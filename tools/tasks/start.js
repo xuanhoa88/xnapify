@@ -7,16 +7,37 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import WebSocket from 'ws';
 import express from 'express';
 import webpack from 'webpack';
-import open from 'open';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 import config from '../config';
 import { BuildError, setupGracefulShutdown } from '../lib/errorHandler';
 import { isSilent, isVerbose, logError, logInfo } from '../lib/logger';
-import { clientConfig, SERVER_BUNDLE_PATH, serverConfig } from '../webpack';
+import {
+  webpackClientConfig,
+  WEBPACK_SERVER_BUNDLE_PATH,
+  webpackServerConfig,
+  /**
+   * Starts the BrowserSync WebSocket server for development.
+   * Initializes a WebSocket server to enable live reload, HMR, and error overlay features.
+   * Opens the default browser if there are no active clients connected.
+   *
+   * @function startBrowserSync
+   * @param {http.Server} server - The HTTP server instance to bind WebSocket and browser sync to.
+   * @returns {Promise<boolean>} Resolves true if browser was opened, false if clients already connected.
+   */
+  start as startBrowserSync,
+  /**
+   * Gracefully shuts down the BrowserSync WebSocket server and browser process.
+   * Notifies all connected clients to close, stops the heartbeat, closes all connections,
+   * and terminates the opened browser process if any.
+   *
+   * @function cleanupBrowserSync
+   */
+  shutdown as cleanupBrowserSync,
+  restart as restartBrowserSync,
+} from '../webpack';
 import clean from './clean';
 
 const silent = isSilent(); // Cache silent check
@@ -30,7 +51,6 @@ const DEV_CONFIG = {
 };
 
 let app, hmr;
-let browserProcess = null;
 
 /**
  * Create compilation promise for webpack compiler
@@ -127,10 +147,10 @@ function configureWebpackForDev(config, isClient = true) {
  */
 function getServerModule() {
   // Clear require cache to get fresh bundle
-  delete require.cache[require.resolve(SERVER_BUNDLE_PATH)];
+  delete require.cache[require.resolve(WEBPACK_SERVER_BUNDLE_PATH)];
 
   // Load server bundle
-  const serverBundle = require(SERVER_BUNDLE_PATH);
+  const serverBundle = require(WEBPACK_SERVER_BUNDLE_PATH);
 
   // Get the hot module
   hmr = serverBundle.default.hot;
@@ -162,8 +182,6 @@ async function checkForUpdate() {
     if (updatedModules && updatedModules.length > 0 && isVerbose()) {
       logInfo(`🔥 HMR: Updated ${updatedModules.length} module(s)`);
     }
-
-    console.log({ updatedModules });
   } catch (error) {
     // On HMR failure, log the error
     const status = hmr ? hmr.status() : 'no-hmr';
@@ -183,11 +201,11 @@ async function checkForUpdate() {
  */
 function setupWebpackCompilers() {
   // Configure webpack for development with HMR
-  configureWebpackForDev(clientConfig, true);
-  configureWebpackForDev(serverConfig, false);
+  configureWebpackForDev(webpackClientConfig, true);
+  configureWebpackForDev(webpackServerConfig, false);
 
   // Create webpack compilers
-  const multiCompiler = webpack([clientConfig, serverConfig]);
+  const multiCompiler = webpack([webpackClientConfig, webpackServerConfig]);
   const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
   const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
 
@@ -205,7 +223,7 @@ function setupWebpackMiddleware(clientCompiler) {
   // Webpack dev middleware
   app.use(
     webpackDevMiddleware(clientCompiler, {
-      publicPath: clientConfig.output.publicPath,
+      publicPath: webpackClientConfig.output.publicPath,
       stats: { colors: true, chunks: false, modules: false },
       serverSideRender: true,
     }),
@@ -226,68 +244,27 @@ function setupWebpackMiddleware(clientCompiler) {
  */
 function setupSSRMiddleware(serverCompiler) {
   // Watch server compiler for changes and auto-reload app
-  serverCompiler.watch(serverConfig.watchOptions, async (error, stats) => {
-    if (error) {
-      logError(`Server watch error: ${error.message}`);
-      return;
-    }
-
-    if (stats && typeof stats.hasErrors === 'function' && stats.hasErrors()) {
-      if (isVerbose()) {
-        logError(
-          `Server compilation errors: ${stats.compilation.errors.length}`,
-        );
+  serverCompiler.watch(
+    webpackServerConfig.watchOptions,
+    async (error, stats) => {
+      if (error) {
+        logError(`Server watch error: ${error.message}`);
+        return;
       }
-      return;
-    }
 
-    // Compilation successful
-    await checkForUpdate();
-  });
-}
+      if (stats && typeof stats.hasErrors === 'function' && stats.hasErrors()) {
+        if (isVerbose()) {
+          logError(
+            `Server compilation errors: ${stats.compilation.errors.length}`,
+          );
+        }
+        return;
+      }
 
-/**
- * Open the default browser to the dev server URL.
- */
-async function openBrowser() {
-  try {
-    const proc = await open(`http://${DEV_CONFIG.host}:${DEV_CONFIG.port}`);
-    if (proc && typeof proc.kill === 'function') {
-      browserProcess = proc;
-      console.log('Opened browser (PID:', proc.pid, ')');
-    } else {
-      browserProcess = null;
-      console.log('Opened browser (no process handle available)');
-    }
-  } catch (error) {
-    throw new BuildError(`Failed to open browser: ${error.message}`, {
-      suggestion: 'Check if your system can launch a browser from the CLI.',
-    });
-  }
-}
-
-/**
- * Close the browser process.
- */
-function closeBrowser() {
-  if (
-    browserProcess &&
-    typeof browserProcess.kill === 'function' &&
-    !browserProcess.killed
-  ) {
-    try {
-      browserProcess.kill('SIGTERM');
-      console.log(
-        'Closed browser (SIGTERM sent to PID:',
-        browserProcess.pid,
-        ')',
-      );
-    } catch (err) {
-      console.warn('Failed to close browser process:', err.message);
-    }
-  } else {
-    console.log('No browser process to close or process handle not available.');
-  }
+      // Compilation successful
+      await checkForUpdate();
+    },
+  );
 }
 
 /**
@@ -303,23 +280,28 @@ export default async function main() {
   const startTime = Date.now();
   logInfo('🚀 Starting development server...');
 
-  // Heartbeat WebSocket for dev tab auto-close
-  let heartbeatWSS = null;
-
   // Setup graceful shutdown handler
-  setupGracefulShutdown(async () => {
+  setupGracefulShutdown(() => {
     logInfo('🛑 Development server shutting down...');
 
-    // Cleanup Browser
-    closeBrowser();
+    Promise.allSettled([
+      // Shutdown BrowserSync safely (won't throw)
+      new Promise(resolve => {
+        resolve(cleanupBrowserSync());
+      }),
 
-    // Cleanup heartbeat WebSocket
-    if (heartbeatWSS) {
-      await new Promise(resolve => heartbeatWSS.close(resolve));
-      logInfo('Heartbeat WebSocket closed.');
-    }
-
-    logInfo('👋 Goodbye!');
+      // Print goodbye message (synchronous)
+      new Promise(resolve => {
+        logInfo('👋 Goodbye!');
+        resolve();
+      }),
+    ])
+      // Always executed regardless of success/failure of above tasks
+      .finally(() => {
+        // Reset references to allow GC
+        app = null;
+        hmr = null;
+      });
   });
 
   try {
@@ -332,37 +314,6 @@ export default async function main() {
     // Create Express server instance
     // This will be passed to the SSR app for middleware setup
     app = express();
-
-    app.use((req, res, next) => {
-      // Override default res.send()
-      const originalSend = res.send.bind(res);
-
-      // UX improvement: Show overlay message on dev server disconnect instead of closing window
-      res.send = html => {
-        if (typeof html === 'string' && html.includes('</body>')) {
-          const injected = html.replace(
-            '</body>',
-            `
-<script>
-(function () {
-  try {
-    var ws = new WebSocket("ws://${DEV_CONFIG.host}:${DEV_CONFIG.port}/~/__bs");
-    ws.onclose = () => window.close();
-    ws.onerror = () => window.close();
-  } catch (e) {
-    window.close();
-  }
-})();
-</script>
-      </body>`,
-          );
-          return originalSend(injected);
-        }
-        return originalSend(html);
-      };
-
-      next();
-    });
 
     // Setup webpack dev middleware (HMR, hot reload)
     setupWebpackMiddleware(clientCompiler);
@@ -387,28 +338,9 @@ export default async function main() {
       DEV_CONFIG.host,
     );
 
-    // Create WebSocket server for dev tab auto-close
-    try {
-      heartbeatWSS = new WebSocket.Server({ server, path: '/~/__bs' });
-    } catch (wsErr) {
-      throw new BuildError(
-        `Failed to create Tab auto-close server: ${wsErr.message}`,
-        {
-          suggestion:
-            'The WebSocket port might be in use. Try a different port or close the conflicting process.',
-        },
-      );
-    }
-
-    // Handle WebSocket server runtime errors
-    heartbeatWSS.on('error', err => {
-      throw new BuildError(`Tab auto-close server error: ${err.message}`, {
-        suggestion: 'Check for network issues or port conflicts.',
-      });
-    });
-
-    // Open browser for dev server
-    await openBrowser();
+    // Initialize BrowserSync WebSocket server for live reload and HMR
+    // This will also open the browser automatically if no clients are connected
+    startBrowserSync(server);
 
     // Success
     const duration = Date.now() - startTime;
@@ -420,9 +352,6 @@ export default async function main() {
 
     return app;
   } catch (error) {
-    // Cleanup on error
-    closeBrowser();
-
     const devError =
       error instanceof BuildError
         ? error
@@ -444,8 +373,9 @@ export default async function main() {
 
 // Execute if called directly (as child process)
 if (require.main === module) {
+  // Start the server and keep the process alive
   main().catch(error => {
-    console.error(error);
+    logError('Failed to start development server:', error);
     process.exit(1);
   });
 }

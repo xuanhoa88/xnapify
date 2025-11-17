@@ -371,7 +371,7 @@ echo $RSK_API_URL  # ✅ Good
 echo $API_URL      # ❌ Won't be injected
 
 # 2. Check webpack config
-grep "createDotenvDefinitions" tools/webpack/serverConfig.webpack.js
+grep "createDotenvDefinitions" tools/webpack/server.config.js
 
 # 3. Rebuild
 npm run build

@@ -28,7 +28,7 @@ import {
   logVerbose,
   logWarn,
 } from '../lib/logger';
-import { clientConfig, serverConfig } from '../webpack';
+import { webpackClientConfig, webpackServerConfig } from '../webpack';
 import clean from './clean';
 import messages from './i18n';
 
@@ -274,7 +274,7 @@ function createBundle() {
 
     logInfo(`🔨 Compiling webpack bundles...`);
 
-    const compiler = webpack([clientConfig, serverConfig]);
+    const compiler = webpack([webpackClientConfig, webpackServerConfig]);
 
     compiler.run((err, stats) => {
       const duration = Date.now() - startTime;

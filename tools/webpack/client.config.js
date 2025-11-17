@@ -19,7 +19,7 @@ import baseConfig, {
   isAnalyze,
   isDebug,
   isProfile,
-} from './baseConfig.webpack';
+} from './base.config';
 
 // Client webpack configuration
 const BUNDLE_MAX_CHUNK_SIZE =
@@ -51,7 +51,10 @@ export default merge(baseConfig, {
   entry: {
     // Client entry: src/client.js → build/public/assets/client.js (or client.[hash].js)
     // This is the browser-side application that hydrates the SSR markup
-    client: [path.join(config.APP_DIR, 'client.js')],
+    client: [
+      path.join(__dirname, 'browserSync', 'client.config.js'),
+      path.join(config.APP_DIR, 'client.js'),
+    ],
   },
 
   // Output configuration for client bundle

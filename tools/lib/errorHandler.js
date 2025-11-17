@@ -21,7 +21,7 @@ export class BuildError extends Error {
 /**
  * Sleep utility for retry delays
  */
-function sleep(ms) {
+export function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
@@ -154,34 +154,85 @@ export function logDetailedError(error, context = {}) {
 }
 
 /**
- * Setup graceful shutdown handlers
+ * Setup graceful shutdown with proper async handling and fatal error capture.
  */
 export function setupGracefulShutdown(cleanupFn) {
   const signals = ['SIGINT', 'SIGTERM', 'SIGQUIT'];
+  let isShuttingDown = false;
 
-  signals.forEach(signal => {
-    process.on(signal, async () => {
-      logInfo(`🛑 Received ${signal}, shutting down...`);
+  // Remove all event listeners to prevent duplicate handling
+  const removeListeners = () => {
+    signals.forEach(signal => {
+      process.removeListener(signal, signalHandler);
+    });
+    process.removeListener('uncaughtException', uncaughtHandler);
+    process.removeListener('unhandledRejection', unhandledRejectionHandler);
+  };
 
-      try {
-        if (cleanupFn) await cleanupFn();
-        process.exit(0);
-      } catch (error) {
-        logDetailedError(error, { phase: 'cleanup', signal });
-        process.exit(1);
+  // Main shutdown handler
+  const shutdownHandler = async (signalOrError, isFatal) => {
+    // Prevent multiple shutdown attempts
+    if (isShuttingDown) {
+      logInfo('⏳ Shutdown already in progress...');
+      return;
+    }
+
+    isShuttingDown = true;
+    let exitCode = isFatal ? 1 : 0;
+
+    try {
+      // Log shutdown reason
+      if (typeof signalOrError === 'string') {
+        logInfo(`🛑 Received ${signalOrError}, shutting down...`);
+      } else if (isFatal) {
+        logDetailedError(signalOrError, { type: 'fatal' });
+        logInfo('🛑 Fatal error, shutting down...');
       }
-    });
+
+      // Run cleanup function
+      if (typeof cleanupFn === 'function') {
+        await cleanupFn(signalOrError);
+      }
+    } catch (error) {
+      logDetailedError(error, { phase: 'cleanup', signal: signalOrError });
+      exitCode = 1;
+    } finally {
+      // Remove listeners to prevent re-triggering
+      removeListeners();
+
+      // Exit cleanly
+      process.exit(exitCode);
+    }
+  };
+
+  // Signal handler wrapper
+  const signalHandler = signal => shutdownHandler(signal, false);
+
+  // Uncaught exception handler
+  const uncaughtHandler = error => {
+    logError('💥 Uncaught Exception:', error);
+    shutdownHandler(error, true);
+  };
+
+  // Unhandled rejection handler
+  const unhandledRejectionHandler = (reason, promise) => {
+    logError('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+    const error = reason instanceof Error ? reason : new Error(String(reason));
+    shutdownHandler(error, true);
+  };
+
+  // Register signal handlers
+  signals.forEach(signal => {
+    process.on(signal, signalHandler);
   });
 
-  process.on('uncaughtException', error => {
-    logDetailedError(error, { type: 'uncaughtException' });
-    process.exit(1);
-  });
+  // Register error handlers
+  process.on('uncaughtException', uncaughtHandler);
+  process.on('unhandledRejection', unhandledRejectionHandler);
 
-  process.on('unhandledRejection', reason => {
-    logDetailedError(new Error(`Unhandled rejection: ${reason}`), {
-      type: 'unhandledRejection',
-    });
-    process.exit(1);
-  });
+  // Log that shutdown handler is ready
+  logInfo('✓ Graceful shutdown handler registered');
+
+  // Return manual shutdown trigger
+  return () => shutdownHandler('MANUAL', false);
 }

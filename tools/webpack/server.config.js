@@ -18,8 +18,8 @@ import baseConfig, {
   reStyle,
   reImage,
   reFont,
-} from './baseConfig.webpack';
-import { createDotenvDefinitions } from './dotenvPlugin.webpack';
+} from './base.config';
+import { createDotenvDefinitions } from './dotenv.plugin';
 
 const verbose = isVerbose(); // Cache verbose check
 
