@@ -750,15 +750,14 @@ if (isDOMReady) {
   });
 }
 
+// ===========================
+// HMR: Hot Module Replacement
+// ===========================
 if (module.hot) {
-  // ===========================
-  // HMR: Hot Module Replacement
-  // ===========================
-
   // Accept updates for this module (e.g., router updates)
   module.hot.accept(err => {
     if (err) {
-      console.error('❌ HMR: Error accepting router update:', err);
+      console.error('❌ HMR: Error accepting Client update:', err);
       return;
     }
 
@@ -791,10 +790,7 @@ if (module.hot) {
     module.hot.data.clearUpdate = clearUpdate;
   });
 
-  // ===========================
   // HMR: Status handler
-  // ===========================
-
   module.hot.addStatusHandler(status => {
     if (status === 'idle') {
       // When HMR is done applying updates, notify overlay/reporters
@@ -806,15 +802,12 @@ if (module.hot) {
     }
   });
 
-  // ===========================
-  // HMR: Dispose handler
-  // ===========================
-
+  // Dispose handler
   module.hot.dispose(data => {
     console.log('🔥 HMR: Disposing module');
 
     // Cancel any pending scheduled updates to avoid calling outdated state
-    if (data && data.pendingUpdate && data.clearUpdate) {
+    if (data && data.pendingUpdate && typeof data.clearUpdate === 'function') {
       data.clearUpdate(data.pendingUpdate);
     }
 

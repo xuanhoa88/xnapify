@@ -21,6 +21,7 @@ async function action({ fetch }) {
     title,
     component: (
       <Layout showHero>
+        {'AAAA'}
         <Home loading={false} payload={data.payload} />
       </Layout>
     ),

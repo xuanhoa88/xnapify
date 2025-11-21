@@ -36,9 +36,6 @@ async function syncDatabase(options = {}) {
 /**
  * Load and validate a factory function from a webpack module
  *
- * Safely loads a module and validates it exports a default factory function.
- * Returns null if module is invalid or fails to load.
- *
  * @param {Function} context - Webpack require.context function
  * @param {string} path - Module path relative to context
  * @param {string} type - Type name for logging (e.g., 'models', 'module')

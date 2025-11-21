@@ -590,19 +590,16 @@ async function main(app, staticPath) {
   return app;
 }
 
-// =============================================================================
-// MODULE EXECUTION
-// =============================================================================
-
+// ===========================
+// HMR: Hot Module Replacement
+// ===========================
 if (module.hot) {
-  // Development: Enable HMR for server-side code
+  // Accept updates for this module (e.g., router updates)
   module.hot.accept(err => {
     if (err) {
-      console.error('❌ HMR: Error accepting router update:', err);
+      console.error('❌ HMR: Error accepting Server update:', err);
       return;
     }
-
-    console.log('✅ HMR: Router reloaded successfully');
   });
 
   // Store reference for HMR

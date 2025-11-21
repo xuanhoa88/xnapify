@@ -14,13 +14,7 @@ import webpackHotMiddleware from 'webpack-hot-middleware';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
 import config from '../config';
 import { BuildError, setupGracefulShutdown } from '../lib/errorHandler';
-import {
-  isSilent,
-  isVerbose,
-  logDebug,
-  logError,
-  logInfo,
-} from '../lib/logger';
+import { isSilent, isVerbose, logError, logInfo } from '../lib/logger';
 import {
   WEBPACK_SERVER_BUNDLE_PATH,
   webpackClientConfig,
@@ -175,100 +169,110 @@ function loadServerBundle() {
 }
 
 /**
- * Reloads Express application middleware stack while preserving webpack middleware state.
+ * Reinitializes the server bundle and Express application middlewares
+ * while preserving webpack middleware state for HMR.
  */
-async function reloadExpressMiddlewares() {
+async function reinitializeServerAndMiddlewares() {
   try {
-    // Guard: router must exist
+    // Guard: Ensure Express app and router are initialized
     // eslint-disable-next-line no-underscore-dangle
-    if (!app._router || !app._router.stack) {
-      throw new Error('Express router not initialized');
+    if (!app || !app._router || !Array.isArray(app._router.stack)) {
+      throw new Error('Express router is not initialized');
     }
 
-    // Find index AFTER the last webpack middleware.
-    // Uses Symbol marker for 100% accuracy.
+    // Find the index after the last webpack middleware
     const findWebpackMiddlewareBoundary = () => {
+      let lastWebpackIndex = -1;
       // eslint-disable-next-line no-underscore-dangle
-      for (let i = app._router.stack.length - 1; i >= 0; i -= 1) {
+      for (let i = 0; i < app._router.stack.length; i++) {
         // eslint-disable-next-line no-underscore-dangle
-        if (app._router.stack[i][kWebpackMiddleware]) {
-          return i + 1;
+        const layer = app._router.stack[i];
+        if (layer.handle && layer.handle[kWebpackMiddleware]) {
+          lastWebpackIndex = i;
         }
       }
-      return 0; // Default to start if no marker found
+
+      return lastWebpackIndex + 1; // Return index after the last webpack middleware
     };
 
-    const webpackMiddlewareBoundary = findWebpackMiddlewareBoundary();
-
-    // Remove all routes/middlewares added by the application
-    // eslint-disable-next-line no-underscore-dangle
-    app._router.stack.splice(webpackMiddlewareBoundary);
-
-    // Reload the server bundle to get the new app initializer
-    const server = loadServerBundle();
-
-    // Re-initialize the application with the new bundle
-    // This will add the updated routes and middleware
-    await server.initializeApp(app);
-
-    if (!silent) {
-      logInfo('✅ Express middlewares reloaded');
+    const boundaryIndex = findWebpackMiddlewareBoundary();
+    if (boundaryIndex === 0) {
+      logInfo('⚠️ No webpack middleware found, reloading all middlewares');
+    } else {
+      // Remove all application-added middlewares and routes after the Webpack boundary
+      // eslint-disable-next-line no-underscore-dangle
+      app._router.stack.splice(boundaryIndex);
     }
-  } catch (error) {
-    logError('❌ Failed to reload Express middlewares');
+
+    // Reload the latest server bundle
+    const serverBundle = loadServerBundle();
+
+    // Re-initialize app with the new server bundle and routes
+    await serverBundle.initializeApp(app);
+
+    logInfo('✅ Server bundle and middlewares reinitialized successfully');
+  } catch (err) {
+    logError('❌ Failed to reinitialize server and middlewares');
     if (isVerbose()) {
-      logError(error);
+      logError(err);
     }
-    // Optionally, trigger a full server restart here if HMR fails
+    // Optional: trigger a full server restart if HMR fails
   }
 }
 
 /**
  * Apply HMR updates or reload app on failure
  */
+/**
+ * Check for HMR updates and optionally apply them.
+ *
+ * @returns {Promise<boolean>} True if updates detected, false otherwise.
+ */
 async function checkForUpdate() {
   try {
-    // Skip if HMR not available or not ready
-    if (!hmr || hmr.status() !== 'idle') {
-      return;
+    // Skip if HMR runtime is not available or not in 'idle' state
+    if (!hmr || typeof hmr.status !== 'function' || hmr.status() !== 'idle') {
+      if (isVerbose()) logInfo('HMR not ready, skipping update check');
+      return false;
     }
 
-    // Add a small delay to ensure all modules are properly loaded
+    // Small delay to ensure all modules are loaded before checking
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Check for server updates
-    const outdatedModules = await hmr.check(true); // false = don't apply automatically
+    // Check for updates and auto-apply them
+    const updatedModules = await hmr.check(true);
 
-    // No updates available
-    if (!outdatedModules || outdatedModules.length === 0) {
-      if (isVerbose()) {
-        logInfo('No HMR updates available');
-      }
-      return;
+    // No updates found
+    if (!updatedModules || updatedModules.length === 0) {
+      if (isVerbose()) logInfo('No HMR updates available.');
+      return false;
     }
 
-    logInfo(`🔥 HMR: Detected ${outdatedModules.length} outdated module(s)`);
+    logInfo(`🔥 HMR: Detected ${updatedModules.length} updated module(s).`);
+    await reinitializeServerAndMiddlewares();
 
     return true;
-  } catch (error) {
-    // Get current status for better error context
-    const status = hmr ? hmr.status() : 'no-hmr';
+  } catch (err) {
+    // Capture HMR status for context; fallback if hmr is unavailable
+    const hmrStatus =
+      hmr && typeof hmr.status === 'function' ? hmr.status() : 'no-hmr';
 
     // Log detailed error information
-    logError(`❌ HMR update failed (status: ${status})`);
-    logError(error.stack || error.message || error);
+    logError(`❌ HMR update failed (status: ${hmrStatus}).`);
+    logError(err && err.stack ? err.stack : err.message || err);
 
-    // Handle different error scenarios
-    if (status === 'abort' || status === 'fail') {
-      logInfo(
-        '⚠️  HMR in bad state, attempting to reload Express middleware...',
-      );
-    } else if (status === 'dispose' || status === 'prepare') {
-      // HMR is in transition state, might resolve on next check
-      logInfo('⏳ HMR is processing, will retry on next change');
-    } else {
-      // Unexpected error state
-      logError('⚠️  Unexpected HMR state, monitoring for next update');
+    // Provide guidance based on HMR state
+    switch (hmrStatus) {
+      case 'abort':
+      case 'fail':
+        logInfo('⚠️ HMR in a bad state, consider restarting the server.');
+        break;
+      case 'dispose':
+      case 'prepare':
+        logInfo('⏳ HMR is processing, will retry on next check.');
+        break;
+      default:
+        logError('⚠️ Unexpected HMR state, monitoring for next update.');
     }
 
     return false;
@@ -299,86 +303,43 @@ function setupWebpackCompilers() {
  * Setup Express middleware for webpack
  */
 function setupWebpackMiddlewares(clientCompiler) {
-  // Wrap any middleware and tag it as a webpack middleware
+  // Helper to wrap and tag a middleware as Webpack middleware
   const wrapWebpackMiddleware = fn => {
     const wrapper = (req, res, next) => fn(req, res, next);
     wrapper[kWebpackMiddleware] = true;
     return wrapper;
   };
 
-  // Webpack dev middleware
-  const devMw = webpackDevMiddleware(clientCompiler, {
-    // Base path for all the assets. Should match the publicPath in webpack config
-    // This ensures static assets are served from the correct URL path
-    publicPath: webpackClientConfig.output.publicPath,
-
-    // Control what bundle information gets displayed in the console
+  // ---------------------------
+  // Webpack Dev Middleware
+  // ---------------------------
+  const devMiddleware = webpackDevMiddleware(clientCompiler, {
+    publicPath: webpackClientConfig.output.publicPath, // Serve assets from correct URL
     stats: {
-      colors: true, // Enable colored output for better readability
-      chunks: false, // Disable chunk information (reduces console noise)
-      modules: false, // Disable module information (reduces console noise)
+      colors: true, // Colored console output
+      chunks: false, // Hide chunk details to reduce noise
+      modules: false, // Hide module details
     },
-
-    // Write files to disk even in development mode
-    // This is useful for server-side rendering that needs to access the built files
-    writeToDisk: true,
-
-    // Enable server-side rendering support
-    // This allows the server to access the webpack stats and assets
-    serverSideRender: true,
+    writeToDisk: true, // Write files to disk for SSR
+    serverSideRender: true, // Enable SSR access to webpack stats
   });
-  app.use(wrapWebpackMiddleware(devMw));
+  app.use(wrapWebpackMiddleware(devMiddleware));
 
-  // Webpack hot middleware for HMR (Hot Module Replacement)
-  const hotMw = webpackHotMiddleware(clientCompiler, {
-    // Control logging behavior
-    // In verbose mode, logs will be shown in console
-    // Otherwise, logging is disabled to reduce noise
-    log: isVerbose() ? console.log : false, // eslint-disable-line no-console
-
-    // The path where the WebSocket server will listen for connections
-    // This should match the path configured in webpack's HotModuleReplacementPlugin
-    path: '/~/__webpack_hmr',
-
-    // How often to send heartbeat updates to the client (in milliseconds)
-    // This keeps the connection alive and detects connection failures
-    heartbeat: 10 * 1000, // 10 seconds
+  // ---------------------------
+  // Webpack Hot Middleware (HMR)
+  // ---------------------------
+  const hotMiddleware = webpackHotMiddleware(clientCompiler, {
+    log: isVerbose() ? console.log : false, // Verbose logging
+    path: '/~/__webpack_hmr', // WebSocket path for HMR
+    heartbeat: 10_000, // Heartbeat interval in ms
   });
-  app.use(wrapWebpackMiddleware(hotMw));
+  app.use(wrapWebpackMiddleware(hotMiddleware));
 }
 
 /**
  * Sets up a file watcher for the server bundle that triggers HMR updates when server code changes.
- *
- * @param {Object} serverCompiler - The webpack compiler instance for the server bundle
- * @returns {void}
  */
 function setupServerBundleWatcher(serverCompiler) {
-  // Detect changed files during watch-run
-  serverCompiler.hooks.watchRun.tap('WatchRunPlugin', function (compiler) {
-    const fileSystem = compiler.watchFileSystem;
-    let watcher = null;
-
-    // Webpack 4/5 compatibility
-    if (fileSystem) {
-      if (fileSystem.wfs && fileSystem.wfs.watcher) {
-        watcher = fileSystem.wfs.watcher;
-      } else if (fileSystem.watcher) {
-        watcher = fileSystem.watcher;
-      }
-    }
-
-    if (!watcher || !watcher.mtimes) return;
-
-    const changedFiles = Object.keys(watcher.mtimes);
-    if (changedFiles.length === 0) return;
-
-    logInfo('🔄 Files changed:');
-    changedFiles.forEach(function (file) {
-      logDebug('   → ' + file);
-    });
-  });
-
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
