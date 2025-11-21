@@ -149,7 +149,7 @@ export default async function main() {
     }
 
     if (warningCount > 0) {
-      logWarn(`\n⚠️  Found ${warningCount} warnings`);
+      logWarn(`\n⚠️ Found ${warningCount} warnings`);
     }
 
     logInfo(

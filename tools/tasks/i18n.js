@@ -271,7 +271,7 @@ async function processFile(fileName) {
     });
     state.errors.push({ fileName, error: fileError });
     state.stats.errors++;
-    logWarn(`⚠️  ${fileError.message}`);
+    logWarn(`⚠️ ${fileError.message}`);
     return 0;
   }
 }
@@ -402,7 +402,7 @@ async function syncTranslationKeys() {
     if (I18N_VALIDATE) {
       Object.keys(flatTranslations).forEach(key => {
         if (!state.extractedKeys.has(key)) {
-          logWarn(`⚠️  Unused key in ${locale}: ${key}`);
+          logWarn(`⚠️ Unused key in ${locale}: ${key}`);
           state.stats.warnings++;
         }
       });
@@ -616,7 +616,7 @@ export default async function main() {
     const validation = validateKeys();
     if (validation.issues.length > 0) {
       const validationMessage = [
-        `\n⚠️  Found ${validation.issues.length} validation issue(s):`,
+        `\n⚠️ Found ${validation.issues.length} validation issue(s):`,
         ...validation.issues.map(
           issue => `   ${issue.type.toUpperCase()}: ${issue.message}`,
         ),

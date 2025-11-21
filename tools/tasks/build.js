@@ -243,7 +243,7 @@ function logBundleResults(analysis, duration) {
   // Warnings
   if (analysis.oversizedAssets.length > 0) {
     const warningMessage = [
-      `⚠️  ${
+      `⚠️ ${
         analysis.oversizedAssets.length
       } asset(s) exceed size limit (${formatBytes(config.bundleMaxAssetSize)})`,
     ];
@@ -260,7 +260,7 @@ function logBundleResults(analysis, duration) {
   }
 
   if (duration > 30000) {
-    logWarn(`⚠️  Slow build detected (${formattedDuration})`);
+    logWarn(`⚠️ Slow build detected (${formattedDuration})`);
   }
 }
 
@@ -426,19 +426,19 @@ export default async function main() {
         '',
         '📋 Next steps:',
         '',
-        '  1️⃣  Install production dependencies (REQUIRED):',
+        '  1️⃣ Install production dependencies (REQUIRED):',
         `     cd '${config.BUILD_DIR}' && npm install --production`,
         '',
-        '  2️⃣  Test locally:',
+        '  2️⃣ Test locally:',
         `     cd '${config.BUILD_DIR}'`,
         '     export NODE_ENV=production RSK_JWT_SECRET=$(openssl rand -base64 32)',
         '     node server.js',
         '',
-        '  3️⃣  Deploy:',
+        '  3️⃣ Deploy:',
         '     • Docker: See Dockerfile in project root',
         `     • Server: Deploy '${config.BUILD_DIR}' directory with node_modules/`,
         '',
-        `⚠️  Important: Run server from '${config.BUILD_DIR}' directory`,
+        `⚠️ Important: Run server from '${config.BUILD_DIR}' directory`,
         '   See docs/deployment.md for complete deployment guide',
         '',
       ].join('\n');

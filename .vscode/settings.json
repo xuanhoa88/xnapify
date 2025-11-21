@@ -12,7 +12,10 @@
   "files.autoSave": "onFocusChange",
   "files.autoSaveDelay": 1000,
   // ESLint validation
-  "eslint.validate": ["javascript", "javascriptreact"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact"
+  ],
   // File type associations
   "files.associations": {
     ".eslintignore": "ignore",
@@ -52,6 +55,8 @@
   },
   // Stylelint configuration
   "stylelint.enable": true,
-  "stylelint.validate": ["css"],
+  "stylelint.validate": [
+    "css"
+  ],
   "css.validate": false
 }

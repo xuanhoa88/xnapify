@@ -1,59 +1,83 @@
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ * Babel configuration for React Starter Kit
+ *
+ * This configuration supports:
+ * - Modern JavaScript features (ESNext)
+ * - React with automatic runtime
+ * - Code splitting with @loadable/component
+ * - Development/Production optimizations
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/**
+ * React Starter Kit – Babel configuration
+ * Supports:
+ *  - Modern JS (ESNext)
+ *  - React (automatic runtime)
+ *  - Code splitting (@loadable/component)
+ *  - Optimizations for production
+ */
+
 module.exports = api => {
-  // ---- Caching ----
+  // Always recalc config — Webpack + React Refresh need this
   api.cache.never();
 
-  // ---- Environment ----
   const NODE_ENV = process.env.NODE_ENV || 'development';
-  const isProduction = NODE_ENV === 'production';
-  const isDevelopment = NODE_ENV === 'development';
-  const isTest = NODE_ENV === 'test';
+  const isProd = NODE_ENV === 'production';
 
-  // ---- Export Config ----
   return {
-    targets: 'defaults',
+    /**
+     * Use inline source maps for best debugging with Webpack + HMR
+     * (external maps often break HMR invalidation)
+     */
+    sourceMaps: 'inline',
 
+    /**
+     * Important:
+     * Server code runs on Node → target Node
+     * Client code is handled by Browserslist via Webpack
+     * This works fine for both sides.
+     */
     presets: [
       [
         '@babel/preset-env',
         {
-          targets: { node: 'current' },
+          targets: 'defaults',
           modules: 'commonjs',
           useBuiltIns: 'usage',
           corejs: 3,
         },
       ],
+
       [
         '@babel/preset-react',
         {
-          development: isDevelopment || isTest,
+          development: !isProd,
           runtime: 'automatic',
         },
       ],
     ],
 
     plugins: [
-      //
-      // 📦 Code Splitting / SSR
-      //
+      // =====================
+      // 📦 Code splitting
+      // =====================
       '@loadable/babel-plugin',
 
-      //
+      // =====================
       // ⚙ Class fields & private methods
-      //
+      // =====================
       ['@babel/plugin-transform-class-properties', { loose: true }],
       ['@babel/plugin-transform-private-methods', { loose: true }],
       ['@babel/plugin-transform-private-property-in-object', { loose: true }],
 
-      //
-      // 📘 Syntax features
-      //
+      // =====================
+      // 📘 Modern JavaScript Features
+      // (Babel 7+ includes most of these in preset-env; keeping only necessary)
+      // =====================
       '@babel/plugin-syntax-dynamic-import',
       '@babel/plugin-transform-export-namespace-from',
       '@babel/plugin-transform-json-strings',
@@ -62,10 +86,10 @@ module.exports = api => {
       '@babel/plugin-transform-nullish-coalescing-operator',
       '@babel/plugin-transform-object-rest-spread',
 
-      //
-      // 🚀 Production-only optimizations
-      //
-      ...(isProduction
+      // =====================
+      // 🚀 Production Optimizations
+      // =====================
+      ...(isProd
         ? [
             '@babel/plugin-transform-react-constant-elements',
             '@babel/plugin-transform-react-inline-elements',

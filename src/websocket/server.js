@@ -591,9 +591,7 @@ export class WebSocketServer extends EventEmitter {
  */
 export function createWebSocketServer(options = {}, httpServer = null) {
   if (options.enableAuth && !options.jwtSecret) {
-    console.warn(
-      '⚠️  JWT secret not provided, authentication will be disabled',
-    );
+    console.warn('⚠️ JWT secret not provided, authentication will be disabled');
     options.enableAuth = false;
   }
 

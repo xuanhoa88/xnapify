@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* eslint-disable global-require */
-
-import IsomorphicRouter from '../router';
 import { getRuntimeVariable } from '../redux';
 
 /**
@@ -118,11 +115,7 @@ if (__DEV__) {
   });
 }
 
-/**
- * Create and export the router instance.
- * This instance is shared across the application for consistent routing.
- *
- * The router handles both server-side and client-side routing,
- * enabling seamless SSR and client-side navigation.
- */
-export const router = new IsomorphicRouter(routes);
+// Export the routes configuration object as the default export
+// This is consumed by the router to set up all application routes
+// The structure follows the format expected by the IsomorphicRouter
+export default routes;

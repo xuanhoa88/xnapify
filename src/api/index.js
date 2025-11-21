@@ -52,14 +52,14 @@ function loadFactory(context, path, type) {
 
     // Validate default export exists
     if (!factory) {
-      console.warn(`⚠️  No default export in ${type}: ${path}`);
+      console.warn(`⚠️ No default export in ${type}: ${path}`);
       return null;
     }
 
     // Validate default export is a function
     if (typeof factory !== 'function') {
       console.warn(
-        `⚠️  Default export is not a factory function in ${type}: ${path}`,
+        `⚠️ Default export is not a factory function in ${type}: ${path}`,
       );
       return null;
     }
@@ -133,14 +133,14 @@ async function discoverModules(app, dependencies) {
 
             if (!modelSet || typeof modelSet !== 'object') {
               console.warn(
-                `⚠️  Models factory did not return an object: ${path}`,
+                `⚠️ Models factory did not return an object: ${path}`,
               );
               return;
             }
 
             const modelCount = Object.keys(modelSet).length;
             if (modelCount === 0) {
-              console.warn(`⚠️  Models factory returned empty object: ${path}`);
+              console.warn(`⚠️ Models factory returned empty object: ${path}`);
               return;
             }
 
@@ -203,14 +203,14 @@ async function discoverModules(app, dependencies) {
 
             if (!moduleRouter) {
               console.warn(
-                `⚠️  Module factory returned null/undefined: ${path}`,
+                `⚠️ Module factory returned null/undefined: ${path}`,
               );
               return;
             }
 
             // Use duck typing instead of instanceof to avoid webpack module issues
             if (typeof moduleRouter.use !== 'function') {
-              console.warn(`⚠️  Module did not return a Router: ${path}`);
+              console.warn(`⚠️ Module did not return a Router: ${path}`);
               return;
             }
 
@@ -311,7 +311,7 @@ function createConfig(config = {}) {
   // Validate required configuration
   if (!defaultConfig.jwtSecret) {
     console.warn(
-      '⚠️  JWT secret not set. Set RSK_JWT_SECRET environment variable.',
+      '⚠️ JWT secret not set. Set RSK_JWT_SECRET environment variable.',
     );
     if (isProduction) {
       throw new Error('JWT secret is required in production');
@@ -361,41 +361,28 @@ function createHealthCheckHandler(config = {}) {
       // Check database connectivity
       await sequelize.authenticate();
 
-      const healthData = {
-        success: true,
+      res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        uptime: process.uptime(),
         environment: config.environment,
         version: config.version,
         database: 'connected',
-        memory: {
-          used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-          total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-          unit: 'MB',
-        },
-      };
-
-      res.status(200).json(healthData);
+      });
     } catch (error) {
-      const errorData = {
-        success: false,
+      res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
+        environment: config.environment,
+        version: config.version,
         error: error.message,
         database: 'disconnected',
-      };
-
-      res.status(503).json(errorData);
+      });
     }
   };
 }
 
 /**
  * Setup app dependencies in Express app settings
- *
- * Protects shared objects from modification by freezing them.
- * This prevents accidental mutations that could affect other parts of the application.
  *
  * @param {Object} app - Express app
  * @param {Object} config - API configuration
@@ -419,59 +406,98 @@ function setupAppDependencies(app, config = {}) {
 }
 
 /**
- * Create an app guard that prevents modules from modifying critical dependencies
+ * Guard Express app settings to prevent modification of protected keys.
+ * HMR-friendly version that allows re-initialization during hot reload.
  *
- * @param {Object} app - Original Express app
- * @returns {Object} Guarded app proxy
+ * @param {import('express').Express} app
+ * @returns {Proxy} Guarded app
  */
 function createAppGuard(app) {
-  // List of protected dependency keys that modules cannot modify
+  // Logs a warning when protected app settings are accessed or modified
+  const warnBlocked = (action, key) => {
+    console.warn(
+      `⚠️ Attempted to ${action} protected dependency: "${key}"\n` +
+        new Error().stack.split('\n').slice(2).join('\n'),
+    );
+  };
+
+  // Critical application dependencies that should not be modified at runtime
+  // These are protected by the app guard to maintain application integrity
   const protectedKeys = new Set([
-    'jwtSecret',
-    'jwtExpiresIn',
-    'sequelize',
-    'fs',
-    'http',
-    'auth',
-    'models', // Will be added later
+    'jwtSecret', // JWT authentication secret
+    'jwtExpiresIn', // JWT token expiration
+    'sequelize', // Database ORM instance
+    'fs', // Filesystem utilities
+    'http', // HTTP utilities
+    'auth', // Authentication engine
+    'models', // Database models
   ]);
 
-  // Create a proxy that intercepts app.set() and app.unset() calls
-  return new Proxy(app, {
-    get(target, prop) {
-      const originalMethod = target[prop];
+  // Flag to allow temporary writes during setup/HMR
+  // eslint-disable-next-line no-underscore-dangle
+  if (!app.__allowProtectedWrites) {
+    // eslint-disable-next-line no-underscore-dangle
+    app.__allowProtectedWrites = false;
+  }
 
-      // Intercept app.set() to prevent modification of protected keys
+  return new Proxy(app, {
+    get(target, prop, receiver) {
+      const original = Reflect.get(target, prop, receiver);
+
+      // ----- PROTECT app.set() -----
       if (prop === 'set') {
         return function (key, value) {
-          if (protectedKeys.has(key)) {
-            console.warn(
-              `⚠️  Module attempted to modify protected dependency: ${key}`,
-            );
-            return target; // Return app for chaining, but don't actually set
+          // Allow writes when flag is set (during setup/HMR)
+          // eslint-disable-next-line no-underscore-dangle
+          if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
+            warnBlocked('modify', key);
+            return target;
           }
-          return originalMethod.call(target, key, value);
+
+          return original.call(target, key, value);
         };
       }
 
-      // Intercept app.unset() to prevent removal of protected keys
-      if (prop === 'unset') {
+      // ----- PROTECT app.enable()/disable() -----
+      if (prop === 'enable' || prop === 'disable') {
         return function (key) {
-          if (protectedKeys.has(key)) {
-            console.warn(
-              `⚠️  Module attempted to remove protected dependency: ${key}`,
-            );
-            return target; // Return app for chaining, but don't actually unset
+          // eslint-disable-next-line no-underscore-dangle
+          if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
+            warnBlocked(`${prop}`, key);
+            return target;
           }
-          return originalMethod.call(target, key);
+          return original.call(target, key);
         };
       }
 
-      // For all other methods/properties, return as normal
-      if (typeof originalMethod === 'function') {
-        return originalMethod.bind(target);
+      // ----- PROTECT app.settings[key] deletion -----
+      if (prop === 'settings') {
+        return new Proxy(original, {
+          deleteProperty(obj, key) {
+            // eslint-disable-next-line no-underscore-dangle
+            if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
+              warnBlocked('delete', key);
+              return false;
+            }
+            return Reflect.deleteProperty(obj, key);
+          },
+          set(obj, key, value) {
+            // eslint-disable-next-line no-underscore-dangle
+            if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
+              warnBlocked('overwrite', key);
+              return false;
+            }
+            return Reflect.set(obj, key, value);
+          },
+        });
       }
-      return originalMethod;
+
+      // Return functions bound correctly
+      if (typeof original === 'function') {
+        return original.bind(target);
+      }
+
+      return original;
     },
   });
 }
@@ -570,13 +596,9 @@ function createLoggingMiddleware(config) {
       : 'dev'; // Colored output for development
 
   return morgan(format, {
-    skip: req => {
+    skip: req =>
       // Skip logging for health checks in production
-      if (config.environment === 'production' && req.url === '/health') {
-        return true;
-      }
-      return false;
-    },
+      config.environment === 'production' && req.url === '/health',
   });
 }
 

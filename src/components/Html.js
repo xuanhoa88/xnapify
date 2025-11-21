@@ -160,7 +160,7 @@ function Html({
         {/* Application state */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `window.__APP_STATE__=${serialize(appState)}`,
+            __html: `window.__PRELOAD_STATE__=${serialize(appState)}`,
           }}
         />
 

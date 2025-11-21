@@ -13,12 +13,14 @@ import MiniCssExtractPlugin from 'mini-css-extract-plugin';
 import { merge } from 'webpack-merge';
 import config from '../config';
 import { isVerbose } from '../lib/logger';
-import baseConfig, {
+import {
+  createBaseConfig,
   createCSSRule,
   createDefinePluginConfig,
   isAnalyze,
   isDebug,
   isProfile,
+  reScript,
 } from './base.config';
 
 // Client webpack configuration
@@ -29,6 +31,71 @@ const BUNDLE_MINIFICATION = config.env('BUNDLE_MINIFICATION') !== 'false';
 const BUNDLE_PROGRESS_REPORTING = config.env('BUNDLE_PROGRESS') !== 'false';
 
 const verbose = isVerbose(); // Cache verbose check
+
+// Initialize base webpack configuration with common settings for all environments
+const baseConfig = createBaseConfig();
+
+// React Fast Refresh (HMR)
+if (isDebug) {
+  // Recursively adds a Babel plugin to matching rules
+  const addBabelLoaderPluginToRule = (rules, plugin, testFn) => {
+    if (!Array.isArray(rules)) return;
+
+    rules.forEach(rule => {
+      if (!rule) return;
+
+      // Check if the current rule matches the test function
+      if (testFn(rule)) {
+        const loaders = (
+          Array.isArray(rule.use) ? rule.use : [rule.use]
+        ).filter(Boolean);
+
+        loaders.forEach(loaderConfig => {
+          // Handle both string and object loader configurations
+          const loader =
+            typeof loaderConfig === 'string'
+              ? loaderConfig
+              : loaderConfig && loaderConfig.loader;
+
+          // Only modify babel-loader configurations
+          if (loader === 'babel-loader') {
+            // Ensure we're working with an object configuration
+            const config =
+              typeof loaderConfig === 'object' ? loaderConfig : null;
+            if (!config) return;
+
+            config.options = config.options || {};
+            config.options.plugins = config.options.plugins || [];
+
+            // Add the plugin if not already present (check by resolved path)
+            const pluginExists = config.options.plugins.some(
+              p => p === plugin || (Array.isArray(p) && p[0] === plugin),
+            );
+
+            if (!pluginExists) {
+              config.options.plugins.push(plugin);
+            }
+          }
+        });
+      }
+
+      // Recursively process nested rules (like oneOf)
+      if (rule.oneOf) {
+        addBabelLoaderPluginToRule(rule.oneOf, plugin, testFn);
+      }
+    });
+  };
+
+  // Add React Refresh Babel plugin to JS/JSX files
+  // This enables component hot reloading without losing component state
+  const baseRules =
+    baseConfig.module && baseConfig.module.rules ? baseConfig.module.rules : [];
+  addBabelLoaderPluginToRule(
+    baseRules,
+    require.resolve('react-refresh/babel'),
+    rule => rule.test && reScript === rule.test,
+  );
+}
 
 /**
  * Configuration for the client-side bundle (client.js)
@@ -91,7 +158,6 @@ export default merge(baseConfig, {
       // CSS handling for client bundle (extracts CSS to separate files)
       createCSSRule({
         isClient: true,
-        isDebug,
         extractLoader: MiniCssExtractPlugin.loader,
       }),
     ],
@@ -100,18 +166,22 @@ export default merge(baseConfig, {
   plugins: [
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
-    createDefinePluginConfig({
-      isDebug,
-      isBrowser: true, // Client bundle runs in browser
-    }),
+    createDefinePluginConfig({ isClient: true }),
 
-    // Loadable Components Plugin - generates loadable-stats.json for SSR
+    // Loadable Components Plugin - generates stats file for SSR code splitting
     // https://loadable-components.com/docs/api-loadable-server/
-    // Output: build/loadable-stats.json (parent of output.path)
-    // Server reads from: __dirname/loadable-stats.json (build/loadable-stats.json)
     new LoadablePlugin({
-      filename: path.join(config.BUILD_DIR, 'loadable-stats.json'), // Write to parent dir (build/)
-      writeToDisk: true, // Write to disk even in dev mode,
+      // Output filename for the stats JSON file
+      filename: 'loadable-stats.json',
+
+      // Write the stats file to disk in development mode
+      // The file will be written to the build directory specified in config.BUILD_DIR
+      writeToDisk: {
+        filename: config.BUILD_DIR, // Directory where the file will be written
+      },
+
+      // Don't include the stats file in webpack's assets
+      // This prevents it from being included in the production build
       outputAsset: false,
     }),
 
@@ -176,7 +246,7 @@ export default merge(baseConfig, {
             defaultSizes: 'gzip', // Show gzipped sizes by default
 
             // Exclude source maps from analysis
-            excludeAssets: /\.map$/,
+            excludeAssets: /\.map$/i,
           }),
         ]
       : []),

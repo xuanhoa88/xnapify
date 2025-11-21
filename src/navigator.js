@@ -338,7 +338,7 @@ export function subscribeToNavigation(listener) {
   }
 
   // If already subscribed, unsubscribe first to avoid duplicates
-  if (navigationUnsubscribe) {
+  if (typeof navigationUnsubscribe === 'function') {
     navigationUnsubscribe();
     navigationUnsubscribe = null;
   }
@@ -349,7 +349,7 @@ export function subscribeToNavigation(listener) {
 
     // Return unsubscribe function
     return () => {
-      if (navigationUnsubscribe) {
+      if (typeof navigationUnsubscribe === 'function') {
         navigationUnsubscribe();
         navigationUnsubscribe = null;
       }

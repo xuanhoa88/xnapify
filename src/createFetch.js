@@ -29,6 +29,7 @@ export class FetchError extends Error {
 
 /**
  * Configuration options for createFetch
+ *
  * @typedef {Object} FetchConfig
  * @property {string} [cookie] - Cookie string for server-side requests
  * @property {Function} [onRequest] - Request interceptor
@@ -39,30 +40,9 @@ export class FetchError extends Error {
 /**
  * Creates a simple wrapper around the Fetch API for server/client compatibility.
  *
- * Features:
- * - Server/client compatibility (cookies, environment detection)
- * - Request/response/error interceptors
- * - Configurable timeout per-request
- * - Enhanced error handling with FetchError
- *
  * @param {Function} fetch - Native fetch function or polyfill
  * @param {FetchConfig} config - Configuration options
  * @returns {Function} Enhanced fetch function
- *
- * @example
- * const fetch = createFetch(window.fetch, {
- *   onRequest: (url, options) => {
- *     // Add auth token
- *     options.headers.Authorization = 'Bearer token';
- *     return options;
- *   },
- * });
- *
- * // Internal API (goes through proxy)
- * const data = await fetch('/api/users', { timeout: 5000 });
- *
- * // External API (full URL)
- * const data = await fetch('https://external-api.com/data');
  */
 export function createFetch(fetch, config = {}) {
   const {
@@ -73,9 +53,7 @@ export function createFetch(fetch, config = {}) {
     headers = {},
   } = config;
 
-  /**
-   * Default fetch options for internal API requests
-   */
+  // Default fetch options for internal API requests
   const defaults = {
     method: 'GET',
     mode: 'same-origin',
@@ -87,13 +65,8 @@ export function createFetch(fetch, config = {}) {
     },
   };
 
-  /**
-   * Execute fetch with optional timeout using AbortController
-   * @param {string} url - Request URL
-   * @param {Object} options - Fetch options
-   * @returns {Promise<Response>}
-   */
-  async function executeRequest(url, options) {
+  // Execute fetch with optional timeout using AbortController
+  const executeRequest = async (url, options) => {
     const timeoutMs = options.timeout;
 
     // No timeout specified or AbortController not available, use regular fetch
@@ -124,15 +97,10 @@ export function createFetch(fetch, config = {}) {
       }
       throw error;
     }
-  }
+  };
 
-  /**
-   * Process response and handle errors
-   * @param {Response} response - Fetch response
-   * @param {string} url - Request URL
-   * @returns {Promise<any>}
-   */
-  async function processResponse(response, url) {
+  //  Process response and handle errors
+  const processResponse = async (response, url) => {
     const contentType = response.headers.get('content-type');
     const isJson = contentType && contentType.includes('application/json');
 
@@ -158,15 +126,9 @@ export function createFetch(fetch, config = {}) {
     }
 
     return data;
-  }
+  };
 
-  /**
-   * Enhanced fetch wrapper
-   * Auto-detects absolute URLs vs relative paths
-   * @param {string} url - Request URL (absolute or relative)
-   * @param {Object} options - Fetch options (can include timeout)
-   * @returns {Promise<any>}
-   */
+  // Auto-detects absolute URLs vs relative paths
   return async function enhancedFetch(url, options = {}) {
     try {
       // Auto-detect: absolute URL (http/https) or relative path

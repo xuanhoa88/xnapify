@@ -1,0 +1,67 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Debug configuration for React Starter Kit development server
+      "type": "node",
+      "name": "RSK: Start Dev Server",
+      "request": "launch",
+      // Use npm to start the development server
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "start"
+      ],
+      // Working directory (project root)
+      "cwd": "${workspaceFolder}",
+      // Environment variables for development
+      "env": {
+        "NODE_ENV": "development",
+        "FORCE_COLOR": "1",
+        "DEBUG": "app:*"
+      },
+      // Terminal and console settings
+      "console": "integratedTerminal",
+      "outputCapture": "std",
+      "internalConsoleOptions": "neverOpen",
+      // Source map configuration for debugging
+      "sourceMaps": true,
+      "resolveSourceMapLocations": [
+        "${workspaceFolder}/**",
+        "!**/node_modules/**"
+      ],
+      "sourceMapPathOverrides": {
+        "webpack:///./*": "${workspaceFolder}/*",
+        "webpack:///src/*": "${workspaceFolder}/src/*",
+        "webpack:///*": "*"
+      },
+      // Skip Node.js internal files for better performance
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      // Debug configuration for running tests
+      "type": "node",
+      "name": "RSK: Run Tests",
+      "request": "launch",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "test",
+        "--",
+        "--runInBand",
+        "--no-cache"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen",
+      "env": {
+        "NODE_ENV": "test",
+        "FORCE_COLOR": "1"
+      },
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

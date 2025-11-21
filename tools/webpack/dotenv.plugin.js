@@ -55,7 +55,7 @@ export function createDotenvDefinitions(options = {}) {
     });
   } else if (verbose) {
     logWarn(
-      `⚠️  Dotenv Plugin: No environment variables found with prefix "${prefix}"`,
+      `⚠️ Dotenv Plugin: No environment variables found with prefix "${prefix}"`,
     );
   }
 

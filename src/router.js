@@ -242,7 +242,7 @@ function isChildRoute(parentRoute, childRoute) {
  *   // result is the component returned by the action
  * });
  */
-export default class IsomorphicRouter {
+class IsomorphicRouter {
   /**
    * Create a new IsomorphicRouter instance.
    *
@@ -371,3 +371,12 @@ export default class IsomorphicRouter {
       });
   }
 }
+
+/**
+ * Create and export the router instance.
+ * This instance is shared across the application for consistent routing.
+ *
+ * The router handles both server-side and client-side routing,
+ * enabling seamless SSR and client-side navigation.
+ */
+export default new IsomorphicRouter(require('./pages').default);

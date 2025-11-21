@@ -4,9 +4,13 @@
 node_modules/
 .pnp
 .pnp.js
-package-lock.json
 yarn.lock
+package-lock.json
+
+# pnpm
 pnpm-lock.yaml
+pnpm-debug.log*
+.pnpm-store/
 
 # Compiled output
 build/
@@ -46,14 +50,10 @@ coverage
 *.lcov
 
 # Dependency directories
-node_modules/
 jspm_packages/
 
 # Snowpack dependency directory (https://snowpack.dev/)
 web_modules/
-
-# TypeScript cache
-*.tsbuildinfo
 
 # Optional npm cache directory
 .npm
@@ -82,26 +82,35 @@ web_modules/
 # Yarn Integrity file
 .yarn-integrity
 
-# dotenv environment variable files
+# Environment variables
 .env
-.env.development.local
-.env.test.local
-.env.production.local
 .env.local
+.env.*.local
+!.env.example
+.env.*.tmp
+.env.*.bak
+.env~
+# Environment-specific (should be in .gitignore, use CI/CD secrets)
+.env.ci
+.env.staging
+.env.production
 
-# parcel-bundler cache (https://parceljs.org/)
-.cache
-.parcel-cache
+# Performance logs
+.rts2_cache/
+.eslintcache
+.cache/
+.parcel-cache/
+
+# Sensitive credentials
+*.pem
+*.key
+*.cert
 
 # Next.js build output
 .next
 
 # Nuxt.js build / generate output
 .nuxt
-dist
-
-# Gatsby files
-.cache/
 
 # Storybook build outputs
 .out
@@ -114,7 +123,6 @@ temp/
 
 # Editors and IDEs
 .idea/
-.vscode/
 *.swp
 *.swo
 *~
@@ -126,25 +134,33 @@ temp/
 *.launch
 .settings/
 *.tmproj
+
+# Test snapshots
+__snapshots__/
+*.snap
+
+# VS Code
+.vscode/*
+!.vscode/extensions.json
 !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/extensions.json
+!.vscode/*.code-snippets
 
 # OS generated files
 .DS_Store
-.DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
 Thumbs.db
 
-# Optional stylelint cache
-.stylelintcache
-
 # SvelteKit build / generate output
 .svelte-kit
+
+# TypeScript output
+dist-tsc/
+*.tsbuildinfo
 
 # Vite build tool
 .vite

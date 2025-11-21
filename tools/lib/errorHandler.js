@@ -63,7 +63,7 @@ export async function withRetry(operation, options = {}) {
 
       // Log retry attempt
       logWarn(
-        `⚠️  Attempt ${attempt + 1}/${maxRetries + 1} failed: ${error.message}`,
+        `⚠️ Attempt ${attempt + 1}/${maxRetries + 1} failed: ${error.message}`,
       );
 
       if (verbose) {

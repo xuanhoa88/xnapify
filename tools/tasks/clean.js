@@ -445,7 +445,7 @@ export default async function main() {
       }
     } else {
       logWarn(
-        `⚠️  Cleanup completed with ${errorCount} errors in ${Math.round(
+        `⚠️ Cleanup completed with ${errorCount} errors in ${Math.round(
           stats.duration,
         )}ms`,
       );

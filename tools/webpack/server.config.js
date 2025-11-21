@@ -11,10 +11,10 @@ import { merge } from 'webpack-merge';
 import nodeExternals from 'webpack-node-externals';
 import config from '../config';
 import { isVerbose } from '../lib/logger';
-import baseConfig, {
+import {
+  createBaseConfig,
   createCSSRule,
   createDefinePluginConfig,
-  isDebug,
   reStyle,
   reImage,
   reFont,
@@ -39,7 +39,7 @@ export const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
  * Configuration for the server-side bundle (server.js)
  * Targets Node.js environment with CommonJS output
  */
-export default merge(baseConfig, {
+export default merge(createBaseConfig(), {
   // Configuration name for multi-compiler mode (used in webpack logs)
   name: 'server',
 
@@ -97,10 +97,7 @@ export default merge(baseConfig, {
     rules: [
       // CSS handling for server bundle (exports class names only for SSR)
       // Note: Image and font rules are inherited from baseConfig
-      createCSSRule({
-        isClient: false,
-        isDebug,
-      }),
+      createCSSRule({ isClient: false }),
     ],
   },
 
@@ -108,8 +105,7 @@ export default merge(baseConfig, {
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
     createDefinePluginConfig({
-      isDebug,
-      isBrowser: false, // Server bundle runs in Node.js
+      isClient: false, // Server bundle runs in Node.js
       // Inject RSK_ prefixed environment variables
       ...createDotenvDefinitions({ prefix: 'RSK_', verbose }),
     }),

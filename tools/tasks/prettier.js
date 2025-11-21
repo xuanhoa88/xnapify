@@ -22,7 +22,7 @@
  */
 
 import fs from 'fs';
-import prettier from 'prettier';
+import { format as prettierFormatter } from 'prettier';
 import prettierConfig from '../../.prettierrc';
 import config from '../config';
 import { readDir } from '../lib/fs';
@@ -51,7 +51,7 @@ export default async function main() {
   });
 
   if (files.length === 0) {
-    logWarn('⚠️  No files found matching pattern');
+    logWarn('⚠️ No files found matching pattern');
     return;
   }
 
@@ -68,7 +68,7 @@ export default async function main() {
 
     try {
       // Check if file is formatted
-      const formatted = prettier.format(fileContent, {
+      const formatted = prettierFormatter(fileContent, {
         ...prettierConfig,
         filepath: filePath,
       });
