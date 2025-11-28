@@ -37,18 +37,11 @@ export function login({ email, password }) {
     dispatch({ type: LOGIN_START });
 
     try {
-      const response = await fetch('/api/auth/login', {
+      const { data } = await fetch('/api/users/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Login failed');
-      }
-
-      const data = await response.json();
 
       // Update user state
       dispatch({
@@ -87,18 +80,15 @@ export function register({ email, password, displayName }) {
     dispatch({ type: REGISTER_START });
 
     try {
-      const response = await fetch('/api/auth/register', {
+      const { data } = await fetch('/api/users/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, displayName }),
+        body: JSON.stringify({
+          email,
+          password,
+          display_name: displayName, // Convert to snake_case for backend
+        }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Registration failed');
-      }
-
-      const data = await response.json();
 
       // Update user state
       dispatch({
@@ -132,23 +122,19 @@ export function logout() {
   return async (dispatch, getState, { fetch, navigator }) => {
     try {
       // Call logout API to clear server-side session/cookie
-      await fetch('/api/auth/logout', {
+      await fetch('/api/users/logout', {
         method: 'POST',
       });
-
+    } catch (error) {
+      // TODO: Handle logout error
+      console.error('Logout error:', error);
+    } finally {
       // Clear user state
       dispatch({
         type: LOGOUT,
       });
 
       // Redirect to home page
-      navigator.navigateTo('/');
-    } catch (error) {
-      console.error('Logout error:', error);
-      // Still clear user state even if API call fails
-      dispatch({
-        type: LOGOUT,
-      });
       navigator.navigateTo('/');
     }
   };
@@ -166,14 +152,7 @@ export function getCurrentUser() {
     dispatch({ type: FETCH_USER_START });
 
     try {
-      const response = await fetch('/api/auth/me');
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to get user');
-      }
-
-      const data = await response.json();
+      const { data } = await fetch('/api/users/me');
 
       // Update user state
       dispatch({
@@ -203,22 +182,15 @@ export function getCurrentUser() {
  * @returns {Function} Redux thunk action
  */
 export function resetPassword({ email }) {
-  return async dispatch => {
+  return async (dispatch, getState, { fetch }) => {
     dispatch({ type: RESET_PASSWORD_START });
 
     try {
-      const response = await fetch('/api/auth/reset-password', {
+      const { data } = await fetch('/api/users/request-reset-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || 'Failed to send reset email');
-      }
-
-      const data = await response.json();
 
       dispatch({
         type: RESET_PASSWORD_SUCCESS,

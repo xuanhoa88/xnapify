@@ -24,13 +24,13 @@ export async function register(req, res) {
   const http = req.app.get('http');
 
   try {
-    const { email, password, displayName } = req.body;
+    const { email, password, display_name } = req.body;
 
     // Validate input
     const validationErrors = validateRegistration({
       email,
       password,
-      displayName,
+      display_name,
     });
     if (Object.keys(validationErrors).length > 0) {
       return http.sendValidationError(res, validationErrors);
@@ -45,7 +45,7 @@ export async function register(req, res) {
       {
         email,
         password,
-        displayName,
+        display_name,
       },
       { models, auth },
     );
@@ -55,6 +55,7 @@ export async function register(req, res) {
       'access',
       { id: user.id, email: user.email },
       req.app.get('jwtSecret'),
+      { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
     // Set token cookie
@@ -67,13 +68,13 @@ export async function register(req, res) {
         user: {
           id: user.id,
           email: user.email,
-          emailConfirmed: user.emailConfirmed,
-          isActive: user.isActive,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
-          displayName: (user.profile && user.profile.displayName) || null,
-          firstName: (user.profile && user.profile.firstName) || null,
-          lastName: (user.profile && user.profile.lastName) || null,
+          email_confirmed: user.email_confirmed,
+          is_active: user.is_active,
+          created_at: user.created_at,
+          updated_at: user.updated_at,
+          display_name: (user.profile && user.profile.display_name) || null,
+          first_name: (user.profile && user.profile.first_name) || null,
+          last_name: (user.profile && user.profile.last_name) || null,
           picture: (user.profile && user.profile.picture) || null,
           bio: (user.profile && user.profile.bio) || null,
           location: (user.profile && user.profile.location) || null,
@@ -84,7 +85,7 @@ export async function register(req, res) {
       201,
     );
   } catch (error) {
-    if (error.message === 'User already exists') {
+    if (error.message === 'USER_ALREADY_EXISTS') {
       return http.sendError(res, 'User with this email already exists', 409);
     }
 
@@ -126,6 +127,7 @@ export async function login(req, res) {
       'access',
       { id: user.id, email: user.email },
       req.app.get('jwtSecret'),
+      { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
     // Set token cookie
@@ -136,13 +138,13 @@ export async function login(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
@@ -151,11 +153,12 @@ export async function login(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'Invalid credentials') {
+    console.log(error);
+    if (error.message === 'INVALID_CREDENTIALS') {
       return http.sendUnauthorized(res, 'Invalid email or password');
     }
 
-    if (error.message === 'Account is inactive') {
+    if (error.message === 'ACCOUNT_INACTIVE') {
       return http.sendUnauthorized(res, 'Account is inactive');
     }
 
@@ -210,13 +213,13 @@ export async function getCurrentUser(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
@@ -249,6 +252,7 @@ export async function refreshToken(req, res) {
         email: req.user.email,
       },
       req.app.get('jwtSecret'),
+      { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
     // Set new token cookie
@@ -290,12 +294,23 @@ export async function verifyEmail(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
+        email_confirmed: user.email_confirmed,
       },
     });
   } catch (error) {
-    if (error.message === 'Invalid or expired token') {
+    if (
+      error.message === 'INVALID_TOKEN' ||
+      error.message === 'TOKEN_EXPIRED'
+    ) {
       return http.sendError(res, 'Invalid or expired verification token', 400);
+    }
+
+    if (error.message === 'USER_NOT_FOUND') {
+      return http.sendError(res, 'User not found', 404);
+    }
+
+    if (error.message === 'EMAIL_ALREADY_VERIFIED') {
+      return http.sendError(res, 'Email already verified', 400);
     }
 
     return http.sendServerError(res, 'Email verification failed');
@@ -372,8 +387,19 @@ export async function resetPassword(req, res) {
       message: 'Password reset successfully',
     });
   } catch (error) {
-    if (error.message === 'Invalid or expired token') {
+    if (
+      error.message === 'INVALID_TOKEN' ||
+      error.message === 'TOKEN_EXPIRED'
+    ) {
       return http.sendError(res, 'Invalid or expired reset token', 400);
+    }
+
+    if (error.message === 'USER_NOT_FOUND') {
+      return http.sendError(res, 'User not found', 404);
+    }
+
+    if (error.message === 'EMAIL_ALREADY_VERIFIED') {
+      return http.sendError(res, 'Email already verified', 400);
     }
 
     return http.sendServerError(res, 'Password reset failed');

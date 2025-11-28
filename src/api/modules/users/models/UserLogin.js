@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * UserLogin Model Factory
@@ -18,11 +17,12 @@ import { DataTypes } from 'sequelize';
  * - name: 'facebook', key: 'facebook-user-id-456'
  * - name: 'github', key: 'github-user-id-789'
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} UserLogin model
  */
-export default function createUserLoginModel(Model) {
-  const UserLogin = Model.define(
+export default function createUserLoginModel({ connection, DataTypes }) {
+  const UserLogin = connection.define(
     'UserLogin',
     {
       id: {
@@ -32,7 +32,7 @@ export default function createUserLoginModel(Model) {
         comment: 'Unique login identifier',
       },
 
-      userId: {
+      user_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'User this login belongs to',
@@ -51,11 +51,10 @@ export default function createUserLoginModel(Model) {
       },
     },
     {
-      indexes: [
-        { fields: ['userId'] },
-        { fields: ['name', 'key'], unique: true },
-      ],
+      tableName: 'user_logins',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

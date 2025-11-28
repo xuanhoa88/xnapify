@@ -350,7 +350,7 @@ import createFetch from 'createFetch';
 - **Redux** → `src/redux/` (actions, reducers, store, constants)
 - **Express** → `src/server.js`, `src/api/`
 - **Webpack** → `tools/webpack/`
-- **Database** → `src/api/models/`, `src/api/sequelize.js`
+- **Database** → `src/api/models/`, `src/api/db.js`
 
 ## 📚 Next Steps
 

@@ -360,17 +360,15 @@ export function requireConditionalPermission(getPermissionRequirement) {
         if (permissionRequirement.every(p => typeof p === 'string')) {
           // All permissions required
           return requirePermissions(permissionRequirement)(req, res, next);
-        } else {
-          // Any permission required
-          return requireAnyPermission(permissionRequirement)(req, res, next);
         }
-      } else if (typeof permissionRequirement === 'string') {
+        // Any permission required
+        return requireAnyPermission(permissionRequirement)(req, res, next);
+      }
+      if (typeof permissionRequirement === 'string') {
         // Single permission required
         return requirePermission(permissionRequirement)(req, res, next);
-      } else if (
-        permissionRequirement &&
-        typeof permissionRequirement === 'object'
-      ) {
+      }
+      if (permissionRequirement && typeof permissionRequirement === 'object') {
         // Resource permission required
         const { resource, action, scope } = permissionRequirement;
         return requireResourcePermission(resource, action, scope)(
@@ -378,10 +376,9 @@ export function requireConditionalPermission(getPermissionRequirement) {
           res,
           next,
         );
-      } else {
-        // No permission required
-        return next();
       }
+      // No permission required
+      return next();
     } catch (error) {
       return res.status(500).json({
         success: false,

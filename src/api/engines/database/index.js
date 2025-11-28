@@ -5,5 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Database connection
-export { default as sequelize } from './sequelize';
+// Export Sequelize and operators
+export * from 'sequelize';
+
+// Export database connection
+export * from './connection';
+
+// Export database migrator
+export * from './migrator';
+
+// Export current working directory
+export const cwd = __dirname;

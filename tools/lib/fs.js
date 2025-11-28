@@ -15,7 +15,7 @@ import { logDebug } from './logger';
  * Validate path for safety
  */
 function validatePath(filePath) {
-  if (!filePath || typeof filePath !== 'string') {
+  if (typeof filePath !== 'string' || filePath.trim().length === 0) {
     throw new BuildError('Invalid file path', {
       path: filePath,
       suggestion: 'Provide a valid string path',

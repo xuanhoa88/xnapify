@@ -350,7 +350,7 @@ export function requireDepartment(department) {
  *
  * Requires user to be in the same team as the resource being accessed.
  *
- * @param {string} resourceIdParam - Parameter name for resource ID
+ * @param {string} resource_idParam - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} teamField - Field name that contains the team ID
  * @returns {Function} Express middleware function
@@ -359,7 +359,7 @@ export function requireDepartment(department) {
  * router.get('/projects/:id', requireAuth, requireSameTeam('id', 'Project', 'teamId'), controller.getProject);
  */
 export function requireSameTeam(
-  resourceIdParam = 'id',
+  resource_idParam = 'id',
   resourceModel,
   teamField = 'teamId',
 ) {
@@ -406,8 +406,8 @@ export function requireSameTeam(
       }
 
       // Get resource
-      const resourceId = req.params[resourceIdParam];
-      const resource = await ResourceModel.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await ResourceModel.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({

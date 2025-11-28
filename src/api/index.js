@@ -10,27 +10,21 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import { sequelize } from './engines/database';
-import { fs, http, auth } from './engines';
+import { fs, http, auth, db } from './engines';
 
 /**
- * Synchronize database models
- *
- * Creates tables if they don't exist. Optionally can alter or force recreate tables.
- *
- * @param {Object} [options={}] - Sequelize sync options
- * @param {boolean} [options.force] - Drop tables before recreating (dangerous!)
- * @param {boolean} [options.alter] - Alter tables to fit models (use migrations instead)
- * @param {boolean} [options.logging] - Enable SQL logging (default: false)
- * @returns {Promise<void>}
+ * Parse environment variable as comma-separated array with fallback
+ * @param {string|undefined} envValue - Environment variable value
+ * @param {Array} defaultValue - Default array if envValue is empty
+ * @returns {Array}
  */
-async function syncDatabase(options = {}) {
-  try {
-    await sequelize.sync(options);
-  } catch (error) {
-    console.error('❌ Database sync failed:', error.message);
-    throw error;
-  }
+function parseEnvArray(envValue, defaultValue = []) {
+  return typeof envValue === 'string'
+    ? envValue
+        .split(',')
+        .map(item => item.trim())
+        .filter(Boolean)
+    : defaultValue;
 }
 
 /**
@@ -236,141 +230,71 @@ async function discoverModules(app, dependencies) {
 }
 
 /**
- * Creates and validates API configuration with sensible defaults
- *
- * This function merges environment variables with provided configuration,
- * applies validation, and ensures all required settings are present.
- *
- * @param {Object} [config={}] - User-provided configuration
- * @param {string} [config.apiPrefix='/api'] - Base path for API routes
- * @param {Object} [config.rateLimit] - Rate limiting configuration
- * @param {Object} [config.cors] - CORS configuration
- * @returns {Object} Validated configuration object
- */
-function createConfig(config = {}) {
-  const isProduction = process.env.NODE_ENV === 'production';
-
-  // Base configuration with defaults
-  const defaultConfig = {
-    // API settings
-    apiPrefix: config.apiPrefix || '/api',
-    environment: process.env.NODE_ENV || 'development',
-    version: process.env.RSK_API_VERSION || '1.0.0',
-
-    // JWT settings
-    jwtSecret: config.jwtSecret,
-    jwtExpiresIn: config.jwtExpiresIn || '7d',
-
-    // Rate limiting
-    rateLimit: {
-      windowMs: 15 * 60 * 1000, // 15 minutes
-      max: isProduction ? 50 : 100,
-      authMax: isProduction ? 5 : 10,
-      // Trust X-Forwarded-* headers when behind a proxy
-      trustProxy: process.env.TRUST_PROXY === 'true' || false,
-      ...(config.rateLimit || {}), // Allow overrides
-    },
-
-    // CORS configuration
-    cors: {
-      // Origin configuration
-      origin: (() => {
-        if (process.env.RSK_CORS_ORIGIN === 'false') return false;
-        if (process.env.RSK_CORS_ORIGIN) {
-          return process.env.RSK_CORS_ORIGIN.split(',').map(s => s.trim());
-        }
-        return !isProduction; // true in development, false in production
-      })(),
-
-      // Other CORS settings
-      credentials: process.env.RSK_CORS_CREDENTIALS !== 'false',
-      methods: (
-        process.env.RSK_CORS_METHODS?.split(',') || [
-          'GET',
-          'POST',
-          'PUT',
-          'PATCH',
-          'DELETE',
-          'OPTIONS',
-        ]
-      ).map(method => method.trim().toUpperCase()),
-      allowedHeaders: process.env.RSK_CORS_ALLOWED_HEADERS?.split(',') || [
-        'Content-Type',
-        'Authorization',
-        'X-Requested-With',
-      ],
-      exposedHeaders: process.env.RSK_CORS_EXPOSED_HEADERS?.split(',') || [],
-      maxAge: parseInt(process.env.RSK_CORS_MAX_AGE, 10) || 600, // 10 minutes
-      ...(config.cors || {}), // Allow overrides
-    },
-  };
-
-  // Validate required configuration
-  if (!defaultConfig.jwtSecret) {
-    console.warn(
-      '⚠️ JWT secret not set. Set RSK_JWT_SECRET environment variable.',
-    );
-    if (isProduction) {
-      throw new Error('JWT secret is required in production');
-    }
-  }
-
-  // Log configuration in development
-  if (!isProduction) {
-    console.debug('📋 API Configuration:', {
-      ...defaultConfig,
-      jwtSecret: defaultConfig.jwtSecret ? '***' : 'Not set',
-    });
-  }
-
-  return Object.freeze(defaultConfig);
-}
-
-/**
  * Create rate limiting middleware
  *
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  * @returns {Function} Rate limiting middleware
  */
-function createRateLimiter(config = {}) {
+const createRateLimiter = (options = {}) => {
+  const windowMs = options.isProduction ? 15 * 60 * 1000 : 1 * 60 * 1000; // 15 minutes
+  const maxRequests = options.isProduction ? 50 : 100;
+
   return rateLimit({
-    windowMs: config.rateLimit.windowMs,
-    max: config.rateLimit.max,
-    message: {
-      success: false,
-      error: 'Too many requests from this IP, please try again later.',
-      retryAfter: '15 minutes',
+    windowMs,
+    max: maxRequests,
+
+    // Standardized headers (recommended)
+    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
+    legacyHeaders: false, // Disable `X-RateLimit-*` headers
+
+    // Skip rate limiting for certain requests
+    // Skip health checks, metrics, static assets
+    skip: req =>
+      ['/health', '/metrics', '/favicon.ico'].some(path =>
+        req.path.startsWith(path),
+      ),
+
+    // Custom error handler
+    handler: (req, res, next, options) => {
+      res.status(options.statusCode).json({
+        success: false,
+        error: 'Too many requests from this IP, please try again later.',
+        retryAfter: Math.ceil(options.windowMs / 60000) + ' minutes',
+        limit: options.max,
+        current: req.rateLimit.used,
+      });
     },
-    standardHeaders: true,
-    legacyHeaders: false,
+
+    // Allow safe overrides (but protect critical settings)
+    ...options.rateLimit,
   });
-}
+};
 
 /**
  * Create health check endpoint handler
  *
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  * @returns {Function} Health check handler
  */
-function createHealthCheckHandler(config = {}) {
+function createHealthCheckHandler(options = {}) {
   return async (req, res) => {
     try {
       // Check database connectivity
-      await sequelize.authenticate();
+      await db.connection.authenticate();
 
       res.status(200).json({
         status: 'healthy',
         timestamp: new Date().toISOString(),
-        environment: config.environment,
-        version: config.version,
+        environment: options.nodeEnv,
+        version: options.apiVersion,
         database: 'connected',
       });
     } catch (error) {
       res.status(503).json({
         status: 'unhealthy',
         timestamp: new Date().toISOString(),
-        environment: config.environment,
-        version: config.version,
+        environment: options.nodeEnv,
+        version: options.apiVersion,
         error: error.message,
         database: 'disconnected',
       });
@@ -382,15 +306,15 @@ function createHealthCheckHandler(config = {}) {
  * Setup app dependencies in Express app settings
  *
  * @param {Object} app - Express app
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  */
-function setupAppDependencies(app, config = {}) {
+function setupAppDependencies(app, options = {}) {
   // JWT configuration (used by auth middleware)
-  app.set('jwtSecret', config.jwtSecret);
-  app.set('jwtExpiresIn', config.jwtExpiresIn);
+  app.set('jwtSecret', options.jwtSecret);
+  app.set('jwtExpiresIn', options.jwtExpiresIn);
 
   // Freeze complex objects to prevent modification
-  app.set('sequelize', sequelize);
+  app.set('db', db);
 
   // Note: fs module is already read-only, but we freeze it for consistency
   app.set('fs', fs);
@@ -423,8 +347,9 @@ function createAppGuard(app) {
   const protectedKeys = new Set([
     'jwtSecret', // JWT authentication secret
     'jwtExpiresIn', // JWT token expiration
-    'sequelize', // Database ORM instance
+    'db', // Database ORM instance
     'fs', // Filesystem utilities
+    'i18n', // Internationalization utilities
     'http', // HTTP utilities
     'auth', // Authentication engine
     'models', // Database models
@@ -502,68 +427,101 @@ function createAppGuard(app) {
 /**
  * Create CORS middleware
  *
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  * @returns {Function} CORS middleware
  */
-function createCorsMiddleware(config = {}) {
-  return cors({
-    // Origin configuration - supports dynamic origin function
-    origin:
-      typeof config.cors.origin === 'boolean'
-        ? config.cors.origin
-        : function (origin, callback) {
-            // Allow requests with no origin (mobile apps, Postman, etc.)
-            if (!origin) {
-              return callback(null, true);
-            }
+function createCorsMiddleware(options = {}) {
+  return function corsWithReq(req, res, next) {
+    cors({
+      origin(origin, callback) {
+        const corsOrigin =
+          typeof process.env.RSK_CORS_ORIGIN === 'string'
+            ? process.env.RSK_CORS_ORIGIN.trim()
+            : '';
 
-            // Check if origin is in allowed list
-            if (Array.isArray(config.cors.origin)) {
-              const isAllowed = config.cors.origin.some(allowedOrigin => {
-                // Support wildcards
-                if (allowedOrigin.includes('*')) {
-                  const pattern = allowedOrigin.replace(/\*/g, '.*');
-                  return new RegExp(`^${pattern}$`).test(origin);
-                }
-                return allowedOrigin === origin;
-              });
-              return callback(null, isAllowed);
-            }
+        // Handle boolean string values
+        if (corsOrigin === 'true') {
+          // Allow all origins (WARNING: use only in development)
+          return callback(null, true);
+        }
 
-            // Fallback to default behavior
-            return callback(null, config.cors.origin);
-          },
+        if (corsOrigin === 'false') {
+          // Block all origins
+          return callback(null, false);
+        }
 
-    // Credentials support
-    credentials: config.cors.credentials,
+        // Allow requests with no origin (like mobile apps, curl, Postman)
+        // Remove this if you want to block requests without origin
+        if (!origin) {
+          return callback(null, true);
+        }
 
-    // HTTP methods
-    methods: config.cors.methods,
+        // Parse allowed origins from environment variable
+        const allowedOrigins = parseEnvArray(corsOrigin, []);
 
-    // Allowed headers
-    allowedHeaders: config.cors.allowedHeaders,
+        // If no origins configured, block by default (secure default)
+        if (allowedOrigins.length === 0) {
+          // For SSR apps, you typically want to allow your own domain
+          // Check if the request is from the same host
+          const reqHost = req.headers.host || req.headers.origin;
+          let originHost = null;
 
-    // Exposed headers
-    exposedHeaders: config.cors.exposedHeaders,
+          try {
+            originHost = new URL(origin).host;
+          } catch {
+            return callback(null, false);
+          }
 
-    // Preflight cache duration (in seconds)
-    maxAge: config.cors.maxAge,
+          if (originHost === reqHost) {
+            return callback(null, true);
+          }
 
-    // Preflight continue
-    preflightContinue: config.cors.preflightContinue,
+          return callback(null, false);
+        }
 
-    // Options success status
-    optionsSuccessStatus: config.cors.optionsSuccessStatus,
-  });
+        // Check if origin matches any allowed pattern
+        const isAllowed = allowedOrigins.some(allowedOrigin => {
+          // Exact match
+          if (allowedOrigin === origin) {
+            return true;
+          }
+
+          // Wildcard support (e.g., "https://*.example.com")
+          if (allowedOrigin.includes('*')) {
+            // Escape special regex characters except *
+            const escapedPattern = allowedOrigin
+              .replace(/[.+?^${}()|[\]\\]/g, '\\$&')
+              .replace(/\*/g, '.*');
+            return new RegExp(`^${escapedPattern}$`).test(origin);
+          }
+
+          return false;
+        });
+
+        if (isAllowed) {
+          callback(null, true);
+        } else {
+          callback(new Error(`Origin ${origin} not allowed by CORS`), false);
+        }
+      },
+
+      // Recommended additional CORS settings
+      credentials: true, // Allow cookies/auth headers
+      maxAge: 86400, // Cache preflight requests for 24 hours,
+
+      // Allow overrides
+      ...(options.cors || {}),
+    })(req, res, next);
+  };
 }
 
 /**
  * Create compression middleware
  *
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  * @returns {Function} Compression middleware
  */
-function createCompressionMiddleware(config) {
+function createCompressionMiddleware(options) {
   return compression({
     filter: (req, res) => {
       // Don't compress responses if the request includes a cache-control: no-transform directive
@@ -576,26 +534,25 @@ function createCompressionMiddleware(config) {
       // Use compression filter function
       return compression.filter(req, res);
     },
-    level: config.environment === 'production' ? 6 : 1, // Higher compression in production
+    level: options.isProduction ? 6 : 1, // Higher compression in production
   });
 }
 
 /**
  * Create logging middleware (Morgan)
  *
- * @param {Object} config - API configuration
+ * @param {Object} options - API configuration
  * @returns {Function} Logging middleware
  */
-function createLoggingMiddleware(config) {
-  const format =
-    config.environment === 'production'
-      ? 'combined' // Apache combined log format for production
-      : 'dev'; // Colored output for development
+function createLoggingMiddleware(options) {
+  const format = options.isProduction
+    ? 'combined' // Apache combined log format for production
+    : 'dev'; // Colored output for development
 
   return morgan(format, {
     skip: req =>
       // Skip logging for health checks in production
-      config.environment === 'production' && req.url === '/health',
+      options.isProduction && req.url === '/health',
   });
 }
 
@@ -606,16 +563,24 @@ function createLoggingMiddleware(config) {
  * configuration validation, and modular setup.
  *
  * @param {Object} app - Express app instance
- * @param {Object} options - Configuration object
+ * @param {Object} config - Configuration object
  * @throws {Error} If configuration is invalid or initialization fails
  */
-export default async function main(app, i18n, options = {}) {
+export default async function main(app, i18n, config = {}) {
   try {
-    // Create and validate configuration
-    const config = createConfig(options);
+    // Validate required configuration
+    if (!config.jwtSecret) {
+      throw new Error('JWT secret is required');
+    }
 
     // Setup app dependencies for dependency injection
     setupAppDependencies(app, config);
+
+    // Initialize database migrations
+    await db.runMigrations(null, db.connection);
+
+    // Initialize database seeds
+    await db.runSeeds(null, db.connection);
 
     // Create rate limiter middleware
     const rateLimiter = createRateLimiter(config);
@@ -630,12 +595,15 @@ export default async function main(app, i18n, options = {}) {
 
     // Discover and initialize modules
     const { apiModels, apiRoutes } = await discoverModules(app, {
-      sequelize,
+      db,
       jwtConfig: {
         secret: config.jwtSecret,
         expiresIn: config.jwtExpiresIn,
       },
     });
+
+    // Store i18n in app settings
+    app.set('i18n', i18n);
 
     // Store models in app settings
     app.set('models', apiModels);
@@ -645,9 +613,6 @@ export default async function main(app, i18n, options = {}) {
 
     // Setup enhanced error handler for API routes
     app.use(config.apiPrefix, http.errorHandler);
-
-    // Synchronize database
-    await syncDatabase();
 
     console.info('✅ API bootstrap completed successfully');
   } catch (error) {

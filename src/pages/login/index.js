@@ -10,7 +10,14 @@ import { isAuthenticated } from '../../redux';
 import Login from './Login';
 
 /**
- * Login route
+ * Route configuration
+ */
+const route = {
+  path: '/login',
+};
+
+/**
+ * Route action
  * Redirects authenticated users to home page
  */
 function action(context) {
@@ -34,4 +41,4 @@ function action(context) {
   };
 }
 
-export default action;
+export default [route, action];

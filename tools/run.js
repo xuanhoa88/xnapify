@@ -5,11 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Load environment variables from .env file
-// Uses override: true to ensure .env values take precedence over system environment
-// This allows local .env to override any pre-existing NODE_ENV or other variables
-require('dotenv').config({ override: true });
-
 import { spawn } from 'child_process';
 import path from 'path';
 import config from './config';
@@ -120,6 +115,11 @@ const AVAILABLE_TASKS = [
     name: 'stylelint',
     description: 'Lint CSS files with Stylelint',
   },
+  {
+    name: 'jwt',
+    description: 'Generate a new JWT options and update .env',
+    processEnv: { NODE_ENV: process.env.NODE_ENV || 'development' },
+  },
 ];
 
 /**
@@ -160,13 +160,21 @@ function executeTask(taskName) {
     // Get additional arguments to forward to task (everything after task name)
     const taskArgs = process.argv.slice(3); // Skip node, script, and task name
 
+    taskArgs.unshift(
+      `dotenv_config_path=.env.${processEnv.NODE_ENV || 'development'}`,
+    );
+
     // Spawn task in child process using babel-node
     // Forward any additional arguments to the task
-    const taskProcess = spawn('babel-node', [taskPath, ...taskArgs], {
-      stdio: 'inherit', // Inherit stdin, stdout, stderr
-      env: processEnv,
-      cwd: config.ROOT_DIR,
-    });
+    const taskProcess = spawn(
+      'babel-node',
+      ['-r', 'dotenv/config', taskPath, ...taskArgs],
+      {
+        stdio: 'inherit', // Inherit stdin, stdout, stderr
+        env: processEnv,
+        cwd: config.ROOT_DIR,
+      },
+    );
 
     // Handle task process exit
     taskProcess.on('exit', (code, signal) => {

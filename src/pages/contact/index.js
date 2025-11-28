@@ -9,7 +9,14 @@ import Layout from '../../components/Layout';
 import Contact from './Contact';
 
 /**
- * Contact route
+ * Route configuration
+ */
+const route = {
+  path: '/contact',
+};
+
+/**
+ * Route action
  */
 function action() {
   const title = 'Contact Us';
@@ -24,4 +31,4 @@ function action() {
   };
 }
 
-export default action;
+export default [route, action];

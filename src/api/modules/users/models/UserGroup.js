@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * UserGroup Model (Junction Table)
@@ -12,8 +11,8 @@ import { DataTypes } from 'sequelize';
  * Links users to groups (many-to-many relationship).
  * A user can belong to multiple groups, and a group can have multiple users.
  */
-export default function createUserGroupModel(Model) {
-  const UserGroup = Model.define(
+export default function createUserGroupModel({ connection, DataTypes }) {
+  const UserGroup = connection.define(
     'UserGroup',
     {
       id: {
@@ -23,25 +22,23 @@ export default function createUserGroupModel(Model) {
         comment: 'Unique user-group membership identifier',
       },
 
-      userId: {
+      user_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'User ID',
       },
 
-      groupId: {
+      group_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Group ID',
       },
     },
     {
-      indexes: [
-        { fields: ['userId'] },
-        { fields: ['groupId'] },
-        { fields: ['userId', 'groupId'], unique: true },
-      ],
+      tableName: 'user_groups',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

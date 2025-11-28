@@ -43,7 +43,8 @@
     "clean": "babel-node tools/run clean",
     "i18n": "babel-node tools/run i18n",
     "build": "babel-node tools/run build",
-    "start": "babel-node tools/run start"
+    "start": "babel-node tools/run start",
+    "generate:jwt": "babel-node tools/run jwt"
   },
   "dependencies": {
     "@loadable/component": "5.16.4",
@@ -77,10 +78,11 @@
     "redux": "4.2.1",
     "redux-logger": "3.0.6",
     "redux-thunk": "2.4.2",
-    "sequelize": "4.44.4",
+    "sequelize": "6.37.7",
     "serialize-javascript": "6.0.2",
     "source-map-support": "0.5.21",
     "sqlite3": "5.0.11",
+    "umzug": "3.8.2",
     "uuid": "^10.0.0",
     "whatwg-fetch": "3.6.20",
     "ws": "5.2.4",

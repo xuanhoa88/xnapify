@@ -61,7 +61,7 @@ export function getFilters(req, allowedFilters = []) {
   const filters = {};
 
   allowedFilters.forEach(field => {
-    if (req.query[field] !== undefined) {
+    if (req.query[field] != null) {
       filters[field] = req.query[field];
     }
   });
@@ -170,11 +170,7 @@ export function parseBody(req, requiredFields = [], optionalFields = []) {
 
   // Check required fields
   requiredFields.forEach(field => {
-    if (
-      body[field] === undefined ||
-      body[field] === null ||
-      body[field] === ''
-    ) {
+    if (body[field] == null || body[field] === '') {
       result.errors.push(`Field '${field}' is required`);
     } else {
       result.data[field] = body[field];
@@ -183,7 +179,7 @@ export function parseBody(req, requiredFields = [], optionalFields = []) {
 
   // Add optional fields if present
   optionalFields.forEach(field => {
-    if (body[field] !== undefined) {
+    if (body[field] != null) {
       result.data[field] = body[field];
     }
   });
@@ -199,7 +195,7 @@ export function parseBody(req, requiredFields = [], optionalFields = []) {
  * @returns {string} Sanitized string
  */
 export function sanitizeString(input, options = {}) {
-  if (typeof input !== 'string') {
+  if (typeof input !== 'string' || input.trim().length === 0) {
     return '';
   }
 
@@ -254,7 +250,7 @@ export function getRequestMetadata(req) {
     method: req.method,
     url: req.originalUrl,
     ip: getClientIP(req),
-    userAgent: getUserAgent(req),
+    user_agent: getUserAgent(req),
     timestamp: new Date().toISOString(),
     protocol: getProtocol(req),
     isAjax: isAjax(req),

@@ -39,7 +39,9 @@ Thumbs.db
 *.log
 
 # Environment files
-.env*
+.env
+.env.*
+!.env.defaults
 
 # Lock files
 package-lock.json

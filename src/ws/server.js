@@ -214,7 +214,7 @@ export class WebSocketServer extends EventEmitter {
     this.emit('connection:new', ws, req);
     this.log('debug', `New WebSocket connection: ${connectionId}`, {
       ip,
-      userAgent: req.headers['user-agent'],
+      user_agent: req.headers['user-agent'],
     });
 
     // Send welcome message
@@ -607,7 +607,7 @@ function setupDefaultEventHandlers(server) {
   server.on('connection:new', (ws, req) => {
     server.log('info', `🔗 New connection: ${ws.id}`, {
       ip: ws.ip,
-      userAgent: req.headers['user-agent'],
+      user_agent: req.headers['user-agent'],
     });
   });
   server.on('connection:authenticated', (ws, user) => {

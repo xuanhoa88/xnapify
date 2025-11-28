@@ -401,7 +401,7 @@ export function createUrl(pathname, params = {}) {
 
   Object.keys(params).forEach(key => {
     const value = params[key];
-    if (value !== null && value !== undefined) {
+    if (value != null) {
       searchParams.append(key, String(value));
     }
   });

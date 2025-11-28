@@ -6,6 +6,7 @@
  */
 
 import path from 'path';
+import { hashPassword, verifyPassword } from '../utils/password';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -14,21 +15,21 @@ import path from 'path';
 /**
  * Get user with profile information
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with profile
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function getUserWithProfile(userId, models) {
+export async function getUserWithProfile(user_id, models) {
   const { User, UserProfile } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
     attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   return user;
@@ -37,21 +38,21 @@ export async function getUserWithProfile(userId, models) {
 /**
  * Update user profile information
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} profileData - Profile data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function updateUserProfile(userId, profileData, models) {
+export async function updateUserProfile(user_id, profileData, models) {
   const { User, UserProfile } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Update profile data
@@ -60,7 +61,7 @@ export async function updateUserProfile(userId, profileData, models) {
   } else {
     // Create profile if it doesn't exist
     await UserProfile.create({
-      userId,
+      user_id,
       ...profileData,
     });
   }
@@ -77,26 +78,26 @@ export async function updateUserProfile(userId, profileData, models) {
 /**
  * Upload user avatar
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} file - Uploaded file object
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} options.fs - Filesystem actions
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If user not found or file invalid
+ * @throws {Error} If USER_NOT_FOUND or file invalid
  */
-export async function uploadUserAvatar(userId, file, { models, fs }) {
+export async function uploadUserAvatar(user_id, file, { models, fs }) {
   // Get models from app context
   const { User, UserProfile } = models;
 
   // Find user by ID
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
   // Check if user exists
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Store old avatar path for cleanup after successful upload
@@ -105,7 +106,7 @@ export async function uploadUserAvatar(userId, file, { models, fs }) {
   // Generate unique filename for avatar
   const timestamp = Date.now();
   const fileExtension = path.extname(file.originalname);
-  const fileName = `avatar_${userId}_${timestamp}${fileExtension}`;
+  const fileName = `avatar_${user_id}_${timestamp}${fileExtension}`;
 
   // Prepare file data for upload
   const fileData = {
@@ -132,7 +133,7 @@ export async function uploadUserAvatar(userId, file, { models, fs }) {
     await user.profile.update({ picture: avatarPath });
   } else {
     await UserProfile.create({
-      userId,
+      user_id,
       picture: avatarPath,
     });
   }
@@ -159,22 +160,22 @@ export async function uploadUserAvatar(userId, file, { models, fs }) {
 /**
  * Remove user avatar
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} options.fs - Filesystem actions
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function removeUserAvatar(userId, { models, fs }) {
+export async function removeUserAvatar(user_id, { models, fs }) {
   const { User, UserProfile } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   if (user.profile && user.profile.picture) {
@@ -202,37 +203,34 @@ export async function removeUserAvatar(userId, { models, fs }) {
 /**
  * Change user password
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} currentPassword - Current password
  * @param {string} newPassword - New password
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If user not found or password invalid
+ * @throws {Error} If USER_NOT_FOUND or password invalid
  */
 export async function changeUserPassword(
-  userId,
+  user_id,
   currentPassword,
   newPassword,
   { models, auth },
 ) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Verify current password
-  const isValidPassword = await auth.password.verifyPassword(
-    currentPassword,
-    user.password,
-  );
+  const isValidPassword = await verifyPassword(currentPassword, user.password);
   if (!isValidPassword) {
     throw new Error('Invalid current password');
   }
 
   // Hash new password
-  const hashedPassword = await auth.password.hashPassword(newPassword);
+  const hashedPassword = await hashPassword(newPassword);
 
   // Update password
   await user.update({ password: hashedPassword });
@@ -243,12 +241,12 @@ export async function changeUserPassword(
 /**
  * Get user activity log
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} options - Query options
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Activity log with pagination
  */
-export async function getUserActivity(userId, options, models) {
+export async function getUserActivity(user_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
   const { UserLogin } = models;
@@ -266,11 +264,11 @@ export async function getUserActivity(userId, options, models) {
   }
 
   const { count, rows: activities } = await UserLogin.findAndCountAll({
-    where: { userId },
+    where: { user_id },
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['loginAt', 'DESC']],
-    attributes: ['id', 'ipAddress', 'userAgent', 'loginAt', 'success'],
+    order: [['login_at', 'DESC']],
+    attributes: ['id', 'ip_address', 'user_agent', 'login_at', 'success'],
   });
 
   return {
@@ -287,20 +285,20 @@ export async function getUserActivity(userId, options, models) {
 /**
  * Update user preferences
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} preferences - User preferences
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated preferences
  */
-export async function updateUserPreferences(userId, preferences, models) {
+export async function updateUserPreferences(user_id, preferences, models) {
   const { UserProfile } = models;
 
   // Find or create user profile
-  let profile = await UserProfile.findOne({ where: { userId } });
+  let profile = await UserProfile.findOne({ where: { user_id } });
 
   if (!profile) {
     profile = await UserProfile.create({
-      userId,
+      user_id,
       preferences: preferences,
     });
   } else {
@@ -317,15 +315,15 @@ export async function updateUserPreferences(userId, preferences, models) {
 /**
  * Get user preferences
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User preferences
  */
-export async function getUserPreferences(userId, models) {
+export async function getUserPreferences(user_id, models) {
   const { UserProfile } = models;
 
   const profile = await UserProfile.findOne({
-    where: { userId },
+    where: { user_id },
     attributes: ['preferences'],
   });
 
@@ -346,31 +344,28 @@ export async function getUserPreferences(userId, models) {
 /**
  * Delete user account
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} password - User password for confirmation
  * @param {Object} {models, auth} - Database models and authentication engine
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If user not found or password invalid
+ * @throws {Error} If USER_NOT_FOUND or password invalid
  */
-export async function deleteUserAccount(userId, password, { models, auth }) {
+export async function deleteUserAccount(user_id, password, { models, auth }) {
   const { User, UserProfile } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Verify password
-  const isValidPassword = await auth.password.verifyPassword(
-    password,
-    user.password,
-  );
+  const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
     throw new Error('Invalid password');
   }
 
   // Delete user profile first (if exists)
-  await UserProfile.destroy({ where: { userId } });
+  await UserProfile.destroy({ where: { user_id } });
 
   // Delete user (this will cascade to related records)
   await user.destroy();
@@ -381,28 +376,28 @@ export async function deleteUserAccount(userId, password, { models, auth }) {
 /**
  * Export user data (GDPR compliance)
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User data export
  */
-export async function exportUserData(userId, models) {
+export async function exportUserData(user_id, models) {
   const { User, UserProfile, UserLogin } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
     attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Get login history
   const loginHistory = UserLogin
     ? await UserLogin.findAll({
-        where: { userId },
-        attributes: ['ipAddress', 'userAgent', 'loginAt', 'success'],
-        order: [['loginAt', 'DESC']],
+        where: { user_id },
+        attributes: ['ip_address', 'user_agent', 'login_at', 'success'],
+        order: [['login_at', 'DESC']],
       })
     : [];
 
@@ -411,17 +406,17 @@ export async function exportUserData(userId, models) {
     user: {
       id: user.id,
       email: user.email,
-      emailConfirmed: user.emailConfirmed,
-      isActive: user.isActive,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
+      email_confirmed: user.email_confirmed,
+      is_active: user.is_active,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
       role: user.role,
     },
     profile: user.profile
       ? {
-          displayName: user.profile.displayName,
-          firstName: user.profile.firstName,
-          lastName: user.profile.lastName,
+          display_name: user.profile.display_name,
+          first_name: user.profile.first_name,
+          last_name: user.profile.last_name,
           bio: user.profile.bio,
           location: user.profile.location,
           website: user.profile.website,

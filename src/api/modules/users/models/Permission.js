@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * Permission Model Factory
@@ -18,11 +17,12 @@ import { DataTypes } from 'sequelize';
  * - resource: 'users', action: 'write', name: 'users:write'
  * - resource: 'posts', action: 'delete', name: 'posts:delete'
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} Permission model
  */
-export default function createPermissionModel(Model) {
-  const Permission = Model.define(
+export default function createPermissionModel({ connection, DataTypes }) {
+  const Permission = connection.define(
     'Permission',
     {
       id: {
@@ -57,7 +57,7 @@ export default function createPermissionModel(Model) {
         comment: 'Permission description',
       },
 
-      isActive: {
+      is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
@@ -65,14 +65,10 @@ export default function createPermissionModel(Model) {
       },
     },
     {
-      indexes: [
-        { fields: ['name'], unique: true },
-        { fields: ['resource'] },
-        { fields: ['action'] },
-        { fields: ['resource', 'action'], unique: true },
-        { fields: ['isActive'] },
-      ],
+      tableName: 'permissions',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

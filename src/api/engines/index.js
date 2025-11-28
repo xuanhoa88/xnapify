@@ -6,7 +6,7 @@
  */
 
 // Database engine
-export * as database from './database';
+export * as db from './database';
 
 // HTTP engine
 export * as http from './http';

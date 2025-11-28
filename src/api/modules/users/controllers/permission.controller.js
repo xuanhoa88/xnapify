@@ -134,8 +134,7 @@ export async function updatePermission(req, res) {
       name: name || permission.name,
       resource: resource || permission.resource,
       action: action || permission.action,
-      description:
-        description !== undefined ? description : permission.description,
+      description: description != null ? description : permission.description,
     });
 
     return http.sendSuccess(res, { permission });

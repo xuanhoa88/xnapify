@@ -40,7 +40,7 @@ export default function profileRoutes(deps, middlewares, app) {
    * @route   PUT /profile
    * @desc    Update user profile information
    * @access  Private (requires authentication)
-   * @body    { displayName, firstName, lastName, bio, location, website }
+   * @body    { display_name, first_name, last_name, bio, location, website }
    */
   router.put('/profile', requireAuth, profileController.updateProfile);
 

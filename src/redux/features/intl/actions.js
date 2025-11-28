@@ -85,7 +85,7 @@ export function setLocale(locale) {
       const availableLocaleCodes = Object.keys(availableLocales);
 
       // Validate locale parameter
-      if (!locale || typeof locale !== 'string') {
+      if (typeof locale !== 'string' || locale.trim().length === 0) {
         console.error('Invalid locale (not a string):', locale);
         return null;
       }

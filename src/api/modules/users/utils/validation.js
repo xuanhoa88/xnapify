@@ -77,8 +77,8 @@ export function validateRegistration(data) {
   }
 
   // Display name validation (optional)
-  if (data.displayName && data.displayName.length > 100) {
-    errors.displayName = 'Display name must be less than 100 characters';
+  if (data.display_name && data.display_name.length > 100) {
+    errors.display_name = 'Display name must be less than 100 characters';
   }
 
   return errors;

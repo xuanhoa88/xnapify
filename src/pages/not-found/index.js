@@ -9,7 +9,15 @@ import Layout from '../../components/Layout';
 import NotFound from './NotFound';
 
 /**
- * Not Found route (404)
+ * Route configuration
+ */
+const route = {
+  path: '/*path',
+  priority: 0,
+};
+
+/**
+ * Route action (404)
  */
 function action() {
   const title = 'Page Not Found';
@@ -24,4 +32,4 @@ function action() {
   };
 }
 
-export default action;
+export default [route, action];

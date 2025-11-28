@@ -4,16 +4,22 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * GroupRole Model (Junction Table)
  *
  * Links groups to roles (many-to-many relationship).
  * A group can have multiple roles, and a role can be assigned to multiple groups.
+ *
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} Sequelize - Sequelize instance
+ * @returns {Model} GroupRole model
  */
-export default function createGroupRoleModel(Model) {
-  const GroupRole = Model.define(
+export default function createGroupRoleModel({
+  connection,
+  Sequelize: { DataTypes },
+}) {
+  const GroupRole = connection.define(
     'GroupRole',
     {
       id: {
@@ -23,25 +29,23 @@ export default function createGroupRoleModel(Model) {
         comment: 'Unique group-role assignment identifier',
       },
 
-      groupId: {
+      group_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Group ID',
       },
 
-      roleId: {
+      role_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Role ID',
       },
     },
     {
-      indexes: [
-        { fields: ['groupId'] },
-        { fields: ['roleId'] },
-        { fields: ['groupId', 'roleId'], unique: true },
-      ],
+      tableName: 'group_roles',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

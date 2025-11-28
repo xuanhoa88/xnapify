@@ -12,7 +12,7 @@ import App from './components/App';
 import { createFetch } from './createFetch';
 import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import router from './router';
+import router from './pages';
 import { configureStore } from './redux';
 
 // Get i18n instance
@@ -281,7 +281,7 @@ function trackNavigationPerformance(startTime, route) {
  * @returns {boolean}
  */
 function isPerformanceTrackingEnabled() {
-  return __DEV__ && performanceMetrics !== null;
+  return __DEV__ && performanceMetrics != null;
 }
 
 /**
@@ -489,11 +489,19 @@ async function onLocationChange(location, action) {
       return;
     }
 
+    // Set context for route resolution
     context.pathname = location.pathname;
     context.query = queryString.parse(location.search);
 
     // Resolve the route
     const route = await router.resolve(context);
+
+    // If route not found, throw 404 error
+    if (!route) {
+      const error = new Error(`Route ${location.pathname} not found`);
+      error.status = 404;
+      throw error;
+    }
 
     // Check if navigation was aborted after route resolution
     if (navigationSignal.aborted) {

@@ -72,15 +72,15 @@ export async function getUserById(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        isLocked: user.isLocked,
-        failedLoginAttempts: user.failedLoginAttempts,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        is_locked: user.is_locked,
+        failed_login_attempts: user.failed_login_attempts,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
@@ -107,14 +107,14 @@ export async function updateUserById(req, res) {
     const { id } = req.params;
     const {
       email,
-      displayName,
-      firstName,
-      lastName,
+      display_name,
+      first_name,
+      last_name,
       bio,
       location,
       website,
       role,
-      isActive,
+      is_active,
     } = req.body;
 
     // Prevent admin from updating themselves
@@ -130,14 +130,14 @@ export async function updateUserById(req, res) {
       id,
       {
         email,
-        displayName,
-        firstName,
-        lastName,
+        display_name,
+        first_name,
+        last_name,
         bio,
         location,
         website,
         role,
-        isActive,
+        is_active,
       },
       models,
     );
@@ -146,13 +146,13 @@ export async function updateUserById(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
@@ -161,11 +161,11 @@ export async function updateUserById(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
-    if (error.message === 'Email already exists') {
+    if (error.message === 'USER_ALREADY_EXISTS') {
       return http.sendValidationError(res, {
         email: 'Email is already in use by another user',
       });
@@ -258,7 +258,7 @@ export async function updateUserRole(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -278,17 +278,17 @@ export async function updateUserStatus(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { isActive } = req.body;
+    const { is_active } = req.body;
 
     // Validate status
-    if (typeof isActive !== 'boolean') {
+    if (typeof is_active !== 'boolean') {
       return http.sendValidationError(res, {
-        isActive: 'Status must be true or false',
+        is_active: 'Status must be true or false',
       });
     }
 
     // Prevent admin from deactivating themselves
-    if (req.user.id === id && !isActive) {
+    if (req.user.id === id && !is_active) {
       return http.sendError(res, 'Cannot deactivate your own account', 400);
     }
 
@@ -296,18 +296,18 @@ export async function updateUserStatus(req, res) {
     const models = req.app.get('models');
 
     // Update user status
-    const user = await userAdminService.updateUserStatus(id, isActive, models);
+    const user = await userAdminService.updateUserStatus(id, is_active, models);
 
     return http.sendSuccess(res, {
-      message: `User ${isActive ? 'activated' : 'deactivated'} successfully`,
+      message: `User ${is_active ? 'activated' : 'deactivated'} successfully`,
       user: {
         id: user.id,
         email: user.email,
-        isActive: user.isActive,
+        is_active: user.is_active,
       },
     });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -327,17 +327,17 @@ export async function updateUserLockStatus(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { isLocked, reason } = req.body;
+    const { is_locked, reason } = req.body;
 
     // Validate input
-    if (typeof isLocked !== 'boolean') {
+    if (typeof is_locked !== 'boolean') {
       return http.sendValidationError(res, {
-        isLocked: 'Lock status must be true or false',
+        is_locked: 'Lock status must be true or false',
       });
     }
 
     // Prevent admin from locking themselves
-    if (req.user.id === id && isLocked) {
+    if (req.user.id === id && is_locked) {
       return http.sendError(res, 'Cannot lock your own account', 400);
     }
 
@@ -347,22 +347,22 @@ export async function updateUserLockStatus(req, res) {
     // Update user lock status
     const user = await userAdminService.updateUserLockStatus(
       id,
-      isLocked,
+      is_locked,
       reason,
       models,
     );
 
     return http.sendSuccess(res, {
-      message: `User account ${isLocked ? 'locked' : 'unlocked'} successfully`,
+      message: `User account ${is_locked ? 'locked' : 'unlocked'} successfully`,
       user: {
         id: user.id,
         email: user.email,
-        isLocked: user.isLocked,
-        failedLoginAttempts: user.failedLoginAttempts,
+        is_locked: user.is_locked,
+        failed_login_attempts: user.failed_login_attempts,
       },
     });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -404,12 +404,12 @@ export async function getUserStats(req, res) {
 export async function bulkUpdateUsers(req, res) {
   const http = req.app.get('http');
   try {
-    const { userIds, updates } = req.body;
+    const { user_ids, updates } = req.body;
 
     // Validate input
-    if (!Array.isArray(userIds) || userIds.length === 0) {
+    if (!Array.isArray(user_ids) || user_ids.length === 0) {
       return http.sendValidationError(res, {
-        userIds: 'User IDs must be a non-empty array',
+        user_ids: 'User IDs must be a non-empty array',
       });
     }
 
@@ -420,7 +420,7 @@ export async function bulkUpdateUsers(req, res) {
     }
 
     // Prevent admin from updating themselves
-    if (userIds.includes(req.user.id)) {
+    if (user_ids.includes(req.user.id)) {
       return http.sendError(res, 'Cannot bulk update your own account', 400);
     }
 
@@ -429,7 +429,7 @@ export async function bulkUpdateUsers(req, res) {
 
     // Perform bulk update
     const result = await userAdminService.bulkUpdateUsers(
-      userIds,
+      user_ids,
       updates,
       models,
     );

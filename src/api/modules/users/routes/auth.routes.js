@@ -33,7 +33,7 @@ export default function authRoutes(deps, middlewares, app) {
    * @route   POST /register
    * @desc    Register a new user
    * @access  Public
-   * @body    { email, password, displayName }
+   * @body    { email, password, display_name }
    */
   router.post('/register', authController.register);
 
@@ -58,6 +58,30 @@ export default function authRoutes(deps, middlewares, app) {
    * @access  Private (requires authentication)
    */
   router.get('/me', requireAuth, authController.getCurrentUser);
+
+  /**
+   * @route   POST /request-reset-password
+   * @desc    Request password reset email
+   * @access  Public
+   * @body    { email }
+   */
+  router.post('/request-reset-password', authController.forgotPassword);
+
+  /**
+   * @route   POST /reset-password
+   * @desc    Reset password with token
+   * @access  Public
+   * @body    { token, password }
+   */
+  router.post('/reset-password', authController.resetPassword);
+
+  /**
+   * @route   POST /verify-email
+   * @desc    Verify email address with token
+   * @access  Public
+   * @body    { token }
+   */
+  router.post('/verify-email', authController.verifyEmail);
 
   return router;
 }

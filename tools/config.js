@@ -10,7 +10,7 @@ import path from 'path';
 // Get environment variable with default fallback
 const env = (key, defaultValue) => {
   const value = process.env[key];
-  return value !== undefined ? value : defaultValue;
+  return value != null ? value : defaultValue;
 };
 
 // Project root directory (overridable via CWD env var)

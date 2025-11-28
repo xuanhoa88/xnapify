@@ -66,13 +66,12 @@ Used when running the server:
 
 #### Server Configuration
 
-| Variable          | Default       | Description         |
-| ----------------- | ------------- | ------------------- |
-| `NODE_ENV`        | `development` | Environment mode    |
-| `RSK_PORT`        | `3000`        | Server port         |
-| `RSK_HOST`        | `localhost`   | Server host         |
-| `RSK_HTTPS`       | `false`       | Enable HTTPS (dev)  |
-| `RSK_TRUST_PROXY` | `loopback`    | Trust proxy setting |
+| Variable    | Default       | Description        |
+| ----------- | ------------- | ------------------ |
+| `NODE_ENV`  | `development` | Environment mode   |
+| `RSK_PORT`  | `3000`        | Server port        |
+| `RSK_HOST`  | `localhost`   | Server host        |
+| `RSK_HTTPS` | `false`       | Enable HTTPS (dev) |
 
 #### API Configuration
 
@@ -414,7 +413,6 @@ RSK_API_PROXY_URL=
 # Security
 RSK_JWT_SECRET=dev-secret-change-in-production
 RSK_JWT_EXPIRES_IN=7d
-RSK_TRUST_PROXY=loopback
 
 # Database
 RSK_DATABASE_URL=sqlite:database.sqlite

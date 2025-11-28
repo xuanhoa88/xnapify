@@ -24,12 +24,12 @@ export async function assignRolesToUser(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { roleIds } = req.body;
+    const { role_ids } = req.body;
 
     // Validate input
-    if (!Array.isArray(roleIds)) {
+    if (!Array.isArray(role_ids)) {
       return http.sendValidationError(res, {
-        roleIds: 'Role IDs must be an array',
+        role_ids: 'Role IDs must be an array',
       });
     }
 
@@ -37,17 +37,17 @@ export async function assignRolesToUser(req, res) {
     const models = req.app.get('models');
 
     // Assign roles
-    const user = await userRbacService.assignRolesToUser(id, roleIds, models);
+    const user = await userRbacService.assignRolesToUser(id, role_ids, models);
 
     return http.sendSuccess(res, { user });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
     if (error.message.includes('roles not found')) {
       return http.sendValidationError(res, {
-        roleIds: error.message,
+        role_ids: error.message,
       });
     }
 
@@ -85,7 +85,7 @@ export async function getUserRoles(req, res) {
           ],
         },
       ],
-      attributes: ['id', 'email', 'displayName'],
+      attributes: ['id', 'email', 'display_name'],
     });
 
     if (!user) {
@@ -96,7 +96,7 @@ export async function getUserRoles(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        displayName: user.displayName,
+        display_name: user.display_name,
       },
       roles: user.roles,
     });
@@ -117,12 +117,12 @@ export async function assignGroupsToUser(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { groupIds } = req.body;
+    const { group_ids } = req.body;
 
     // Validate input
-    if (!Array.isArray(groupIds)) {
+    if (!Array.isArray(group_ids)) {
       return http.sendValidationError(res, {
-        groupIds: 'Group IDs must be an array',
+        group_ids: 'Group IDs must be an array',
       });
     }
 
@@ -130,17 +130,21 @@ export async function assignGroupsToUser(req, res) {
     const models = req.app.get('models');
 
     // Assign groups
-    const user = await userRbacService.assignGroupsToUser(id, groupIds, models);
+    const user = await userRbacService.assignGroupsToUser(
+      id,
+      group_ids,
+      models,
+    );
 
     return http.sendSuccess(res, { user });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
     if (error.message.includes('groups not found')) {
       return http.sendValidationError(res, {
-        groupIds: error.message,
+        group_ids: error.message,
       });
     }
 
@@ -178,7 +182,7 @@ export async function getUserGroups(req, res) {
           ],
         },
       ],
-      attributes: ['id', 'email', 'displayName'],
+      attributes: ['id', 'email', 'display_name'],
     });
 
     if (!user) {
@@ -189,7 +193,7 @@ export async function getUserGroups(req, res) {
       user: {
         id: user.id,
         email: user.email,
-        displayName: user.displayName,
+        display_name: user.display_name,
       },
       groups: user.groups,
     });
@@ -219,7 +223,7 @@ export async function getUserPermissions(req, res) {
 
     return http.sendSuccess(res, { permissions });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -251,12 +255,12 @@ export async function checkUserPermission(req, res) {
     );
 
     return http.sendSuccess(res, {
-      userId: id,
+      user_id: id,
       permission,
       hasPermission,
     });
   } catch (error) {
-    if (error.message === 'User not found') {
+    if (error.message === 'USER_NOT_FOUND') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -267,7 +271,7 @@ export async function checkUserPermission(req, res) {
 /**
  * Remove role from user
  *
- * @route   DELETE /api/users/:id/roles/:roleId
+ * @route   DELETE /api/users/:id/roles/:role_id
  * @access  Admin (requires 'users:manage' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -275,7 +279,7 @@ export async function checkUserPermission(req, res) {
 export async function removeRoleFromUser(req, res) {
   const http = req.app.get('http');
   try {
-    const { id, roleId } = req.params;
+    const { id, role_id } = req.params;
     const models = req.app.get('models');
     const { User, Role } = models;
 
@@ -284,7 +288,7 @@ export async function removeRoleFromUser(req, res) {
       return http.sendNotFound(res, 'User not found');
     }
 
-    const role = await Role.findByPk(roleId);
+    const role = await Role.findByPk(role_id);
     if (!role) {
       return http.sendNotFound(res, 'Role not found');
     }
@@ -303,7 +307,7 @@ export async function removeRoleFromUser(req, res) {
 /**
  * Remove group from user
  *
- * @route   DELETE /api/users/:id/groups/:groupId
+ * @route   DELETE /api/users/:id/groups/:group_id
  * @access  Admin (requires 'users:manage' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -311,7 +315,7 @@ export async function removeRoleFromUser(req, res) {
 export async function removeGroupFromUser(req, res) {
   const http = req.app.get('http');
   try {
-    const { id, groupId } = req.params;
+    const { id, group_id } = req.params;
     const models = req.app.get('models');
     const { User, Group } = models;
 
@@ -320,7 +324,7 @@ export async function removeGroupFromUser(req, res) {
       return http.sendNotFound(res, 'User not found');
     }
 
-    const group = await Group.findByPk(groupId);
+    const group = await Group.findByPk(group_id);
     if (!group) {
       return http.sendNotFound(res, 'Group not found');
     }

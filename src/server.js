@@ -5,6 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// Load environment variables from .env file
+const nodeEnv = process.env.NODE_ENV || 'development';
+require('dotenv').config({ override: true, processEnv: { NODE_ENV: nodeEnv } });
+
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import createProxy from 'express-http-proxy';
@@ -21,12 +25,43 @@ import {
   setLocale,
   setRuntimeVariable,
 } from './redux';
-import App from './components/App';
-import Html from './components/Html';
 import { createFetch } from './createFetch';
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import router from './router';
+import router from './pages';
+import App from './components/App';
+import Html from './components/Html';
+
+// Configure global navigator for CSS tooling (required by some CSS-in-JS libraries)
+if (!global.navigator) {
+  global.navigator = { user_agent: 'all' };
+}
+
+// Environment variable defaults with validation
+const config = Object.freeze({
+  // Environment variables
+  nodeEnv,
+  isProduction: nodeEnv === 'production',
+
+  // Server configuration
+  port: parseInt(process.env.RSK_PORT, 10) || 3000,
+  host: process.env.RSK_HOST || '0.0.0.0',
+  trustProxy: nodeEnv === 'production' ? 1 : 'loopback',
+
+  // Application metadata
+  appName: process.env.RSK_APP_NAME || 'React Starter Kit',
+  appDescription:
+    process.env.RSK_APP_DESCRIPTION ||
+    'Boilerplate for React.js web applications',
+
+  // Base path for API routes
+  apiPrefix: process.env.RSK_API_PREFIX || '/api',
+  apiVersion: process.env.RSK_API_VERSION || '1.0.0',
+
+  // JWT settings
+  jwtSecret: process.env.RSK_JWT_SECRET,
+  jwtExpiresIn: process.env.RSK_JWT_EXPIRES_IN || '7d',
+});
 
 // =============================================================================
 // GLOBAL ERROR HANDLERS
@@ -41,7 +76,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
   // In production, log but don't exit immediately
   // Allow graceful shutdown or monitoring systems to catch this
-  if (process.env.NODE_ENV === 'production') {
+  if (config.isProduction) {
     // Log to monitoring service here
     console.error(
       '⚠️ Production unhandled rejection - monitoring but not exiting',
@@ -87,34 +122,6 @@ function setupGracefulShutdown(server) {
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
 }
-
-// Configure global navigator for CSS tooling (required by some CSS-in-JS libraries)
-if (!global.navigator) {
-  global.navigator = { userAgent: 'all' };
-}
-
-// Environment variable defaults with validation
-const config = Object.freeze({
-  // Server configuration
-  port: parseInt(process.env.RSK_PORT, 10) || 3000,
-  host: process.env.RSK_HOST || '0.0.0.0',
-  nodeEnv: process.env.NODE_ENV || 'development',
-  isProduction: process.env.NODE_ENV === 'production',
-  trustProxy: process.env.RSK_TRUST_PROXY === 'true' || 'loopback',
-
-  // Application metadata
-  appName: process.env.RSK_APP_NAME || 'React Starter Kit',
-  appDescription:
-    process.env.RSK_APP_DESCRIPTION ||
-    'Boilerplate for React.js web applications',
-
-  // Base path for API routes
-  apiPrefix: process.env.RSK_API_PREFIX || '/api',
-
-  // JWT settings
-  jwtSecret: process.env.RSK_JWT_SECRET,
-  jwtExpiresIn: process.env.RSK_JWT_EXPIRES_IN || '7d',
-});
 
 // i18n instance
 const i18n = getI18nInstance();
@@ -379,7 +386,7 @@ export function startServer(app, port = config.port, host = config.host) {
         console.info(
           `   URL: http://${host === '0.0.0.0' ? 'localhost' : host}:${port}/`,
         );
-        console.info(`   Environment: ${config.nodeEnv}`);
+        console.info(`   Environment: ${nodeEnv}`);
         console.info(`   Process ID: ${process.pid}`);
         console.info('='.repeat(50));
 
@@ -465,7 +472,7 @@ async function main(app, staticPath) {
   );
 
   // This sets up all API routes, middleware, and database connections
-  await require('./api').default(app, i18n);
+  await require('./api').default(app, i18n, config);
 
   // This will forward all requests to /api/* to the specified backend server
   setupApiProxy(app);
@@ -502,8 +509,16 @@ async function main(app, staticPath) {
       // Resolve route
       const route = await router.resolve(context);
 
+      // If route not found, throw 404 error
+      if (!route) {
+        const error = new Error(`Route ${req.path} not found`);
+        error.status = 404;
+        throw error;
+      }
+
       // Handle redirects
       if (route.redirect) {
+        console.log('Redirecting to', route.redirect);
         res.redirect(route.status || 302, route.redirect);
         return;
       }

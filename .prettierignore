@@ -30,7 +30,9 @@ pnpm-lock.yaml
 *.log
 
 # Environment files
-.env*
+.env
+.env.*
+!.env.defaults
 
 # Configuration files that shouldn't be formatted
 .gitignore

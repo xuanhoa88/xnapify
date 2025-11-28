@@ -35,7 +35,7 @@ export async function createGroup(groupData, models) {
     description,
     category,
     type,
-    isActive: true,
+    is_active: true,
   });
 
   return group;
@@ -54,7 +54,13 @@ export async function createGroup(groupData, models) {
  * @returns {Promise<Object>} Groups with pagination
  */
 export async function getGroups(options, models) {
-  const { page = 1, limit = 10, search = '', category = '', type = '' } = options;
+  const {
+    page = 1,
+    limit = 10,
+    search = '',
+    category = '',
+    type = '',
+  } = options;
   const offset = (page - 1) * limit;
   const { Group, Role, User } = models;
 
@@ -118,14 +124,14 @@ export async function getGroups(options, models) {
 /**
  * Get group by ID
  *
- * @param {string} groupId - Group ID
+ * @param {string} group_id - Group ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Group with roles and users
  */
-export async function getGroupById(groupId, models) {
+export async function getGroupById(group_id, models) {
   const { Group, Role, User } = models;
 
-  const group = await Group.findByPk(groupId, {
+  const group = await Group.findByPk(group_id, {
     include: [
       {
         model: Role,
@@ -136,7 +142,7 @@ export async function getGroupById(groupId, models) {
         model: User,
         as: 'users',
         through: { attributes: [] },
-        attributes: ['id', 'email', 'displayName', 'isActive'],
+        attributes: ['id', 'email', 'display_name', 'is_active'],
       },
     ],
   });
@@ -151,15 +157,15 @@ export async function getGroupById(groupId, models) {
 /**
  * Update group
  *
- * @param {string} groupId - Group ID
+ * @param {string} group_id - Group ID
  * @param {Object} updateData - Data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function updateGroup(groupId, updateData, models) {
+export async function updateGroup(group_id, updateData, models) {
   const { Group } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
@@ -181,14 +187,14 @@ export async function updateGroup(groupId, updateData, models) {
 /**
  * Delete group
  *
- * @param {string} groupId - Group ID
+ * @param {string} group_id - Group ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteGroup(groupId, models) {
+export async function deleteGroup(group_id, models) {
   const { Group } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
@@ -206,25 +212,25 @@ export async function deleteGroup(groupId, models) {
 /**
  * Assign roles to group
  *
- * @param {string} groupId - Group ID
- * @param {string[]} roleIds - Array of role IDs
+ * @param {string} group_id - Group ID
+ * @param {string[]} role_ids - Array of role IDs
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Group with updated roles
  */
-export async function assignRolesToGroup(groupId, roleIds, models) {
+export async function assignRolesToGroup(group_id, role_ids, models) {
   const { Group, Role } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
 
   // Verify all roles exist
   const roles = await Role.findAll({
-    where: { id: roleIds },
+    where: { id: role_ids },
   });
 
-  if (roles.length !== roleIds.length) {
+  if (roles.length !== role_ids.length) {
     throw new Error('One or more roles not found');
   }
 
@@ -232,7 +238,7 @@ export async function assignRolesToGroup(groupId, roleIds, models) {
   await group.setRoles(roles);
 
   // Return group with roles
-  return await Group.findByPk(groupId, {
+  return await Group.findByPk(group_id, {
     include: [
       {
         model: Role,
@@ -246,20 +252,20 @@ export async function assignRolesToGroup(groupId, roleIds, models) {
 /**
  * Add role to group
  *
- * @param {string} groupId - Group ID
- * @param {string} roleId - Role ID
+ * @param {string} group_id - Group ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function addRoleToGroup(groupId, roleId, models) {
+export async function addRoleToGroup(group_id, role_id, models) {
   const { Group, Role } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -271,20 +277,20 @@ export async function addRoleToGroup(groupId, roleId, models) {
 /**
  * Remove role from group
  *
- * @param {string} groupId - Group ID
- * @param {string} roleId - Role ID
+ * @param {string} group_id - Group ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function removeRoleFromGroup(groupId, roleId, models) {
+export async function removeRoleFromGroup(group_id, role_id, models) {
   const { Group, Role } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -296,17 +302,17 @@ export async function removeRoleFromGroup(groupId, roleId, models) {
 /**
  * Get group members with pagination
  *
- * @param {string} groupId - Group ID
+ * @param {string} group_id - Group ID
  * @param {Object} options - Query options
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Group members with pagination
  */
-export async function getGroupMembers(groupId, options, models) {
+export async function getGroupMembers(group_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
   const { Group, User } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
@@ -316,14 +322,14 @@ export async function getGroupMembers(groupId, options, models) {
       {
         model: Group,
         as: 'groups',
-        where: { id: groupId },
+        where: { id: group_id },
         through: { attributes: [] },
       },
     ],
-    attributes: ['id', 'email', 'displayName', 'isActive', 'createdAt'],
+    attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['displayName', 'ASC']],
+    order: [['display_name', 'ASC']],
   });
 
   return {
@@ -341,22 +347,22 @@ export async function getGroupMembers(groupId, options, models) {
 /**
  * Add user to group
  *
- * @param {string} groupId - Group ID
- * @param {string} userId - User ID
+ * @param {string} group_id - Group ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function addUserToGroup(groupId, userId, models) {
+export async function addUserToGroup(group_id, user_id, models) {
   const { Group, User } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   await group.addUser(user);
@@ -366,22 +372,22 @@ export async function addUserToGroup(groupId, userId, models) {
 /**
  * Remove user from group
  *
- * @param {string} groupId - Group ID
- * @param {string} userId - User ID
+ * @param {string} group_id - Group ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function removeUserFromGroup(groupId, userId, models) {
+export async function removeUserFromGroup(group_id, user_id, models) {
   const { Group, User } = models;
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   await group.removeUser(user);
@@ -398,7 +404,12 @@ export async function getGroupCategories(models) {
   const { Group } = models;
 
   const categories = await Group.findAll({
-    attributes: [[models.Sequelize.fn('DISTINCT', models.Sequelize.col('category')), 'category']],
+    attributes: [
+      [
+        models.Sequelize.fn('DISTINCT', models.Sequelize.col('category')),
+        'category',
+      ],
+    ],
     where: {
       category: {
         [models.Sequelize.Op.ne]: null,
@@ -421,7 +432,9 @@ export async function getGroupTypes(models) {
   const { Group } = models;
 
   const types = await Group.findAll({
-    attributes: [[models.Sequelize.fn('DISTINCT', models.Sequelize.col('type')), 'type']],
+    attributes: [
+      [models.Sequelize.fn('DISTINCT', models.Sequelize.col('type')), 'type'],
+    ],
     where: {
       type: {
         [models.Sequelize.Op.ne]: null,
@@ -444,7 +457,7 @@ export async function getGroupStats(models) {
   const { Group, User } = models;
 
   const totalGroups = await Group.count();
-  
+
   const categoryStats = await Group.findAll({
     attributes: [
       'category',

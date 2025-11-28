@@ -9,7 +9,15 @@ import Layout from '../../components/Layout';
 import ErrorPage from './ErrorPage';
 
 /**
- * Error route (Development only)
+ * Route configuration
+ */
+const route = {
+  path: '/error',
+  devOnly: __DEV__,
+};
+
+/**
+ * Route action (Development only)
  */
 function action() {
   const title = 'Error';
@@ -24,4 +32,4 @@ function action() {
   };
 }
 
-export default action;
+export default [route, action];

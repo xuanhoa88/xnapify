@@ -26,8 +26,8 @@ export { SET_RUNTIME_VARIABLE } from './constants';
  */
 export const getRuntimeVariable = (state, name, defaultValue) => {
   const value = state.runtime && state.runtime[name];
-  return value !== undefined ? value : defaultValue;
+  return value != null ? value : defaultValue;
 };
 
 // Public API - Reducer
-export { default } from './reducer'; // Default export for rootReducer
+export { default } from './reducer';

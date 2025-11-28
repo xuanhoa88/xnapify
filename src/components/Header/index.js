@@ -21,7 +21,7 @@ function Header({ showHero = false }) {
           <Link className={s.brand} to='/'>
             <img
               src='/rsk_38x38.png'
-              srcSet='rsk_72x72.png'
+              srcSet='/rsk_72x72.png 2x'
               width='38'
               height='38'
               alt='RSK'

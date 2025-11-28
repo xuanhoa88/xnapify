@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * RolePermission Model Factory (Junction Table)
@@ -13,11 +12,12 @@ import { DataTypes } from 'sequelize';
  * Links roles to permissions (many-to-many relationship).
  * A role can have multiple permissions, and a permission can belong to multiple roles.
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} RolePermission model
  */
-export default function createRolePermissionModel(Model) {
-  const RolePermission = Model.define(
+export default function createRolePermissionModel({ connection, DataTypes }) {
+  const RolePermission = connection.define(
     'RolePermission',
     {
       id: {
@@ -27,25 +27,23 @@ export default function createRolePermissionModel(Model) {
         comment: 'Unique role-permission assignment identifier',
       },
 
-      roleId: {
+      role_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Role ID',
       },
 
-      permissionId: {
+      permission_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Permission ID',
       },
     },
     {
-      indexes: [
-        { fields: ['roleId'] },
-        { fields: ['permissionId'] },
-        { fields: ['roleId', 'permissionId'], unique: true },
-      ],
+      tableName: 'role_permissions',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

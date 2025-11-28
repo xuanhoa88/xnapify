@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { hashPassword } from '../utils/password';
+
 /**
  * Get users with pagination and search
  *
@@ -32,9 +34,9 @@ export async function getUserList(options, models) {
       { email: { [models.Sequelize.Op.iLike]: `%${search}%` } },
     ];
     profileWhereConditions[models.Sequelize.Op.or] = [
-      { displayName: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { firstName: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { lastName: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { display_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { first_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { last_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
     ];
   }
 
@@ -45,11 +47,11 @@ export async function getUserList(options, models) {
 
   // Filter by status
   if (status === 'active') {
-    whereConditions.isActive = true;
+    whereConditions.is_active = true;
   } else if (status === 'inactive') {
-    whereConditions.isActive = false;
+    whereConditions.is_active = false;
   } else if (status === 'locked') {
-    whereConditions.isLocked = true;
+    whereConditions.is_locked = true;
   }
 
   const { count, rows: users } = await User.findAndCountAll({
@@ -65,7 +67,7 @@ export async function getUserList(options, models) {
     attributes: { exclude: ['password'] },
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['createdAt', 'DESC']],
+    order: [['created_at', 'DESC']],
   });
 
   return {
@@ -82,35 +84,35 @@ export async function getUserList(options, models) {
 /**
  * Get user by ID with full details
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with profile and additional details
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function getUserById(userId, models) {
+export async function getUserById(user_id, models) {
   const { User, UserProfile, UserLogin } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
     attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Get additional stats
   const loginCount = UserLogin
     ? await UserLogin.count({
-        where: { userId, success: true },
+        where: { user_id, success: true },
       })
     : 0;
 
   const lastLogin = UserLogin
     ? await UserLogin.findOne({
-        where: { userId, success: true },
-        order: [['loginAt', 'DESC']],
-        attributes: ['loginAt', 'ipAddress'],
+        where: { user_id, success: true },
+        order: [['login_at', 'DESC']],
+        attributes: ['login_at', 'ip_address'],
       })
     : null;
 
@@ -118,8 +120,8 @@ export async function getUserById(userId, models) {
     ...user.toJSON(),
     stats: {
       loginCount,
-      lastLogin: (lastLogin && lastLogin.loginAt) || null,
-      lastLoginIp: (lastLogin && lastLogin.ipAddress) || null,
+      lastLogin: (lastLogin && lastLogin.login_at) || null,
+      lastLoginIp: (lastLogin && lastLogin.ip_address) || null,
     },
   };
 }
@@ -127,41 +129,41 @@ export async function getUserById(userId, models) {
 /**
  * Update user by admin
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} userData - User data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If user not found or email already exists
+ * @throws {Error} If USER_NOT_FOUND or USER_ALREADY_EXISTS
  */
-export async function updateUserById(userId, userData, models) {
+export async function updateUserById(user_id, userData, models) {
   const { User, UserProfile } = models;
   const {
     email,
-    displayName,
-    firstName,
-    lastName,
+    display_name,
+    first_name,
+    last_name,
     bio,
     location,
     website,
     role,
-    isActive,
+    is_active,
   } = userData;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Check if email is already taken by another user
   if (email && email !== user.email) {
     const existingUser = await User.findOne({
-      where: { email, id: { [models.Sequelize.Op.ne]: userId } },
+      where: { email, id: { [models.Sequelize.Op.ne]: user_id } },
     });
     if (existingUser) {
-      throw new Error('Email already exists');
+      throw new Error('USER_ALREADY_EXISTS');
     }
   }
 
@@ -169,7 +171,7 @@ export async function updateUserById(userId, userData, models) {
   const userUpdates = {};
   if (email) userUpdates.email = email;
   if (role) userUpdates.role = role;
-  if (typeof isActive === 'boolean') userUpdates.isActive = isActive;
+  if (typeof is_active === 'boolean') userUpdates.is_active = is_active;
 
   if (Object.keys(userUpdates).length > 0) {
     await user.update(userUpdates);
@@ -177,19 +179,19 @@ export async function updateUserById(userId, userData, models) {
 
   // Update profile fields
   const profileUpdates = {};
-  if (displayName !== undefined) profileUpdates.displayName = displayName;
-  if (firstName !== undefined) profileUpdates.firstName = firstName;
-  if (lastName !== undefined) profileUpdates.lastName = lastName;
-  if (bio !== undefined) profileUpdates.bio = bio;
-  if (location !== undefined) profileUpdates.location = location;
-  if (website !== undefined) profileUpdates.website = website;
+  if (display_name != null) profileUpdates.display_name = display_name;
+  if (first_name != null) profileUpdates.first_name = first_name;
+  if (last_name != null) profileUpdates.last_name = last_name;
+  if (bio != null) profileUpdates.bio = bio;
+  if (location != null) profileUpdates.location = location;
+  if (website != null) profileUpdates.website = website;
 
   if (Object.keys(profileUpdates).length > 0) {
     if (user.profile) {
       await user.profile.update(profileUpdates);
     } else {
       await UserProfile.create({
-        userId,
+        user_id,
         ...profileUpdates,
       });
     }
@@ -207,17 +209,17 @@ export async function updateUserById(userId, userData, models) {
 /**
  * Delete user by admin
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function deleteUserById(userId, models) {
+export async function deleteUserById(user_id, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Delete user (cascade will handle related records)
@@ -229,18 +231,18 @@ export async function deleteUserById(userId, models) {
 /**
  * Update user role
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} role - New role
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function updateUserRole(userId, role, models) {
+export async function updateUserRole(user_id, role, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   await user.update({ role });
@@ -251,21 +253,21 @@ export async function updateUserRole(userId, role, models) {
 /**
  * Update user status (active/inactive)
  *
- * @param {string} userId - User ID
- * @param {boolean} isActive - Active status
+ * @param {string} user_id - User ID
+ * @param {boolean} is_active - Active status
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function updateUserStatus(userId, isActive, models) {
+export async function updateUserStatus(user_id, is_active, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
-  await user.update({ isActive });
+  await user.update({ is_active });
 
   return user;
 }
@@ -273,29 +275,29 @@ export async function updateUserStatus(userId, isActive, models) {
 /**
  * Update user lock status
  *
- * @param {string} userId - User ID
- * @param {boolean} isLocked - Lock status
+ * @param {string} user_id - User ID
+ * @param {boolean} is_locked - Lock status
  * @param {string} reason - Lock reason (optional)
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function updateUserLockStatus(userId, isLocked, reason, models) {
+export async function updateUserLockStatus(user_id, is_locked, reason, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   const updates = {
-    isLocked,
-    lockReason: isLocked ? reason : null,
+    is_locked,
+    lockReason: is_locked ? reason : null,
   };
 
   // Reset failed login attempts when unlocking
-  if (!isLocked) {
-    updates.failedLoginAttempts = 0;
+  if (!is_locked) {
+    updates.failed_login_attempts = 0;
   }
 
   await user.update(updates);
@@ -314,10 +316,10 @@ export async function getUserStats(models) {
 
   // Get user counts
   const totalUsers = await User.count();
-  const activeUsers = await User.count({ where: { isActive: true } });
-  const inactiveUsers = await User.count({ where: { isActive: false } });
-  const lockedUsers = await User.count({ where: { isLocked: true } });
-  const verifiedUsers = await User.count({ where: { emailConfirmed: true } });
+  const activeUsers = await User.count({ where: { is_active: true } });
+  const inactiveUsers = await User.count({ where: { is_active: false } });
+  const lockedUsers = await User.count({ where: { is_locked: true } });
+  const verifiedUsers = await User.count({ where: { email_confirmed: true } });
 
   // Get role distribution
   const roleStats = await User.findAll({
@@ -335,7 +337,7 @@ export async function getUserStats(models) {
 
   const recentRegistrations = await User.count({
     where: {
-      createdAt: {
+      created_at: {
         [models.Sequelize.Op.gte]: thirtyDaysAgo,
       },
     },
@@ -347,10 +349,10 @@ export async function getUserStats(models) {
     const totalLogins = await UserLogin.count({ where: { success: true } });
     const uniqueLoginsToday = await UserLogin.count({
       distinct: true,
-      col: 'userId',
+      col: 'user_id',
       where: {
         success: true,
-        loginAt: {
+        login_at: {
           [models.Sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
         },
       },
@@ -383,12 +385,12 @@ export async function getUserStats(models) {
 /**
  * Bulk update users
  *
- * @param {string[]} userIds - Array of user IDs
+ * @param {string[]} user_ids - Array of user IDs
  * @param {Object} updates - Updates to apply
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Update result
  */
-export async function bulkUpdateUsers(userIds, updates, models) {
+export async function bulkUpdateUsers(user_ids, updates, models) {
   const { User, UserProfile } = models;
 
   // Separate user and profile updates
@@ -397,25 +399,24 @@ export async function bulkUpdateUsers(userIds, updates, models) {
 
   // User fields
   if (updates.role) userUpdates.role = updates.role;
-  if (typeof updates.isActive === 'boolean')
-    userUpdates.isActive = updates.isActive;
-  if (typeof updates.isLocked === 'boolean')
-    userUpdates.isLocked = updates.isLocked;
+  if (typeof updates.is_active === 'boolean')
+    userUpdates.is_active = updates.is_active;
+  if (typeof updates.is_locked === 'boolean')
+    userUpdates.is_locked = updates.is_locked;
 
   // Profile fields
-  if (updates.displayName !== undefined)
-    profileUpdates.displayName = updates.displayName;
-  if (updates.firstName !== undefined)
-    profileUpdates.firstName = updates.firstName;
-  if (updates.lastName !== undefined)
-    profileUpdates.lastName = updates.lastName;
+  if (updates.display_name != null)
+    profileUpdates.display_name = updates.display_name;
+  if (updates.first_name != null)
+    profileUpdates.first_name = updates.first_name;
+  if (updates.last_name != null) profileUpdates.last_name = updates.last_name;
 
   let updatedCount = 0;
 
   // Update users
   if (Object.keys(userUpdates).length > 0) {
     const [affectedRows] = await User.update(userUpdates, {
-      where: { id: userIds },
+      where: { id: user_ids },
     });
     updatedCount = affectedRows;
   }
@@ -423,13 +424,13 @@ export async function bulkUpdateUsers(userIds, updates, models) {
   // Update profiles
   if (Object.keys(profileUpdates).length > 0) {
     await UserProfile.update(profileUpdates, {
-      where: { userId: userIds },
+      where: { user_id: user_ids },
     });
   }
 
   return {
     updatedCount,
-    userIds,
+    user_ids,
     updates: { ...userUpdates, ...profileUpdates },
   };
 }
@@ -437,28 +438,28 @@ export async function bulkUpdateUsers(userIds, updates, models) {
 /**
  * Reset user password (admin action)
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} newPassword - New password
- * @param {Object} {models, auth} - Database models and authentication engine
+ * @param {Object} {models} - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If user not found
+ * @throws {Error} If USER_NOT_FOUND
  */
-export async function resetUserPassword(userId, newPassword, { models, auth }) {
+export async function resetUserPassword(user_id, newPassword, { models }) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Hash new password
-  const hashedPassword = await auth.password.hashPassword(newPassword);
+  const hashedPassword = await hashPassword(newPassword);
 
   // Update password and reset security fields
   await user.update({
     password: hashedPassword,
-    failedLoginAttempts: 0,
-    isLocked: false,
+    failed_login_attempts: 0,
+    is_locked: false,
   });
 
   return user;

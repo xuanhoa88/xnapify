@@ -9,7 +9,14 @@ import Layout from '../../components/Layout';
 import Page from '../../components/Page';
 
 /**
- * Privacy Policy route
+ * Route configuration
+ */
+const route = {
+  path: '/privacy',
+};
+
+/**
+ * Route action
  */
 async function action() {
   // Load markdown file (only English version exists)
@@ -25,4 +32,4 @@ async function action() {
   };
 }
 
-export default action;
+export default [route, action];

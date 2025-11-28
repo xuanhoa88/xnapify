@@ -263,7 +263,7 @@ class WorkerService {
           data,
         });
 
-        if (result && result.success !== undefined) {
+        if (result && result.success != null) {
           return result;
         }
       } catch (error) {

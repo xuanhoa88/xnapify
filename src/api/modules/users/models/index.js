@@ -48,25 +48,25 @@ function initializeUserRelationships(models) {
 
   // User <-> UserLogin (One-to-Many)
   User.hasMany(UserLogin, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'logins',
     onUpdate: 'cascade',
     onDelete: 'cascade',
   });
   UserLogin.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'user',
   });
 
   // User <-> UserProfile (One-to-One)
   User.hasOne(UserProfile, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'profile',
     onUpdate: 'cascade',
     onDelete: 'cascade',
   });
   UserProfile.belongsTo(User, {
-    foreignKey: 'userId',
+    foreignKey: 'user_id',
     as: 'user',
   });
 
@@ -77,56 +77,56 @@ function initializeUserRelationships(models) {
   // User <-> Role (Many-to-Many through UserRole)
   User.belongsToMany(Role, {
     through: UserRole,
-    foreignKey: 'userId',
-    otherKey: 'roleId',
+    foreignKey: 'user_id',
+    otherKey: 'role_id',
     as: 'roles',
   });
   Role.belongsToMany(User, {
     through: UserRole,
-    foreignKey: 'roleId',
-    otherKey: 'userId',
+    foreignKey: 'role_id',
+    otherKey: 'user_id',
     as: 'users',
   });
 
   // Role <-> Permission (Many-to-Many through RolePermission)
   Role.belongsToMany(Permission, {
     through: RolePermission,
-    foreignKey: 'roleId',
-    otherKey: 'permissionId',
+    foreignKey: 'role_id',
+    otherKey: 'permission_id',
     as: 'permissions',
   });
   Permission.belongsToMany(Role, {
     through: RolePermission,
-    foreignKey: 'permissionId',
-    otherKey: 'roleId',
+    foreignKey: 'permission_id',
+    otherKey: 'role_id',
     as: 'roles',
   });
 
   // User <-> Group (Many-to-Many through UserGroup)
   User.belongsToMany(Group, {
     through: UserGroup,
-    foreignKey: 'userId',
-    otherKey: 'groupId',
+    foreignKey: 'user_id',
+    otherKey: 'group_id',
     as: 'groups',
   });
   Group.belongsToMany(User, {
     through: UserGroup,
-    foreignKey: 'groupId',
-    otherKey: 'userId',
+    foreignKey: 'group_id',
+    otherKey: 'user_id',
     as: 'users',
   });
 
   // Group <-> Role (Many-to-Many through GroupRole)
   Group.belongsToMany(Role, {
     through: GroupRole,
-    foreignKey: 'groupId',
-    otherKey: 'roleId',
+    foreignKey: 'group_id',
+    otherKey: 'role_id',
     as: 'roles',
   });
   Role.belongsToMany(Group, {
     through: GroupRole,
-    foreignKey: 'roleId',
-    otherKey: 'groupId',
+    foreignKey: 'role_id',
+    otherKey: 'group_id',
     as: 'groups',
   });
 }
@@ -146,7 +146,7 @@ function initializeUserRelationships(models) {
  * - Group <-> Role (Many-to-Many through GroupRole)
  *
  * @param {Object} deps - Dependencies injected by API bootstrap
- * @param {Object} deps.Model - Sequelize instance for database operations
+ * @param {Object} deps.db - Sequelize instance for database operations
  * @param {Object} deps.jwtConfig - JWT configuration
  * @param {string} deps.jwtConfig.secret - JWT secret key
  * @param {string} deps.jwtConfig.expiresIn - JWT expiration time
@@ -166,26 +166,23 @@ function initializeUserRelationships(models) {
  * @example
  * // Called by API bootstrap during model discovery
  * const userModels = initializeAuthModels(
- *   { sequelize, jwtConfig },
+ *   { db, jwtConfig },
  *   app
  * );
  * // Returns: { User, UserLogin, UserProfile, Role, Permission, ... }
  */
-export default function initializeAuthModels(deps) {
-  // Extract sequelize from dependencies
-  const { sequelize } = deps;
-
+export default function initializeAuthModels({ db }) {
   // Initialize all models with sequelize instance
-  const User = createUserModel(sequelize);
-  const UserLogin = createUserLoginModel(sequelize);
-  const UserProfile = createUserProfileModel(sequelize);
-  const Role = createRoleModel(sequelize);
-  const Permission = createPermissionModel(sequelize);
-  const Group = createGroupModel(sequelize);
-  const UserRole = createUserRoleModel(sequelize);
-  const RolePermission = createRolePermissionModel(sequelize);
-  const UserGroup = createUserGroupModel(sequelize);
-  const GroupRole = createGroupRoleModel(sequelize);
+  const User = createUserModel(db);
+  const UserLogin = createUserLoginModel(db);
+  const UserProfile = createUserProfileModel(db);
+  const Role = createRoleModel(db);
+  const Permission = createPermissionModel(db);
+  const Group = createGroupModel(db);
+  const UserRole = createUserRoleModel(db);
+  const RolePermission = createRolePermissionModel(db);
+  const UserGroup = createUserGroupModel(db);
+  const GroupRole = createGroupRoleModel(db);
 
   // Prepare models object for relationships
   const models = {

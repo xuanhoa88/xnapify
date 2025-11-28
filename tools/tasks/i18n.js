@@ -207,7 +207,7 @@ function extractTranslationKeys(code, fileName) {
   patterns.forEach(pattern => {
     let match;
     // eslint-disable-next-line no-cond-assign
-    while ((match = pattern.exec(code)) !== null) {
+    while ((match = pattern.exec(code)) != null) {
       const key = match[1].trim();
       if (key) {
         keys.add(key);
@@ -219,7 +219,7 @@ function extractTranslationKeys(code, fileName) {
   const templatePattern = /\bt\(`([^`]+)`\)/g;
   let templateMatch;
   // eslint-disable-next-line no-cond-assign
-  while ((templateMatch = templatePattern.exec(code)) !== null) {
+  while ((templateMatch = templatePattern.exec(code)) != null) {
     const warning = `Dynamic key in ${path.basename(fileName)}: t(\`${
       templateMatch[1]
     }\`) - use static keys instead`;

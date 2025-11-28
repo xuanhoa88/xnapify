@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * Group Model Factory
@@ -18,11 +17,15 @@ import { DataTypes } from 'sequelize';
  * - name: 'Marketing', description: 'Marketing team'
  * - name: 'Support', description: 'Customer support team'
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} Sequelize - Sequelize instance
  * @returns {Model} Group model
  */
-export default function createGroupModel(Model) {
-  const Group = Model.define(
+export default function createGroupModel({
+  connection,
+  Sequelize: { DataTypes },
+}) {
+  const Group = connection.define(
     'Group',
     {
       id: {
@@ -45,7 +48,7 @@ export default function createGroupModel(Model) {
         comment: 'Group description',
       },
 
-      isActive: {
+      is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
@@ -53,8 +56,10 @@ export default function createGroupModel(Model) {
       },
     },
     {
-      indexes: [{ fields: ['name'], unique: true }, { fields: ['isActive'] }],
+      tableName: 'groups',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

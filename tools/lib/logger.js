@@ -28,7 +28,7 @@ function determineLogLevel() {
   const envLevel = process.env.LOG_LEVEL
     ? process.env.LOG_LEVEL.toLowerCase()
     : undefined;
-  if (envLevel && LOG_LEVELS[envLevel] !== undefined) {
+  if (envLevel && LOG_LEVELS[envLevel] != null) {
     return envLevel;
   }
 

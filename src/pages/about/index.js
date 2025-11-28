@@ -9,7 +9,14 @@ import Layout from '../../components/Layout';
 import Page from '../../components/Page';
 
 /**
- * About route
+ * Route configuration
+ */
+const route = {
+  path: '/about',
+};
+
+/**
+ * Route action
  * Supports locale-specific content
  */
 async function action({ locale }) {
@@ -42,4 +49,4 @@ async function action({ locale }) {
   };
 }
 
-export default action;
+export default [route, action];

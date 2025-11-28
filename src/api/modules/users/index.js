@@ -15,6 +15,16 @@ import {
 } from './routes';
 
 /**
+ * Users Module Migrations Context
+ */
+const migrationsContext = require.context('./migrations', false, /\.js$/);
+
+/**
+ * Users Module Seeds Context
+ */
+const seedsContext = require.context('./seeds', false, /\.js$/);
+
+/**
  * User Module Factory
  *
  * This module handles comprehensive user management including authentication,
@@ -46,7 +56,7 @@ import {
  * @example
  * // Called by API bootstrap during module discovery
  * const userRouter = userModule(
- *   { Router, sequelize, models, jwtConfig },
+ *   { Router, db, models, jwtConfig },
  *   app
  * );
  * // Router will be mounted at /api/users
@@ -55,8 +65,23 @@ import {
  * // Other modules can access user userMiddlewares
  * const userMiddlewares = req.app.get('userMiddlewares');
  */
-export default function userModule(deps, app) {
+export default async function userModule(deps, app) {
   const { Router } = deps;
+
+  // Get database instance from app settings
+  const db = app.get('db');
+
+  // Initialize database migrations
+  await db.runMigrations(
+    [{ context: migrationsContext, prefix: 'users' }],
+    db.connection,
+  );
+
+  // Initialize database seeds
+  await db.runSeeds(
+    [{ context: seedsContext, prefix: 'users' }],
+    db.connection,
+  );
 
   // Register global middlewares in app settings for reuse by other modules
   app.set('userMiddlewares', userMiddlewares);

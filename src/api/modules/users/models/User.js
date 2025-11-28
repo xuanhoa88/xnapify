@@ -5,19 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DataTypes } from 'sequelize';
-
 /**
  * User Model Factory
  *
  * Creates the User model with the provided Sequelize instance.
  * Core user model for authentication and user management.
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} User model
  */
-export default function createUserModel(Model) {
-  const User = Model.define(
+export default function createUserModel({ connection, DataTypes }) {
+  const User = connection.define(
     'User',
     {
       id: {
@@ -38,7 +37,7 @@ export default function createUserModel(Model) {
         comment: 'User email address (unique)',
       },
 
-      emailConfirmed: {
+      email_confirmed: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
@@ -51,47 +50,46 @@ export default function createUserModel(Model) {
         comment: 'Hashed password (PBKDF2) - null for OAuth-only users',
       },
 
-      isActive: {
+      is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
         comment: 'Whether user account is active',
       },
 
-      isLocked: {
+      is_locked: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
         allowNull: false,
         comment: 'Whether user account is locked (security)',
       },
 
-      failedLoginAttempts: {
+      failed_login_attempts: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
         allowNull: false,
         comment: 'Number of failed login attempts',
       },
 
-      lastLoginAt: {
+      last_login_at: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'Last successful login timestamp',
       },
 
-      passwordChangedAt: {
+      password_changed_at: {
         type: DataTypes.DATE,
         allowNull: true,
         comment: 'When password was last changed',
       },
     },
     {
-      indexes: [
-        { fields: ['email'], unique: true },
-        { fields: ['isActive'] },
-        { fields: ['isLocked'] },
-      ],
+      tableName: 'users',
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+      deletedAt: 'deleted_at',
       timestamps: true,
-      paranoid: true, // Soft delete support
+      paranoid: true,
     },
   );
 

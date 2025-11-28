@@ -12,25 +12,25 @@
 /**
  * Assign roles to a user
  *
- * @param {string} userId - User ID
- * @param {string[]} roleIds - Array of role IDs
+ * @param {string} user_id - User ID
+ * @param {string[]} role_ids - Array of role IDs
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with roles
  */
-export async function assignRolesToUser(userId, roleIds, models) {
+export async function assignRolesToUser(user_id, role_ids, models) {
   const { User, Role } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Verify all roles exist
   const roles = await Role.findAll({
-    where: { id: roleIds },
+    where: { id: role_ids },
   });
 
-  if (roles.length !== roleIds.length) {
+  if (roles.length !== role_ids.length) {
     throw new Error('One or more roles not found');
   }
 
@@ -38,7 +38,7 @@ export async function assignRolesToUser(userId, roleIds, models) {
   await user.setRoles(roles);
 
   // Return user with roles
-  return await User.findByPk(userId, {
+  return await User.findByPk(user_id, {
     include: [
       {
         model: Role,
@@ -53,25 +53,25 @@ export async function assignRolesToUser(userId, roleIds, models) {
 /**
  * Assign groups to a user
  *
- * @param {string} userId - User ID
- * @param {string[]} groupIds - Array of group IDs
+ * @param {string} user_id - User ID
+ * @param {string[]} group_ids - Array of group IDs
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with groups
  */
-export async function assignGroupsToUser(userId, groupIds, models) {
+export async function assignGroupsToUser(user_id, group_ids, models) {
   const { User, Group } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Verify all groups exist
   const groups = await Group.findAll({
-    where: { id: groupIds },
+    where: { id: group_ids },
   });
 
-  if (groups.length !== groupIds.length) {
+  if (groups.length !== group_ids.length) {
     throw new Error('One or more groups not found');
   }
 
@@ -79,7 +79,7 @@ export async function assignGroupsToUser(userId, groupIds, models) {
   await user.setGroups(groups);
 
   // Return user with groups
-  return await User.findByPk(userId, {
+  return await User.findByPk(user_id, {
     include: [
       {
         model: Group,
@@ -94,20 +94,20 @@ export async function assignGroupsToUser(userId, groupIds, models) {
 /**
  * Add role to user
  *
- * @param {string} userId - User ID
- * @param {string} roleId - Role ID
+ * @param {string} user_id - User ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
  */
-export async function addRoleToUser(userId, roleId, models) {
+export async function addRoleToUser(user_id, role_id, models) {
   const { User, Role } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -119,20 +119,20 @@ export async function addRoleToUser(userId, roleId, models) {
 /**
  * Remove role from user
  *
- * @param {string} userId - User ID
- * @param {string} roleId - Role ID
+ * @param {string} user_id - User ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
  */
-export async function removeRoleFromUser(userId, roleId, models) {
+export async function removeRoleFromUser(user_id, role_id, models) {
   const { User, Role } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -144,20 +144,20 @@ export async function removeRoleFromUser(userId, roleId, models) {
 /**
  * Add group to user
  *
- * @param {string} userId - User ID
- * @param {string} groupId - Group ID
+ * @param {string} user_id - User ID
+ * @param {string} group_id - Group ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
  */
-export async function addGroupToUser(userId, groupId, models) {
+export async function addGroupToUser(user_id, group_id, models) {
   const { User, Group } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
@@ -169,20 +169,20 @@ export async function addGroupToUser(userId, groupId, models) {
 /**
  * Remove group from user
  *
- * @param {string} userId - User ID
- * @param {string} groupId - Group ID
+ * @param {string} user_id - User ID
+ * @param {string} group_id - Group ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
  */
-export async function removeGroupFromUser(userId, groupId, models) {
+export async function removeGroupFromUser(user_id, group_id, models) {
   const { User, Group } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
-  const group = await Group.findByPk(groupId);
+  const group = await Group.findByPk(group_id);
   if (!group) {
     throw new Error('Group not found');
   }
@@ -194,14 +194,14 @@ export async function removeGroupFromUser(userId, groupId, models) {
 /**
  * Get user's effective permissions (from roles and groups)
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of permissions
  */
-export async function getUserPermissions(userId, models) {
+export async function getUserPermissions(user_id, models) {
   const { User, Role, Permission, Group } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [
       {
         model: Role,
@@ -238,7 +238,7 @@ export async function getUserPermissions(userId, models) {
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   const permissions = new Set();
@@ -265,53 +265,53 @@ export async function getUserPermissions(userId, models) {
 /**
  * Check if user has specific permission
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} permissionName - Permission name
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user has permission
  */
-export async function userHasPermission(userId, permissionName, models) {
-  const permissions = await getUserPermissions(userId, models);
+export async function userHasPermission(user_id, permissionName, models) {
+  const permissions = await getUserPermissions(user_id, models);
   return permissions.includes(permissionName);
 }
 
 /**
  * Check if user has any of the specified permissions
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string[]} permissionNames - Array of permission names
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user has any permission
  */
-export async function userHasAnyPermission(userId, permissionNames, models) {
-  const permissions = await getUserPermissions(userId, models);
+export async function userHasAnyPermission(user_id, permissionNames, models) {
+  const permissions = await getUserPermissions(user_id, models);
   return permissionNames.some(permission => permissions.includes(permission));
 }
 
 /**
  * Check if user has all specified permissions
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string[]} permissionNames - Array of permission names
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user has all permissions
  */
-export async function userHasAllPermissions(userId, permissionNames, models) {
-  const permissions = await getUserPermissions(userId, models);
+export async function userHasAllPermissions(user_id, permissionNames, models) {
+  const permissions = await getUserPermissions(user_id, models);
   return permissionNames.every(permission => permissions.includes(permission));
 }
 
 /**
  * Get user's roles
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of roles
  */
-export async function getUserRoles(userId, models) {
+export async function getUserRoles(user_id, models) {
   const { User, Role, Permission } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [
       {
         model: Role,
@@ -329,7 +329,7 @@ export async function getUserRoles(userId, models) {
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   return user.roles;
@@ -338,14 +338,14 @@ export async function getUserRoles(userId, models) {
 /**
  * Get user's groups
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of groups
  */
-export async function getUserGroups(userId, models) {
+export async function getUserGroups(user_id, models) {
   const { User, Group, Role } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [
       {
         model: Group,
@@ -363,7 +363,7 @@ export async function getUserGroups(userId, models) {
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   return user.groups;
@@ -372,40 +372,40 @@ export async function getUserGroups(userId, models) {
 /**
  * Check if user has specific role
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} roleName - Role name
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user has role
  */
-export async function userHasRole(userId, roleName, models) {
-  const roles = await getUserRoles(userId, models);
+export async function userHasRole(user_id, roleName, models) {
+  const roles = await getUserRoles(user_id, models);
   return roles.some(role => role.name === roleName);
 }
 
 /**
  * Check if user is in specific group
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {string} groupName - Group name
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user is in group
  */
-export async function userInGroup(userId, groupName, models) {
-  const groups = await getUserGroups(userId, models);
+export async function userInGroup(user_id, groupName, models) {
+  const groups = await getUserGroups(user_id, models);
   return groups.some(group => group.name === groupName);
 }
 
 /**
  * Get user's complete RBAC profile
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Complete RBAC profile
  */
-export async function getUserRBACProfile(userId, models) {
+export async function getUserRBACProfile(user_id, models) {
   const { User, Role, Permission, Group } = models;
 
-  const user = await User.findByPk(userId, {
+  const user = await User.findByPk(user_id, {
     include: [
       {
         model: Role,
@@ -443,18 +443,18 @@ export async function getUserRBACProfile(userId, models) {
   });
 
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   // Get effective permissions
-  const permissions = await getUserPermissions(userId, models);
+  const permissions = await getUserPermissions(user_id, models);
 
   return {
     user: {
       id: user.id,
       email: user.email,
-      displayName: user.displayName,
-      isActive: user.isActive,
+      display_name: user.display_name,
+      is_active: user.is_active,
     },
     roles: user.roles.map(role => ({
       id: role.id,
@@ -481,29 +481,29 @@ export async function getUserRBACProfile(userId, models) {
 /**
  * Bulk assign roles to multiple users
  *
- * @param {string[]} userIds - Array of user IDs
- * @param {string[]} roleIds - Array of role IDs
+ * @param {string[]} user_ids - Array of user IDs
+ * @param {string[]} role_ids - Array of role IDs
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Assignment result
  */
-export async function bulkAssignRolesToUsers(userIds, roleIds, models) {
+export async function bulkAssignRolesToUsers(user_ids, role_ids, models) {
   const { User, Role } = models;
 
   // Verify users exist
   const users = await User.findAll({
-    where: { id: userIds },
+    where: { id: user_ids },
   });
 
-  if (users.length !== userIds.length) {
+  if (users.length !== user_ids.length) {
     throw new Error('One or more users not found');
   }
 
   // Verify roles exist
   const roles = await Role.findAll({
-    where: { id: roleIds },
+    where: { id: role_ids },
   });
 
-  if (roles.length !== roleIds.length) {
+  if (roles.length !== role_ids.length) {
     throw new Error('One or more roles not found');
   }
 
@@ -517,8 +517,8 @@ export async function bulkAssignRolesToUsers(userIds, roleIds, models) {
 
   return {
     assignedCount,
-    userIds,
-    roleIds,
+    user_ids,
+    role_ids,
   };
 }
 

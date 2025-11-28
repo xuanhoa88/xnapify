@@ -38,13 +38,13 @@ export async function getProfile(req, res) {
       profile: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
@@ -68,7 +68,7 @@ export async function getProfile(req, res) {
 export async function updateProfile(req, res) {
   const http = req.app.get('http');
   try {
-    const { displayName, firstName, lastName, bio, location, website } =
+    const { display_name, first_name, last_name, bio, location, website } =
       req.body;
 
     // Get models from app context
@@ -78,9 +78,9 @@ export async function updateProfile(req, res) {
     const user = await profileService.updateUserProfile(
       req.user.id,
       {
-        displayName,
-        firstName,
-        lastName,
+        display_name,
+        first_name,
+        last_name,
         bio,
         location,
         website,
@@ -92,13 +92,13 @@ export async function updateProfile(req, res) {
       profile: {
         id: user.id,
         email: user.email,
-        emailConfirmed: user.emailConfirmed,
-        isActive: user.isActive,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-        displayName: (user.profile && user.profile.displayName) || null,
-        firstName: (user.profile && user.profile.firstName) || null,
-        lastName: (user.profile && user.profile.lastName) || null,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        updated_at: user.updated_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        first_name: (user.profile && user.profile.first_name) || null,
+        last_name: (user.profile && user.profile.last_name) || null,
         picture: (user.profile && user.profile.picture) || null,
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,

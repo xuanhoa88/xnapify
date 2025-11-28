@@ -10,7 +10,14 @@ import { isAuthenticated, isAdmin } from '../../redux';
 import Admin from './Admin';
 
 /**
- * Admin dashboard route
+ * Route configuration
+ */
+const route = {
+  path: '/admin',
+};
+
+/**
+ * Route action
  * Requires authentication and admin role
  */
 async function action(context) {
@@ -39,4 +46,4 @@ async function action(context) {
   };
 }
 
-export default action;
+export default [route, action];

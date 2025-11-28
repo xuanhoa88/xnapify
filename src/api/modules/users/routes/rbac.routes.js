@@ -72,7 +72,7 @@ export default function rbacRoutes(deps, middlewares, app) {
    * @desc    Assign permissions to a role
    * @access  Admin (requires 'roles:write' permission)
    * @param   {string} id - Role ID
-   * @body    { permissionIds }
+   * @body    { permission_ids }
    */
   router.put(
     '/roles/:id/permissions',
@@ -162,7 +162,7 @@ export default function rbacRoutes(deps, middlewares, app) {
    * @desc    Assign roles to a user
    * @access  Admin (requires 'users:manage' permission)
    * @param   {string} id - User ID
-   * @body    { roleIds }
+   * @body    { role_ids }
    */
   router.put(
     '/users/:id/roles',
@@ -176,7 +176,7 @@ export default function rbacRoutes(deps, middlewares, app) {
    * @desc    Assign groups to a user
    * @access  Admin (requires 'users:manage' permission)
    * @param   {string} id - User ID
-   * @body    { groupIds }
+   * @body    { group_ids }
    */
   router.put(
     '/users/:id/groups',

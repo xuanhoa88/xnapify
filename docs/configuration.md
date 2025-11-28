@@ -39,14 +39,6 @@ cp .env.defaults .env
 - **Description:** Enable HTTPS for development server
 - **Example:** `RSK_HTTPS=true`
 
-### `RSK_TRUST_PROXY`
-
-- **Default:** `loopback`
-- **Description:** Trust proxy setting for Express.js
-- **Options:** `loopback`, `linklocal`, `uniquelocal`, or specific IP addresses
-- **Example:** `RSK_TRUST_PROXY=loopback`
-- **Docs:** [Express Behind Proxies](https://expressjs.com/en/guide/behind-proxies.html)
-
 ## API Configuration
 
 ### `RSK_API_BASE_URL`
@@ -217,7 +209,6 @@ LOG_LEVEL=verbose
 # Production settings
 RSK_PORT=8080
 RSK_HOST=0.0.0.0
-RSK_TRUST_PROXY=true
 
 # Production database
 RSK_DATABASE_URL=postgresql://user:pass@db.example.com:5432/prod

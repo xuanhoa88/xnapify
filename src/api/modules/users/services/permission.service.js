@@ -90,14 +90,14 @@ export async function getPermissions(options, models) {
 /**
  * Get permission by ID
  *
- * @param {string} permissionId - Permission ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Permission
  */
-export async function getPermissionById(permissionId, models) {
+export async function getPermissionById(permission_id, models) {
   const { Permission } = models;
 
-  const permission = await Permission.findByPk(permissionId);
+  const permission = await Permission.findByPk(permission_id);
   if (!permission) {
     throw new Error('Permission not found');
   }
@@ -108,15 +108,15 @@ export async function getPermissionById(permissionId, models) {
 /**
  * Update permission
  *
- * @param {string} permissionId - Permission ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} updateData - Data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated permission
  */
-export async function updatePermission(permissionId, updateData, models) {
+export async function updatePermission(permission_id, updateData, models) {
   const { Permission } = models;
 
-  const permission = await Permission.findByPk(permissionId);
+  const permission = await Permission.findByPk(permission_id);
   if (!permission) {
     throw new Error('Permission not found');
   }
@@ -138,14 +138,14 @@ export async function updatePermission(permissionId, updateData, models) {
 /**
  * Delete permission
  *
- * @param {string} permissionId - Permission ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
  */
-export async function deletePermission(permissionId, models) {
+export async function deletePermission(permission_id, models) {
   const { Permission } = models;
 
-  const permission = await Permission.findByPk(permissionId);
+  const permission = await Permission.findByPk(permission_id);
   if (!permission) {
     throw new Error('Permission not found');
   }
@@ -313,14 +313,14 @@ export async function bulkCreatePermissions(permissionsData, models) {
 /**
  * Get roles that have specific permission
  *
- * @param {string} permissionId - Permission ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of roles
  */
-export async function getRolesWithPermission(permissionId, models) {
+export async function getRolesWithPermission(permission_id, models) {
   const { Permission, Role } = models;
 
-  const permission = await Permission.findByPk(permissionId, {
+  const permission = await Permission.findByPk(permission_id, {
     include: [
       {
         model: Role,

@@ -35,9 +35,6 @@ export {
 // OAuth utilities
 export * as oauth from './oauth';
 
-// Password security utilities
-export * as password from './password';
-
 // JWT utilities
 export * as jwt from './jwt';
 

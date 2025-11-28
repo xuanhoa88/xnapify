@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { hashPassword, verifyPassword } from '../utils/password';
+
 // ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
@@ -15,38 +17,37 @@
  * @param {Object} userData - User registration data
  * @param {string} userData.email - User email
  * @param {string} userData.password - User password
- * @param {string} userData.displayName - User display name (optional)
+ * @param {string} userData.display_name - User display name (optional)
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.auth - Auth utilities from global auth engine
  * @returns {Promise<Object>} Created user with profile
  * @throws {Error} If user already exists or creation fails
  */
-export async function registerUser(userData, { models, auth }) {
-  const { email, password, displayName } = userData;
+export async function registerUser(userData, { models }) {
+  const { email, password, display_name } = userData;
   const { User, UserProfile } = models;
 
   // Check if user already exists
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
-    throw new Error('User already exists');
+    throw new Error('USER_ALREADY_EXISTS');
   }
 
   // Hash password using global auth utilities
-  const hashedPassword = await auth.password.hashPassword(password);
+  const hashedPassword = await hashPassword(password);
 
   // Create user with profile
   const user = await User.create(
     {
       email,
-      emailConfirmed: false,
+      email_confirmed: false,
       password: hashedPassword,
-      isActive: true,
-      isLocked: false,
-      failedLoginAttempts: 0,
+      is_active: true,
+      is_locked: false,
+      failed_login_attempts: 0,
       role: 'user',
       profile: {
-        displayName: displayName || email.split('@')[0],
+        display_name: display_name || email.split('@')[0],
       },
     },
     {
@@ -64,12 +65,11 @@ export async function registerUser(userData, { models, auth }) {
  * @param {string} password - User password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.auth - Auth utilities from global auth engine
  * @returns {Promise<Object>} User with profile
  * @throws {Error} If credentials are invalid
  */
-export async function authenticateUser(email, password, { models, auth }) {
-  const { User, UserProfile, UserLogin } = models;
+export async function authenticateUser(email, password, { models }) {
+  const { User, UserProfile } = models;
 
   // Find user with profile
   const user = await User.findOne({
@@ -78,51 +78,44 @@ export async function authenticateUser(email, password, { models, auth }) {
   });
 
   if (!user) {
-    throw new Error('Invalid credentials');
+    throw new Error('INVALID_CREDENTIALS');
   }
 
   // Check if account is active
-  if (!user.isActive) {
-    throw new Error('Account is inactive');
+  if (!user.is_active) {
+    throw new Error('ACCOUNT_INACTIVE');
   }
 
   // Check if account is locked
-  if (user.isLocked) {
-    throw new Error('Account is locked');
+  if (user.is_locked) {
+    throw new Error('ACCOUNT_LOCKED');
   }
 
   // Verify password using global auth utilities
-  const isValidPassword = await auth.password.verifyPassword(
-    password,
-    user.password,
-  );
+  const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
     // Increment failed login attempts
-    await user.increment('failedLoginAttempts');
+    await user.increment('failed_login_attempts');
 
     // Lock account after 5 failed attempts
-    if (user.failedLoginAttempts >= 4) {
-      await user.update({ isLocked: true });
+    if (user.failed_login_attempts >= 4) {
+      await user.update({ is_locked: true });
     }
 
-    throw new Error('Invalid credentials');
+    throw new Error('INVALID_CREDENTIALS');
   }
 
   // Reset failed login attempts on successful login
-  if (user.failedLoginAttempts > 0) {
-    await user.update({ failedLoginAttempts: 0 });
+  if (user.failed_login_attempts > 0) {
+    await user.update({ failed_login_attempts: 0 });
   }
 
   // Log successful login
-  if (UserLogin) {
-    await UserLogin.create({
-      userId: user.id,
-      ipAddress: null, // This would be set by the controller
-      userAgent: null, // This would be set by the controller
-      loginAt: new Date(),
-      success: true,
-    });
-  }
+  await updateLastLogin(
+    user.id,
+    { ip_address: null, user_agent: null },
+    models,
+  );
 
   return user;
 }
@@ -142,23 +135,23 @@ export async function verifyEmail(token, models) {
   // For now, we'll simulate token verification
   try {
     // Decode token to get user ID (simplified)
-    const userId = token; // In reality, decode JWT token
+    const user_id = token; // In reality, decode JWT token
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(user_id);
     if (!user) {
-      throw new Error('Invalid or expired token');
+      throw new Error('USER_NOT_FOUND');
     }
 
-    if (user.emailConfirmed) {
-      throw new Error('Email already verified');
+    if (user.email_confirmed) {
+      throw new Error('EMAIL_ALREADY_VERIFIED');
     }
 
     // Update email confirmation status
-    await user.update({ emailConfirmed: true });
+    await user.update({ email_confirmed: true });
 
     return user;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    throw new Error('INVALID_TOKEN');
   }
 }
 
@@ -200,99 +193,98 @@ export async function requestPasswordReset(email, models) {
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.auth - Auth utilities from global auth engine
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid or expired
  */
-export async function resetPassword(token, newPassword, { models, auth }) {
+export async function resetPassword(token, newPassword, { models }) {
   const { User } = models;
 
   try {
     // Decode token to get user ID (simplified)
-    const userId = token; // In reality, decode and verify JWT token
+    const user_id = token; // In reality, decode and verify JWT token
 
-    const user = await User.findByPk(userId);
+    const user = await User.findByPk(user_id);
     if (!user) {
-      throw new Error('Invalid or expired token');
+      throw new Error('USER_NOT_FOUND');
     }
 
     // Hash new password using global auth utilities
-    const hashedPassword = await auth.password.hashPassword(newPassword);
+    const hashedPassword = await hashPassword(newPassword);
 
     // Update password and reset failed login attempts
     await user.update({
       password: hashedPassword,
-      failedLoginAttempts: 0,
-      isLocked: false,
+      failed_login_attempts: 0,
+      is_locked: false,
     });
 
     return user;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    throw new Error('INVALID_TOKEN');
   }
 }
 
 /**
  * Update user's last login timestamp
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} loginData - Login data (IP, user agent, etc.)
  * @param {Object} models - Database models
  * @returns {Promise<void>}
  */
-export async function updateLastLogin(userId, loginData, models) {
+export async function updateLastLogin(user_id, loginData, models) {
   const { User, UserLogin } = models;
 
   // Update user's last login
-  await User.update({ lastLoginAt: new Date() }, { where: { id: userId } });
+  await User.update({ last_login_at: new Date() }, { where: { id: user_id } });
 
   // Create login record
-  if (UserLogin) {
-    await UserLogin.create({
-      userId,
-      ipAddress: loginData.ipAddress,
-      userAgent: loginData.userAgent,
-      loginAt: new Date(),
-      success: true,
-    });
-  }
+  await UserLogin.create({
+    user_id,
+    name: 'local',
+    key: user_id,
+    ip_address: loginData.ip_address,
+    user_agent: loginData.user_agent,
+    login_at: new Date(),
+    success: true,
+  });
 }
 
 /**
  * Check if user account is locked
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if account is locked
  */
-export async function isAccountLocked(userId, models) {
+export async function isAccountLocked(user_id, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId, {
-    attributes: ['isLocked', 'failedLoginAttempts'],
+  const user = await User.findByPk(user_id, {
+    attributes: ['is_locked', 'failed_login_attempts'],
   });
 
-  return user ? user.isLocked : false;
+  return user ? user.is_locked : false;
 }
 
 /**
  * Unlock user account
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
  */
-export async function unlockAccount(userId, models) {
+export async function unlockAccount(user_id, models) {
   const { User } = models;
 
-  const user = await User.findByPk(userId);
+  const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('User not found');
+    throw new Error('USER_NOT_FOUND');
   }
 
   await user.update({
-    isLocked: false,
-    failedLoginAttempts: 0,
+    is_locked: false,
+    failed_login_attempts: 0,
   });
 
   return user;

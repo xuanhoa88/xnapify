@@ -35,11 +35,7 @@ export function validateBody(schema = {}) {
 
     // Check required fields
     required.forEach(field => {
-      if (
-        body[field] === undefined ||
-        body[field] === null ||
-        body[field] === ''
-      ) {
+      if (body[field] == null || body[field] === '') {
         errors.push(`Field '${field}' is required`);
       }
     });
@@ -48,7 +44,7 @@ export function validateBody(schema = {}) {
     Object.entries(rules).forEach(([field, rule]) => {
       const value = body[field];
 
-      if (value !== undefined) {
+      if (value != null) {
         if (rule.type && typeof value !== rule.type) {
           errors.push(`Field '${field}' must be of type ${rule.type}`);
         }
@@ -114,7 +110,7 @@ export function validateQuery(schema = {}) {
     Object.entries(rules).forEach(([field, rule]) => {
       const value = query[field];
 
-      if (value !== undefined) {
+      if (value != null) {
         if (rule.type === 'number') {
           const num = parseInt(value, 10);
           if (isNaN(num)) {
@@ -276,7 +272,7 @@ export function requestLogger(options = {}) {
       method: req.method,
       url: req.originalUrl,
       ip: req.ip,
-      userAgent: req.get('User-Agent'),
+      user_agent: req.get('User-Agent'),
       timestamp: new Date().toISOString(),
     };
 

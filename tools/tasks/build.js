@@ -31,6 +31,7 @@ import {
 import { webpackClientConfig, webpackServerConfig } from '../webpack';
 import clean from './clean';
 import messages from './i18n';
+import generateJWT from './jwt';
 
 // Build configuration
 const BUNDLE_REPORT_PATH = config.env(
@@ -87,6 +88,12 @@ async function copyFiles() {
         path.join(config.BUILD_DIR, 'i18n', 'translations'),
       );
       logDebug('Copied i18n translations');
+    }
+
+    // 5. Copy .env.production
+    if (fs.existsSync('.env.production')) {
+      await copyFile('.env.production', path.join(config.BUILD_DIR, '.env'));
+      logDebug('Copied .env.production');
     }
 
     logInfo('✅ Static files copied');
@@ -382,6 +389,11 @@ export default async function main() {
         description: 'Cleaning build directory',
       },
       {
+        name: 'generate:jwt',
+        task: () => generateJWT('production'),
+        description: 'Generating JWT options',
+      },
+      {
         name: 'messages',
         task: messages,
         description: 'Extracting i18n messages',
@@ -431,8 +443,7 @@ export default async function main() {
         '',
         '  2️⃣ Test locally:',
         `     cd '${config.BUILD_DIR}'`,
-        '     export NODE_ENV=production RSK_JWT_SECRET=$(openssl rand -base64 32)',
-        '     node server.js',
+        '     NODE_ENV=production node server.js',
         '',
         '  3️⃣ Deploy:',
         '     • Docker: See Dockerfile in project root',

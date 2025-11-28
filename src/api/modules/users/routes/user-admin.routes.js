@@ -62,7 +62,7 @@ export default function userAdminRoutes(deps, middlewares, app) {
    * @desc    Update user by ID
    * @access  Admin only
    * @param   {string} id - User ID
-   * @body    { email, displayName, isActive, emailConfirmed }
+   * @body    { email, display_name, is_active, email_confirmed }
    */
   router.put(
     '/:id',
@@ -103,7 +103,7 @@ export default function userAdminRoutes(deps, middlewares, app) {
    * @desc    Update user status (active/inactive)
    * @access  Admin only
    * @param   {string} id - User ID
-   * @body    { isActive }
+   * @body    { is_active }
    */
   router.put(
     '/:id/status',
@@ -128,7 +128,7 @@ export default function userAdminRoutes(deps, middlewares, app) {
    * @route   PUT /bulk
    * @desc    Bulk update users
    * @access  Admin only
-   * @body    { userIds, updates }
+   * @body    { user_ids, updates }
    */
   router.put(
     '/bulk',

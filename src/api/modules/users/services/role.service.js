@@ -31,7 +31,7 @@ export async function createRole(roleData, models) {
   const role = await Role.create({
     name,
     description,
-    isActive: true,
+    is_active: true,
   });
 
   return role;
@@ -89,14 +89,14 @@ export async function getRoles(options, models) {
 /**
  * Get role by ID
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Role with permissions
  */
-export async function getRoleById(roleId, models) {
+export async function getRoleById(role_id, models) {
   const { Role, Permission } = models;
 
-  const role = await Role.findByPk(roleId, {
+  const role = await Role.findByPk(role_id, {
     include: [
       {
         model: Permission,
@@ -116,15 +116,15 @@ export async function getRoleById(roleId, models) {
 /**
  * Update role
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {Object} updateData - Data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated role
  */
-export async function updateRole(roleId, updateData, models) {
+export async function updateRole(role_id, updateData, models) {
   const { Role } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -146,14 +146,14 @@ export async function updateRole(roleId, updateData, models) {
 /**
  * Delete role
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteRole(roleId, models) {
+export async function deleteRole(role_id, models) {
   const { Role } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -171,25 +171,25 @@ export async function deleteRole(roleId, models) {
 /**
  * Assign permissions to a role
  *
- * @param {string} roleId - Role ID
- * @param {string[]} permissionIds - Array of permission IDs
+ * @param {string} role_id - Role ID
+ * @param {string[]} permission_ids - Array of permission IDs
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Role with updated permissions
  */
-export async function assignPermissionsToRole(roleId, permissionIds, models) {
+export async function assignPermissionsToRole(role_id, permission_ids, models) {
   const { Role, Permission } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
 
   // Verify all permissions exist
   const permissions = await Permission.findAll({
-    where: { id: permissionIds },
+    where: { id: permission_ids },
   });
 
-  if (permissions.length !== permissionIds.length) {
+  if (permissions.length !== permission_ids.length) {
     throw new Error('One or more permissions not found');
   }
 
@@ -197,7 +197,7 @@ export async function assignPermissionsToRole(roleId, permissionIds, models) {
   await role.setPermissions(permissions);
 
   // Return role with permissions
-  return await Role.findByPk(roleId, {
+  return await Role.findByPk(role_id, {
     include: [
       {
         model: Permission,
@@ -211,20 +211,20 @@ export async function assignPermissionsToRole(roleId, permissionIds, models) {
 /**
  * Add permission to role
  *
- * @param {string} roleId - Role ID
- * @param {string} permissionId - Permission ID
+ * @param {string} role_id - Role ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated role
  */
-export async function addPermissionToRole(roleId, permissionId, models) {
+export async function addPermissionToRole(role_id, permission_id, models) {
   const { Role, Permission } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
 
-  const permission = await Permission.findByPk(permissionId);
+  const permission = await Permission.findByPk(permission_id);
   if (!permission) {
     throw new Error('Permission not found');
   }
@@ -236,20 +236,20 @@ export async function addPermissionToRole(roleId, permissionId, models) {
 /**
  * Remove permission from role
  *
- * @param {string} roleId - Role ID
- * @param {string} permissionId - Permission ID
+ * @param {string} role_id - Role ID
+ * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated role
  */
-export async function removePermissionFromRole(roleId, permissionId, models) {
+export async function removePermissionFromRole(role_id, permission_id, models) {
   const { Role, Permission } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
 
-  const permission = await Permission.findByPk(permissionId);
+  const permission = await Permission.findByPk(permission_id);
   if (!permission) {
     throw new Error('Permission not found');
   }
@@ -261,14 +261,14 @@ export async function removePermissionFromRole(roleId, permissionId, models) {
 /**
  * Get role permissions
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of permissions
  */
-export async function getRolePermissions(roleId, models) {
+export async function getRolePermissions(role_id, models) {
   const { Role, Permission } = models;
 
-  const role = await Role.findByPk(roleId, {
+  const role = await Role.findByPk(role_id, {
     include: [
       {
         model: Permission,
@@ -288,30 +288,30 @@ export async function getRolePermissions(roleId, models) {
 /**
  * Check if role has permission
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {string} permissionName - Permission name
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if role has permission
  */
-export async function roleHasPermission(roleId, permissionName, models) {
-  const permissions = await getRolePermissions(roleId, models);
+export async function roleHasPermission(role_id, permissionName, models) {
+  const permissions = await getRolePermissions(role_id, models);
   return permissions.some(permission => permission.name === permissionName);
 }
 
 /**
  * Get users with specific role
  *
- * @param {string} roleId - Role ID
+ * @param {string} role_id - Role ID
  * @param {Object} options - Query options
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Users with pagination
  */
-export async function getUsersWithRole(roleId, options, models) {
+export async function getUsersWithRole(role_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
   const { Role, User } = models;
 
-  const role = await Role.findByPk(roleId);
+  const role = await Role.findByPk(role_id);
   if (!role) {
     throw new Error('Role not found');
   }
@@ -321,14 +321,14 @@ export async function getUsersWithRole(roleId, options, models) {
       {
         model: Role,
         as: 'roles',
-        where: { id: roleId },
+        where: { id: role_id },
         through: { attributes: [] },
       },
     ],
-    attributes: ['id', 'email', 'displayName', 'isActive', 'createdAt'],
+    attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['createdAt', 'DESC']],
+    order: [['created_at', 'DESC']],
   });
 
   return {

@@ -10,7 +10,14 @@ import { isAuthenticated } from '../../redux';
 import ResetPassword from './ResetPassword';
 
 /**
- * Reset Password route
+ * Route configuration
+ */
+const route = {
+  path: '/reset-password',
+};
+
+/**
+ * Route action
  * Redirects authenticated users to home page
  */
 function action(context) {
@@ -34,4 +41,4 @@ function action(context) {
   };
 }
 
-export default action;
+export default [route, action];

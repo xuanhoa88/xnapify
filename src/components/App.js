@@ -10,7 +10,6 @@ import React from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
 
-// eslint-disable-next-line react/prop-types
 export default function App({ context, children }) {
   return (
     <ReduxProvider store={context.store}>
@@ -32,4 +31,5 @@ const ContextType = {
 
 App.propTypes = {
   context: PropTypes.shape(ContextType).isRequired,
+  children: PropTypes.node.isRequired,
 };

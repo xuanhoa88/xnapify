@@ -108,7 +108,7 @@ export function getCookieValue(req, name) {
  */
 export function hasCookie(req, name) {
   const value = getCookieValue(req, name);
-  return value !== null && value !== undefined && value !== '';
+  return value != null && value !== '';
 }
 
 /**
@@ -282,7 +282,10 @@ export function getCookieConfig(type = 'jwt', overrides = {}) {
 export function validateCookieOptions(options = {}) {
   const errors = [];
 
-  if (options.name && typeof options.name !== 'string') {
+  if (
+    options.name &&
+    (typeof options.name !== 'string' || options.name.trim().length === 0)
+  ) {
     errors.push('Cookie name must be a string');
   }
 
@@ -300,11 +303,17 @@ export function validateCookieOptions(options = {}) {
     errors.push('Cookie sameSite must be "strict", "lax", or "none"');
   }
 
-  if (options.path && typeof options.path !== 'string') {
+  if (
+    options.path &&
+    (typeof options.path !== 'string' || options.path.trim().length === 0)
+  ) {
     errors.push('Cookie path must be a string');
   }
 
-  if (options.domain && typeof options.domain !== 'string') {
+  if (
+    options.domain &&
+    (typeof options.domain !== 'string' || options.domain.trim().length === 0)
+  ) {
     errors.push('Cookie domain must be a string');
   }
 

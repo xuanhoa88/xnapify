@@ -101,7 +101,7 @@ export async function getGroupById(req, res) {
           model: User,
           as: 'users',
           through: { attributes: [] },
-          attributes: ['id', 'email', 'displayName'],
+          attributes: ['id', 'email', 'display_name'],
         },
       ],
     });
@@ -140,7 +140,7 @@ export async function updateGroup(req, res) {
     // Update group
     await group.update({
       name: name || group.name,
-      description: description !== undefined ? description : group.description,
+      description: description != null ? description : group.description,
     });
 
     return http.sendSuccess(res, { group });
@@ -200,12 +200,12 @@ export async function assignRolesToGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { roleIds } = req.body;
+    const { role_ids } = req.body;
 
     // Validate input
-    if (!Array.isArray(roleIds)) {
+    if (!Array.isArray(role_ids)) {
       return http.sendValidationError(res, {
-        roleIds: 'Role IDs must be an array',
+        role_ids: 'Role IDs must be an array',
       });
     }
 
@@ -219,12 +219,12 @@ export async function assignRolesToGroup(req, res) {
 
     // Verify all roles exist
     const roles = await Role.findAll({
-      where: { id: roleIds },
+      where: { id: role_ids },
     });
 
-    if (roles.length !== roleIds.length) {
+    if (roles.length !== role_ids.length) {
       return http.sendValidationError(res, {
-        roleIds: 'One or more roles not found',
+        role_ids: 'One or more roles not found',
       });
     }
 
@@ -280,10 +280,10 @@ export async function getGroupMembers(req, res) {
           through: { attributes: [] },
         },
       ],
-      attributes: ['id', 'email', 'displayName', 'isActive', 'createdAt'],
+      attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
       limit: parseInt(limit),
       offset: parseInt(offset),
-      order: [['displayName', 'ASC']],
+      order: [['display_name', 'ASC']],
     });
 
     return http.sendSuccess(res, {

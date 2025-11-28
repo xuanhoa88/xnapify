@@ -69,7 +69,7 @@ export const validators = {
    * Check if value is required (not null, undefined, or empty string)
    */
   required: (value, message = 'This field is required') => {
-    if (value === null || value === undefined || value === '') {
+    if (value == null || value === '') {
       throw new FieldValidationError(message, null, value);
     }
     return value;
@@ -79,7 +79,7 @@ export const validators = {
    * Check if value is a string
    */
   string: (value, message = 'Must be a string') => {
-    if (typeof value !== 'string') {
+    if (typeof value !== 'string' || value.trim().length === 0) {
       throw new FieldValidationError(message, null, value);
     }
     return value;
@@ -129,7 +129,7 @@ export const validators = {
    * Check if value is an object
    */
   object: (value, message = 'Must be an object') => {
-    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    if (typeof value !== 'object' || value == null || Array.isArray(value)) {
       throw new FieldValidationError(message, null, value);
     }
     return value;
@@ -389,40 +389,6 @@ export function validateField(value, rules, field = 'field') {
  */
 export const commonSchemas = {
   /**
-   * User registration schema
-   */
-  userRegistration: createSchema({
-    email: [validators.required, validators.string, validators.email()],
-    password: [
-      validators.required,
-      validators.string,
-      validators.minLength(8, 'Password must be at least 8 characters'),
-      validators.pattern(
-        /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-        'Password must contain at least one lowercase letter, one uppercase letter, and one number',
-      ),
-    ],
-    firstName: [
-      validators.required,
-      validators.string,
-      validators.maxLength(50),
-    ],
-    lastName: [
-      validators.required,
-      validators.string,
-      validators.maxLength(50),
-    ],
-  }),
-
-  /**
-   * User login schema
-   */
-  userLogin: createSchema({
-    email: [validators.required, validators.string, validators.email()],
-    password: [validators.required, validators.string],
-  }),
-
-  /**
    * Pagination schema
    */
   pagination: createSchema({
@@ -488,19 +454,19 @@ export function sanitize(data, options = {}) {
     return data
       .map(item => sanitize(item, options))
       .filter(item => {
-        if (removeNullValues && item === null) return false;
+        if (removeNullValues && item == null) return false;
         if (removeEmptyStrings && item === '') return false;
         return true;
       });
   }
 
-  if (typeof data === 'object' && data !== null) {
+  if (typeof data === 'object' && data != null) {
     const sanitized = {};
 
     Object.entries(data).forEach(([key, value]) => {
       const sanitizedValue = sanitize(value, options);
 
-      if (removeNullValues && sanitizedValue === null) return;
+      if (removeNullValues && sanitizedValue == null) return;
       if (removeEmptyStrings && sanitizedValue === '') return;
 
       sanitized[key] = sanitizedValue;

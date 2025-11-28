@@ -57,7 +57,7 @@ export function createResponse(
     timestamp: new Date().toISOString(),
   };
 
-  if (data !== null) {
+  if (data != null) {
     response.data = data;
   }
 

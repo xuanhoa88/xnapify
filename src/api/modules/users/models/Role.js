@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * Role Model Factory
@@ -18,11 +17,12 @@ import { DataTypes } from 'sequelize';
  * - name: 'user', description: 'Regular user'
  * - name: 'moderator', description: 'Content moderator'
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} Role model
  */
-export default function createRoleModel(Model) {
-  const Role = Model.define(
+export default function createRoleModel({ connection, DataTypes }) {
+  const Role = connection.define(
     'Role',
     {
       id: {
@@ -45,7 +45,7 @@ export default function createRoleModel(Model) {
         comment: 'Role description',
       },
 
-      isActive: {
+      is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
         allowNull: false,
@@ -53,8 +53,10 @@ export default function createRoleModel(Model) {
       },
     },
     {
-      indexes: [{ fields: ['name'], unique: true }, { fields: ['isActive'] }],
+      tableName: 'roles',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 

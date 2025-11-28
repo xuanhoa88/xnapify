@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DataTypes } from 'sequelize';
-
 /**
  * UserProfile Model Factory
  *
@@ -14,20 +12,20 @@ import { DataTypes } from 'sequelize';
  * Stores additional user profile information.
  * One-to-one relationship with User model.
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
  * @returns {Model} UserProfile model
  */
-export default function createUserProfileModel(Model) {
-  const UserProfile = Model.define(
+export default function createUserProfileModel({ connection, DataTypes }) {
+  const UserProfile = connection.define(
     'UserProfile',
     {
-      userId: {
+      user_id: {
         type: DataTypes.UUID,
         primaryKey: true,
         comment: 'User this profile belongs to',
       },
 
-      displayName: {
+      display_name: {
         type: DataTypes.STRING(100),
         allowNull: true,
         comment: 'User display name',
@@ -67,7 +65,11 @@ export default function createUserProfileModel(Model) {
       },
     },
     {
+      tableName: 'user_profiles',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+      noPrimaryKey: true,
     },
   );
 

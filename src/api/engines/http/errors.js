@@ -305,7 +305,7 @@ export function errorHandler(err, req, res, next) {
     url: req.originalUrl,
     method: req.method,
     ip: req.ip,
-    userAgent: req.get('User-Agent'),
+    user_agent: req.get('User-Agent'),
     timestamp: new Date().toISOString(),
   });
 
@@ -349,7 +349,9 @@ export function errorHandler(err, req, res, next) {
 
   // Handle JWT errors
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    const authError = new AuthenticationError('Invalid or expired token');
+    const authError = new AuthenticationError(
+      err.name === 'JsonWebTokenError' ? 'INVALID_TOKEN' : 'TOKEN_EXPIRED',
+    );
     return res.status(authError.statusCode).json({
       success: false,
       error: authError.message,

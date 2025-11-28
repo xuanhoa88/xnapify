@@ -59,7 +59,7 @@ export function generateToken(payload, secret, options = {}) {
     throw new Error('Payload must be a non-empty object');
   }
 
-  if (!secret || typeof secret !== 'string') {
+  if (typeof secret !== 'string' || secret.trim().length === 0) {
     throw new Error('Secret must be a non-empty string');
   }
 
@@ -100,11 +100,11 @@ export function generateToken(payload, secret, options = {}) {
  * }
  */
 export function verifyToken(token, secret, options = {}) {
-  if (!token || typeof token !== 'string') {
+  if (typeof token !== 'string' || token.trim().length === 0) {
     throw new Error('Token must be a non-empty string');
   }
 
-  if (!secret || typeof secret !== 'string') {
+  if (typeof secret !== 'string' || secret.trim().length === 0) {
     throw new Error('Secret must be a non-empty string');
   }
 
@@ -206,7 +206,7 @@ export function verifyTypedToken(token, expectedType, secret, options = {}) {
  * console.log('Token expires at:', new Date(payload.exp * 1000));
  */
 export function decodeToken(token) {
-  if (!token || typeof token !== 'string') {
+  if (typeof token !== 'string' || token.trim().length === 0) {
     throw new Error('Token must be a non-empty string');
   }
 
@@ -390,11 +390,17 @@ export function validateJwtConfig(config = {}) {
     errors.push('expiresIn must be a string or number');
   }
 
-  if (config.issuer && typeof config.issuer !== 'string') {
+  if (
+    config.issuer &&
+    (typeof config.issuer !== 'string' || config.issuer.trim().length === 0)
+  ) {
     errors.push('issuer must be a string');
   }
 
-  if (config.audience && typeof config.audience !== 'string') {
+  if (
+    config.audience &&
+    (typeof config.audience !== 'string' || config.audience.trim().length === 0)
+  ) {
     errors.push('audience must be a string');
   }
 

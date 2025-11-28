@@ -131,7 +131,7 @@ export async function updateRole(req, res) {
     // Update role
     await role.update({
       name: name || role.name,
-      description: description !== undefined ? description : role.description,
+      description: description != null ? description : role.description,
     });
 
     return http.sendSuccess(res, { role });
@@ -191,12 +191,12 @@ export async function assignPermissionsToRole(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { permissionIds } = req.body;
+    const { permission_ids } = req.body;
 
     // Validate input
-    if (!Array.isArray(permissionIds)) {
+    if (!Array.isArray(permission_ids)) {
       return http.sendValidationError(res, {
-        permissionIds: 'Permission IDs must be an array',
+        permission_ids: 'Permission IDs must be an array',
       });
     }
 
@@ -206,7 +206,7 @@ export async function assignPermissionsToRole(req, res) {
     // Assign permissions
     const role = await roleService.assignPermissionsToRole(
       id,
-      permissionIds,
+      permission_ids,
       models,
     );
 
@@ -218,7 +218,7 @@ export async function assignPermissionsToRole(req, res) {
 
     if (error.message.includes('permissions not found')) {
       return http.sendValidationError(res, {
-        permissionIds: error.message,
+        permission_ids: error.message,
       });
     }
 

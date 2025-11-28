@@ -7,6 +7,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
+import path from 'path';
 import express from 'express';
 import webpack from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
@@ -14,7 +16,14 @@ import webpackHotMiddleware from 'webpack-hot-middleware';
 import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
 import config from '../config';
 import { BuildError, setupGracefulShutdown } from '../lib/errorHandler';
-import { isSilent, isVerbose, logError, logInfo } from '../lib/logger';
+import {
+  isSilent,
+  isVerbose,
+  logError,
+  logInfo,
+  logDebug,
+} from '../lib/logger';
+import { copyFile } from '../lib/fs';
 import {
   WEBPACK_SERVER_BUNDLE_PATH,
   webpackClientConfig,
@@ -23,6 +32,7 @@ import {
   shutdown as shutdownBrowserSync,
 } from '../webpack';
 import clean from './clean';
+import generateJWT from './jwt';
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('webpack-middleware');
@@ -434,6 +444,15 @@ export default async function main() {
   try {
     // Clean build directory
     await clean();
+
+    // Generate JWT
+    await generateJWT('development');
+
+    // Copy .env.development
+    if (fs.existsSync('.env.development')) {
+      await copyFile('.env.development', path.join(config.BUILD_DIR, '.env'));
+      logDebug('Copied .env.development');
+    }
 
     // Create Express server instance
     app = express();

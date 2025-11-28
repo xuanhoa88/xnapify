@@ -14,18 +14,18 @@
  *
  * Requires user to own the resource or have admin permissions.
  *
- * @param {string} resourceIdParam - Parameter name for resource ID (default: 'id')
+ * @param {string} resource_idParam - Parameter name for resource ID (default: 'id')
  * @param {string} resourceModel - Model name for the resource
- * @param {string} ownerField - Field name that contains the owner ID (default: 'userId')
+ * @param {string} ownerField - Field name that contains the owner ID (default: 'user_id')
  * @returns {Function} Express middleware function
  *
  * @example
  * router.put('/posts/:id', requireAuth, requireOwnership('id', 'Post', 'authorId'), controller.updatePost);
  */
 export function requireOwnership(
-  resourceIdParam = 'id',
+  resource_idParam = 'id',
   resourceModel,
-  ownerField = 'userId',
+  ownerField = 'user_id',
 ) {
   return async (req, res, next) => {
     if (!req.user) {
@@ -46,8 +46,8 @@ export function requireOwnership(
         });
       }
 
-      const resourceId = req.params[resourceIdParam];
-      const resource = await Model.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await Model.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({
@@ -90,7 +90,7 @@ export function requireOwnership(
  * Supports multiple ownership patterns and admin bypass options.
  *
  * @param {Object} options - Configuration options
- * @param {string} options.resourceIdParam - Parameter name for resource ID
+ * @param {string} options.resource_idParam - Parameter name for resource ID
  * @param {string} options.resourceModel - Model name for the resource
  * @param {string|Function} options.ownerField - Field name or function to determine ownership
  * @param {boolean} options.adminBypass - Whether admins can bypass ownership (default: true)
@@ -108,9 +108,9 @@ export function requireOwnership(
  */
 export function requireFlexibleOwnership(options) {
   const {
-    resourceIdParam = 'id',
+    resource_idParam = 'id',
     resourceModel,
-    ownerField = 'userId',
+    ownerField = 'user_id',
     adminBypass = true,
     bypassRoles = [],
     bypassPermissions = [],
@@ -135,8 +135,8 @@ export function requireFlexibleOwnership(options) {
         });
       }
 
-      const resourceId = req.params[resourceIdParam];
-      const resource = await Model.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await Model.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({
@@ -201,7 +201,7 @@ export function requireFlexibleOwnership(options) {
  *
  * Allows access if user is owner OR has shared access to the resource.
  *
- * @param {string} resourceIdParam - Parameter name for resource ID
+ * @param {string} resource_idParam - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {string} sharedModel - Model name for shared access records
@@ -209,14 +209,14 @@ export function requireFlexibleOwnership(options) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/documents/:id', requireAuth, requireSharedOwnership('id', 'Document', 'ownerId', 'DocumentShare', 'userId'), controller.getDocument);
+ * router.get('/documents/:id', requireAuth, requireSharedOwnership('id', 'Document', 'ownerId', 'DocumentShare', 'user_id'), controller.getDocument);
  */
 export function requireSharedOwnership(
-  resourceIdParam = 'id',
+  resource_idParam = 'id',
   resourceModel,
-  ownerField = 'userId',
+  ownerField = 'user_id',
   sharedModel,
-  sharedUserField = 'userId',
+  sharedUserField = 'user_id',
 ) {
   return async (req, res, next) => {
     if (!req.user) {
@@ -245,8 +245,8 @@ export function requireSharedOwnership(
         });
       }
 
-      const resourceId = req.params[resourceIdParam];
-      const resource = await Model.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await Model.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({
@@ -263,7 +263,7 @@ export function requireSharedOwnership(
         // Check if user has shared access
         const sharedAccess = await SharedModel.findOne({
           where: {
-            resourceId: resourceId,
+            resource_id: resource_id,
             [sharedUserField]: req.user.id,
           },
         });
@@ -298,7 +298,7 @@ export function requireSharedOwnership(
  *
  * Allows access based on hierarchical relationships (e.g., team lead can access team member resources).
  *
- * @param {string} resourceIdParam - Parameter name for resource ID
+ * @param {string} resource_idParam - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {Function} hierarchyCheck - Function to check hierarchical relationship
@@ -309,9 +309,9 @@ export function requireSharedOwnership(
  * router.get('/reports/:id', requireAuth, requireHierarchicalOwnership('id', 'Report', 'authorId', isManager), controller.getReport);
  */
 export function requireHierarchicalOwnership(
-  resourceIdParam = 'id',
+  resource_idParam = 'id',
   resourceModel,
-  ownerField = 'userId',
+  ownerField = 'user_id',
   hierarchyCheck,
 ) {
   return async (req, res, next) => {
@@ -333,8 +333,8 @@ export function requireHierarchicalOwnership(
         });
       }
 
-      const resourceId = req.params[resourceIdParam];
-      const resource = await Model.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await Model.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({
@@ -385,11 +385,11 @@ export function requireHierarchicalOwnership(
  *
  * Allows ownership changes based on time constraints (e.g., can only edit within 1 hour of creation).
  *
- * @param {string} resourceIdParam - Parameter name for resource ID
+ * @param {string} resource_idParam - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {number} timeLimit - Time limit in milliseconds
- * @param {string} timeField - Field name for creation/modification time (default: 'createdAt')
+ * @param {string} timeField - Field name for creation/modification time (default: 'created_at')
  * @returns {Function} Express middleware function
  *
  * @example
@@ -397,11 +397,11 @@ export function requireHierarchicalOwnership(
  * router.put('/comments/:id', requireAuth, requireTimeBasedOwnership('id', 'Comment', 'authorId', oneHour), controller.updateComment);
  */
 export function requireTimeBasedOwnership(
-  resourceIdParam = 'id',
+  resource_idParam = 'id',
   resourceModel,
-  ownerField = 'userId',
+  ownerField = 'user_id',
   timeLimit,
-  timeField = 'createdAt',
+  timeField = 'created_at',
 ) {
   return async (req, res, next) => {
     if (!req.user) {
@@ -422,8 +422,8 @@ export function requireTimeBasedOwnership(
         });
       }
 
-      const resourceId = req.params[resourceIdParam];
-      const resource = await Model.findByPk(resourceId);
+      const resource_id = req.params[resource_idParam];
+      const resource = await Model.findByPk(resource_id);
 
       if (!resource) {
         return res.status(404).json({

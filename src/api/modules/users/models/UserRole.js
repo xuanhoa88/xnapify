@@ -4,7 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { DataTypes } from 'sequelize';
 
 /**
  * UserRole Model Factory (Junction Table)
@@ -13,11 +12,11 @@ import { DataTypes } from 'sequelize';
  * Links users to roles (many-to-many relationship).
  * A user can have multiple roles, and a role can be assigned to multiple users.
  *
- * @param {Object} Model - Sequelize instance
+ * @param {Object} connection - Sequelize connection instance
  * @returns {Model} UserRole model
  */
-export default function createUserRoleModel(Model) {
-  const UserRole = Model.define(
+export default function createUserRoleModel({ connection, DataTypes }) {
+  const UserRole = connection.define(
     'UserRole',
     {
       id: {
@@ -27,25 +26,23 @@ export default function createUserRoleModel(Model) {
         comment: 'Unique user-role assignment identifier',
       },
 
-      userId: {
+      user_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'User ID',
       },
 
-      roleId: {
+      role_id: {
         type: DataTypes.UUID,
         allowNull: false,
         comment: 'Role ID',
       },
     },
     {
-      indexes: [
-        { fields: ['userId'] },
-        { fields: ['roleId'] },
-        { fields: ['userId', 'roleId'], unique: true },
-      ],
+      tableName: 'user_roles',
       timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
     },
   );
 
