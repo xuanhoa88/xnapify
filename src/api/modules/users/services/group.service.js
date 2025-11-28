@@ -454,7 +454,7 @@ export async function getGroupTypes(models) {
  * @returns {Promise<Object>} Group statistics
  */
 export async function getGroupStats(models) {
-  const { Group, User } = models;
+  const { Group } = models;
 
   const totalGroups = await Group.count();
 

@@ -12,7 +12,7 @@ React Starter Kit uses environment variables for configuration. This guide expla
 
 ```javascript
 // tools/run.js
-require('dotenv').config({ override: true }); // Loads .env file
+require('dotenv-flow/config'); // Loads .env file
 ```
 
 **Setup:**

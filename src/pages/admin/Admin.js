@@ -112,6 +112,7 @@ function Admin({ title }) {
               <div className={s.settingItem}>
                 <div className={s.settingHeader}>
                   <h3>Maintenance Mode</h3>
+                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
                   <label className={s.switch}>
                     <input type='checkbox' />
                     <span className={s.slider} />
@@ -122,6 +123,7 @@ function Admin({ title }) {
               <div className={s.settingItem}>
                 <div className={s.settingHeader}>
                   <h3>Email Notifications</h3>
+                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
                   <label className={s.switch}>
                     <input type='checkbox' defaultChecked />
                     <span className={s.slider} />
@@ -132,6 +134,7 @@ function Admin({ title }) {
               <div className={s.settingItem}>
                 <div className={s.settingHeader}>
                   <h3>Two-Factor Authentication</h3>
+                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
                   <label className={s.switch}>
                     <input type='checkbox' defaultChecked />
                     <span className={s.slider} />
@@ -142,6 +145,7 @@ function Admin({ title }) {
               <div className={s.settingItem}>
                 <div className={s.settingHeader}>
                   <h3>API Access</h3>
+                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
                   <label className={s.switch}>
                     <input type='checkbox' defaultChecked />
                     <span className={s.slider} />

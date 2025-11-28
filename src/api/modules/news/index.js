@@ -28,7 +28,7 @@ import routes from './news.routes';
  * const newsRouter = newsModule({ Router }, app);
  * // Router will be mounted at /api/news
  */
-export default function newsModule({ Router }, app) {
+export default function newsModule({ Router }) {
   const router = Router();
 
   // Mount news routes directly

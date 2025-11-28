@@ -214,7 +214,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, auth },
+  { models },
 ) {
   const { User } = models;
 
@@ -350,7 +350,7 @@ export async function getUserPreferences(user_id, models) {
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If USER_NOT_FOUND or password invalid
  */
-export async function deleteUserAccount(user_id, password, { models, auth }) {
+export async function deleteUserAccount(user_id, password, { models }) {
   const { User, UserProfile } = models;
 
   const user = await User.findByPk(user_id);

@@ -14,7 +14,7 @@
 import multer from 'multer';
 import * as filesystemActions from '../actions';
 import workerService from '../workers';
-import { MAX_FILE_SIZE } from '../utils';
+import { MAX_FILE_SIZE } from '../utils/constants';
 
 /**
  * Hybrid decision logic for upload operations

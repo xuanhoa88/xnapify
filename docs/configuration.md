@@ -428,7 +428,7 @@ ls -la .env
 
 # Check dotenv is loaded
 # Should be in tools/run.js
-require('dotenv').config({ override: true });
+require('dotenv-flow/config');
 ```
 
 ### Wrong Values

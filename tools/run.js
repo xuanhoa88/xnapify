@@ -87,7 +87,7 @@ const AVAILABLE_TASKS = [
   {
     name: 'build',
     description: 'Build the project for production',
-    processEnv: { NODE_ENV: process.env.NODE_ENV || 'production' },
+    processEnv: { NODE_ENV: 'production' },
   },
   {
     name: 'clean',
@@ -96,12 +96,12 @@ const AVAILABLE_TASKS = [
   {
     name: 'start',
     description: 'Start the project for development',
-    processEnv: { NODE_ENV: process.env.NODE_ENV || 'development' },
+    processEnv: { NODE_ENV: 'development' },
   },
   {
     name: 'test',
     description: 'Run tests with Jest',
-    processEnv: { NODE_ENV: process.env.NODE_ENV || 'test' },
+    processEnv: { NODE_ENV: 'test' },
   },
   {
     name: 'i18n',
@@ -118,7 +118,6 @@ const AVAILABLE_TASKS = [
   {
     name: 'jwt',
     description: 'Generate a new JWT options and update .env',
-    processEnv: { NODE_ENV: process.env.NODE_ENV || 'development' },
   },
 ];
 
@@ -156,19 +155,16 @@ function executeTask(taskName) {
     const processEnv = taskEnv
       ? Object.assign({}, process.env, taskEnv)
       : process.env;
+    processEnv.NODE_ENV = processEnv.NODE_ENV || 'development';
 
     // Get additional arguments to forward to task (everything after task name)
     const taskArgs = process.argv.slice(3); // Skip node, script, and task name
-
-    taskArgs.unshift(
-      `dotenv_config_path=.env.${processEnv.NODE_ENV || 'development'}`,
-    );
 
     // Spawn task in child process using babel-node
     // Forward any additional arguments to the task
     const taskProcess = spawn(
       'babel-node',
-      ['-r', 'dotenv/config', taskPath, ...taskArgs],
+      ['-r', 'dotenv-flow/config', taskPath, ...taskArgs],
       {
         stdio: 'inherit', // Inherit stdin, stdout, stderr
         env: processEnv,

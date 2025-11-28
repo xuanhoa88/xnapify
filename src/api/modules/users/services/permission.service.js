@@ -73,7 +73,10 @@ export async function getPermissions(options, models) {
     where: whereCondition,
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['resource', 'ASC'], ['action', 'ASC']],
+    order: [
+      ['resource', 'ASC'],
+      ['action', 'ASC'],
+    ],
   });
 
   return {
@@ -195,7 +198,12 @@ export async function getResources(models) {
   const { Permission } = models;
 
   const resources = await Permission.findAll({
-    attributes: [[models.Sequelize.fn('DISTINCT', models.Sequelize.col('resource')), 'resource']],
+    attributes: [
+      [
+        models.Sequelize.fn('DISTINCT', models.Sequelize.col('resource')),
+        'resource',
+      ],
+    ],
     order: [['resource', 'ASC']],
     raw: true,
   });
@@ -214,49 +222,184 @@ export async function createDefaultPermissions(models) {
 
   const defaultPermissions = [
     // User Management
-    { name: 'users:read', resource: 'users', action: 'read', description: 'View users' },
-    { name: 'users:write', resource: 'users', action: 'write', description: 'Create and update users' },
-    { name: 'users:delete', resource: 'users', action: 'delete', description: 'Delete users' },
-    { name: 'users:manage', resource: 'users', action: 'manage', description: 'Full user management' },
+    {
+      name: 'users:read',
+      resource: 'users',
+      action: 'read',
+      description: 'View users',
+    },
+    {
+      name: 'users:write',
+      resource: 'users',
+      action: 'write',
+      description: 'Create and update users',
+    },
+    {
+      name: 'users:delete',
+      resource: 'users',
+      action: 'delete',
+      description: 'Delete users',
+    },
+    {
+      name: 'users:manage',
+      resource: 'users',
+      action: 'manage',
+      description: 'Full user management',
+    },
 
     // Role Management
-    { name: 'roles:read', resource: 'roles', action: 'read', description: 'View roles' },
-    { name: 'roles:write', resource: 'roles', action: 'write', description: 'Create and update roles' },
-    { name: 'roles:delete', resource: 'roles', action: 'delete', description: 'Delete roles' },
+    {
+      name: 'roles:read',
+      resource: 'roles',
+      action: 'read',
+      description: 'View roles',
+    },
+    {
+      name: 'roles:write',
+      resource: 'roles',
+      action: 'write',
+      description: 'Create and update roles',
+    },
+    {
+      name: 'roles:delete',
+      resource: 'roles',
+      action: 'delete',
+      description: 'Delete roles',
+    },
 
     // Permission Management
-    { name: 'permissions:read', resource: 'permissions', action: 'read', description: 'View permissions' },
-    { name: 'permissions:write', resource: 'permissions', action: 'write', description: 'Create and update permissions' },
+    {
+      name: 'permissions:read',
+      resource: 'permissions',
+      action: 'read',
+      description: 'View permissions',
+    },
+    {
+      name: 'permissions:write',
+      resource: 'permissions',
+      action: 'write',
+      description: 'Create and update permissions',
+    },
 
     // Group Management
-    { name: 'groups:read', resource: 'groups', action: 'read', description: 'View groups' },
-    { name: 'groups:write', resource: 'groups', action: 'write', description: 'Create and update groups' },
-    { name: 'groups:delete', resource: 'groups', action: 'delete', description: 'Delete groups' },
+    {
+      name: 'groups:read',
+      resource: 'groups',
+      action: 'read',
+      description: 'View groups',
+    },
+    {
+      name: 'groups:write',
+      resource: 'groups',
+      action: 'write',
+      description: 'Create and update groups',
+    },
+    {
+      name: 'groups:delete',
+      resource: 'groups',
+      action: 'delete',
+      description: 'Delete groups',
+    },
 
     // System Administration
-    { name: 'system:admin', resource: 'system', action: 'admin', description: 'System administration' },
-    { name: 'system:settings', resource: 'system', action: 'settings', description: 'Manage system settings' },
+    {
+      name: 'system:admin',
+      resource: 'system',
+      action: 'admin',
+      description: 'System administration',
+    },
+    {
+      name: 'system:settings',
+      resource: 'system',
+      action: 'settings',
+      description: 'Manage system settings',
+    },
 
     // Content Management (examples)
-    { name: 'posts:read', resource: 'posts', action: 'read', description: 'View posts' },
-    { name: 'posts:write', resource: 'posts', action: 'write', description: 'Create and update posts' },
-    { name: 'posts:delete', resource: 'posts', action: 'delete', description: 'Delete posts' },
-    { name: 'posts:publish', resource: 'posts', action: 'publish', description: 'Publish posts' },
+    {
+      name: 'posts:read',
+      resource: 'posts',
+      action: 'read',
+      description: 'View posts',
+    },
+    {
+      name: 'posts:write',
+      resource: 'posts',
+      action: 'write',
+      description: 'Create and update posts',
+    },
+    {
+      name: 'posts:delete',
+      resource: 'posts',
+      action: 'delete',
+      description: 'Delete posts',
+    },
+    {
+      name: 'posts:publish',
+      resource: 'posts',
+      action: 'publish',
+      description: 'Publish posts',
+    },
 
     // Comments Management (examples)
-    { name: 'comments:read', resource: 'comments', action: 'read', description: 'View comments' },
-    { name: 'comments:write', resource: 'comments', action: 'write', description: 'Create and update comments' },
-    { name: 'comments:delete', resource: 'comments', action: 'delete', description: 'Delete comments' },
-    { name: 'comments:moderate', resource: 'comments', action: 'moderate', description: 'Moderate comments' },
+    {
+      name: 'comments:read',
+      resource: 'comments',
+      action: 'read',
+      description: 'View comments',
+    },
+    {
+      name: 'comments:write',
+      resource: 'comments',
+      action: 'write',
+      description: 'Create and update comments',
+    },
+    {
+      name: 'comments:delete',
+      resource: 'comments',
+      action: 'delete',
+      description: 'Delete comments',
+    },
+    {
+      name: 'comments:moderate',
+      resource: 'comments',
+      action: 'moderate',
+      description: 'Moderate comments',
+    },
 
     // File Management (examples)
-    { name: 'files:read', resource: 'files', action: 'read', description: 'View files' },
-    { name: 'files:write', resource: 'files', action: 'write', description: 'Upload and update files' },
-    { name: 'files:delete', resource: 'files', action: 'delete', description: 'Delete files' },
+    {
+      name: 'files:read',
+      resource: 'files',
+      action: 'read',
+      description: 'View files',
+    },
+    {
+      name: 'files:write',
+      resource: 'files',
+      action: 'write',
+      description: 'Upload and update files',
+    },
+    {
+      name: 'files:delete',
+      resource: 'files',
+      action: 'delete',
+      description: 'Delete files',
+    },
 
     // Analytics (examples)
-    { name: 'analytics:read', resource: 'analytics', action: 'read', description: 'View analytics' },
-    { name: 'analytics:export', resource: 'analytics', action: 'export', description: 'Export analytics data' },
+    {
+      name: 'analytics:read',
+      resource: 'analytics',
+      action: 'read',
+      description: 'View analytics',
+    },
+    {
+      name: 'analytics:export',
+      resource: 'analytics',
+      action: 'export',
+      description: 'Export analytics data',
+    },
   ];
 
   const createdPermissions = [];
@@ -274,7 +417,10 @@ export async function createDefaultPermissions(models) {
       }
     } catch (error) {
       // Continue with other permissions if one fails
-      console.warn(`Failed to create permission ${permData.name}:`, error.message);
+      console.warn(
+        `Failed to create permission ${permData.name}:`,
+        error.message,
+      );
     }
   }
 
@@ -303,7 +449,10 @@ export async function bulkCreatePermissions(permissionsData, models) {
         createdPermissions.push(permission);
       }
     } catch (error) {
-      console.warn(`Failed to create permission ${permData.name}:`, error.message);
+      console.warn(
+        `Failed to create permission ${permData.name}:`,
+        error.message,
+      );
     }
   }
 
@@ -361,10 +510,10 @@ export async function permissionExists(permissionName, models) {
  * @returns {Promise<Object>} Permission statistics
  */
 export async function getPermissionStats(models) {
-  const { Permission, Role } = models;
+  const { Permission } = models;
 
   const totalPermissions = await Permission.count();
-  
+
   const resourceStats = await Permission.findAll({
     attributes: [
       'resource',

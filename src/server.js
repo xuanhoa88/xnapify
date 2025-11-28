@@ -5,10 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Load environment variables from .env file
-const nodeEnv = process.env.NODE_ENV || 'development';
-require('dotenv').config({ override: true, processEnv: { NODE_ENV: nodeEnv } });
-
+import 'dotenv-flow/config';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import createProxy from 'express-http-proxy';
@@ -36,6 +33,9 @@ import Html from './components/Html';
 if (!global.navigator) {
   global.navigator = { user_agent: 'all' };
 }
+
+// Get environment variables
+const nodeEnv = process.env.NODE_ENV || 'development';
 
 // Environment variable defaults with validation
 const config = Object.freeze({

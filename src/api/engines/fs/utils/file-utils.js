@@ -15,8 +15,10 @@ import {
   MAX_FILENAME_LENGTH,
   ALLOWED_EXTENSIONS,
   SIZE_LIMITS,
+  MAX_FILE_SIZE,
 } from './constants';
 import { FILE_TYPES } from './file-types';
+import { UPLOAD_PRESETS } from './upload-presets';
 
 /**
  * Sanitize filename to remove dangerous characters
