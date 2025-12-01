@@ -33,7 +33,7 @@ import {
  * @returns {Function} Redux thunk action
  */
 export function login({ email, password }) {
-  return async (dispatch, getState, { fetch, navigator }) => {
+  return async (dispatch, getState, { fetch }) => {
     dispatch({ type: LOGIN_START });
 
     try {
@@ -48,9 +48,6 @@ export function login({ email, password }) {
         type: LOGIN_SUCCESS,
         payload: data.user,
       });
-
-      // Redirect to home page
-      navigator.navigateTo('/');
 
       return { success: true, user: data.user };
     } catch (error) {
@@ -76,7 +73,7 @@ export function login({ email, password }) {
  * @returns {Function} Redux thunk action
  */
 export function register({ email, password, displayName }) {
-  return async (dispatch, getState, { fetch, navigator }) => {
+  return async (dispatch, getState, { fetch }) => {
     dispatch({ type: REGISTER_START });
 
     try {
@@ -95,9 +92,6 @@ export function register({ email, password, displayName }) {
         type: REGISTER_SUCCESS,
         payload: data.user,
       });
-
-      // Redirect to home page
-      navigator.navigateTo('/');
 
       return { success: true, user: data.user };
     } catch (error) {
@@ -119,7 +113,7 @@ export function register({ email, password, displayName }) {
  * @returns {Function} Redux thunk action
  */
 export function logout() {
-  return async (dispatch, getState, { fetch, navigator }) => {
+  return async (dispatch, getState, { fetch }) => {
     try {
       // Call logout API to clear server-side session/cookie
       await fetch('/api/users/logout', {
@@ -133,9 +127,6 @@ export function logout() {
       dispatch({
         type: LOGOUT,
       });
-
-      // Redirect to home page
-      navigator.navigateTo('/');
     }
   };
 }
@@ -209,14 +200,28 @@ export function resetPassword({ email }) {
 }
 
 /**
- * Update user profile
+ * Updates user profile information on the server
  *
  * @param {Object} userData - User data to update
- * @returns {Object} Redux action
+ * @returns {Function} Redux thunk action
  */
 export function updateUser(userData) {
-  return {
-    type: UPDATE_USER,
-    payload: userData,
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch('/api/users/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+      });
+
+      dispatch({
+        type: UPDATE_USER,
+        payload: data.profile,
+      });
+
+      return { success: true, user: data.profile };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   };
 }

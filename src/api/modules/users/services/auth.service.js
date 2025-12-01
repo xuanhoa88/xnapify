@@ -6,6 +6,7 @@
  */
 
 import { hashPassword, verifyPassword } from '../utils/password';
+import { SYSTEM_ROLES } from '../constants/roles';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
@@ -45,7 +46,7 @@ export async function registerUser(userData, { models }) {
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
-      role: 'user',
+      role: SYSTEM_ROLES[0],
       profile: {
         display_name: display_name || email.split('@')[0],
       },

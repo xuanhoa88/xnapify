@@ -3,37 +3,42 @@
  * https://stylelint.io/user-guide/configuration/
  */
 
-// File patterns to lint
-const patterns = {
+const filePatterns = {
   all: 'src/**/*.{css,less,styl,scss,sass,sss}',
   css: 'src/**/*.css',
   scss: 'src/**/*.scss',
   sass: 'src/**/*.sass',
 };
 
-const config = {
-  extends: 'stylelint-config-standard',
+module.exports = {
+  extends: ['stylelint-config-standard', 'stylelint-config-prettier'],
+
+  patterns: filePatterns,
 
   rules: {
-    // Disable rules that conflict with Prettier
+    // Prettier compatibility
     'declaration-colon-newline-after': null,
     'value-list-comma-newline-after': null,
 
+    // Allow redundant longhand properties
+    'declaration-block-no-redundant-longhand-properties': null,
+
     // CSS Modules support
-    'property-no-unknown': [
-      true,
-      {
-        ignoreProperties: ['composes'],
-      },
-    ],
+    'property-no-unknown': [true, { ignoreProperties: ['composes'] }],
+
+    // Allow :global and :local only
     'selector-pseudo-class-no-unknown': [
       true,
-      {
-        ignorePseudoClasses: ['global', 'local'],
-      },
+      { ignorePseudoClasses: ['global', 'local'] },
     ],
+
+    // Allow any naming style: CamelCase, PascalCase, kebab-case, etc.
+    'selector-class-pattern': null,
+
+    // Avoid false errors with Tailwind, PostCSS, HTML, SCSS, etc.
+    'at-rule-no-unknown': null,
+
+    // Allow any naming style: CamelCase, PascalCase, kebab-case, etc.
+    'keyframes-name-pattern': null,
   },
 };
-
-config.patterns = patterns;
-module.exports = config;

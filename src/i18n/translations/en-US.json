@@ -10,6 +10,8 @@
     "contact": "Contact",
     "login": "Login",
     "register": "Register",
+    "logout": "Logout",
+    "profile": "Profile",
     "home": "Home",
     "admin": "Admin",
     "privacy": "Privacy",

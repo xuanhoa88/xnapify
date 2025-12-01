@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../components/variables.css';
+@import "../../components/variables.css";
 
 /* Error page wrapper - overrides global styles */
 .root {

@@ -9,69 +9,73 @@ Create a new model in `src/data/models/`:
 import DataType from 'sequelize';
 import Model from '../sequelize';
 
-const Post = Model.define('Post', {
-  id: {
-    type: DataType.UUID,
-    defaultValue: DataType.UUIDV1,
-    primaryKey: true,
-  },
-  
-  title: {
-    type: DataType.STRING(255),
-    allowNull: false,
-    validate: {
-      notEmpty: true,
-      len: [1, 255],
+const Post = Model.define(
+  'Post',
+  {
+    id: {
+      type: DataType.UUID,
+      defaultValue: DataType.UUIDV1,
+      primaryKey: true,
     },
-  },
-  
-  content: {
-    type: DataType.TEXT,
-    allowNull: false,
-  },
-  
-  slug: {
-    type: DataType.STRING(255),
-    allowNull: false,
-    unique: true,
-    validate: {
-      is: /^[a-z0-9-]+$/i,
+
+    title: {
+      type: DataType.STRING(255),
+      allowNull: false,
+      validate: {
+        notEmpty: true,
+        len: [1, 255],
+      },
     },
-  },
-  
-  published: {
-    type: DataType.BOOLEAN,
-    defaultValue: false,
-  },
-  
-  publishedAt: {
-    type: DataType.DATE,
-    allowNull: true,
-  },
-  
-  userId: {
-    type: DataType.UUID,
-    allowNull: false,
-    references: {
-      model: 'User',
-      key: 'id',
+
+    content: {
+      type: DataType.TEXT,
+      allowNull: false,
     },
-  },
-}, {
-  timestamps: true, // Adds createdAt and updatedAt
-  indexes: [
-    {
-      fields: ['userId'],
-    },
-    {
-      fields: ['slug'],
+
+    slug: {
+      type: DataType.STRING(255),
+      allowNull: false,
       unique: true,
+      validate: {
+        is: /^[a-z0-9-]+$/i,
+      },
     },
-    {
-      fields: ['published', 'publishedAt'],
+
+    published: {
+      type: DataType.BOOLEAN,
+      defaultValue: false,
     },
-  ],
-});
+
+    publishedAt: {
+      type: DataType.DATE,
+      allowNull: true,
+    },
+
+    userId: {
+      type: DataType.UUID,
+      allowNull: false,
+      references: {
+        model: 'User',
+        key: 'id',
+      },
+    },
+  },
+  {
+    timestamps: true, // Adds createdAt and updatedAt
+    indexes: [
+      {
+        fields: ['userId'],
+      },
+      {
+        fields: ['slug'],
+        unique: true,
+      },
+      {
+        fields: ['published', 'publishedAt'],
+      },
+    ],
+  },
+);
 
 export default Post;
 ```
@@ -82,19 +86,19 @@ Add associations in the model file or in a separate associations file:
 
 ```javascript
 // In src/data/models/Post.js
-Post.associate = (models) => {
+Post.associate = models => {
   // A post belongs to a user
   Post.belongsTo(models.User, {
     foreignKey: 'userId',
     as: 'author',
   });
-  
+
   // A post has many comments
   Post.hasMany(models.Comment, {
     foreignKey: 'postId',
     as: 'comments',
   });
-  
+
   // A post has many tags (many-to-many)
   Post.belongsToMany(models.Tag, {
     through: 'PostTags',
@@ -104,7 +108,7 @@ Post.associate = (models) => {
 };
 
 // In src/data/models/User.js
-User.associate = (models) => {
+User.associate = models => {
   // A user has many posts
   User.hasMany(models.Post, {
     foreignKey: 'userId',
@@ -132,7 +136,7 @@ const models = {
 };
 
 // Setup associations
-Object.keys(models).forEach((modelName) => {
+Object.keys(models).forEach(modelName => {
   if (models[modelName].associate) {
     models[modelName].associate(models);
   }
@@ -202,7 +206,7 @@ export const up = async (queryInterface, Sequelize) => {
   await queryInterface.addIndex('Posts', ['published', 'publishedAt']);
 };
 
-export const down = async (queryInterface) => {
+export const down = async queryInterface => {
   await queryInterface.dropTable('Posts');
 };
 ```
@@ -234,13 +238,13 @@ app.get('/api/posts', async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'displayName', 'email'],
+          attributes: ['id', 'display_name', 'email'],
         },
       ],
       order: [['publishedAt', 'DESC']],
       where: { published: true },
     });
-    
+
     res.json(posts);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -256,7 +260,7 @@ app.get('/api/posts/:slug', async (req, res) => {
         {
           model: User,
           as: 'author',
-          attributes: ['id', 'displayName'],
+          attributes: ['id', 'display_name'],
         },
         {
           model: Comment,
@@ -264,11 +268,11 @@ app.get('/api/posts/:slug', async (req, res) => {
         },
       ],
     });
-    
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
+
     res.json(post);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -279,14 +283,14 @@ app.get('/api/posts/:slug', async (req, res) => {
 app.post('/api/posts', jwtMiddleware, async (req, res) => {
   try {
     const { title, content, slug } = req.body;
-    
+
     const post = await Post.create({
       title,
       content,
       slug,
       userId: req.user.id,
     });
-    
+
     res.status(201).json(post);
   } catch (error) {
     res.status(400).json({ error: error.message });
@@ -297,16 +301,16 @@ app.post('/api/posts', jwtMiddleware, async (req, res) => {
 app.put('/api/posts/:id', jwtMiddleware, async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
-    
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
+
     // Check ownership
     if (post.userId !== req.user.id) {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    
+
     await post.update(req.body);
     res.json(post);
   } catch (error) {
@@ -318,16 +322,16 @@ app.put('/api/posts/:id', jwtMiddleware, async (req, res) => {
 app.delete('/api/posts/:id', jwtMiddleware, async (req, res) => {
   try {
     const post = await Post.findByPk(req.params.id);
-    
+
     if (!post) {
       return res.status(404).json({ error: 'Post not found' });
     }
-    
+
     // Check ownership
     if (post.userId !== req.user.id) {
       return res.status(403).json({ error: 'Forbidden' });
     }
-    
+
     await post.destroy();
     res.status(204).send();
   } catch (error) {
@@ -421,17 +425,20 @@ import sequelize from './data/sequelize';
 
 app.post('/api/posts', jwtMiddleware, async (req, res) => {
   const t = await sequelize.transaction();
-  
+
   try {
-    const post = await Post.create({
-      title: req.body.title,
-      content: req.body.content,
-      userId: req.user.id,
-    }, { transaction: t });
-    
+    const post = await Post.create(
+      {
+        title: req.body.title,
+        content: req.body.content,
+        userId: req.user.id,
+      },
+      { transaction: t },
+    );
+
     // Create related records
     await post.addTags(req.body.tagIds, { transaction: t });
-    
+
     await t.commit();
     res.status(201).json(post);
   } catch (error) {
@@ -444,33 +451,37 @@ app.post('/api/posts', jwtMiddleware, async (req, res) => {
 ## 8. Model Hooks (Lifecycle Events)
 
 ```javascript
-const Post = Model.define('Post', {
-  // ... fields
-}, {
-  hooks: {
-    beforeCreate: (post) => {
-      // Generate slug from title if not provided
-      if (!post.slug) {
-        post.slug = post.title
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-|-$/g, '');
-      }
-    },
-    
-    beforeUpdate: (post) => {
-      // Set publishedAt when published
-      if (post.published && !post.publishedAt) {
-        post.publishedAt = new Date();
-      }
-    },
-    
-    afterCreate: async (post) => {
-      // Send notification
-      console.log(`New post created: ${post.title}`);
+const Post = Model.define(
+  'Post',
+  {
+    // ... fields
+  },
+  {
+    hooks: {
+      beforeCreate: post => {
+        // Generate slug from title if not provided
+        if (!post.slug) {
+          post.slug = post.title
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/^-|-$/g, '');
+        }
+      },
+
+      beforeUpdate: post => {
+        // Set publishedAt when published
+        if (post.published && !post.publishedAt) {
+          post.publishedAt = new Date();
+        }
+      },
+
+      afterCreate: async post => {
+        // Send notification
+        console.log(`New post created: ${post.title}`);
+      },
     },
   },
-});
+);
 ```
 
 ## 9. Virtual Fields
@@ -478,7 +489,7 @@ const Post = Model.define('Post', {
 ```javascript
 const Post = Model.define('Post', {
   // ... fields
-  
+
   // Virtual field (not stored in database)
   excerpt: {
     type: DataType.VIRTUAL,
@@ -486,7 +497,7 @@ const Post = Model.define('Post', {
       return this.content.substring(0, 200) + '...';
     },
   },
-  
+
   // Computed field
   isPublished: {
     type: DataType.VIRTUAL,
@@ -514,7 +525,7 @@ const Post = Model.define('Post', {
       },
     },
   },
-  
+
   email: {
     type: DataType.STRING,
     validate: {
@@ -523,7 +534,7 @@ const Post = Model.define('Post', {
       },
     },
   },
-  
+
   url: {
     type: DataType.STRING,
     validate: {
@@ -532,14 +543,16 @@ const Post = Model.define('Post', {
       },
     },
   },
-  
+
   // Custom validator
   slug: {
     type: DataType.STRING,
     validate: {
       isValidSlug(value) {
         if (!/^[a-z0-9-]+$/.test(value)) {
-          throw new Error('Slug must contain only lowercase letters, numbers, and hyphens');
+          throw new Error(
+            'Slug must contain only lowercase letters, numbers, and hyphens',
+          );
         }
       },
     },

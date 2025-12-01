@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../components/variables.css';
+@import "../../components/variables.css";
 
 /* =============================================================================
    ROOT & CONTAINER
@@ -59,7 +59,7 @@
   border-radius: var(--radius-xl);
   border: 1px solid var(--color-border);
   transition: all var(--transition-base);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 8%);
   display: flex;
   flex-direction: column;
   gap: var(--spacing-4);
@@ -67,7 +67,7 @@
 
 .featureCard:hover {
   transform: translateY(-8px);
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 12%);
   border-color: var(--color-primary);
 }
 
@@ -138,20 +138,9 @@
 }
 
 .newsItem:hover {
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 16px rgb(0 0 0 / 10%);
   transform: translateY(-2px);
   border-color: var(--color-primary);
-}
-
-.newsItem:hover .newsNumber {
-  background: var(--color-primary);
-  color: var(--color-background);
-}
-
-.newsContent {
-  display: flex;
-  gap: var(--spacing-6);
-  padding: var(--spacing-8);
 }
 
 .newsNumber {
@@ -168,6 +157,11 @@
   border-radius: var(--radius-lg);
   transition: all var(--transition-base);
   font-variant-numeric: tabular-nums;
+}
+
+.newsItem:hover .newsNumber {
+  background: var(--color-primary);
+  color: var(--color-background);
 }
 
 .newsBody {
@@ -259,8 +253,6 @@
   margin: 0;
   letter-spacing: -0.01em;
 }
-
-
 
 /* =============================================================================
    RESPONSIVE DESIGN
@@ -387,7 +379,7 @@
   .newsDesc {
     font-size: var(--font-size-sm);
     line-height: 1.6;
-    display: -webkit-box;
+    display: box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;

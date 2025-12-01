@@ -28,9 +28,9 @@ const initialState = null;
  * {
  *   id: string,
  *   email: string,
- *   displayName: string,
+ *   display_name: string,
  *   role: string,  // 'admin', 'user', etc.
- *   isAdmin: boolean,  // Optional flag
+ *   is_admin: boolean,  // Optional flag
  *   // ... other user properties from JWT
  * }
  *
@@ -80,13 +80,10 @@ export const getUser = state => state.user;
  * @param {Object} state - Redux state
  * @returns {boolean} True if user is logged in
  */
-export const isAuthenticated = state => !!state.user;
+export const isAuthenticated = state => state.user && state.user.id;
 
 /**
  * Check if user has admin role
- *
- * Checks both user.role === 'admin' and user.isAdmin === true
- * for flexibility with different user object structures.
  *
  * @param {Object} state - Redux state
  * @returns {boolean} True if user is admin
@@ -94,7 +91,7 @@ export const isAuthenticated = state => !!state.user;
 export const isAdmin = state => {
   const { user } = state;
   if (!user) return false;
-  return user.role === 'admin' || user.isAdmin === true;
+  return user.role === 'admin' || user.is_admin === true;
 };
 
 /**
@@ -119,5 +116,13 @@ export const getUserEmail = state => (state.user && state.user.email) || null;
  * @param {Object} state - Redux state
  * @returns {string|null} User display name or null
  */
-export const getUserDisplayName = state =>
-  (state.user && state.user.displayName) || null;
+export const getUserDisplayName = state => {
+  if (!state.user) return null;
+  // Check top-level display_name first (API response format)
+  if (state.user.display_name) return state.user.display_name;
+  // Check nested profile (just in case structure changes)
+  if (state.user.profile && state.user.profile.display_name)
+    return state.user.profile.display_name;
+  // Fallback to email
+  return state.user.email;
+};

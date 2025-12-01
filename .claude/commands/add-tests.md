@@ -3,6 +3,7 @@ Add tests to the React Starter Kit application using Jest and React Testing Libr
 ## Test Setup
 
 The project already has Jest configured. Key files:
+
 - `jest.config.js` - Jest configuration
 - `src/setupTests.js` - Test setup and global mocks
 
@@ -21,20 +22,20 @@ describe('Button', () => {
     render(<Button>Click me</Button>);
     expect(screen.getByText('Click me')).toBeInTheDocument();
   });
-  
+
   it('calls onClick when clicked', () => {
     const handleClick = jest.fn();
     render(<Button onClick={handleClick}>Click me</Button>);
-    
+
     fireEvent.click(screen.getByText('Click me'));
     expect(handleClick).toHaveBeenCalledTimes(1);
   });
-  
+
   it('applies custom className', () => {
-    const { container } = render(<Button className="custom">Click me</Button>);
+    const { container } = render(<Button className='custom'>Click me</Button>);
     expect(container.firstChild).toHaveClass('custom');
   });
-  
+
   it('is disabled when disabled prop is true', () => {
     render(<Button disabled>Click me</Button>);
     expect(screen.getByText('Click me')).toBeDisabled();
@@ -69,12 +70,12 @@ describe('Home', () => {
         ],
       },
     };
-    
+
     render(<Home data={data} />);
     expect(screen.getByText('News 1')).toBeInTheDocument();
     expect(screen.getByText('News 2')).toBeInTheDocument();
   });
-  
+
   it('renders without data', () => {
     render(<Home />);
     // Should not crash
@@ -95,7 +96,7 @@ import UserProfile from './UserProfile';
 const mockStore = createStore(() => ({
   user: {
     id: '123',
-    displayName: 'John Doe',
+    display_name: 'John Doe',
     email: 'john@example.com',
   },
 }));
@@ -105,9 +106,9 @@ describe('UserProfile', () => {
     render(
       <Provider store={mockStore}>
         <UserProfile />
-      </Provider>
+      </Provider>,
     );
-    
+
     expect(screen.getByText('John Doe')).toBeInTheDocument();
     expect(screen.getByText('john@example.com')).toBeInTheDocument();
   });
@@ -125,15 +126,15 @@ import Counter from './Counter';
 describe('Counter', () => {
   it('increments counter', () => {
     render(<Counter />);
-    
+
     const button = screen.getByText('Increment');
     const count = screen.getByText(/Count: \d+/);
-    
+
     expect(count).toHaveTextContent('Count: 0');
-    
+
     fireEvent.click(button);
     expect(count).toHaveTextContent('Count: 1');
-    
+
     fireEvent.click(button);
     expect(count).toHaveTextContent('Count: 2');
   });
@@ -152,20 +153,22 @@ import UserList from './UserList';
 jest.mock('../../hooks/useAppContext', () => ({
   useAppContext: () => ({
     insertCss: jest.fn(() => jest.fn()),
-    fetch: jest.fn(() => Promise.resolve([
-      { id: '1', name: 'User 1' },
-      { id: '2', name: 'User 2' },
-    ])),
+    fetch: jest.fn(() =>
+      Promise.resolve([
+        { id: '1', name: 'User 1' },
+        { id: '2', name: 'User 2' },
+      ]),
+    ),
   }),
 }));
 
 describe('UserList', () => {
   it('loads and displays users', async () => {
     render(<UserList />);
-    
+
     // Initially shows loading
     expect(screen.getByText('Loading...')).toBeInTheDocument();
-    
+
     // Wait for users to load
     await waitFor(() => {
       expect(screen.getByText('User 1')).toBeInTheDocument();
@@ -187,18 +190,20 @@ describe('Home route', () => {
   it('has correct path', () => {
     expect(route.path).toBe('/');
   });
-  
+
   it('returns component', async () => {
-    const mockFetch = jest.fn(() => Promise.resolve({
-      reactjsGetAllNews: { map: [] },
-    }));
-    
+    const mockFetch = jest.fn(() =>
+      Promise.resolve({
+        reactjsGetAllNews: { map: [] },
+      }),
+    );
+
     const result = await route.action({
       fetch: mockFetch,
       params: {},
       query: {},
     });
-    
+
     expect(result).toHaveProperty('component');
     expect(result).toHaveProperty('title');
   });
@@ -217,61 +222,57 @@ import app from './server';
 describe('API Endpoints', () => {
   describe('GET /api/users', () => {
     it('returns users list', async () => {
-      const response = await request(app)
-        .get('/api/users')
-        .expect(200);
-      
+      const response = await request(app).get('/api/users').expect(200);
+
       expect(Array.isArray(response.body)).toBe(true);
     });
   });
-  
+
   describe('POST /api/users', () => {
     it('creates a new user', async () => {
       const userData = {
         name: 'Test User',
         email: 'test@example.com',
       };
-      
+
       const response = await request(app)
         .post('/api/users')
         .send(userData)
         .expect(201);
-      
+
       expect(response.body).toHaveProperty('id');
       expect(response.body.name).toBe(userData.name);
     });
-    
+
     it('returns 400 for invalid data', async () => {
       const response = await request(app)
         .post('/api/users')
         .send({ name: '' })
         .expect(400);
-      
+
       expect(response.body).toHaveProperty('error');
     });
   });
-  
+
   describe('Protected endpoints', () => {
     it('returns 401 without token', async () => {
-      await request(app)
-        .get('/api/profile')
-        .expect(401);
+      await request(app).get('/api/profile').expect(401);
     });
-    
+
     it('returns user profile with valid token', async () => {
       // First login to get token
       const loginResponse = await request(app)
         .post('/auth/login')
         .send({ email: 'user@example.com', password: 'password' });
-      
+
       const token = loginResponse.headers['set-cookie'];
-      
+
       // Then access protected endpoint
       const response = await request(app)
         .get('/api/profile')
         .set('Cookie', token)
         .expect(200);
-      
+
       expect(response.body).toHaveProperty('email');
     });
   });
@@ -291,40 +292,40 @@ describe('User model', () => {
   beforeAll(async () => {
     await sequelize.sync({ force: true });
   });
-  
+
   afterAll(async () => {
     await sequelize.close();
   });
-  
+
   afterEach(async () => {
     await User.destroy({ where: {}, truncate: true });
   });
-  
+
   it('creates a user', async () => {
     const user = await User.create({
       email: 'test@example.com',
-      displayName: 'Test User',
+      display_name: 'Test User',
     });
-    
+
     expect(user.id).toBeDefined();
     expect(user.email).toBe('test@example.com');
-    expect(user.displayName).toBe('Test User');
+    expect(user.display_name).toBe('Test User');
   });
-  
+
   it('validates email format', async () => {
     await expect(
       User.create({
         email: 'invalid-email',
-        displayName: 'Test User',
-      })
+        display_name: 'Test User',
+      }),
     ).rejects.toThrow();
   });
-  
+
   it('requires email', async () => {
     await expect(
       User.create({
-        displayName: 'Test User',
-      })
+        display_name: 'Test User',
+      }),
     ).rejects.toThrow();
   });
 });
@@ -345,22 +346,22 @@ describe('Format utilities', () => {
       expect(formatDate(date)).toBe('January 15, 2024');
     });
   });
-  
+
   describe('formatCurrency', () => {
     it('formats USD currency', () => {
       expect(formatCurrency(1234.56)).toBe('$1,234.56');
     });
-    
+
     it('handles zero', () => {
       expect(formatCurrency(0)).toBe('$0.00');
     });
   });
-  
+
   describe('slugify', () => {
     it('converts string to slug', () => {
       expect(slugify('Hello World')).toBe('hello-world');
     });
-    
+
     it('removes special characters', () => {
       expect(slugify('Hello @#$ World!')).toBe('hello-world');
     });
@@ -385,32 +386,26 @@ describe('Authentication flow', () => {
       .send({
         email: 'newuser@example.com',
         password: 'password123',
-        displayName: 'New User',
+        display_name: 'New User',
       })
       .expect(200);
-    
+
     const token = registerResponse.headers['set-cookie'];
     expect(token).toBeDefined();
-    
+
     // 2. Access protected route
     const profileResponse = await request(app)
       .get('/api/profile')
       .set('Cookie', token)
       .expect(200);
-    
+
     expect(profileResponse.body.email).toBe('newuser@example.com');
-    
+
     // 3. Logout
-    await request(app)
-      .post('/auth/logout')
-      .set('Cookie', token)
-      .expect(200);
-    
+    await request(app).post('/auth/logout').set('Cookie', token).expect(200);
+
     // 4. Verify token is invalid
-    await request(app)
-      .get('/api/profile')
-      .set('Cookie', token)
-      .expect(401);
+    await request(app).get('/api/profile').set('Cookie', token).expect(401);
   });
 });
 ```
@@ -448,6 +443,7 @@ open coverage/lcov-report/index.html
 ### 2. Coverage Thresholds
 
 Already configured in `jest.config.js`:
+
 ```javascript
 coverageThreshold: {
   global: {
@@ -477,6 +473,7 @@ jest.spyOn(api, 'fetchUsers').mockResolvedValue([]);
 ### 2. Mock CSS Modules
 
 Already configured in `jest.config.js`:
+
 ```javascript
 moduleNameMapper: {
   '\\.(css|less|scss|sass)$': 'identity-obj-proxy',

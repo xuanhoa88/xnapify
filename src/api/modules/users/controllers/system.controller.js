@@ -6,6 +6,7 @@
  */
 
 import { userRbacService } from '../services';
+import { SYSTEM_ROLES } from '../constants/roles';
 
 // ========================================================================
 // SYSTEM MANAGEMENT CONTROLLERS
@@ -63,7 +64,7 @@ export async function getRBACStatus(req, res) {
     // Get system roles
     const systemRoles = await Role.findAll({
       where: {
-        name: ['admin', 'user', 'moderator'],
+        name: SYSTEM_ROLES,
       },
       attributes: ['id', 'name', 'description'],
     });

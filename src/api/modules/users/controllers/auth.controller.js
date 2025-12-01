@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { authService, profileService } from '../services';
+import { authService } from '../services';
 import { validateRegistration, validateLogin } from '../utils/validation';
+import { isAdmin } from '../constants/roles';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -50,16 +51,16 @@ export async function register(req, res) {
       { models, auth },
     );
 
-    // Generate JWT token using consolidated JWT utilities
-    const token = auth.jwt.generateTypedToken(
-      'access',
+    // Generate token pair (access + refresh)
+    const tokens = auth.jwt.generateTokenPair(
       { id: user.id, email: user.email },
       req.app.get('jwtSecret'),
       { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
-    // Set token cookie
-    auth.setTokenCookie(res, token);
+    // Set token cookies
+    auth.setTokenCookie(res, tokens.accessToken);
+    auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Return user data
     return http.sendSuccess(
@@ -122,16 +123,16 @@ export async function login(req, res) {
       auth,
     });
 
-    // Generate JWT token using consolidated JWT utilities
-    const token = auth.jwt.generateTypedToken(
-      'access',
+    // Generate token pair (access + refresh)
+    const tokens = auth.jwt.generateTokenPair(
       { id: user.id, email: user.email },
       req.app.get('jwtSecret'),
       { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
-    // Set token cookie
-    auth.setTokenCookie(res, token);
+    // Set token cookies
+    auth.setTokenCookie(res, tokens.accessToken);
+    auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
     // Return user data
     return http.sendSuccess(res, {
@@ -179,8 +180,9 @@ export async function logout(req, res) {
   try {
     const auth = req.app.get('auth');
 
-    // Clear token cookie
+    // Clear token cookies
     auth.clearTokenCookie(res);
+    auth.clearRefreshTokenCookie(res);
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });
   } catch (error) {
@@ -201,13 +203,88 @@ export async function getCurrentUser(req, res) {
   try {
     // Get models from app context
     const models = req.app.get('models');
+    const { User, UserProfile, Role, Permission, Group } = models;
 
-    // Get user with profile
-    const user = await profileService.getUserWithProfile(req.user.id, models);
+    // Get user with profile, roles, permissions, and groups
+    const user = await User.findByPk(req.user.id, {
+      include: [
+        {
+          model: UserProfile,
+          as: 'profile',
+        },
+        {
+          model: Role,
+          as: 'roles',
+          through: { attributes: [] }, // Exclude junction table attributes
+          include: [
+            {
+              model: Permission,
+              as: 'permissions',
+              through: { attributes: [] },
+            },
+          ],
+        },
+        {
+          model: Group,
+          as: 'groups',
+          through: { attributes: [] },
+          include: [
+            {
+              model: Role,
+              as: 'roles',
+              through: { attributes: [] },
+              include: [
+                {
+                  model: Permission,
+                  as: 'permissions',
+                  through: { attributes: [] },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+      attributes: { exclude: ['password'] },
+    });
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
     }
+
+    // Collect all permissions from direct roles and group roles
+    const permissionsSet = new Set();
+    const rolesSet = new Set();
+
+    // Add permissions from direct user roles
+    if (user.roles) {
+      for (const role of user.roles) {
+        rolesSet.add(role.name);
+        if (role.permissions) {
+          for (const perm of role.permissions) {
+            permissionsSet.add(perm.name);
+          }
+        }
+      }
+    }
+
+    // Add permissions from group roles
+    if (user.groups) {
+      for (const group of user.groups) {
+        if (group.roles) {
+          for (const role of group.roles) {
+            rolesSet.add(role.name);
+            if (role.permissions) {
+              for (const perm of role.permissions) {
+                permissionsSet.add(perm.name);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // RBAC logic: Determine primary role and is_admin
+    const allRoles = Array.from(rolesSet);
 
     return http.sendSuccess(res, {
       user: {
@@ -224,10 +301,21 @@ export async function getCurrentUser(req, res) {
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
         website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
+        role: user.role,
+        is_admin: isAdmin({ roles: allRoles }),
+        roles: allRoles,
+        permissions: Array.from(permissionsSet),
+        groups: user.groups
+          ? user.groups.map(group => ({
+              id: group.id,
+              name: group.name,
+              description: group.description,
+            }))
+          : [],
       },
     });
   } catch (error) {
+    console.error('getCurrentUser error:', error);
     return http.sendServerError(res, 'Failed to get user information');
   }
 }
@@ -243,20 +331,23 @@ export async function getCurrentUser(req, res) {
 export async function refreshToken(req, res) {
   const http = req.app.get('http');
   try {
-    // Generate new JWT token using global auth engine
+    // Get refresh token from cookie
     const auth = req.app.get('auth');
-    const token = auth.jwt.generateTypedToken(
-      'access',
-      {
-        id: req.user.id,
-        email: req.user.email,
-      },
+    const refreshToken = auth.manageCookie('get', 'refresh', { req });
+
+    if (!refreshToken) {
+      return http.sendUnauthorized(res, 'Refresh token required');
+    }
+
+    // Generate new token pair
+    const newTokens = auth.jwt.refreshTokenPair(
+      refreshToken,
       req.app.get('jwtSecret'),
-      { expiresIn: req.app.get('jwtExpiresIn') },
     );
 
-    // Set new token cookie
-    auth.setTokenCookie(res, token);
+    // Set new token cookies
+    auth.setTokenCookie(res, newTokens.accessToken);
+    auth.setRefreshTokenCookie(res, newTokens.refreshToken);
 
     return http.sendSuccess(res, { message: 'Token refreshed successfully' });
   } catch (error) {

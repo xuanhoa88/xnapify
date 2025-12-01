@@ -167,6 +167,25 @@ export function generateTypedToken(type, payload, secret, options = {}) {
 }
 
 /**
+ * Generate a token pair (access + refresh tokens)
+ *
+ * @param {Object} payload - Token payload (user data)
+ * @param {string} secret - JWT secret
+ * @param {Object} [options] - Additional options
+ * @returns {Object} Token pair with accessToken, refreshToken, and expiresIn
+ */
+export function generateTokenPair(payload, secret, options = {}) {
+  const accessToken = generateTypedToken('access', payload, secret, options);
+  const refreshToken = generateTypedToken('refresh', payload, secret, options);
+
+  return {
+    accessToken,
+    refreshToken,
+    expiresIn: JWT_TOKEN_TYPES.access.expiresIn,
+  };
+}
+
+/**
  * Verify a typed JWT token
  *
  * @param {string} token - JWT token to verify

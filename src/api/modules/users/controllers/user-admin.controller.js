@@ -6,6 +6,7 @@
  */
 
 import { userAdminService, profileService } from '../services';
+import { SYSTEM_ROLES } from '../constants/roles';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)
@@ -231,10 +232,9 @@ export async function updateUserRole(req, res) {
     const { role } = req.body;
 
     // Validate role
-    const validRoles = ['user', 'admin', 'moderator'];
-    if (!role || !validRoles.includes(role)) {
+    if (!role) {
       return http.sendValidationError(res, {
-        role: `Role must be one of: ${validRoles.join(', ')}`,
+        role: `Role must be one of: ${SYSTEM_ROLES.join(', ')}`,
       });
     }
 

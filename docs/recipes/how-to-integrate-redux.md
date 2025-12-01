@@ -30,7 +30,7 @@ The application uses:
   user: {         // User authentication
     id: null,
     email: null,
-    displayName: null,
+    display_name: null,
   },
   // Add your reducers here
 }

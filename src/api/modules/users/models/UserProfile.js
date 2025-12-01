@@ -31,6 +31,18 @@ export default function createUserProfileModel({ connection, DataTypes }) {
         comment: 'User display name',
       },
 
+      first_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'User first name',
+      },
+
+      last_name: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+        comment: 'User last name',
+      },
+
       picture: {
         type: DataTypes.STRING(255),
         allowNull: true,

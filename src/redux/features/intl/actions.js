@@ -36,17 +36,6 @@ function setLocaleCookie(locale) {
   document.cookie = `${LOCALE_COOKIE_NAME}=${locale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE}`;
 }
 
-/**
- * Update URL with locale parameter
- * @param {string} locale - Locale code
- * @param {Object} navigator - Navigator helper from Redux thunk
- */
-function updateLocaleUrl(locale, navigator) {
-  if (!isBrowser() || !navigator) return;
-
-  navigator.navigateTo(`?${LOCALE_COOKIE_NAME}=${locale}`);
-}
-
 // =============================================================================
 // ACTIONS
 // =============================================================================
@@ -75,7 +64,7 @@ function updateLocaleUrl(locale, navigator) {
  * dispatch(setLocale('invalid')); // Falls back to 'en-US' or first available
  */
 export function setLocale(locale) {
-  return async (dispatch, getState, { navigator, i18n }) => {
+  return async (dispatch, getState, { i18n }) => {
     const state = getState();
 
     try {
@@ -139,7 +128,6 @@ export function setLocale(locale) {
 
       // Persist locale (browser only)
       setLocaleCookie(locale);
-      updateLocaleUrl(locale, navigator);
 
       return locale;
     } catch (error) {

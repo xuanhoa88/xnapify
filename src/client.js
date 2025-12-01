@@ -13,7 +13,7 @@ import { createFetch } from './createFetch';
 import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
 import router from './pages';
-import { configureStore } from './redux';
+import { configureStore, getCurrentUser } from './redux';
 
 // Get i18n instance
 const i18n = getI18nInstance();
@@ -150,17 +150,39 @@ async function ensureI18n() {
   }
 }
 
+/**
+ * Initialize user authentication
+ * Fetches current user from server if not in preloaded state
+ */
+async function initializeAuth() {
+  const state = store.getState();
+  const { user } = state;
+
+  // If no user in state, try to fetch from server (JWT cookie will be sent automatically)
+  if (!user || !user.id) {
+    try {
+      await store.dispatch(getCurrentUser());
+      if (__DEV__) {
+        console.log('✅ User authenticated from session');
+      }
+    } catch {
+      // User not authenticated or token invalid - this is fine
+      if (__DEV__) {
+        console.log('ℹ️ No authenticated user');
+      }
+    }
+  } else if (__DEV__) {
+    console.log('✅ User loaded from SSR state');
+  }
+}
+
 // Create an enhanced version of fetch with additional features
 const fetch = createFetch(window.fetch);
 
 // Initialize Redux store with server state
 // eslint-disable-next-line no-underscore-dangle
 const appState = window.__PRELOAD_STATE__ || { reduxState: {} };
-const store = configureStore(appState.reduxState, {
-  fetch,
-  navigator,
-  i18n,
-});
+const store = configureStore(appState.reduxState, { fetch, i18n });
 
 // Application context object that provides shared dependencies and state
 // to components throughout the application
@@ -671,6 +693,9 @@ function cleanup() {
 async function initializeApp() {
   // Ensure i18n is synced BEFORE any rendering
   await ensureI18n();
+
+  // Initialize user authentication from session
+  await initializeAuth();
 
   currentLocation = navigator.getCurrentLocation();
   unsubscribeNavigation = navigator.subscribeToNavigation(onLocationChange);

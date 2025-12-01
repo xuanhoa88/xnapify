@@ -6,6 +6,7 @@
  */
 
 import { roleService } from '../services';
+import { SYSTEM_ROLES } from '../constants/roles';
 
 // ========================================================================
 // ROLE MANAGEMENT CONTROLLERS
@@ -165,7 +166,7 @@ export async function deleteRole(req, res) {
     }
 
     // Prevent deletion of system roles
-    if (['admin', 'user'].includes(role.name)) {
+    if (SYSTEM_ROLES.includes(role.name)) {
       return http.sendError(res, 'Cannot delete system roles', 400);
     }
 

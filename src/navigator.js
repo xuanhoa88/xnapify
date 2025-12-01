@@ -15,21 +15,43 @@ import { createBrowserHistory, createMemoryHistory } from 'history';
  * Check if code is running in browser environment
  * @private
  */
-const isBrowser = typeof window !== 'undefined';
+const IS_BROWSER = typeof window !== 'undefined';
 
 // =============================================================================
-// HISTORY INSTANCE
+// HISTORY INSTANCE (LAZY INITIALIZATION)
 // =============================================================================
 
 /**
- * History instance
- * - Browser: Uses HTML5 History API for client-side navigation
- * - Server: Uses memory history for SSR compatibility
+ * History instance (lazy-initialized)
  * @private
  */
-const history = isBrowser
-  ? createBrowserHistory({ basename: '' })
-  : createMemoryHistory({ initialEntries: ['/'] });
+let history = null;
+
+/**
+ * Initialize history instance
+ * @private
+ * @returns {History} History instance
+ */
+export function getHistory() {
+  if (!history) {
+    history = IS_BROWSER
+      ? createBrowserHistory({ basename: '' })
+      : createMemoryHistory({ initialEntries: ['/'] });
+  }
+  return history;
+}
+
+/**
+ * Reset history instance (useful for testing)
+ * @private
+ */
+export function resetHistory() {
+  if (navigationUnsubscribe) {
+    navigationUnsubscribe();
+    navigationUnsubscribe = null;
+  }
+  history = null;
+}
 
 // =============================================================================
 // NAVIGATION FUNCTIONS
@@ -42,6 +64,7 @@ const history = isBrowser
  *
  * @param {string|Object} path - Path to navigate to, or location object
  * @param {Object} [state] - Optional state object to associate with the location
+ * @returns {boolean} True if navigation succeeded
  *
  * @example
  * // Simple path
@@ -60,18 +83,21 @@ const history = isBrowser
  * navigateTo({ pathname: '/posts', search: '?page=2', hash: '#comments' });
  */
 export function navigateTo(path, state) {
-  if (!history) return;
+  if (!IS_BROWSER) return false;
 
   try {
+    const hist = getHistory();
     if (typeof path === 'string') {
-      history.push(path, state);
+      hist.push(path, state);
     } else {
-      history.push(path);
+      hist.push(path);
     }
+    return true;
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation error:', error);
     }
+    return false;
   }
 }
 
@@ -83,6 +109,7 @@ export function navigateTo(path, state) {
  *
  * @param {string|Object} path - Path to replace with, or location object
  * @param {Object} [state] - Optional state object to associate with the location
+ * @returns {boolean} True if replacement succeeded
  *
  * @example
  * // Redirect after login (don't allow back to login page)
@@ -97,18 +124,21 @@ export function navigateTo(path, state) {
  * replaceTo({ pathname: '/home', search: '', hash: '' });
  */
 export function replaceTo(path, state) {
-  if (!history) return;
+  if (!IS_BROWSER) return false;
 
   try {
+    const hist = getHistory();
     if (typeof path === 'string') {
-      history.replace(path, state);
+      hist.replace(path, state);
     } else {
-      history.replace(path);
+      hist.replace(path);
     }
+    return true;
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation error:', error);
     }
+    return false;
   }
 }
 
@@ -118,18 +148,22 @@ export function replaceTo(path, state) {
  * Moves back one entry in the history stack. On the server, this is a no-op.
  * Equivalent to clicking the browser's back button.
  *
+ * @returns {boolean} True if navigation succeeded
+ *
  * @example
  * goBack();
  */
 export function goBack() {
-  if (!history || !isBrowser) return;
+  if (!IS_BROWSER) return false;
 
   try {
-    history.goBack();
+    getHistory().back();
+    return true;
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation error:', error);
     }
+    return false;
   }
 }
 
@@ -139,18 +173,22 @@ export function goBack() {
  * Moves forward one entry in the history stack. On the server, this is a no-op.
  * Equivalent to clicking the browser's forward button.
  *
+ * @returns {boolean} True if navigation succeeded
+ *
  * @example
  * goForward();
  */
 export function goForward() {
-  if (!history || !isBrowser) return;
+  if (!IS_BROWSER) return false;
 
   try {
-    history.goForward();
+    getHistory().forward();
+    return true;
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation error:', error);
     }
+    return false;
   }
 }
 
@@ -162,6 +200,7 @@ export function goForward() {
  *
  * @param {number} n - The relative position in the history stack
  *                     Negative values go back, positive values go forward
+ * @returns {boolean} True if navigation succeeded
  *
  * @example
  * // Go back 2 pages
@@ -172,14 +211,16 @@ export function goForward() {
  * go(1);
  */
 export function go(n) {
-  if (!history || !isBrowser) return;
+  if (!IS_BROWSER) return false;
 
   try {
-    history.go(n);
+    getHistory().go(n);
+    return true;
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation error:', error);
     }
+    return false;
   }
 }
 
@@ -191,9 +232,9 @@ export function go(n) {
  * Get current location
  *
  * Returns the current location object containing pathname, search, hash, etc.
- * On the server, returns null.
+ * On the server, returns a default location object.
  *
- * @returns {Object|null} Location object with pathname, search, hash, state, key
+ * @returns {Object} Location object with pathname, search, hash, state, key
  *
  * @example
  * const location = getCurrentLocation();
@@ -202,7 +243,10 @@ export function go(n) {
  * console.log(location.hash);     // '#section'
  */
 export function getCurrentLocation() {
-  return history ? history.location : null;
+  if (!IS_BROWSER) {
+    return { pathname: '/', search: '', hash: '', state: null, key: 'default' };
+  }
+  return getHistory().location;
 }
 
 /**
@@ -218,7 +262,7 @@ export function getCurrentLocation() {
  * console.log(pathname); // '/about'
  */
 export function getCurrentPathname() {
-  return history && history.location ? history.location.pathname : '/';
+  return getCurrentLocation().pathname;
 }
 
 /**
@@ -234,7 +278,7 @@ export function getCurrentPathname() {
  * console.log(search); // '?page=2&sort=name'
  */
 export function getCurrentSearch() {
-  return history && history.location ? history.location.search : '';
+  return getCurrentLocation().search;
 }
 
 /**
@@ -250,7 +294,23 @@ export function getCurrentSearch() {
  * console.log(hash); // '#section'
  */
 export function getCurrentHash() {
-  return history && history.location ? history.location.hash : '';
+  return getCurrentLocation().hash;
+}
+
+/**
+ * Get current state
+ *
+ * Returns the state object associated with the current location.
+ * On the server, returns null.
+ *
+ * @returns {Object|null} Current state object
+ *
+ * @example
+ * const state = getCurrentState();
+ * console.log(state); // { from: '/home' }
+ */
+export function getCurrentState() {
+  return getCurrentLocation().state;
 }
 
 // =============================================================================
@@ -278,8 +338,7 @@ export function getCurrentHash() {
  * unsubscribe();
  */
 export function onNavigationChange(listener) {
-  if (!history) {
-    // Return no-op unsubscribe function for server-side
+  if (!IS_BROWSER) {
     return () => {};
   }
 
@@ -291,8 +350,7 @@ export function onNavigationChange(listener) {
   }
 
   try {
-    // Subscribe to history changes
-    return history.listen(listener);
+    return getHistory().listen(listener);
   } catch (error) {
     if (__DEV__) {
       console.error('Navigation subscription error:', error);
@@ -325,8 +383,7 @@ export function onNavigationChange(listener) {
 let navigationUnsubscribe = null;
 
 export function subscribeToNavigation(listener) {
-  if (!history) {
-    // Return no-op unsubscribe function for server-side
+  if (!IS_BROWSER) {
     return () => {};
   }
 
@@ -344,10 +401,8 @@ export function subscribeToNavigation(listener) {
   }
 
   try {
-    // Subscribe to history changes
-    navigationUnsubscribe = history.listen(listener);
+    navigationUnsubscribe = getHistory().listen(listener);
 
-    // Return unsubscribe function
     return () => {
       if (typeof navigationUnsubscribe === 'function') {
         navigationUnsubscribe();
@@ -379,7 +434,7 @@ export function subscribeToNavigation(listener) {
  * }
  */
 export function isNavigationAvailable() {
-  return isBrowser && !!history;
+  return IS_BROWSER;
 }
 
 /**
@@ -388,26 +443,34 @@ export function isNavigationAvailable() {
  * Helper function to build URLs with query strings.
  *
  * @param {string} pathname - Base pathname
- * @param {Object} params - Query parameters as key-value pairs
- * @returns {string} Complete URL with query string
+ * @param {Object} [params={}] - Query parameters as key-value pairs
+ * @param {string} [hash=''] - Optional hash fragment
+ * @returns {string} Complete URL with query string and hash
  *
  * @example
  * const url = createUrl('/search', { q: 'react', page: 2 });
  * console.log(url); // '/search?q=react&page=2'
  * navigateTo(url);
+ *
+ * @example
+ * const url = createUrl('/docs', { v: '2' }, '#installation');
+ * console.log(url); // '/docs?v=2#installation'
  */
-export function createUrl(pathname, params = {}) {
+export function createUrl(pathname, params = {}, hash = '') {
   const searchParams = new URLSearchParams();
 
   Object.keys(params).forEach(key => {
     const value = params[key];
-    if (value != null) {
+    if (value != null && value !== '') {
       searchParams.append(key, String(value));
     }
   });
 
   const search = searchParams.toString();
-  return search ? `${pathname}?${search}` : pathname;
+  const queryString = search ? `?${search}` : '';
+  const hashString = hash && !hash.startsWith('#') ? `#${hash}` : hash;
+
+  return `${pathname}${queryString}${hashString}`;
 }
 
 /**
@@ -438,4 +501,119 @@ export function parseQuery(search) {
   });
 
   return params;
+}
+
+/**
+ * Update query parameters while preserving existing ones
+ *
+ * @param {Object} newParams - New parameters to add/update
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.replace=false] - Use replace instead of push
+ * @param {string[]} [options.remove=[]] - Parameter keys to remove
+ * @returns {boolean} True if navigation succeeded
+ *
+ * @example
+ * // Current URL: /search?q=react&page=1
+ * updateQueryParams({ page: 2, sort: 'date' });
+ * // New URL: /search?q=react&page=2&sort=date
+ *
+ * @example
+ * // Remove a parameter
+ * updateQueryParams({ page: 2 }, { remove: ['sort'] });
+ */
+export function updateQueryParams(newParams, options = {}) {
+  if (!IS_BROWSER) return false;
+
+  const { replace = false, remove = [] } = options;
+  const currentParams = parseQuery();
+
+  // Remove specified params
+  remove.forEach(key => {
+    delete currentParams[key];
+  });
+
+  // Merge with new params
+  const mergedParams = { ...currentParams, ...newParams };
+
+  // Remove null/undefined values
+  Object.keys(mergedParams).forEach(key => {
+    if (mergedParams[key] == null) {
+      delete mergedParams[key];
+    }
+  });
+
+  const pathname = getCurrentPathname();
+  const hash = getCurrentHash();
+  const url = createUrl(pathname, mergedParams, hash);
+
+  return replace ? replaceTo(url) : navigateTo(url);
+}
+
+/**
+ * Check if current path matches a pattern
+ *
+ * @param {string|RegExp} pattern - Path pattern to match
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.exact=false] - Require exact match
+ * @returns {boolean} True if current path matches pattern
+ *
+ * @example
+ * // Current path: /blog/post-1
+ * matchPath('/blog'); // true
+ * matchPath('/blog', { exact: true }); // false
+ * matchPath(/^\/blog\//); // true
+ */
+export function matchPath(pattern, options = {}) {
+  const { exact = false } = options;
+  const pathname = getCurrentPathname();
+
+  if (pattern instanceof RegExp) {
+    return pattern.test(pathname);
+  }
+
+  if (exact) {
+    return pathname === pattern;
+  }
+
+  return pathname.startsWith(pattern);
+}
+
+/**
+ * Get query parameter value by key
+ *
+ * @param {string} key - Parameter key
+ * @param {string} [defaultValue=''] - Default value if parameter not found
+ * @returns {string} Parameter value
+ *
+ * @example
+ * // Current URL: /search?q=react&page=2
+ * getQueryParam('q'); // 'react'
+ * getQueryParam('sort', 'date'); // 'date' (default)
+ */
+export function getQueryParam(key, defaultValue = '') {
+  const params = parseQuery();
+  return params[key] ?? defaultValue;
+}
+
+/**
+ * Navigate with confirmation
+ *
+ * Shows a confirmation dialog before navigating
+ *
+ * @param {string|Object} path - Path to navigate to
+ * @param {string} message - Confirmation message
+ * @param {Object} [state] - Optional state object
+ * @returns {boolean} True if user confirmed and navigation succeeded
+ *
+ * @example
+ * navigateWithConfirm('/delete', 'Are you sure you want to leave?');
+ */
+export function navigateWithConfirm(path, message, state) {
+  if (!IS_BROWSER) return false;
+
+  if (window.confirm(message)) {
+    return navigateTo(path, state);
+  }
+
+  return false;
 }

@@ -20,11 +20,11 @@ import {
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
   setLocale,
+  getCurrentUser,
   setRuntimeVariable,
 } from './redux';
 import { createFetch } from './createFetch';
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, getI18nInstance } from './i18n';
-import * as navigator from './navigator';
 import router from './pages';
 import App from './components/App';
 import Html from './components/Html';
@@ -222,11 +222,25 @@ function setupApiProxy(app) {
  * @returns {Promise<Object>} Configured Redux store
  */
 async function createReduxStore(req, fetch, locale) {
-  // Initialize store with user from JWT
-  const store = configureStore(
-    { user: req.user || null },
-    { fetch, navigator, i18n },
-  );
+  let user = req.user || null;
+
+  // Initialize store with user (either full profile or basic JWT data)
+  const store = configureStore({ user }, { fetch, i18n });
+
+  // If we have a user from JWT, fetch full profile for SSR to get display_name
+  if (user && user.id) {
+    try {
+      await store.dispatch(getCurrentUser());
+      if (__DEV__) {
+        console.log('✅ User authenticated from session');
+      }
+    } catch {
+      // User not authenticated or token invalid - this is fine
+      if (__DEV__) {
+        console.log('ℹ️ No authenticated user');
+      }
+    }
+  }
 
   // Set runtime variables
   store.dispatch(
@@ -472,7 +486,7 @@ async function main(app, staticPath) {
   );
 
   // This sets up all API routes, middleware, and database connections
-  await require('./api').default(app, i18n, config);
+  await import('./api').then(api => api.default(app, i18n, config));
 
   // This will forward all requests to /api/* to the specified backend server
   setupApiProxy(app);

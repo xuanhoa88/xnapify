@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SYSTEM_ROLES } from '../constants/roles';
+
 // ========================================================================
 // ROLE MANAGEMENT SERVICES
 // ========================================================================
@@ -159,7 +161,7 @@ export async function deleteRole(role_id, models) {
   }
 
   // Prevent deletion of system roles
-  const systemRoles = ['admin', 'user', 'moderator'];
+  const systemRoles = SYSTEM_ROLES;
   if (systemRoles.includes(role.name)) {
     throw new Error('Cannot delete system roles');
   }

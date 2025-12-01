@@ -4,8 +4,7 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-
-@import "../../components/variables.css";
+@import '../../components/variables.css';
 
 /* Centered root for forms */
 .root {
@@ -20,22 +19,22 @@
 
 /* Decorative gradient overlay */
 .root::before {
-  content: "";
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: radial-gradient(
-    circle at 20% 50%,
-    rgb(102 126 234 / 10%) 0%,
-    transparent 50%
-  ),
+      circle at 20% 50%,
+      rgb(102 126 234 / 10%) 0%,
+      transparent 50%
+    ),
     radial-gradient(
-    circle at 80% 80%,
-    rgb(118 75 162 / 10%) 0%,
-    transparent 50%
-  );
+      circle at 80% 80%,
+      rgb(118 75 162 / 10%) 0%,
+      transparent 50%
+    );
   pointer-events: none;
   z-index: 0;
 }
@@ -96,23 +95,72 @@
   transition: all var(--transition-fast);
 }
 
-.input::placeholder {
-  color: var(--color-text-tertiary);
+.textarea {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  outline: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-base);
+  font-family: var(--font-family-base);
+  line-height: var(--line-height-normal);
+  transition: all var(--transition-fast);
+  resize: vertical;
+  min-height: 100px;
 }
 
-.input:hover {
-  border-color: var(--color-border-hover);
-}
-
-.input:focus {
+.textarea:focus {
   border-color: var(--color-primary);
   box-shadow: var(--shadow-focus);
+}
+
+.input:read-only {
+  background-color: var(--color-background-secondary);
+  cursor: default;
 }
 
 .input:disabled {
   background-color: var(--color-background-tertiary);
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.7;
+}
+
+.row {
+  display: flex;
+  margin-left: -10px;
+  margin-right: -10px;
+}
+
+.col {
+  flex: 1;
+  padding-left: 10px;
+  padding-right: 10px;
+}
+
+.success {
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border: 1px solid #c3e6cb;
+  border-radius: 4px;
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.error {
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.error strong {
+  font-weight: 700;
 }
 
 .button {
@@ -160,27 +208,28 @@
   transform: none;
 }
 
-.buttonLink {
-  display: block;
-  width: 100%;
-  margin: var(--spacing-2) 0;
-  padding: var(--spacing-3);
-  border: none;
-  background: transparent;
-  color: var(--color-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  text-align: center;
-  text-decoration: none;
-  cursor: pointer;
-  transition: color var(--transition-fast);
-  border-radius: var(--radius-md);
+.avatarContainer {
+  display: flex;
+  justify-content: center;
+  margin-bottom: var(--spacing-6);
 }
 
-.buttonLink:hover {
-  color: var(--color-primary-hover);
-  text-decoration: underline;
-  background: var(--color-background-tertiary);
+.avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary),
+    var(--color-primary-hover)
+  );
+  color: white;
+  font-size: var(--font-size-3xl);
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-md);
 }
 
 @media (max-width: 768px) {
@@ -191,30 +240,4 @@
   .container {
     padding: var(--spacing-6);
   }
-}
-
-.error {
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  border: 1px solid #f5c6cb;
-  border-radius: 4px;
-  background-color: #f8d7da;
-  color: #721c24;
-}
-
-.error strong {
-  font-weight: 700;
-}
-
-.success {
-  margin-bottom: 15px;
-  padding: 10px 15px;
-  border: 1px solid #c3e6cb;
-  border-radius: 4px;
-  background-color: #d4edda;
-  color: #155724;
-}
-
-.success strong {
-  font-weight: 700;
 }

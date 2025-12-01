@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../variables.css';
+@import "../variables.css";
 
 /*
  * normalize.css is imported in JS file.
@@ -89,6 +89,7 @@ a:hover {
   text-decoration: underline;
 }
 
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 a:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -103,14 +104,8 @@ a:focus-visible {
  * Customize the background color to match your design.
  */
 
-::-moz-selection {
-  background: rgba(37, 99, 235, 0.2);
-  color: var(--color-text-primary);
-  text-shadow: none;
-}
-
 ::selection {
-  background: rgba(37, 99, 235, 0.2);
+  background: rgb(37 99 235 / 20%);
   color: var(--color-text-primary);
   text-shadow: none;
 }
@@ -194,11 +189,11 @@ textarea {
   }
 
   a[href]::after {
-    content: ' (' attr(href) ')';
+    content: " (" attr(href) ")";
   }
 
   abbr[title]::after {
-    content: ' (' attr(title) ')';
+    content: " (" attr(title) ")";
   }
 
   /*
@@ -206,9 +201,9 @@ textarea {
    * or use the `javascript:` pseudo protocol
    */
 
-  a[href^='#']::after,
-  a[href^='javascript:']::after {
-    content: '';
+  a[href^="#"]::after,
+  a[href^="javascript:"]::after {
+    content: "";
   }
 
   pre,

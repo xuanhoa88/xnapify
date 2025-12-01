@@ -13,6 +13,7 @@ open build/bundle-stats.html
 ```
 
 **What to look for:**
+
 - Large dependencies (>100KB)
 - Duplicate dependencies
 - Unused code
@@ -21,15 +22,16 @@ open build/bundle-stats.html
 ### 2. Enable Code Splitting
 
 **Route-based splitting (already implemented):**
+
 ```javascript
 // src/routes/heavy-page/index.js
 export default {
   path: '/heavy-page',
-  
+
   async action() {
     // Dynamic import for code splitting
     const HeavyPage = await import('./HeavyPage');
-    
+
     return {
       title: 'Heavy Page',
       component: <HeavyPage.default />,
@@ -39,6 +41,7 @@ export default {
 ```
 
 **Component-based splitting:**
+
 ```javascript
 import React, { lazy, Suspense } from 'react';
 
@@ -57,6 +60,7 @@ function Dashboard() {
 ### 3. Tree Shaking
 
 **Use named imports:**
+
 ```javascript
 // ❌ Bad - imports entire library
 import _ from 'lodash';
@@ -71,6 +75,7 @@ import debounce from 'lodash-es/debounce';
 ```
 
 **Configure webpack for better tree shaking:**
+
 ```javascript
 // tools/webpack/client.js
 optimization: {
@@ -97,21 +102,24 @@ npm install lodash-es
 ### 5. Enable Compression
 
 **Add gzip/brotli compression:**
+
 ```javascript
 // src/server.js
 import compression from 'compression';
 
-app.use(compression({
-  level: 6, // Compression level (0-9)
-  threshold: 1024, // Only compress files > 1KB
-  filter: (req, res) => {
-    // Don't compress if client doesn't support it
-    if (req.headers['x-no-compression']) {
-      return false;
-    }
-    return compression.filter(req, res);
-  },
-}));
+app.use(
+  compression({
+    level: 6, // Compression level (0-9)
+    threshold: 1024, // Only compress files > 1KB
+    filter: (req, res) => {
+      // Don't compress if client doesn't support it
+      if (req.headers['x-no-compression']) {
+        return false;
+      }
+      return compression.filter(req, res);
+    },
+  }),
+);
 ```
 
 ## React Performance
@@ -119,19 +127,24 @@ app.use(compression({
 ### 1. Memoization
 
 **Use React.memo for expensive components:**
+
 ```javascript
 import React, { memo } from 'react';
 
-const ExpensiveComponent = memo(({ data }) => {
-  // Expensive rendering logic
-  return <div>{/* ... */}</div>;
-}, (prevProps, nextProps) => {
-  // Custom comparison function
-  return prevProps.data.id === nextProps.data.id;
-});
+const ExpensiveComponent = memo(
+  ({ data }) => {
+    // Expensive rendering logic
+    return <div>{/* ... */}</div>;
+  },
+  (prevProps, nextProps) => {
+    // Custom comparison function
+    return prevProps.data.id === nextProps.data.id;
+  },
+);
 ```
 
 **Use useMemo for expensive calculations:**
+
 ```javascript
 import { useMemo } from 'react';
 
@@ -139,20 +152,21 @@ function DataTable({ data }) {
   const sortedData = useMemo(() => {
     return data.sort((a, b) => a.value - b.value);
   }, [data]); // Only recalculate when data changes
-  
+
   return <table>{/* render sortedData */}</table>;
 }
 ```
 
 **Use useCallback for stable function references:**
+
 ```javascript
 import { useCallback } from 'react';
 
 function Parent() {
-  const handleClick = useCallback((id) => {
+  const handleClick = useCallback(id => {
     console.log('Clicked:', id);
   }, []); // Function never changes
-  
+
   return <Child onClick={handleClick} />;
 }
 ```
@@ -160,27 +174,27 @@ function Parent() {
 ### 2. Virtualization for Long Lists
 
 **Install react-window:**
+
 ```bash
 npm install react-window
 ```
 
 **Use for long lists:**
+
 ```javascript
 import { FixedSizeList } from 'react-window';
 
 function LongList({ items }) {
   const Row = ({ index, style }) => (
-    <div style={style}>
-      {items[index].name}
-    </div>
+    <div style={style}>{items[index].name}</div>
   );
-  
+
   return (
     <FixedSizeList
       height={600}
       itemCount={items.length}
       itemSize={50}
-      width="100%"
+      width='100%'
     >
       {Row}
     </FixedSizeList>
@@ -196,24 +210,24 @@ import React, { useState, useEffect, useRef } from 'react';
 function LazyImage({ src, alt, placeholder }) {
   const [imageSrc, setImageSrc] = useState(placeholder);
   const imgRef = useRef();
-  
+
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
         if (entry.isIntersecting) {
           setImageSrc(src);
           observer.disconnect();
         }
       });
     });
-    
+
     if (imgRef.current) {
       observer.observe(imgRef.current);
     }
-    
+
     return () => observer.disconnect();
   }, [src]);
-  
+
   return <img ref={imgRef} src={imageSrc} alt={alt} />;
 }
 ```
@@ -226,20 +240,20 @@ import debounce from 'lodash/debounce';
 
 function SearchInput() {
   const [results, setResults] = useState([]);
-  
+
   const search = useCallback(
-    debounce(async (query) => {
+    debounce(async query => {
       const data = await fetch(`/api/search?q=${query}`);
       setResults(data);
     }, 300),
     [],
   );
-  
+
   return (
     <input
-      type="text"
-      onChange={(e) => search(e.target.value)}
-      placeholder="Search..."
+      type='text'
+      onChange={e => search(e.target.value)}
+      placeholder='Search...'
     />
   );
 }
@@ -251,10 +265,13 @@ function SearchInput() {
 
 ```javascript
 // src/server.js
-app.use('/public', express.static('public', {
-  maxAge: '1y', // Cache static assets for 1 year
-  immutable: true,
-}));
+app.use(
+  '/public',
+  express.static('public', {
+    maxAge: '1y', // Cache static assets for 1 year
+    immutable: true,
+  }),
+);
 
 // Cache API responses
 app.get('/api/data', (req, res) => {
@@ -266,6 +283,7 @@ app.get('/api/data', (req, res) => {
 ### 2. Database Query Optimization
 
 **Add indexes:**
+
 ```javascript
 // src/data/models/Post.js
 {
@@ -278,6 +296,7 @@ app.get('/api/data', (req, res) => {
 ```
 
 **Use eager loading:**
+
 ```javascript
 // ❌ Bad - N+1 query problem
 const posts = await Post.findAll();
@@ -292,14 +311,16 @@ const posts = await Post.findAll({
 ```
 
 **Limit fields:**
+
 ```javascript
 // Only fetch needed fields
 const users = await User.findAll({
-  attributes: ['id', 'displayName', 'email'],
+  attributes: ['id', 'display_name', 'email'],
 });
 ```
 
 **Use pagination:**
+
 ```javascript
 const page = parseInt(req.query.page) || 1;
 const limit = 20;
@@ -321,10 +342,12 @@ npm install compression
 ```javascript
 import compression from 'compression';
 
-app.use(compression({
-  level: 6,
-  threshold: 1024,
-}));
+app.use(
+  compression({
+    level: 6,
+    threshold: 1024,
+  }),
+);
 ```
 
 ### 4. HTTP/2 Server Push
@@ -340,7 +363,7 @@ app.get('/', (req, res) => {
       response: { 'content-type': 'application/javascript' },
     });
   }
-  
+
   res.render('index');
 });
 ```
@@ -370,6 +393,7 @@ cache: {
 ### 3. Production Optimizations
 
 **Enable in webpack config:**
+
 ```javascript
 optimization: {
   minimize: true,
@@ -405,6 +429,7 @@ optimization: {
 ### 1. Critical CSS
 
 **Extract critical CSS for above-the-fold content:**
+
 ```javascript
 // Already implemented in src/components/Html.js
 <style dangerouslySetInnerHTML={{ __html: css.join('') }} />
@@ -425,12 +450,13 @@ plugins: [
   new PurgeCSSPlugin({
     paths: glob.sync('src/**/*', { nodir: true }),
   }),
-]
+];
 ```
 
 ### 3. CSS Minification
 
 **Already enabled via css-loader:**
+
 ```javascript
 {
   loader: 'css-loader',
@@ -447,8 +473,8 @@ plugins: [
 ```javascript
 // Use WebP with fallback
 <picture>
-  <source srcSet="/image.webp" type="image/webp" />
-  <img src="/image.jpg" alt="Description" />
+  <source srcSet='/image.webp' type='image/webp' />
+  <img src='/image.jpg' alt='Description' />
 </picture>
 ```
 
@@ -456,21 +482,21 @@ plugins: [
 
 ```javascript
 <img
-  src="/image-800.jpg"
-  srcSet="
+  src='/image-800.jpg'
+  srcSet='
     /image-400.jpg 400w,
     /image-800.jpg 800w,
     /image-1200.jpg 1200w
-  "
-  sizes="(max-width: 600px) 400px, (max-width: 1200px) 800px, 1200px"
-  alt="Description"
+  '
+  sizes='(max-width: 600px) 400px, (max-width: 1200px) 800px, 1200px'
+  alt='Description'
 />
 ```
 
 ### 3. Lazy Loading
 
 ```javascript
-<img src="/image.jpg" loading="lazy" alt="Description" />
+<img src='/image.jpg' loading='lazy' alt='Description' />
 ```
 
 ## Monitoring Performance
@@ -516,12 +542,14 @@ performance: {
 ## Performance Checklist
 
 ### Build Time
+
 - [ ] Enable webpack caching
 - [ ] Use parallel builds
 - [ ] Minimize source maps in production
 - [ ] Remove unused dependencies
 
 ### Bundle Size
+
 - [ ] Enable code splitting
 - [ ] Use tree shaking
 - [ ] Minimize dependencies
@@ -529,6 +557,7 @@ performance: {
 - [ ] Remove console.log in production
 
 ### Runtime Performance
+
 - [ ] Use React.memo for expensive components
 - [ ] Use useMemo for expensive calculations
 - [ ] Use useCallback for stable functions
@@ -537,6 +566,7 @@ performance: {
 - [ ] Debounce expensive operations
 
 ### Server Performance
+
 - [ ] Enable caching headers
 - [ ] Optimize database queries
 - [ ] Add database indexes
@@ -545,12 +575,14 @@ performance: {
 - [ ] Use HTTP/2
 
 ### CSS Performance
+
 - [ ] Extract critical CSS
 - [ ] Remove unused CSS
 - [ ] Minify CSS
 - [ ] Use CSS Modules
 
 ### Image Performance
+
 - [ ] Use modern formats (WebP)
 - [ ] Use responsive images
 - [ ] Lazy load images

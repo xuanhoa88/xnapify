@@ -28,26 +28,33 @@ export const isAnalyze =
   config.bundleAnalyze;
 
 export const isProfile = process.argv.includes('--profile') || BUNDLE_PROFILE;
-
-// JavaScript files (including ES modules and CommonJS)
-export const reScript = /\.(js|jsx|[cm]js)$/i;
+// JavaScript/TypeScript files (including ES modules and CommonJS)
+export const reScript = /\.[jt]sx?$/i; // .js, .jsx, .ts, .tsx
+export const reScriptLegacy = /\.[cm][jt]s$/i; // .cjs, .mjs, .cts, .mts
 
 // Stylesheet files (CSS, SCSS, SASS, LESS, Stylus, SugarSS)
 export const reStyle = /\.(css|s[ac]ss|less|styl|sss)$/i;
 
-// Image files (with optional version query string)
-export const reImage = /\.(?:ico|gif|png|jpg|jpeg|webp)(\?v=\d+\.\d+\.\d+)?$/i;
+// Image files (with optional query string for cache busting)
+export const reImage = /\.(?:ico|gif|png|jpe?g|webp|bmp|avif)(?:\?.*)?$/i;
 
-// Font files (with optional version query string)
-export const reFont = /\.(woff2?|eot|ttf|otf)(\?v=\d+\.\d+\.\d+)?$/i;
+// Font files (with optional query string for cache busting)
+export const reFont = /\.(?:woff2?|eot|ttf|otf)(?:\?.*)?$/i;
 
 // SVG files (handled separately for React component conversion)
-export const reSvg = /\.svg$/i;
+export const reSvg = /\.svg(?:\?.*)?$/i;
 
 // Markup and document files
-export const reHtml = /\.html$/i;
-export const reMarkdown = /\.(md|markdown)$/i;
+export const reHtml = /\.html?$/i; // Supports .htm too
+export const reMarkdown = /\.(?:md|markdown)$/i;
 export const reText = /\.txt$/i;
+
+// Media files
+export const reAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac)$/i;
+export const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)$/i;
+
+// Data files
+export const reData = /\.(?:json|xml|csv|ya?ml)$/i;
 
 /** Get file naming pattern based on environment */
 const getFileNamePattern = (hashType = 'hash') =>
@@ -65,13 +72,9 @@ const getFileNamePattern = (hashType = 'hash') =>
 export const createCSSRule = ({ isClient, extractLoader }) => {
   // Common CSS loader options
   const cssLoaderOptions = {
-    // Number of loaders applied before css-loader (for @import resolution)
-    // Current: 1 (postcss-loader only)
-    // With SCSS/SASS: 2 (postcss-loader + sass-loader)
-    // With LESS: 2 (postcss-loader + less-loader)
-    importLoaders: 1,
-    sourceMap: isClient && isDebug, // Source maps only for client in dev mode
-    esModule: false, // Required for compatibility
+    importLoaders: 1, // Will be dynamically adjusted per preprocessor
+    sourceMap: isClient && isDebug,
+    esModule: false,
     modules: {
       // Enable CSS Modules only for files in src/ directory
       auto: resourcePath => resourcePath.includes(config.APP_DIR),
@@ -87,86 +90,82 @@ export const createCSSRule = ({ isClient, extractLoader }) => {
   const postcssLoaderOptions = {
     sourceMap: isClient && isDebug,
     postcssOptions: {
-      config: path.resolve(__dirname, '...', 'postcss.config.js'),
+      config: path.resolve(__dirname, '..', 'postcss.config.js'),
       // SugarSS parser (for .sss files)
-      // Automatically uses sugarss parser when file extension is .sss
-      // Install: npm install -D sugarss
-      parser: file => {
-        if (file && file.endsWith('.sss')) {
-          return require('sugarss');
-        }
-        return undefined; // Use default parser for other files
-      },
+      parser: file => (file?.endsWith('.sss') ? 'sugarss' : undefined),
     },
   };
 
-  // SCSS/SASS loader options (uncomment when sass-loader is installed)
-  const sassLoaderOptions = {
-    sourceMap: isClient && isDebug,
-  };
-
-  // LESS loader options (uncomment when less-loader is installed)
-  const lessLoaderOptions = {
-    sourceMap: isClient && isDebug,
-  };
-
-  // Stylus loader options (uncomment when stylus-loader is installed)
-  const stylusLoaderOptions = {
-    sourceMap: isClient && isDebug,
-  };
-
-  return {
-    test: reStyle,
-    rules: [
-      // First rule: Extract CSS (client) or just get class names (server)
+  // Helper to build loader chain (executed right-to-left)
+  const buildLoaders = (preprocessor = null) => {
+    const loaders = [
       {
-        issuer: { not: [reStyle] },
-        ...(extractLoader
-          ? { use: extractLoader } // Client: extract CSS to files
-          : { loader: 'css-loader', options: cssLoaderOptions }), // Server: class names only
+        loader: 'css-loader',
+        options: {
+          ...cssLoaderOptions,
+          // Adjust importLoaders based on number of loaders after css-loader
+          importLoaders: preprocessor ? 2 : 1,
+        },
       },
-      // Process CSS with css-loader (only for client, server uses above)
-      ...(isClient
-        ? [
-            {
-              loader: 'css-loader',
-              options: cssLoaderOptions,
-            },
-          ]
-        : []),
-      // PostCSS loader (autoprefixer, etc.)
       {
         loader: 'postcss-loader',
         options: postcssLoaderOptions,
       },
+    ];
 
-      // Preprocessor loaders (conditional on file extension)
-      // Install the packages you need:
-      // - SCSS/SASS: npm install -D sass sass-loader
-      // - LESS: npm install -D less less-loader
-      // - Stylus: npm install -D stylus stylus-loader
-      // - SugarSS: npm install -D sugarss (handled by PostCSS parser above, no loader needed)
-      // Note: Update importLoaders count above when enabling preprocessors
+    // Add preprocessor loader at the end (executes first)
+    if (preprocessor) {
+      loaders.push(preprocessor);
+    }
 
-      // SCSS/SASS loader
+    // For client: add extract/style-loader at the beginning (executes last)
+    if (isClient && extractLoader) {
+      return [extractLoader, ...loaders];
+    }
+
+    return loaders;
+  };
+
+  // Return rule with oneOf for different file types
+  return {
+    test: reStyle,
+    oneOf: [
+      // SCSS/SASS
       {
         test: /\.s[ac]ss$/i,
-        loader: 'sass-loader',
-        options: sassLoaderOptions,
+        use: buildLoaders({
+          loader: 'sass-loader',
+          options: {
+            sourceMap: isClient && isDebug,
+          },
+        }),
       },
 
-      // LESS loader
+      // LESS
       {
         test: /\.less$/i,
-        loader: 'less-loader',
-        options: lessLoaderOptions,
+        use: buildLoaders({
+          loader: 'less-loader',
+          options: {
+            sourceMap: isClient && isDebug,
+          },
+        }),
       },
 
-      // Stylus loader
+      // Stylus
       {
         test: /\.styl$/i,
-        loader: 'stylus-loader',
-        options: stylusLoaderOptions,
+        use: buildLoaders({
+          loader: 'stylus-loader',
+          options: {
+            sourceMap: isClient && isDebug,
+          },
+        }),
+      },
+
+      // Plain CSS (must be last in oneOf)
+      {
+        use: buildLoaders(),
       },
     ],
   };

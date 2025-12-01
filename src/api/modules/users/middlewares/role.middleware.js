@@ -5,8 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  ADMIN_ROLE,
+  SYSTEM_ROLES,
+  MODERATOR_ROLE,
+  STAFF_ROLE,
+} from '../constants/roles';
+
 // ========================================================================
-// ROLE-BASED AUTHORIZATION MIDDLEWARES
+// ROLE-BASED ACCESS CONTROL (RBAC) MIDDLEWARE
 // ========================================================================
 
 /**
@@ -158,7 +165,7 @@ export function requireAnyRole(allowedRoles) {
  * router.get('/admin', requireAuth, requireAdmin, controller.adminAction);
  */
 export function requireAdmin(req, res, next) {
-  return requireRole('admin')(req, res, next);
+  return requireRole(ADMIN_ROLE)(req, res, next);
 }
 
 /**
@@ -175,7 +182,7 @@ export function requireAdmin(req, res, next) {
  * router.delete('/posts/:id', requireAuth, requireModerator, controller.deletePost);
  */
 export function requireModerator(req, res, next) {
-  return requireAnyRole(['admin', 'moderator'])(req, res, next);
+  return requireAnyRole([ADMIN_ROLE, MODERATOR_ROLE])(req, res, next);
 }
 
 /**
@@ -192,7 +199,11 @@ export function requireModerator(req, res, next) {
  * router.get('/staff/dashboard', requireAuth, requireStaff, controller.staffDashboard);
  */
 export function requireStaff(req, res, next) {
-  return requireAnyRole(['admin', 'moderator', 'staff'])(req, res, next);
+  return requireAnyRole(
+    SYSTEM_ROLES.filter(r =>
+      [ADMIN_ROLE, MODERATOR_ROLE, STAFF_ROLE].includes(r),
+    ),
+  )(req, res, next);
 }
 
 /**
@@ -209,10 +220,7 @@ export function requireStaff(req, res, next) {
  * const hierarchy = ['user', 'staff', 'moderator', 'admin'];
  * router.get('/management', requireAuth, requireRoleLevel('staff', hierarchy), controller.manage);
  */
-export function requireRoleLevel(
-  minimumRole,
-  roleHierarchy = ['user', 'staff', 'moderator', 'admin'],
-) {
+export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
   return async (req, res, next) => {
     if (!req.user) {
       return res.status(401).json({

@@ -58,6 +58,21 @@ function extractToken(req, options = {}) {
 }
 
 /**
+ * Send standardized error response
+ *
+ * @param {Object} res - Express response object
+ * @param {Error} error - Error object with status and code properties
+ * @returns {Object} JSON response
+ */
+function sendErrorResponse(res, error) {
+  return res.status(error.status || 500).json({
+    success: false,
+    error: error.message,
+    code: error.code,
+  });
+}
+
+/**
  * Basic JWT authentication middleware
  *
  * @param {Object} [options] - Middleware options
@@ -80,15 +95,7 @@ export function requireAuth(options = {}) {
         const error = new Error('Authentication token required');
         error.status = 401;
         error.code = 'TOKEN_REQUIRED';
-
-        if (onError) {
-          return onError(error, req, res, next);
-        }
-        return res.status(401).json({
-          success: false,
-          error: error.message,
-          code: error.code,
-        });
+        throw error;
       }
 
       const decoded = verifyTypedToken(token, tokenType, jwtSecret);
@@ -98,22 +105,26 @@ export function requireAuth(options = {}) {
       }
       req.token = token;
       req.authMethod = 'jwt';
+      req.authenticated = true;
 
       next();
     } catch (error) {
       error.status = 401;
-      error.code =
-        error.name === 'TokenExpiredError' ? 'TOKEN_EXPIRED' : 'TOKEN_INVALID';
 
-      if (onError) {
+      // Determine error code based on error type
+      if (!error.code) {
+        if (error.name === 'TokenExpiredError') {
+          error.code = 'TOKEN_EXPIRED';
+        } else {
+          error.code = 'TOKEN_INVALID';
+        }
+      }
+
+      if (typeof onError === 'function') {
         return onError(error, req, res, next);
       }
 
-      return res.status(401).json({
-        success: false,
-        error: error.message,
-        code: error.code,
-      });
+      return sendErrorResponse(res, error);
     }
   };
 }
@@ -184,11 +195,7 @@ export function refreshToken(options = {}) {
         const error = new Error('Token has expired');
         error.status = 401;
         error.code = 'TOKEN_EXPIRED';
-        return res.status(401).json({
-          success: false,
-          error: error.message,
-          code: error.code,
-        });
+        throw error;
       }
 
       // Check if token is close to expiration
@@ -225,7 +232,9 @@ export function refreshToken(options = {}) {
 
       next();
     } catch (error) {
-      next(error);
+      error.status = error.status || 401;
+      error.code = error.code || 'TOKEN_REFRESH_ERROR';
+      return sendErrorResponse(res, error);
     }
   };
 }
@@ -250,36 +259,17 @@ export function requireSession(options = {}) {
         const error = new Error('Session required');
         error.status = 401;
         error.code = 'SESSION_REQUIRED';
-
-        if (onError) {
-          return onError(error, req, res, next);
-        }
-
-        return res.status(401).json({
-          success: false,
-          error: error.message,
-          code: error.code,
-        });
+        throw error;
       }
 
       // Get session data from store (if provided)
       if (sessionStore) {
         const sessionData = await sessionStore(sessionId);
-
         if (!sessionData) {
           const error = new Error('Invalid session');
           error.status = 401;
           error.code = 'INVALID_SESSION';
-
-          if (onError) {
-            return onError(error, req, res, next);
-          }
-
-          return res.status(401).json({
-            success: false,
-            error: error.message,
-            code: error.code,
-          });
+          throw error;
         }
 
         req.session = sessionData;
@@ -287,18 +277,71 @@ export function requireSession(options = {}) {
 
       req.sessionId = sessionId;
       req.authMethod = 'session';
+      req.authenticated = true;
 
       next();
     } catch (error) {
-      if (onError) {
+      error.status = error.status || 500;
+      error.code = error.code || 'SESSION_ERROR';
+
+      if (typeof onError === 'function') {
         return onError(error, req, res, next);
       }
 
-      return res.status(500).json({
-        success: false,
-        error: 'Session validation failed',
-        code: 'SESSION_ERROR',
-      });
+      return sendErrorResponse(res, error);
+    }
+  };
+}
+
+/**
+ * Optional session-based authentication middleware
+ *
+ * Attempts to authenticate via session but allows request to proceed
+ * even if no session exists or session is invalid.
+ *
+ * Sets the following properties on req:
+ * - req.session: Session data (if valid session exists)
+ * - req.sessionId: Session ID (if exists)
+ * - req.authMethod: 'session' (if authenticated)
+ * - req.authenticated: true/false
+ *
+ * @param {Object} [options] - Session options
+ * @param {Function} [options.sessionStore] - Function to get session data by ID
+ * @returns {Function} Express middleware
+ */
+export function optionalSession(options = {}) {
+  const { sessionStore } = options;
+
+  return async (req, res, next) => {
+    try {
+      const sessionId = manageCookie('get', 'session', { req });
+
+      if (!sessionId) {
+        req.authenticated = false;
+        return next(); // No session, continue without authentication
+      }
+
+      // Get session data from store (if provided)
+      if (sessionStore) {
+        const sessionData = await sessionStore(sessionId);
+
+        if (!sessionData) {
+          req.authenticated = false;
+          return next(); // Invalid session, continue without authentication
+        }
+
+        req.session = sessionData;
+      }
+
+      req.sessionId = sessionId;
+      req.authMethod = 'session';
+      req.authenticated = true;
+
+      next();
+    } catch (error) {
+      // On any error, continue without authentication
+      req.authenticated = false;
+      next();
     }
   };
 }
@@ -372,7 +415,7 @@ export function requireAnyAuth(options = {}) {
     error.code = 'AUTH_REQUIRED';
     error.attempts = errors;
 
-    if (onError) {
+    if (typeof onError === 'function') {
       return onError(error, req, res, next);
     }
 

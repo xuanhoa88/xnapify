@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../components/variables.css';
+@import "../../components/variables.css";
 
 /* Standard page root layout */
 .root {
@@ -239,7 +239,7 @@
 
 .slider::before {
   position: absolute;
-  content: '';
+  content: "";
   height: 18px;
   width: 18px;
   left: 3px;

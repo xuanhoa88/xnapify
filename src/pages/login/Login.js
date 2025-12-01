@@ -10,6 +10,7 @@ import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import { login } from '../../redux';
 import s from './Login.css';
+import { replaceTo, getQueryParam } from '../../navigator';
 
 function Login({ title }) {
   const dispatch = useDispatch();
@@ -30,8 +31,10 @@ function Login({ title }) {
 
       if (!result.success) {
         setError(result.error);
+      } else {
+        const returnTo = getQueryParam('returnTo');
+        replaceTo(returnTo || '/');
       }
-      // On success, Redux action redirects automatically
     },
     [email, password, dispatch],
   );

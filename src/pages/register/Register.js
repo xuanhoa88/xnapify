@@ -9,6 +9,7 @@ import PropTypes from 'prop-types';
 import { useCallback, useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
+import { replaceTo, getQueryParam } from '../../navigator';
 import s from './Register.css';
 
 function Register({ title }) {
@@ -55,8 +56,10 @@ function Register({ title }) {
 
       if (!result.success) {
         setError(result.error);
+      } else {
+        const returnTo = getQueryParam('returnTo');
+        replaceTo(returnTo || '/');
       }
-      // On success, Redux action redirects automatically
     },
     [displayName, email, password, confirmPassword, dispatch],
   );

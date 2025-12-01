@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { isAdmin } from '../constants/roles';
+
 // ========================================================================
-// RESOURCE OWNERSHIP AUTHORIZATION MIDDLEWARES
+// RESOURCE OWNERSHIP AND ADMIN-BYPASS MIDDLEWARE
 // ========================================================================
 
 /**
@@ -60,11 +62,9 @@ export function requireOwnership(
       const isOwner = resource[ownerField] === req.user.id;
 
       // Check if user is admin (bypass ownership)
-      const userRole =
-        req.user.role || (req.user.profile && req.user.profile.role);
-      const isAdmin = userRole === 'admin' || req.user.isAdmin === true;
+      const isAdminUser = isAdmin(req.user);
 
-      if (!isOwner && !isAdmin) {
+      if (!isOwner && !isAdminUser) {
         return res.status(403).json({
           success: false,
           error: 'Access denied. You can only access your own resources.',
@@ -157,7 +157,7 @@ export function requireFlexibleOwnership(options) {
       let canBypass = false;
 
       // Admin bypass
-      if (adminBypass && req.user.role === 'admin') {
+      if (adminBypass && isAdmin(req.user)) {
         canBypass = true;
       }
 

@@ -608,6 +608,17 @@ export default async function main(app, i18n, config = {}) {
     // Store models in app settings
     app.set('models', apiModels);
 
+    // This populates req.user from JWT cookies if present, allowing SSR to include user in initial state
+    app.use(auth.middlewares.optionalAuth({ jwtSecret: config.jwtSecret }));
+
+    // Auto-refresh token if expiring (Dual-Token Strategy)
+    app.use(
+      auth.middlewares.refreshToken({
+        jwtSecret: config.jwtSecret,
+        refreshThreshold: 5 * 60, // 5 minutes
+      }),
+    );
+
     // Mount API routes with rate limiting only
     app.use(config.apiPrefix, rateLimiter, apiRoutes);
 

@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../variables.css';
+@import "../variables.css";
 
 .root {
   background: var(--color-dark-navy);
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgb(255 255 255 / 10%);
   margin-top: auto;
 }
 
@@ -25,7 +25,7 @@
 }
 
 .text {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(255 255 255 / 85%);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   line-height: 1.5;
@@ -34,7 +34,7 @@
 
 /* Links wrapper - all links together */
 .link {
-  color: rgba(255, 255, 255, 0.85);
+  color: rgb(255 255 255 / 85%);
   text-decoration: none;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
@@ -47,18 +47,19 @@
 
 .link:hover {
   color: white;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255 255 255 / 10%);
   text-decoration: none;
 }
 
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 .link:focus-visible {
-  outline: 2px solid rgba(255, 255, 255, 0.5);
+  outline: 2px solid rgb(255 255 255 / 50%);
   outline-offset: 2px;
   border-radius: var(--radius-md);
 }
 
 .spacer {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgb(255 255 255 / 30%);
   margin: 0 var(--spacing-2);
   user-select: none;
   font-weight: var(--font-weight-normal);
@@ -76,7 +77,7 @@
 /* Mobile */
 @media (max-width: 768px) {
   .root {
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    border-top: 1px solid rgb(255 255 255 / 10%);
   }
 
   .container {
@@ -110,7 +111,7 @@
     font-weight: var(--font-weight-normal);
     width: 100%;
     margin-top: var(--spacing-3);
-    color: rgba(255, 255, 255, 0.5);
+    color: rgb(255 255 255 / 50%);
     letter-spacing: 0;
   }
 
@@ -119,8 +120,9 @@
     right: var(--spacing-4);
     width: 52px;
     height: 52px;
+
     /* Position above footer to avoid overlap */
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 4px 16px rgb(0 0 0 / 25%);
   }
 
   .scrollToTop:hover {
@@ -131,7 +133,7 @@
   .scrollToTop:active {
     /* Add active state for mobile feedback */
     transform: scale(0.95);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 20%);
   }
 
   .icon {
@@ -158,12 +160,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
   transition: all var(--transition-base);
   z-index: 1000;
   opacity: 0;
   visibility: hidden;
   transform: translateY(20px);
+
   /* Mobile optimizations */
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -178,7 +181,7 @@
 
 .scrollToTop:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 25%);
   transform: translateY(-4px);
 }
 
@@ -186,6 +189,7 @@
   transform: translateY(0);
 }
 
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
 .scrollToTop:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
@@ -195,7 +199,7 @@
 .icon {
   width: 28px;
   height: 28px;
-  stroke: currentColor;
+  stroke: currentcolor;
   stroke-width: 2.5;
   stroke-linecap: round;
   stroke-linejoin: round;
