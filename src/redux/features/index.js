@@ -94,3 +94,65 @@ export {
   // Reducer (default export from feature)
   default as userReducer,
 } from './user';
+
+// =============================================================================
+// FEATURE: UI (UI State)
+// =============================================================================
+export {
+  // Actions
+  toggleSidebar,
+  openSidebar,
+  closeSidebar,
+  setAdminPanel,
+  // Constants
+  TOGGLE_SIDEBAR,
+  OPEN_SIDEBAR,
+  CLOSE_SIDEBAR,
+  SET_ADMIN_PANEL,
+  // Selectors
+  isSidebarOpen,
+  isAdminPanel,
+  setPageHeader,
+  shouldShowPageHeader,
+  // Reducer (default export from feature)
+  default as uiReducer,
+} from './ui';
+
+// =============================================================================
+// FEATURE: GROUPS (Group Management)
+// =============================================================================
+export {
+  // Actions
+  fetchGroups,
+  fetchGroupById,
+  createGroup,
+  updateGroup,
+  deleteGroup,
+  clearGroupsError,
+  // Constants
+  FETCH_GROUPS_START,
+  FETCH_GROUPS_SUCCESS,
+  FETCH_GROUPS_ERROR,
+  FETCH_GROUP_START,
+  FETCH_GROUP_SUCCESS,
+  FETCH_GROUP_ERROR,
+  CREATE_GROUP_START,
+  CREATE_GROUP_SUCCESS,
+  CREATE_GROUP_ERROR,
+  UPDATE_GROUP_START,
+  UPDATE_GROUP_SUCCESS,
+  UPDATE_GROUP_ERROR,
+  DELETE_GROUP_START,
+  DELETE_GROUP_SUCCESS,
+  DELETE_GROUP_ERROR,
+  CLEAR_GROUPS_ERROR,
+  // Selectors
+  getGroups,
+  getCurrentGroup,
+  getGroupsPagination,
+  getGroupsLoading,
+  getGroupsError,
+  getGroupById,
+  // Reducer (default export from feature)
+  default as groupsReducer,
+} from './groups';

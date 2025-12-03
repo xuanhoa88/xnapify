@@ -54,7 +54,10 @@ export class FilesystemManager {
    */
   removeProvider(name) {
     if (name === this.defaultProvider) {
-      throw new Error('Cannot remove the default provider');
+      const error = new Error('Cannot remove the default provider');
+      error.name = 'InvalidFilesystemProviderNameError';
+      error.status = 400;
+      throw error;
     }
     return this.providers.delete(name);
   }
@@ -67,7 +70,10 @@ export class FilesystemManager {
     const provider = this.providers.get(providerName);
 
     if (!provider) {
-      throw new Error(`Filesystem provider not found: ${providerName}`);
+      const error = new Error(`Filesystem provider not found: ${providerName}`);
+      error.name = 'FilesystemProviderNotFoundError';
+      error.status = 404;
+      throw error;
     }
 
     return provider;
@@ -85,7 +91,10 @@ export class FilesystemManager {
    */
   setDefaultProvider(name) {
     if (!this.providers.has(name)) {
-      throw new Error(`Provider not found: ${name}`);
+      const error = new Error(`Filesystem provider not found: ${name}`);
+      error.name = 'FilesystemProviderNotFoundError';
+      error.status = 404;
+      throw error;
     }
     this.defaultProvider = name;
     return this;
@@ -203,7 +212,9 @@ export class FilesystemManager {
         success: true,
       };
     } catch (error) {
-      throw new Error(`Failed to copy between providers: ${error.message}`);
+      error.name = 'FilesystemProviderCopyBetweenProvidersError';
+      error.status = 500;
+      throw error;
     }
   }
 
@@ -234,7 +245,9 @@ export class FilesystemManager {
         moved: true,
       };
     } catch (error) {
-      throw new Error(`Failed to move between providers: ${error.message}`);
+      error.name = 'FilesystemProviderMoveBetweenProvidersError';
+      error.status = 500;
+      throw error;
     }
   }
 

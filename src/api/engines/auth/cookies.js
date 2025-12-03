@@ -135,7 +135,12 @@ export function manageCookie(
   switch (action) {
     case 'set':
       if (!context.res || !value) {
-        throw new Error('Response object and value required for set action');
+        const error = new Error(
+          'Response object and value required for set action',
+        );
+        error.name = 'MissingCookieValueError';
+        error.status = 400;
+        throw error;
       }
       return setSecureCookie(context.res, config.name, value, {
         maxAge: config.maxAge,
@@ -145,13 +150,19 @@ export function manageCookie(
 
     case 'get':
       if (!context.req) {
-        throw new Error('Request object required for get action');
+        const error = new Error('Request object required for get action');
+        error.name = 'MissingCookieValueError';
+        error.status = 400;
+        throw error;
       }
       return getCookieValue(context.req, config.name);
 
     case 'clear':
       if (!context.res) {
-        throw new Error('Response object required for clear action');
+        const error = new Error('Response object required for clear action');
+        error.name = 'MissingCookieValueError';
+        error.status = 400;
+        throw error;
       }
       return clearSecureCookie(context.res, config.name, {
         path: config.path,
@@ -160,12 +171,19 @@ export function manageCookie(
 
     case 'has':
       if (!context.req) {
-        throw new Error('Request object required for has action');
+        const error = new Error('Request object required for has action');
+        error.name = 'MissingCookieValueError';
+        error.status = 400;
+        throw error;
       }
       return hasCookie(context.req, config.name);
 
-    default:
-      throw new Error(`Unknown action: ${action}`);
+    default: {
+      const error = new Error(`Unknown action: ${action}`);
+      error.name = 'UnknownCookieActionError';
+      error.status = 400;
+      throw error;
+    }
   }
 }
 

@@ -4,7 +4,7 @@
  */
 
 import { synchronizeFiles, synchronizeFile } from '../actions/sync';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process sync operations
@@ -28,7 +28,7 @@ async function processSync(data) {
       return await synchronizeFiles(operations, options);
 
     default:
-      throw new Error(`Unknown sync type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown sync type: ${type}`);
   }
 }
 

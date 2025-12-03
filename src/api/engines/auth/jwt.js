@@ -56,11 +56,17 @@ const JWT_TOKEN_TYPES = Object.freeze({
  */
 export function generateToken(payload, secret, options = {}) {
   if (!payload || typeof payload !== 'object') {
-    throw new Error('Payload must be a non-empty object');
+    const error = new Error('Payload must be a non-empty object');
+    error.name = 'InvalidTokenPayloadError';
+    error.status = 400;
+    throw error;
   }
 
   if (typeof secret !== 'string' || secret.trim().length === 0) {
-    throw new Error('Secret must be a non-empty string');
+    const error = new Error('Secret must be a non-empty string');
+    error.name = 'InvalidTokenSecretError';
+    error.status = 400;
+    throw error;
   }
 
   const config = {
@@ -101,11 +107,17 @@ export function generateToken(payload, secret, options = {}) {
  */
 export function verifyToken(token, secret, options = {}) {
   if (typeof token !== 'string' || token.trim().length === 0) {
-    throw new Error('Token must be a non-empty string');
+    const error = new Error('Token must be a non-empty string');
+    error.name = 'InvalidTokenStringError';
+    error.status = 400;
+    throw error;
   }
 
   if (typeof secret !== 'string' || secret.trim().length === 0) {
-    throw new Error('Secret must be a non-empty string');
+    const error = new Error('Secret must be a non-empty string');
+    error.name = 'InvalidTokenSecretError';
+    error.status = 400;
+    throw error;
   }
 
   const config = {
@@ -122,13 +134,22 @@ export function verifyToken(token, secret, options = {}) {
   } catch (error) {
     // Enhance error messages
     if (error.name === 'TokenExpiredError') {
-      throw new Error('Token has expired');
+      const error = new Error('Token has expired');
+      error.name = 'TokenExpiredError';
+      error.status = 401;
+      throw error;
     }
     if (error.name === 'JsonWebTokenError') {
-      throw new Error('Invalid token format');
+      const error = new Error('Invalid token format');
+      error.name = 'InvalidTokenFormatError';
+      error.status = 401;
+      throw error;
     }
     if (error.name === 'NotBeforeError') {
-      throw new Error('Token not active yet');
+      const error = new Error('Token not active yet');
+      error.name = 'TokenNotActiveError';
+      error.status = 401;
+      throw error;
     }
     throw error;
   }
@@ -150,7 +171,10 @@ export function verifyToken(token, secret, options = {}) {
 export function generateTypedToken(type, payload, secret, options = {}) {
   const tokenConfig = JWT_TOKEN_TYPES[type];
   if (!tokenConfig) {
-    throw new Error(`Unknown token type: ${type}`);
+    const error = new Error(`Unknown token type: ${type}`);
+    error.name = 'UnknownTokenTypeError';
+    error.status = 400;
+    throw error;
   }
 
   const enhancedPayload = {
@@ -202,13 +226,19 @@ export function verifyTypedToken(token, expectedType, secret, options = {}) {
 
   const tokenConfig = JWT_TOKEN_TYPES[expectedType];
   if (!tokenConfig) {
-    throw new Error(`Unknown token type: ${expectedType}`);
+    const error = new Error(`Unknown token type: ${expectedType}`);
+    error.name = 'UnknownTokenTypeError';
+    error.status = 400;
+    throw error;
   }
 
   if (decoded.type !== tokenConfig.type) {
-    throw new Error(
+    const error = new Error(
       `Invalid token type. Expected: ${tokenConfig.type}, got: ${decoded.type}`,
     );
+    error.name = 'InvalidTokenTypeError';
+    error.status = 401;
+    throw error;
   }
 
   return decoded;
@@ -226,13 +256,18 @@ export function verifyTypedToken(token, expectedType, secret, options = {}) {
  */
 export function decodeToken(token) {
   if (typeof token !== 'string' || token.trim().length === 0) {
-    throw new Error('Token must be a non-empty string');
+    const error = new Error('Token must be a non-empty string');
+    error.name = 'InvalidTokenStringError';
+    error.status = 400;
+    throw error;
   }
 
   try {
     return jwt.decode(token, { complete: true });
   } catch (error) {
-    throw new Error('Invalid token format');
+    error.name = 'InvalidTokenFormatError';
+    error.status = 401;
+    throw error;
   }
 }
 
@@ -368,7 +403,10 @@ export function createTokenBlacklistEntry(token) {
   try {
     const decoded = decodeToken(token);
     if (!decoded || !decoded.payload) {
-      throw new Error('Invalid token');
+      const error = new Error('Invalid token');
+      error.name = 'InvalidTokenFormatError';
+      error.status = 401;
+      throw error;
     }
 
     return {
@@ -377,7 +415,9 @@ export function createTokenBlacklistEntry(token) {
       blacklistedAt: Math.floor(Date.now() / 1000),
     };
   } catch (error) {
-    throw new Error('Cannot create blacklist entry for invalid token');
+    error.name = 'InvalidTokenFormatError';
+    error.status = 401;
+    throw error;
   }
 }
 

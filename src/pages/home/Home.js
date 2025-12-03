@@ -8,7 +8,7 @@
 import PropTypes from 'prop-types';
 import s from './Home.css';
 
-function Home({ loading, payload }) {
+function Home({ loading, payload, featuresData }) {
   return (
     <div className={s.root}>
       {/* Features Section */}
@@ -21,71 +21,15 @@ function Home({ loading, payload }) {
             </p>
           </div>
           <div className={s.featureGrid}>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>⚡</div>
-                <h3 className={s.featureTitle}>Lightning Fast</h3>
+            {featuresData.map(feature => (
+              <div key={feature.id} className={s.featureCard}>
+                <div className={s.featureHeader}>
+                  <div className={s.featureIcon}>{feature.icon}</div>
+                  <h3 className={s.featureTitle}>{feature.name}</h3>
+                </div>
+                <p className={s.featureDesc}>{feature.description}</p>
               </div>
-              <p className={s.featureDesc}>
-                Server-side rendering with React 16+, automatic code splitting,
-                and optimized Webpack 5 configuration for instant page loads and
-                superior performance. Supports React 16, 17, and 18+
-              </p>
-            </div>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>🎨</div>
-                <h3 className={s.featureTitle}>Beautiful Design System</h3>
-              </div>
-              <p className={s.featureDesc}>
-                Professional UI with CSS Modules, design tokens, and responsive
-                layouts. Mobile-first approach with accessibility built-in from
-                day one
-              </p>
-            </div>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>🔧</div>
-                <h3 className={s.featureTitle}>Developer Experience</h3>
-              </div>
-              <p className={s.featureDesc}>
-                Hot Module Replacement for instant feedback, Redux DevTools for
-                state debugging, and Jest + React Testing Library for
-                comprehensive testing
-              </p>
-            </div>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>🌍</div>
-                <h3 className={s.featureTitle}>Global Ready</h3>
-              </div>
-              <p className={s.featureDesc}>
-                Full internationalization with react-i18next, locale-specific
-                routing, and dynamic language switching. Currently supports
-                English and Vietnamese
-              </p>
-            </div>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>🔐</div>
-                <h3 className={s.featureTitle}>Secure by Default</h3>
-              </div>
-              <p className={s.featureDesc}>
-                JWT authentication, protected routes, role-based access control,
-                and security best practices implemented throughout the codebase
-              </p>
-            </div>
-            <div className={s.featureCard}>
-              <div className={s.featureHeader}>
-                <div className={s.featureIcon}>🚀</div>
-                <h3 className={s.featureTitle}>Production Ready</h3>
-              </div>
-              <p className={s.featureDesc}>
-                Docker support, environment configuration, optimized builds, and
-                comprehensive deployment guides. Ship to production with
-                confidence
-              </p>
-            </div>
+            ))}
           </div>
         </div>
       </section>
@@ -111,7 +55,7 @@ function Home({ loading, payload }) {
                   <article key={item.id || item.link} className={s.newsItem}>
                     <div className={s.newsContent}>
                       <div className={s.newsNumber}>
-                        {String(index + 1).padStart(2, '0')}
+                        <span>{String(index + 1).padStart(2, '0')}</span>
                       </div>
                       <div className={s.newsBody}>
                         <h3 className={s.newsTitle}>
@@ -152,6 +96,16 @@ Home.propTypes = {
       pubDate: PropTypes.string,
     }),
   ),
+  featuresData: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.string.isRequired,
+      name: PropTypes.string.isRequired,
+      icon: PropTypes.string.isRequired,
+      description: PropTypes.string.isRequired,
+      details: PropTypes.string.isRequired,
+      tags: PropTypes.arrayOf(PropTypes.string).isRequired,
+    }),
+  ).isRequired,
 };
 
 export default Home;

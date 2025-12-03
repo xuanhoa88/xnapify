@@ -4,7 +4,7 @@
  */
 
 import { deleteFile, deleteFiles } from '../actions/delete';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process delete operations
@@ -22,7 +22,7 @@ async function processDelete(data) {
       return await deleteFiles(fileNames);
 
     default:
-      throw new Error(`Unknown delete type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown delete type: ${type}`);
   }
 }
 

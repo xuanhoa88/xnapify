@@ -4,7 +4,7 @@
  */
 
 import { renameFile, renameFiles } from '../actions/rename';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process rename operations
@@ -24,7 +24,7 @@ async function processRename(data) {
       return await renameFiles(operations.renameOperations, operations.options);
 
     default:
-      throw new Error(`Unknown rename type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown rename type: ${type}`);
   }
 }
 

@@ -350,7 +350,7 @@ export function errorHandler(err, req, res, next) {
   // Handle JWT errors
   if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
     const authError = new AuthenticationError(
-      err.name === 'JsonWebTokenError' ? 'INVALID_TOKEN' : 'TOKEN_EXPIRED',
+      err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired',
     );
     return res.status(authError.statusCode).json({
       success: false,

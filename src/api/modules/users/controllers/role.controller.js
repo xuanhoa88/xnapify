@@ -15,7 +15,7 @@ import { SYSTEM_ROLES } from '../constants/roles';
 /**
  * Create a new role
  *
- * @route   POST /api/users/roles
+ * @route   POST /api/admin/roles
  * @access  Admin (requires 'roles:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -40,7 +40,7 @@ export async function createRole(req, res) {
 
     return http.sendSuccess(res, { role }, 201);
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'RoleAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -51,7 +51,7 @@ export async function createRole(req, res) {
 /**
  * Get all roles with pagination
  *
- * @route   GET /api/users/roles
+ * @route   GET /api/admin/roles
  * @access  Admin (requires 'roles:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -76,7 +76,7 @@ export async function getRoles(req, res) {
 /**
  * Get role by ID
  *
- * @route   GET /api/users/roles/:id
+ * @route   GET /api/admin/roles/:id
  * @access  Admin (requires 'roles:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -111,7 +111,7 @@ export async function getRoleById(req, res) {
 /**
  * Update role by ID
  *
- * @route   PUT /api/users/roles/:id
+ * @route   PUT /api/admin/roles/:id
  * @access  Admin (requires 'roles:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -137,7 +137,7 @@ export async function updateRole(req, res) {
 
     return http.sendSuccess(res, { role });
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'RoleAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -148,7 +148,7 @@ export async function updateRole(req, res) {
 /**
  * Delete role by ID
  *
- * @route   DELETE /api/users/roles/:id
+ * @route   DELETE /api/admin/roles/:id
  * @access  Admin (requires 'roles:delete' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -183,7 +183,7 @@ export async function deleteRole(req, res) {
 /**
  * Assign permissions to a role
  *
- * @route   PUT /api/users/roles/:id/permissions
+ * @route   PUT /api/admin/roles/:id/permissions
  * @access  Admin (requires 'roles:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -213,11 +213,11 @@ export async function assignPermissionsToRole(req, res) {
 
     return http.sendSuccess(res, { role });
   } catch (error) {
-    if (error.message === 'Role not found') {
+    if (error.name === 'RoleNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
-    if (error.message.includes('permissions not found')) {
+    if (error.name === 'PermissionNotFoundError') {
       return http.sendValidationError(res, {
         permission_ids: error.message,
       });

@@ -6,13 +6,15 @@
  */
 
 import { useCallback, useState } from 'react';
-import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { useTranslation, Trans } from 'react-i18next';
+import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
 import s from './Login.css';
 import { replaceTo, getQueryParam } from '../../navigator';
 
 function Login({ title }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -45,14 +47,14 @@ function Login({ title }) {
         <h1>{title}</h1>
         {error && (
           <div className={s.error}>
-            <strong>Error:</strong> {error}
+            <strong>{t('login.error')}</strong> {error}
           </div>
         )}
 
         <form method='post' onSubmit={handleSubmit}>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='email'>
-              Email address:
+              {t('login.email')}
               <input
                 className={s.input}
                 id='email'
@@ -68,7 +70,7 @@ function Login({ title }) {
           </div>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='password'>
-              Password:
+              {t('login.password')}
               <input
                 className={s.input}
                 id='password'
@@ -79,22 +81,23 @@ function Login({ title }) {
                 required
               />
             </label>
-          </div>
-          <div className={s.formGroup}>
-            <a href='/reset-password' className={s.buttonLink}>
-              Forgot password?
+            <a href='/reset-password' className={s.forgotPasswordLink}>
+              {t('login.forgotPassword')}
             </a>
           </div>
           <div className={s.formGroup}>
             <button className={s.button} type='submit' disabled={loading}>
-              {loading ? 'Please wait...' : 'Log in'}
+              {loading ? t('login.loading') : t('login.submit')}
             </button>
           </div>
         </form>
-        <div className={s.formGroup}>
-          <a href='/register' className={s.buttonLink}>
-            Don&apos;t have an account? Register
-          </a>
+        <div className={s.linkWrapper}>
+          <Trans
+            t={t}
+            i18nKey='login.dontHaveAccount'
+            // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
+            components={[<a href='/register' className={s.buttonLink} />]}
+          />
         </div>
       </div>
     </div>

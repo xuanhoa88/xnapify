@@ -10,12 +10,14 @@ import PropTypes from 'prop-types';
 import Feedback from '../Feedback';
 import Footer from '../Footer';
 import Header from '../Header';
+import Sidebar from '../Sidebar';
 import s from './Layout.css';
 
-function Layout({ children, showHero = false }) {
+function Layout({ children }) {
   return (
     <div className={s.root}>
-      <Header showHero={showHero} />
+      <Header />
+      <Sidebar />
       <main className={s.content}>{children}</main>
       <Feedback />
       <Footer />
@@ -25,7 +27,6 @@ function Layout({ children, showHero = false }) {
 
 Layout.propTypes = {
   children: PropTypes.node.isRequired,
-  showHero: PropTypes.bool,
 };
 
 export default Layout;

@@ -570,7 +570,10 @@ export default async function main(app, i18n, config = {}) {
   try {
     // Validate required configuration
     if (!config.jwtSecret) {
-      throw new Error('JWT secret is required');
+      const error = new Error('JWT secret is required');
+      error.name = 'MissingJwtSecretError';
+      error.status = 500;
+      throw error;
     }
 
     // Setup app dependencies for dependency injection

@@ -16,7 +16,7 @@ import { validatePassword } from '../utils/validation';
 /**
  * Get user profile with extended information
  *
- * @route   GET /api/users/profile
+ * @route   GET /api/profile
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -60,7 +60,7 @@ export async function getProfile(req, res) {
 /**
  * Update user profile information
  *
- * @route   PUT /api/users/profile
+ * @route   PUT /api/profile
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -114,7 +114,7 @@ export async function updateProfile(req, res) {
 /**
  * Upload user avatar image
  *
- * @route   POST /api/users/avatar
+ * @route   POST /api/profile/avatar
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -148,15 +148,21 @@ export async function uploadAvatar(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'Invalid file type') {
+    if (error.name === 'INVALID_FILE_TYPE') {
       return http.sendValidationError(res, {
         avatar: 'Invalid file type. Only JPEG, PNG, and GIF are allowed',
       });
     }
 
-    if (error.message === 'File too large') {
+    if (error.code === 'LIMIT_FILE_SIZE') {
       return http.sendValidationError(res, {
         avatar: 'File too large. Maximum size is 5MB',
+      });
+    }
+
+    if (error.name === 'LIMIT_FILE_COUNT') {
+      return http.sendValidationError(res, {
+        avatar: 'File count exceeds limit',
       });
     }
 
@@ -167,7 +173,7 @@ export async function uploadAvatar(req, res) {
 /**
  * Remove user avatar
  *
- * @route   DELETE /api/users/avatar
+ * @route   DELETE /api/profile/avatar
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -201,7 +207,7 @@ export async function removeAvatar(req, res) {
 /**
  * Change user password
  *
- * @route   PUT /api/users/password
+ * @route   PUT /api/profile/password
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -241,7 +247,7 @@ export async function changePassword(req, res) {
       message: 'Password changed successfully',
     });
   } catch (error) {
-    if (error.message === 'Invalid current password') {
+    if (error.name === 'InvalidPasswordError') {
       return http.sendValidationError(res, {
         currentPassword: 'Current password is incorrect',
       });
@@ -254,7 +260,7 @@ export async function changePassword(req, res) {
 /**
  * Get user activity log
  *
- * @route   GET /api/users/profile/activity
+ * @route   GET /api/profile/activity
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -283,7 +289,7 @@ export async function getActivity(req, res) {
 /**
  * Update user preferences
  *
- * @route   PUT /api/users/profile/preferences
+ * @route   PUT /api/profile/preferences
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -320,7 +326,7 @@ export async function updatePreferences(req, res) {
 /**
  * Get user preferences
  *
- * @route   GET /api/users/profile/preferences
+ * @route   GET /api/profile/preferences
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -346,7 +352,7 @@ export async function getPreferences(req, res) {
 /**
  * Delete user account
  *
- * @route   DELETE /api/users/profile
+ * @route   DELETE /api/profile
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -382,7 +388,7 @@ export async function deleteAccount(req, res) {
       message: 'Account deleted successfully',
     });
   } catch (error) {
-    if (error.message === 'Invalid password') {
+    if (error.name === 'InvalidPasswordError') {
       return http.sendValidationError(res, {
         password: 'Password is incorrect',
       });

@@ -85,11 +85,21 @@ export default function createUserModel({ connection, DataTypes }) {
     },
     {
       tableName: 'users',
-      createdAt: 'created_at',
-      updatedAt: 'updated_at',
-      deletedAt: 'deleted_at',
       timestamps: true,
-      paranoid: true,
+      underscored: true,
+      paranoid: true, // Enable soft deletes (uses deleted_at column)
+      defaultScope: {
+        attributes: {
+          exclude: ['password'],
+        },
+      },
+      scopes: {
+        withPassword: {
+          attributes: {
+            include: ['password'],
+          },
+        },
+      },
     },
   );
 

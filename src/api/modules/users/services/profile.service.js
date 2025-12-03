@@ -18,18 +18,20 @@ import { hashPassword, verifyPassword } from '../utils/password';
  * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with profile
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function getUserWithProfile(user_id, models) {
   const { User, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return user;
@@ -42,7 +44,7 @@ export async function getUserWithProfile(user_id, models) {
  * @param {Object} profileData - Profile data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function updateUserProfile(user_id, profileData, models) {
   const { User, UserProfile } = models;
@@ -52,7 +54,10 @@ export async function updateUserProfile(user_id, profileData, models) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Update profile data
@@ -69,7 +74,6 @@ export async function updateUserProfile(user_id, profileData, models) {
   // Reload user with updated profile
   await user.reload({
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   return user;
@@ -84,7 +88,7 @@ export async function updateUserProfile(user_id, profileData, models) {
  * @param {Object} options.models - Database models
  * @param {Object} options.fs - Filesystem actions
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If USER_NOT_FOUND or file invalid
+ * @throws {Error} If UserNotFoundError or file invalid
  */
 export async function uploadUserAvatar(user_id, file, { models, fs }) {
   // Get models from app context
@@ -97,7 +101,10 @@ export async function uploadUserAvatar(user_id, file, { models, fs }) {
 
   // Check if user exists
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Store old avatar path for cleanup after successful upload
@@ -123,7 +130,10 @@ export async function uploadUserAvatar(user_id, file, { models, fs }) {
   });
 
   if (!uploadResult.success) {
-    throw new Error(uploadResult.message || 'Failed to upload avatar');
+    const error = new Error(uploadResult.message || 'Failed to upload avatar');
+    error.name = 'FileUploadError';
+    error.status = 400;
+    throw error;
   }
 
   // Update profile with new avatar path
@@ -151,7 +161,6 @@ export async function uploadUserAvatar(user_id, file, { models, fs }) {
   // Reload user with updated profile
   await user.reload({
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   return user;
@@ -165,7 +174,7 @@ export async function uploadUserAvatar(user_id, file, { models, fs }) {
  * @param {Object} options.models - Database models
  * @param {Object} options.fs - Filesystem actions
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function removeUserAvatar(user_id, { models, fs }) {
   const { User, UserProfile } = models;
@@ -175,7 +184,10 @@ export async function removeUserAvatar(user_id, { models, fs }) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   if (user.profile && user.profile.picture) {
@@ -194,7 +206,6 @@ export async function removeUserAvatar(user_id, { models, fs }) {
   // Reload user with updated profile
   await user.reload({
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   return user;
@@ -208,7 +219,7 @@ export async function removeUserAvatar(user_id, { models, fs }) {
  * @param {string} newPassword - New password
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If USER_NOT_FOUND or password invalid
+ * @throws {Error} If UserNotFoundError or password invalid
  */
 export async function changeUserPassword(
   user_id,
@@ -218,15 +229,21 @@ export async function changeUserPassword(
 ) {
   const { User } = models;
 
-  const user = await User.findByPk(user_id);
+  const user = await User.scope('withPassword').findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify current password
   const isValidPassword = await verifyPassword(currentPassword, user.password);
   if (!isValidPassword) {
-    throw new Error('Invalid current password');
+    const error = new Error('Invalid current password');
+    error.name = 'InvalidPasswordError';
+    error.status = 400;
+    throw error;
   }
 
   // Hash new password
@@ -348,20 +365,26 @@ export async function getUserPreferences(user_id, models) {
  * @param {string} password - User password for confirmation
  * @param {Object} {models, auth} - Database models and authentication engine
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If USER_NOT_FOUND or password invalid
+ * @throws {Error} If UserNotFoundError or password invalid
  */
 export async function deleteUserAccount(user_id, password, { models }) {
   const { User, UserProfile } = models;
 
-  const user = await User.findByPk(user_id);
+  const user = await User.scope('withPassword').findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify password
   const isValidPassword = await verifyPassword(password, user.password);
   if (!isValidPassword) {
-    throw new Error('Invalid password');
+    const error = new Error('Invalid password');
+    error.name = 'InvalidPasswordError';
+    error.status = 400;
+    throw error;
   }
 
   // Delete user profile first (if exists)
@@ -385,11 +408,13 @@ export async function exportUserData(user_id, models) {
 
   const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Get login history

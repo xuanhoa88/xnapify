@@ -6,6 +6,7 @@
  */
 
 import { Readable } from 'stream';
+import { FilesystemError } from '../utils';
 
 /**
  * Memory Filesystem Provider
@@ -39,19 +40,21 @@ export class MemoryFilesystemProvider {
       // Validate extension
       if (!this.validateExtension(fileName)) {
         const ext = fileName.split('.').pop();
-        throw new Error(`File extension not allowed: .${ext}`);
+        throw new FilesystemError(`File extension not allowed: .${ext}`);
       }
 
       // Validate file size
       if (fileBuffer.length > this.maxFileSize) {
-        throw new Error(
+        throw new FilesystemError(
           `File size exceeds limit: ${fileBuffer.length} > ${this.maxFileSize}`,
         );
       }
 
       // Check max files limit
       if (this.files.size >= this.maxFiles && !this.files.has(fileName)) {
-        throw new Error(`Maximum number of files reached: ${this.maxFiles}`);
+        throw new FilesystemError(
+          `Maximum number of files reached: ${this.maxFiles}`,
+        );
       }
 
       // Store file in memory
@@ -72,7 +75,7 @@ export class MemoryFilesystemProvider {
 
       return metadata;
     } catch (error) {
-      throw new Error(`Failed to store file: ${error.message}`);
+      throw new FilesystemError(`Failed to store file: ${error.message}`);
     }
   }
 
@@ -84,12 +87,14 @@ export class MemoryFilesystemProvider {
       // Validate extension
       if (!this.validateExtension(fileName)) {
         const ext = fileName.split('.').pop();
-        throw new Error(`File extension not allowed: .${ext}`);
+        throw new FilesystemError(`File extension not allowed: .${ext}`);
       }
 
       // Check max files limit
       if (this.files.size >= this.maxFiles && !this.files.has(fileName)) {
-        throw new Error(`Maximum number of files reached: ${this.maxFiles}`);
+        throw new FilesystemError(
+          `Maximum number of files reached: ${this.maxFiles}`,
+        );
       }
 
       // Read stream into buffer
@@ -101,7 +106,7 @@ export class MemoryFilesystemProvider {
 
         // Check size limit during streaming
         if (totalSize > this.maxFileSize) {
-          throw new Error(
+          throw new FilesystemError(
             `File size exceeds limit: ${totalSize} > ${this.maxFileSize}`,
           );
         }
@@ -112,7 +117,9 @@ export class MemoryFilesystemProvider {
       const fileBuffer = Buffer.concat(chunks);
       return await this.store(fileName, fileBuffer, options);
     } catch (error) {
-      throw new Error(`Failed to store file from stream: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to store file from stream: ${error.message}`,
+      );
     }
   }
 
@@ -124,7 +131,7 @@ export class MemoryFilesystemProvider {
       const fileData = this.files.get(fileName);
 
       if (!fileData) {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
 
       return {
@@ -132,7 +139,7 @@ export class MemoryFilesystemProvider {
         metadata: { ...fileData.metadata },
       };
     } catch (error) {
-      throw new Error(`Failed to retrieve file: ${error.message}`);
+      throw new FilesystemError(`Failed to retrieve file: ${error.message}`);
     }
   }
 
@@ -144,7 +151,7 @@ export class MemoryFilesystemProvider {
       const fileData = this.files.get(fileName);
 
       if (!fileData) {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
 
       const stream = Readable.from(fileData.buffer);
@@ -154,7 +161,7 @@ export class MemoryFilesystemProvider {
         metadata: { ...fileData.metadata },
       };
     } catch (error) {
-      throw new Error(`Failed to get file stream: ${error.message}`);
+      throw new FilesystemError(`Failed to get file stream: ${error.message}`);
     }
   }
 
@@ -164,13 +171,13 @@ export class MemoryFilesystemProvider {
   async delete(fileName) {
     try {
       if (!this.files.has(fileName)) {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
 
       this.files.delete(fileName);
       return { success: true, fileName, provider: 'memory' };
     } catch (error) {
-      throw new Error(`Failed to delete file: ${error.message}`);
+      throw new FilesystemError(`Failed to delete file: ${error.message}`);
     }
   }
 
@@ -189,7 +196,7 @@ export class MemoryFilesystemProvider {
       const fileData = this.files.get(fileName);
 
       if (!fileData) {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
 
       return {
@@ -198,7 +205,9 @@ export class MemoryFilesystemProvider {
         isDirectory: false,
       };
     } catch (error) {
-      throw new Error(`Failed to get file metadata: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to get file metadata: ${error.message}`,
+      );
     }
   }
 
@@ -230,7 +239,7 @@ export class MemoryFilesystemProvider {
 
       return results;
     } catch (error) {
-      throw new Error(`Failed to list files: ${error.message}`);
+      throw new FilesystemError(`Failed to list files: ${error.message}`);
     }
   }
 
@@ -242,7 +251,7 @@ export class MemoryFilesystemProvider {
       const sourceData = this.files.get(sourceFileName);
 
       if (!sourceData) {
-        throw new Error(`Source file not found: ${sourceFileName}`);
+        throw new FilesystemError(`Source file not found: ${sourceFileName}`);
       }
 
       // Check max files limit
@@ -250,7 +259,9 @@ export class MemoryFilesystemProvider {
         this.files.size >= this.maxFiles &&
         !this.files.has(destinationFileName)
       ) {
-        throw new Error(`Maximum number of files reached: ${this.maxFiles}`);
+        throw new FilesystemError(
+          `Maximum number of files reached: ${this.maxFiles}`,
+        );
       }
 
       const now = new Date();
@@ -274,7 +285,7 @@ export class MemoryFilesystemProvider {
         provider: 'memory',
       };
     } catch (error) {
-      throw new Error(`Failed to copy file: ${error.message}`);
+      throw new FilesystemError(`Failed to copy file: ${error.message}`);
     }
   }
 
@@ -286,7 +297,7 @@ export class MemoryFilesystemProvider {
       const sourceData = this.files.get(sourceFileName);
 
       if (!sourceData) {
-        throw new Error(`Source file not found: ${sourceFileName}`);
+        throw new FilesystemError(`Source file not found: ${sourceFileName}`);
       }
 
       // Check max files limit (only if destination is new)
@@ -294,7 +305,9 @@ export class MemoryFilesystemProvider {
         this.files.size >= this.maxFiles &&
         !this.files.has(destinationFileName)
       ) {
-        throw new Error(`Maximum number of files reached: ${this.maxFiles}`);
+        throw new FilesystemError(
+          `Maximum number of files reached: ${this.maxFiles}`,
+        );
       }
 
       const now = new Date();
@@ -320,7 +333,7 @@ export class MemoryFilesystemProvider {
         provider: 'memory',
       };
     } catch (error) {
-      throw new Error(`Failed to move file: ${error.message}`);
+      throw new FilesystemError(`Failed to move file: ${error.message}`);
     }
   }
 
@@ -360,7 +373,9 @@ export class MemoryFilesystemProvider {
         files: files.slice(0, 10), // Show first 10 files
       };
     } catch (error) {
-      throw new Error(`Failed to get storage stats: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to get storage stats: ${error.message}`,
+      );
     }
   }
 }

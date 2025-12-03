@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import "../../components/variables.css";
+@import '../../components/variables.css';
 
 /* =============================================================================
    ROOT & CONTAINER
@@ -127,6 +127,8 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-6);
+  max-width: 900px;
+  margin: 0 auto;
 }
 
 .newsItem {
@@ -135,33 +137,81 @@
   border: 1px solid var(--color-border);
   transition: all var(--transition-base);
   overflow: hidden;
+  position: relative;
+}
+
+.newsItem::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 .newsItem:hover {
-  box-shadow: 0 8px 16px rgb(0 0 0 / 10%);
-  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 12%);
+  transform: translateY(-4px);
   border-color: var(--color-primary);
+}
+
+.newsItem:hover::before {
+  opacity: 1;
+}
+
+.newsContent {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-6);
+  padding: var(--spacing-8);
 }
 
 .newsNumber {
   flex-shrink: 0;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-tertiary);
-  background: var(--color-background-secondary);
+  background: linear-gradient(
+    135deg,
+    var(--color-background-secondary) 0%,
+    var(--color-border) 100%
+  );
   border-radius: var(--radius-lg);
   transition: all var(--transition-base);
   font-variant-numeric: tabular-nums;
+  position: relative;
+  overflow: hidden;
+}
+
+.newsNumber::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-primary);
+  opacity: 0;
+  transition: opacity var(--transition-base);
 }
 
 .newsItem:hover .newsNumber {
-  background: var(--color-primary);
   color: var(--color-background);
+  transform: scale(1.05);
+}
+
+.newsItem:hover .newsNumber::after {
+  opacity: 1;
+}
+
+.newsNumber span {
+  position: relative;
+  z-index: 1;
 }
 
 .newsBody {
@@ -185,10 +235,23 @@
   color: var(--color-text-primary);
   text-decoration: none;
   transition: color var(--transition-fast);
+  display: inline-block;
 }
 
 .newsTitle a:hover {
   color: var(--color-primary);
+}
+
+.newsDesc {
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  font-size: var(--font-size-base);
+  margin: 0;
+  letter-spacing: -0.01em;
+  display: box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .readMore {
@@ -200,11 +263,13 @@
   align-items: center;
   gap: var(--spacing-1);
   transition: all var(--transition-fast);
+  margin-top: var(--spacing-2);
 }
 
 .readMore:hover {
   gap: var(--spacing-2);
   color: var(--color-primary-dark);
+  transform: translateX(4px);
 }
 
 .loading {
@@ -240,18 +305,11 @@
   padding: var(--spacing-12) 0;
   background: var(--color-background-secondary);
   border-radius: var(--radius-lg);
+  border: 2px dashed var(--color-border);
 }
 
 .noNews p {
   margin: 0;
-}
-
-.newsDesc {
-  color: var(--color-text-secondary);
-  line-height: 1.7;
-  font-size: var(--font-size-base);
-  margin: 0;
-  letter-spacing: -0.01em;
 }
 
 /* =============================================================================
@@ -279,12 +337,13 @@
   }
 
   .newsContent {
-    gap: var(--spacing-4);
+    gap: var(--spacing-5);
+    padding: var(--spacing-6);
   }
 
   .newsNumber {
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     font-size: var(--font-size-xl);
   }
 }
@@ -352,6 +411,10 @@
     border-radius: var(--radius-lg);
   }
 
+  .newsItem:hover {
+    transform: translateY(-2px);
+  }
+
   .newsContent {
     flex-direction: row;
     gap: var(--spacing-4);
@@ -360,9 +423,9 @@
   }
 
   .newsNumber {
-    width: 44px;
-    height: 44px;
-    font-size: var(--font-size-xl);
+    width: 48px;
+    height: 48px;
+    font-size: var(--font-size-lg);
     flex-shrink: 0;
     border-radius: var(--radius-md);
   }
@@ -379,18 +442,12 @@
   .newsDesc {
     font-size: var(--font-size-sm);
     line-height: 1.6;
-    display: box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    -webkit-line-clamp: 2;
   }
 
   .readMore {
     font-size: var(--font-size-xs);
     margin-top: var(--spacing-1);
-    min-height: 44px;
-    display: inline-flex;
-    align-items: center;
   }
 
   .loading {

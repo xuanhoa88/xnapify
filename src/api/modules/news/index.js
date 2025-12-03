@@ -22,11 +22,6 @@ import routes from './news.routes';
  * @param {Function} deps.Router - Express Router constructor
  * @param {Object} app - Express app instance (for accessing app-level settings)
  * @returns {Router} Express router with news routes
- *
- * @example
- * // Called by API bootstrap during module discovery
- * const newsRouter = newsModule({ Router }, app);
- * // Router will be mounted at /api/news
  */
 export default function newsModule({ Router }) {
   const router = Router();

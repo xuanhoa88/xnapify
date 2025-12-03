@@ -11,6 +11,7 @@ import {
   LOGOUT,
   UPDATE_USER,
   FETCH_USER_SUCCESS,
+  FETCH_USER_ERROR,
 } from './constants';
 
 // Initial state for user feature
@@ -46,6 +47,10 @@ export default function user(state = initialState, action) {
       // Set user data from successful authentication or fetch
       return action.payload;
 
+    case FETCH_USER_ERROR:
+      // If fetching user fails (e.g. 404 Not Found), clear state
+      return null;
+
     case LOGOUT:
       // Clear user state
       return null;
@@ -80,7 +85,7 @@ export const getUser = state => state.user;
  * @param {Object} state - Redux state
  * @returns {boolean} True if user is logged in
  */
-export const isAuthenticated = state => state.user && state.user.id;
+export const isAuthenticated = state => state.user && !!state.user.id;
 
 /**
  * Check if user has admin role

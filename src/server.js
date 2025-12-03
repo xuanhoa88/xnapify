@@ -25,7 +25,6 @@ import {
 } from './redux';
 import { createFetch } from './createFetch';
 import { AVAILABLE_LOCALES, DEFAULT_LOCALE, getI18nInstance } from './i18n';
-import router from './pages';
 import App from './components/App';
 import Html from './components/Html';
 
@@ -431,6 +430,9 @@ export function startServer(app, port = config.port, host = config.host) {
  * @returns {Promise<Object>} Configured Express app
  */
 async function main(app, staticPath) {
+  // Create router instance
+  const router = await import('./pages').then(m => m.default());
+
   // Configure Express
   app.set('trust proxy', config.trustProxy);
 
@@ -497,7 +499,9 @@ async function main(app, staticPath) {
     try {
       // Create fetch client for SSR
       const fetch = createFetch(nodeFetch, {
-        baseUrl: `http://${config.host}:${config.port}`,
+        baseUrl: `http://${
+          config.host === '0.0.0.0' ? '127.0.0.1' : config.host
+        }:${config.port}`,
         headers: {
           Cookie: req.headers.cookie || '',
           'User-Agent': req.headers['user-agent'] || 'RSK',
@@ -532,7 +536,6 @@ async function main(app, staticPath) {
 
       // Handle redirects
       if (route.redirect) {
-        console.log('Redirecting to', route.redirect);
         res.redirect(route.status || 302, route.redirect);
         return;
       }

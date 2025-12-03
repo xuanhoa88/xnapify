@@ -4,7 +4,7 @@
  */
 
 import { copyFile, copyFiles } from '../actions/copy';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process copy operations
@@ -24,7 +24,7 @@ async function processCopy(data) {
       return await copyFiles(operations, options);
 
     default:
-      throw new Error(`Unknown copy type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown copy type: ${type}`);
   }
 }
 

@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
+
 // ========================================================================
 // USER RBAC ASSIGNMENT SERVICES
 // ========================================================================
@@ -22,7 +24,10 @@ export async function assignRolesToUser(user_id, role_ids, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify all roles exist
@@ -31,14 +36,17 @@ export async function assignRolesToUser(user_id, role_ids, models) {
   });
 
   if (roles.length !== role_ids.length) {
-    throw new Error('One or more roles not found');
+    const error = new Error('One or more roles not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Set roles for user (replaces existing)
   await user.setRoles(roles);
 
-  // Return user with roles
-  return await User.findByPk(user_id, {
+  // Reload user with roles
+  await user.reload({
     include: [
       {
         model: Role,
@@ -46,8 +54,8 @@ export async function assignRolesToUser(user_id, role_ids, models) {
         through: { attributes: [] },
       },
     ],
-    attributes: { exclude: ['password'] },
   });
+  return user;
 }
 
 /**
@@ -63,7 +71,10 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify all groups exist
@@ -72,14 +83,17 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
   });
 
   if (groups.length !== group_ids.length) {
-    throw new Error('One or more groups not found');
+    const error = new Error('One or more groups not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Set groups for user (replaces existing)
   await user.setGroups(groups);
 
-  // Return user with groups
-  return await User.findByPk(user_id, {
+  // Reload user with groups
+  await user.reload({
     include: [
       {
         model: Group,
@@ -87,8 +101,8 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
         through: { attributes: [] },
       },
     ],
-    attributes: { exclude: ['password'] },
   });
+  return user;
 }
 
 /**
@@ -104,12 +118,18 @@ export async function addRoleToUser(user_id, role_id, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.addRole(role);
@@ -129,12 +149,18 @@ export async function removeRoleFromUser(user_id, role_id, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.removeRole(role);
@@ -154,12 +180,18 @@ export async function addGroupToUser(user_id, group_id, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.addGroup(group);
@@ -179,12 +211,18 @@ export async function removeGroupFromUser(user_id, group_id, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.removeGroup(group);
@@ -238,7 +276,10 @@ export async function getUserPermissions(user_id, models) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const permissions = new Set();
@@ -329,7 +370,10 @@ export async function getUserRoles(user_id, models) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return user.roles;
@@ -363,7 +407,10 @@ export async function getUserGroups(user_id, models) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return user.groups;
@@ -439,11 +486,13 @@ export async function getUserRBACProfile(user_id, models) {
         ],
       },
     ],
-    attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Get effective permissions
@@ -495,7 +544,10 @@ export async function bulkAssignRolesToUsers(user_ids, role_ids, models) {
   });
 
   if (users.length !== user_ids.length) {
-    throw new Error('One or more users not found');
+    const error = new Error('One or more users not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify roles exist
@@ -504,7 +556,10 @@ export async function bulkAssignRolesToUsers(user_ids, role_ids, models) {
   });
 
   if (roles.length !== role_ids.length) {
-    throw new Error('One or more roles not found');
+    const error = new Error('One or more roles not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   let assignedCount = 0;
@@ -602,9 +657,9 @@ export async function initializeDefaultRBAC(models) {
   await moderatorRole.setPermissions(moderationPermissions);
 
   // Assign roles to groups
-  const adminGroup = groups.find(g => g.name === 'administrators');
-  const staffGroup = groups.find(g => g.name === 'staff');
-  const moderatorGroup = groups.find(g => g.name === 'moderators');
+  const adminGroup = groups.find(g => g.name === ADMIN_ROLE);
+  const staffGroup = groups.find(g => g.name === STAFF_ROLE);
+  const moderatorGroup = groups.find(g => g.name === MODERATOR_ROLE);
 
   if (adminGroup) {
     await adminGroup.addRole(adminRole);

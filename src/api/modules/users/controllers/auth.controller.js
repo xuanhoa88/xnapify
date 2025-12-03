@@ -7,7 +7,6 @@
 
 import { authService } from '../services';
 import { validateRegistration, validateLogin } from '../utils/validation';
-import { isAdmin } from '../constants/roles';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -16,7 +15,7 @@ import { isAdmin } from '../constants/roles';
 /**
  * Register a new user
  *
- * @route   POST /api/users/register
+ * @route   POST /api/register
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -51,6 +50,9 @@ export async function register(req, res) {
       { models, auth },
     );
 
+    // Get complete user data with RBAC information
+    const userData = await authService.getCurrentUser(user.id, models);
+
     // Generate token pair (access + refresh)
     const tokens = auth.jwt.generateTokenPair(
       { id: user.id, email: user.email },
@@ -62,31 +64,10 @@ export async function register(req, res) {
     auth.setTokenCookie(res, tokens.accessToken);
     auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Return user data
-    return http.sendSuccess(
-      res,
-      {
-        user: {
-          id: user.id,
-          email: user.email,
-          email_confirmed: user.email_confirmed,
-          is_active: user.is_active,
-          created_at: user.created_at,
-          updated_at: user.updated_at,
-          display_name: (user.profile && user.profile.display_name) || null,
-          first_name: (user.profile && user.profile.first_name) || null,
-          last_name: (user.profile && user.profile.last_name) || null,
-          picture: (user.profile && user.profile.picture) || null,
-          bio: (user.profile && user.profile.bio) || null,
-          location: (user.profile && user.profile.location) || null,
-          website: (user.profile && user.profile.website) || null,
-          role: user.role || 'user',
-        },
-      },
-      201,
-    );
+    // Return user data with RBAC information
+    return http.sendSuccess(res, { user: userData }, 201);
   } catch (error) {
-    if (error.message === 'USER_ALREADY_EXISTS') {
+    if (error.name === 'UserAlreadyExistsError') {
       return http.sendError(res, 'User with this email already exists', 409);
     }
 
@@ -97,7 +78,7 @@ export async function register(req, res) {
 /**
  * Login user
  *
- * @route   POST /api/users/login
+ * @route   POST /api/login
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -123,6 +104,9 @@ export async function login(req, res) {
       auth,
     });
 
+    // Get complete user data with RBAC information
+    const userData = await authService.getCurrentUser(user.id, models);
+
     // Generate token pair (access + refresh)
     const tokens = auth.jwt.generateTokenPair(
       { id: user.id, email: user.email },
@@ -134,33 +118,23 @@ export async function login(req, res) {
     auth.setTokenCookie(res, tokens.accessToken);
     auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Return user data
-    return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
-      },
-    });
+    // Return user data with RBAC information
+    return http.sendSuccess(res, { user: userData });
   } catch (error) {
-    console.log(error);
-    if (error.message === 'INVALID_CREDENTIALS') {
-      return http.sendUnauthorized(res, 'Invalid email or password');
+    if (error.name === 'UserNotFoundError') {
+      return http.sendUnauthorized(res, 'User not found');
     }
 
-    if (error.message === 'ACCOUNT_INACTIVE') {
+    if (error.name === 'AccountInactiveError') {
       return http.sendUnauthorized(res, 'Account is inactive');
+    }
+
+    if (error.name === 'AccountLockedError') {
+      return http.sendUnauthorized(res, 'Account is locked');
+    }
+
+    if (error.name === 'InvalidCredentialsError') {
+      return http.sendUnauthorized(res, 'Invalid email or password');
     }
 
     return http.sendServerError(res, 'Login failed');
@@ -170,7 +144,7 @@ export async function login(req, res) {
 /**
  * Logout user
  *
- * @route   POST /api/users/logout
+ * @route   POST /api/logout
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -193,129 +167,23 @@ export async function logout(req, res) {
 /**
  * Get current authenticated user
  *
- * @route   GET /api/users/me
+ * @route   GET /api/me
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function getCurrentUser(req, res) {
+export async function me(req, res) {
   const http = req.app.get('http');
   try {
     // Get models from app context
     const models = req.app.get('models');
-    const { User, UserProfile, Role, Permission, Group } = models;
 
-    // Get user with profile, roles, permissions, and groups
-    const user = await User.findByPk(req.user.id, {
-      include: [
-        {
-          model: UserProfile,
-          as: 'profile',
-        },
-        {
-          model: Role,
-          as: 'roles',
-          through: { attributes: [] }, // Exclude junction table attributes
-          include: [
-            {
-              model: Permission,
-              as: 'permissions',
-              through: { attributes: [] },
-            },
-          ],
-        },
-        {
-          model: Group,
-          as: 'groups',
-          through: { attributes: [] },
-          include: [
-            {
-              model: Role,
-              as: 'roles',
-              through: { attributes: [] },
-              include: [
-                {
-                  model: Permission,
-                  as: 'permissions',
-                  through: { attributes: [] },
-                },
-              ],
-            },
-          ],
-        },
-      ],
-      attributes: { exclude: ['password'] },
-    });
+    // Get complete user data with RBAC information
+    const userData = await authService.getCurrentUser(req.user.id, models);
 
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
-
-    // Collect all permissions from direct roles and group roles
-    const permissionsSet = new Set();
-    const rolesSet = new Set();
-
-    // Add permissions from direct user roles
-    if (user.roles) {
-      for (const role of user.roles) {
-        rolesSet.add(role.name);
-        if (role.permissions) {
-          for (const perm of role.permissions) {
-            permissionsSet.add(perm.name);
-          }
-        }
-      }
-    }
-
-    // Add permissions from group roles
-    if (user.groups) {
-      for (const group of user.groups) {
-        if (group.roles) {
-          for (const role of group.roles) {
-            rolesSet.add(role.name);
-            if (role.permissions) {
-              for (const perm of role.permissions) {
-                permissionsSet.add(perm.name);
-              }
-            }
-          }
-        }
-      }
-    }
-
-    // RBAC logic: Determine primary role and is_admin
-    const allRoles = Array.from(rolesSet);
-
-    return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        role: user.role,
-        is_admin: isAdmin({ roles: allRoles }),
-        roles: allRoles,
-        permissions: Array.from(permissionsSet),
-        groups: user.groups
-          ? user.groups.map(group => ({
-              id: group.id,
-              name: group.name,
-              description: group.description,
-            }))
-          : [],
-      },
-    });
+    return http.sendSuccess(res, { user: userData });
   } catch (error) {
-    console.error('getCurrentUser error:', error);
+    console.error('me error:', error);
     return http.sendServerError(res, 'Failed to get user information');
   }
 }
@@ -390,17 +258,17 @@ export async function verifyEmail(req, res) {
     });
   } catch (error) {
     if (
-      error.message === 'INVALID_TOKEN' ||
-      error.message === 'TOKEN_EXPIRED'
+      error.name === 'InvalidTokenError' ||
+      error.name === 'TokenExpiredError'
     ) {
       return http.sendError(res, 'Invalid or expired verification token', 400);
     }
 
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendError(res, 'User not found', 404);
     }
 
-    if (error.message === 'EMAIL_ALREADY_VERIFIED') {
+    if (error.name === 'EmailAlreadyVerifiedError') {
       return http.sendError(res, 'Email already verified', 400);
     }
 
@@ -479,17 +347,17 @@ export async function resetPassword(req, res) {
     });
   } catch (error) {
     if (
-      error.message === 'INVALID_TOKEN' ||
-      error.message === 'TOKEN_EXPIRED'
+      error.name === 'InvalidTokenError' ||
+      error.name === 'TokenExpiredError'
     ) {
       return http.sendError(res, 'Invalid or expired reset token', 400);
     }
 
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendError(res, 'User not found', 404);
     }
 
-    if (error.message === 'EMAIL_ALREADY_VERIFIED') {
+    if (error.name === 'EmailAlreadyVerifiedError') {
       return http.sendError(res, 'Email already verified', 400);
     }
 

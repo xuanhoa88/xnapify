@@ -6,6 +6,7 @@
  */
 
 import { groupService } from '../services';
+import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
 
 // ========================================================================
 // GROUP MANAGEMENT CONTROLLERS
@@ -14,7 +15,7 @@ import { groupService } from '../services';
 /**
  * Create a new group
  *
- * @route   POST /api/users/groups
+ * @route   POST /api/admin/groups
  * @access  Admin (requires 'groups:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -39,7 +40,7 @@ export async function createGroup(req, res) {
 
     return http.sendSuccess(res, { group }, 201);
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'GroupAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -50,7 +51,7 @@ export async function createGroup(req, res) {
 /**
  * Get all groups with pagination
  *
- * @route   GET /api/users/groups
+ * @route   GET /api/admin/groups
  * @access  Admin (requires 'groups:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -71,6 +72,7 @@ export async function getGroups(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
+    console.error('getGroups error:', error);
     return http.sendServerError(res, 'Failed to get groups');
   }
 }
@@ -78,7 +80,7 @@ export async function getGroups(req, res) {
 /**
  * Get group by ID
  *
- * @route   GET /api/users/groups/:id
+ * @route   GET /api/admin/groups/:id
  * @access  Admin (requires 'groups:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -119,7 +121,7 @@ export async function getGroupById(req, res) {
 /**
  * Update group by ID
  *
- * @route   PUT /api/users/groups/:id
+ * @route   PUT /api/admin/groups/:id
  * @access  Admin (requires 'groups:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -145,7 +147,7 @@ export async function updateGroup(req, res) {
 
     return http.sendSuccess(res, { group });
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'GroupAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -156,7 +158,7 @@ export async function updateGroup(req, res) {
 /**
  * Delete group by ID
  *
- * @route   DELETE /api/users/groups/:id
+ * @route   DELETE /api/admin/groups/:id
  * @access  Admin (requires 'groups:delete' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -174,7 +176,7 @@ export async function deleteGroup(req, res) {
     }
 
     // Prevent deletion of system groups
-    if (['administrators', 'staff'].includes(group.name)) {
+    if ([ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE].includes(group.name)) {
       return http.sendError(res, 'Cannot delete system groups', 400);
     }
 
@@ -191,7 +193,7 @@ export async function deleteGroup(req, res) {
 /**
  * Assign roles to a group
  *
- * @route   PUT /api/users/groups/:id/roles
+ * @route   PUT /api/admin/groups/:id/roles
  * @access  Admin (requires 'groups:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -251,7 +253,7 @@ export async function assignRolesToGroup(req, res) {
 /**
  * Get group members
  *
- * @route   GET /api/users/groups/:id/members
+ * @route   GET /api/admin/groups/:id/members
  * @access  Admin (requires 'groups:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

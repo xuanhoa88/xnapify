@@ -5,13 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
 import { useCallback, useState } from 'react';
+import PropTypes from 'prop-types';
+import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { resetPassword } from '../../redux';
 import s from './ResetPassword.css';
 
 function ResetPassword({ title }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
@@ -46,21 +48,25 @@ function ResetPassword({ title }) {
 
         {error && (
           <div className={s.error}>
-            <strong>Error:</strong> {error}
+            <strong>{t('resetPassword.error')}</strong> {error}
           </div>
         )}
 
         {success && (
           <div className={s.success}>
-            <strong>Success!</strong> If an account exists with that email, you
-            will receive a password reset link shortly.
+            <Trans
+              t={t}
+              i18nKey='resetPassword.success'
+              // eslint-disable-next-line react/jsx-key
+              components={[<strong />]}
+            />
           </div>
         )}
 
         <form method='post' onSubmit={handleSubmit}>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='email'>
-              Email address:
+              {t('resetPassword.email')}
               <input
                 className={s.input}
                 id='email'
@@ -75,13 +81,13 @@ function ResetPassword({ title }) {
           </div>
           <div className={s.formGroup}>
             <button className={s.button} type='submit' disabled={loading}>
-              {loading ? 'Please wait...' : 'Send Reset Link'}
+              {loading ? t('resetPassword.loading') : t('resetPassword.submit')}
             </button>
           </div>
         </form>
         <div className={s.formGroup}>
           <a href='/login' className={s.buttonLink}>
-            Back to Log In
+            {t('resetPassword.backToLogin')}
           </a>
         </div>
       </div>

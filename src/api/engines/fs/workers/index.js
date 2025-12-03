@@ -13,6 +13,7 @@ import { fork } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import { FilesystemWorkerError } from '../utils';
 
 // Use require.context to dynamically import worker files
 const workersContext = require.context('./', false, /\.worker\.js$/);
@@ -76,7 +77,7 @@ function getWorkerPath(workerName) {
 
   if (!workersContext.keys().includes(workerKey)) {
     const availableWorkers = getAvailableWorkers().join(', ');
-    throw new Error(
+    throw new FilesystemWorkerError(
       `Worker '${workerName}' not found. Available workers: ${availableWorkers}`,
     );
   }
@@ -130,7 +131,7 @@ class WorkerService {
    */
   async getWorker(workerType) {
     if (!this.workerPools[workerType]) {
-      throw new Error(`Unknown worker type: ${workerType}`);
+      throw new FilesystemWorkerError(`Unknown worker type: ${workerType}`);
     }
 
     const pool = this.workerPools[workerType];

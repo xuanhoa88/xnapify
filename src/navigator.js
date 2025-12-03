@@ -373,7 +373,7 @@ export function onNavigationChange(listener) {
  *
  * @example
  * // In src/client.js
- * const unsubscribe = subscribeToNavigation((location, action) => {
+ * const unsubscribe = subscribe((location, action) => {
  *   onLocationChange(location, action);
  * });
  *
@@ -382,14 +382,14 @@ export function onNavigationChange(listener) {
  */
 let navigationUnsubscribe = null;
 
-export function subscribeToNavigation(listener) {
+export function subscribe(listener) {
   if (!IS_BROWSER) {
     return () => {};
   }
 
   if (typeof listener !== 'function') {
     if (__DEV__) {
-      console.error('subscribeToNavigation: listener must be a function');
+      console.error('subscribe: listener must be a function');
     }
     return () => {};
   }
@@ -592,7 +592,7 @@ export function matchPath(pattern, options = {}) {
  */
 export function getQueryParam(key, defaultValue = '') {
   const params = parseQuery();
-  return params[key] ?? defaultValue;
+  return params[key] || defaultValue;
 }
 
 /**

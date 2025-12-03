@@ -12,7 +12,6 @@ import App from './components/App';
 import { createFetch } from './createFetch';
 import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import router from './pages';
 import { configureStore, getCurrentUser } from './redux';
 
 // Get i18n instance
@@ -469,7 +468,14 @@ function abortNavigation() {
 // Track if initial hydration has completed
 let hasHydrated = false;
 
-async function onLocationChange(location, action) {
+/**
+ * Handle route change
+ * @param {*} router
+ * @param {*} location
+ * @param {*} action
+ * @returns
+ */
+async function handleRouteChange(location, action) {
   const navigationStartTime = performance.now();
 
   // Abort any in-progress navigation
@@ -510,6 +516,9 @@ async function onLocationChange(location, action) {
     if (navigationSignal.aborted) {
       return;
     }
+
+    // Create router instance
+    const router = await import('./pages').then(m => m.default());
 
     // Set context for route resolution
     context.pathname = location.pathname;
@@ -697,8 +706,11 @@ async function initializeApp() {
   // Initialize user authentication from session
   await initializeAuth();
 
+  // Get current location
   currentLocation = navigator.getCurrentLocation();
-  unsubscribeNavigation = navigator.subscribeToNavigation(onLocationChange);
+
+  // Subscribe to navigation changes
+  unsubscribeNavigation = navigator.subscribe(handleRouteChange);
 
   // Pass true to indicate actual page unload
   window.addEventListener('beforeunload', cleanup);
@@ -721,7 +733,7 @@ async function initializeApp() {
   }
 
   // Trigger initial route rendering
-  onLocationChange(currentLocation);
+  handleRouteChange(currentLocation);
 }
 
 // =============================================================================
@@ -807,7 +819,7 @@ if (module.hot) {
       () => {
         // Only trigger location change if the pathname matches
         if (currentLocation.pathname === locationToRestore.pathname) {
-          onLocationChange(locationToRestore, 'HMR_UPDATE');
+          handleRouteChange(locationToRestore, 'HMR_UPDATE');
         }
       },
       typeof window.requestIdleCallback === 'function'

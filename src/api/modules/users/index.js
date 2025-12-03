@@ -6,13 +6,7 @@
  */
 
 import * as userMiddlewares from './middlewares';
-import {
-  authRoutes,
-  profileRoutes,
-  userAdminRoutes,
-  rbacRoutes,
-  demoRoutes,
-} from './routes';
+import { authRoutes, profileRoutes, rbacRoutes } from './routes';
 
 /**
  * Users Module Migrations Context
@@ -32,11 +26,10 @@ const seedsContext = require.context('./seeds', false, /\.js$/);
  * Uses dependency injection and modular route architecture.
  *
  * Module Structure:
- * - Authentication: POST /users/register, POST /users/login, POST /users/logout, GET /users/me
- * - Profile: GET /users/profile, PUT /users/profile, POST /users/avatar, PUT /users/password
- * - Administration: GET /users/list, GET /users/:id, PUT /users/:id, DELETE /users/:id
- * - RBAC: POST /users/roles, GET /users/permissions, PUT /users/:id/roles
- * - Demo: GET /users/admin/dashboard, GET /users/team/workspace
+ * - Authentication: POST /login, POST /register, POST /logout, GET /me
+ * - Profile: GET /profile, PUT /profile, POST /profile/avatar, PUT /profile/password
+ * - Administration: GET /admin/users/list, GET /admin/users/:id, PUT /admin/users/:id, DELETE /admin/users/:id
+ * - RBAC: POST /admin/roles, GET /admin/permissions, PUT /admin/:id/roles, GET /admin/groups
  * - Security: Password management, JWT tokens, role-based permissions
  * - Models: User, UserProfile, Role, Permission, Group
  * - Services: Authentication, profile, user-admin, role, permission, group, user-rbac
@@ -93,25 +86,17 @@ export default async function userModule(deps, app) {
   // MOUNT SEPARATED ROUTE MODULES
   // ========================================================================
 
-  // Authentication routes (public and authenticated)
-  // Handles: /users/register, /users/login, /users/logout, /users/me
-  router.use('/users', authRoutes(deps, userMiddlewares, app));
+  // Authentication routes (public)
+  // Handles: /login, /register, /logout, /me
+  router.use('/', authRoutes(deps, userMiddlewares, app));
 
   // Profile management routes (authenticated users)
-  // Handles: /users/profile, /users/avatar, /users/password
-  router.use('/users', profileRoutes(deps, userMiddlewares, app));
+  // Handles: /profile, /profile/avatar, /profile/password
+  router.use('/', profileRoutes(deps, userMiddlewares, app));
 
-  // User administration routes (admin only)
-  // Handles: /users/list, /users/:id, /users/:id/role, /users/:id/status
-  router.use('/users', userAdminRoutes(deps, userMiddlewares, app));
-
-  // RBAC management routes (permission-based)
-  // Handles: /users/roles, /users/permissions, /users/groups, /users/initialize
-  router.use('/users', rbacRoutes(deps, userMiddlewares, app));
-
-  // Demo and example routes
-  // Handles: /users/admin/dashboard, /users/team/workspace, /users/developer/tools
-  router.use('/users', demoRoutes(deps, userMiddlewares, app));
+  // Admin routes (RBAC + User Administration)
+  // Handles: /admin/roles, /admin/permissions, /admin/groups, /admin/users/list, /admin/users/:id
+  router.use('/admin', rbacRoutes(deps, userMiddlewares, app));
 
   console.info('✅ User module loaded with modular routes');
 

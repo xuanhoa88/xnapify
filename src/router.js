@@ -175,7 +175,7 @@ function validateRoutes(routeConfig, trace = '') {
 function getRouteTree(root) {
   const buildTree = route => {
     const node = {
-      path: route.path || '(root)',
+      path: route.path || '(default)',
       hasAction: typeof route.action === 'function',
       autoDelegate: route.autoDelegate !== false,
     };

@@ -118,31 +118,43 @@ function contextToMigrations(context, prefix) {
  */
 function mergeMigrations(migrationSources) {
   if (!Array.isArray(migrationSources)) {
-    throw new Error('migrationSources must be an array');
+    const error = new Error('migrationSources must be an array');
+    error.name = 'InvalidMigrationSourcesError';
+    error.status = 400;
+    throw error;
   }
 
   const allMigrations = new Map();
 
   migrationSources.forEach(source => {
     if (!source || typeof source !== 'object') {
-      throw new Error(
+      const error = new Error(
         'Each migration source must be an object with {context, prefix}',
       );
+      error.name = 'InvalidMigrationSourceError';
+      error.status = 400;
+      throw error;
     }
 
     if (!source.context || typeof source.context !== 'function') {
-      throw new Error(
+      const error = new Error(
         'Each migration source must have a valid context (require.context function)',
       );
+      error.name = 'InvalidMigrationSourceContextError';
+      error.status = 400;
+      throw error;
     }
 
     if (
       typeof source.prefix !== 'string' ||
       source.prefix.trim().length === 0
     ) {
-      throw new Error(
+      const error = new Error(
         'Each migration source must have a valid prefix (string)',
       );
+      error.name = 'InvalidMigrationSourcePrefixError';
+      error.status = 400;
+      throw error;
     }
 
     const migrations = contextToMigrations(source.context, source.prefix);
@@ -169,10 +181,16 @@ function mergeMigrations(migrationSources) {
  */
 function validateConnection(connection) {
   if (!connection) {
-    throw new Error('Sequelize connection is required');
+    const error = new Error('Sequelize connection is required');
+    error.name = 'InvalidConnectionError';
+    error.status = 400;
+    throw error;
   }
   if (typeof connection.authenticate !== 'function') {
-    throw new Error('Invalid Sequelize connection instance');
+    const error = new Error('Invalid Sequelize connection instance');
+    error.name = 'InvalidConnectionError';
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -198,11 +216,14 @@ function createMigrationUmzug(migrations, connection, logger = console) {
     // Array of {context, prefix} objects
     migrationsConfig = mergeMigrations(migrations);
   } else {
-    throw new Error(
+    const error = new Error(
       'Invalid migrations parameter. Expected:\n' +
         '  - null (use built-in migrations)\n' +
         '  - [{context, prefix}, ...] (module migrations)',
     );
+    error.name = 'InvalidMigrationsError';
+    error.status = 400;
+    throw error;
   }
 
   return new Umzug({
@@ -238,11 +259,14 @@ function createSeedUmzug(seeds, connection, logger = console) {
     // Array of {context, prefix} objects
     seedsConfig = mergeMigrations(seeds);
   } else {
-    throw new Error(
+    const error = new Error(
       'Invalid seeds parameter. Expected:\n' +
         '  - null (use built-in seeds)\n' +
         '  - [{context, prefix}, ...] (module seeds)',
     );
+    error.name = 'InvalidSeedsError';
+    error.status = 400;
+    throw error;
   }
 
   return new Umzug({

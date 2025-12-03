@@ -13,7 +13,7 @@ import ErrorPage from './ErrorPage';
  */
 const route = {
   path: '/error',
-  devOnly: __DEV__,
+  devOnly: true,
 };
 
 /**

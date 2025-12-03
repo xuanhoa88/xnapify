@@ -50,7 +50,15 @@ export async function pathExists(filePath) {
  */
 export async function ensureDir(dirPath) {
   validatePath(dirPath);
-  await fsPromises.mkdir(dirPath, { recursive: true });
+  try {
+    await fsPromises.access(dirPath);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      await fsPromises.mkdir(dirPath, { recursive: true });
+    } else {
+      throw error;
+    }
+  }
 }
 
 /**
@@ -279,33 +287,4 @@ export async function moveDir(source, target, options = {}) {
     },
     { operation: 'moveDir', source, target },
   );
-}
-
-/**
- * Get directory size recursively
- */
-export async function getDirectorySize(dirPath) {
-  validatePath(dirPath);
-
-  async function calculateSize(currentPath) {
-    const info = await getFileInfo(currentPath);
-
-    if (!info.exists) return 0;
-
-    if (info.isFile) {
-      return info.size;
-    }
-
-    if (info.isDirectory) {
-      const entries = await fsPromises.readdir(currentPath);
-      const sizes = await Promise.all(
-        entries.map(entry => calculateSize(path.join(currentPath, entry))),
-      );
-      return sizes.reduce((sum, size) => sum + size, 0);
-    }
-
-    return 0;
-  }
-
-  return calculateSize(dirPath);
 }

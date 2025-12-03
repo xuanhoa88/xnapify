@@ -27,7 +27,10 @@ export async function createRole(roleData, models) {
   // Check if role already exists
   const existingRole = await Role.findOne({ where: { name } });
   if (existingRole) {
-    throw new Error(`Role '${name}' already exists`);
+    const error = new Error(`Role '${name}' already exists`);
+    error.name = 'RoleAlreadyExistsError';
+    error.status = 400;
+    throw error;
   }
 
   const role = await Role.create({
@@ -57,8 +60,8 @@ export async function getRoles(options, models) {
   const whereCondition = search
     ? {
         [models.Sequelize.Op.or]: [
-          { name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-          { description: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+          { name: { [models.Sequelize.Op.like]: `%${search}%` } },
+          { description: { [models.Sequelize.Op.like]: `%${search}%` } },
         ],
       }
     : {};
@@ -109,7 +112,10 @@ export async function getRoleById(role_id, models) {
   });
 
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return role;
@@ -128,7 +134,10 @@ export async function updateRole(role_id, updateData, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Check if name is being changed and if it already exists
@@ -137,7 +146,10 @@ export async function updateRole(role_id, updateData, models) {
       where: { name: updateData.name },
     });
     if (existingRole) {
-      throw new Error(`Role '${updateData.name}' already exists`);
+      const error = new Error(`Role '${updateData.name}' already exists`);
+      error.name = 'RoleAlreadyExistsError';
+      error.status = 400;
+      throw error;
     }
   }
 
@@ -157,13 +169,19 @@ export async function deleteRole(role_id, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Prevent deletion of system roles
   const systemRoles = SYSTEM_ROLES;
   if (systemRoles.includes(role.name)) {
-    throw new Error('Cannot delete system roles');
+    const error = new Error('Cannot delete system roles');
+    error.name = 'SystemRoleDeletionError';
+    error.status = 400;
+    throw error;
   }
 
   await role.destroy();
@@ -183,7 +201,10 @@ export async function assignPermissionsToRole(role_id, permission_ids, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify all permissions exist
@@ -192,7 +213,10 @@ export async function assignPermissionsToRole(role_id, permission_ids, models) {
   });
 
   if (permissions.length !== permission_ids.length) {
-    throw new Error('One or more permissions not found');
+    const error = new Error('One or more permissions not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Set permissions for role (replaces existing)
@@ -223,12 +247,18 @@ export async function addPermissionToRole(role_id, permission_id, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const permission = await Permission.findByPk(permission_id);
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await role.addPermission(permission);
@@ -248,12 +278,18 @@ export async function removePermissionFromRole(role_id, permission_id, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const permission = await Permission.findByPk(permission_id);
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await role.removePermission(permission);
@@ -281,7 +317,10 @@ export async function getRolePermissions(role_id, models) {
   });
 
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return role.permissions;
@@ -315,7 +354,10 @@ export async function getUsersWithRole(role_id, options, models) {
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const { count, rows: users } = await User.findAndCountAll({

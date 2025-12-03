@@ -45,20 +45,24 @@ export default function profileRoutes(deps, middlewares, app) {
   router.put('/profile', requireAuth, profileController.updateProfile);
 
   /**
-   * @route   POST /avatar
+   * @route   POST /profile/avatar
    * @desc    Upload user avatar image
    * @access  Private (requires authentication)
    * @body    FormData with 'avatar' file field
    */
-  router.post('/avatar', requireAuth, profileController.uploadAvatar);
+  router.post('/profile/avatar', requireAuth, profileController.uploadAvatar);
 
   /**
-   * @route   PUT /password
+   * @route   PUT /profile/password
    * @desc    Change user password
    * @access  Private (requires authentication)
    * @body    { currentPassword, newPassword }
    */
-  router.put('/password', requireAuth, profileController.changePassword);
+  router.put(
+    '/profile/password',
+    requireAuth,
+    profileController.changePassword,
+  );
 
   return router;
 }

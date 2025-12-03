@@ -31,6 +31,16 @@ export async function up({ context, Sequelize }) {
       allowNull: true,
       comment: 'Group description',
     },
+    category: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Group category (e.g., system, organization, department)',
+    },
+    type: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+      comment: 'Group type (e.g., admin, staff, team, user)',
+    },
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

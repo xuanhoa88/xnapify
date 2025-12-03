@@ -1,6 +1,33 @@
 {
   "login": {
-    "title": "Log In"
+    "title": "Log In",
+    "email": "Email",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "dontHaveAccount": "Don't have an account? <0>Register</0>",
+    "loading": "Please wait...",
+    "submit": "Log in",
+    "error": "Error"
+  },
+  "register": {
+    "title": "Register",
+    "email": "Email",
+    "displayName": "Display name",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "loading": "Please wait...",
+    "submit": "Create Account",
+    "alreadyHaveAccount": "Already have an account? <0>Log in</0>",
+    "error": "Error"
+  },
+  "resetPassword": {
+    "title": "Reset Password",
+    "email": "Email",
+    "loading": "Please wait...",
+    "submit": "Send Reset Link",
+    "backToLogin": "Back to Log In",
+    "error": "Error",
+    "success": "<0>Success!</0> If an account exists with that email, you will receive a password reset link shortly."
   },
   "header": {
     "brand": "React Starter Kit"
@@ -13,7 +40,7 @@
     "logout": "Logout",
     "profile": "Profile",
     "home": "Home",
-    "admin": "Admin",
+    "admin": "Admin Panel",
     "privacy": "Privacy",
     "notFound": "Not Found",
     "separator": {

@@ -1,4 +1,12 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 import { useCallback } from 'react';
+import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { LOCALE_COOKIE_NAME, setLocale } from '../../../redux';
 import s from './LanguageSwitcher.css';
@@ -53,7 +61,7 @@ function LanguageSwitcher() {
           key={code}
           href={`?${LOCALE_COOKIE_NAME}=${code}`}
           onClick={e => handleLocaleChange(code, e)}
-          className={isSelected(code) ? s.active : s.link}
+          className={clsx(s.link, { [s.active]: isSelected(code) })}
           aria-current={isSelected(code) ? 'true' : undefined}
         >
           {name}

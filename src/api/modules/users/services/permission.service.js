@@ -27,7 +27,10 @@ export async function createPermission(permissionData, models) {
   // Check if permission already exists
   const existingPermission = await Permission.findOne({ where: { name } });
   if (existingPermission) {
-    throw new Error(`Permission '${name}' already exists`);
+    const error = new Error(`Permission '${name}' already exists`);
+    error.name = 'PermissionAlreadyExistsError';
+    error.status = 400;
+    throw error;
   }
 
   const permission = await Permission.create({
@@ -60,8 +63,8 @@ export async function getPermissions(options, models) {
 
   if (search) {
     whereCondition[models.Sequelize.Op.or] = [
-      { name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { description: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { name: { [models.Sequelize.Op.like]: `%${search}%` } },
+      { description: { [models.Sequelize.Op.like]: `%${search}%` } },
     ];
   }
 
@@ -102,7 +105,10 @@ export async function getPermissionById(permission_id, models) {
 
   const permission = await Permission.findByPk(permission_id);
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return permission;
@@ -121,7 +127,10 @@ export async function updatePermission(permission_id, updateData, models) {
 
   const permission = await Permission.findByPk(permission_id);
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Check if name is being changed and if it already exists
@@ -130,7 +139,10 @@ export async function updatePermission(permission_id, updateData, models) {
       where: { name: updateData.name },
     });
     if (existingPermission) {
-      throw new Error(`Permission '${updateData.name}' already exists`);
+      const error = new Error(`Permission '${updateData.name}' already exists`);
+      error.name = 'PermissionAlreadyExistsError';
+      error.status = 400;
+      throw error;
     }
   }
 
@@ -150,7 +162,10 @@ export async function deletePermission(permission_id, models) {
 
   const permission = await Permission.findByPk(permission_id);
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Prevent deletion of system permissions
@@ -163,7 +178,10 @@ export async function deletePermission(permission_id, models) {
   ];
 
   if (systemPermissions.includes(permission.name)) {
-    throw new Error('Cannot delete system permissions');
+    const error = new Error('Cannot delete system permissions');
+    error.name = 'PermissionSystemError';
+    error.status = 400;
+    throw error;
   }
 
   await permission.destroy();
@@ -480,7 +498,10 @@ export async function getRolesWithPermission(permission_id, models) {
   });
 
   if (!permission) {
-    throw new Error('Permission not found');
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return permission.roles;

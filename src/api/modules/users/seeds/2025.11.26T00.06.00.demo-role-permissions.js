@@ -95,6 +95,62 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.rolesRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.rolesWrite,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.permissionsRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.permissionsWrite,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.groupsRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.groupsWrite,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.usersManage,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.systemAdmin,
+      created_at: now,
+      updated_at: now,
+    },
 
     // User role - basic read/write permissions
     {

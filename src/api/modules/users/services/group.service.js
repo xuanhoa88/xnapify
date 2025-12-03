@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Op } from 'sequelize';
+import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
+
 // ========================================================================
 // GROUP MANAGEMENT SERVICES
 // ========================================================================
@@ -27,7 +30,10 @@ export async function createGroup(groupData, models) {
   // Check if group already exists
   const existingGroup = await Group.findOne({ where: { name } });
   if (existingGroup) {
-    throw new Error(`Group '${name}' already exists`);
+    const error = new Error(`Group '${name}' already exists`);
+    error.name = 'GroupAlreadyExistsError';
+    error.status = 400;
+    throw error;
   }
 
   const group = await Group.create({
@@ -67,9 +73,9 @@ export async function getGroups(options, models) {
   const whereCondition = {};
 
   if (search) {
-    whereCondition[models.Sequelize.Op.or] = [
-      { name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { description: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+    whereCondition[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } },
     ];
   }
 
@@ -148,7 +154,10 @@ export async function getGroupById(group_id, models) {
   });
 
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   return group;
@@ -167,7 +176,10 @@ export async function updateGroup(group_id, updateData, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Check if name is being changed and if it already exists
@@ -176,7 +188,10 @@ export async function updateGroup(group_id, updateData, models) {
       where: { name: updateData.name },
     });
     if (existingGroup) {
-      throw new Error(`Group '${updateData.name}' already exists`);
+      const error = new Error(`Group '${updateData.name}' already exists`);
+      error.name = 'GroupAlreadyExistsError';
+      error.status = 400;
+      throw error;
     }
   }
 
@@ -196,13 +211,19 @@ export async function deleteGroup(group_id, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Prevent deletion of system groups
-  const systemGroups = ['administrators', 'staff', 'developers'];
+  const systemGroups = [ADMIN_ROLE, STAFF_ROLE];
   if (systemGroups.includes(group.name)) {
-    throw new Error('Cannot delete system groups');
+    const error = new Error('Cannot delete system groups');
+    error.name = 'CannotDeleteSystemGroupError';
+    error.status = 400;
+    throw error;
   }
 
   await group.destroy();
@@ -222,7 +243,10 @@ export async function assignRolesToGroup(group_id, role_ids, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Verify all roles exist
@@ -231,7 +255,10 @@ export async function assignRolesToGroup(group_id, role_ids, models) {
   });
 
   if (roles.length !== role_ids.length) {
-    throw new Error('One or more roles not found');
+    const error = new Error('One or more roles not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Set roles for group (replaces existing)
@@ -262,12 +289,18 @@ export async function addRoleToGroup(group_id, role_id, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await group.addRole(role);
@@ -287,12 +320,18 @@ export async function removeRoleFromGroup(group_id, role_id, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const role = await Role.findByPk(role_id);
   if (!role) {
-    throw new Error('Role not found');
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await group.removeRole(role);
@@ -314,7 +353,10 @@ export async function getGroupMembers(group_id, options, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const { count, rows: users } = await User.findAndCountAll({
@@ -357,12 +399,18 @@ export async function addUserToGroup(group_id, user_id, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await group.addUser(user);
@@ -382,12 +430,18 @@ export async function removeUserFromGroup(group_id, user_id, models) {
 
   const group = await Group.findByPk(group_id);
   if (!group) {
-    throw new Error('Group not found');
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await group.removeUser(user);
@@ -412,7 +466,7 @@ export async function getGroupCategories(models) {
     ],
     where: {
       category: {
-        [models.Sequelize.Op.ne]: null,
+        [Op.ne]: null,
       },
     },
     order: [['category', 'ASC']],
@@ -437,7 +491,7 @@ export async function getGroupTypes(models) {
     ],
     where: {
       type: {
-        [models.Sequelize.Op.ne]: null,
+        [Op.ne]: null,
       },
     },
     order: [['type', 'ASC']],
@@ -465,7 +519,7 @@ export async function getGroupStats(models) {
     ],
     where: {
       category: {
-        [models.Sequelize.Op.ne]: null,
+        [Op.ne]: null,
       },
     },
     group: ['category'],
@@ -480,7 +534,7 @@ export async function getGroupStats(models) {
     ],
     where: {
       type: {
-        [models.Sequelize.Op.ne]: null,
+        [Op.ne]: null,
       },
     },
     group: ['type'],
@@ -510,13 +564,13 @@ export async function getGroupStats(models) {
 export async function createDefaultGroups(models) {
   const defaultGroups = [
     {
-      name: 'administrators',
+      name: ADMIN_ROLE,
       description: 'System administrators with full access',
       category: 'system',
       type: 'admin',
     },
     {
-      name: 'staff',
+      name: STAFF_ROLE,
       description: 'Staff members with elevated privileges',
       category: 'organization',
       type: 'staff',
@@ -528,7 +582,7 @@ export async function createDefaultGroups(models) {
       type: 'team',
     },
     {
-      name: 'moderators',
+      name: MODERATOR_ROLE,
       description: 'Content moderators',
       category: 'content',
       type: 'moderation',

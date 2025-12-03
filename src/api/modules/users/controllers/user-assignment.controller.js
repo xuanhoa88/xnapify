@@ -41,7 +41,7 @@ export async function assignRolesToUser(req, res) {
 
     return http.sendSuccess(res, { user });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -138,11 +138,11 @@ export async function assignGroupsToUser(req, res) {
 
     return http.sendSuccess(res, { user });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
-    if (error.message.includes('groups not found')) {
+    if (error.name === 'GroupNotFoundError') {
       return http.sendValidationError(res, {
         group_ids: error.message,
       });
@@ -223,7 +223,7 @@ export async function getUserPermissions(req, res) {
 
     return http.sendSuccess(res, { permissions });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -260,7 +260,7 @@ export async function checkUserPermission(req, res) {
       hasPermission,
     });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 

@@ -4,7 +4,7 @@
  */
 
 import { downloadFile, downloadFiles } from '../actions/download';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process download operations
@@ -22,7 +22,7 @@ async function processDownload(data) {
       return await downloadFiles(fileNames, options);
 
     default:
-      throw new Error(`Unknown download type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown download type: ${type}`);
   }
 }
 

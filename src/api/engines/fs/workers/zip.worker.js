@@ -3,7 +3,13 @@
  * Supports both same-process and child process execution
  */
 
-import { setupForkMode, createWorker, createZip, extractZip } from '../utils';
+import {
+  setupForkMode,
+  createWorker,
+  createZip,
+  extractZip,
+  FilesystemWorkerError,
+} from '../utils';
 
 /**
  * Process ZIP operations (compression and decompression)
@@ -22,14 +28,14 @@ async function processZip(data) {
     case 'UNZIP':
       // Extract ZIP archive using adm-zip
       if (!zipSource || !extractPath) {
-        throw new Error(
+        throw new FilesystemWorkerError(
           'zipSource and extractPath are required for extraction',
         );
       }
       return await extractZip(zipSource, extractPath, options);
 
     default:
-      throw new Error(`Unknown ZIP type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown ZIP type: ${type}`);
   }
 }
 

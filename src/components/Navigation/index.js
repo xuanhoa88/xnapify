@@ -22,7 +22,7 @@ function Navigation() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const isAuth = useSelector(isAuthenticated);
-  const isAdminUser = useSelector(isAdmin);
+  const isAdminActive = useSelector(isAdmin);
   const displayName = useSelector(getUserDisplayName);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -129,7 +129,7 @@ function Navigation() {
                 </svg>
                 {t('navigation.profile')}
               </Link>
-              {isAdminUser && (
+              {isAdminActive && (
                 <Link
                   className={s.userMenuItem}
                   to='/admin'
@@ -158,7 +158,7 @@ function Navigation() {
                       strokeLinejoin='round'
                     />
                   </svg>
-                  {t('navigation.admin_dashboard', 'Admin')}
+                  {t('navigation.admin', 'Admin Panel')}
                 </Link>
               )}
               <a

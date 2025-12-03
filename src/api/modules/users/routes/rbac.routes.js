@@ -11,6 +11,7 @@ import {
   groupController,
   userAssignmentController,
   systemController,
+  userAdminController,
 } from '../controllers';
 
 /**
@@ -28,7 +29,7 @@ import {
  * @returns {Router} Express router with RBAC routes
  */
 export default function rbacRoutes(deps, middlewares, app) {
-  const { requirePermission, requireAnyPermission } = middlewares;
+  const { requirePermission, requireAnyPermission, requireAdmin } = middlewares;
   const router = deps.Router();
 
   // Create auth middleware instance
@@ -226,6 +227,116 @@ export default function rbacRoutes(deps, middlewares, app) {
     requireAuth,
     requirePermission('system:admin'),
     systemController.initializeRBAC,
+  );
+
+  // ========================================================================
+  // USER ADMINISTRATION ROUTES
+  // ========================================================================
+
+  /**
+   * @route   GET /users/list
+   * @desc    Get paginated list of all users
+   * @access  Admin only
+   * @query   { page, limit, search, role, status }
+   */
+  router.get(
+    '/users/list',
+    requireAuth,
+    requireAdmin,
+    userAdminController.getUserList,
+  );
+
+  /**
+   * @route   GET /users/:id
+   * @desc    Get specific user by ID
+   * @access  Admin only
+   * @param   {string} id - User ID
+   */
+  router.get(
+    '/users/:id',
+    requireAuth,
+    requireAdmin,
+    userAdminController.getUserById,
+  );
+
+  /**
+   * @route   PUT /users/:id
+   * @desc    Update user by ID
+   * @access  Admin only
+   * @param   {string} id - User ID
+   * @body    { email, display_name, is_active, email_confirmed }
+   */
+  router.put(
+    '/users/:id',
+    requireAuth,
+    requireAdmin,
+    userAdminController.updateUserById,
+  );
+
+  /**
+   * @route   DELETE /users/:id
+   * @desc    Delete user by ID
+   * @access  Admin only
+   * @param   {string} id - User ID
+   */
+  router.delete(
+    '/users/:id',
+    requireAuth,
+    requireAdmin,
+    userAdminController.deleteUserById,
+  );
+
+  /**
+   * @route   PUT /users/:id/role
+   * @desc    Update user role
+   * @access  Admin only
+   * @param   {string} id - User ID
+   * @body    { role }
+   */
+  router.put(
+    '/users/:id/role',
+    requireAuth,
+    requireAdmin,
+    userAdminController.updateUserRole,
+  );
+
+  /**
+   * @route   PUT /users/:id/status
+   * @desc    Update user status (active/inactive)
+   * @access  Admin only
+   * @param   {string} id - User ID
+   * @body    { is_active }
+   */
+  router.put(
+    '/users/:id/status',
+    requireAuth,
+    requireAdmin,
+    userAdminController.updateUserStatus,
+  );
+
+  /**
+   * @route   GET /users/stats
+   * @desc    Get user statistics
+   * @access  Admin only
+   */
+  router.get(
+    '/users/stats',
+    requireAuth,
+    requireAdmin,
+    userAdminController.getUserStats,
+  );
+
+  /**
+   * @route   PUT /users/bulk
+   * @desc    Bulk update users
+   * @access  Admin only
+   * @body    { user_ids, updates }
+   */
+  router.put(
+    '/users/bulk',
+    requireAuth,
+    requireAdmin,
+    userAdminController.bulkUpdateUsers,
   );
 
   return router;

@@ -14,7 +14,7 @@ import { permissionService } from '../services';
 /**
  * Create a new permission
  *
- * @route   POST /api/users/permissions
+ * @route   POST /api/admin/permissions
  * @access  Admin (requires 'permissions:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -45,7 +45,7 @@ export async function createPermission(req, res) {
 
     return http.sendSuccess(res, { permission }, 201);
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'PermissionAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -56,7 +56,7 @@ export async function createPermission(req, res) {
 /**
  * Get all permissions with pagination
  *
- * @route   GET /api/users/permissions
+ * @route   GET /api/admin/permissions
  * @access  Admin (requires 'permissions:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -84,7 +84,7 @@ export async function getPermissions(req, res) {
 /**
  * Get permission by ID
  *
- * @route   GET /api/users/permissions/:id
+ * @route   GET /api/admin/permissions/:id
  * @access  Admin (requires 'permissions:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -111,7 +111,7 @@ export async function getPermissionById(req, res) {
 /**
  * Update permission by ID
  *
- * @route   PUT /api/users/permissions/:id
+ * @route   PUT /api/admin/permissions/:id
  * @access  Admin (requires 'permissions:write' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -139,7 +139,7 @@ export async function updatePermission(req, res) {
 
     return http.sendSuccess(res, { permission });
   } catch (error) {
-    if (error.message.includes('already exists')) {
+    if (error.name === 'PermissionAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
     }
 
@@ -150,7 +150,7 @@ export async function updatePermission(req, res) {
 /**
  * Delete permission by ID
  *
- * @route   DELETE /api/users/permissions/:id
+ * @route   DELETE /api/admin/permissions/:id
  * @access  Admin (requires 'permissions:delete' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -193,7 +193,7 @@ export async function deletePermission(req, res) {
 /**
  * Get permissions by resource
  *
- * @route   GET /api/users/permissions/resource/:resource
+ * @route   GET /api/admin/permissions/resource/:resource
  * @access  Admin (requires 'permissions:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -219,7 +219,7 @@ export async function getPermissionsByResource(req, res) {
 /**
  * Initialize default permissions
  *
- * @route   POST /api/users/permissions/initialize
+ * @route   POST /api/admin/permissions/initialize
  * @access  Admin (requires 'system:admin' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

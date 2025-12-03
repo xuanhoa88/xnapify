@@ -5,7 +5,7 @@
 
 import { getFileInfo } from '../actions/info';
 import { previewFile } from '../actions/preview';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process info operations
@@ -23,7 +23,7 @@ async function processInfo(data) {
       return await previewFile(fileName, options);
 
     default:
-      throw new Error(`Unknown info type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown info type: ${type}`);
   }
 }
 

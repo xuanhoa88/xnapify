@@ -31,12 +31,12 @@ export async function getUserList(options, models) {
   // Search in email and display name
   if (search) {
     whereConditions[models.Sequelize.Op.or] = [
-      { email: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { email: { [models.Sequelize.Op.like]: `%${search}%` } },
     ];
     profileWhereConditions[models.Sequelize.Op.or] = [
-      { display_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { first_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
-      { last_name: { [models.Sequelize.Op.iLike]: `%${search}%` } },
+      { display_name: { [models.Sequelize.Op.like]: `%${search}%` } },
+      { first_name: { [models.Sequelize.Op.like]: `%${search}%` } },
+      { last_name: { [models.Sequelize.Op.like]: `%${search}%` } },
     ];
   }
 
@@ -64,7 +64,6 @@ export async function getUserList(options, models) {
         required: false,
       },
     ],
-    attributes: { exclude: ['password'] },
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['created_at', 'DESC']],
@@ -87,18 +86,20 @@ export async function getUserList(options, models) {
  * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with profile and additional details
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function getUserById(user_id, models) {
   const { User, UserProfile, UserLogin } = models;
 
   const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Get additional stats
@@ -133,7 +134,7 @@ export async function getUserById(user_id, models) {
  * @param {Object} userData - User data to update
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user with profile
- * @throws {Error} If USER_NOT_FOUND or USER_ALREADY_EXISTS
+ * @throws {Error} If UserNotFoundError or UserAlreadyExistsError
  */
 export async function updateUserById(user_id, userData, models) {
   const { User, UserProfile } = models;
@@ -154,7 +155,10 @@ export async function updateUserById(user_id, userData, models) {
   });
 
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Check if email is already taken by another user
@@ -163,7 +167,10 @@ export async function updateUserById(user_id, userData, models) {
       where: { email, id: { [models.Sequelize.Op.ne]: user_id } },
     });
     if (existingUser) {
-      throw new Error('USER_ALREADY_EXISTS');
+      const error = new Error('User with this email already exists');
+      error.name = 'UserAlreadyExistsError';
+      error.status = 409;
+      throw error;
     }
   }
 
@@ -200,7 +207,6 @@ export async function updateUserById(user_id, userData, models) {
   // Reload user with updated data
   await user.reload({
     include: [{ model: UserProfile, as: 'profile' }],
-    attributes: { exclude: ['password'] },
   });
 
   return user;
@@ -212,14 +218,17 @@ export async function updateUserById(user_id, userData, models) {
  * @param {string} user_id - User ID
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} Success status
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function deleteUserById(user_id, models) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Delete user (cascade will handle related records)
@@ -235,14 +244,17 @@ export async function deleteUserById(user_id, models) {
  * @param {string} role - New role
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function updateUserRole(user_id, role, models) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.update({ role });
@@ -257,14 +269,17 @@ export async function updateUserRole(user_id, role, models) {
  * @param {boolean} is_active - Active status
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function updateUserStatus(user_id, is_active, models) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.update({ is_active });
@@ -280,14 +295,17 @@ export async function updateUserStatus(user_id, is_active, models) {
  * @param {string} reason - Lock reason (optional)
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function updateUserLockStatus(user_id, is_locked, reason, models) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   const updates = {
@@ -442,14 +460,17 @@ export async function bulkUpdateUsers(user_ids, updates, models) {
  * @param {string} newPassword - New password
  * @param {Object} {models} - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If USER_NOT_FOUND
+ * @throws {Error} If UserNotFoundError
  */
 export async function resetUserPassword(user_id, newPassword, { models }) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Hash new password

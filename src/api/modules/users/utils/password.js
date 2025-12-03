@@ -8,23 +8,24 @@
 import crypto from 'crypto';
 import { promisify } from 'util';
 
+// Promisify crypto functions
 const scrypt = promisify(crypto.scrypt);
 
 /**
  * Default password configuration
  */
-const DEFAULT_PASSWORD_CONFIG = {
+const DEFAULT_PASSWORD_CONFIG = Object.freeze({
   saltLength: 32,
   keyLength: 64,
   iterations: 16384, // scrypt N parameter
   blockSize: 8, // scrypt r parameter
   parallelization: 1, // scrypt p parameter
-};
+});
 
 /**
  * Password strength requirements
  */
-const DEFAULT_STRENGTH_CONFIG = {
+const DEFAULT_STRENGTH_CONFIG = Object.freeze({
   minLength: 8,
   maxLength: 128,
   requireUppercase: true,
@@ -32,7 +33,7 @@ const DEFAULT_STRENGTH_CONFIG = {
   requireNumbers: true,
   requireSpecialChars: true,
   forbidCommonPasswords: true,
-};
+});
 
 /**
  * Hash a password using scrypt
@@ -67,7 +68,10 @@ export async function verifyPassword(password, hashedPassword, options = {}) {
 
   const [saltHex, hashHex] = hashedPassword.split(':');
   if (!saltHex || !hashHex) {
-    throw new Error('Invalid hash format');
+    const error = new Error('Invalid hash format');
+    error.name = 'InvalidPasswordHashFormatError';
+    error.status = 400;
+    throw error;
   }
 
   const salt = Buffer.from(saltHex, 'hex');

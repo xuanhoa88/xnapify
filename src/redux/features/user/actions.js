@@ -37,7 +37,7 @@ export function login({ email, password }) {
     dispatch({ type: LOGIN_START });
 
     try {
-      const { data } = await fetch('/api/users/login', {
+      const { data } = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -77,7 +77,7 @@ export function register({ email, password, displayName }) {
     dispatch({ type: REGISTER_START });
 
     try {
-      const { data } = await fetch('/api/users/register', {
+      const { data } = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -116,7 +116,7 @@ export function logout() {
   return async (dispatch, getState, { fetch }) => {
     try {
       // Call logout API to clear server-side session/cookie
-      await fetch('/api/users/logout', {
+      await fetch('/api/logout', {
         method: 'POST',
       });
     } catch (error) {
@@ -143,7 +143,7 @@ export function getCurrentUser() {
     dispatch({ type: FETCH_USER_START });
 
     try {
-      const { data } = await fetch('/api/users/me');
+      const { data } = await fetch('/api/me');
 
       // Update user state
       dispatch({
@@ -208,7 +208,7 @@ export function resetPassword({ email }) {
 export function updateUser(userData) {
   return async (dispatch, getState, { fetch }) => {
     try {
-      const { data } = await fetch('/api/users/profile', {
+      const { data } = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),

@@ -30,6 +30,24 @@ export class FilesystemError extends Error {
 }
 
 /**
+ * Custom filesystem worker error class
+ */
+export class FilesystemWorkerError extends Error {
+  constructor(message, code = ERROR_CODES.WORKER_ERROR, statusCode = 500) {
+    super(message);
+    this.name = 'FilesystemWorkerError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+
+    // Maintain proper stack trace for where our error was thrown
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, FilesystemWorkerError);
+    }
+  }
+}
+
+/**
  * Create standardized response object
  *
  * @param {boolean} success - Success status

@@ -1,6 +1,33 @@
 {
   "login": {
-    "title": "Đăng nhập"
+    "title": "Đăng nhập",
+    "email": "Email",
+    "password": "Mật khẩu",
+    "forgotPassword": "Quên mật khẩu?",
+    "dontHaveAccount": "Không có tài khoản? <0>Đăng ký</0>",
+    "loading": "Vui lòng đợi...",
+    "submit": "Đăng nhập",
+    "error": "Lỗi"
+  },
+  "register": {
+    "title": "Đăng ký",
+    "email": "Email",
+    "displayName": "Tên hiển thị",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "loading": "Vui lòng đợi...",
+    "submit": "Đăng ký",
+    "alreadyHaveAccount": "Đã có tài khoản? <0>Đăng nhập</0>",
+    "error": "Lỗi"
+  },
+  "resetPassword": {
+    "title": "Quên mật khẩu",
+    "email": "Email",
+    "loading": "Vui lòng đợi...",
+    "submit": "Gửi",
+    "backToLogin": "Quay lại đăng nhập",
+    "error": "Lỗi",
+    "success": "<0>Thành công!</0> Nếu có tài khoản với email này, bạn sẽ nhận được một liên kết để reset mật khẩu."
   },
   "header": {
     "brand": "React Starter Kit"

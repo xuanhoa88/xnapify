@@ -15,7 +15,7 @@ import { SYSTEM_ROLES } from '../constants/roles';
 /**
  * Get paginated list of all users
  *
- * @route   GET /api/users/list
+ * @route   GET /api/admin/users/list
  * @access  Admin
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -162,11 +162,11 @@ export async function updateUserById(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
-    if (error.message === 'USER_ALREADY_EXISTS') {
+    if (error.name === 'UserAlreadyExistsError') {
       return http.sendValidationError(res, {
         email: 'Email is already in use by another user',
       });
@@ -258,7 +258,7 @@ export async function updateUserRole(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -307,7 +307,7 @@ export async function updateUserStatus(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 
@@ -362,7 +362,7 @@ export async function updateUserLockStatus(req, res) {
       },
     });
   } catch (error) {
-    if (error.message === 'USER_NOT_FOUND') {
+    if (error.name === 'UserNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
 

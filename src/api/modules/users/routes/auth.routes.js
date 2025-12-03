@@ -57,7 +57,7 @@ export default function authRoutes(deps, middlewares, app) {
    * @desc    Get current authenticated user
    * @access  Private (requires authentication)
    */
-  router.get('/me', requireAuth, authController.getCurrentUser);
+  router.get('/me', requireAuth, authController.me);
 
   /**
    * @route   POST /request-reset-password

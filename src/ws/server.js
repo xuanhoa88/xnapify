@@ -73,7 +73,10 @@ export class WebSocketServer extends EventEmitter {
    */
   start(httpServer = null) {
     if (this.isRunning) {
-      throw new Error('WebSocket server is already running');
+      const error = new Error('WebSocket server is already running');
+      error.name = 'WebSocketServerAlreadyRunningError';
+      error.status = 409;
+      throw error;
     }
 
     try {

@@ -6,198 +6,127 @@
  */
 
 import PropTypes from 'prop-types';
+import clsx from 'clsx';
 import s from './Admin.css';
 
-function Admin({ title }) {
-  return (
-    <div className={s.root}>
-      <div className={s.container}>
-        <h1>{title}</h1>
-        <p className={s.lead}>
-          Welcome to the Admin Dashboard. Manage your application, monitor
-          performance, and configure system settings.
-        </p>
+function Admin({ title, children }) {
+  const renderContent = () => {
+    if (children) {
+      return children;
+    }
 
-        <div className={s.content}>
-          <div className={s.statsGrid}>
-            <div className={s.statCard}>
-              <div className={s.statIcon}>👥</div>
-              <div className={s.statInfo}>
-                <h3>Total Users</h3>
-                <p className={s.statValue}>1,234</p>
-                <span className={s.statChange}>+12% from last month</span>
-              </div>
-            </div>
-            <div className={s.statCard}>
-              <div className={s.statIcon}>📊</div>
-              <div className={s.statInfo}>
-                <h3>Active Sessions</h3>
-                <p className={s.statValue}>456</p>
-                <span className={s.statChange}>+8% from last week</span>
-              </div>
-            </div>
-            <div className={s.statCard}>
-              <div className={s.statIcon}>💰</div>
-              <div className={s.statInfo}>
-                <h3>Revenue</h3>
-                <p className={s.statValue}>$12,345</p>
-                <span className={s.statChange}>+15% from last month</span>
-              </div>
-            </div>
-            <div className={s.statCard}>
-              <div className={s.statIcon}>⚡</div>
-              <div className={s.statInfo}>
-                <h3>Performance</h3>
-                <p className={s.statValue}>98.5%</p>
-                <span className={s.statChange}>Uptime this month</span>
-              </div>
-            </div>
+    return (
+      <div className={s.dashboardGrid}>
+        {/* Stats Cards */}
+        <div className={s.card}>
+          <div className={s.cardHeader}>
+            <h3 className={s.cardTitle}>Total Users</h3>
+            <span className={s.cardIcon}>👥</span>
           </div>
+          <div className={s.cardValue}>1,234</div>
+          <div className={s.cardTrend}>+12% from last month</div>
+        </div>
 
-          <div className={s.section}>
-            <h2>User Management</h2>
-            <div className={s.table}>
-              <table>
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Email</th>
-                    <th>Role</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>John Doe</td>
-                    <td>john@example.com</td>
-                    <td>Admin</td>
-                    <td>
-                      <span className={s.statusActive}>Active</span>
-                    </td>
-                    <td>
-                      <button className={s.actionButton}>Edit</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Jane Smith</td>
-                    <td>jane@example.com</td>
-                    <td>User</td>
-                    <td>
-                      <span className={s.statusActive}>Active</span>
-                    </td>
-                    <td>
-                      <button className={s.actionButton}>Edit</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Bob Johnson</td>
-                    <td>bob@example.com</td>
-                    <td>User</td>
-                    <td>
-                      <span className={s.statusInactive}>Inactive</span>
-                    </td>
-                    <td>
-                      <button className={s.actionButton}>Edit</button>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+        <div className={s.card}>
+          <div className={s.cardHeader}>
+            <h3 className={s.cardTitle}>Active Roles</h3>
+            <span className={s.cardIcon}>🎭</span>
           </div>
+          <div className={s.cardValue}>8</div>
+          <div className={s.cardTrend}>No change</div>
+        </div>
 
-          <div className={s.section}>
-            <h2>System Settings</h2>
-            <div className={s.settingsGrid}>
-              <div className={s.settingItem}>
-                <div className={s.settingHeader}>
-                  <h3>Maintenance Mode</h3>
-                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
-                  <label className={s.switch}>
-                    <input type='checkbox' />
-                    <span className={s.slider} />
-                  </label>
-                </div>
-                <p>Enable maintenance mode to perform system updates</p>
-              </div>
-              <div className={s.settingItem}>
-                <div className={s.settingHeader}>
-                  <h3>Email Notifications</h3>
-                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
-                  <label className={s.switch}>
-                    <input type='checkbox' defaultChecked />
-                    <span className={s.slider} />
-                  </label>
-                </div>
-                <p>Send email notifications to users</p>
-              </div>
-              <div className={s.settingItem}>
-                <div className={s.settingHeader}>
-                  <h3>Two-Factor Authentication</h3>
-                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
-                  <label className={s.switch}>
-                    <input type='checkbox' defaultChecked />
-                    <span className={s.slider} />
-                  </label>
-                </div>
-                <p>Require 2FA for all admin accounts</p>
-              </div>
-              <div className={s.settingItem}>
-                <div className={s.settingHeader}>
-                  <h3>API Access</h3>
-                  {/* eslint-disable-next-line jsx-a11y/label-has-associated-control */}
-                  <label className={s.switch}>
-                    <input type='checkbox' defaultChecked />
-                    <span className={s.slider} />
-                  </label>
-                </div>
-                <p>Allow external API access</p>
-              </div>
-            </div>
+        <div className={s.card}>
+          <div className={s.cardHeader}>
+            <h3 className={s.cardTitle}>System Status</h3>
+            <span className={s.cardIcon}>✅</span>
           </div>
+          <div className={s.cardValue}>Healthy</div>
+          <div className={s.cardTrend}>Uptime: 99.9%</div>
+        </div>
 
-          <div className={s.section}>
-            <h2>Recent Activity</h2>
-            <div className={s.activityList}>
-              <div className={s.activityItem}>
-                <div className={s.activityIcon}>🔐</div>
-                <div className={s.activityContent}>
-                  <p className={s.activityText}>
-                    <strong>John Doe</strong> logged in from 192.168.1.1
-                  </p>
-                  <span className={s.activityTime}>2 minutes ago</span>
-                </div>
-              </div>
-              <div className={s.activityItem}>
-                <div className={s.activityIcon}>👤</div>
-                <div className={s.activityContent}>
-                  <p className={s.activityText}>
-                    <strong>Jane Smith</strong> updated profile settings
-                  </p>
-                  <span className={s.activityTime}>15 minutes ago</span>
-                </div>
-              </div>
-              <div className={s.activityItem}>
-                <div className={s.activityIcon}>⚙️</div>
-                <div className={s.activityContent}>
-                  <p className={s.activityText}>
-                    System backup completed successfully
-                  </p>
-                  <span className={s.activityTime}>1 hour ago</span>
-                </div>
-              </div>
-              <div className={s.activityItem}>
-                <div className={s.activityIcon}>📧</div>
-                <div className={s.activityContent}>
-                  <p className={s.activityText}>
-                    Email notification sent to 1,234 users
-                  </p>
-                  <span className={s.activityTime}>3 hours ago</span>
-                </div>
-              </div>
-            </div>
+        {/* Recent Activity Table */}
+        <div className={s.fullWidthCard}>
+          <div className={s.cardHeader}>
+            <h3 className={s.cardTitle}>Recent Activity</h3>
+          </div>
+          <div className={s.tableContainer}>
+            <table className={s.table}>
+              <thead>
+                <tr>
+                  <th>User</th>
+                  <th>Action</th>
+                  <th>Date</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>
+                    <div className={s.userCell}>
+                      <div className={s.avatar}>JD</div>
+                      <div>
+                        <div className={s.userName}>John Doe</div>
+                        <div className={s.userEmail}>john@example.com</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>Updated profile</td>
+                  <td>2 mins ago</td>
+                  <td>
+                    <span className={clsx(s.badge, s.badgeSuccess)}>
+                      Success
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div className={s.userCell}>
+                      <div className={s.avatar}>AS</div>
+                      <div>
+                        <div className={s.userName}>Alice Smith</div>
+                        <div className={s.userEmail}>alice@example.com</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>Login attempt</td>
+                  <td>15 mins ago</td>
+                  <td>
+                    <span className={clsx(s.badge, s.badgeWarning)}>
+                      Failed
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td>
+                    <div className={s.userCell}>
+                      <div className={s.avatar}>RJ</div>
+                      <div>
+                        <div className={s.userName}>Robert Johnson</div>
+                        <div className={s.userEmail}>robert@example.com</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>Created new role</td>
+                  <td>1 hour ago</td>
+                  <td>
+                    <span className={clsx(s.badge, s.badgeSuccess)}>
+                      Success
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className={s.root}>
+      <div className={s.mainContent}>
+        <div className={s.container}>{renderContent()}</div>
       </div>
     </div>
   );
@@ -205,6 +134,7 @@ function Admin({ title }) {
 
 Admin.propTypes = {
   title: PropTypes.string.isRequired,
+  children: PropTypes.node,
 };
 
 export default Admin;

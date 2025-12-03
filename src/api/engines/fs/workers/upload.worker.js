@@ -4,7 +4,7 @@
  */
 
 import { uploadFile, uploadFiles } from '../actions/upload';
-import { setupForkMode, createWorker } from '../utils';
+import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
 
 /**
  * Process upload operations
@@ -22,7 +22,7 @@ async function processUpload(data) {
       return await uploadFiles(filesData);
 
     default:
-      throw new Error(`Unknown upload type: ${type}`);
+      throw new FilesystemWorkerError(`Unknown upload type: ${type}`);
   }
 }
 

@@ -62,9 +62,9 @@ export function requireOwnership(
       const isOwner = resource[ownerField] === req.user.id;
 
       // Check if user is admin (bypass ownership)
-      const isAdminUser = isAdmin(req.user);
+      const isAdminActive = isAdmin(req.user);
 
-      if (!isOwner && !isAdminUser) {
+      if (!isOwner && !isAdminActive) {
         return res.status(403).json({
           success: false,
           error: 'Access denied. You can only access your own resources.',

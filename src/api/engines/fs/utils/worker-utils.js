@@ -5,9 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Worker Utilities for Child Process Management
- */
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Setup fork mode execution for worker processes
@@ -93,7 +91,7 @@ export function createWorker(processFunction, messageType) {
           break;
 
         default:
-          throw new Error(`Unknown message type: ${type}`);
+          throw new FilesystemWorkerError(`Unknown message type: ${type}`);
       }
 
       return {

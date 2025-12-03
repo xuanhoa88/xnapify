@@ -5,14 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
 import { useCallback, useState } from 'react';
+import PropTypes from 'prop-types';
+import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
 import { replaceTo, getQueryParam } from '../../navigator';
 import s from './Register.css';
 
 function Register({ title }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
@@ -71,14 +73,14 @@ function Register({ title }) {
 
         {error && (
           <div className={s.error}>
-            <strong>Error:</strong> {error}
+            <strong>{t('register.error')}</strong> {error}
           </div>
         )}
 
         <form method='post' onSubmit={handleSubmit}>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='displayName'>
-              Display Name:
+              {t('register.displayName')}
               <input
                 className={s.input}
                 id='displayName'
@@ -93,7 +95,7 @@ function Register({ title }) {
           </div>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='email'>
-              Email address:
+              {t('register.email')}
               <input
                 className={s.input}
                 id='email'
@@ -107,7 +109,7 @@ function Register({ title }) {
           </div>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='password'>
-              Password:
+              {t('register.password')}
               <input
                 className={s.input}
                 id='password'
@@ -122,7 +124,7 @@ function Register({ title }) {
           </div>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='confirmPassword'>
-              Confirm Password:
+              {t('register.confirmPassword')}
               <input
                 className={s.input}
                 id='confirmPassword'
@@ -137,14 +139,17 @@ function Register({ title }) {
           </div>
           <div className={s.formGroup}>
             <button className={s.button} type='submit' disabled={loading}>
-              {loading ? 'Please wait...' : 'Create Account'}
+              {loading ? t('register.loading') : t('register.submit')}
             </button>
           </div>
         </form>
-        <div className={s.formGroup}>
-          <a href='/login' className={s.buttonLink}>
-            Already have an account? Log in
-          </a>
+        <div className={s.linkWrapper}>
+          <Trans
+            t={t}
+            i18nKey='register.alreadyHaveAccount'
+            // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+            components={[<a href='/login' className={s.buttonLink} />]}
+          />
         </div>
       </div>
     </div>

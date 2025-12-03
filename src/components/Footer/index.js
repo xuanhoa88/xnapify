@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import Link from '../Link';
 import s from './Footer.css';
 import { useTranslation } from 'react-i18next';
@@ -87,7 +88,7 @@ function Footer() {
 
       {/* Scroll to Top Button */}
       <button
-        className={`${s.scrollToTop} ${showScroll ? s.visible : ''}`}
+        className={clsx(s.scrollToTop, showScroll ? s.visible : '')}
         onClick={scrollToTop}
         aria-label='Scroll to top'
         type='button'

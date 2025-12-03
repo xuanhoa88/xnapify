@@ -9,6 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { createReadStream, createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
+import { FilesystemError } from '../utils';
 
 /**
  * Local Filesystem Provider
@@ -25,14 +26,14 @@ export class LocalFilesystemProvider {
 
     // Ensure base directory exists
     if (this.createDirectories) {
-      this.ensureDirectory(this.basePath);
+      this.ensureDir(this.basePath);
     }
   }
 
   /**
    * Ensure directory exists, create if it doesn't
    */
-  async ensureDirectory(dirPath) {
+  async ensureDir(dirPath) {
     try {
       await fs.access(dirPath);
     } catch (error) {
@@ -68,14 +69,14 @@ export class LocalFilesystemProvider {
     try {
       // Validate extension
       if (!this.validateExtension(fileName)) {
-        throw new Error(
+        throw new FilesystemError(
           `File extension not allowed: ${path.extname(fileName)}`,
         );
       }
 
       // Validate file size
       if (fileBuffer.length > this.maxFileSize) {
-        throw new Error(
+        throw new FilesystemError(
           `File size exceeds limit: ${fileBuffer.length} > ${this.maxFileSize}`,
         );
       }
@@ -83,7 +84,7 @@ export class LocalFilesystemProvider {
       // Ensure directory exists
       const filePath = this.getFilePath(fileName);
       const directory = path.dirname(filePath);
-      await this.ensureDirectory(directory);
+      await this.ensureDir(directory);
 
       // Write file
       await fs.writeFile(filePath, fileBuffer);
@@ -100,7 +101,7 @@ export class LocalFilesystemProvider {
         provider: 'local',
       };
     } catch (error) {
-      throw new Error(`Failed to store file: ${error.message}`);
+      throw new FilesystemError(`Failed to store file: ${error.message}`);
     }
   }
 
@@ -111,7 +112,7 @@ export class LocalFilesystemProvider {
     try {
       // Validate extension
       if (!this.validateExtension(fileName)) {
-        throw new Error(
+        throw new FilesystemError(
           `File extension not allowed: ${path.extname(fileName)}`,
         );
       }
@@ -119,7 +120,7 @@ export class LocalFilesystemProvider {
       // Ensure directory exists
       const filePath = this.getFilePath(fileName);
       const directory = path.dirname(filePath);
-      await this.ensureDirectory(directory);
+      await this.ensureDir(directory);
 
       // Create write stream and pipe
       const writeStream = createWriteStream(filePath);
@@ -131,7 +132,7 @@ export class LocalFilesystemProvider {
       // Validate file size after writing
       if (stats.size > this.maxFileSize) {
         await this.delete(fileName); // Clean up
-        throw new Error(
+        throw new FilesystemError(
           `File size exceeds limit: ${stats.size} > ${this.maxFileSize}`,
         );
       }
@@ -146,7 +147,9 @@ export class LocalFilesystemProvider {
         provider: 'local',
       };
     } catch (error) {
-      throw new Error(`Failed to store file from stream: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to store file from stream: ${error.message}`,
+      );
     }
   }
 
@@ -172,9 +175,9 @@ export class LocalFilesystemProvider {
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
-      throw new Error(`Failed to retrieve file: ${error.message}`);
+      throw new FilesystemError(`Failed to retrieve file: ${error.message}`);
     }
   }
 
@@ -204,9 +207,9 @@ export class LocalFilesystemProvider {
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
-      throw new Error(`Failed to get file stream: ${error.message}`);
+      throw new FilesystemError(`Failed to get file stream: ${error.message}`);
     }
   }
 
@@ -220,9 +223,9 @@ export class LocalFilesystemProvider {
       return { success: true, fileName, provider: 'local' };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
-      throw new Error(`Failed to delete file: ${error.message}`);
+      throw new FilesystemError(`Failed to delete file: ${error.message}`);
     }
   }
 
@@ -259,9 +262,11 @@ export class LocalFilesystemProvider {
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`File not found: ${fileName}`);
+        throw new FilesystemError(`File not found: ${fileName}`);
       }
-      throw new Error(`Failed to get file metadata: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to get file metadata: ${error.message}`,
+      );
     }
   }
 
@@ -316,9 +321,9 @@ export class LocalFilesystemProvider {
       return results;
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`Directory not found: ${directory}`);
+        throw new FilesystemError(`Directory not found: ${directory}`);
       }
-      throw new Error(`Failed to list files: ${error.message}`);
+      throw new FilesystemError(`Failed to list files: ${error.message}`);
     }
   }
 
@@ -332,7 +337,7 @@ export class LocalFilesystemProvider {
 
       // Ensure destination directory exists
       const destDir = path.dirname(destPath);
-      await this.ensureDirectory(destDir);
+      await this.ensureDir(destDir);
 
       await fs.copyFile(sourcePath, destPath);
 
@@ -346,9 +351,9 @@ export class LocalFilesystemProvider {
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`Source file not found: ${sourceFileName}`);
+        throw new FilesystemError(`Source file not found: ${sourceFileName}`);
       }
-      throw new Error(`Failed to copy file: ${error.message}`);
+      throw new FilesystemError(`Failed to copy file: ${error.message}`);
     }
   }
 
@@ -362,7 +367,7 @@ export class LocalFilesystemProvider {
 
       // Ensure destination directory exists
       const destDir = path.dirname(destPath);
-      await this.ensureDirectory(destDir);
+      await this.ensureDir(destDir);
 
       await fs.rename(sourcePath, destPath);
 
@@ -376,9 +381,9 @@ export class LocalFilesystemProvider {
       };
     } catch (error) {
       if (error.code === 'ENOENT') {
-        throw new Error(`Source file not found: ${sourceFileName}`);
+        throw new FilesystemError(`Source file not found: ${sourceFileName}`);
       }
-      throw new Error(`Failed to move file: ${error.message}`);
+      throw new FilesystemError(`Failed to move file: ${error.message}`);
     }
   }
 
@@ -403,7 +408,9 @@ export class LocalFilesystemProvider {
         modifiedAt: stats.mtime,
       };
     } catch (error) {
-      throw new Error(`Failed to get storage stats: ${error.message}`);
+      throw new FilesystemError(
+        `Failed to get storage stats: ${error.message}`,
+      );
     }
   }
 }

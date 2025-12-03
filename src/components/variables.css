@@ -15,6 +15,7 @@
   --color-primary-hover: #1d4ed8; /* Blue 700 */
   --color-primary-light: #3b82f6; /* Blue 500 */
   --color-primary-dark: #1e40af; /* Blue 800 */
+  --color-primary-bg: #eff6ff; /* Blue 50 */
 
   /* Secondary Colors */
   --color-secondary: #7c3aed; /* Violet 600 */
@@ -36,6 +37,9 @@
   --color-success: #10b981; /* Green 500 */
   --color-warning: #f59e0b; /* Amber 500 */
   --color-error: #ef4444; /* Red 500 */
+  --color-error-bg: #fef2f2; /* Red 50 */
+  --color-error-border: #fecaca; /* Red 200 */
+  --color-error-text: #991b1b; /* Red 800 */
   --color-info: #3b82f6; /* Blue 500 */
 
   /* Dark Theme Colors */
@@ -54,11 +58,11 @@
    * Typography
    * ======================================================================== */
 
-  --font-family-base: -apple-system, blinkmacsystemfont, "Segoe UI", "Roboto",
-    "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+  --font-family-base: -apple-system, blinkmacsystemfont, 'Segoe UI', 'Roboto',
+    'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  --font-family-mono: "SF Mono", "Monaco", "Inconsolata", "Fira Code",
-    "Fira Mono", "Roboto Mono", monospace;
+  --font-family-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code',
+    'Fira Mono', 'Roboto Mono', monospace;
 
   /* Font Sizes */
   --font-size-xs: 0.75rem; /* 12px */
@@ -70,6 +74,8 @@
   --font-size-3xl: 1.875rem; /* 30px */
   --font-size-4xl: 2.25rem; /* 36px */
   --font-size-5xl: 3rem; /* 48px */
+  --font-size-6xl: 3.75rem; /* 60px */
+  --font-size-7xl: 4.5rem; /* 72px */
 
   /* Font Weights */
   --font-weight-normal: 400;
@@ -114,10 +120,8 @@
    * ======================================================================== */
 
   --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 5%);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%),
-    0 2px 4px -1px rgb(0 0 0 / 6%);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%),
-    0 4px 6px -2px rgb(0 0 0 / 5%);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 10%), 0 2px 4px -1px rgb(0 0 0 / 6%);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 10%), 0 4px 6px -2px rgb(0 0 0 / 5%);
   --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 10%),
     0 10px 10px -5px rgb(0 0 0 / 4%);
   --shadow-focus: 0 0 0 3px rgb(37 99 235 / 10%);

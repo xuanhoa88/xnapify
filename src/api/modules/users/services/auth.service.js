@@ -6,11 +6,137 @@
  */
 
 import { hashPassword, verifyPassword } from '../utils/password';
-import { SYSTEM_ROLES } from '../constants/roles';
+import { DEFAULT_ROLE, isAdmin } from '../constants/roles';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
+
+/**
+ * Get current user with complete RBAC information
+ *
+ * Fetches user data including profile, roles, permissions, and groups.
+ * This is the centralized function used by login, register, and me endpoints
+ * to ensure consistent user data formatting.
+ *
+ * @param {string} userId - User ID to fetch
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Formatted user object with RBAC data
+ */
+export async function getCurrentUser(userId, models) {
+  const { User, UserProfile, Role, Permission, Group } = models;
+
+  // Get user with profile, roles, permissions, and groups
+  const user = await User.findByPk(userId, {
+    include: [
+      {
+        model: UserProfile,
+        as: 'profile',
+      },
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] }, // Exclude junction table attributes
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            through: { attributes: [] },
+          },
+        ],
+      },
+      {
+        model: Group,
+        as: 'groups',
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  // Collect all permissions from direct roles and group roles
+  const permissionsSet = new Set();
+  const rolesSet = new Set();
+
+  // Add permissions from direct user roles
+  if (user.roles) {
+    for (const role of user.roles) {
+      rolesSet.add(role.name);
+      if (role.permissions) {
+        for (const perm of role.permissions) {
+          permissionsSet.add(perm.name);
+        }
+      }
+    }
+  }
+
+  // Add permissions from group roles
+  if (user.groups) {
+    for (const group of user.groups) {
+      if (group.roles) {
+        for (const role of group.roles) {
+          rolesSet.add(role.name);
+          if (role.permissions) {
+            for (const perm of role.permissions) {
+              permissionsSet.add(perm.name);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // RBAC logic: Determine roles, permissions, and is_admin
+  const allRoles = Array.from(rolesSet);
+  const allPermissions = Array.from(permissionsSet);
+
+  // Return formatted user object
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    bio: (user.profile && user.profile.bio) || null,
+    location: (user.profile && user.profile.location) || null,
+    website: (user.profile && user.profile.website) || null,
+    is_admin: isAdmin({ roles: allRoles }),
+    roles: allRoles,
+    permissions: allPermissions,
+    groups: user.groups
+      ? user.groups.map(group => ({
+          id: group.id,
+          name: group.name,
+          description: group.description,
+        }))
+      : [],
+  };
+}
 
 /**
  * Register a new user
@@ -31,7 +157,10 @@ export async function registerUser(userData, { models }) {
   // Check if user already exists
   const existingUser = await User.findOne({ where: { email } });
   if (existingUser) {
-    throw new Error('USER_ALREADY_EXISTS');
+    const error = new Error('User already exists');
+    error.name = 'UserAlreadyExistsError';
+    error.status = 400;
+    throw error;
   }
 
   // Hash password using global auth utilities
@@ -46,7 +175,7 @@ export async function registerUser(userData, { models }) {
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
-      role: SYSTEM_ROLES[0],
+      role: DEFAULT_ROLE,
       profile: {
         display_name: display_name || email.split('@')[0],
       },
@@ -72,24 +201,38 @@ export async function registerUser(userData, { models }) {
 export async function authenticateUser(email, password, { models }) {
   const { User, UserProfile } = models;
 
-  // Find user with profile
-  const user = await User.findOne({
+  // Find user with password (need to verify it)
+  const user = await User.scope('withPassword').findOne({
     where: { email },
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      {
+        model: UserProfile,
+        as: 'profile',
+      },
+    ],
   });
 
   if (!user) {
-    throw new Error('INVALID_CREDENTIALS');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   // Check if account is active
   if (!user.is_active) {
-    throw new Error('ACCOUNT_INACTIVE');
+    const error = new Error('Account inactive');
+    error.name = 'AccountInactiveError';
+    error.status = 403;
+    throw error;
   }
 
   // Check if account is locked
   if (user.is_locked) {
-    throw new Error('ACCOUNT_LOCKED');
+    const error = new Error('Account locked');
+    error.name = 'AccountLockedError';
+    error.status = 403;
+    throw error;
   }
 
   // Verify password using global auth utilities
@@ -103,7 +246,10 @@ export async function authenticateUser(email, password, { models }) {
       await user.update({ is_locked: true });
     }
 
-    throw new Error('INVALID_CREDENTIALS');
+    const error = new Error('Invalid credentials');
+    error.name = 'InvalidCredentialsError';
+    error.status = 401;
+    throw error;
   }
 
   // Reset failed login attempts on successful login
@@ -140,11 +286,17 @@ export async function verifyEmail(token, models) {
 
     const user = await User.findByPk(user_id);
     if (!user) {
-      throw new Error('USER_NOT_FOUND');
+      const error = new Error('User not found');
+      error.name = 'UserNotFoundError';
+      error.status = 404;
+      throw error;
     }
 
     if (user.email_confirmed) {
-      throw new Error('EMAIL_ALREADY_VERIFIED');
+      const error = new Error('Email already verified');
+      error.name = 'EmailAlreadyVerifiedError';
+      error.status = 400;
+      throw error;
     }
 
     // Update email confirmation status
@@ -152,7 +304,9 @@ export async function verifyEmail(token, models) {
 
     return user;
   } catch (error) {
-    throw new Error('INVALID_TOKEN');
+    error.name = 'InvalidTokenError';
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -206,7 +360,10 @@ export async function resetPassword(token, newPassword, { models }) {
 
     const user = await User.findByPk(user_id);
     if (!user) {
-      throw new Error('USER_NOT_FOUND');
+      const error = new Error('User not found');
+      error.name = 'UserNotFoundError';
+      error.status = 404;
+      throw error;
     }
 
     // Hash new password using global auth utilities
@@ -221,7 +378,9 @@ export async function resetPassword(token, newPassword, { models }) {
 
     return user;
   } catch (error) {
-    throw new Error('INVALID_TOKEN');
+    error.name = 'InvalidTokenError';
+    error.status = 400;
+    throw error;
   }
 }
 
@@ -280,7 +439,10 @@ export async function unlockAccount(user_id, models) {
 
   const user = await User.findByPk(user_id);
   if (!user) {
-    throw new Error('USER_NOT_FOUND');
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
   }
 
   await user.update({

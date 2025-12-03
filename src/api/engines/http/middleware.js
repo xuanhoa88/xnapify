@@ -287,8 +287,6 @@ export function requestLogger(options = {}) {
     res.on('finish', () => {
       logData.statusCode = res.statusCode;
       logData.duration = Date.now() - start;
-
-      console.log('HTTP Request:', JSON.stringify(logData, null, 2));
     });
 
     next();
