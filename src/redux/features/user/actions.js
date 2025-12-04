@@ -138,7 +138,7 @@ export function logout() {
  *
  * @returns {Function} Redux thunk action
  */
-export function getCurrentUser() {
+export function me() {
   return async (dispatch, getState, { fetch }) => {
     dispatch({ type: FETCH_USER_START });
 
@@ -205,7 +205,7 @@ export function resetPassword({ email }) {
  * @param {Object} userData - User data to update
  * @returns {Function} Redux thunk action
  */
-export function updateUser(userData) {
+export function updateCurrentUser(userData) {
   return async (dispatch, getState, { fetch }) => {
     try {
       const { data } = await fetch('/api/profile', {

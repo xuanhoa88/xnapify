@@ -29,6 +29,16 @@
     "error": "Error",
     "success": "<0>Success!</0> If an account exists with that email, you will receive a password reset link shortly."
   },
+  "profile": {
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "bio": "Bio",
+    "location": "Location",
+    "website": "Website",
+    "email": "Email",
+    "saving": "Saving...",
+    "saveChanges": "Save Changes"
+  },
   "header": {
     "brand": "React Starter Kit"
   },

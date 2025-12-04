@@ -304,4 +304,14 @@ export default merge(baseConfig, {
     __filename: false,
     global: false,
   },
+
+  // Source maps for client bundle
+  // https://webpack.js.org/configuration/devtool/
+  // Development: cheap-module-source-map - faster rebuilds, good debugging
+  // Production: source-map - best quality for production debugging
+  devtool:
+    config.env('BUNDLE_SOURCE_MAPS') !== 'false'
+      ? process.env.WEBPACK_DEVTOOL ||
+        (isDebug ? 'cheap-module-source-map' : 'source-map')
+      : false,
 });

@@ -57,17 +57,40 @@ export async function getRoles(options, models) {
   const offset = (page - 1) * limit;
   const { Role, Permission } = models;
 
+  const { sequelize } = Role;
+  const { Op } = sequelize.Sequelize;
+
   const whereCondition = search
     ? {
-        [models.Sequelize.Op.or]: [
-          { name: { [models.Sequelize.Op.like]: `%${search}%` } },
-          { description: { [models.Sequelize.Op.like]: `%${search}%` } },
+        [Op.or]: [
+          { name: { [Op.like]: `%${search}%` } },
+          { description: { [Op.like]: `%${search}%` } },
         ],
       }
     : {};
 
   const { count, rows: roles } = await Role.findAndCountAll({
     where: whereCondition,
+    attributes: {
+      include: [
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM user_roles AS ur
+            WHERE ur.role_id = Role.id
+          )`),
+          'usersCount',
+        ],
+        [
+          sequelize.literal(`(
+            SELECT COUNT(*)
+            FROM role_permissions AS rp
+            WHERE rp.role_id = Role.id
+          )`),
+          'permissionsCount',
+        ],
+      ],
+    },
     include: [
       {
         model: Permission,

@@ -47,11 +47,18 @@ export function requireRole(requiredRole) {
         });
       }
 
-      const { User } = models;
+      const { User, Role } = models;
 
-      // Get user with role information
+      // Get user with roles through association
       const user = await User.findByPk(req.user.id, {
-        attributes: ['id', 'email', 'role'],
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+          },
+        ],
       });
 
       if (!user) {
@@ -62,21 +69,25 @@ export function requireRole(requiredRole) {
       }
 
       // Check if user has the required role
-      if (user.role !== requiredRole) {
+      const userRoles = Array.isArray(user.roles)
+        ? user.roles.map(r => r.name)
+        : [];
+      if (!userRoles.includes(requiredRole)) {
         return res.status(403).json({
           success: false,
           error: `Access denied. Required role: ${requiredRole}`,
         });
       }
 
-      // Attach full user info to request
+      // Attach roles to request
       req.user = {
         ...req.user,
-        role: user.role,
+        roles: userRoles,
       };
 
       next();
     } catch (error) {
+      console.error('requireRole error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -114,10 +125,17 @@ export function requireAnyRole(allowedRoles) {
         });
       }
 
-      const { User } = models;
+      const { User, Role } = models;
 
       const user = await User.findByPk(req.user.id, {
-        attributes: ['id', 'email', 'role'],
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+          },
+        ],
       });
 
       if (!user) {
@@ -128,7 +146,12 @@ export function requireAnyRole(allowedRoles) {
       }
 
       // Check if user has any of the allowed roles
-      if (!allowedRoles.includes(user.role)) {
+      const userRoles = Array.isArray(user.roles)
+        ? user.roles.map(r => r.name)
+        : [];
+      const hasRole = userRoles.some(role => allowedRoles.includes(role));
+
+      if (!hasRole) {
         return res.status(403).json({
           success: false,
           error: `Access denied. Required roles: ${allowedRoles.join(', ')}`,
@@ -137,11 +160,12 @@ export function requireAnyRole(allowedRoles) {
 
       req.user = {
         ...req.user,
-        role: user.role,
+        roles: userRoles,
       };
 
       next();
     } catch (error) {
+      console.error('requireAnyRole error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -238,10 +262,17 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
         });
       }
 
-      const { User } = models;
+      const { User, Role } = models;
 
       const user = await User.findByPk(req.user.id, {
-        attributes: ['id', 'email', 'role'],
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+          },
+        ],
       });
 
       if (!user) {
@@ -251,12 +282,19 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
         });
       }
 
-      // Get role levels
-      const userRoleLevel = roleHierarchy.indexOf(user.role);
+      // Get user's highest role level
+      const userRoles = Array.isArray(user.roles)
+        ? user.roles.map(r => r.name)
+        : [];
+      const userRoleLevels = userRoles
+        .map(role => roleHierarchy.indexOf(role))
+        .filter(level => level !== -1);
+
+      const highestUserRoleLevel = Math.max(...userRoleLevels, -1);
       const minimumRoleLevel = roleHierarchy.indexOf(minimumRole);
 
-      // Check if role exists in hierarchy
-      if (userRoleLevel === -1) {
+      // Check if user has any valid role
+      if (highestUserRoleLevel === -1) {
         return res.status(403).json({
           success: false,
           error: 'Invalid user role',
@@ -270,8 +308,8 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
         });
       }
 
-      // Check if user's role level meets minimum requirement
-      if (userRoleLevel < minimumRoleLevel) {
+      // Check if user's highest role level meets minimum requirement
+      if (highestUserRoleLevel < minimumRoleLevel) {
         return res.status(403).json({
           success: false,
           error: `Access denied. Minimum role required: ${minimumRole}`,
@@ -280,12 +318,13 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
 
       req.user = {
         ...req.user,
-        role: user.role,
-        roleLevel: userRoleLevel,
+        roles: userRoles,
+        roleLevel: highestUserRoleLevel,
       };
 
       next();
     } catch (error) {
+      console.error('requireRoleLevel error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role level authorization failed',

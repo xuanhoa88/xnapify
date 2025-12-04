@@ -12,7 +12,7 @@ import Link from '../Link';
 import {
   isAuthenticated,
   isAdmin,
-  getUserDisplayName,
+  getCurrentUserDisplayName,
   logout,
 } from '../../redux';
 import { replaceTo } from '../../navigator';
@@ -23,7 +23,7 @@ function Navigation() {
   const dispatch = useDispatch();
   const isAuth = useSelector(isAuthenticated);
   const isAdminActive = useSelector(isAdmin);
-  const displayName = useSelector(getUserDisplayName);
+  const displayName = useSelector(getCurrentUserDisplayName);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 

@@ -6,7 +6,6 @@
  */
 
 import { profileService } from '../services';
-// Note: HTTP utilities are accessed via req.app.get('http')
 import { validatePassword } from '../utils/validation';
 
 // ========================================================================

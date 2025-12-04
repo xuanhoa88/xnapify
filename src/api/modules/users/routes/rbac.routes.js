@@ -234,6 +234,19 @@ export default function rbacRoutes(deps, middlewares, app) {
   // ========================================================================
 
   /**
+   * @route   POST /users
+   * @desc    Create a new user
+   * @access  Admin only
+   * @body    { email, password, display_name, role, is_active }
+   */
+  router.post(
+    '/users',
+    requireAuth,
+    requireAdmin,
+    userAdminController.createUser,
+  );
+
+  /**
    * @route   GET /users/list
    * @desc    Get paginated list of all users
    * @access  Admin only

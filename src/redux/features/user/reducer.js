@@ -72,14 +72,6 @@ export default function user(state = initialState, action) {
 // =============================================================================
 
 /**
- * Get current user
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} User object or null if not authenticated
- */
-export const getUser = state => state.user;
-
-/**
  * Check if user is authenticated
  *
  * @param {Object} state - Redux state
@@ -100,12 +92,20 @@ export const isAdmin = state => {
 };
 
 /**
+ * Get current user
+ *
+ * @param {Object} state - Redux state
+ * @returns {Object|null} User object or null if not authenticated
+ */
+export const getCurrentUser = state => state.user;
+
+/**
  * Get user ID
  *
  * @param {Object} state - Redux state
  * @returns {string|null} User ID or null
  */
-export const getUserId = state => (state.user && state.user.id) || null;
+export const getCurrentUserId = state => (state.user && state.user.id) || null;
 
 /**
  * Get user email
@@ -113,7 +113,8 @@ export const getUserId = state => (state.user && state.user.id) || null;
  * @param {Object} state - Redux state
  * @returns {string|null} User email or null
  */
-export const getUserEmail = state => (state.user && state.user.email) || null;
+export const getCurrentUserEmail = state =>
+  (state.user && state.user.email) || null;
 
 /**
  * Get user display name
@@ -121,7 +122,7 @@ export const getUserEmail = state => (state.user && state.user.email) || null;
  * @param {Object} state - Redux state
  * @returns {string|null} User display name or null
  */
-export const getUserDisplayName = state => {
+export const getCurrentUserDisplayName = state => {
   if (!state.user) return null;
   // Check top-level display_name first (API response format)
   if (state.user.display_name) return state.user.display_name;

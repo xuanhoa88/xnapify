@@ -13,19 +13,19 @@ export {
   login,
   register,
   logout,
-  getCurrentUser,
+  me,
   resetPassword,
-  updateUser,
+  updateCurrentUser,
 } from './actions';
 
 // Public API - Selectors
 export {
-  getUser,
+  getCurrentUser,
   isAuthenticated,
   isAdmin,
-  getUserId,
-  getUserEmail,
-  getUserDisplayName,
+  getCurrentUserId,
+  getCurrentUserEmail,
+  getCurrentUserDisplayName,
 } from './reducer';
 
 // Public API - Reducer

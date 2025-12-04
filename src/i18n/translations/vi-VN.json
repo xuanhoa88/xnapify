@@ -29,6 +29,16 @@
     "error": "Lỗi",
     "success": "<0>Thành công!</0> Nếu có tài khoản với email này, bạn sẽ nhận được một liên kết để reset mật khẩu."
   },
+  "profile": {
+    "firstName": "Tên",
+    "lastName": "Họ",
+    "bio": "Giới thiệu",
+    "location": "Địa chỉ",
+    "website": "Website",
+    "email": "Email",
+    "saving": "Đang lưu...",
+    "saveChanges": "Lưu thay đổi"
+  },
   "header": {
     "brand": "React Starter Kit"
   },

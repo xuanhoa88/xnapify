@@ -5,85 +5,80 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useEffect, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchPermissions, deletePermission } from '../../../redux';
 import s from './Permissions.css';
 
 function Permissions() {
-  const permissions = [
-    {
-      id: 1,
-      name: 'users.create',
-      description: 'Create new users',
-      category: 'Users',
-    },
-    {
-      id: 2,
-      name: 'users.read',
-      description: 'View user information',
-      category: 'Users',
-    },
-    {
-      id: 3,
-      name: 'users.update',
-      description: 'Update user information',
-      category: 'Users',
-    },
-    {
-      id: 4,
-      name: 'users.delete',
-      description: 'Delete users',
-      category: 'Users',
-    },
-    {
-      id: 5,
-      name: 'roles.create',
-      description: 'Create new roles',
-      category: 'Roles',
-    },
-    {
-      id: 6,
-      name: 'roles.read',
-      description: 'View role information',
-      category: 'Roles',
-    },
-    {
-      id: 7,
-      name: 'roles.update',
-      description: 'Update role information',
-      category: 'Roles',
-    },
-    {
-      id: 8,
-      name: 'roles.delete',
-      description: 'Delete roles',
-      category: 'Roles',
-    },
-    {
-      id: 9,
-      name: 'groups.create',
-      description: 'Create new groups',
-      category: 'Groups',
-    },
-    {
-      id: 10,
-      name: 'groups.read',
-      description: 'View group information',
-      category: 'Groups',
-    },
-    {
-      id: 11,
-      name: 'groups.update',
-      description: 'Update group information',
-      category: 'Groups',
-    },
-    {
-      id: 12,
-      name: 'groups.delete',
-      description: 'Delete groups',
-      category: 'Groups',
-    },
-  ];
+  const dispatch = useDispatch();
+  const { permissions, loading, error } = useSelector(
+    state => state.permissions,
+  );
 
-  const categories = [...new Set(permissions.map(p => p.category))];
+  useEffect(() => {
+    dispatch(fetchPermissions({ limit: 1000 }));
+  }, [dispatch]);
+
+  const handleDelete = useCallback(
+    async (permissionId, permissionName) => {
+      if (
+        !confirm(
+          `Are you sure you want to delete the permission "${permissionName}"?`,
+        )
+      ) {
+        return;
+      }
+
+      const result = await dispatch(deletePermission(permissionId));
+      if (!result.success) {
+        alert(`Failed to delete permission: ${result.error}`);
+      }
+    },
+    [dispatch],
+  );
+
+  // Group permissions by resource
+  const groupedPermissions = permissions.reduce((acc, permission) => {
+    const resource = permission.resource || 'Other';
+    if (!acc[resource]) {
+      acc[resource] = [];
+    }
+    acc[resource].push(permission);
+    return acc;
+  }, {});
+
+  const categories = Object.keys(groupedPermissions).sort();
+
+  if (loading) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h1 className={s.title}>Permission Management</h1>
+        </div>
+        <div className={s.loading}>Loading permissions...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h1 className={s.title}>Permission Management</h1>
+        </div>
+        <div className={s.error}>
+          <p>Error loading permissions: {error}</p>
+          <button
+            className={s.addButton}
+            onClick={() => dispatch(fetchPermissions({ limit: 1000 }))}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={s.root}>
@@ -113,36 +108,43 @@ function Permissions() {
         <div key={category} className={s.categorySection}>
           <h2 className={s.categoryTitle}>{category}</h2>
           <div className={s.permissionGrid}>
-            {permissions
-              .filter(p => p.category === category)
-              .map(permission => (
-                <div key={permission.id} className={s.permissionCard}>
-                  <div className={s.permissionHeader}>
-                    <h3 className={s.permissionName}>{permission.name}</h3>
-                    <div className={s.permissionActions}>
-                      <button className={s.editBtn} title='Edit'>
-                        ✏️
-                      </button>
-                      <button className={s.deleteBtn} title='Delete'>
-                        🗑️
-                      </button>
-                    </div>
-                  </div>
-                  <p className={s.permissionDescription}>
-                    {permission.description}
-                  </p>
-                  <div className={s.permissionMeta}>
-                    <span className={s.metaLabel}>Used in:</span>
-                    <div className={s.roleChips}>
-                      <span className={s.roleChip}>Admin</span>
-                      <span className={s.roleChip}>Moderator</span>
-                    </div>
+            {groupedPermissions[category].map(permission => (
+              <div key={permission.id} className={s.permissionCard}>
+                <div className={s.permissionHeader}>
+                  <h3 className={s.permissionName}>{permission.name}</h3>
+                  <div className={s.permissionActions}>
+                    <button className={s.editBtn} title='Edit'>
+                      ✏️
+                    </button>
+                    <button
+                      className={s.deleteBtn}
+                      title='Delete'
+                      onClick={() =>
+                        handleDelete(permission.id, permission.name)
+                      }
+                    >
+                      🗑️
+                    </button>
                   </div>
                 </div>
-              ))}
+                <p className={s.permissionDescription}>
+                  {permission.description || 'No description available'}
+                </p>
+                <div className={s.permissionMeta}>
+                  <span className={s.metaLabel}>Action:</span>
+                  <span className={s.metaValue}>{permission.action}</span>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ))}
+
+      {permissions.length === 0 && (
+        <div className={s.empty}>
+          <p>No permissions found.</p>
+        </div>
+      )}
     </div>
   );
 }

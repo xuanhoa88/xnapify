@@ -129,4 +129,13 @@ export default merge(createBaseConfig(), {
     __filename: false,
     global: false,
   },
+
+  // Override devtool for server bundle
+  // Use 'source-map' for cleaner stack traces with correct file paths
+  // Works better with source-map-support (configured via BannerPlugin above)
+  // https://webpack.js.org/configuration/devtool/
+  devtool:
+    config.env('BUNDLE_SOURCE_MAPS') !== 'false'
+      ? process.env.WEBPACK_DEVTOOL || 'source-map'
+      : false,
 });

@@ -100,7 +100,7 @@ export function createController() {
  *     }
  * });
  */
-export function createRouter(Router, controllerConfigs = {}) {
+export function createRouter(Router, options = {}) {
   // Create action-based controllers
   const controllers = createController();
 
@@ -108,31 +108,28 @@ export function createRouter(Router, controllerConfigs = {}) {
   const router = Router();
 
   // Upload files (single or multiple)
-  router.post('/upload', controllers.uploadFiles(controllerConfigs.upload));
+  router.post('/upload', controllers.uploadFiles(options.upload));
 
   // Download files (single or multiple)
-  router.get(
-    '/download',
-    controllers.downloadFiles(controllerConfigs.download),
-  );
+  router.get('/download', controllers.downloadFiles(options.download));
 
   // File information
-  router.get('/info', controllers.getFileInfo(controllerConfigs.info));
+  router.get('/info', controllers.getFileInfo(options.info));
 
   // File preview
-  router.get('/preview', controllers.previewFile(controllerConfigs.preview));
+  router.get('/preview', controllers.previewFile(options.preview));
 
   // Delete files (single or multiple)
-  router.delete('/delete', controllers.deleteFiles(controllerConfigs.delete));
+  router.delete('/delete', controllers.deleteFiles(options.delete));
 
   // Rename files (single or multiple)
-  router.patch('/rename', controllers.renameFiles(controllerConfigs.rename));
+  router.patch('/rename', controllers.renameFiles(options.rename));
 
   // Copy files (single or multiple)
-  router.post('/copy', controllers.copyFiles(controllerConfigs.copy));
+  router.post('/copy', controllers.copyFiles(options.copy));
 
   // Synchronize files (single or multiple)
-  router.post('/sync', controllers.synchronizeFiles(controllerConfigs.sync));
+  router.post('/sync', controllers.synchronizeFiles(options.sync));
 
   // Error handling middleware
   router.use((error, req, res) => {

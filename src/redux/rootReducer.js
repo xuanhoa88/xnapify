@@ -6,16 +6,22 @@
  */
 
 import { combineReducers } from 'redux';
-import intl from './features/intl';
-import runtime from './features/runtime';
 import user from './features/user';
+import runtime from './features/runtime';
+import intl from './features/intl';
 import ui from './features/ui';
 import groups from './features/groups';
+import roles from './features/roles';
+import permissions from './features/permissions';
+import usersManagement from './features/usersManagement';
 
 export default combineReducers({
-  intl,
-  runtime,
   user,
+  runtime,
+  intl,
   ui,
   groups,
+  roles,
+  permissions,
+  usersManagement,
 });

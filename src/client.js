@@ -12,7 +12,7 @@ import App from './components/App';
 import { createFetch } from './createFetch';
 import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import { configureStore, getCurrentUser } from './redux';
+import { configureStore, me } from './redux';
 
 // Get i18n instance
 const i18n = getI18nInstance();
@@ -160,7 +160,7 @@ async function initializeAuth() {
   // If no user in state, try to fetch from server (JWT cookie will be sent automatically)
   if (!user || !user.id) {
     try {
-      await store.dispatch(getCurrentUser());
+      await store.dispatch(me());
       if (__DEV__) {
         console.log('✅ User authenticated from session');
       }

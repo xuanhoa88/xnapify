@@ -6,7 +6,6 @@
  */
 
 import { userRbacService } from '../services';
-// Note: HTTP utilities are accessed via req.app.get('http')
 
 // ========================================================================
 // USER ASSIGNMENT CONTROLLERS

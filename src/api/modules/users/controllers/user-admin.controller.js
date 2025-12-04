@@ -13,6 +13,82 @@ import { SYSTEM_ROLES } from '../constants/roles';
 // ========================================================================
 
 /**
+ * Create a new user
+ *
+ * @route   POST /api/admin/users
+ * @access  Admin
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function createUser(req, res) {
+  const http = req.app.get('http');
+  try {
+    const {
+      email,
+      password,
+      confirm_password,
+      display_name,
+      first_name,
+      last_name,
+      role,
+      is_active,
+    } = req.body;
+
+    // Validate required fields
+    if (!email || !password) {
+      return http.sendValidationError(res, {
+        email: !email ? 'Email is required' : undefined,
+        password: !password ? 'Password is required' : undefined,
+      });
+    }
+
+    // Validate password match
+    if (confirm_password && password !== confirm_password) {
+      return http.sendValidationError(res, {
+        confirm_password: 'Passwords do not match',
+      });
+    }
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Create user
+    const user = await userAdminService.createUser(
+      {
+        email,
+        password,
+        display_name,
+        first_name,
+        last_name,
+        role,
+        is_active,
+      },
+      models,
+    );
+
+    return http.sendSuccess(res, {
+      message: 'User created successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        email_confirmed: user.email_confirmed,
+        is_active: user.is_active,
+        created_at: user.created_at,
+        display_name: (user.profile && user.profile.display_name) || null,
+        role: user.roles && user.roles.length > 0 ? user.roles[0].name : 'user',
+      },
+    });
+  } catch (error) {
+    if (error.name === 'UserAlreadyExistsError') {
+      return http.sendValidationError(res, {
+        email: 'Email is already in use by another user',
+      });
+    }
+    return http.sendServerError(res, 'Failed to create user');
+  }
+}
+
+/**
  * Get paginated list of all users
  *
  * @route   GET /api/admin/users/list
@@ -40,7 +116,27 @@ export async function getUserList(req, res) {
       models,
     );
 
-    return http.sendSuccess(res, result);
+    // Format users to include roles array
+    const formattedUsers = result.users.map(user => ({
+      id: user.id,
+      email: user.email,
+      email_confirmed: user.email_confirmed,
+      is_active: user.is_active,
+      is_locked: user.is_locked,
+      failed_login_attempts: user.failed_login_attempts,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      display_name: (user.profile && user.profile.display_name) || null,
+      first_name: (user.profile && user.profile.first_name) || null,
+      last_name: (user.profile && user.profile.last_name) || null,
+      picture: (user.profile && user.profile.picture) || null,
+      roles: user.roles ? user.roles.map(r => r.name) : [],
+    }));
+
+    return http.sendSuccess(res, {
+      users: formattedUsers,
+      pagination: result.pagination,
+    });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user list');
   }

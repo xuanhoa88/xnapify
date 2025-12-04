@@ -5,29 +5,137 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useEffect, useState, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import clsx from 'clsx';
+import { fetchUsers, deleteUser } from '../../../redux';
+import CreateUserModal from './CreateUserModal';
+import EditUserModal from './EditUserModal';
 import s from './Users.css';
 
+const getInitials = displayName => {
+  if (!displayName) return '?';
+  const parts = displayName.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return displayName.substring(0, 2).toUpperCase();
+};
+
+const formatDate = dateString => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
+};
+
 function Users() {
+  const dispatch = useDispatch();
+  const { users, pagination, loading, error } = useSelector(
+    state => state.usersManagement,
+  );
+
+  const [search, setSearch] = useState('');
+  const [inputValue, setInputValue] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+
+  useEffect(() => {
+    dispatch(
+      fetchUsers({
+        page: currentPage,
+        search,
+        role: roleFilter,
+        status: statusFilter,
+      }),
+    );
+  }, [dispatch, currentPage, search, roleFilter, statusFilter]);
+
+  const handleDelete = useCallback(
+    async (userId, userEmail) => {
+      if (!confirm(`Are you sure you want to delete user "${userEmail}"?`)) {
+        return;
+      }
+
+      const result = await dispatch(deleteUser(userId));
+      if (!result.success) {
+        alert(`Failed to delete user: ${result.error}`);
+      }
+    },
+    [dispatch],
+  );
+
+  const handleSearchChange = e => {
+    setInputValue(e.target.value);
+  };
+
+  const handleSearchSubmit = () => {
+    if (inputValue !== search) {
+      setSearch(inputValue);
+      setCurrentPage(1);
+    }
+  };
+
+  const handleKeyDown = e => {
+    if (e.key === 'Enter') {
+      handleSearchSubmit();
+    }
+  };
+
+  const handleRoleFilterChange = e => {
+    setRoleFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilterChange = e => {
+    setStatusFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  if (loading && users.length === 0) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h1 className={s.title}>User Management</h1>
+        </div>
+        <div className={s.loading}>Loading users...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h1 className={s.title}>User Management</h1>
+        </div>
+        <div className={s.error}>
+          <p>Error loading users: {error}</p>
+          <button
+            className={s.addButton}
+            onClick={() => dispatch(fetchUsers({ page: 1 }))}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={s.root}>
       <div className={s.header}>
-        <h1 className={s.title}>User Management</h1>
-        <button className={s.addButton}>
-          <svg
-            width='16'
-            height='16'
-            viewBox='0 0 16 16'
-            fill='none'
-            xmlns='http://www.w3.org/2000/svg'
-          >
-            <path
-              d='M8 3V13M3 8H13'
-              stroke='currentColor'
-              strokeWidth='2'
-              strokeLinecap='round'
-              strokeLinejoin='round'
-            />
-          </svg>
+        <h2 className={s.title}>User Management</h2>
+        <button
+          className={s.addButton}
+          onClick={() => setShowCreateModal(true)}
+        >
           Add User
         </button>
       </div>
@@ -35,16 +143,30 @@ function Users() {
       <div className={s.filters}>
         <input
           type='text'
-          placeholder='Search users...'
+          placeholder='Search users... (Press Enter)'
           className={s.searchInput}
+          value={inputValue}
+          onChange={handleSearchChange}
+          onKeyDown={handleKeyDown}
+          onBlur={handleSearchSubmit}
         />
-        <select className={s.filterSelect}>
+        <select
+          className={s.filterSelect}
+          value={roleFilter}
+          onChange={handleRoleFilterChange}
+        >
           <option value=''>All Roles</option>
           <option value='admin'>Admin</option>
           <option value='user'>User</option>
           <option value='moderator'>Moderator</option>
+          <option value='editor'>Editor</option>
+          <option value='viewer'>Viewer</option>
         </select>
-        <select className={s.filterSelect}>
+        <select
+          className={s.filterSelect}
+          value={statusFilter}
+          onChange={handleStatusFilterChange}
+        >
           <option value=''>All Status</option>
           <option value='active'>Active</option>
           <option value='inactive'>Inactive</option>
@@ -55,106 +177,153 @@ function Users() {
         <table className={s.table}>
           <thead>
             <tr>
-              <th>Name</th>
+              <th>User</th>
               <th>Email</th>
               <th>Role</th>
               <th>Status</th>
-              <th>Created</th>
+              <th>Joined</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>
-                <div className={s.userCell}>
-                  <div className={s.avatar}>JD</div>
-                  <span>John Doe</span>
-                </div>
-              </td>
-              <td>john@example.com</td>
-              <td>
-                <span className={s.roleAdmin}>Admin</span>
-              </td>
-              <td>
-                <span className={s.statusActive}>Active</span>
-              </td>
-              <td>2024-01-15</td>
-              <td>
-                <div className={s.actions}>
-                  <button className={s.actionBtn} title='Edit'>
-                    ✏️
-                  </button>
-                  <button className={s.actionBtn} title='Delete'>
-                    🗑️
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div className={s.userCell}>
-                  <div className={s.avatar}>JS</div>
-                  <span>Jane Smith</span>
-                </div>
-              </td>
-              <td>jane@example.com</td>
-              <td>
-                <span className={s.roleUser}>User</span>
-              </td>
-              <td>
-                <span className={s.statusActive}>Active</span>
-              </td>
-              <td>2024-02-20</td>
-              <td>
-                <div className={s.actions}>
-                  <button className={s.actionBtn} title='Edit'>
-                    ✏️
-                  </button>
-                  <button className={s.actionBtn} title='Delete'>
-                    🗑️
-                  </button>
-                </div>
-              </td>
-            </tr>
-            <tr>
-              <td>
-                <div className={s.userCell}>
-                  <div className={s.avatar}>BJ</div>
-                  <span>Bob Johnson</span>
-                </div>
-              </td>
-              <td>bob@example.com</td>
-              <td>
-                <span className={s.roleModerator}>Moderator</span>
-              </td>
-              <td>
-                <span className={s.statusInactive}>Inactive</span>
-              </td>
-              <td>2024-03-10</td>
-              <td>
-                <div className={s.actions}>
-                  <button className={s.actionBtn} title='Edit'>
-                    ✏️
-                  </button>
-                  <button className={s.actionBtn} title='Delete'>
-                    🗑️
-                  </button>
-                </div>
-              </td>
-            </tr>
+            {users.map(user => (
+              <tr key={user.id}>
+                <td>
+                  <div className={s.userCell}>
+                    <div className={s.avatar}>
+                      {getInitials(user.display_name || user.email)}
+                    </div>
+                    <span>{user.display_name || user.email}</span>
+                  </div>
+                </td>
+                <td>{user.email}</td>
+                <td>
+                  {user.roles && user.roles.length > 0 ? (
+                    user.roles.map(role => (
+                      <span
+                        key={role}
+                        className={clsx(
+                          s.roleUser,
+                          s[
+                            `role${role.charAt(0).toUpperCase() + role.slice(1)}`
+                          ],
+                        )}
+                      >
+                        {role}
+                      </span>
+                    ))
+                  ) : (
+                    <span className={s.roleUser}>User</span>
+                  )}
+                </td>
+                <td>
+                  <span
+                    className={
+                      user.is_active ? s.statusActive : s.statusInactive
+                    }
+                  >
+                    {user.is_active ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td>{formatDate(user.created_at)}</td>
+                <td>
+                  <div className={s.actions}>
+                    <button
+                      className={s.actionBtn}
+                      title='Edit'
+                      onClick={() => setEditingUser(user)}
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      className={s.actionBtn}
+                      title='Delete'
+                      onClick={() => handleDelete(user.id, user.email)}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
 
-      <div className={s.pagination}>
-        <button className={s.pageBtn} disabled>
-          Previous
-        </button>
-        <span className={s.pageInfo}>Page 1 of 1</span>
-        <button className={s.pageBtn} disabled>
-          Next
-        </button>
-      </div>
+      {users.length === 0 && (
+        <div className={s.empty}>
+          <p>No users found.</p>
+        </div>
+      )}
+
+      {pagination && pagination.pages > 1 && (
+        <div className={s.pagination}>
+          <button
+            className={s.pageBtn}
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(currentPage - 1)}
+          >
+            Previous
+          </button>
+
+          <div className={s.pageNumbers}>
+            {(() => {
+              const pages = [];
+              const { pages: totalPages } = pagination;
+              const delta = 1; // Number of pages to show on each side of current page
+
+              for (let i = 1; i <= totalPages; i++) {
+                if (
+                  i === 1 ||
+                  i === totalPages ||
+                  (i >= currentPage - delta && i <= currentPage + delta)
+                ) {
+                  pages.push(
+                    <button
+                      key={i}
+                      className={clsx(s.pageNumber, {
+                        [s.activePage]: currentPage === i,
+                      })}
+                      onClick={() => setCurrentPage(i)}
+                    >
+                      {i}
+                    </button>,
+                  );
+                } else if (
+                  (i === currentPage - delta - 1 && i > 1) ||
+                  (i === currentPage + delta + 1 && i < totalPages)
+                ) {
+                  pages.push(
+                    <span key={`dots-${i}`} className={s.ellipsis}>
+                      ...
+                    </span>,
+                  );
+                }
+              }
+              return pages;
+            })()}
+          </div>
+
+          <button
+            className={s.pageBtn}
+            disabled={currentPage >= pagination.pages}
+            onClick={() => setCurrentPage(currentPage + 1)}
+          >
+            Next
+          </button>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <CreateUserModal onClose={() => setShowCreateModal(false)} />
+      )}
+
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          onClose={() => setEditingUser(null)}
+        />
+      )}
     </div>
   );
 }

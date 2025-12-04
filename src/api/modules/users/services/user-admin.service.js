@@ -8,6 +8,76 @@
 import { hashPassword } from '../utils/password';
 
 /**
+ * Create a new user
+ *
+ * @param {Object} userData - User data
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Created user
+ * @throws {Error} If UserAlreadyExistsError
+ */
+export async function createUser(userData, models) {
+  const { User, UserProfile, Role } = models;
+  const {
+    email,
+    password,
+    display_name,
+    first_name,
+    last_name,
+    role,
+    is_active = true,
+  } = userData;
+
+  // Check if user exists
+  const existingUser = await User.findOne({ where: { email } });
+  if (existingUser) {
+    const error = new Error('User already exists');
+    error.name = 'UserAlreadyExistsError';
+    throw error;
+  }
+
+  // Hash password
+  const hashedPassword = await hashPassword(password);
+
+  // Create user
+  const user = await User.create({
+    email,
+    password: hashedPassword,
+    is_active,
+    email_confirmed: true, // Admin created users are auto-confirmed
+  });
+
+  // Create profile
+  await UserProfile.create({
+    user_id: user.id,
+    display_name: display_name || email.split('@')[0],
+    first_name,
+    last_name,
+  });
+
+  // Assign role
+  if (role) {
+    const roleRecord = await Role.findOne({ where: { name: role } });
+    if (roleRecord) {
+      await user.addRole(roleRecord);
+    }
+  } else {
+    // Default role
+    const defaultRole = await Role.findOne({ where: { name: 'user' } });
+    if (defaultRole) {
+      await user.addRole(defaultRole);
+    }
+  }
+
+  // Reload with associations
+  return user.reload({
+    include: [
+      { model: UserProfile, as: 'profile' },
+      { model: Role, as: 'roles' },
+    ],
+  });
+}
+
+/**
  * Get users with pagination and search
  *
  * @param {Object} options - Query options
@@ -22,27 +92,29 @@ import { hashPassword } from '../utils/password';
 export async function getUserList(options, models) {
   const { page = 1, limit = 10, search = '', role = '', status = '' } = options;
   const offset = (page - 1) * limit;
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role } = models;
+
+  const { sequelize } = User;
+  const { Op } = sequelize.Sequelize;
 
   // Build where conditions
   const whereConditions = {};
   const profileWhereConditions = {};
+  const roleWhereConditions = {};
 
   // Search in email and display name
   if (search) {
-    whereConditions[models.Sequelize.Op.or] = [
-      { email: { [models.Sequelize.Op.like]: `%${search}%` } },
-    ];
-    profileWhereConditions[models.Sequelize.Op.or] = [
-      { display_name: { [models.Sequelize.Op.like]: `%${search}%` } },
-      { first_name: { [models.Sequelize.Op.like]: `%${search}%` } },
-      { last_name: { [models.Sequelize.Op.like]: `%${search}%` } },
+    whereConditions[Op.or] = [{ email: { [Op.like]: `%${search}%` } }];
+    profileWhereConditions[Op.or] = [
+      { display_name: { [Op.like]: `%${search}%` } },
+      { first_name: { [Op.like]: `%${search}%` } },
+      { last_name: { [Op.like]: `%${search}%` } },
     ];
   }
 
   // Filter by role
   if (role) {
-    whereConditions.role = role;
+    roleWhereConditions.name = role;
   }
 
   // Filter by status
@@ -63,7 +135,16 @@ export async function getUserList(options, models) {
         where: search ? profileWhereConditions : undefined,
         required: false,
       },
+      {
+        model: Role,
+        as: 'roles',
+        where: role ? roleWhereConditions : undefined,
+        required: !!role,
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
     ],
+    distinct: true,
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['created_at', 'DESC']],
@@ -138,6 +219,10 @@ export async function getUserById(user_id, models) {
  */
 export async function updateUserById(user_id, userData, models) {
   const { User, UserProfile } = models;
+
+  const { sequelize } = User;
+  const { Op } = sequelize.Sequelize;
+
   const {
     email,
     display_name,
@@ -164,7 +249,7 @@ export async function updateUserById(user_id, userData, models) {
   // Check if email is already taken by another user
   if (email && email !== user.email) {
     const existingUser = await User.findOne({
-      where: { email, id: { [models.Sequelize.Op.ne]: user_id } },
+      where: { email, id: { [Op.ne]: user_id } },
     });
     if (existingUser) {
       const error = new Error('User with this email already exists');
@@ -332,6 +417,9 @@ export async function updateUserLockStatus(user_id, is_locked, reason, models) {
 export async function getUserStats(models) {
   const { User, UserLogin } = models;
 
+  const { sequelize } = models;
+  const { Op } = sequelize.Sequelize;
+
   // Get user counts
   const totalUsers = await User.count();
   const activeUsers = await User.count({ where: { is_active: true } });
@@ -356,7 +444,7 @@ export async function getUserStats(models) {
   const recentRegistrations = await User.count({
     where: {
       created_at: {
-        [models.Sequelize.Op.gte]: thirtyDaysAgo,
+        [Op.gte]: thirtyDaysAgo,
       },
     },
   });
@@ -371,7 +459,7 @@ export async function getUserStats(models) {
       where: {
         success: true,
         login_at: {
-          [models.Sequelize.Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
+          [Op.gte]: new Date(new Date().setHours(0, 0, 0, 0)),
         },
       },
     });

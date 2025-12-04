@@ -139,19 +139,38 @@
   font-weight: var(--font-weight-medium);
 }
 
-.roleChips {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: wrap;
+.metaValue {
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+  font-weight: var(--font-weight-medium);
 }
 
-.roleChip {
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-primary);
-  color: white;
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
+/* Loading state */
+.loading {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+/* Error state */
+.error {
+  padding: var(--spacing-8);
+  text-align: center;
+}
+
+.error p {
+  color: #dc3545;
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-base);
+}
+
+/* Empty state */
+.empty {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
 }
 
 @media (max-width: 768px) {

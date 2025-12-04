@@ -205,11 +205,7 @@ export async function assignPermissionsToRole(req, res) {
     const models = req.app.get('models');
 
     // Assign permissions
-    const role = await roleService.assignPermissionsToRole(
-      id,
-      permission_ids,
-      models,
-    );
+    const role = await assignPermissionsToRole(id, permission_ids, models);
 
     return http.sendSuccess(res, { role });
   } catch (error) {

@@ -6,27 +6,27 @@
  */
 
 // Login action types
-export const LOGIN_START = 'user/LOGIN_START';
-export const LOGIN_SUCCESS = 'user/LOGIN_SUCCESS';
-export const LOGIN_ERROR = 'user/LOGIN_ERROR';
+export const LOGIN_START = 'me/LOGIN_START';
+export const LOGIN_SUCCESS = 'me/LOGIN_SUCCESS';
+export const LOGIN_ERROR = 'me/LOGIN_ERROR';
 
 // Register action types
-export const REGISTER_START = 'user/REGISTER_START';
-export const REGISTER_SUCCESS = 'user/REGISTER_SUCCESS';
-export const REGISTER_ERROR = 'user/REGISTER_ERROR';
+export const REGISTER_START = 'me/REGISTER_START';
+export const REGISTER_SUCCESS = 'me/REGISTER_SUCCESS';
+export const REGISTER_ERROR = 'me/REGISTER_ERROR';
 
 // Logout action type
-export const LOGOUT = 'user/LOGOUT';
+export const LOGOUT = 'me/LOGOUT';
 
 // Fetch current user action types
-export const FETCH_USER_START = 'user/FETCH_USER_START';
-export const FETCH_USER_SUCCESS = 'user/FETCH_USER_SUCCESS';
-export const FETCH_USER_ERROR = 'user/FETCH_USER_ERROR';
+export const FETCH_USER_START = 'me/FETCH_USER_START';
+export const FETCH_USER_SUCCESS = 'me/FETCH_USER_SUCCESS';
+export const FETCH_USER_ERROR = 'me/FETCH_USER_ERROR';
 
 // Reset password action types
-export const RESET_PASSWORD_START = 'user/RESET_PASSWORD_START';
-export const RESET_PASSWORD_SUCCESS = 'user/RESET_PASSWORD_SUCCESS';
-export const RESET_PASSWORD_ERROR = 'user/RESET_PASSWORD_ERROR';
+export const RESET_PASSWORD_START = 'me/RESET_PASSWORD_START';
+export const RESET_PASSWORD_SUCCESS = 'me/RESET_PASSWORD_SUCCESS';
+export const RESET_PASSWORD_ERROR = 'me/RESET_PASSWORD_ERROR';
 
 // Update user action type
-export const UPDATE_USER = 'user/UPDATE_USER';
+export const UPDATE_USER = 'me/UPDATE_USER';

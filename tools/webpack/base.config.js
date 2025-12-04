@@ -92,7 +92,7 @@ export const createCSSRule = ({ isClient, extractLoader }) => {
     postcssOptions: {
       config: path.resolve(__dirname, '..', 'postcss.config.js'),
       // SugarSS parser (for .sss files)
-      parser: file => (file?.endsWith('.sss') ? 'sugarss' : undefined),
+      parser: file => (file && file.endsWith('.sss') ? 'sugarss' : undefined),
     },
   };
 
@@ -452,12 +452,5 @@ export function createBaseConfig() {
             assetFilter: assetFilename => /\.(js|css)$/i.test(assetFilename),
           }
         : false,
-
-    // Choose a developer tool to enhance debugging
-    // https://webpack.js.org/configuration/devtool/
-    devtool: BUNDLE_SOURCE_MAPS
-      ? process.env.WEBPACK_DEVTOOL ||
-        (isDebug ? 'inline-source-map' : 'source-map')
-      : false,
   };
 }

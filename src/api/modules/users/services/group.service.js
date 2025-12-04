@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Op } from 'sequelize';
 import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
 
 // ========================================================================
@@ -70,6 +69,9 @@ export async function getGroups(options, models) {
   const offset = (page - 1) * limit;
   const { Group, Role, User } = models;
 
+  const { sequelize } = Group;
+  const { Op } = sequelize.Sequelize;
+
   const whereCondition = {};
 
   if (search) {
@@ -100,7 +102,6 @@ export async function getGroups(options, models) {
         model: User,
         as: 'users',
         through: { attributes: [] },
-        attributes: ['id'],
         required: false,
       },
     ],
@@ -457,6 +458,9 @@ export async function removeUserFromGroup(group_id, user_id, models) {
 export async function getGroupCategories(models) {
   const { Group } = models;
 
+  const { sequelize } = Group;
+  const { Op } = sequelize.Sequelize;
+
   const categories = await Group.findAll({
     attributes: [
       [
@@ -485,6 +489,9 @@ export async function getGroupCategories(models) {
 export async function getGroupTypes(models) {
   const { Group } = models;
 
+  const { sequelize } = Group;
+  const { Op } = sequelize.Sequelize;
+
   const types = await Group.findAll({
     attributes: [
       [models.Sequelize.fn('DISTINCT', models.Sequelize.col('type')), 'type'],
@@ -509,6 +516,9 @@ export async function getGroupTypes(models) {
  */
 export async function getGroupStats(models) {
   const { Group } = models;
+
+  const { sequelize } = Group;
+  const { Op } = sequelize.Sequelize;
 
   const totalGroups = await Group.count();
 

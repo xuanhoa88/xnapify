@@ -20,7 +20,7 @@ import {
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
   setLocale,
-  getCurrentUser,
+  me,
   setRuntimeVariable,
 } from './redux';
 import { createFetch } from './createFetch';
@@ -229,7 +229,7 @@ async function createReduxStore(req, fetch, locale) {
   // If we have a user from JWT, fetch full profile for SSR to get display_name
   if (user && user.id) {
     try {
-      await store.dispatch(getCurrentUser());
+      await store.dispatch(me());
       if (__DEV__) {
         console.log('✅ User authenticated from session');
       }

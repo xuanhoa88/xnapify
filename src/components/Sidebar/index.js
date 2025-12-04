@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -30,6 +30,14 @@ function Sidebar() {
   const isAuth = useSelector(isAuthenticated);
   const isAdminActive = useSelector(isAdmin);
 
+  // Track current path on client-side only to prevent hydration mismatch
+  const [currentPath, setCurrentPath] = useState('');
+
+  // Update current path only on client-side after hydration
+  useEffect(() => {
+    setCurrentPath(getCurrentLocation().pathname);
+  }, []);
+
   const handleCloseSidebar = useCallback(() => {
     dispatch(closeSidebar());
   }, [dispatch]);
@@ -39,13 +47,18 @@ function Sidebar() {
     handleCloseSidebar();
   }, [dispatch, handleCloseSidebar]);
 
-  const isActive = useCallback((path, exact = false) => {
-    const currentPath = getCurrentLocation().pathname;
-    if (exact) {
-      return currentPath === path;
-    }
-    return currentPath.startsWith(path);
-  }, []);
+  const isActive = useCallback(
+    (path, exact = false) => {
+      // Return false during SSR to match initial server render
+      if (!currentPath) return false;
+
+      if (exact) {
+        return currentPath === path;
+      }
+      return currentPath.startsWith(path);
+    },
+    [currentPath],
+  );
 
   // Admin Menu Items
   const adminMenuItems = [

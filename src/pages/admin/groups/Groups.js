@@ -31,6 +31,8 @@ function Groups() {
   const loading = useSelector(getGroupsLoading);
   const error = useSelector(getGroupsError);
 
+  console.log(groups);
+
   useEffect(() => {
     // Fetch groups on component mount
     dispatch(fetchGroups({ page: 1, limit: 20 }));

@@ -66,9 +66,9 @@ export {
   login,
   register,
   logout,
-  getCurrentUser,
+  me,
   resetPassword,
-  updateUser,
+  updateCurrentUser,
   // Constants
   LOGIN_START,
   LOGIN_SUCCESS,
@@ -85,12 +85,12 @@ export {
   RESET_PASSWORD_ERROR,
   UPDATE_USER,
   // Selectors
-  getUser,
+  getCurrentUser,
   isAuthenticated,
   isAdmin,
-  getUserId,
-  getUserEmail,
-  getUserDisplayName,
+  getCurrentUserId,
+  getCurrentUserEmail,
+  getCurrentUserDisplayName,
   // Reducer (default export from feature)
   default as userReducer,
 } from './user';
@@ -156,3 +156,98 @@ export {
   // Reducer (default export from feature)
   default as groupsReducer,
 } from './groups';
+
+// =============================================================================
+// FEATURE: ROLES (Role Management)
+// =============================================================================
+export {
+  // Actions
+  fetchRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  // Constants
+  FETCH_ROLES_START,
+  FETCH_ROLES_SUCCESS,
+  FETCH_ROLES_ERROR,
+  CREATE_ROLE_START,
+  CREATE_ROLE_SUCCESS,
+  CREATE_ROLE_ERROR,
+  UPDATE_ROLE_START,
+  UPDATE_ROLE_SUCCESS,
+  UPDATE_ROLE_ERROR,
+  DELETE_ROLE_START,
+  DELETE_ROLE_SUCCESS,
+  DELETE_ROLE_ERROR,
+  // Selectors
+  getRoles,
+  getCurrentRole,
+  getRolesPagination,
+  getRolesLoading,
+  getRolesError,
+  getRoleById,
+  // Reducer (default export from feature)
+  default as rolesReducer,
+} from './roles';
+
+// =============================================================================
+// FEATURE: PERMISSIONS (Permission Management)
+// =============================================================================
+export {
+  // Actions
+  fetchPermissions,
+  createPermission,
+  updatePermission,
+  deletePermission,
+  // Constants
+  FETCH_PERMISSIONS_START,
+  FETCH_PERMISSIONS_SUCCESS,
+  FETCH_PERMISSIONS_ERROR,
+  CREATE_PERMISSION_START,
+  CREATE_PERMISSION_SUCCESS,
+  CREATE_PERMISSION_ERROR,
+  UPDATE_PERMISSION_START,
+  UPDATE_PERMISSION_SUCCESS,
+  UPDATE_PERMISSION_ERROR,
+  DELETE_PERMISSION_START,
+  DELETE_PERMISSION_SUCCESS,
+  DELETE_PERMISSION_ERROR,
+  // Selectors
+  getPermissions,
+  getPermissionsPagination,
+  getPermissionsLoading,
+  getPermissionsError,
+  getPermissionById,
+  // Reducer (default export from feature)
+  default as permissionsReducer,
+} from './permissions';
+
+// =============================================================================
+// FEATURE: USERS MANAGEMENT (Admin User Management)
+// =============================================================================
+export {
+  // Actions
+  fetchUsers,
+  deleteUser,
+  updateUserStatus,
+  createUser,
+  updateUser,
+  // Constants
+  FETCH_USERS_START,
+  FETCH_USERS_SUCCESS,
+  FETCH_USERS_ERROR,
+  DELETE_USER_START,
+  DELETE_USER_SUCCESS,
+  DELETE_USER_ERROR,
+  UPDATE_USER_STATUS_START,
+  UPDATE_USER_STATUS_SUCCESS,
+  UPDATE_USER_STATUS_ERROR,
+  // Selectors
+  getUsers,
+  getUsersPagination,
+  getUsersLoading,
+  getUsersError,
+  getUserById,
+  // Reducer (default export from feature)
+  default as usersManagementReducer,
+} from './usersManagement';

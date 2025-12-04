@@ -59,12 +59,15 @@ export async function getPermissions(options, models) {
   const offset = (page - 1) * limit;
   const { Permission } = models;
 
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
   const whereCondition = {};
 
   if (search) {
-    whereCondition[models.Sequelize.Op.or] = [
-      { name: { [models.Sequelize.Op.like]: `%${search}%` } },
-      { description: { [models.Sequelize.Op.like]: `%${search}%` } },
+    whereCondition[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } },
     ];
   }
 

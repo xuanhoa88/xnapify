@@ -6,6 +6,9 @@
  */
 
 import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
+import { createRole } from './role.service';
+import { createDefaultPermissions } from './permission.service';
+import { createDefaultGroups } from './group.service';
 
 // ========================================================================
 // USER RBAC ASSIGNMENT SERVICES
@@ -584,15 +587,16 @@ export async function bulkAssignRolesToUsers(user_ids, role_ids, models) {
  * @returns {Promise<Object>} Setup result
  */
 export async function initializeDefaultRBAC(models) {
-  const { roleService } = require('./role.service');
-  const { permissionService } = require('./permission.service');
-  const { groupService } = require('./group.service');
+  const { Permission } = models;
+
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
 
   // Create default permissions
-  const permissions = await permissionService.createDefaultPermissions(models);
+  const permissions = await createDefaultPermissions(models);
 
   // Create default roles
-  const adminRole = await roleService.createRole(
+  const adminRole = await createRole(
     {
       name: 'admin',
       description: 'System Administrator - Full access',
@@ -600,7 +604,7 @@ export async function initializeDefaultRBAC(models) {
     models,
   );
 
-  const userRole = await roleService.createRole(
+  const userRole = await createRole(
     {
       name: 'user',
       description: 'Regular User - Basic access',
@@ -608,7 +612,7 @@ export async function initializeDefaultRBAC(models) {
     models,
   );
 
-  const moderatorRole = await roleService.createRole(
+  const moderatorRole = await createRole(
     {
       name: 'moderator',
       description: 'Content Moderator - Limited admin access',
@@ -617,32 +621,27 @@ export async function initializeDefaultRBAC(models) {
   );
 
   // Create default groups
-  const groups = await groupService.createDefaultGroups(models);
+  const groups = await createDefaultGroups(models);
 
   // Assign all permissions to admin role
-  const allPermissions = await models.Permission.findAll();
+  const allPermissions = await Permission.findAll();
   await adminRole.setPermissions(allPermissions);
 
   // Assign basic permissions to user role
-  const basicPermissions = await models.Permission.findAll({
+  const basicPermissions = await Permission.findAll({
     where: {
       name: {
-        [models.Sequelize.Op.in]: [
-          'users:read',
-          'posts:read',
-          'comments:read',
-          'files:read',
-        ],
+        [Op.in]: ['users:read', 'posts:read', 'comments:read', 'files:read'],
       },
     },
   });
   await userRole.setPermissions(basicPermissions);
 
   // Assign moderation permissions to moderator role
-  const moderationPermissions = await models.Permission.findAll({
+  const moderationPermissions = await Permission.findAll({
     where: {
       name: {
-        [models.Sequelize.Op.in]: [
+        [Op.in]: [
           'users:read',
           'posts:read',
           'posts:write',

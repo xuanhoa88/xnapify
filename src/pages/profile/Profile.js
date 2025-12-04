@@ -5,17 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { getUser, updateUser } from '../../redux';
+import { getCurrentUser, updateCurrentUser } from '../../redux';
 import s from './Profile.css';
 
 function Profile({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const user = useSelector(getUser);
+  const user = useSelector(getCurrentUser);
 
   const [formData, setFormData] = useState({
     display_name: '',
@@ -41,33 +41,38 @@ function Profile({ title }) {
     }
   }, [user]);
 
-  const handleChange = e => {
+  const handleChange = useCallback(e => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
+  }, []);
 
-  const handleSubmit = async e => {
-    e.preventDefault();
-    setLoading(true);
-    setMessage({ type: '', text: '' });
+  const handleSubmit = useCallback(
+    async e => {
+      e.preventDefault();
+      setLoading(true);
+      setMessage({ type: '', text: '' });
 
-    const result = await dispatch(updateUser(formData));
+      const result = await dispatch(updateCurrentUser(formData));
 
-    setLoading(false);
-    if (result.success) {
-      setMessage({ type: 'success', text: 'Profile updated successfully' });
-    } else {
-      setMessage({
-        type: 'error',
-        text: result.error || 'Failed to update profile',
-      });
-    }
-  };
+      setLoading(false);
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Profile updated successfully' });
+      } else {
+        setMessage({
+          type: 'error',
+          text: result.error || 'Failed to update profile',
+        });
+      }
+    },
+    [dispatch, formData],
+  );
 
   // Get first letter of display name for avatar
-  const avatarInitial = formData.display_name
-    ? formData.display_name.charAt(0).toUpperCase()
-    : 'U';
+  const avatarInitial = useMemo(() => {
+    return formData.display_name
+      ? formData.display_name.charAt(0).toUpperCase()
+      : 'U';
+  }, [formData.display_name]);
 
   return (
     <div className={s.root}>
@@ -103,7 +108,7 @@ function Profile({ title }) {
             <div className={s.col}>
               <div className={s.formGroup}>
                 <label className={s.label} htmlFor='first_name'>
-                  First Name:
+                  {t('profile.firstName')}
                   <input
                     className={s.input}
                     id='first_name'
@@ -118,7 +123,7 @@ function Profile({ title }) {
             <div className={s.col}>
               <div className={s.formGroup}>
                 <label className={s.label} htmlFor='last_name'>
-                  Last Name:
+                  {t('profile.lastName')}
                   <input
                     className={s.input}
                     id='last_name'
@@ -134,7 +139,7 @@ function Profile({ title }) {
 
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='bio'>
-              Bio:
+              {t('profile.bio')}
               <textarea
                 className={s.textarea}
                 id='bio'
@@ -148,7 +153,7 @@ function Profile({ title }) {
 
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='location'>
-              Location:
+              {t('profile.location')}
               <input
                 className={s.input}
                 id='location'
@@ -162,7 +167,7 @@ function Profile({ title }) {
 
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='website'>
-              Website:
+              {t('profile.website')}
               <input
                 className={s.input}
                 id='website'
@@ -176,12 +181,12 @@ function Profile({ title }) {
 
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='email'>
-              Email (read-only):
+              {t('profile.email')}
               <input
                 className={s.input}
                 id='email'
                 type='email'
-                value={user?.email || ''}
+                value={(user && user.email) || ''}
                 readOnly
                 disabled
               />
@@ -190,7 +195,7 @@ function Profile({ title }) {
 
           <div className={s.formGroup}>
             <button className={s.button} type='submit' disabled={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
+              {loading ? t('profile.saving') : t('profile.saveChanges')}
             </button>
           </div>
         </form>
