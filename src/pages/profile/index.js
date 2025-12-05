@@ -8,9 +8,9 @@
 import Layout from '../../components/Layout';
 import Profile from './Profile';
 
-const title = 'User Profile';
+function action({ i18n }) {
+  const title = i18n.t('navigation.profile', 'User Profile');
 
-function action() {
   return {
     title,
     component: (

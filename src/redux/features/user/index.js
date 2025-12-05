@@ -9,24 +9,10 @@
 export * from './constants';
 
 // Public API - Actions
-export {
-  login,
-  register,
-  logout,
-  me,
-  resetPassword,
-  updateCurrentUser,
-} from './actions';
+export * from './actions';
 
 // Public API - Selectors
-export {
-  getCurrentUser,
-  isAuthenticated,
-  isAdmin,
-  getCurrentUserId,
-  getCurrentUserEmail,
-  getCurrentUserDisplayName,
-} from './reducer';
+export * from './selector';
 
 // Public API - Reducer
 export { default } from './reducer';

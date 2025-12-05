@@ -50,8 +50,3 @@ export default function ui(state = initialState, action) {
       return state;
   }
 }
-
-// Selectors
-export const isSidebarOpen = state => state.ui.sidebarOpen;
-export const isAdminPanel = state => state.ui.isAdminPanel;
-export const shouldShowPageHeader = state => state.ui.showPageHeader;

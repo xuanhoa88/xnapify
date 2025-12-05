@@ -30,6 +30,7 @@
     "success": "<0>Thành công!</0> Nếu có tài khoản với email này, bạn sẽ nhận được một liên kết để reset mật khẩu."
   },
   "profile": {
+    "displayName": "Tên hiển thị",
     "firstName": "Tên",
     "lastName": "Họ",
     "bio": "Giới thiệu",

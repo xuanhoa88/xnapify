@@ -6,28 +6,13 @@
  */
 
 // Public API - Actions
-export { setRuntimeVariable } from './actions';
+export * from './actions';
 
 // Public API - Constants (for external use if needed)
-export { SET_RUNTIME_VARIABLE } from './constants';
+export * from './constants';
 
 // Public API - Selectors
-/**
- * Get a runtime variable by name
- *
- * @param {Object} state - Redux state
- * @param {string} name - Variable name
- * @param {*} defaultValue - Default value if variable doesn't exist
- * @returns {*} Variable value or defaultValue
- *
- * @example
- * const appName = getRuntimeVariable(state, 'appName', 'Default App');
- * const availableLocales = getRuntimeVariable(state, 'availableLocales', {});
- */
-export const getRuntimeVariable = (state, name, defaultValue) => {
-  const value = state.runtime && state.runtime[name];
-  return value != null ? value : defaultValue;
-};
+export * from './selector';
 
 // Public API - Reducer
 export { default } from './reducer';

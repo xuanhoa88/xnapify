@@ -92,7 +92,7 @@ function Profile({ title }) {
         <form onSubmit={handleSubmit}>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='display_name'>
-              {t('navigation.profile')}:
+              {t('profile.displayName')}
               <input
                 className={s.input}
                 id='display_name'

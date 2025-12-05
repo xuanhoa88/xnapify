@@ -7,9 +7,5 @@
 
 export * from './constants';
 export * from './actions';
-export {
-  default,
-  isSidebarOpen,
-  isAdminPanel,
-  shouldShowPageHeader,
-} from './reducer';
+export * from './selector';
+export { default } from './reducer';

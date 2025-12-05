@@ -30,6 +30,7 @@
     "success": "<0>Success!</0> If an account exists with that email, you will receive a password reset link shortly."
   },
   "profile": {
+    "displayName": "Display Name",
     "firstName": "First Name",
     "lastName": "Last Name",
     "bio": "Bio",

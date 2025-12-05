@@ -5,27 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// Public API - Constants (for external use if needed)
+export { LOCALE_COOKIE_MAX_AGE, LOCALE_COOKIE_NAME } from './constants';
+
 // Public API - Actions
 export { setLocale } from './actions';
 
-// Public API - Constants (for external use if needed)
-export {
-  LOCALE_COOKIE_MAX_AGE,
-  LOCALE_COOKIE_NAME,
-  SET_LOCALE_START,
-  SET_LOCALE_SUCCESS,
-  SET_LOCALE_ERROR,
-  SET_LOCALE_FALLBACK,
-} from './constants';
-
 // Public API - Selectors
-export {
-  getLocale,
-  getLocaleLoading,
-  isLocaleLoading,
-  getLocaleMessages,
-  getLocaleFallback,
-} from './reducer';
+export * from './selector';
 
 // Public API - Reducer
 export { default } from './reducer';

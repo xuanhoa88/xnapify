@@ -8,7 +8,12 @@
 import { useCallback } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
-import { LOCALE_COOKIE_NAME, setLocale } from '../../../redux';
+import {
+  getLocale,
+  LOCALE_COOKIE_NAME,
+  setLocale,
+  getRuntimeVariable,
+} from '../../../redux';
 import s from './LanguageSwitcher.css';
 
 /**
@@ -18,11 +23,11 @@ import s from './LanguageSwitcher.css';
 function LanguageSwitcher() {
   // Redux hooks
   const dispatch = useDispatch();
-  const currentLocale = useSelector(state => state.intl.locale);
+  const currentLocale = useSelector(getLocale);
 
   // Get available locales from runtime variables
-  const availableLocales = useSelector(
-    state => state.runtime.availableLocales || {},
+  const availableLocales = useSelector(state =>
+    getRuntimeVariable(state, 'availableLocales'),
   );
 
   /**
