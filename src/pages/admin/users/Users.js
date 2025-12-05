@@ -8,7 +8,14 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
-import { fetchUsers, deleteUser } from '../../../redux';
+import {
+  fetchUsers,
+  deleteUser,
+  getUsers,
+  getUsersPagination,
+  getUsersLoading,
+  getUsersError,
+} from '../../../redux';
 import CreateUserModal from './CreateUserModal';
 import EditUserModal from './EditUserModal';
 import s from './Users.css';
@@ -34,9 +41,10 @@ const formatDate = dateString => {
 
 function Users() {
   const dispatch = useDispatch();
-  const { users, pagination, loading, error } = useSelector(
-    state => state.usersManagement,
-  );
+  const users = useSelector(getUsers);
+  const pagination = useSelector(getUsersPagination);
+  const loading = useSelector(getUsersLoading);
+  const error = useSelector(getUsersError);
 
   const [search, setSearch] = useState('');
   const [inputValue, setInputValue] = useState('');

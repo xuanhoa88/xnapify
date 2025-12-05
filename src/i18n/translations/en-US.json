@@ -53,6 +53,11 @@
     "admin": "Admin Panel",
     "privacy": "Privacy",
     "notFound": "Not Found",
+    "backToSite": "Back to Site",
+    "users": "Users",
+    "roles": "Roles",
+    "groups": "Groups",
+    "permissions": "Permissions",
     "separator": {
       "or": "or"
     }

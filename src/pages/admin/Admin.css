@@ -169,16 +169,6 @@
   color: #92400e;
 }
 
-.badgeDanger {
-  background: #fee2e2;
-  color: #991b1b;
-}
-
-.badgeInfo {
-  background: #dbeafe;
-  color: #1e40af;
-}
-
 /* Loading state */
 .loading {
   padding: var(--spacing-8);
@@ -213,6 +203,28 @@
   text-align: center;
   color: var(--color-text-secondary);
   font-size: var(--font-size-base);
+}
+
+/* Retry button */
+.retryButton {
+  padding: var(--spacing-3) var(--spacing-6);
+  background: var(--gradient-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.retryButton:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.retryButton:active {
+  transform: translateY(0);
 }
 
 /* Responsive */

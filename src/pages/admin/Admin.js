@@ -9,7 +9,13 @@ import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import { fetchDashboard } from '../../redux';
+import {
+  fetchDashboard,
+  getDashboardStats,
+  getDashboardLoading,
+  getDashboardError,
+  getDashboardRecentActivity,
+} from '../../redux';
 import s from './Admin.css';
 
 /**
@@ -41,15 +47,15 @@ const formatRelativeTime = dateString => {
  * The default dashboard displays system statistics and recent activity.
  *
  * @param {Object} props - Component props
- * @param {string} [props.title] - Page title for SEO and accessibility
  * @param {React.ReactNode} [props.children] - Child components to render (admin sub-pages)
  * @returns {JSX.Element} Admin layout component
  */
-function Admin({ title, children }) {
+function Admin({ children }) {
   const dispatch = useDispatch();
-  const { stats, recentActivity, loading, error } = useSelector(
-    state => state.dashboard,
-  );
+  const stats = useSelector(getDashboardStats);
+  const loading = useSelector(getDashboardLoading);
+  const error = useSelector(getDashboardError);
+  const recentActivity = useSelector(getDashboardRecentActivity);
 
   useEffect(() => {
     // Only fetch dashboard data if we're showing the default dashboard
@@ -74,7 +80,7 @@ function Admin({ title, children }) {
         <div className={s.error}>
           <p>Error loading dashboard: {error}</p>
           <button
-            className={s.addButton}
+            className={s.retryButton}
             onClick={() => dispatch(fetchDashboard())}
           >
             Retry

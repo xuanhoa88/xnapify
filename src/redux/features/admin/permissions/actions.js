@@ -29,11 +29,13 @@ import {
  * @param {string} params.search - Search term
  * @returns {Function} Redux thunk action
  */
-export function fetchPermissions({ page = 1, limit = 100, search = '' } = {}) {
+export function fetchPermissions(options = {}) {
   return async (dispatch, getState, { fetch }) => {
     dispatch({ type: FETCH_PERMISSIONS_START });
 
     try {
+      const { page = 1, limit = 100, search = '' } = options || {};
+
       const params = new URLSearchParams();
       if (page) params.append('page', page);
       if (limit) params.append('limit', limit);

@@ -5,19 +5,25 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchPermissions, deletePermission } from '../../../redux';
+import {
+  fetchPermissions,
+  deletePermission,
+  getPermissions,
+  getPermissionsLoading,
+  getPermissionsError,
+} from '../../../redux';
 import s from './Permissions.css';
 
 function Permissions() {
   const dispatch = useDispatch();
-  const { permissions, loading, error } = useSelector(
-    state => state.permissions,
-  );
+  const permissions = useSelector(getPermissions);
+  const loading = useSelector(getPermissionsLoading);
+  const error = useSelector(getPermissionsError);
 
   useEffect(() => {
-    dispatch(fetchPermissions({ limit: 1000 }));
+    dispatch(fetchPermissions({ page: 1 }));
   }, [dispatch]);
 
   const handleDelete = useCallback(
@@ -39,16 +45,19 @@ function Permissions() {
   );
 
   // Group permissions by resource
-  const groupedPermissions = permissions.reduce((acc, permission) => {
-    const resource = permission.resource || 'Other';
-    if (!acc[resource]) {
-      acc[resource] = [];
-    }
-    acc[resource].push(permission);
-    return acc;
-  }, {});
+  const { groupedPermissions, categories } = useMemo(() => {
+    const groupedPermissions = permissions.reduce((acc, permission) => {
+      const resource = permission.resource || 'Other';
+      if (!acc[resource]) {
+        acc[resource] = [];
+      }
+      acc[resource].push(permission);
+      return acc;
+    }, {});
 
-  const categories = Object.keys(groupedPermissions).sort();
+    const categories = Object.keys(groupedPermissions).sort();
+    return { groupedPermissions, categories };
+  }, [permissions]);
 
   if (loading) {
     return (
@@ -71,7 +80,7 @@ function Permissions() {
           <p>Error loading permissions: {error}</p>
           <button
             className={s.addButton}
-            onClick={() => dispatch(fetchPermissions({ limit: 1000 }))}
+            onClick={() => dispatch(fetchPermissions())}
           >
             Retry
           </button>

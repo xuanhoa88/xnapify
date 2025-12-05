@@ -26,7 +26,7 @@ const getRoleIcon = roleName => {
 
 function Roles() {
   const dispatch = useDispatch();
-  const { roles, loading, error } = useSelector(state => state.roles);
+  const { roles, loading, error } = useSelector(state => state.admin.roles);
 
   useEffect(() => {
     dispatch(fetchRoles({ limit: 100 }));

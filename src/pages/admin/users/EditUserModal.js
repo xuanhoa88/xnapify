@@ -8,13 +8,18 @@
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { updateUser, fetchRoles } from '../../../redux';
+import {
+  updateUser,
+  fetchRoles,
+  getRoles,
+  getRolesLoading,
+} from '../../../redux';
 import s from './Users.css';
 
 function EditUserModal({ user, onClose }) {
   const dispatch = useDispatch();
-  const roles = useSelector(state => state.roles.roles);
-  const rolesLoading = useSelector(state => state.roles.loading);
+  const roles = useSelector(getRoles);
+  const rolesLoading = useSelector(getRolesLoading);
 
   const [formData, setFormData] = useState({
     display_name: '',

@@ -14,7 +14,9 @@ import {
 const initialState = {
   stats: {
     totalUsers: 0,
-    activeRoles: 0,
+    totalGroups: 0,
+    totalPermissions: 0,
+    totalRoles: 0,
     systemStatus: 'Unknown',
     uptime: '0%',
   },

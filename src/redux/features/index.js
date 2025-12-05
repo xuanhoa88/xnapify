@@ -119,17 +119,46 @@ export {
 } from './ui';
 
 // =============================================================================
-// FEATURE: GROUPS (Group Management)
+// FEATURE: ADMIN (Admin Features)
 // =============================================================================
 export {
-  // Actions
+  // Roles Actions
+  fetchRoles,
+  createRole,
+  updateRole,
+  deleteRole,
+  // Groups Actions
   fetchGroups,
   fetchGroupById,
   createGroup,
   updateGroup,
   deleteGroup,
   clearGroupsError,
-  // Constants
+  // Permissions Actions
+  fetchPermissions,
+  createPermission,
+  updatePermission,
+  deletePermission,
+  // Users Actions
+  fetchUsers,
+  deleteUser,
+  updateUserStatus,
+  createUser,
+  updateUser,
+  // Roles Constants
+  FETCH_ROLES_START,
+  FETCH_ROLES_SUCCESS,
+  FETCH_ROLES_ERROR,
+  CREATE_ROLE_START,
+  CREATE_ROLE_SUCCESS,
+  CREATE_ROLE_ERROR,
+  UPDATE_ROLE_START,
+  UPDATE_ROLE_SUCCESS,
+  UPDATE_ROLE_ERROR,
+  DELETE_ROLE_START,
+  DELETE_ROLE_SUCCESS,
+  DELETE_ROLE_ERROR,
+  // Groups Constants
   FETCH_GROUPS_START,
   FETCH_GROUPS_SUCCESS,
   FETCH_GROUPS_ERROR,
@@ -146,60 +175,7 @@ export {
   DELETE_GROUP_SUCCESS,
   DELETE_GROUP_ERROR,
   CLEAR_GROUPS_ERROR,
-  // Selectors
-  getGroups,
-  getCurrentGroup,
-  getGroupsPagination,
-  getGroupsLoading,
-  getGroupsError,
-  getGroupById,
-  // Reducer (default export from feature)
-  default as groupsReducer,
-} from './groups';
-
-// =============================================================================
-// FEATURE: ROLES (Role Management)
-// =============================================================================
-export {
-  // Actions
-  fetchRoles,
-  createRole,
-  updateRole,
-  deleteRole,
-  // Constants
-  FETCH_ROLES_START,
-  FETCH_ROLES_SUCCESS,
-  FETCH_ROLES_ERROR,
-  CREATE_ROLE_START,
-  CREATE_ROLE_SUCCESS,
-  CREATE_ROLE_ERROR,
-  UPDATE_ROLE_START,
-  UPDATE_ROLE_SUCCESS,
-  UPDATE_ROLE_ERROR,
-  DELETE_ROLE_START,
-  DELETE_ROLE_SUCCESS,
-  DELETE_ROLE_ERROR,
-  // Selectors
-  getRoles,
-  getCurrentRole,
-  getRolesPagination,
-  getRolesLoading,
-  getRolesError,
-  getRoleById,
-  // Reducer (default export from feature)
-  default as rolesReducer,
-} from './roles';
-
-// =============================================================================
-// FEATURE: PERMISSIONS (Permission Management)
-// =============================================================================
-export {
-  // Actions
-  fetchPermissions,
-  createPermission,
-  updatePermission,
-  deletePermission,
-  // Constants
+  // Permissions Constants
   FETCH_PERMISSIONS_START,
   FETCH_PERMISSIONS_SUCCESS,
   FETCH_PERMISSIONS_ERROR,
@@ -212,27 +188,7 @@ export {
   DELETE_PERMISSION_START,
   DELETE_PERMISSION_SUCCESS,
   DELETE_PERMISSION_ERROR,
-  // Selectors
-  getPermissions,
-  getPermissionsPagination,
-  getPermissionsLoading,
-  getPermissionsError,
-  getPermissionById,
-  // Reducer (default export from feature)
-  default as permissionsReducer,
-} from './permissions';
-
-// =============================================================================
-// FEATURE: USERS MANAGEMENT (Admin User Management)
-// =============================================================================
-export {
-  // Actions
-  fetchUsers,
-  deleteUser,
-  updateUserStatus,
-  createUser,
-  updateUser,
-  // Constants
+  // Users Constants
   FETCH_USERS_START,
   FETCH_USERS_SUCCESS,
   FETCH_USERS_ERROR,
@@ -242,26 +198,49 @@ export {
   UPDATE_USER_STATUS_START,
   UPDATE_USER_STATUS_SUCCESS,
   UPDATE_USER_STATUS_ERROR,
-  // Selectors
+  CREATE_USER_START,
+  CREATE_USER_SUCCESS,
+  CREATE_USER_ERROR,
+  UPDATE_USER_START,
+  UPDATE_USER_SUCCESS,
+  UPDATE_USER_ERROR,
+  // Roles Selectors
+  getRoles,
+  getCurrentRole,
+  getRolesPagination,
+  getRolesLoading,
+  getRolesError,
+  getRoleById,
+  // Groups Selectors
+  getGroups,
+  getCurrentGroup,
+  getGroupsPagination,
+  getGroupsLoading,
+  getGroupsError,
+  getGroupById,
+  // Permissions Selectors
+  getPermissions,
+  getPermissionsPagination,
+  getPermissionsLoading,
+  getPermissionsError,
+  getPermissionById,
+  // Users Selectors
   getUsers,
   getUsersPagination,
   getUsersLoading,
   getUsersError,
   getUserById,
-  // Reducer (default export from feature)
-  default as usersManagementReducer,
-} from './usersManagement';
-
-// =============================================================================
-// FEATURE: DASHBOARD (Admin Dashboard)
-// =============================================================================
-export {
-  // Actions
+  // Dashboard Actions
   fetchDashboard,
-  // Constants
+  // Dashboard Constants
   FETCH_DASHBOARD_START,
   FETCH_DASHBOARD_SUCCESS,
   FETCH_DASHBOARD_ERROR,
+  // Dashboard Selectors
+  getDashboardStats,
+  getDashboardRecentActivity,
+  getDashboardLoading,
+  getDashboardError,
   // Reducer (default export from feature)
-  default as dashboardReducer,
-} from './dashboard';
+  default as adminReducer,
+} from './admin';

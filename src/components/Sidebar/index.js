@@ -17,7 +17,7 @@ import {
   isAdmin,
   logout,
 } from '../../redux';
-import { getCurrentLocation } from '../../navigator';
+import { getCurrentLocation, onNavigationChange } from '../../navigator';
 import Link from '../Link';
 import s from './Sidebar.css';
 
@@ -33,9 +33,17 @@ function Sidebar() {
   // Track current path on client-side only to prevent hydration mismatch
   const [currentPath, setCurrentPath] = useState('');
 
-  // Update current path only on client-side after hydration
+  // Update current path on client-side after hydration and on route changes
   useEffect(() => {
+    // Set initial path
     setCurrentPath(getCurrentLocation().pathname);
+
+    // Listen for route changes using the navigator's onNavigationChange
+    const unsubscribe = onNavigationChange(location => {
+      setCurrentPath(location.pathname);
+    });
+
+    return unsubscribe;
   }, []);
 
   const handleCloseSidebar = useCallback(() => {
@@ -62,23 +70,40 @@ function Sidebar() {
 
   // Admin Menu Items
   const adminMenuItems = [
-    { path: '/admin', label: 'Dashboard', icon: '📊', exact: true },
-    { path: '/admin/users', label: 'Users', icon: '👥' },
-    { path: '/admin/roles', label: 'Roles', icon: '🎭' },
-    { path: '/admin/groups', label: 'Groups', icon: '👨‍👩‍👧‍👦' },
-    { path: '/admin/permissions', label: 'Permissions', icon: '🔐' },
+    {
+      path: '/admin',
+      label: t('navigation.admin', 'Admin Panel'),
+      icon: '📊',
+      exact: true,
+    },
+    { path: '/admin/users', label: t('navigation.users', 'Users'), icon: '👥' },
+    { path: '/admin/roles', label: t('navigation.roles', 'Roles'), icon: '🎭' },
+    {
+      path: '/admin/groups',
+      label: t('navigation.groups', 'Groups'),
+      icon: '👨‍👩‍👧‍👦',
+    },
+    {
+      path: '/admin/permissions',
+      label: t('navigation.permissions', 'Permissions'),
+      icon: '🔐',
+    },
   ];
 
   // Primary Menu Items
   const primaryMenuItems = [
-    { path: '/about', label: t('navigation.about'), icon: 'ℹ️' },
-    { path: '/contact', label: t('navigation.contact'), icon: '📞' },
+    { path: '/about', label: t('navigation.about', 'About'), icon: 'ℹ️' },
+    { path: '/contact', label: t('navigation.contact', 'Contact'), icon: '📞' },
   ];
 
   if (!isAuth) {
     primaryMenuItems.push(
-      { path: '/login', label: t('navigation.login'), icon: '🔑' },
-      { path: '/register', label: t('navigation.register'), icon: '📝' },
+      { path: '/login', label: t('navigation.login', 'Login'), icon: '🔑' },
+      {
+        path: '/register',
+        label: t('navigation.register', 'Register'),
+        icon: '📝',
+      },
     );
   }
 
@@ -146,7 +171,9 @@ function Sidebar() {
                     onClick={handleCloseSidebar}
                   >
                     <span className={s.menuIcon}>🏠</span>
-                    <span className={s.menuLabel}>Back to Site</span>
+                    <span className={s.menuLabel}>
+                      {t('navigation.backToSite', 'Back to Site')}
+                    </span>
                   </Link>
                 </li>
               </ul>

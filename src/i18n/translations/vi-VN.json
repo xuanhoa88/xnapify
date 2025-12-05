@@ -53,6 +53,11 @@
     "admin": "Quản trị",
     "privacy": "Bảo mật",
     "notFound": "Không tìm thấy",
+    "backToSite": "Quay lại trang web",
+    "users": "Người dùng",
+    "roles": "Vai trò",
+    "groups": "Nhóm",
+    "permissions": "Quyền",
     "separator": {
       "or": "hoặc"
     }
