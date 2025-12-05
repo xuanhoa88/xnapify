@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -13,13 +13,18 @@ import {
   fetchRoles,
   getRoles,
   getRolesLoading,
+  fetchGroups,
+  getGroups,
+  getGroupsLoading,
 } from '../../../redux';
-import s from './Users.css';
+import s from './UserModal.css';
 
 function CreateUserModal({ onClose }) {
   const dispatch = useDispatch();
   const roles = useSelector(getRoles);
   const rolesLoading = useSelector(getRolesLoading);
+  const groups = useSelector(getGroups);
+  const groupsLoading = useSelector(getGroupsLoading);
 
   const [formData, setFormData] = useState({
     email: '',
@@ -29,14 +34,17 @@ function CreateUserModal({ onClose }) {
     first_name: '',
     last_name: '',
     role: ['user'],
+    groups: [],
     is_active: true,
   });
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [roleSearch, setRoleSearch] = useState('');
+  const [groupSearch, setGroupSearch] = useState('');
 
   useEffect(() => {
     dispatch(fetchRoles());
+    dispatch(fetchGroups());
   }, [dispatch]);
 
   const handleChange = useCallback(e => {
@@ -54,6 +62,16 @@ function CreateUserModal({ onClose }) {
       role: checked
         ? [...prev.role, value]
         : prev.role.filter(r => r !== value),
+    }));
+  }, []);
+
+  const handleGroupChange = useCallback(e => {
+    const { value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      groups: checked
+        ? [...prev.groups, value]
+        : prev.groups.filter(g => g !== value),
     }));
   }, []);
 
@@ -86,11 +104,29 @@ function CreateUserModal({ onClose }) {
   );
 
   // Filter roles based on search
-  const filteredRoles = roles.filter(
-    role =>
-      role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
-      (role.description &&
-        role.description.toLowerCase().includes(roleSearch.toLowerCase())),
+  const filteredRoles = useMemo(
+    () =>
+      roles.filter(
+        role =>
+          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+          (role.description &&
+            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
+      ),
+    [roles, roleSearch],
+  );
+
+  // Filter groups based on search
+  const filteredGroups = useMemo(
+    () =>
+      groups.filter(
+        group =>
+          group.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+          (group.description &&
+            group.description
+              .toLowerCase()
+              .includes(groupSearch.toLowerCase())),
+      ),
+    [groups, groupSearch],
   );
 
   return (
@@ -219,6 +255,49 @@ function CreateUserModal({ onClose }) {
                   ))
                 ) : (
                   <div className={s.noRolesFound}>No roles found</div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className={s.formGroup}>
+            <label htmlFor='groups'>
+              Groups ({formData.groups.length} selected)
+            </label>
+            <input
+              type='text'
+              placeholder='Search groups...'
+              value={groupSearch}
+              onChange={e => setGroupSearch(e.target.value)}
+              className={s.groupSearchInput}
+            />
+            {groupsLoading ? (
+              <div className={s.groupsLoading}>Loading groups...</div>
+            ) : (
+              <div className={s.groupsCheckboxGroup}>
+                {filteredGroups.length > 0 ? (
+                  filteredGroups.map(group => (
+                    <label key={group.id} className={s.groupCheckbox}>
+                      <input
+                        type='checkbox'
+                        name='groups'
+                        value={group.id}
+                        checked={formData.groups.includes(group.id)}
+                        onChange={handleGroupChange}
+                      />
+                      <span>
+                        {group.name.charAt(0).toUpperCase() +
+                          group.name.slice(1)}
+                        {group.description && (
+                          <span className={s.groupDescription}>
+                            {group.description}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <div className={s.noGroupsFound}>No groups found</div>
                 )}
               </div>
             )}

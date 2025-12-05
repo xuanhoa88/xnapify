@@ -80,6 +80,10 @@ export default function createUserModel({ connection, DataTypes }) {
       tableName: 'users',
       underscored: true,
       paranoid: true,
+      timestamps: true,
+      createdAt: 'created_at',
+      updatedAt: 'updated_at',
+      deletedAt: 'deleted_at',
       defaultScope: {
         attributes: {
           exclude: ['password'],

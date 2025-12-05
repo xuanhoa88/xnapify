@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
-import { replaceTo, getQueryParam } from '../../navigator';
+import * as navigator from '../../navigator';
 import s from './Register.css';
 
 function Register({ title }) {
@@ -59,8 +59,7 @@ function Register({ title }) {
       if (!result.success) {
         setError(result.error);
       } else {
-        const returnTo = getQueryParam('returnTo');
-        replaceTo(returnTo || '/');
+        navigator.replaceTo(navigator.getQueryParam('returnTo', '/'));
       }
     },
     [displayName, email, password, confirmPassword, dispatch],

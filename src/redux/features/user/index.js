@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Constants
-export * from './constants';
-
 // Public API - Actions
 export * from './actions';
 

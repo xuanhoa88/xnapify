@@ -245,7 +245,7 @@ const location = navigator.getCurrentLocation();
 // Returns: { pathname, search, hash, state, key } or null on server
 
 // Subscribe to navigation changes
-const unsubscribe = navigator.onNavigationChange((location, action) => {
+const unsubscribe = navigator.listen((location, action) => {
   console.log('Navigation:', location.pathname, action);
 });
 

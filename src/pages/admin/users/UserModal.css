@@ -1,0 +1,391 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../components/variables.css';
+
+/* Modal Overlay */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(0 0 0 / 50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.modalContent {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 600px;
+  box-shadow: var(--shadow-xl);
+  border: 1px solid var(--color-border);
+  animation: slideIn 0.2s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 0;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: var(--color-text-primary);
+}
+
+.modalForm {
+  padding: var(--spacing-6);
+}
+
+.formGroup {
+  margin-bottom: var(--spacing-4);
+  flex: 1;
+}
+
+.formRow {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+}
+
+.formInput,
+.formSelect {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+  transition: var(--transition-base);
+}
+
+.formInput:focus,
+.formSelect:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.formGroupCheckbox {
+  display: flex;
+  align-items: center;
+  margin-top: var(--spacing-8);
+}
+
+.formGroupCheckbox label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+}
+
+.formError {
+  padding: var(--spacing-3);
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-sm);
+}
+
+.loading {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-6);
+  border-top: 1px solid var(--color-border);
+}
+
+.cancelBtn {
+  padding: var(--spacing-3) var(--spacing-5);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+  color: var(--color-text-secondary);
+}
+
+.cancelBtn:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.submitBtn {
+  padding: var(--spacing-3) var(--spacing-5);
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.submitBtn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Role Selection */
+.rolesCheckboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.roleCheckbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  padding: var(--spacing-4) var(--spacing-3);
+  margin: 0;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
+  border: none;
+  min-height: 60px;
+}
+
+.roleCheckbox:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.roleCheckbox input[type='checkbox'] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.roleCheckbox > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  flex: 1;
+}
+
+.roleDescription {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+  margin: 0;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.rolesLoading {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.roleSearchInput {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-3);
+  transition: var(--transition-base);
+  background: var(--color-background);
+}
+
+.roleSearchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
+}
+
+.roleSearchInput::placeholder {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.noRolesFound {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+/* Group Selection */
+.groupsCheckboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.groupCheckbox {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  padding: var(--spacing-4) var(--spacing-3);
+  margin: 0;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
+  border: none;
+  min-height: 60px;
+}
+
+.groupCheckbox:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.groupCheckbox input[type='checkbox'] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.groupCheckbox > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  flex: 1;
+}
+
+.groupDescription {
+  display: block;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+  margin: 0;
+  font-style: normal;
+  line-height: 1.5;
+}
+
+.groupsLoading {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.groupSearchInput {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  margin-bottom: var(--spacing-3);
+  transition: var(--transition-base);
+  background: var(--color-background);
+}
+
+.groupSearchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
+}
+
+.groupSearchInput::placeholder {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+.noGroupsFound {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}

@@ -17,7 +17,7 @@ export async function up({ context }) {
   const now = new Date();
 
   const userGroups = [
-    // Admin - Management group
+    // Admin - Management and Engineering groups (multi-group membership)
     {
       id: uuidv4(),
       user_id: demoUserIds.admin,
@@ -25,8 +25,15 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
+    {
+      id: uuidv4(),
+      user_id: demoUserIds.admin,
+      group_id: demoGroupIds.engineering,
+      created_at: now,
+      updated_at: now,
+    },
 
-    // John - Engineering group
+    // John - Engineering group only
     {
       id: uuidv4(),
       user_id: demoUserIds.john,
@@ -35,7 +42,7 @@ export async function up({ context }) {
       updated_at: now,
     },
 
-    // Jane - Marketing and Support groups
+    // Jane - Marketing and Support groups (multi-group membership)
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
@@ -51,7 +58,7 @@ export async function up({ context }) {
       updated_at: now,
     },
 
-    // Locked user - Support group
+    // Locked user - Support group only
     {
       id: uuidv4(),
       user_id: demoUserIds.locked,

@@ -105,6 +105,7 @@ export async function getUserList(req, res) {
       search = '',
       role = '',
       status = '',
+      group = '',
     } = req.query;
 
     // Get models from app context
@@ -112,11 +113,11 @@ export async function getUserList(req, res) {
 
     // Get user list
     const result = await userAdminService.getUserList(
-      { page, limit, search, role, status },
+      { page, limit, search, role, status, group },
       models,
     );
 
-    // Format users to include roles array
+    // Format users to include roles and groups arrays
     const formattedUsers = result.users.map(user => ({
       id: user.id,
       email: user.email,
@@ -131,6 +132,7 @@ export async function getUserList(req, res) {
       last_name: (user.profile && user.profile.last_name) || null,
       picture: (user.profile && user.profile.picture) || null,
       roles: user.roles ? user.roles.map(r => r.name) : [],
+      groups: user.groups || [],
     }));
 
     return http.sendSuccess(res, {

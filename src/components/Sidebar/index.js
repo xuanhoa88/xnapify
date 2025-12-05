@@ -17,7 +17,7 @@ import {
   isAdmin,
   logout,
 } from '../../redux';
-import { getCurrentLocation, onNavigationChange } from '../../navigator';
+import * as navigator from '../../navigator';
 import Link from '../Link';
 import s from './Sidebar.css';
 
@@ -36,10 +36,10 @@ function Sidebar() {
   // Update current path on client-side after hydration and on route changes
   useEffect(() => {
     // Set initial path
-    setCurrentPath(getCurrentLocation().pathname);
+    setCurrentPath(navigator.getCurrentLocation().pathname);
 
-    // Listen for route changes using the navigator's onNavigationChange
-    const unsubscribe = onNavigationChange(location => {
+    // Listen for route changes
+    const unsubscribe = navigator.listen(location => {
       setCurrentPath(location.pathname);
     });
 

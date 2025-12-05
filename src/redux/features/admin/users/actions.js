@@ -9,19 +9,52 @@ import {
   FETCH_USERS_START,
   FETCH_USERS_SUCCESS,
   FETCH_USERS_ERROR,
-  DELETE_USER_START,
-  DELETE_USER_SUCCESS,
-  DELETE_USER_ERROR,
-  UPDATE_USER_STATUS_START,
-  UPDATE_USER_STATUS_SUCCESS,
-  UPDATE_USER_STATUS_ERROR,
+  FETCH_USER_BY_ID_START,
+  FETCH_USER_BY_ID_SUCCESS,
+  FETCH_USER_BY_ID_ERROR,
+  DELETE_USER_BY_ID_START,
+  DELETE_USER_BY_ID_SUCCESS,
+  DELETE_USER_BY_ID_ERROR,
+  UPDATE_USER_STATUS_BY_ID_START,
+  UPDATE_USER_STATUS_BY_ID_SUCCESS,
+  UPDATE_USER_STATUS_BY_ID_ERROR,
   CREATE_USER_START,
   CREATE_USER_SUCCESS,
   CREATE_USER_ERROR,
-  UPDATE_USER_START,
-  UPDATE_USER_SUCCESS,
-  UPDATE_USER_ERROR,
+  UPDATE_USER_BY_IDSTART,
+  UPDATE_USER_BY_IDSUCCESS,
+  UPDATE_USER_BY_IDERROR,
 } from './constants';
+
+/**
+ * Fetch user by ID with full details
+ *
+ * @param {string} userId - User ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchUserById(userId) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch({ type: FETCH_USER_BY_ID_START });
+
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}`);
+
+      dispatch({
+        type: FETCH_USER_BY_ID_SUCCESS,
+        payload: data.user,
+      });
+
+      return { success: true, user: data.user };
+    } catch (error) {
+      dispatch({
+        type: FETCH_USER_BY_ID_ERROR,
+        payload: error.message,
+      });
+
+      return { success: false, error: error.message };
+    }
+  };
+}
 
 /**
  * Fetch all users with pagination and filters
@@ -82,7 +115,7 @@ export function fetchUsers(options = {}) {
  */
 export function deleteUser(userId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: DELETE_USER_START, payload: userId });
+    dispatch({ type: DELETE_USER_BY_ID_START, payload: userId });
 
     try {
       await fetch(`/api/admin/users/${userId}`, {
@@ -90,14 +123,14 @@ export function deleteUser(userId) {
       });
 
       dispatch({
-        type: DELETE_USER_SUCCESS,
+        type: DELETE_USER_BY_ID_SUCCESS,
         payload: userId,
       });
 
       return { success: true };
     } catch (error) {
       dispatch({
-        type: DELETE_USER_ERROR,
+        type: DELETE_USER_BY_ID_ERROR,
         payload: error.message,
       });
 
@@ -115,7 +148,7 @@ export function deleteUser(userId) {
  */
 export function updateUserStatus(userId, isActive) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_USER_STATUS_START });
+    dispatch({ type: UPDATE_USER_STATUS_BY_ID_START });
 
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
@@ -125,14 +158,14 @@ export function updateUserStatus(userId, isActive) {
       });
 
       dispatch({
-        type: UPDATE_USER_STATUS_SUCCESS,
+        type: UPDATE_USER_STATUS_BY_ID_SUCCESS,
         payload: data.user,
       });
 
       return { success: true, user: data.user };
     } catch (error) {
       dispatch({
-        type: UPDATE_USER_STATUS_ERROR,
+        type: UPDATE_USER_STATUS_BY_ID_ERROR,
         payload: error.message,
       });
 
@@ -198,7 +231,7 @@ export function createUser(userData) {
  */
 export function updateUser(userId, userData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_USER_START });
+    dispatch({ type: UPDATE_USER_BY_IDSTART });
 
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
@@ -207,7 +240,7 @@ export function updateUser(userId, userData) {
       });
 
       dispatch({
-        type: UPDATE_USER_SUCCESS,
+        type: UPDATE_USER_BY_IDSUCCESS,
         payload: data.user,
       });
 
@@ -217,7 +250,7 @@ export function updateUser(userId, userData) {
       return { success: true, data: data.user };
     } catch (error) {
       dispatch({
-        type: UPDATE_USER_ERROR,
+        type: UPDATE_USER_BY_IDERROR,
         payload: error.message,
       });
 

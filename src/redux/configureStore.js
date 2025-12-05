@@ -9,47 +9,66 @@ import { applyMiddleware, createStore } from 'redux';
 import thunk from 'redux-thunk';
 import rootReducer from './rootReducer';
 
-let composeEnhancers = applyMiddleware; // fallback for production
-
-if (__DEV__) {
-  try {
-    // Loaded only in dev environment (browser)
-    const { composeWithDevTools } = require('@redux-devtools/extension');
-    composeEnhancers = composeWithDevTools;
-  } catch {
-    // ignore — often happens during SSR or no extension installed
-    composeEnhancers = applyMiddleware;
-  }
-}
-
 /**
  * Configure and create Redux store
+ * @param {Object} initialState - Initial Redux state
+ * @param {Object} helpersConfig - Extra argument for thunk middleware
+ * @returns {Store} Configured Redux store
  */
 export default function configureStore(initialState = {}, helpersConfig = {}) {
+  // Initialize middleware array with thunk first
   const middleware = [thunk.withExtraArgument(helpersConfig)];
 
-  // Add Redux Logger only in development
+  // Add development-only middleware
   if (__DEV__) {
-    const { createLogger } = require('redux-logger');
-    middleware.push(
-      createLogger({
-        collapsed: true,
-        duration: true,
-        timestamp: false,
-      }),
-    );
+    // Add Redux Logger (should be last middleware)
+    try {
+      const { createLogger } = require('redux-logger');
+      middleware.push(
+        createLogger({
+          collapsed: true,
+          duration: true,
+          timestamp: false,
+          diff: false,
+        }),
+      );
+    } catch (err) {
+      console.warn('Redux Logger not available:', err.message);
+    }
   }
 
-  // Create final enhancer
-  const enhancer = composeEnhancers(applyMiddleware(...middleware));
+  // Configure store enhancers
+  let enhancer;
 
+  if (__DEV__) {
+    // Try to use Redux DevTools Extension
+    try {
+      const { composeWithDevTools } = require('@redux-devtools/extension');
+      enhancer = composeWithDevTools({
+        trace: true,
+        traceLimit: 25,
+      })(applyMiddleware(...middleware));
+    } catch (err) {
+      console.warn('Redux DevTools Extension not available:', err.message);
+      enhancer = applyMiddleware(...middleware);
+    }
+  } else {
+    // Production: just apply middleware
+    enhancer = applyMiddleware(...middleware);
+  }
+
+  // Create store
   const store = createStore(rootReducer, initialState, enhancer);
 
-  // Enable HMR only in real client-dev (NOT SSR)
-  if (__DEV__ && typeof module !== 'undefined' && module.hot) {
+  // Enable Hot Module Replacement for reducers
+  if (__DEV__ && module.hot) {
     module.hot.accept('./rootReducer', () => {
-      const nextRootReducer = require('./rootReducer').default;
-      store.replaceReducer(nextRootReducer);
+      try {
+        const nextRootReducer = require('./rootReducer').default;
+        store.replaceReducer(nextRootReducer);
+      } catch (err) {
+        console.error('Error during HMR of rootReducer:', err);
+      }
     });
   }
 

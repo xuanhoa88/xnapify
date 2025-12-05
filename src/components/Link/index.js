@@ -7,7 +7,7 @@
 
 import PropTypes from 'prop-types';
 import { useCallback } from 'react';
-import { navigateTo } from '../../navigator';
+import * as navigator from '../../navigator';
 
 function isLeftClickEvent(event) {
   return event.button === 0;
@@ -34,7 +34,7 @@ function Link({ to, children, onClick = null, ...props }) {
       }
 
       event.preventDefault();
-      navigateTo(to);
+      navigator.navigateTo(to);
     },
     [onClick, to],
   );

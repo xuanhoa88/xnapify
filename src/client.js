@@ -12,7 +12,7 @@ import App from './components/App';
 import { createFetch } from './createFetch';
 import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import { configureStore, me } from './redux';
+import { configureStore } from './redux';
 
 // Get i18n instance
 const i18n = getI18nInstance();
@@ -149,39 +149,15 @@ async function ensureI18n() {
   }
 }
 
-/**
- * Initialize user authentication
- * Fetches current user from server if not in preloaded state
- */
-async function initializeAuth() {
-  const state = store.getState();
-  const { user } = state;
-
-  // If we have a user from JWT, fetch full profile for SSR to get display_name
-  if (user && user.id) {
-    try {
-      await store.dispatch(me());
-      if (__DEV__) {
-        console.log('✅ User authenticated from session');
-      }
-    } catch {
-      // User not authenticated or token invalid - this is fine
-      if (__DEV__) {
-        console.log('ℹ️ No authenticated user');
-      }
-    }
-  } else if (__DEV__) {
-    console.log('✅ User loaded from SSR state');
-  }
-}
-
 // Create an enhanced version of fetch with additional features
 const fetch = createFetch(window.fetch);
 
 // Initialize Redux store with server state
 // eslint-disable-next-line no-underscore-dangle
-const appState = window.__PRELOAD_STATE__ || { reduxState: {} };
-const store = configureStore(appState.reduxState, { fetch, i18n });
+const { reduxState = {} } = { ...window.__PRELOAD_STATE__ };
+// eslint-disable-next-line no-underscore-dangle
+delete window.__PRELOAD_STATE__;
+const store = configureStore(reduxState, { fetch, i18n });
 
 // Application context object that provides shared dependencies and state
 // to components throughout the application
@@ -204,6 +180,9 @@ let currentLocation = navigator.getCurrentLocation();
 
 // Navigation subscription cleanup function
 let unsubscribeNavigation = null;
+
+// Router instance cache (initialized once, reused for all navigations)
+let cachedRouter = null;
 
 // Scroll position cache for back/forward navigation
 const scrollPositionsHistory = {};
@@ -469,6 +448,22 @@ function abortNavigation() {
 let hasHydrated = false;
 
 /**
+ * Get or create router instance
+ * Router is cached and reused across navigations for performance
+ * @returns {Promise<IsomorphicRouter>} Router instance
+ */
+async function getRouter() {
+  if (!cachedRouter) {
+    cachedRouter = await import('./pages').then(m => m.default());
+
+    if (__DEV__) {
+      console.log('✅ Router initialized and cached');
+    }
+  }
+  return cachedRouter;
+}
+
+/**
  * Handle route change
  * @param {*} router
  * @param {*} location
@@ -517,8 +512,8 @@ async function handleRouteChange(location, action) {
       return;
     }
 
-    // Create router instance
-    const router = await import('./pages').then(m => m.default());
+    // Get cached router instance (created once, reused for all navigations)
+    const router = await getRouter();
 
     // Set context for route resolution
     context.pathname = location.pathname;
@@ -703,9 +698,6 @@ async function initializeApp() {
   // Ensure i18n is synced BEFORE any rendering
   await ensureI18n();
 
-  // Initialize user authentication from session
-  await initializeAuth();
-
   // Get current location
   currentLocation = navigator.getCurrentLocation();
 
@@ -805,6 +797,9 @@ if (module.hot) {
       console.error('❌ HMR: Error accepting Client update:', err);
       return;
     }
+
+    // Invalidate router cache to pick up new routes
+    cachedRouter = null;
 
     // Store current location so we can restore after HMR update
     const locationToRestore = { ...currentLocation };

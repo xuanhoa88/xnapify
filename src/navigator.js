@@ -11,46 +11,91 @@ import { createBrowserHistory, createMemoryHistory } from 'history';
 // CONSTANTS
 // =============================================================================
 
-/**
- * Check if code is running in browser environment
- * @private
- */
-const IS_BROWSER = typeof window !== 'undefined';
+const isBrowser = typeof window !== 'undefined';
 
 // =============================================================================
 // HISTORY INSTANCE (LAZY INITIALIZATION)
 // =============================================================================
 
 /**
- * History instance (lazy-initialized)
+ * Browser history instance (lazy-initialized, client-only singleton)
  * @private
  */
-let history = null;
+let browserHistory = null;
+
+/**
+ * Unsubscribe function (lazy-initialized)
+ * @private
+ */
+let unsubscribe = null;
 
 /**
  * Initialize history instance
- * @private
+ * Creates browser history in browser, memory history on server
+ * For SSR, always creates a fresh memory history to avoid state leaks
+ *
+ * @param {string} [initialUrl='/'] - Initial URL for server-side rendering
  * @returns {History} History instance
  */
-export function getHistory() {
-  if (!history) {
-    history = IS_BROWSER
-      ? createBrowserHistory({ basename: '' })
-      : createMemoryHistory({ initialEntries: ['/'] });
+export function getHistory(initialUrl = '/') {
+  // Server: always create fresh instance per request to avoid state leaks
+  if (!isBrowser) {
+    return createMemoryHistory({
+      initialEntries: [initialUrl],
+      initialIndex: 0,
+    });
   }
-  return history;
+
+  // Client: singleton pattern
+  if (!browserHistory) {
+    browserHistory = createBrowserHistory({ basename: '' });
+  }
+  return browserHistory;
 }
 
 /**
- * Reset history instance (useful for testing)
- * @private
+ * Reset history instance
+ * Useful for testing or cleaning up between SSR requests
+ *
+ * @returns {void}
  */
 export function resetHistory() {
-  if (navigationUnsubscribe) {
-    navigationUnsubscribe();
-    navigationUnsubscribe = null;
+  if (unsubscribe) {
+    unsubscribe();
+    unsubscribe = null;
   }
-  history = null;
+
+  // Only reset browser history on client
+  if (isBrowser) {
+    browserHistory = null;
+  }
+}
+
+// =============================================================================
+// HELPER FUNCTIONS (PRIVATE)
+// =============================================================================
+
+/**
+ * Generic navigation function
+ * @private
+ * @param {History} history - History instance to use
+ * @param {string} method - History method ('push' or 'replace')
+ * @param {string|Object} path - Path or location object
+ * @param {Object} [state] - Optional state object
+ * @throws {Error} If navigation fails
+ */
+function navigate(history, method, path, state) {
+  if (!path) {
+    throw new Error(`navigate: path is required`);
+  }
+
+  if (typeof path === 'string') {
+    history[method](path, state);
+  } else if (typeof path === 'object') {
+    history[method](path);
+  } else {
+    throw new Error(`navigate: path must be a string or location object`);
+  }
 }
 
 // =============================================================================
@@ -60,11 +105,13 @@ export function resetHistory() {
 /**
  * Navigate to a new location
  *
- * Adds a new entry to the history stack. On the server, this is a no-op.
+ * Adds a new entry to the history stack. On the server, this updates the
+ * memory history instance.
  *
  * @param {string|Object} path - Path to navigate to, or location object
  * @param {Object} [state] - Optional state object to associate with the location
- * @returns {boolean} True if navigation succeeded
+ * @param {History} [history] - Optional history instance (uses default if not provided)
+ * @returns {boolean} True if navigation succeeded, false otherwise
  *
  * @example
  * // Simple path
@@ -81,21 +128,20 @@ export function resetHistory() {
  * @example
  * // Location object
  * navigateTo({ pathname: '/posts', search: '?page=2', hash: '#comments' });
+ *
+ * @example
+ * // SSR: provide history instance
+ * const hist = getHistory('/initial');
+ * navigateTo('/about', null, hist);
  */
-export function navigateTo(path, state) {
-  if (!IS_BROWSER) return false;
-
+export function navigateTo(path, state, history) {
   try {
-    const hist = getHistory();
-    if (typeof path === 'string') {
-      hist.push(path, state);
-    } else {
-      hist.push(path);
-    }
+    const hist = history || getHistory();
+    navigate(hist, 'push', path, state);
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation error:', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('navigateTo failed:', err);
     }
     return false;
   }
@@ -104,12 +150,13 @@ export function navigateTo(path, state) {
 /**
  * Replace current location
  *
- * Replaces the current entry in the history stack. On the server, this is a no-op.
+ * Replaces the current entry in the history stack.
  * Use this instead of navigateTo() when you don't want to add a new history entry.
  *
  * @param {string|Object} path - Path to replace with, or location object
  * @param {Object} [state] - Optional state object to associate with the location
- * @returns {boolean} True if replacement succeeded
+ * @param {History} [history] - Optional history instance (uses default if not provided)
+ * @returns {boolean} True if replacement succeeded, false otherwise
  *
  * @example
  * // Redirect after login (don't allow back to login page)
@@ -123,20 +170,14 @@ export function navigateTo(path, state) {
  * // Location object
  * replaceTo({ pathname: '/home', search: '', hash: '' });
  */
-export function replaceTo(path, state) {
-  if (!IS_BROWSER) return false;
-
+export function replaceTo(path, state, history) {
   try {
-    const hist = getHistory();
-    if (typeof path === 'string') {
-      hist.replace(path, state);
-    } else {
-      hist.replace(path);
-    }
+    const hist = history || getHistory();
+    navigate(hist, 'replace', path, state);
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation error:', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('replaceTo failed:', err);
     }
     return false;
   }
@@ -145,23 +186,23 @@ export function replaceTo(path, state) {
 /**
  * Go back in history
  *
- * Moves back one entry in the history stack. On the server, this is a no-op.
+ * Moves back one entry in the history stack.
  * Equivalent to clicking the browser's back button.
  *
- * @returns {boolean} True if navigation succeeded
+ * @param {History} [history] - Optional history instance (uses default if not provided)
+ * @returns {boolean} True if navigation succeeded, false otherwise
  *
  * @example
  * goBack();
  */
-export function goBack() {
-  if (!IS_BROWSER) return false;
-
+export function goBack(history) {
   try {
-    getHistory().back();
+    const hist = history || getHistory();
+    hist.go(-1);
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation error:', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('goBack failed:', err);
     }
     return false;
   }
@@ -170,23 +211,23 @@ export function goBack() {
 /**
  * Go forward in history
  *
- * Moves forward one entry in the history stack. On the server, this is a no-op.
+ * Moves forward one entry in the history stack.
  * Equivalent to clicking the browser's forward button.
  *
- * @returns {boolean} True if navigation succeeded
+ * @param {History} [history] - Optional history instance (uses default if not provided)
+ * @returns {boolean} True if navigation succeeded, false otherwise
  *
  * @example
  * goForward();
  */
-export function goForward() {
-  if (!IS_BROWSER) return false;
-
+export function goForward(history) {
   try {
-    getHistory().forward();
+    const hist = history || getHistory();
+    hist.go(1);
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation error:', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('goForward failed:', err);
     }
     return false;
   }
@@ -196,11 +237,11 @@ export function goForward() {
  * Go to a specific entry in history
  *
  * Moves to a specific entry in the history stack by its relative position.
- * On the server, this is a no-op.
  *
  * @param {number} n - The relative position in the history stack
  *                     Negative values go back, positive values go forward
- * @returns {boolean} True if navigation succeeded
+ * @param {History} [history] - Optional history instance (uses default if not provided)
+ * @returns {boolean} True if navigation succeeded, false otherwise
  *
  * @example
  * // Go back 2 pages
@@ -210,15 +251,17 @@ export function goForward() {
  * // Go forward 1 page
  * go(1);
  */
-export function go(n) {
-  if (!IS_BROWSER) return false;
-
+export function go(n, history) {
   try {
-    getHistory().go(n);
+    if (typeof n !== 'number') {
+      throw new Error('go: n must be a number');
+    }
+    const hist = history || getHistory();
+    hist.go(n);
     return true;
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation error:', error);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('go failed:', err);
     }
     return false;
   }
@@ -232,8 +275,8 @@ export function go(n) {
  * Get current location
  *
  * Returns the current location object containing pathname, search, hash, etc.
- * On the server, returns a default location object.
  *
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {Object} Location object with pathname, search, hash, state, key
  *
  * @example
@@ -242,75 +285,73 @@ export function go(n) {
  * console.log(location.search);   // '?page=2'
  * console.log(location.hash);     // '#section'
  */
-export function getCurrentLocation() {
-  if (!IS_BROWSER) {
-    return { pathname: '/', search: '', hash: '', state: null, key: 'default' };
-  }
-  return getHistory().location;
+export function getCurrentLocation(history) {
+  const hist = history || getHistory();
+  return hist.location;
 }
 
 /**
  * Get current pathname
  *
  * Returns just the pathname portion of the current location.
- * On the server, returns '/'.
  *
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {string} Current pathname
  *
  * @example
  * const pathname = getCurrentPathname();
  * console.log(pathname); // '/about'
  */
-export function getCurrentPathname() {
-  return getCurrentLocation().pathname;
+export function getCurrentPathname(history) {
+  return getCurrentLocation(history).pathname;
 }
 
 /**
  * Get current search params
  *
  * Returns the query string portion of the current location.
- * On the server, returns empty string.
  *
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {string} Current search string (including '?')
  *
  * @example
  * const search = getCurrentSearch();
  * console.log(search); // '?page=2&sort=name'
  */
-export function getCurrentSearch() {
-  return getCurrentLocation().search;
+export function getCurrentSearch(history) {
+  return getCurrentLocation(history).search;
 }
 
 /**
  * Get current hash
  *
  * Returns the hash portion of the current location.
- * On the server, returns empty string.
  *
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {string} Current hash (including '#')
  *
  * @example
  * const hash = getCurrentHash();
  * console.log(hash); // '#section'
  */
-export function getCurrentHash() {
-  return getCurrentLocation().hash;
+export function getCurrentHash(history) {
+  return getCurrentLocation(history).hash;
 }
 
 /**
  * Get current state
  *
  * Returns the state object associated with the current location.
- * On the server, returns null.
  *
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {Object|null} Current state object
  *
  * @example
  * const state = getCurrentState();
  * console.log(state); // { from: '/home' }
  */
-export function getCurrentState() {
-  return getCurrentLocation().state;
+export function getCurrentState(history) {
+  return getCurrentLocation(history).state || null;
 }
 
 // =============================================================================
@@ -321,15 +362,15 @@ export function getCurrentState() {
  * Subscribe to navigation changes
  *
  * Registers a listener that will be called whenever the location changes.
- * On the server, returns a no-op unsubscribe function.
  *
  * @param {Function} listener - Callback function (location, action) => void
  *                              - location: Current location object
  *                              - action: Navigation action (PUSH, REPLACE, POP)
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {Function} Unsubscribe function to stop listening
  *
  * @example
- * const unsubscribe = onNavigationChange((location, action) => {
+ * const unsubscribe = listen((location, action) => {
  *   console.log('Navigated to:', location.pathname);
  *   console.log('Action:', action); // PUSH, REPLACE, or POP
  * });
@@ -337,36 +378,22 @@ export function getCurrentState() {
  * // Later, stop listening
  * unsubscribe();
  */
-export function onNavigationChange(listener) {
-  if (!IS_BROWSER) {
-    return () => {};
-  }
-
+export function listen(listener, history) {
   if (typeof listener !== 'function') {
-    if (__DEV__) {
-      console.error('onNavigationChange: listener must be a function');
-    }
-    return () => {};
+    throw new Error('listen: listener must be a function');
   }
-
-  try {
-    return getHistory().listen(listener);
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation subscription error:', error);
-    }
-    return () => {};
-  }
+  const hist = history || getHistory();
+  return hist.listen(listener);
 }
 
 /**
  * Subscribe to navigation changes (singleton pattern)
  *
- * Ensures only one listener is registered at a time. If called multiple times,
- * the previous listener is automatically unsubscribed.
- * On the server, returns a no-op unsubscribe function.
+ * Ensures only one listener is registered at a time on the default history instance.
+ * If called multiple times, the previous listener is automatically unsubscribed.
  *
  * Use this in your main application entry point to avoid duplicate subscriptions.
+ * For SSR, prefer using listen() with a specific history instance.
  *
  * @param {Function} listener - Callback function (location, action) => void
  * @returns {Function} Unsubscribe function
@@ -380,62 +407,34 @@ export function onNavigationChange(listener) {
  * // Cleanup on page unload
  * window.addEventListener('beforeunload', unsubscribe);
  */
-let navigationUnsubscribe = null;
-
 export function subscribe(listener) {
-  if (!IS_BROWSER) {
-    return () => {};
-  }
-
   if (typeof listener !== 'function') {
-    if (__DEV__) {
-      console.error('subscribe: listener must be a function');
+    throw new Error('subscribe: listener must be a function');
+  }
+
+  // Store previous unsubscribe locally to avoid race conditions
+  const prevUnsubscribe = unsubscribe;
+
+  // Unsubscribe previous listener
+  if (typeof prevUnsubscribe === 'function') {
+    prevUnsubscribe();
+  }
+
+  // Subscribe new listener
+  unsubscribe = getHistory().listen(listener);
+
+  // Return unsubscribe function
+  return () => {
+    if (typeof unsubscribe === 'function') {
+      unsubscribe();
+      unsubscribe = null;
     }
-    return () => {};
-  }
-
-  // If already subscribed, unsubscribe first to avoid duplicates
-  if (typeof navigationUnsubscribe === 'function') {
-    navigationUnsubscribe();
-    navigationUnsubscribe = null;
-  }
-
-  try {
-    navigationUnsubscribe = getHistory().listen(listener);
-
-    return () => {
-      if (typeof navigationUnsubscribe === 'function') {
-        navigationUnsubscribe();
-        navigationUnsubscribe = null;
-      }
-    };
-  } catch (error) {
-    if (__DEV__) {
-      console.error('Navigation subscription error:', error);
-    }
-    return () => {};
-  }
+  };
 }
 
 // =============================================================================
 // UTILITY FUNCTIONS
 // =============================================================================
-
-/**
- * Check if navigation is available
- *
- * Returns true if running in browser with history support.
- *
- * @returns {boolean} True if navigation is available
- *
- * @example
- * if (isNavigationAvailable()) {
- *   navigateTo('/about');
- * }
- */
-export function isNavigationAvailable() {
-  return IS_BROWSER;
-}
 
 /**
  * Create a URL with query parameters
@@ -457,6 +456,13 @@ export function isNavigationAvailable() {
  * console.log(url); // '/docs?v=2#installation'
  */
 export function createUrl(pathname, params = {}, hash = '') {
+  if (typeof pathname !== 'string') {
+    throw new Error('createUrl: pathname must be a string');
+  }
+
+  // Ensure pathname starts with /
+  const normalizedPath = pathname.startsWith('/') ? pathname : `/${pathname}`;
+
   const searchParams = new URLSearchParams();
 
   Object.keys(params).forEach(key => {
@@ -470,7 +476,7 @@ export function createUrl(pathname, params = {}, hash = '') {
   const queryString = search ? `?${search}` : '';
   const hashString = hash && !hash.startsWith('#') ? `#${hash}` : hash;
 
-  return `${pathname}${queryString}${hashString}`;
+  return `${normalizedPath}${queryString}${hashString}`;
 }
 
 /**
@@ -479,6 +485,7 @@ export function createUrl(pathname, params = {}, hash = '') {
  * Helper function to parse URL query parameters.
  *
  * @param {string} [search] - Query string (defaults to current location search)
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {Object} Parsed query parameters
  *
  * @example
@@ -489,8 +496,8 @@ export function createUrl(pathname, params = {}, hash = '') {
  * // Parse current location
  * const params = parseQuery();
  */
-export function parseQuery(search) {
-  const queryString = search || getCurrentSearch();
+export function parseQuery(search, history) {
+  const queryString = search || getCurrentSearch(history);
   const params = {};
 
   if (!queryString) return params;
@@ -510,7 +517,8 @@ export function parseQuery(search) {
  * @param {Object} [options] - Options
  * @param {boolean} [options.replace=false] - Use replace instead of push
  * @param {string[]} [options.remove=[]] - Parameter keys to remove
- * @returns {boolean} True if navigation succeeded
+ * @param {History} [options.history] - Optional history instance
+ * @returns {boolean} True if navigation succeeded, false otherwise
  *
  * @example
  * // Current URL: /search?q=react&page=1
@@ -522,60 +530,40 @@ export function parseQuery(search) {
  * updateQueryParams({ page: 2 }, { remove: ['sort'] });
  */
 export function updateQueryParams(newParams, options = {}) {
-  if (!IS_BROWSER) return false;
+  try {
+    const { replace = false, remove = [], history } = options;
+    const hist = history || getHistory();
+    const currentParams = parseQuery(null, hist);
 
-  const { replace = false, remove = [] } = options;
-  const currentParams = parseQuery();
+    // Remove specified params
+    remove.forEach(key => {
+      delete currentParams[key];
+    });
 
-  // Remove specified params
-  remove.forEach(key => {
-    delete currentParams[key];
-  });
+    // Merge with new params
+    const mergedParams = { ...currentParams, ...newParams };
 
-  // Merge with new params
-  const mergedParams = { ...currentParams, ...newParams };
+    // Remove null/undefined values
+    Object.keys(mergedParams).forEach(key => {
+      if (mergedParams[key] == null) {
+        delete mergedParams[key];
+      }
+    });
 
-  // Remove null/undefined values
-  Object.keys(mergedParams).forEach(key => {
-    if (mergedParams[key] == null) {
-      delete mergedParams[key];
+    const pathname = getCurrentPathname(hist);
+    const hash = getCurrentHash(hist);
+    const url = createUrl(pathname, mergedParams, hash);
+
+    if (replace) {
+      return replaceTo(url, null, hist);
     }
-  });
-
-  const pathname = getCurrentPathname();
-  const hash = getCurrentHash();
-  const url = createUrl(pathname, mergedParams, hash);
-
-  return replace ? replaceTo(url) : navigateTo(url);
-}
-
-/**
- * Check if current path matches a pattern
- *
- * @param {string|RegExp} pattern - Path pattern to match
- * @param {Object} [options] - Options
- * @param {boolean} [options.exact=false] - Require exact match
- * @returns {boolean} True if current path matches pattern
- *
- * @example
- * // Current path: /blog/post-1
- * matchPath('/blog'); // true
- * matchPath('/blog', { exact: true }); // false
- * matchPath(/^\/blog\//); // true
- */
-export function matchPath(pattern, options = {}) {
-  const { exact = false } = options;
-  const pathname = getCurrentPathname();
-
-  if (pattern instanceof RegExp) {
-    return pattern.test(pathname);
+    return navigateTo(url, null, hist);
+  } catch (err) {
+    if (process.env.NODE_ENV !== 'production') {
+      console.error('updateQueryParams failed:', err);
+    }
+    return false;
   }
-
-  if (exact) {
-    return pathname === pattern;
-  }
-
-  return pathname.startsWith(pattern);
 }
 
 /**
@@ -583,6 +571,7 @@ export function matchPath(pattern, options = {}) {
  *
  * @param {string} key - Parameter key
  * @param {string} [defaultValue=''] - Default value if parameter not found
+ * @param {History} [history] - Optional history instance (uses default if not provided)
  * @returns {string} Parameter value
  *
  * @example
@@ -590,30 +579,10 @@ export function matchPath(pattern, options = {}) {
  * getQueryParam('q'); // 'react'
  * getQueryParam('sort', 'date'); // 'date' (default)
  */
-export function getQueryParam(key, defaultValue = '') {
-  const params = parseQuery();
-  return params[key] || defaultValue;
-}
-
-/**
- * Navigate with confirmation
- *
- * Shows a confirmation dialog before navigating
- *
- * @param {string|Object} path - Path to navigate to
- * @param {string} message - Confirmation message
- * @param {Object} [state] - Optional state object
- * @returns {boolean} True if user confirmed and navigation succeeded
- *
- * @example
- * navigateWithConfirm('/delete', 'Are you sure you want to leave?');
- */
-export function navigateWithConfirm(path, message, state) {
-  if (!IS_BROWSER) return false;
-
-  if (window.confirm(message)) {
-    return navigateTo(path, state);
+export function getQueryParam(key, defaultValue = '', history) {
+  if (typeof key !== 'string') {
+    throw new Error('getQueryParam: key must be a string');
   }
-
-  return false;
+  const params = parseQuery(null, history);
+  return params[key] || defaultValue;
 }

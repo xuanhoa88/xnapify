@@ -55,7 +55,7 @@ export async function createRole(roleData, models) {
 export async function getRoles(options, models) {
   const { page = 1, limit = 10, search = '' } = options;
   const offset = (page - 1) * limit;
-  const { Role, Permission } = models;
+  const { Role, Permission, User } = models;
 
   const { sequelize } = Role;
   const { Op } = sequelize.Sequelize;
@@ -71,26 +71,6 @@ export async function getRoles(options, models) {
 
   const { count, rows: roles } = await Role.findAndCountAll({
     where: whereCondition,
-    attributes: {
-      include: [
-        [
-          sequelize.literal(`(
-            SELECT COUNT(*)
-            FROM user_roles AS ur
-            WHERE ur.role_id = Role.id
-          )`),
-          'usersCount',
-        ],
-        [
-          sequelize.literal(`(
-            SELECT COUNT(*)
-            FROM role_permissions AS rp
-            WHERE rp.role_id = Role.id
-          )`),
-          'permissionsCount',
-        ],
-      ],
-    },
     include: [
       {
         model: Permission,
@@ -103,8 +83,42 @@ export async function getRoles(options, models) {
     order: [['name', 'ASC']],
   });
 
+  // Fetch counts for each role
+  const rolesWithCounts = await Promise.all(
+    roles.map(async role => {
+      const [usersCount, permissionsCount] = await Promise.all([
+        User.count({
+          include: [
+            {
+              model: Role,
+              as: 'roles',
+              where: { id: role.id },
+              required: true,
+            },
+          ],
+        }),
+        Permission.count({
+          include: [
+            {
+              model: Role,
+              as: 'roles',
+              where: { id: role.id },
+              required: true,
+            },
+          ],
+        }),
+      ]);
+
+      return {
+        ...role.toJSON(),
+        usersCount,
+        permissionsCount,
+      };
+    }),
+  );
+
   return {
-    roles,
+    roles: rolesWithCounts,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),

@@ -126,6 +126,25 @@ function setupGracefulShutdown(server) {
 // i18n instance
 const i18n = getI18nInstance();
 
+// Router instance cache (initialized once, reused for all SSR requests)
+let cachedRouter = null;
+
+/**
+ * Get or create router instance
+ * Router is cached and reused across all SSR requests for performance
+ * @returns {Promise<IsomorphicRouter>} Router instance
+ */
+async function getRouter() {
+  if (!cachedRouter) {
+    cachedRouter = await import('./pages').then(m => m.default());
+
+    if (__DEV__) {
+      console.log('✅ Server router initialized and cached');
+    }
+  }
+  return cachedRouter;
+}
+
 /**
  * Setup API proxy if configured
  *
@@ -235,7 +254,6 @@ async function createReduxStore(req, fetch, locale) {
         console.log('✅ User authenticated from session');
       }
     } catch {
-      // User not authenticated or token invalid - this is fine
       if (__DEV__) {
         console.log('ℹ️ No authenticated user');
       }
@@ -431,8 +449,8 @@ export function startServer(app, port = config.port, host = config.host) {
  * @returns {Promise<Object>} Configured Express app
  */
 async function main(app, staticPath) {
-  // Create router instance
-  const router = await import('./pages').then(m => m.default());
+  // Get cached router instance (created once, reused for all SSR requests)
+  const router = await getRouter();
 
   // Configure Express
   app.set('trust proxy', config.trustProxy);
@@ -633,6 +651,9 @@ if (module.hot) {
       console.error('❌ HMR: Error accepting Server update:', err);
       return;
     }
+
+    // Invalidate router cache to pick up new routes
+    cachedRouter = null;
   });
 
   // Store reference for HMR

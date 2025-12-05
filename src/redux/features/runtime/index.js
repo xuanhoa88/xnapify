@@ -8,9 +8,6 @@
 // Public API - Actions
 export * from './actions';
 
-// Public API - Constants (for external use if needed)
-export * from './constants';
-
 // Public API - Selectors
 export * from './selector';
 

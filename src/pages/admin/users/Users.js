@@ -15,6 +15,8 @@ import {
   getUsersPagination,
   getUsersLoading,
   getUsersError,
+  fetchGroups,
+  getGroups,
 } from '../../../redux';
 import CreateUserModal from './CreateUserModal';
 import EditUserModal from './EditUserModal';
@@ -46,13 +48,19 @@ function Users() {
   const loading = useSelector(getUsersLoading);
   const error = useSelector(getUsersError);
 
+  const groups = useSelector(getGroups);
   const [search, setSearch] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
+  const [groupFilter, setGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
+  const [editingUserId, setEditingUserId] = useState(null);
+
+  useEffect(() => {
+    dispatch(fetchGroups());
+  }, [dispatch]);
 
   useEffect(() => {
     dispatch(
@@ -60,10 +68,11 @@ function Users() {
         page: currentPage,
         search,
         role: roleFilter,
+        group: groupFilter,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, search, roleFilter, statusFilter]);
+  }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
 
   const handleDelete = useCallback(
     async (userId, userEmail) => {
@@ -98,6 +107,11 @@ function Users() {
 
   const handleRoleFilterChange = e => {
     setRoleFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleGroupFilterChange = e => {
+    setGroupFilter(e.target.value);
     setCurrentPage(1);
   };
 
@@ -172,6 +186,18 @@ function Users() {
         </select>
         <select
           className={s.filterSelect}
+          value={groupFilter}
+          onChange={handleGroupFilterChange}
+        >
+          <option value=''>All Groups</option>
+          {groups.map(group => (
+            <option key={group.id} value={group.name}>
+              {group.name.charAt(0).toUpperCase() + group.name.slice(1)}
+            </option>
+          ))}
+        </select>
+        <select
+          className={s.filterSelect}
           value={statusFilter}
           onChange={handleStatusFilterChange}
         >
@@ -188,6 +214,7 @@ function Users() {
               <th>User</th>
               <th>Email</th>
               <th>Role</th>
+              <th>Groups</th>
               <th>Status</th>
               <th>Joined</th>
               <th>Actions</th>
@@ -225,6 +252,17 @@ function Users() {
                   )}
                 </td>
                 <td>
+                  {user.groups && user.groups.length > 0 ? (
+                    user.groups.map(group => (
+                      <span key={group.id} className={s.groupBadge}>
+                        {group.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className={s.noGroup}>—</span>
+                  )}
+                </td>
+                <td>
                   <span
                     className={
                       user.is_active ? s.statusActive : s.statusInactive
@@ -239,7 +277,7 @@ function Users() {
                     <button
                       className={s.actionBtn}
                       title='Edit'
-                      onClick={() => setEditingUser(user)}
+                      onClick={() => setEditingUserId(user.id)}
                     >
                       ✏️
                     </button>
@@ -326,10 +364,10 @@ function Users() {
         <CreateUserModal onClose={() => setShowCreateModal(false)} />
       )}
 
-      {editingUser && (
+      {editingUserId && (
         <EditUserModal
-          user={editingUser}
-          onClose={() => setEditingUser(null)}
+          userId={editingUserId}
+          onClose={() => setEditingUserId(null)}
         />
       )}
     </div>

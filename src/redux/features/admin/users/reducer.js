@@ -9,18 +9,18 @@ import {
   FETCH_USERS_START,
   FETCH_USERS_SUCCESS,
   FETCH_USERS_ERROR,
-  DELETE_USER_START,
-  DELETE_USER_SUCCESS,
-  DELETE_USER_ERROR,
-  UPDATE_USER_STATUS_START,
-  UPDATE_USER_STATUS_SUCCESS,
-  UPDATE_USER_STATUS_ERROR,
+  DELETE_USER_BY_ID_START,
+  DELETE_USER_BY_ID_SUCCESS,
+  DELETE_USER_BY_ID_ERROR,
+  UPDATE_USER_STATUS_BY_ID_START,
+  UPDATE_USER_STATUS_BY_ID_SUCCESS,
+  UPDATE_USER_STATUS_BY_ID_ERROR,
   CREATE_USER_START,
   CREATE_USER_SUCCESS,
   CREATE_USER_ERROR,
-  UPDATE_USER_START,
-  UPDATE_USER_SUCCESS,
-  UPDATE_USER_ERROR,
+  UPDATE_USER_BY_IDSTART,
+  UPDATE_USER_BY_IDSUCCESS,
+  UPDATE_USER_BY_IDERROR,
 } from './constants';
 
 const initialState = {
@@ -50,17 +50,17 @@ export default function usersManagementReducer(state = initialState, action) {
         error: null,
       };
 
-    case DELETE_USER_START:
-    case UPDATE_USER_STATUS_START:
+    case DELETE_USER_BY_ID_START:
+    case UPDATE_USER_STATUS_BY_ID_START:
     case CREATE_USER_START:
-    case UPDATE_USER_START:
+    case UPDATE_USER_BY_IDSTART:
       return {
         ...state,
         loading: true,
         error: null,
       };
 
-    case DELETE_USER_SUCCESS:
+    case DELETE_USER_BY_ID_SUCCESS:
       return {
         ...state,
         loading: false,
@@ -68,8 +68,8 @@ export default function usersManagementReducer(state = initialState, action) {
         error: null,
       };
 
-    case UPDATE_USER_STATUS_SUCCESS:
-    case UPDATE_USER_SUCCESS:
+    case UPDATE_USER_STATUS_BY_ID_SUCCESS:
+    case UPDATE_USER_BY_IDSUCCESS:
       return {
         ...state,
         loading: false,
@@ -88,10 +88,10 @@ export default function usersManagementReducer(state = initialState, action) {
       };
 
     case FETCH_USERS_ERROR:
-    case DELETE_USER_ERROR:
-    case UPDATE_USER_STATUS_ERROR:
+    case DELETE_USER_BY_ID_ERROR:
+    case UPDATE_USER_STATUS_BY_ID_ERROR:
     case CREATE_USER_ERROR:
-    case UPDATE_USER_ERROR:
+    case UPDATE_USER_BY_IDERROR:
       return {
         ...state,
         loading: false,

@@ -16,7 +16,7 @@ import { hashPassword } from '../utils/password';
  * @throws {Error} If UserAlreadyExistsError
  */
 export async function createUser(userData, models) {
-  const { User, UserProfile, Role } = models;
+  const { User, UserProfile, Role, Group } = models;
   const {
     email,
     password,
@@ -24,6 +24,7 @@ export async function createUser(userData, models) {
     first_name,
     last_name,
     role,
+    groups,
     is_active = true,
   } = userData;
 
@@ -68,11 +69,32 @@ export async function createUser(userData, models) {
     }
   }
 
+  // Assign groups
+  if (groups && Array.isArray(groups) && groups.length > 0) {
+    const groupRecords = await Group.findAll({
+      where: { id: groups },
+    });
+    if (groupRecords.length > 0) {
+      await user.addGroups(groupRecords);
+    }
+  }
+
   // Reload with associations
   return user.reload({
     include: [
       { model: UserProfile, as: 'profile' },
-      { model: Role, as: 'roles' },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
     ],
   });
 }
@@ -90,9 +112,16 @@ export async function createUser(userData, models) {
  * @returns {Promise<Object>} Users with pagination info
  */
 export async function getUserList(options, models) {
-  const { page = 1, limit = 10, search = '', role = '', status = '' } = options;
+  const {
+    page = 1,
+    limit = 10,
+    search = '',
+    role = '',
+    status = '',
+    group = '',
+  } = options;
   const offset = (page - 1) * limit;
-  const { User, UserProfile, Role } = models;
+  const { User, UserProfile, Role, Group } = models;
 
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -101,6 +130,7 @@ export async function getUserList(options, models) {
   const whereConditions = {};
   const profileWhereConditions = {};
   const roleWhereConditions = {};
+  const groupWhereConditions = {};
 
   // Search in email and display name
   if (search) {
@@ -115,6 +145,11 @@ export async function getUserList(options, models) {
   // Filter by role
   if (role) {
     roleWhereConditions.name = role;
+  }
+
+  // Filter by group
+  if (group) {
+    groupWhereConditions.name = group;
   }
 
   // Filter by status
@@ -141,6 +176,14 @@ export async function getUserList(options, models) {
         where: role ? roleWhereConditions : undefined,
         required: !!role,
         attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        where: group ? groupWhereConditions : undefined,
+        required: !!group,
+        attributes: ['id', 'name', 'description', 'category', 'type'],
         through: { attributes: [] },
       },
     ],
@@ -170,10 +213,26 @@ export async function getUserList(options, models) {
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserById(user_id, models) {
-  const { User, UserProfile, UserLogin } = models;
+  const { User, UserProfile, UserLogin, Group, Role } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      { model: UserProfile, as: 'profile' },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description', 'category', 'type'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
   });
 
   if (!user) {
@@ -218,7 +277,7 @@ export async function getUserById(user_id, models) {
  * @throws {Error} If UserNotFoundError or UserAlreadyExistsError
  */
 export async function updateUserById(user_id, userData, models) {
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role, Group } = models;
 
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -232,6 +291,7 @@ export async function updateUserById(user_id, userData, models) {
     location,
     website,
     role,
+    groups,
     is_active,
   } = userData;
 
@@ -289,9 +349,39 @@ export async function updateUserById(user_id, userData, models) {
     }
   }
 
+  // Update groups if provided
+  if (groups !== undefined && Array.isArray(groups)) {
+    // Remove all existing groups
+    await user.setGroups([]);
+
+    // Add new groups
+    if (groups.length > 0) {
+      const groupRecords = await Group.findAll({
+        where: { id: groups },
+      });
+      if (groupRecords.length > 0) {
+        await user.addGroups(groupRecords);
+      }
+    }
+  }
+
   // Reload user with updated data
   await user.reload({
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      { model: UserProfile, as: 'profile' },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+    ],
   });
 
   return user;

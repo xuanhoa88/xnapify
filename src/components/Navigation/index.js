@@ -16,7 +16,7 @@ import {
   getCurrentUserDisplayName,
   logout,
 } from '../../redux';
-import { replaceTo } from '../../navigator';
+import * as navigator from '../../navigator';
 import s from './Navigation.css';
 
 function Navigation() {
@@ -32,7 +32,7 @@ function Navigation() {
     e.preventDefault();
     setIsDropdownOpen(false);
     await dispatch(logout());
-    replaceTo('/');
+    navigator.replaceTo('/');
   };
 
   const toggleDropdown = () => {

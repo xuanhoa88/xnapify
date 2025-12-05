@@ -11,7 +11,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
 import s from './Login.css';
-import { replaceTo, getQueryParam } from '../../navigator';
+import * as navigator from '../../navigator';
 
 function Login({ title }) {
   const { t } = useTranslation();
@@ -34,8 +34,7 @@ function Login({ title }) {
       if (!result.success) {
         setError(result.error);
       } else {
-        const returnTo = getQueryParam('returnTo');
-        replaceTo(returnTo || '/');
+        navigator.replaceTo(navigator.getQueryParam('returnTo', '/'));
       }
     },
     [email, password, dispatch],
