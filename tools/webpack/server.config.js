@@ -6,9 +6,9 @@
  */
 
 import path from 'path';
-import webpack from 'webpack';
 import { merge } from 'webpack-merge';
 import nodeExternals from 'webpack-node-externals';
+import TerserPlugin from 'terser-webpack-plugin';
 import config from '../config';
 import { isVerbose } from '../lib/logger';
 import {
@@ -19,6 +19,7 @@ import {
   reImage,
   reFont,
   reSvg,
+  isDebug,
 } from './base.config';
 import { createDotenvDefinitions } from './dotenv.plugin';
 
@@ -100,6 +101,28 @@ export default merge(createBaseConfig(), {
     ],
   },
 
+  // Server-specific optimization configuration
+  optimization: {
+    // Minification (production only)
+    minimize: !isDebug,
+
+    // TerserPlugin for server - keeps console for logging
+    ...(!isDebug
+      ? {
+          minimizer: [
+            new TerserPlugin({
+              parallel: true,
+              terserOptions: {
+                compress: {
+                  // Keep console.* for server-side logging
+                },
+              },
+            }),
+          ],
+        }
+      : {}),
+  },
+
   plugins: [
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
@@ -111,14 +134,6 @@ export default merge(createBaseConfig(), {
 
     // Note: Worker files are now imported directly via require.context
     // No separate bundling needed since they run in the same process
-
-    // Add source-map-support to the entry file for better stack traces
-    // https://webpack.js.org/plugins/banner-plugin/
-    new webpack.BannerPlugin({
-      banner: 'require("source-map-support").install();',
-      raw: true,
-      entryOnly: true, // Only add to entry file, not code-split chunks
-    }),
   ].filter(Boolean),
 
   // Do not replace node globals with polyfills
@@ -129,13 +144,4 @@ export default merge(createBaseConfig(), {
     __filename: false,
     global: false,
   },
-
-  // Override devtool for server bundle
-  // Use 'source-map' for cleaner stack traces with correct file paths
-  // Works better with source-map-support (configured via BannerPlugin above)
-  // https://webpack.js.org/configuration/devtool/
-  devtool:
-    config.env('BUNDLE_SOURCE_MAPS') !== 'false'
-      ? process.env.WEBPACK_DEVTOOL || 'source-map'
-      : false,
 });

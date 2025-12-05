@@ -7,10 +7,12 @@
 
 import path from 'path';
 import webpack from 'webpack';
+import { merge } from 'webpack-merge';
 import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
 import LoadablePlugin from '@loadable/webpack-plugin';
 import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import { merge } from 'webpack-merge';
+import TerserPlugin from 'terser-webpack-plugin';
+import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
 import config from '../config';
 import { isVerbose } from '../lib/logger';
 import {
@@ -22,13 +24,6 @@ import {
   isProfile,
   reScript,
 } from './base.config';
-
-// Client webpack configuration
-const BUNDLE_MAX_CHUNK_SIZE =
-  parseInt(config.env('BUNDLE_MAX_CHUNK_SIZE'), 10) || 1000000; // 1MB
-const BUNDLE_TREE_SHAKING = config.env('BUNDLE_TREE_SHAKING') !== 'false';
-const BUNDLE_MINIFICATION = config.env('BUNDLE_MINIFICATION') !== 'false';
-const BUNDLE_PROGRESS_REPORTING = config.env('BUNDLE_PROGRESS') !== 'false';
 
 const verbose = isVerbose(); // Cache verbose check
 
@@ -198,6 +193,17 @@ export default merge(baseConfig, {
       ignoreOrder: isDebug,
     }),
 
+    // React Refresh Webpack Plugin - enables Fast Refresh for React components (development only)
+    // Works together with react-refresh/babel plugin added to babel-loader above
+    // https://github.com/pmmmwh/react-refresh-webpack-plugin
+    ...(isDebug
+      ? [
+          new ReactRefreshWebpackPlugin({
+            overlay: false, // Disable error overlay (we use webpack-dev-middleware's overlay)
+          }),
+        ]
+      : []),
+
     // Webpack Bundle Analyzer (production only)
     // https://github.com/webpack-contrib/webpack-bundle-analyzer
     ...(isAnalyze && !isDebug
@@ -252,7 +258,7 @@ export default merge(baseConfig, {
       : []),
 
     // Progress plugin for build feedback
-    ...(BUNDLE_PROGRESS_REPORTING && verbose
+    ...(config.env('BUNDLE_PROGRESS') !== 'false' && verbose
       ? [
           new webpack.ProgressPlugin({
             activeModules: true,
@@ -271,26 +277,27 @@ export default merge(baseConfig, {
   // Client-specific optimization configuration
   // https://webpack.js.org/configuration/optimization/
   optimization: {
-    // Override concatenateModules with env var support
-    concatenateModules:
-      process.env.WEBPACK_MODULE_CONCATENATION !== 'false' && !isDebug,
-
-    // Override usedExports with config support
-    usedExports: BUNDLE_TREE_SHAKING,
-
-    // Override sideEffects with env var support
-    sideEffects: process.env.WEBPACK_SIDE_EFFECTS !== 'false',
-
-    // Extend splitChunks with maxSize (client-specific)
-    splitChunks: {
-      maxSize: BUNDLE_MAX_CHUNK_SIZE,
-    },
-
-    // Minification (production only) - client-specific
-    minimize: BUNDLE_MINIFICATION && !isDebug,
-
     // Runtime chunk - separate webpack runtime for better caching (production only)
     runtimeChunk: !isDebug ? 'single' : false,
+
+    // Minification (production only)
+    minimize: !isDebug,
+
+    // TerserPlugin for client - removes console in production
+    ...(!isDebug
+      ? {
+          minimizer: [
+            new TerserPlugin({
+              parallel: true,
+              terserOptions: {
+                compress: {
+                  drop_console: true, // Remove console.* in production
+                },
+              },
+            }),
+          ],
+        }
+      : {}),
   },
 
   // Some libraries import Node modules but don't use them in the browser.
@@ -304,14 +311,4 @@ export default merge(baseConfig, {
     __filename: false,
     global: false,
   },
-
-  // Source maps for client bundle
-  // https://webpack.js.org/configuration/devtool/
-  // Development: cheap-module-source-map - faster rebuilds, good debugging
-  // Production: source-map - best quality for production debugging
-  devtool:
-    config.env('BUNDLE_SOURCE_MAPS') !== 'false'
-      ? process.env.WEBPACK_DEVTOOL ||
-        (isDebug ? 'cheap-module-source-map' : 'source-map')
-      : false,
 });

@@ -16,3 +16,6 @@ export * as permissionController from './permission.controller';
 export * as groupController from './group.controller';
 export * as userAssignmentController from './user-assignment.controller';
 export * as systemController from './system.controller';
+
+// Export dashboard controller
+export * as dashboardController from './dashboard.controller';

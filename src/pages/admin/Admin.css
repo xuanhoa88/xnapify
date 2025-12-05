@@ -179,6 +179,42 @@
   color: #1e40af;
 }
 
+/* Loading state */
+.loading {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+/* Error state */
+.error {
+  padding: var(--spacing-8);
+  text-align: center;
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+.error p {
+  color: #dc3545;
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-base);
+}
+
+/* Empty state */
+.empty {
+  padding: var(--spacing-8);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-base);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .mainContent {

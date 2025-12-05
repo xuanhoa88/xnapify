@@ -157,8 +157,8 @@ async function initializeAuth() {
   const state = store.getState();
   const { user } = state;
 
-  // If no user in state, try to fetch from server (JWT cookie will be sent automatically)
-  if (!user || !user.id) {
+  // If we have a user from JWT, fetch full profile for SSR to get display_name
+  if (user && user.id) {
     try {
       await store.dispatch(me());
       if (__DEV__) {

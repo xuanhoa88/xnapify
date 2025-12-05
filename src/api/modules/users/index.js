@@ -6,7 +6,12 @@
  */
 
 import * as userMiddlewares from './middlewares';
-import { authRoutes, profileRoutes, rbacRoutes } from './routes';
+import {
+  authRoutes,
+  profileRoutes,
+  rbacRoutes,
+  dashboardRoutes,
+} from './routes';
 
 /**
  * Users Module Migrations Context
@@ -93,6 +98,13 @@ export default async function userModule(deps, app) {
   // Profile management routes (authenticated users)
   // Handles: /profile, /profile/avatar, /profile/password
   router.use('/', profileRoutes(deps, userMiddlewares, app));
+
+  // Dashboard routes (admin statistics and activity)
+  // Handles: /admin/dashboard/users
+  router.use(
+    '/admin/dashboard/users',
+    dashboardRoutes(deps, userMiddlewares, app),
+  );
 
   // Admin routes (RBAC + User Administration)
   // Handles: /admin/roles, /admin/permissions, /admin/groups, /admin/users/list, /admin/users/:id

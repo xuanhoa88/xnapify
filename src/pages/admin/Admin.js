@@ -5,14 +5,82 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import { fetchDashboard } from '../../redux';
 import s from './Admin.css';
 
+/**
+ * Format date to relative time (e.g., "2 mins ago")
+ *
+ * @param {string} dateString - ISO date string
+ * @returns {string} Formatted relative time
+ */
+const formatRelativeTime = dateString => {
+  if (!dateString) return 'N/A';
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
+  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+};
+
+/**
+ * Admin Layout Component
+ *
+ * Provides the main layout for admin pages with a default dashboard view.
+ * When children are provided, renders them instead of the default dashboard.
+ * The default dashboard displays system statistics and recent activity.
+ *
+ * @param {Object} props - Component props
+ * @param {string} [props.title] - Page title for SEO and accessibility
+ * @param {React.ReactNode} [props.children] - Child components to render (admin sub-pages)
+ * @returns {JSX.Element} Admin layout component
+ */
 function Admin({ title, children }) {
+  const dispatch = useDispatch();
+  const { stats, recentActivity, loading, error } = useSelector(
+    state => state.dashboard,
+  );
+
+  useEffect(() => {
+    // Only fetch dashboard data if we're showing the default dashboard
+    if (!children) {
+      dispatch(fetchDashboard());
+    }
+  }, [dispatch, children]);
+
   const renderContent = () => {
     if (children) {
       return children;
+    }
+
+    // Loading state
+    if (loading) {
+      return <div className={s.loading}>Loading dashboard...</div>;
+    }
+
+    // Error state
+    if (error) {
+      return (
+        <div className={s.error}>
+          <p>Error loading dashboard: {error}</p>
+          <button
+            className={s.addButton}
+            onClick={() => dispatch(fetchDashboard())}
+          >
+            Retry
+          </button>
+        </div>
+      );
     }
 
     return (
@@ -21,28 +89,51 @@ function Admin({ title, children }) {
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>Total Users</h3>
-            <span className={s.cardIcon}>👥</span>
+            <span className={s.cardIcon} role='img' aria-label='Users'>
+              👥
+            </span>
           </div>
-          <div className={s.cardValue}>1,234</div>
-          <div className={s.cardTrend}>+12% from last month</div>
+          <div className={s.cardValue}>{stats.totalUsers || 0}</div>
+          <div className={s.cardTrend}>
+            {stats.activeUsers || 0} active users
+          </div>
         </div>
 
         <div className={s.card}>
           <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Active Roles</h3>
-            <span className={s.cardIcon}>🎭</span>
+            <h3 className={s.cardTitle}>Total Roles</h3>
+            <span className={s.cardIcon} role='img' aria-label='Roles'>
+              🎭
+            </span>
           </div>
-          <div className={s.cardValue}>8</div>
-          <div className={s.cardTrend}>No change</div>
+          <div className={s.cardValue}>{stats.totalRoles || 0}</div>
+          <div className={s.cardTrend}>
+            {stats.activeRoles || 0} active roles
+          </div>
+        </div>
+
+        <div className={s.card}>
+          <div className={s.cardHeader}>
+            <h3 className={s.cardTitle}>Total Groups</h3>
+            <span className={s.cardIcon} role='img' aria-label='Groups'>
+              👨‍👩‍👧‍👦
+            </span>
+          </div>
+          <div className={s.cardValue}>{stats.totalGroups || 0}</div>
+          <div className={s.cardTrend}>
+            {stats.activeGroups || 0} active groups
+          </div>
         </div>
 
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>System Status</h3>
-            <span className={s.cardIcon}>✅</span>
+            <span className={s.cardIcon} role='img' aria-label='Status'>
+              ✅
+            </span>
           </div>
-          <div className={s.cardValue}>Healthy</div>
-          <div className={s.cardTrend}>Uptime: 99.9%</div>
+          <div className={s.cardValue}>{stats.systemStatus || 'Unknown'}</div>
+          <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
         </div>
 
         {/* Recent Activity Table */}
@@ -51,72 +142,63 @@ function Admin({ title, children }) {
             <h3 className={s.cardTitle}>Recent Activity</h3>
           </div>
           <div className={s.tableContainer}>
-            <table className={s.table}>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Action</th>
-                  <th>Date</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td>
-                    <div className={s.userCell}>
-                      <div className={s.avatar}>JD</div>
-                      <div>
-                        <div className={s.userName}>John Doe</div>
-                        <div className={s.userEmail}>john@example.com</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>Updated profile</td>
-                  <td>2 mins ago</td>
-                  <td>
-                    <span className={clsx(s.badge, s.badgeSuccess)}>
-                      Success
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <div className={s.userCell}>
-                      <div className={s.avatar}>AS</div>
-                      <div>
-                        <div className={s.userName}>Alice Smith</div>
-                        <div className={s.userEmail}>alice@example.com</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>Login attempt</td>
-                  <td>15 mins ago</td>
-                  <td>
-                    <span className={clsx(s.badge, s.badgeWarning)}>
-                      Failed
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <td>
-                    <div className={s.userCell}>
-                      <div className={s.avatar}>RJ</div>
-                      <div>
-                        <div className={s.userName}>Robert Johnson</div>
-                        <div className={s.userEmail}>robert@example.com</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>Created new role</td>
-                  <td>1 hour ago</td>
-                  <td>
-                    <span className={clsx(s.badge, s.badgeSuccess)}>
-                      Success
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            {recentActivity && recentActivity.length > 0 ? (
+              <table className={s.table}>
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Action</th>
+                    <th>Date</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentActivity.map(activity => (
+                    <tr key={activity.id}>
+                      <td>
+                        <div className={s.userCell}>
+                          <div className={s.avatar}>
+                            {(activity.user &&
+                              activity.user.displayName &&
+                              activity.user.displayName
+                                .substring(0, 2)
+                                .toUpperCase()) ||
+                              '?'}
+                          </div>
+                          <div>
+                            <div className={s.userName}>
+                              {(activity.user && activity.user.displayName) ||
+                                'Unknown'}
+                            </div>
+                            <div className={s.userEmail}>
+                              {(activity.user && activity.user.email) || 'N/A'}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>{activity.action}</td>
+                      <td>{formatRelativeTime(activity.date)}</td>
+                      <td>
+                        <span
+                          className={clsx(
+                            s.badge,
+                            activity.status === 'success'
+                              ? s.badgeSuccess
+                              : s.badgeWarning,
+                          )}
+                        >
+                          {activity.status === 'success' ? 'Success' : 'Failed'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className={s.empty}>
+                <p>No recent activity found.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -133,7 +215,7 @@ function Admin({ title, children }) {
 }
 
 Admin.propTypes = {
-  title: PropTypes.string.isRequired,
+  title: PropTypes.string,
   children: PropTypes.node,
 };
 

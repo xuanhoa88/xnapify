@@ -4,10 +4,11 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import cx from 'classnames';
+
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+import clsx from 'clsx';
 import Link from '../Link';
 import {
   isAuthenticated,
@@ -79,7 +80,7 @@ function Navigation() {
             <div className={s.avatar}>{avatarInitial}</div>
             <span className={s.userName}>{displayName}</span>
             <svg
-              className={cx(s.dropdownIcon, {
+              className={clsx(s.dropdownIcon, {
                 [s.dropdownIconOpen]: isDropdownOpen,
               })}
               width='12'
@@ -207,7 +208,7 @@ function Navigation() {
             {t('navigation.login')}
           </Link>
           <span className={s.spacer}>{t('navigation.separator.or')}</span>
-          <Link className={cx(s.link, s.highlight)} to='/register'>
+          <Link className={clsx(s.link, s.highlight)} to='/register'>
             {t('navigation.register')}
           </Link>
         </>

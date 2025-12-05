@@ -14,6 +14,7 @@ import groups from './features/groups';
 import roles from './features/roles';
 import permissions from './features/permissions';
 import usersManagement from './features/usersManagement';
+import dashboard from './features/dashboard';
 
 export default combineReducers({
   user,
@@ -24,4 +25,5 @@ export default combineReducers({
   roles,
   permissions,
   usersManagement,
+  dashboard,
 });

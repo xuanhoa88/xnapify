@@ -8,29 +8,23 @@
 import path from 'path';
 import webpack from 'webpack';
 import config from '../config';
-import { isVerbose } from '../lib/logger';
 
 // Base webpack configuration
-const BUNDLE_PROFILE = config.env('BUNDLE_PROFILE') === 'true';
-const BUNDLE_SOURCE_MAPS = config.env('BUNDLE_SOURCE_MAPS') !== 'false';
-const BUNDLE_MAX_ENTRYPOINT_SIZE =
-  parseInt(config.env('BUNDLE_MAX_ENTRYPOINT_SIZE'), 10) || 250000; // 250KB
-const BUNDLE_PERFORMANCE_HINTS =
-  config.env('BUNDLE_PERFORMANCE_HINTS') !== 'false';
+export const nodeEnv = process.env.NODE_ENV || 'development';
+export const isDebug = nodeEnv !== 'production';
 
-export const isDebug = process.env.NODE_ENV !== 'production';
-
-const verbose = isVerbose(); // Cache verbose check
-
+// Enable bundle analyze
 export const isAnalyze =
   process.argv.includes('--analyze') ||
   process.argv.includes('--analyse') ||
-  config.bundleAnalyze;
+  config.env('BUNDLE_ANALYZE') === 'true';
 
-export const isProfile = process.argv.includes('--profile') || BUNDLE_PROFILE;
+// Enable bundle profile
+export const isProfile =
+  process.argv.includes('--profile') || config.env('BUNDLE_PROFILE') === 'true';
+
 // JavaScript/TypeScript files (including ES modules and CommonJS)
-export const reScript = /\.[jt]sx?$/i; // .js, .jsx, .ts, .tsx
-export const reScriptLegacy = /\.[cm][jt]s$/i; // .cjs, .mjs, .cts, .mts
+export const reScript = /\.(c|m)?(j|t)sx?$/i; // .cjs, .mjs, .cts, .mts
 
 // Stylesheet files (CSS, SCSS, SASS, LESS, Stylus, SugarSS)
 export const reStyle = /\.(css|s[ac]ss|less|styl|sss)$/i;
@@ -44,9 +38,13 @@ export const reFont = /\.(?:woff2?|eot|ttf|otf)(?:\?.*)?$/i;
 // SVG files (handled separately for React component conversion)
 export const reSvg = /\.svg(?:\?.*)?$/i;
 
-// Markup and document files
-export const reHtml = /\.html?$/i; // Supports .htm too
+// HTML files
+export const reHtml = /\.html?$/i;
+
+// Markup files
 export const reMarkdown = /\.(?:md|markdown)$/i;
+
+// Text files
 export const reText = /\.txt$/i;
 
 // Media files
@@ -56,7 +54,9 @@ export const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)$/i;
 // Data files
 export const reData = /\.(?:json|xml|csv|ya?ml)$/i;
 
-/** Get file naming pattern based on environment */
+/**
+ * Get file naming pattern based on environment
+ */
 const getFileNamePattern = (hashType = 'hash') =>
   isDebug ? '[path][name][ext]' : `[${hashType}:8][ext]`;
 
@@ -196,7 +196,56 @@ export const createDefinePluginConfig = ({ isClient, ...extraDefinitions }) =>
  */
 export function createBaseConfig() {
   return {
-    mode: process.env.NODE_ENV || 'development',
+    // Set webpack mode based on environment
+    mode: nodeEnv,
+
+    // Set stats to errors-only
+    stats: 'errors-only',
+
+    // Common optimization configuration
+    // Specific configs (client/server) can override or extend these
+    optimization: {
+      // Development: disable ALL optimizations for accurate source maps
+      // Optimizations can cause webpack to rearrange/merge code, breaking source map accuracy
+      ...(isDebug
+        ? {
+            concatenateModules: false,
+            usedExports: false,
+            sideEffects: false,
+            minimize: false,
+          }
+        : {
+            // Production: enable core optimizations
+            concatenateModules: true,
+            usedExports: true,
+            sideEffects: true,
+          }),
+
+      // Stable module/chunk IDs for better caching (both dev and prod)
+      moduleIds: isDebug ? 'named' : 'deterministic',
+      chunkIds: isDebug ? 'named' : 'deterministic',
+
+      // Code splitting - split vendors and common code into separate chunks
+      splitChunks: {
+        chunks: 'all',
+        cacheGroups: {
+          // Vendors: all node_modules
+          vendors: {
+            test: /[\\/]node_modules[\\/]/,
+            name: 'vendors',
+            priority: 20,
+            reuseExistingChunk: true,
+          },
+          // Common: shared code (used in 2+ places)
+          common: {
+            minChunks: 2,
+            name: 'common',
+            priority: 10,
+            reuseExistingChunk: true,
+          },
+        },
+      },
+    },
 
     // Output configuration for server bundle
     // https://webpack.js.org/configuration/output/
@@ -204,20 +253,19 @@ export function createBaseConfig() {
       // Public URL path for assets (must match client config)
       // This ensures server and client generate the same asset URLs
       publicPath: '/',
+
+      // Source map filename template - controls how file paths appear in stack traces
+      // Development: absolute paths for exact file location
+      // Production: relative paths from project root for portability and security
+      devtoolModuleFilenameTemplate: isDebug
+        ? info => path.resolve(info.absoluteResourcePath)
+        : info => path.relative(config.ROOT_DIR, info.absoluteResourcePath),
     },
 
     resolve: {
       // Allow absolute paths in imports, e.g. import Button from 'components/Button'
       // Keep in sync .eslintrc
       modules: [config.NODE_MODULES_DIR, config.APP_DIR],
-
-      // Webpack 5 polyfills configuration
-      // https://webpack.js.org/configuration/resolve/#resolvefallback
-      fallback: {
-        fs: false,
-        net: false,
-        tls: false,
-      },
 
       extensions: ['.js', '.jsx', '.json'],
     },
@@ -377,80 +425,24 @@ export function createBaseConfig() {
       ],
     },
 
-    // Common optimization configuration
-    // Specific configs (client/server) can override or extend these
-    optimization: {
-      // Scope hoisting - concatenate modules for smaller bundles (production only)
-      concatenateModules: !isDebug,
-
-      // Tree shaking - remove unused exports
-      usedExports: true,
-      sideEffects: true,
-
-      // Code splitting - split vendors and common code into separate chunks
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          // Vendors: all node_modules
-          vendors: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            priority: 20,
-            reuseExistingChunk: true,
-          },
-          // Common: shared code (used in 2+ places)
-          common: {
-            minChunks: 2,
-            name: 'common',
-            priority: 10,
-            reuseExistingChunk: true,
-          },
-        },
-      },
-
-      // Stable module/chunk IDs for better caching
-      moduleIds: isDebug ? 'named' : 'deterministic',
-      chunkIds: isDebug ? 'named' : 'deterministic',
-    },
-
     // Don't attempt to continue if there are any errors.
     bail: !isDebug,
 
     // Webpack 5 filesystem cache for faster rebuilds
     cache: false,
 
-    // Stats output configuration
-    stats: {
-      preset: verbose ? 'normal' : 'errors-warnings',
-      colors: true,
-      // Show timing information
-      timings: true,
-      // Show built modules
-      modules: verbose,
-      // Show chunk information
-      chunks: isDebug,
-      // Show asset information
-      assets: verbose,
-      // Show reasons for including modules
-      reasons: isDebug,
-      // Show performance hints
-      performance: !isDebug,
-    },
+    // Source maps configuration
+    // https://webpack.js.org/configuration/devtool/
+    // Development: eval-source-map - highest quality, accurate line/column mappings
+    // Production: source-map - separate .map files for production debugging
+    devtool:
+      process.env.WEBPACK_DEVTOOL ||
+      (isDebug ? 'eval-source-map' : 'source-map'),
 
-    // Webpack 5 infrastructure logging
-    infrastructureLogging: {
-      level: verbose ? 'info' : 'warn',
-    },
-
-    // Performance hints
-    performance:
-      BUNDLE_PERFORMANCE_HINTS && !isDebug
-        ? {
-            maxAssetSize: config.bundleMaxAssetSize,
-            maxEntrypointSize: BUNDLE_MAX_ENTRYPOINT_SIZE,
-            hints: 'warning',
-            assetFilter: assetFilename => /\.(js|css)$/i.test(assetFilename),
-          }
-        : false,
+    // Plugins
+    plugins: [
+      // Set environment variables
+      new webpack.EnvironmentPlugin({ NODE_ENV: nodeEnv }),
+    ],
   };
 }

@@ -6,10 +6,15 @@
  */
 
 /**
- * UserGroup Model (Junction Table)
+ * UserGroup Model Factory (Junction Table)
  *
+ * Creates the UserGroup model with the provided Sequelize instance.
  * Links users to groups (many-to-many relationship).
  * A user can belong to multiple groups, and a group can have multiple users.
+ *
+ * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
+ * @returns {Model} UserGroup model
  */
 export default function createUserGroupModel({ connection, DataTypes }) {
   const UserGroup = connection.define(
@@ -37,6 +42,7 @@ export default function createUserGroupModel({ connection, DataTypes }) {
     {
       tableName: 'user_groups',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },

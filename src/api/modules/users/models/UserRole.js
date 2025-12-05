@@ -13,6 +13,7 @@
  * A user can have multiple roles, and a role can be assigned to multiple users.
  *
  * @param {Object} connection - Sequelize connection instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} UserRole model
  */
 export default function createUserRoleModel({ connection, DataTypes }) {
@@ -41,6 +42,7 @@ export default function createUserRoleModel({ connection, DataTypes }) {
     {
       tableName: 'user_roles',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },

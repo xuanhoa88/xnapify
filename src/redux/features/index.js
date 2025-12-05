@@ -251,3 +251,17 @@ export {
   // Reducer (default export from feature)
   default as usersManagementReducer,
 } from './usersManagement';
+
+// =============================================================================
+// FEATURE: DASHBOARD (Admin Dashboard)
+// =============================================================================
+export {
+  // Actions
+  fetchDashboard,
+  // Constants
+  FETCH_DASHBOARD_START,
+  FETCH_DASHBOARD_SUCCESS,
+  FETCH_DASHBOARD_ERROR,
+  // Reducer (default export from feature)
+  default as dashboardReducer,
+} from './dashboard';

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import 'source-map-support/register';
 import 'dotenv-flow/config';
 import cookieParser from 'cookie-parser';
 import express from 'express';

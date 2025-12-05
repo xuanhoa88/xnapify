@@ -6,19 +6,17 @@
  */
 
 /**
- * GroupRole Model (Junction Table)
+ * GroupRole Model Factory (Junction Table)
  *
+ * Creates the GroupRole model with the provided Sequelize instance.
  * Links groups to roles (many-to-many relationship).
  * A group can have multiple roles, and a role can be assigned to multiple groups.
  *
  * @param {Object} connection - Sequelize connection instance
- * @param {Object} Sequelize - Sequelize instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} GroupRole model
  */
-export default function createGroupRoleModel({
-  connection,
-  Sequelize: { DataTypes },
-}) {
+export default function createGroupRoleModel({ connection, DataTypes }) {
   const GroupRole = connection.define(
     'GroupRole',
     {
@@ -44,6 +42,7 @@ export default function createGroupRoleModel({
     {
       tableName: 'group_roles',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },

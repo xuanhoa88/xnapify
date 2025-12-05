@@ -17,7 +17,7 @@ import s from './Button.css';
 
 function Button({ children }) {
   useStyles(s); // Required for SSR
-  
+
   return <button className={s.button}>{children}</button>;
 }
 ```
@@ -38,6 +38,7 @@ function Button({ children }) {
 ```
 
 **Generated HTML:**
+
 ```html
 <button class="Button_button_1a2b3c">Click me</button>
 ```
@@ -45,16 +46,12 @@ function Button({ children }) {
 ### Multiple Classes
 
 ```javascript
-<div className={`${s.container} ${s.active}`}>
-  Content
-</div>
+<div className={`${s.container} ${s.active}`}>Content</div>;
 
 // Or use classnames library
-import cn from 'classnames';
+import clsx from 'clsx';
 
-<div className={cn(s.container, { [s.active]: isActive })}>
-  Content
-</div>
+<div className={clsx(s.container, { [s.active]: isActive })}>Content</div>;
 ```
 
 ### Composition
@@ -99,7 +96,7 @@ Use `:global` for global styles:
     margin: 0;
     font-family: Arial, sans-serif;
   }
-  
+
   * {
     box-sizing: border-box;
   }
@@ -126,15 +123,15 @@ import './App.css';
 ```css
 .card {
   padding: 20px;
-  
+
   & .title {
     font-size: 24px;
     margin: 0 0 10px;
   }
-  
+
   & .content {
     color: #666;
-    
+
     & p {
       margin: 0 0 10px;
     }
@@ -238,11 +235,21 @@ Vendor prefixes are added automatically:
 
 ```css
 /* Common breakpoints */
-@media (max-width: 575px) { /* Mobile */ }
-@media (min-width: 576px) and (max-width: 767px) { /* Small tablets */ }
-@media (min-width: 768px) and (max-width: 991px) { /* Tablets */ }
-@media (min-width: 992px) and (max-width: 1199px) { /* Small desktops */ }
-@media (min-width: 1200px) { /* Large desktops */ }
+@media (max-width: 575px) {
+  /* Mobile */
+}
+@media (min-width: 576px) and (max-width: 767px) {
+  /* Small tablets */
+}
+@media (min-width: 768px) and (max-width: 991px) {
+  /* Tablets */
+}
+@media (min-width: 992px) and (max-width: 1199px) {
+  /* Small desktops */
+}
+@media (min-width: 1200px) {
+  /* Large desktops */
+}
 ```
 
 ## 🎯 Layout Patterns
@@ -325,28 +332,29 @@ Vendor prefixes are added automatically:
   --color-danger: #dc3545;
   --color-warning: #ffc107;
   --color-info: #17a2b8;
-  
+
   --color-text: #212529;
   --color-text-muted: #6c757d;
   --color-bg: #ffffff;
   --color-bg-alt: #f8f9fa;
-  
-  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    sans-serif;
   --font-size-base: 16px;
   --line-height-base: 1.5;
-  
+
   --spacing-xs: 4px;
   --spacing-sm: 8px;
   --spacing-md: 16px;
   --spacing-lg: 24px;
   --spacing-xl: 32px;
-  
+
   --border-radius: 4px;
   --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Dark theme */
-[data-theme="dark"] {
+[data-theme='dark'] {
   --color-text: #f8f9fa;
   --color-text-muted: #adb5bd;
   --color-bg: #212529;
@@ -397,12 +405,24 @@ code {
   --font-size-4xl: 36px;
 }
 
-h1 { font-size: var(--font-size-4xl); }
-h2 { font-size: var(--font-size-3xl); }
-h3 { font-size: var(--font-size-2xl); }
-h4 { font-size: var(--font-size-xl); }
-h5 { font-size: var(--font-size-lg); }
-h6 { font-size: var(--font-size-base); }
+h1 {
+  font-size: var(--font-size-4xl);
+}
+h2 {
+  font-size: var(--font-size-3xl);
+}
+h3 {
+  font-size: var(--font-size-2xl);
+}
+h4 {
+  font-size: var(--font-size-xl);
+}
+h5 {
+  font-size: var(--font-size-lg);
+}
+h6 {
+  font-size: var(--font-size-base);
+}
 ```
 
 ## 🎭 Animations
@@ -423,7 +443,9 @@ h6 { font-size: var(--font-size-base); }
 .card {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 .card:hover {
@@ -451,8 +473,12 @@ h6 { font-size: var(--font-size-base); }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spinner {
@@ -546,16 +572,24 @@ h6 { font-size: var(--font-size-base); }
 
 ```css
 /* BEM-style naming */
-.card { }
-.card__title { }
-.card__content { }
-.card--featured { }
+.card {
+}
+.card__title {
+}
+.card__content {
+}
+.card--featured {
+}
 
 /* Or simple descriptive names */
-.card { }
-.cardTitle { }
-.cardContent { }
-.featuredCard { }
+.card {
+}
+.cardTitle {
+}
+.cardContent {
+}
+.featuredCard {
+}
 ```
 
 ### Performance

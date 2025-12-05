@@ -42,6 +42,7 @@ export default function createRolePermissionModel({ connection, DataTypes }) {
     {
       tableName: 'role_permissions',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },

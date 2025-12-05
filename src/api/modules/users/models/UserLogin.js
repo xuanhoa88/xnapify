@@ -53,6 +53,7 @@ export default function createUserLoginModel({ connection, DataTypes }) {
     {
       tableName: 'user_logins',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },

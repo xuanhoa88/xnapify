@@ -18,13 +18,10 @@
  * - name: 'Support', description: 'Customer support team'
  *
  * @param {Object} connection - Sequelize connection instance
- * @param {Object} Sequelize - Sequelize instance
+ * @param {Object} DataTypes - Sequelize data types
  * @returns {Model} Group model
  */
-export default function createGroupModel({
-  connection,
-  Sequelize: { DataTypes },
-}) {
+export default function createGroupModel({ connection, DataTypes }) {
   const Group = connection.define(
     'Group',
     {
@@ -70,6 +67,7 @@ export default function createGroupModel({
     {
       tableName: 'groups',
       timestamps: true,
+      underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
     },
