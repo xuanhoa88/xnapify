@@ -6,10 +6,14 @@
  */
 
 import {
-  FETCH_DASHBOARD_START,
-  FETCH_DASHBOARD_SUCCESS,
-  FETCH_DASHBOARD_ERROR,
-} from './constants';
+  fetchDashboardStart,
+  fetchDashboardSuccess,
+  fetchDashboardError,
+} from './slice';
+
+/**
+ * Dashboard Thunks
+ */
 
 /**
  * Fetch dashboard statistics and recent activity
@@ -21,22 +25,16 @@ import {
  */
 export function fetchDashboard() {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_DASHBOARD_START });
+    dispatch(fetchDashboardStart());
 
     try {
       const { data } = await fetch('/api/admin/dashboard/users');
 
-      dispatch({
-        type: FETCH_DASHBOARD_SUCCESS,
-        payload: data,
-      });
+      dispatch(fetchDashboardSuccess(data));
 
       return { success: true, data };
     } catch (error) {
-      dispatch({
-        type: FETCH_DASHBOARD_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchDashboardError(error.message));
 
       return { success: false, error: error.message };
     }

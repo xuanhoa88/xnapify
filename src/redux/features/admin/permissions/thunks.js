@@ -6,32 +6,38 @@
  */
 
 import {
-  FETCH_PERMISSIONS_START,
-  FETCH_PERMISSIONS_SUCCESS,
-  FETCH_PERMISSIONS_ERROR,
-  DELETE_PERMISSION_START,
-  DELETE_PERMISSION_SUCCESS,
-  DELETE_PERMISSION_ERROR,
-  CREATE_PERMISSION_START,
-  CREATE_PERMISSION_SUCCESS,
-  CREATE_PERMISSION_ERROR,
-  UPDATE_PERMISSION_START,
-  UPDATE_PERMISSION_SUCCESS,
-  UPDATE_PERMISSION_ERROR,
-} from './constants';
+  fetchPermissionsStart,
+  fetchPermissionsSuccess,
+  fetchPermissionsError,
+  deletePermissionStart,
+  deletePermissionSuccess,
+  deletePermissionError,
+  createPermissionStart,
+  createPermissionSuccess,
+  createPermissionError,
+  updatePermissionStart,
+  updatePermissionSuccess,
+  updatePermissionError,
+} from './slice';
+
+/**
+ * Permissions Thunks
+ *
+ * Async thunk actions for permissions CRUD operations.
+ */
 
 /**
  * Fetch all permissions
  *
- * @param {Object} params - Query parameters
- * @param {number} params.page - Page number
- * @param {number} params.limit - Items per page
- * @param {string} params.search - Search term
+ * @param {Object} options - Query parameters
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {string} options.search - Search term
  * @returns {Function} Redux thunk action
  */
 export function fetchPermissions(options = {}) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_PERMISSIONS_START });
+    dispatch(fetchPermissionsStart());
 
     try {
       const { page = 1, limit = 100, search = '' } = options || {};
@@ -45,17 +51,11 @@ export function fetchPermissions(options = {}) {
         `/api/admin/permissions?${params.toString()}`,
       );
 
-      dispatch({
-        type: FETCH_PERMISSIONS_SUCCESS,
-        payload: data,
-      });
+      dispatch(fetchPermissionsSuccess(data));
 
       return { success: true, data };
     } catch (error) {
-      dispatch({
-        type: FETCH_PERMISSIONS_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchPermissionsError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -70,24 +70,18 @@ export function fetchPermissions(options = {}) {
  */
 export function deletePermission(permissionId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: DELETE_PERMISSION_START, payload: permissionId });
+    dispatch(deletePermissionStart());
 
     try {
       await fetch(`/api/admin/permissions/${permissionId}`, {
         method: 'DELETE',
       });
 
-      dispatch({
-        type: DELETE_PERMISSION_SUCCESS,
-        payload: permissionId,
-      });
+      dispatch(deletePermissionSuccess(permissionId));
 
       return { success: true };
     } catch (error) {
-      dispatch({
-        type: DELETE_PERMISSION_ERROR,
-        payload: error.message,
-      });
+      dispatch(deletePermissionError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -106,7 +100,7 @@ export function deletePermission(permissionId) {
  */
 export function createPermission(permissionData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: CREATE_PERMISSION_START });
+    dispatch(createPermissionStart());
 
     try {
       const { data } = await fetch('/api/admin/permissions', {
@@ -115,17 +109,11 @@ export function createPermission(permissionData) {
         body: JSON.stringify(permissionData),
       });
 
-      dispatch({
-        type: CREATE_PERMISSION_SUCCESS,
-        payload: data.permission,
-      });
+      dispatch(createPermissionSuccess(data.permission));
 
       return { success: true, permission: data.permission };
     } catch (error) {
-      dispatch({
-        type: CREATE_PERMISSION_ERROR,
-        payload: error.message,
-      });
+      dispatch(createPermissionError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -141,7 +129,7 @@ export function createPermission(permissionData) {
  */
 export function updatePermission(permissionId, permissionData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_PERMISSION_START });
+    dispatch(updatePermissionStart());
 
     try {
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`, {
@@ -150,17 +138,11 @@ export function updatePermission(permissionId, permissionData) {
         body: JSON.stringify(permissionData),
       });
 
-      dispatch({
-        type: UPDATE_PERMISSION_SUCCESS,
-        payload: data.permission,
-      });
+      dispatch(updatePermissionSuccess(data.permission));
 
       return { success: true, permission: data.permission };
     } catch (error) {
-      dispatch({
-        type: UPDATE_PERMISSION_ERROR,
-        payload: error.message,
-      });
+      dispatch(updatePermissionError(error.message));
 
       return { success: false, error: error.message };
     }

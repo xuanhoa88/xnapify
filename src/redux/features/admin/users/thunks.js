@@ -6,25 +6,31 @@
  */
 
 import {
-  FETCH_USERS_START,
-  FETCH_USERS_SUCCESS,
-  FETCH_USERS_ERROR,
-  FETCH_USER_BY_ID_START,
-  FETCH_USER_BY_ID_SUCCESS,
-  FETCH_USER_BY_ID_ERROR,
-  DELETE_USER_BY_ID_START,
-  DELETE_USER_BY_ID_SUCCESS,
-  DELETE_USER_BY_ID_ERROR,
-  UPDATE_USER_STATUS_BY_ID_START,
-  UPDATE_USER_STATUS_BY_ID_SUCCESS,
-  UPDATE_USER_STATUS_BY_ID_ERROR,
-  CREATE_USER_START,
-  CREATE_USER_SUCCESS,
-  CREATE_USER_ERROR,
-  UPDATE_USER_BY_IDSTART,
-  UPDATE_USER_BY_IDSUCCESS,
-  UPDATE_USER_BY_IDERROR,
-} from './constants';
+  fetchUsersStart,
+  fetchUsersSuccess,
+  fetchUsersError,
+  fetchUserByIdStart,
+  fetchUserByIdSuccess,
+  fetchUserByIdError,
+  deleteUserStart,
+  deleteUserSuccess,
+  deleteUserError,
+  updateUserStatusStart,
+  updateUserStatusSuccess,
+  updateUserStatusError,
+  createUserStart,
+  createUserSuccess,
+  createUserError,
+  updateUserByIdStart,
+  updateUserByIdSuccess,
+  updateUserByIdError,
+} from './slice';
+
+/**
+ * Users Thunks
+ *
+ * Async thunk actions for admin users CRUD operations.
+ */
 
 /**
  * Fetch user by ID with full details
@@ -34,22 +40,16 @@ import {
  */
 export function fetchUserById(userId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_USER_BY_ID_START });
+    dispatch(fetchUserByIdStart());
 
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`);
 
-      dispatch({
-        type: FETCH_USER_BY_ID_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(fetchUserByIdSuccess(data.user));
 
       return { success: true, user: data.user };
     } catch (error) {
-      dispatch({
-        type: FETCH_USER_BY_ID_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchUserByIdError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -59,17 +59,17 @@ export function fetchUserById(userId) {
 /**
  * Fetch all users with pagination and filters
  *
- * @param {Object} params - Query parameters
- * @param {number} params.page - Page number
- * @param {number} params.limit - Items per page
- * @param {string} params.search - Search term
- * @param {string} params.role - Filter by role
- * @param {string} params.status - Filter by status
+ * @param {Object} options - Query parameters
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {string} options.search - Search term
+ * @param {string} options.role - Filter by role
+ * @param {string} options.status - Filter by status
  * @returns {Function} Redux thunk action
  */
 export function fetchUsers(options = {}) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_USERS_START });
+    dispatch(fetchUsersStart());
 
     try {
       const {
@@ -79,6 +79,7 @@ export function fetchUsers(options = {}) {
         role = '',
         status = '',
       } = options || {};
+
       const params = new URLSearchParams();
       if (page) params.append('page', page);
       if (limit) params.append('limit', limit);
@@ -90,17 +91,11 @@ export function fetchUsers(options = {}) {
         `/api/admin/users/list?${params.toString()}`,
       );
 
-      dispatch({
-        type: FETCH_USERS_SUCCESS,
-        payload: data,
-      });
+      dispatch(fetchUsersSuccess(data));
 
       return { success: true, data };
     } catch (error) {
-      dispatch({
-        type: FETCH_USERS_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchUsersError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -115,24 +110,18 @@ export function fetchUsers(options = {}) {
  */
 export function deleteUser(userId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: DELETE_USER_BY_ID_START, payload: userId });
+    dispatch(deleteUserStart());
 
     try {
       await fetch(`/api/admin/users/${userId}`, {
         method: 'DELETE',
       });
 
-      dispatch({
-        type: DELETE_USER_BY_ID_SUCCESS,
-        payload: userId,
-      });
+      dispatch(deleteUserSuccess(userId));
 
       return { success: true };
     } catch (error) {
-      dispatch({
-        type: DELETE_USER_BY_ID_ERROR,
-        payload: error.message,
-      });
+      dispatch(deleteUserError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -148,7 +137,7 @@ export function deleteUser(userId) {
  */
 export function updateUserStatus(userId, isActive) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_USER_STATUS_BY_ID_START });
+    dispatch(updateUserStatusStart());
 
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
@@ -157,17 +146,11 @@ export function updateUserStatus(userId, isActive) {
         body: JSON.stringify({ is_active: isActive }),
       });
 
-      dispatch({
-        type: UPDATE_USER_STATUS_BY_ID_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(updateUserStatusSuccess(data.user));
 
       return { success: true, user: data.user };
     } catch (error) {
-      dispatch({
-        type: UPDATE_USER_STATUS_BY_ID_ERROR,
-        payload: error.message,
-      });
+      dispatch(updateUserStatusError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -178,18 +161,11 @@ export function updateUserStatus(userId, isActive) {
  * Create a new user
  *
  * @param {Object} userData - User data
- * @param {string} userData.email - User email
- * @param {string} userData.password - User password
- * @param {string} userData.display_name - Display name
- * @param {string} userData.first_name - First name
- * @param {string} userData.last_name - Last name
- * @param {string} userData.role - User role
- * @param {boolean} userData.is_active - Active status
  * @returns {Function} Redux thunk action
  */
 export function createUser(userData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: CREATE_USER_START });
+    dispatch(createUserStart());
 
     try {
       const { data } = await fetch('/api/admin/users', {
@@ -197,20 +173,14 @@ export function createUser(userData) {
         body: JSON.stringify(userData),
       });
 
-      dispatch({
-        type: CREATE_USER_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(createUserSuccess(data.user));
 
       // Refresh the list to show the new user
       dispatch(fetchUsers());
 
       return { success: true, data: data.user };
     } catch (error) {
-      dispatch({
-        type: CREATE_USER_ERROR,
-        payload: error.message,
-      });
+      dispatch(createUserError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -222,16 +192,11 @@ export function createUser(userData) {
  *
  * @param {string} userId - User ID
  * @param {Object} userData - User data to update
- * @param {string} userData.display_name - Display name
- * @param {string} userData.first_name - First name
- * @param {string} userData.last_name - Last name
- * @param {string} userData.role - User role
- * @param {boolean} userData.is_active - Active status
  * @returns {Function} Redux thunk action
  */
 export function updateUser(userId, userData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_USER_BY_IDSTART });
+    dispatch(updateUserByIdStart());
 
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
@@ -239,20 +204,14 @@ export function updateUser(userId, userData) {
         body: JSON.stringify(userData),
       });
 
-      dispatch({
-        type: UPDATE_USER_BY_IDSUCCESS,
-        payload: data.user,
-      });
+      dispatch(updateUserByIdSuccess(data.user));
 
       // Refresh the list to show updated data
       dispatch(fetchUsers());
 
       return { success: true, data: data.user };
     } catch (error) {
-      dispatch({
-        type: UPDATE_USER_BY_IDERROR,
-        payload: error.message,
-      });
+      dispatch(updateUserByIdError(error.message));
 
       return { success: false, error: error.message };
     }

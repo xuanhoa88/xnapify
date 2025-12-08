@@ -11,19 +11,16 @@
  * @param {Object} state - Redux state
  * @returns {Array} Array of permission objects
  */
-export function getPermissions(state) {
-  return state.admin.permissions.permissions;
-}
+export const getPermissions = state => state.admin.permissions.permissions;
 
 /**
  * Get permissions pagination
  *
  * @param {Object} state - Redux state
- * @returns {Object} Pagination object
+ * @returns {Object|null} Pagination object
  */
-export function getPermissionsPagination(state) {
-  return state.admin.permissions.pagination;
-}
+export const getPermissionsPagination = state =>
+  state.admin.permissions.pagination;
 
 /**
  * Get permissions loading state
@@ -31,9 +28,7 @@ export function getPermissionsPagination(state) {
  * @param {Object} state - Redux state
  * @returns {boolean} True if permissions are loading
  */
-export function getPermissionsLoading(state) {
-  return state.admin.permissions.loading;
-}
+export const getPermissionsLoading = state => state.admin.permissions.loading;
 
 /**
  * Get permissions error
@@ -41,9 +36,7 @@ export function getPermissionsLoading(state) {
  * @param {Object} state - Redux state
  * @returns {string|null} Error message or null
  */
-export function getPermissionsError(state) {
-  return state.admin.permissions.error;
-}
+export const getPermissionsError = state => state.admin.permissions.error;
 
 /**
  * Get permission by ID
@@ -52,8 +45,5 @@ export function getPermissionsError(state) {
  * @param {string} id - Permission ID
  * @returns {Object|undefined} Permission object or undefined
  */
-export function getPermissionById(state, id) {
-  return state.admin.permissions.permissions.find(
-    permission => permission.id === id,
-  );
-}
+export const getPermissionById = (state, id) =>
+  state.admin.permissions.permissions.find(permission => permission.id === id);

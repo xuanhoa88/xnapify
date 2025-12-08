@@ -5,19 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import renderer from 'react-test-renderer';
+import renderer, { act } from 'react-test-renderer';
 import configureStore from 'redux-mock-store';
-import thunk from 'redux-thunk';
-import i18n from '../../i18n';
+import {
+  DEFAULT_LOCALE,
+  AVAILABLE_LOCALES,
+  getI18nInstance,
+} from '../../redux';
 import App from '../App';
 import Layout from './index';
 
 // =============================================================================
 // TEST SETUP
 // =============================================================================
-
-const middlewares = [thunk];
-const mockStore = configureStore(middlewares);
+const i18n = getI18nInstance();
+const mockStore = configureStore();
+const fetch = jest.fn();
 
 // Initial Redux state matching current codebase structure
 const initialState = {
@@ -27,16 +30,17 @@ const initialState = {
     appDescription: 'Boilerplate for React.js web applications',
   },
   intl: {
-    locale: 'en-US',
+    locale: DEFAULT_LOCALE,
     localeLoading: null,
-    messages: {},
     localeFallback: null,
-    availableLocales: {
-      'en-US': 'English (US)',
-      'vi-VN': 'Tiếng Việt',
-    },
+    availableLocales: AVAILABLE_LOCALES,
   },
   user: null,
+  ui: {
+    sidebarOpen: false,
+    isAdminPanel: false,
+    showPageHeader: false,
+  },
 };
 
 // =============================================================================
@@ -46,22 +50,25 @@ const initialState = {
 describe('Layout', () => {
   test('renders children correctly', () => {
     const store = mockStore(initialState);
+    let component;
 
-    const component = renderer.create(
-      <App
-        context={{
-          store,
-          fetch: () => {},
-          i18n,
-          pathname: '/',
-          query: {},
-        }}
-      >
-        <Layout>
-          <div className='child' />
-        </Layout>
-      </App>,
-    );
+    act(() => {
+      component = renderer.create(
+        <App
+          context={{
+            store,
+            fetch,
+            i18n,
+            pathname: '/',
+            query: {},
+          }}
+        >
+          <Layout>
+            <div className='child' />
+          </Layout>
+        </App>,
+      );
+    });
 
     const tree = component.toJSON();
 
@@ -71,5 +78,10 @@ describe('Layout', () => {
     // Test that it renders the child element
     expect(tree).toBeDefined();
     expect(tree.type).toBe('div');
+
+    // Cleanup to prevent async callback errors
+    act(() => {
+      component.unmount();
+    });
   });
 });

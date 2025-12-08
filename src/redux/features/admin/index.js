@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { combineReducers } from 'redux';
+import { combineReducers } from '@reduxjs/toolkit';
 import roles from './roles';
 import groups from './groups';
 import permissions from './permissions';

@@ -11,19 +11,15 @@
  * @param {Object} state - Redux state
  * @returns {Array} Array of user objects
  */
-export function getUsers(state) {
-  return state.admin.users.users;
-}
+export const getUsers = state => state.admin.users.users;
 
 /**
  * Get users pagination
  *
  * @param {Object} state - Redux state
- * @returns {Object} Pagination object
+ * @returns {Object|null} Pagination object
  */
-export function getUsersPagination(state) {
-  return state.admin.users.pagination;
-}
+export const getUsersPagination = state => state.admin.users.pagination;
 
 /**
  * Get users loading state
@@ -31,9 +27,7 @@ export function getUsersPagination(state) {
  * @param {Object} state - Redux state
  * @returns {boolean} True if users are loading
  */
-export function getUsersLoading(state) {
-  return state.admin.users.loading;
-}
+export const getUsersLoading = state => state.admin.users.loading;
 
 /**
  * Get users error
@@ -41,9 +35,7 @@ export function getUsersLoading(state) {
  * @param {Object} state - Redux state
  * @returns {string|null} Error message or null
  */
-export function getUsersError(state) {
-  return state.admin.users.error;
-}
+export const getUsersError = state => state.admin.users.error;
 
 /**
  * Get user by ID
@@ -52,6 +44,5 @@ export function getUsersError(state) {
  * @param {string} id - User ID
  * @returns {Object|undefined} User object or undefined
  */
-export function getUserById(state, id) {
-  return state.admin.users.users.find(user => user.id === id);
-}
+export const getUserById = (state, id) =>
+  state.admin.users.users.find(user => user.id === id);

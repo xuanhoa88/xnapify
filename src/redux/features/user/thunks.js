@@ -6,21 +6,28 @@
  */
 
 import {
-  LOGIN_START,
-  LOGIN_SUCCESS,
-  LOGIN_ERROR,
-  REGISTER_START,
-  REGISTER_SUCCESS,
-  REGISTER_ERROR,
-  LOGOUT,
-  UPDATE_USER,
-  FETCH_USER_START,
-  FETCH_USER_SUCCESS,
-  FETCH_USER_ERROR,
-  RESET_PASSWORD_START,
-  RESET_PASSWORD_SUCCESS,
-  RESET_PASSWORD_ERROR,
-} from './constants';
+  loginStart,
+  loginSuccess,
+  loginError,
+  registerStart,
+  registerSuccess,
+  registerError,
+  logout as logoutAction,
+  fetchUserStart,
+  fetchUserSuccess,
+  fetchUserError,
+  resetPasswordStart,
+  resetPasswordSuccess,
+  resetPasswordError,
+  updateUser,
+} from './slice';
+
+/**
+ * User Thunks
+ *
+ * Async thunk actions for user authentication and profile management.
+ * These maintain the existing return pattern { success, data/error } for backward compatibility.
+ */
 
 /**
  * Login user
@@ -34,7 +41,7 @@ import {
  */
 export function login({ email, password }) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: LOGIN_START });
+    dispatch(loginStart());
 
     try {
       const { data } = await fetch('/api/login', {
@@ -43,18 +50,11 @@ export function login({ email, password }) {
         body: JSON.stringify({ email, password }),
       });
 
-      // Update user state
-      dispatch({
-        type: LOGIN_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(loginSuccess(data.user));
 
       return { success: true, user: data.user };
     } catch (error) {
-      dispatch({
-        type: LOGIN_ERROR,
-        payload: error.message,
-      });
+      dispatch(loginError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -74,7 +74,7 @@ export function login({ email, password }) {
  */
 export function register({ email, password, displayName }) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: REGISTER_START });
+    dispatch(registerStart());
 
     try {
       const { data } = await fetch('/api/register', {
@@ -83,22 +83,15 @@ export function register({ email, password, displayName }) {
         body: JSON.stringify({
           email,
           password,
-          display_name: displayName, // Convert to snake_case for backend
+          display_name: displayName,
         }),
       });
 
-      // Update user state
-      dispatch({
-        type: REGISTER_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(registerSuccess(data.user));
 
       return { success: true, user: data.user };
     } catch (error) {
-      dispatch({
-        type: REGISTER_ERROR,
-        payload: error.message,
-      });
+      dispatch(registerError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -115,18 +108,13 @@ export function register({ email, password, displayName }) {
 export function logout() {
   return async (dispatch, getState, { fetch }) => {
     try {
-      // Call logout API to clear server-side session/cookie
       await fetch('/api/logout', {
         method: 'POST',
       });
     } catch (error) {
-      // TODO: Handle logout error
       console.error('Logout error:', error);
     } finally {
-      // Clear user state
-      dispatch({
-        type: LOGOUT,
-      });
+      dispatch(logoutAction());
     }
   };
 }
@@ -140,23 +128,16 @@ export function logout() {
  */
 export function me() {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_USER_START });
+    dispatch(fetchUserStart());
 
     try {
       const { data } = await fetch('/api/me');
 
-      // Update user state
-      dispatch({
-        type: FETCH_USER_SUCCESS,
-        payload: data.user,
-      });
+      dispatch(fetchUserSuccess(data.user));
 
       return { success: true, user: data.user };
     } catch (error) {
-      dispatch({
-        type: FETCH_USER_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchUserError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -174,7 +155,7 @@ export function me() {
  */
 export function resetPassword({ email }) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: RESET_PASSWORD_START });
+    dispatch(resetPasswordStart());
 
     try {
       const { data } = await fetch('/api/users/request-reset-password', {
@@ -183,16 +164,11 @@ export function resetPassword({ email }) {
         body: JSON.stringify({ email }),
       });
 
-      dispatch({
-        type: RESET_PASSWORD_SUCCESS,
-      });
+      dispatch(resetPasswordSuccess());
 
       return { success: true, message: data.message };
     } catch (error) {
-      dispatch({
-        type: RESET_PASSWORD_ERROR,
-        payload: error.message,
-      });
+      dispatch(resetPasswordError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -214,10 +190,7 @@ export function updateCurrentUser(userData) {
         body: JSON.stringify(userData),
       });
 
-      dispatch({
-        type: UPDATE_USER,
-        payload: data.profile,
-      });
+      dispatch(updateUser(data.profile));
 
       return { success: true, user: data.profile };
     } catch (error) {

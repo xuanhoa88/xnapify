@@ -6,10 +6,16 @@
  */
 
 // Public API - Actions
-export * from './actions';
+export {
+  toggleSidebar,
+  openSidebar,
+  closeSidebar,
+  setAdminPanel,
+  setPageHeader,
+} from './slice';
 
 // Public API - Selectors
 export * from './selector';
 
 // Public API - Reducer
-export { default } from './reducer';
+export { default } from './slice';

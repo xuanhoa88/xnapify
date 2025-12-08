@@ -16,30 +16,6 @@ export const getLocale = state =>
   (state.intl && state.intl.locale) || DEFAULT_LOCALE;
 
 /**
- * Get locale currently being loaded
- * @param {Object} state - Redux state
- * @returns {string|null} Locale being loaded, or null if no loading in progress
- */
-export const getLocaleLoading = state =>
-  (state.intl && state.intl.localeLoading) || null;
-
-/**
- * Check if a locale is currently being loaded
- * @param {Object} state - Redux state
- * @returns {boolean} True if locale is loading
- */
-export const isLocaleLoading = state => !!getLocaleLoading(state);
-
-/**
- * Get loaded messages for a specific locale
- * @param {Object} state - Redux state
- * @param {string} locale - Locale code
- * @returns {Object|null} Messages object or null if not loaded
- */
-export const getLocaleMessages = (state, locale) =>
-  (state.intl && state.intl.messages && state.intl.messages[locale]) || null;
-
-/**
  * Get locale fallback info if any
  * @param {Object} state - Redux state
  * @returns {Object|null} Fallback info object or null

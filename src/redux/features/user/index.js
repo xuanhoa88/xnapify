@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Actions
-export * from './actions';
+// Public API - Async Thunks
+export * from './thunks';
 
 // Public API - Selectors
 export * from './selector';
 
 // Public API - Reducer
-export { default } from './reducer';
+export { default } from './slice';

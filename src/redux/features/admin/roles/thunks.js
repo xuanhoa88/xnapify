@@ -6,19 +6,26 @@
  */
 
 import {
-  FETCH_ROLES_START,
-  FETCH_ROLES_SUCCESS,
-  FETCH_ROLES_ERROR,
-  DELETE_ROLE_START,
-  DELETE_ROLE_SUCCESS,
-  DELETE_ROLE_ERROR,
-  CREATE_ROLE_START,
-  CREATE_ROLE_SUCCESS,
-  CREATE_ROLE_ERROR,
-  UPDATE_ROLE_START,
-  UPDATE_ROLE_SUCCESS,
-  UPDATE_ROLE_ERROR,
-} from './constants';
+  fetchRolesStart,
+  fetchRolesSuccess,
+  fetchRolesError,
+  deleteRoleStart,
+  deleteRoleSuccess,
+  deleteRoleError,
+  createRoleStart,
+  createRoleSuccess,
+  createRoleError,
+  updateRoleStart,
+  updateRoleSuccess,
+  updateRoleError,
+} from './slice';
+
+/**
+ * Roles Thunks
+ *
+ * Async thunk actions for roles CRUD operations.
+ * Maintains backward compatible return pattern { success, data/error }.
+ */
 
 /**
  * Fetch all roles
@@ -31,7 +38,7 @@ import {
  */
 export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_ROLES_START });
+    dispatch(fetchRolesStart());
 
     try {
       const params = new URLSearchParams();
@@ -41,17 +48,11 @@ export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
 
       const { data } = await fetch(`/api/admin/roles?${params.toString()}`);
 
-      dispatch({
-        type: FETCH_ROLES_SUCCESS,
-        payload: data,
-      });
+      dispatch(fetchRolesSuccess(data));
 
       return { success: true, data };
     } catch (error) {
-      dispatch({
-        type: FETCH_ROLES_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchRolesError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -66,24 +67,18 @@ export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
  */
 export function deleteRole(roleId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: DELETE_ROLE_START, payload: roleId });
+    dispatch(deleteRoleStart());
 
     try {
       await fetch(`/api/admin/roles/${roleId}`, {
         method: 'DELETE',
       });
 
-      dispatch({
-        type: DELETE_ROLE_SUCCESS,
-        payload: roleId,
-      });
+      dispatch(deleteRoleSuccess(roleId));
 
       return { success: true };
     } catch (error) {
-      dispatch({
-        type: DELETE_ROLE_ERROR,
-        payload: error.message,
-      });
+      dispatch(deleteRoleError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -100,7 +95,7 @@ export function deleteRole(roleId) {
  */
 export function createRole(roleData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: CREATE_ROLE_START });
+    dispatch(createRoleStart());
 
     try {
       const { data } = await fetch('/api/admin/roles', {
@@ -109,17 +104,11 @@ export function createRole(roleData) {
         body: JSON.stringify(roleData),
       });
 
-      dispatch({
-        type: CREATE_ROLE_SUCCESS,
-        payload: data.role,
-      });
+      dispatch(createRoleSuccess(data.role));
 
       return { success: true, role: data.role };
     } catch (error) {
-      dispatch({
-        type: CREATE_ROLE_ERROR,
-        payload: error.message,
-      });
+      dispatch(createRoleError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -135,7 +124,7 @@ export function createRole(roleData) {
  */
 export function updateRole(roleId, roleData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_ROLE_START });
+    dispatch(updateRoleStart());
 
     try {
       const { data } = await fetch(`/api/admin/roles/${roleId}`, {
@@ -144,17 +133,11 @@ export function updateRole(roleId, roleData) {
         body: JSON.stringify(roleData),
       });
 
-      dispatch({
-        type: UPDATE_ROLE_SUCCESS,
-        payload: data.role,
-      });
+      dispatch(updateRoleSuccess(data.role));
 
       return { success: true, role: data.role };
     } catch (error) {
-      dispatch({
-        type: UPDATE_ROLE_ERROR,
-        payload: error.message,
-      });
+      dispatch(updateRoleError(error.message));
 
       return { success: false, error: error.message };
     }

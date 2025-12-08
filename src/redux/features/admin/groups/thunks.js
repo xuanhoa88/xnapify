@@ -6,23 +6,29 @@
  */
 
 import {
-  FETCH_GROUPS_START,
-  FETCH_GROUPS_SUCCESS,
-  FETCH_GROUPS_ERROR,
-  FETCH_GROUP_START,
-  FETCH_GROUP_SUCCESS,
-  FETCH_GROUP_ERROR,
-  CREATE_GROUP_START,
-  CREATE_GROUP_SUCCESS,
-  CREATE_GROUP_ERROR,
-  UPDATE_GROUP_START,
-  UPDATE_GROUP_SUCCESS,
-  UPDATE_GROUP_ERROR,
-  DELETE_GROUP_START,
-  DELETE_GROUP_SUCCESS,
-  DELETE_GROUP_ERROR,
-  CLEAR_GROUPS_ERROR,
-} from './constants';
+  fetchGroupsStart,
+  fetchGroupsSuccess,
+  fetchGroupsError,
+  fetchGroupStart,
+  fetchGroupSuccess,
+  fetchGroupError,
+  createGroupStart,
+  createGroupSuccess,
+  createGroupError,
+  updateGroupStart,
+  updateGroupSuccess,
+  updateGroupError,
+  deleteGroupStart,
+  deleteGroupSuccess,
+  deleteGroupError,
+  clearGroupsError as clearError,
+} from './slice';
+
+/**
+ * Groups Thunks
+ *
+ * Async thunk actions for groups CRUD operations.
+ */
 
 /**
  * Fetch all groups with pagination
@@ -37,7 +43,7 @@ import {
  */
 export function fetchGroups(options = {}) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_GROUPS_START });
+    dispatch(fetchGroupsStart());
 
     try {
       const {
@@ -48,7 +54,6 @@ export function fetchGroups(options = {}) {
         type = '',
       } = options;
 
-      // Build query string
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -60,20 +65,16 @@ export function fetchGroups(options = {}) {
 
       const { data } = await fetch(`/api/admin/groups?${params.toString()}`);
 
-      dispatch({
-        type: FETCH_GROUPS_SUCCESS,
-        payload: {
+      dispatch(
+        fetchGroupsSuccess({
           groups: data.groups,
           pagination: data.pagination,
-        },
-      });
+        }),
+      );
 
       return { success: true, data };
     } catch (error) {
-      dispatch({
-        type: FETCH_GROUPS_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchGroupsError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -88,22 +89,16 @@ export function fetchGroups(options = {}) {
  */
 export function fetchGroupById(groupId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: FETCH_GROUP_START });
+    dispatch(fetchGroupStart());
 
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`);
 
-      dispatch({
-        type: FETCH_GROUP_SUCCESS,
-        payload: data.group,
-      });
+      dispatch(fetchGroupSuccess(data.group));
 
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch({
-        type: FETCH_GROUP_ERROR,
-        payload: error.message,
-      });
+      dispatch(fetchGroupError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -122,7 +117,7 @@ export function fetchGroupById(groupId) {
  */
 export function createGroup(groupData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: CREATE_GROUP_START });
+    dispatch(createGroupStart());
 
     try {
       const { data } = await fetch('/api/admin/groups', {
@@ -131,17 +126,11 @@ export function createGroup(groupData) {
         body: JSON.stringify(groupData),
       });
 
-      dispatch({
-        type: CREATE_GROUP_SUCCESS,
-        payload: data.group,
-      });
+      dispatch(createGroupSuccess(data.group));
 
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch({
-        type: CREATE_GROUP_ERROR,
-        payload: error.message,
-      });
+      dispatch(createGroupError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -157,7 +146,7 @@ export function createGroup(groupData) {
  */
 export function updateGroup(groupId, updateData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: UPDATE_GROUP_START });
+    dispatch(updateGroupStart());
 
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`, {
@@ -166,17 +155,11 @@ export function updateGroup(groupId, updateData) {
         body: JSON.stringify(updateData),
       });
 
-      dispatch({
-        type: UPDATE_GROUP_SUCCESS,
-        payload: data.group,
-      });
+      dispatch(updateGroupSuccess(data.group));
 
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch({
-        type: UPDATE_GROUP_ERROR,
-        payload: error.message,
-      });
+      dispatch(updateGroupError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -191,24 +174,18 @@ export function updateGroup(groupId, updateData) {
  */
 export function deleteGroup(groupId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch({ type: DELETE_GROUP_START });
+    dispatch(deleteGroupStart());
 
     try {
       await fetch(`/api/admin/groups/${groupId}`, {
         method: 'DELETE',
       });
 
-      dispatch({
-        type: DELETE_GROUP_SUCCESS,
-        payload: groupId,
-      });
+      dispatch(deleteGroupSuccess(groupId));
 
       return { success: true };
     } catch (error) {
-      dispatch({
-        type: DELETE_GROUP_ERROR,
-        payload: error.message,
-      });
+      dispatch(deleteGroupError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -221,7 +198,5 @@ export function deleteGroup(groupId) {
  * @returns {Object} Redux action
  */
 export function clearGroupsError() {
-  return {
-    type: CLEAR_GROUPS_ERROR,
-  };
+  return clearError();
 }

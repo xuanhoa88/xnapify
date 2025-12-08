@@ -11,9 +11,7 @@
  * @param {Object} state - Redux state
  * @returns {Object} Dashboard statistics
  */
-export function getDashboardStats(state) {
-  return state.admin.dashboard.stats;
-}
+export const getDashboardStats = state => state.admin.dashboard.stats;
 
 /**
  * Get recent activity
@@ -21,9 +19,8 @@ export function getDashboardStats(state) {
  * @param {Object} state - Redux state
  * @returns {Array} Recent activity items
  */
-export function getDashboardRecentActivity(state) {
-  return state.admin.dashboard.recentActivity;
-}
+export const getDashboardRecentActivity = state =>
+  state.admin.dashboard.recentActivity;
 
 /**
  * Get dashboard loading state
@@ -31,9 +28,7 @@ export function getDashboardRecentActivity(state) {
  * @param {Object} state - Redux state
  * @returns {boolean} True if dashboard is loading
  */
-export function getDashboardLoading(state) {
-  return state.admin.dashboard.loading;
-}
+export const getDashboardLoading = state => state.admin.dashboard.loading;
 
 /**
  * Get dashboard error
@@ -41,6 +36,4 @@ export function getDashboardLoading(state) {
  * @param {Object} state - Redux state
  * @returns {string|null} Error message or null
  */
-export function getDashboardError(state) {
-  return state.admin.dashboard.error;
-}
+export const getDashboardError = state => state.admin.dashboard.error;

@@ -21,7 +21,13 @@ import {
 } from '../lib/logger';
 
 // i18n configuration
-const I18N_TRANSLATIONS_DIR = path.join(config.APP_DIR, 'i18n', 'translations');
+const I18N_TRANSLATIONS_DIR = path.join(
+  config.APP_DIR,
+  'redux',
+  'features',
+  'intl',
+  'translations',
+);
 const I18N_SOURCE_EXTENSIONS = config.env(
   'I18N_SOURCE_EXTENSIONS',
   '.js,.jsx,.ts,.tsx',

@@ -11,29 +11,15 @@
  * @param {Object} state - Redux state
  * @returns {Array} Array of role objects
  */
-export function getRoles(state) {
-  return state.admin.roles.roles;
-}
-
-/**
- * Get current role
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} Current role or null
- */
-export function getCurrentRole(state) {
-  return state.admin.roles.currentRole;
-}
+export const getRoles = state => state.admin.roles.roles;
 
 /**
  * Get roles pagination
  *
  * @param {Object} state - Redux state
- * @returns {Object} Pagination object
+ * @returns {Object|null} Pagination object
  */
-export function getRolesPagination(state) {
-  return state.admin.roles.pagination;
-}
+export const getRolesPagination = state => state.admin.roles.pagination;
 
 /**
  * Get roles loading state
@@ -41,9 +27,7 @@ export function getRolesPagination(state) {
  * @param {Object} state - Redux state
  * @returns {boolean} True if roles are loading
  */
-export function getRolesLoading(state) {
-  return state.admin.roles.loading;
-}
+export const getRolesLoading = state => state.admin.roles.loading;
 
 /**
  * Get roles error
@@ -51,9 +35,7 @@ export function getRolesLoading(state) {
  * @param {Object} state - Redux state
  * @returns {string|null} Error message or null
  */
-export function getRolesError(state) {
-  return state.admin.roles.error;
-}
+export const getRolesError = state => state.admin.roles.error;
 
 /**
  * Get role by ID
@@ -62,6 +44,5 @@ export function getRolesError(state) {
  * @param {string} id - Role ID
  * @returns {Object|undefined} Role object or undefined
  */
-export function getRoleById(state, id) {
-  return state.admin.roles.roles.find(role => role.id === id);
-}
+export const getRoleById = (state, id) =>
+  state.admin.roles.roles.find(role => role.id === id);
