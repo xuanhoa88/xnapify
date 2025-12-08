@@ -5,12 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_LOCALE } from './config';
+
 /**
  * Get current locale
  * @param {Object} state - Redux state
  * @returns {string|null} Current locale code
  */
-export const getLocale = state => (state.intl && state.intl.locale) || null;
+export const getLocale = state =>
+  (state.intl && state.intl.locale) || DEFAULT_LOCALE;
 
 /**
  * Get locale currently being loaded
@@ -43,3 +46,11 @@ export const getLocaleMessages = (state, locale) =>
  */
 export const getLocaleFallback = state =>
   (state.intl && state.intl.localeFallback) || null;
+
+/**
+ * Get available locales
+ * @param {Object} state - Redux state
+ * @returns {Object} Available locales object
+ */
+export const getAvailableLocales = state =>
+  (state.intl && state.intl.availableLocales) || {};

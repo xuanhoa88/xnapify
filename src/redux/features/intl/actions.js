@@ -6,13 +6,17 @@
  */
 
 import {
-  LOCALE_COOKIE_MAX_AGE,
-  LOCALE_COOKIE_NAME,
   SET_LOCALE_ERROR,
   SET_LOCALE_FALLBACK,
   SET_LOCALE_START,
   SET_LOCALE_SUCCESS,
+  SET_AVAILABLE_LOCALES,
 } from './constants';
+import {
+  DEFAULT_LOCALE,
+  LOCALE_COOKIE_MAX_AGE,
+  LOCALE_COOKIE_NAME,
+} from './config';
 
 // =============================================================================
 // UTILITIES
@@ -54,24 +58,19 @@ function setLocaleCookie(locale) {
  *
  * @param {string} locale - Locale code (e.g., 'en-US', 'vi-VN')
  * @returns {Function} Redux thunk action
- *
- * @example
- * // Set locale (validates against availableLocales runtime variable)
- * dispatch(setLocale('en-US'));
- *
- * @example
- * // Invalid locale falls back to first available
- * dispatch(setLocale('invalid')); // Falls back to 'en-US' or first available
  */
 export function setLocale(locale) {
   return async (dispatch, getState, { i18n }) => {
-    const state = getState();
-
+    const { intl } = getState();
     try {
-      // Get available locales from runtime variables in Redux store
-      const availableLocales =
-        (state.runtime && state.runtime.availableLocales) || {};
-      const availableLocaleCodes = Object.keys(availableLocales);
+      // Check if locale is available
+      if (!intl.availableLocales || typeof intl.availableLocales !== 'object') {
+        console.error('Invalid availableLocales:', intl.availableLocales);
+        return null;
+      }
+
+      // Get available locales from runtime variables
+      const availableLocales = Object.keys(intl.availableLocales);
 
       // Validate locale parameter
       if (typeof locale !== 'string' || locale.trim().length === 0) {
@@ -80,27 +79,20 @@ export function setLocale(locale) {
       }
 
       // Check if locale is available
-      if (
-        availableLocaleCodes.length > 0 &&
-        !availableLocaleCodes.includes(locale)
-      ) {
+      if (!availableLocales.includes(locale)) {
         const requestedLocale = locale;
-        const fallbackLocale = availableLocaleCodes[0] || 'en-US';
+        const fallbackLocale = availableLocales[0] || DEFAULT_LOCALE;
 
         console.warn(
           `Locale "${requestedLocale}" is not available. Available locales:`,
-          availableLocaleCodes,
+          availableLocales,
         );
         console.info(`Falling back to locale: ${fallbackLocale}`);
 
         // Dispatch fallback action for error handling in components
         dispatch({
           type: SET_LOCALE_FALLBACK,
-          payload: {
-            requestedLocale,
-            fallbackLocale,
-            availableLocaleCodes,
-          },
+          payload: { requestedLocale, fallbackLocale },
         });
 
         // Use fallback locale
@@ -144,5 +136,16 @@ export function setLocale(locale) {
 
       return null;
     }
+  };
+}
+
+/**
+ * Set available locales
+ * @param {Object} availableLocales - Available locales
+ */
+export function setAvailableLocales(availableLocales) {
+  return {
+    type: SET_AVAILABLE_LOCALES,
+    payload: availableLocales,
   };
 }

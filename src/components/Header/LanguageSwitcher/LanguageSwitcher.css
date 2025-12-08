@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import "../../variables.css";
+@import '../../variables.css';
 
 .root {
   display: flex;
@@ -35,6 +35,10 @@
     color var(--transition-fast),
     background-color var(--transition-fast),
     transform var(--transition-fast);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 /* Regular link */
@@ -46,12 +50,12 @@
 
 /* Active/selected language - highlighted */
 .active {
-  color: white;
-  background-color: rgb(255 255 255 / 20%);
-  font-weight: var(--font-weight-semibold);
+  color: #1a1a2e;
+  background-color: white;
+  font-weight: var(--font-weight-bold);
   cursor: default;
   pointer-events: none;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 20%);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
 }
 
 /* Mobile */

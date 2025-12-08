@@ -23,10 +23,6 @@ const mockStore = configureStore(middlewares);
 const initialState = {
   runtime: {
     initialNow: Date.now(),
-    availableLocales: {
-      'en-US': 'English (US)',
-      'vi-VN': 'Tiếng Việt',
-    },
     appName: 'React Starter Kit',
     appDescription: 'Boilerplate for React.js web applications',
   },
@@ -35,6 +31,10 @@ const initialState = {
     localeLoading: null,
     messages: {},
     localeFallback: null,
+    availableLocales: {
+      'en-US': 'English (US)',
+      'vi-VN': 'Tiếng Việt',
+    },
   },
   user: null,
 };

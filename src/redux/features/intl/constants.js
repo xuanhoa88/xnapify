@@ -13,13 +13,4 @@ export const SET_LOCALE_START = 'intl/SET_LOCALE_START';
 export const SET_LOCALE_SUCCESS = 'intl/SET_LOCALE_SUCCESS';
 export const SET_LOCALE_ERROR = 'intl/SET_LOCALE_ERROR';
 export const SET_LOCALE_FALLBACK = 'intl/SET_LOCALE_FALLBACK';
-
-// =============================================================================
-// LOCALE COOKIE CONFIGURATION
-// =============================================================================
-
-// Cookie max-age in seconds (for cookie max-age attribute)
-export const LOCALE_COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
-
-// Cookie and query parameter name
-export const LOCALE_COOKIE_NAME = 'lang';
+export const SET_AVAILABLE_LOCALES = 'intl/SET_AVAILABLE_LOCALES';

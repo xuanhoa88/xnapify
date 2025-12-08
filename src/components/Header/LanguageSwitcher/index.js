@@ -5,15 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  getLocale,
-  LOCALE_COOKIE_NAME,
-  setLocale,
-  getRuntimeVariable,
-} from '../../../redux';
+import { getLocale, setLocale, getAvailableLocales } from '../../../redux';
 import s from './LanguageSwitcher.css';
 
 /**
@@ -26,15 +21,9 @@ function LanguageSwitcher() {
   const currentLocale = useSelector(getLocale);
 
   // Get available locales from runtime variables
-  const availableLocales = useSelector(state =>
-    getRuntimeVariable(state, 'availableLocales'),
-  );
+  const availableLocales = useSelector(getAvailableLocales);
 
-  /**
-   * Handle locale change
-   * @param {string} locale - The locale to switch to
-   * @param {Event} e - Click event
-   */
+  // Handle locale change
   const handleLocaleChange = useCallback(
     (locale, e) => {
       e.preventDefault();
@@ -43,18 +32,19 @@ function LanguageSwitcher() {
     [dispatch],
   );
 
-  /**
-   * Check if locale is currently selected
-   * @param {string} locale - Locale to check
-   * @returns {boolean}
-   */
+  // Check if locale is currently selected
   const isSelected = useCallback(
     locale => locale === currentLocale,
     [currentLocale],
   );
 
-  // Don't render if no locales available (prevents hydration mismatch)
-  const localeEntries = Object.entries(availableLocales);
+  // Memoize available locales
+  const localeEntries = useMemo(
+    () => Object.entries(availableLocales),
+    [availableLocales],
+  );
+
+  // If no locales are available, return null
   if (localeEntries.length === 0) {
     return null;
   }
@@ -62,15 +52,14 @@ function LanguageSwitcher() {
   return (
     <div className={s.root}>
       {localeEntries.map(([code, name]) => (
-        <a
+        <button
           key={code}
-          href={`?${LOCALE_COOKIE_NAME}=${code}`}
           onClick={e => handleLocaleChange(code, e)}
           className={clsx(s.link, { [s.active]: isSelected(code) })}
-          aria-current={isSelected(code) ? 'true' : undefined}
+          type='button'
         >
           {name}
-        </a>
+        </button>
       ))}
     </div>
   );

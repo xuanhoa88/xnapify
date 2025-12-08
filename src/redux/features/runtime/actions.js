@@ -23,7 +23,6 @@ import { SET_RUNTIME_VARIABLE } from './constants';
  * // Multiple variables
  * dispatch(setRuntimeVariable({
  *   initialNow: Date.now(),
- *   availableLocales: { 'en-US': {...}, 'vi-VN': {...} },
  *   appName: 'React Starter Kit',
  *   appDescription: 'Boilerplate...'
  * }));

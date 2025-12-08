@@ -177,9 +177,9 @@ const initialize = server => {
 
   try {
     wss = new WebSocket.Server({
-      server,
-      path: '/~/__bs',
+      noServer: true, // Handle upgrade manually to avoid conflicts
       clientTracking: true,
+      perMessageDeflate: false, // Disable compression for compatibility
     });
 
     wss.on('connection', setupClient);
@@ -195,6 +195,22 @@ const initialize = server => {
     wss.on('close', () => {
       stopHeartbeat();
       logInfo('[BrowserSync] Server closed');
+    });
+
+    // Handle upgrade manually for /~/__bs path only
+    const bsPath = '/~/__bs';
+    server.on('upgrade', (request, socket, head) => {
+      const { pathname } = new URL(
+        request.url,
+        `http://${request.headers.host}`,
+      );
+
+      if (pathname === bsPath) {
+        wss.handleUpgrade(request, socket, head, ws => {
+          wss.emit('connection', ws, request);
+        });
+      }
+      // Don't destroy socket for other paths
     });
 
     startHeartbeat();
@@ -314,7 +330,9 @@ export const start = async server => {
 
   if (hasClients()) {
     logInfo('[BrowserSync] Active clients detected, skipping browser open');
-    notifyReady(true);
+    // Use false to clear overlay without triggering reload
+    // This prevents duplicate fetches when clients reconnect after server restart
+    notifyReady(false);
     return false;
   }
 

@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Constants (for external use if needed)
-export { LOCALE_COOKIE_MAX_AGE, LOCALE_COOKIE_NAME } from './constants';
+// Public API - Configuration
+export * from './config';
 
 // Public API - Actions
-export { setLocale } from './actions';
+export * from './actions';
 
 // Public API - Selectors
 export * from './selector';

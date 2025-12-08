@@ -10,157 +10,36 @@ import queryString from 'query-string';
 import 'whatwg-fetch';
 import App from './components/App';
 import { createFetch } from './createFetch';
-import { DEFAULT_LOCALE, getI18nInstance } from './i18n';
 import * as navigator from './navigator';
-import { configureStore } from './redux';
+import {
+  DEFAULT_LOCALE,
+  configureStore,
+  setLocale,
+  getI18nInstance,
+} from './redux';
+import { createWebSocketClient, EventType } from './ws/client';
 
-// Get i18n instance
+// =============================================================================
+// CONSTANTS & CONFIGURATION
+// =============================================================================
+
+const MAX_SCROLL_HISTORY = 50;
+const LOADING_DELAY_MS = 150;
+const ROOT_KEY = '__reactRoot';
+
+// =============================================================================
+// INITIALIZATION
+// =============================================================================
+
 const i18n = getI18nInstance();
-
-/**
- * Update document title
- */
-function updateTitle(title) {
-  if (title) {
-    document.title = title;
-  }
-}
-
-/**
- * Update or create meta tag
- */
-function updateMeta(name, content, isProperty = false) {
-  if (!content) return;
-
-  const attribute = isProperty ? 'property' : 'name';
-  let meta = document.querySelector(`meta[${attribute}="${name}"]`);
-
-  if (!meta) {
-    meta = document.createElement('meta');
-    meta.setAttribute(attribute, name);
-    document.head.appendChild(meta);
-  }
-
-  meta.setAttribute('content', content);
-}
-
-/**
- * Update or create link tag
- */
-function updateLink(rel, href, attributes = {}) {
-  if (!href) return;
-
-  let link = document.querySelector(
-    `link[rel="${rel}"]${href ? `[href="${href}"]` : ''}`,
-  );
-
-  if (!link) {
-    link = document.createElement('link');
-    link.setAttribute('rel', rel);
-    document.head.appendChild(link);
-  }
-
-  link.setAttribute('href', href);
-
-  Object.keys(attributes).forEach(key => {
-    link.setAttribute(key, attributes[key]);
-  });
-}
-
-/**
- * Update page metadata after route changes
- * @param {Object} metadata - Page metadata (title, description, image, url, type)
- */
-function updatePageMetadata({
-  title,
-  description,
-  image,
-  url,
-  type = 'website',
-}) {
-  if (title) {
-    updateTitle(title);
-    updateMeta('og:title', title, true);
-    updateMeta('twitter:title', title);
-  }
-
-  if (description) {
-    updateMeta('description', description);
-    updateMeta('og:description', description, true);
-    updateMeta('twitter:description', description);
-  }
-
-  if (image) {
-    updateMeta('og:image', image, true);
-    updateMeta('twitter:image', image);
-  }
-
-  if (url) {
-    updateMeta('og:url', url, true);
-    updateLink('canonical', url);
-  }
-
-  if (type) {
-    updateMeta('og:type', type, true);
-  }
-}
-
-/**
- * Handle hydration errors (UPDATED - for use in hydrateRoot callback)
- */
-function handleHydrationError(error) {
-  if (__DEV__) {
-    console.error('Hydration error:', error);
-    trackError({
-      type: 'hydration',
-      error,
-    });
-  }
-}
-
-/**
- * Handle render errors (UPDATED - for use in createRoot callback)
- */
-function handleRenderError(error) {
-  if (__DEV__) {
-    console.error('Render error:', error);
-    trackError({
-      type: 'render',
-      error,
-    });
-  }
-}
-
-/**
- * Ensure i18n is properly synced before hydration
- */
-async function ensureI18n() {
-  const serverLocale = store.getState().intl && store.getState().intl.locale;
-  if (serverLocale && i18n.language !== serverLocale) {
-    // Wait for language change to complete
-    await i18n.changeLanguage(serverLocale);
-
-    if (__DEV__) {
-      console.log('✅ i18n synced:', {
-        server: serverLocale,
-        client: i18n.language,
-      });
-    }
-  }
-}
-
-// Create an enhanced version of fetch with additional features
 const fetch = createFetch(window.fetch);
 
-// Initialize Redux store with server state
 // eslint-disable-next-line no-underscore-dangle
-const { reduxState = {} } = { ...window.__PRELOAD_STATE__ };
+const { reduxState: preloadedState = {} } = window.__PRELOADED_STATE__ || {};
 // eslint-disable-next-line no-underscore-dangle
-delete window.__PRELOAD_STATE__;
-const store = configureStore(reduxState, { fetch, i18n });
+delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
+const store = configureStore(preloadedState, { fetch, i18n });
 
-// Application context object that provides shared dependencies and state
-// to components throughout the application
 const context = {
   store,
   fetch,
@@ -171,469 +50,295 @@ const context = {
   },
 };
 
-// React 18+ root instance (cached for re-renders, null for React 16/17)
-// Using a global variable to persist across HMR updates
-const ROOT_INSTANCE_KEY = '__reactRoot';
+// =============================================================================
+// STATE
+// =============================================================================
 
-// Current location state
 let currentLocation = navigator.getCurrentLocation();
-
-// Navigation subscription cleanup function
 let unsubscribeNavigation = null;
-
-// Router instance cache (initialized once, reused for all navigations)
 let cachedRouter = null;
-
-// Scroll position cache for back/forward navigation
-const scrollPositionsHistory = {};
-
-// Maximum number of scroll positions to keep in history
-const MAX_SCROLL_HISTORY = 50;
-
-// Performance tracking (development only)
-const performanceMetrics = __DEV__
-  ? {
-      navigationCount: 0,
-      errors: [],
-      lastNavigationTime: null,
-      slowNavigations: [],
-    }
-  : null;
-
-// Navigation state management
+let wsClient = null;
 let isNavigating = false;
 let navigationAbortController = null;
+let hasHydrated = false;
+let ReactDOMClient = null;
 
-/**
- * Save current scroll position for back/forward navigation
- */
-function saveScrollPosition() {
-  if (currentLocation && currentLocation.key) {
-    scrollPositionsHistory[currentLocation.key] = {
-      scrollX: window.pageXOffset,
-      scrollY: window.pageYOffset,
-      timestamp: Date.now(),
-    };
+const scrollPositionsHistory = {};
 
-    // Clean up old positions to prevent memory leaks
-    const keys = Object.keys(scrollPositionsHistory);
-    if (keys.length > MAX_SCROLL_HISTORY) {
-      // Sort by timestamp and remove oldest entries
-      const sortedKeys = keys.sort((a, b) => {
-        const timeA = scrollPositionsHistory[a].timestamp || 0;
-        const timeB = scrollPositionsHistory[b].timestamp || 0;
-        return timeA - timeB;
-      });
+// =============================================================================
+// METADATA HELPERS
+// =============================================================================
 
-      // Remove the oldest 25% of entries
-      const removeCount = Math.floor(keys.length * 0.25);
-      sortedKeys.slice(0, removeCount).forEach(key => {
-        delete scrollPositionsHistory[key];
-      });
+function updateMeta(name, content, isProperty = false) {
+  if (!content) return;
+  const attr = isProperty ? 'property' : 'name';
+  let meta = document.querySelector(`meta[${attr}="${name}"]`);
+  if (!meta) {
+    meta = document.createElement('meta');
+    meta.setAttribute(attr, name);
+    document.head.appendChild(meta);
+  }
+  meta.setAttribute('content', content);
+}
+
+function updatePageMetadata({
+  title,
+  description,
+  image,
+  url,
+  type = 'website',
+}) {
+  if (title) {
+    document.title = title;
+    updateMeta('og:title', title, true);
+    updateMeta('twitter:title', title);
+  }
+  if (description) {
+    updateMeta('description', description);
+    updateMeta('og:description', description, true);
+    updateMeta('twitter:description', description);
+  }
+  if (image) {
+    updateMeta('og:image', image, true);
+    updateMeta('twitter:image', image);
+  }
+  if (url) {
+    updateMeta('og:url', url, true);
+    let link = document.querySelector('link[rel="canonical"]');
+    if (!link) {
+      link = document.createElement('link');
+      link.setAttribute('rel', 'canonical');
+      document.head.appendChild(link);
     }
+    link.setAttribute('href', url);
+  }
+  if (type) {
+    updateMeta('og:type', type, true);
   }
 }
 
-/**
- * Restore scroll position or scroll to hash target
- */
+// =============================================================================
+// SCROLL MANAGEMENT
+// =============================================================================
+
+function saveScrollPosition() {
+  if (!currentLocation || !currentLocation.key) return;
+
+  scrollPositionsHistory[currentLocation.key] = {
+    x: window.pageXOffset,
+    y: window.pageYOffset,
+    time: Date.now(),
+  };
+
+  // Cleanup old entries
+  const keys = Object.keys(scrollPositionsHistory);
+  if (keys.length > MAX_SCROLL_HISTORY) {
+    keys
+      .sort(
+        (a, b) =>
+          scrollPositionsHistory[a].time - scrollPositionsHistory[b].time,
+      )
+      .slice(0, Math.floor(keys.length * 0.25))
+      .forEach(key => delete scrollPositionsHistory[key]);
+  }
+}
+
 function restoreScrollPosition(location) {
-  // Handle hash navigation (e.g., #section-id)
   if (location.hash) {
-    const element = document.querySelector(location.hash);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+    const el = document.querySelector(location.hash);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
       return;
     }
   }
-
-  // Restore saved scroll position for back/forward navigation
-  const scrollPosition = scrollPositionsHistory[location.key];
-  if (scrollPosition) {
-    window.scrollTo(scrollPosition.scrollX, scrollPosition.scrollY);
-  } else {
-    // Default: scroll to top for new navigation
-    window.scrollTo(0, 0);
-  }
+  const pos = scrollPositionsHistory[location.key];
+  window.scrollTo((pos && pos.x) || 0, (pos && pos.y) || 0);
 }
 
-/**
- * Track navigation performance
- */
-function trackNavigationPerformance(startTime, route) {
-  if (!isPerformanceTrackingEnabled()) {
-    return;
-  }
+// =============================================================================
+// WEBSOCKET
+// =============================================================================
 
-  const navigationDuration = performance.now() - startTime;
-
-  // Update metrics
-  updateNavigationMetrics(navigationDuration);
-
-  // Track slow navigations (over 1 second)
-  if (navigationDuration > 1000) {
-    trackSlowNavigation(route.path || '/', navigationDuration);
-  }
-}
-
-/**
- * Check if performance tracking is enabled
- * @returns {boolean}
- */
-function isPerformanceTrackingEnabled() {
-  return __DEV__ && performanceMetrics != null;
-}
-
-/**
- * Track an error in performance metrics
- * @param {Object} errorData - Error data to track
- * @param {string} errorData.type - Type of error (e.g., 'hydration', 'render', 'navigation')
- * @param {Error|string} errorData.error - Error object or message
- * @param {string} [errorData.stack] - Error stack trace
- * @param {Object} [additionalData] - Additional data to merge
- */
-function trackError(errorData, additionalData = {}) {
-  if (!isPerformanceTrackingEnabled() || !performanceMetrics.errors) {
-    return;
-  }
-
-  const error = errorData && errorData.error;
-  const type = (errorData && errorData.type) || 'unknown';
-  const stack = (errorData && errorData.stack) || (error && error.stack);
-  const message = typeof error === 'string' ? error : error && error.message;
-  const errorEntry = Object.assign(
-    {
-      timestamp: Date.now(),
-      message,
-      stack,
-      type,
-    },
-    additionalData,
-  );
-
-  performanceMetrics.errors.push(errorEntry);
-
-  // Keep only last 20 errors to prevent memory bloat
-  if (performanceMetrics.errors.length > 20) {
-    performanceMetrics.errors.shift();
-  }
-
-  // Log error in development
-  console.error(`❌ [${errorEntry.type}]:`, errorEntry.message);
-}
-
-/**
- * Track slow navigation performance
- * @param {string} path - Route path
- * @param {number} duration - Navigation duration in ms
- */
-function trackSlowNavigation(path, duration) {
-  if (!isPerformanceTrackingEnabled()) {
-    return;
-  }
-
-  const slowNavigation = {
-    path,
-    duration,
-    timestamp: Date.now(),
-  };
-
-  performanceMetrics.slowNavigations.push(slowNavigation);
-
-  console.warn(`⚠️ Slow navigation to ${path}: ${duration.toFixed(2)}ms`);
-
-  // Keep only last 10 slow navigations
-  if (performanceMetrics.slowNavigations.length > 10) {
-    performanceMetrics.slowNavigations.shift();
-  }
-}
-
-/**
- * Update navigation metrics
- * @param {number} duration - Navigation duration in ms
- */
-function updateNavigationMetrics(duration) {
-  if (!isPerformanceTrackingEnabled()) {
-    return;
-  }
-
-  performanceMetrics.navigationCount += 1;
-  performanceMetrics.lastNavigationTime = duration;
-}
-
-/**
- * Get current performance summary
- */
-function getPerformanceSummary() {
-  if (!isPerformanceTrackingEnabled()) {
+function buildWebSocketUrl(path = '/ws') {
+  try {
+    const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    return `${protocol}://${window.location.host}${normalizedPath}`;
+  } catch (error) {
     return null;
   }
-
-  return {
-    totalNavigations: performanceMetrics.navigationCount,
-    lastNavigationTime: performanceMetrics.lastNavigationTime,
-    slowNavigations: performanceMetrics.slowNavigations.length,
-    totalErrors: performanceMetrics.errors.length,
-    recentErrors: performanceMetrics.errors.slice(-5), // Last 5 errors
-  };
 }
 
-/**
- * Handle navigation errors and reload page if needed
- */
-function handleNavigationError(error, isInitialRender, location) {
-  // In development, log detailed error information
+// =============================================================================
+// ROUTER
+// =============================================================================
+
+async function getRouter() {
+  if (!cachedRouter) {
+    cachedRouter = await import('./pages').then(m => m.default());
+    if (__DEV__) console.log('✅ Router initialized');
+  }
+  return cachedRouter;
+}
+
+// =============================================================================
+// REACT RENDERING
+// =============================================================================
+
+async function initReactDOMClient() {
+  if (ReactDOMClient !== null) return ReactDOMClient;
+  try {
+    ReactDOMClient = await import('react-dom/client');
+    if (
+      !ReactDOMClient ||
+      typeof ReactDOMClient.createRoot !== 'function' ||
+      typeof ReactDOMClient.hydrateRoot !== 'function'
+    ) {
+      ReactDOMClient = false;
+    }
+  } catch {
+    ReactDOMClient = false;
+  }
+  return ReactDOMClient;
+}
+
+function renderApp(appElement, container, isInitial) {
+  const client = ReactDOMClient;
+
+  if (client) {
+    // React 18+
+    let root = window[ROOT_KEY];
+    if (!root) {
+      try {
+        root = client.hydrateRoot(container, appElement, {
+          onRecoverableError: err =>
+            __DEV__ && console.error('Hydration error:', err),
+        });
+        if (__DEV__) console.log('✅ Hydrated');
+      } catch (err) {
+        if (__DEV__)
+          console.warn('Hydration failed, using client render:', err);
+        root = client.createRoot(container);
+        root.render(appElement);
+      }
+      window[ROOT_KEY] = root;
+      hasHydrated = true;
+    } else {
+      root.render(appElement);
+    }
+  } else {
+    // React 16/17 fallback
+    import('react-dom').then(ReactDOM => {
+      // eslint-disable-next-line react/no-deprecated
+      const method =
+        // eslint-disable-next-line react/no-deprecated
+        isInitial && !hasHydrated ? ReactDOM.hydrate : ReactDOM.render;
+      method(appElement, container);
+      if (isInitial) hasHydrated = true;
+    });
+  }
+}
+
+// =============================================================================
+// NAVIGATION
+// =============================================================================
+
+function abortNavigation() {
+  if (
+    navigationAbortController &&
+    typeof navigationAbortController.abort === 'function'
+  ) {
+    navigationAbortController.abort();
+  }
+  navigationAbortController = null;
+  isNavigating = false;
+}
+
+function handleNavigationError(error, isInitial, location) {
   if (__DEV__) {
     console.error('❌ Navigation error:', error);
-
-    // Track error using helper
-    trackError(
-      {
-        type: 'navigation',
-        error,
-      },
-      {
-        location: location.pathname,
-        isInitialRender,
-      },
-    );
-
-    // In development, don't auto-reload - show error for debugging
     throw error;
   }
 
-  // Production error handling
-  if (isInitialRender) {
-    console.error('Failed to load initial route, reloading...');
-    window.location.reload();
-    return;
-  }
-
-  // Handle chunk loading errors
+  // Production: reload on initial load failure or chunk errors
   if (
-    error &&
-    (error.name === 'ChunkLoadError' || error.message.includes('Loading chunk'))
+    isInitial ||
+    (error &&
+      (error.name === 'ChunkLoadError' ||
+        error.message.includes('Loading chunk')))
   ) {
-    console.warn('Chunk load error detected, reloading page...');
+    console.warn('Navigation error, reloading...');
     window.location.reload();
     return;
   }
 
-  // Dispatch error to Redux
   store.dispatch({
     type: 'NAVIGATION_ERROR',
     payload: {
-      error: {
-        message: error.message,
-        stack: error.stack,
-      },
+      error: { message: error.message, stack: error.stack },
       location,
       timestamp: Date.now(),
     },
   });
 }
 
-/**
- * Abort current navigation if in progress
- */
-function abortNavigation() {
-  if (navigationAbortController) {
-    navigationAbortController.abort();
-    navigationAbortController = null;
-  }
-  isNavigating = false;
-}
-
-// Track if initial hydration has completed
-let hasHydrated = false;
-
-/**
- * Get or create router instance
- * Router is cached and reused across navigations for performance
- * @returns {Promise<IsomorphicRouter>} Router instance
- */
-async function getRouter() {
-  if (!cachedRouter) {
-    cachedRouter = await import('./pages').then(m => m.default());
-
-    if (__DEV__) {
-      console.log('✅ Router initialized and cached');
-    }
-  }
-  return cachedRouter;
-}
-
-/**
- * Handle route change
- * @param {*} router
- * @param {*} location
- * @param {*} action
- * @returns
- */
 async function handleRouteChange(location, action) {
-  const navigationStartTime = performance.now();
+  const isInitial = !action;
 
-  // Abort any in-progress navigation
-  if (isNavigating) {
-    abortNavigation();
-  }
+  // Abort previous navigation
+  if (isNavigating) abortNavigation();
 
-  // Create new abort controller for this navigation
   navigationAbortController = new AbortController();
-  const navigationSignal = navigationAbortController.signal;
-
-  // Set navigation lock to prevent concurrent navigations
+  const { signal } = navigationAbortController;
   isNavigating = true;
 
-  // Save current scroll position before navigation
   saveScrollPosition();
+  if (action === 'PUSH') delete scrollPositionsHistory[location.key];
 
-  // Handle different navigation actions
-  if (action === 'PUSH') {
-    // Clear scroll position for new forward navigation
-    delete scrollPositionsHistory[location.key];
-  }
-
-  // Set loading state
   store.dispatch({ type: 'NAVIGATION_START', payload: { location, action } });
 
-  // Add a small delay to prevent flicker for fast loads
   const loadingTimeout = setTimeout(() => {
     store.dispatch({ type: 'NAVIGATION_LOADING', payload: true });
-  }, 150);
+  }, LOADING_DELAY_MS);
 
   currentLocation = location;
 
-  const isInitialRender = !action;
-
   try {
-    // Check if navigation was aborted
-    if (navigationSignal.aborted) {
-      return;
-    }
+    if (signal.aborted) return;
 
-    // Get cached router instance (created once, reused for all navigations)
     const router = await getRouter();
-
-    // Set context for route resolution
     context.pathname = location.pathname;
     context.query = queryString.parse(location.search);
 
-    // Resolve the route
     const route = await router.resolve(context);
-
-    // If route not found, throw 404 error
     if (!route) {
-      const error = new Error(`Route ${location.pathname} not found`);
-      error.status = 404;
-      throw error;
+      const err = new Error(`Route ${location.pathname} not found`);
+      err.status = 404;
+      throw err;
     }
 
-    // Check if navigation was aborted after route resolution
-    if (navigationSignal.aborted) {
-      return;
-    }
+    if (signal.aborted || currentLocation.key !== location.key) return;
 
-    // Guard against outdated navigation
-    if (currentLocation.key !== location.key) {
-      return;
-    }
-
-    // Handle redirects
     if (route.redirect) {
       window.location.href = route.redirect;
       return;
     }
 
-    // Update store with new route data
     store.dispatch({
       type: 'NAVIGATION_SUCCESS',
-      payload: {
-        route,
-        location,
-        action,
-      },
+      payload: { route, location, action },
     });
 
-    // Create the root application element
     const appElement = <App context={context}>{route.component}</App>;
-
-    // Import React 18 root APIs
-    let ReactDOMClient;
-    try {
-      ReactDOMClient = await import('react-dom/client');
-    } catch {
-      ReactDOMClient = null;
-    }
-
-    // DOM container for React app
     const container = document.getElementById('app');
+
     if (!container) {
-      console.error('Failed to find root DOM element');
+      console.error('Root element #app not found');
       return;
     }
 
-    // Detect if React 18 is available
-    const hasReact18 =
-      ReactDOMClient &&
-      typeof ReactDOMClient.createRoot === 'function' &&
-      typeof ReactDOMClient.hydrateRoot === 'function';
+    renderApp(appElement, container, isInitial);
 
-    if (hasReact18) {
-      // React 18 Rendering Logic
-      const { createRoot, hydrateRoot } = ReactDOMClient;
-
-      try {
-        let root = window[ROOT_INSTANCE_KEY];
-        if (!root) {
-          // First render (SSR hydration preferred)
-          try {
-            root = hydrateRoot(container, appElement, {
-              onRecoverableError: handleHydrationError,
-            });
-            if (__DEV__) console.log('✅ Initial hydration completed');
-          } catch (err) {
-            console.warn('Hydration failed, using client render:', err);
-            root = createRoot(container, {
-              onRecoverableError: handleRenderError,
-            });
-            root.render(appElement);
-          }
-          window[ROOT_INSTANCE_KEY] = root;
-          hasHydrated = true;
-        } else {
-          // HMR or subsequent renders
-          root.render(appElement);
-          if (__DEV__ && action === 'HMR_UPDATE')
-            console.log('✅ HMR render completed');
-        }
-      } catch (error) {
-        console.error('Render error:', error);
-        if (window[ROOT_INSTANCE_KEY]) {
-          try {
-            window[ROOT_INSTANCE_KEY].unmount();
-          } catch (e) {
-            console.error('Unmount failed:', e);
-          }
-          delete window[ROOT_INSTANCE_KEY];
-        }
-      }
-    } else {
-      // React 16/17 Fallback
-      const ReactDOM = await import('react-dom');
-
-      // eslint-disable-next-line react/no-deprecated
-      const method =
-        // eslint-disable-next-line react/no-deprecated
-        isInitialRender && !hasHydrated ? ReactDOM.hydrate : ReactDOM.render;
-      method(appElement, container);
-
-      if (isInitialRender) {
-        hasHydrated = true;
-      }
-    }
-
-    // Update page metadata
     if (route.title || route.description) {
       updatePageMetadata({
         title: route.title,
@@ -642,94 +347,117 @@ async function handleRouteChange(location, action) {
       });
     }
 
-    // Restore scroll position after render
-    requestAnimationFrame(() => {
-      restoreScrollPosition(location);
-    });
-
-    // Track navigation performance
-    trackNavigationPerformance(navigationStartTime, route);
+    requestAnimationFrame(() => restoreScrollPosition(location));
   } catch (error) {
-    // Don't handle aborted navigations as errors
-    if (navigationSignal.aborted) {
-      return;
+    if (!signal.aborted) {
+      handleNavigationError(error, isInitial, location);
     }
-
-    handleNavigationError(error, isInitialRender, location);
   } finally {
     clearTimeout(loadingTimeout);
     store.dispatch({ type: 'NAVIGATION_LOADING', payload: false });
-
-    // Reset navigation lock
     isNavigating = false;
     navigationAbortController = null;
   }
 }
 
 // =============================================================================
-// Cleanup function with page unload detection
+// LIFECYCLE
 // =============================================================================
 
 function cleanup() {
+  // Save scroll position before cleanup
   saveScrollPosition();
 
+  // Unsubscribe from navigation events
   if (typeof unsubscribeNavigation === 'function') {
     unsubscribeNavigation();
-    unsubscribeNavigation = null;
   }
+  unsubscribeNavigation = null;
 
+  // Abort any ongoing navigation
   abortNavigation();
 
-  if (__DEV__) {
-    console.log('✅ Client cleanup completed');
-
-    const summary = getPerformanceSummary();
-    if (summary) {
-      console.log('📊 Performance Metrics:', summary);
-    }
+  // Dispose WebSocket client (removes all event listeners)
+  if (wsClient && typeof wsClient.dispose === 'function') {
+    wsClient.dispose();
   }
+  wsClient = null;
+
+  // Remove event listeners
+  window.removeEventListener('beforeunload', cleanup);
+  window.removeEventListener('scroll', saveScrollPosition, { passive: true });
+
+  if (__DEV__) console.log('✅ Cleanup completed');
 }
 
-// =============================================================================
-// Initialize app with page unload handler
-// =============================================================================
-
 async function initializeApp() {
-  // Ensure i18n is synced BEFORE any rendering
-  await ensureI18n();
+  // Set locale
+  if (context.locale && i18n.language !== context.locale) {
+    await store.dispatch(setLocale(context.locale));
+  }
 
-  // Get current location
+  // Initialize React DOM client
+  await initReactDOMClient();
+
   currentLocation = navigator.getCurrentLocation();
 
-  // Subscribe to navigation changes
-  unsubscribeNavigation = navigator.subscribe(handleRouteChange);
-
-  // Pass true to indicate actual page unload
   window.addEventListener('beforeunload', cleanup);
 
-  // Set up scroll position tracking with debouncing
+  // Debounced scroll tracking
   let scrollTimeout;
   window.addEventListener(
     'scroll',
     () => {
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
+      clearTimeout(scrollTimeout);
       scrollTimeout = setTimeout(saveScrollPosition, 100);
     },
     { passive: true },
   );
 
-  if (__DEV__) {
-    console.log('🚀 Client app initialized');
+  // WebSocket
+  try {
+    const wsUrl = buildWebSocketUrl();
+    if (wsUrl) {
+      wsClient = createWebSocketClient({ url: wsUrl, autoReconnect: true });
+
+      // Listen for connection events
+      wsClient.on(EventType.WELCOME, data => {
+        if (__DEV__) {
+          console.log(
+            '✅ WebSocket connected',
+            data && data.authenticated
+              ? '(authenticated)'
+              : '(unauthenticated)',
+          );
+        }
+      });
+
+      wsClient.on(EventType.AUTHENTICATED, user => {
+        if (__DEV__)
+          console.log('✅ WebSocket authenticated as:', user && user.id);
+      });
+
+      wsClient.on(EventType.ERROR, error => {
+        if (__DEV__) console.warn('⚠️ WebSocket error:', error);
+      });
+
+      wsClient.connect();
+    }
+  } catch (error) {
+    if (__DEV__) console.error('WebSocket init failed:', error);
   }
 
-  // Trigger initial route rendering
-  handleRouteChange(currentLocation);
+  if (__DEV__) console.log('🚀 App initialized');
+
+  // Handle initial page load first
+  await handleRouteChange(currentLocation);
+
+  // Subscribe to navigation AFTER initial render to avoid duplicate triggers
+  unsubscribeNavigation = navigator.subscribe(handleRouteChange);
 }
 
 // =============================================================================
-// APPLICATION STARTUP
+// STARTUP
 // =============================================================================
 
 const READY_STATES = new Set(['interactive', 'complete']);
@@ -737,121 +465,65 @@ let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
 let areChunksLoaded = false;
 let hasStarted = false;
 
-/**
- * Start app when both DOM and chunks are ready
- */
 function attemptStartup() {
-  // Ensure startup only happens once
-  if (hasStarted) {
-    return;
-  }
-
-  if (isDOMReady && areChunksLoaded) {
-    hasStarted = true;
-
-    if (__DEV__) {
-      console.log('✅ All prerequisites met, starting app...');
-    }
-
-    initializeApp();
-  } else if (__DEV__) {
-    console.log('⏳ Waiting for prerequisites:', {
-      isDOMReady,
-      areChunksLoaded,
-    });
-  }
+  if (hasStarted || !isDOMReady || !areChunksLoaded) return;
+  hasStarted = true;
+  if (__DEV__) console.log('✅ Starting app...');
+  initializeApp();
 }
 
-// Wait for code-split chunks to load
 loadableReady(() => {
-  if (__DEV__) {
-    console.log('✅ Code-split chunks loaded');
-  }
   areChunksLoaded = true;
   attemptStartup();
 });
 
-// Wait for DOM to be ready
 if (isDOMReady) {
-  if (__DEV__) {
-    console.log('✅ DOM already ready');
-  }
   attemptStartup();
 } else {
   document.addEventListener('DOMContentLoaded', () => {
-    if (__DEV__) {
-      console.log('✅ DOM content loaded');
-    }
     isDOMReady = true;
     attemptStartup();
   });
 }
 
-// ===========================
-// HMR: Hot Module Replacement
-// ===========================
+// =============================================================================
+// HMR
+// =============================================================================
+
 if (module.hot) {
-  // Accept updates for this module (e.g., router updates)
   module.hot.accept(err => {
     if (err) {
-      console.error('❌ HMR: Error accepting Client update:', err);
+      console.error('❌ HMR error:', err);
       return;
     }
-
-    // Invalidate router cache to pick up new routes
     cachedRouter = null;
-
-    // Store current location so we can restore after HMR update
-    const locationToRestore = { ...currentLocation };
-
-    // Use requestIdleCallback if available for non-blocking update,
-    // otherwise fallback to setTimeout for older browsers
-    const scheduleUpdate = window.requestIdleCallback || setTimeout;
-    const clearUpdate = window.cancelIdleCallback || clearTimeout;
-
-    // Schedule the update
-    const updateId = scheduleUpdate(
+    const loc = { ...currentLocation };
+    const schedule = window.requestIdleCallback || setTimeout;
+    schedule(
       () => {
-        // Only trigger location change if the pathname matches
-        if (currentLocation.pathname === locationToRestore.pathname) {
-          handleRouteChange(locationToRestore, 'HMR_UPDATE');
+        if (currentLocation.pathname === loc.pathname) {
+          handleRouteChange(loc, 'HMR_UPDATE');
         }
       },
-      typeof window.requestIdleCallback === 'function'
-        ? { timeout: 1000 } // Timeout for requestIdleCallback
-        : 1000, // Delay for setTimeout fallback
+      { timeout: 1000 },
     );
-
-    // Store HMR data for this module so it can be cleaned up on dispose
-    if (!module.hot.data) {
-      module.hot.data = {};
-    }
-    module.hot.data.pendingUpdate = updateId;
-    module.hot.data.clearUpdate = clearUpdate;
   });
 
-  // HMR: Status handler
   module.hot.addStatusHandler(status => {
-    if (status === 'idle') {
-      // When HMR is done applying updates, notify overlay/reporters
+    if (
+      status === 'idle' &&
       // eslint-disable-next-line no-underscore-dangle
-      const reporter = window.__webpack_hot_middleware_reporter__;
-      if (reporter && typeof reporter.success === 'function') {
-        reporter.success(); // Clears any previous error overlay
-      }
+      window.__webpack_hot_middleware_reporter__ &&
+      // eslint-disable-next-line no-underscore-dangle
+      typeof window.__webpack_hot_middleware_reporter__.success === 'function'
+    ) {
+      // eslint-disable-next-line no-underscore-dangle
+      window.__webpack_hot_middleware_reporter__.success();
     }
   });
 
-  // Dispose handler
-  module.hot.dispose(data => {
-    console.log('🔥 HMR: Disposing module');
-
-    // Cancel any pending scheduled updates to avoid calling outdated state
-    if (data && data.pendingUpdate && typeof data.clearUpdate === 'function') {
-      data.clearUpdate(data.pendingUpdate);
-    }
-
-    // Perform module-specific cleanup (e.g., remove event listeners)
+  module.hot.dispose(() => {
+    if (__DEV__) console.log('🔥 HMR dispose');
     cleanup();
   });
 }

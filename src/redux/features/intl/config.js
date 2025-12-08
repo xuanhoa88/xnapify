@@ -7,14 +7,21 @@
 
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
-import viVN from './translations/vi-VN.json';
 import enUS from './translations/en-US.json';
+import viVN from './translations/vi-VN.json';
 
 // =============================================================================
 // LOCALE CONFIGURATION
 // =============================================================================
 
+// Default locale
 export const DEFAULT_LOCALE = 'en-US';
+
+// Cookie max-age in seconds (for cookie max-age attribute)
+export const LOCALE_COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
+
+// Cookie and query parameter name
+export const LOCALE_COOKIE_NAME = 'lang';
 
 // Internal locale configurations with translations
 const LOCALE_CONFIGS = Object.freeze({
@@ -22,13 +29,21 @@ const LOCALE_CONFIGS = Object.freeze({
   'vi-VN': { name: 'Tiếng Việt', translation: viVN },
 });
 
-// Public API: Available locales without translations (for Redux/components)
-// Simple map: { 'en-US': 'English (US)', 'vi-VN': 'Tiếng Việt' }
+// Available locales
 export const AVAILABLE_LOCALES = Object.freeze(
-  Object.keys(LOCALE_CONFIGS).reduce((acc, key) => {
-    acc[key] = LOCALE_CONFIGS[key].name || key;
-    return acc;
-  }, {}),
+  Object.fromEntries(
+    Object.entries(LOCALE_CONFIGS).map(([key, config]) => [key, config.name]),
+  ),
+);
+
+// Available translations
+export const LOCALE_TRANSLATIONS = Object.freeze(
+  Object.fromEntries(
+    Object.entries(LOCALE_CONFIGS).map(([k, v]) => [
+      k,
+      { translation: v.translation },
+    ]),
+  ),
 );
 
 // =============================================================================
@@ -36,10 +51,7 @@ export const AVAILABLE_LOCALES = Object.freeze(
 // =============================================================================
 
 const i18nConfig = {
-  resources: Object.keys(LOCALE_CONFIGS).reduce((acc, key) => {
-    acc[key] = { translation: LOCALE_CONFIGS[key].translation };
-    return acc;
-  }, {}),
+  resources: LOCALE_TRANSLATIONS,
   lng: DEFAULT_LOCALE,
   fallbackLng: DEFAULT_LOCALE,
   defaultNS: 'translation',
