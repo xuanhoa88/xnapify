@@ -307,6 +307,7 @@ export function startServer(app, port = config.port, host = config.host) {
             enableAuth: !!config.jwtSecret,
             jwtSecret: config.jwtSecret,
             enableLogging: !config.isProduction,
+            requireAuth: false, // Allow anonymous connections (fixes infinite loop)
           },
           server,
         );
@@ -373,9 +374,9 @@ async function main(app, staticPath) {
       limit: config.apiUrlEncodedRequestLimit,
     }),
   );
-  app.use(cookieParser());
 
   // Locale detection
+  app.use(cookieParser());
   app.use(
     expressRequestLanguage({
       languages: Object.keys(AVAILABLE_LOCALES),

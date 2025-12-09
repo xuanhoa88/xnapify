@@ -5,483 +5,422 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import WebSocket from 'ws';
 import open from 'open';
-import { BuildError } from '../../lib/errorHandler';
-import { logInfo, logError, logWarn } from '../../lib/logger';
+import { logInfo, logWarn, logError } from '../../lib/logger';
+
+// Configuration
+const CONFIG = Object.freeze({
+  BROADCAST_RETRY_ATTEMPTS: 3,
+  BROADCAST_RETRY_DELAY: 100, // ms
+  RESTART_NOTIFICATION_DELAY: 1000, // ms
+  SHUTDOWN_DELAY: 1000, // ms
+  BROWSER_KILL_TIMEOUT: 5000, // ms
+});
 
 // State management
-let wss = null;
-let clients = new Set();
-let heartbeatInterval = null;
-let isRestarting = false;
+let hotMiddleware = null;
 let browserProcess = null;
-let currentServer = null;
+let isRestarting = false;
+let isShuttingDown = false;
 
 /**
- * Send JSON message to a specific client
+ * Validate server object
+ * @param {object} server - Express server instance
+ * @returns {boolean}
  */
-const send = (ws, data) => {
-  if (ws.readyState === WebSocket.OPEN) {
-    try {
-      ws.send(JSON.stringify(data));
-      return true;
-    } catch (err) {
-      logError('[BrowserSync] Send error:', err.message);
+function isValidServer(server) {
+  if (!server) {
+    logError('[BrowserSync] Invalid server: server is null/undefined');
+    return false;
+  }
+
+  if (typeof server.address !== 'function') {
+    logError('[BrowserSync] Invalid server: missing address() method');
+    return false;
+  }
+
+  const address = server.address();
+  if (!address || typeof address !== 'object') {
+    logError('[BrowserSync] Invalid server: address() returned invalid data');
+    return false;
+  }
+
+  if (!address.port) {
+    logError('[BrowserSync] Invalid server: no port available');
+    return false;
+  }
+
+  return true;
+}
+
+/**
+ * Broadcast message to all connected clients via HMR middleware
+ * @param {object} data - Message data to broadcast
+ * @param {number} retries - Number of retry attempts remaining
+ * @returns {Promise<boolean>}
+ */
+const broadcast = async (data, retries = CONFIG.BROADCAST_RETRY_ATTEMPTS) => {
+  if (!data || typeof data !== 'object') {
+    logWarn('[BrowserSync] Invalid broadcast data');
+    return false;
+  }
+
+  if (!hotMiddleware) {
+    logWarn('[BrowserSync] Cannot broadcast: HMR middleware not initialized');
+    return false;
+  }
+
+  try {
+    // Ensure the middleware has the publish method
+    if (typeof hotMiddleware.publish !== 'function') {
+      logError('[BrowserSync] HMR middleware missing publish() method');
       return false;
     }
-  }
-  return false;
-};
 
-/**
- * Broadcast message to all connected clients
- */
-const broadcast = data => {
-  let count = 0;
-  clients.forEach(ws => {
-    if (send(ws, data)) count++;
-  });
-  if (count > 0) {
-    logInfo(`[BrowserSync] Broadcast "${data.type}" to ${count} client(s)`);
-  }
-  return count;
-};
+    // Add timestamp if not present
+    const message = {
+      ...data,
+      timestamp: data.timestamp || Date.now(),
+    };
 
-/**
- * Handle incoming client messages
- */
-const handleMessage = (ws, data) => {
-  try {
-    const msg = JSON.parse(data.toString());
+    hotMiddleware.publish(message);
+    logInfo(`[BrowserSync] Broadcasted: ${message.type}`);
+    return true;
+  } catch (error) {
+    logWarn(`[BrowserSync] Broadcast error: ${error.message}`);
 
-    switch (msg.type) {
-      case 'browser_sync_ping':
-        send(ws, { type: 'browser_sync_pong', timestamp: Date.now() });
-        break;
-
-      case 'browser_sync_client_ready':
-        logInfo('[BrowserSync] Client ready');
-        if (isRestarting) {
-          send(ws, {
-            type: 'browser_sync_server_ready',
-            action: 'clear_overlay',
-          });
-          isRestarting = false;
-        }
-        break;
-
-      case 'browser_sync_status':
-        send(ws, {
-          type: 'browser_sync_status_response',
-          isRestarting,
-          clientCount: clients.size,
-          timestamp: Date.now(),
-        });
-        break;
-
-      default:
-        logInfo('[BrowserSync] Unknown message:', msg.type);
-    }
-  } catch (err) {
-    logError('[BrowserSync] Invalid message:', err.message);
-  }
-};
-
-/**
- * Setup client connection handlers
- */
-const setupClient = ws => {
-  clients.add(ws);
-  ws.isAlive = true;
-
-  logInfo(`[BrowserSync] Client connected (${clients.size} active)`);
-
-  // Send connection confirmation
-  send(ws, { type: 'browser_sync_connected', timestamp: Date.now() });
-
-  // Message handler
-  ws.on('message', data => handleMessage(ws, data));
-
-  // Pong handler for heartbeat
-  ws.on('browser_sync_pong', () => {
-    ws.isAlive = true;
-  });
-
-  // Cleanup on close
-  ws.on('close', () => {
-    clients.delete(ws);
-    logInfo(`[BrowserSync] Client disconnected (${clients.size} active)`);
-  });
-
-  // Error handler
-  ws.on('error', err => {
-    logError('[BrowserSync] Client error:', err.message);
-    clients.delete(ws);
-  });
-};
-
-/**
- * Start heartbeat to detect dead connections
- */
-const startHeartbeat = () => {
-  stopHeartbeat();
-
-  heartbeatInterval = setInterval(() => {
-    if (wss && Array.isArray(wss.clients)) {
-      wss.clients.forEach(ws => {
-        if (!ws.isAlive) {
-          clients.delete(ws);
-          ws.terminate();
-          return;
-        }
-        ws.isAlive = false;
-        ws.ping();
-      });
-    }
-  }, 30000);
-};
-
-/**
- * Stop heartbeat interval
- */
-const stopHeartbeat = () => {
-  if (heartbeatInterval) {
-    clearInterval(heartbeatInterval);
-    heartbeatInterval = null;
-  }
-};
-
-/**
- * Initialize WebSocket server
- */
-const initialize = server => {
-  // If server instance changed, recreate WebSocket server
-  const serverChanged = currentServer !== server;
-
-  if (serverChanged && wss) {
-    logInfo('[BrowserSync] HTTP server changed, recreating WebSocket server');
-    stopHeartbeat();
-    wss.removeAllListeners();
-    wss.close();
-    wss = null;
-  }
-
-  currentServer = server;
-
-  // Don't reinitialize if already exists with same server
-  if (wss && !serverChanged) {
-    logInfo('[BrowserSync] Already initialized');
-    return;
-  }
-
-  try {
-    wss = new WebSocket.Server({
-      noServer: true, // Handle upgrade manually to avoid conflicts
-      clientTracking: true,
-      perMessageDeflate: false, // Disable compression for compatibility
-    });
-
-    wss.on('connection', setupClient);
-
-    wss.on('error', err => {
-      logError('[BrowserSync] Server error:', err.message);
-      // Don't throw on runtime errors, just log
-      if (err.code !== 'EADDRINUSE') {
-        logWarn('[BrowserSync] Non-fatal error, continuing...');
-      }
-    });
-
-    wss.on('close', () => {
-      stopHeartbeat();
-      logInfo('[BrowserSync] Server closed');
-    });
-
-    // Handle upgrade manually for /~/__bs path only
-    const bsPath = '/~/__bs';
-    server.on('upgrade', (request, socket, head) => {
-      const { pathname } = new URL(
-        request.url,
-        `http://${request.headers.host}`,
+    // Retry logic
+    if (retries > 0) {
+      logInfo(`[BrowserSync] Retrying broadcast (${retries} attempts left)...`);
+      await new Promise(resolve =>
+        setTimeout(resolve, CONFIG.BROADCAST_RETRY_DELAY),
       );
+      return broadcast(data, retries - 1);
+    }
 
-      if (pathname === bsPath) {
-        wss.handleUpgrade(request, socket, head, ws => {
-          wss.emit('connection', ws, request);
-        });
-      }
-      // Don't destroy socket for other paths
-    });
-
-    startHeartbeat();
-    logInfo('[BrowserSync] Server initialized');
-  } catch (err) {
-    throw new BuildError(`Failed to create WebSocket server: ${err.message}`, {
-      suggestion:
-        'Port may be in use. Try a different port or kill the process.',
-    });
+    logError('[BrowserSync] Broadcast failed after all retries');
+    return false;
   }
 };
+
+/**
+ * Get the server URL
+ * @param {object} server - Express server instance
+ * @returns {string|null}
+ */
+function getServerUrl(server) {
+  if (!isValidServer(server)) {
+    return null;
+  }
+
+  try {
+    const { address, port } = server.address();
+    const host = address === '::' ? 'localhost' : address;
+    return `http://${host}:${port}`;
+  } catch (error) {
+    logError(`[BrowserSync] Failed to get server URL: ${error.message}`);
+    return null;
+  }
+}
 
 /**
  * Open the default browser to the dev server URL
+ * @param {object} server - Express server instance
+ * @returns {Promise<boolean>}
  */
 const openBrowser = async server => {
-  const { address, port } = server.address();
-  const host = address === '::' ? 'localhost' : address;
+  const url = getServerUrl(server);
 
-  const url = `http://${host}:${port}`;
+  if (!url) {
+    logError('[BrowserSync] Cannot open browser: invalid server URL');
+    return false;
+  }
 
   try {
+    logInfo(`[BrowserSync] Opening browser at ${url}...`);
     const proc = await open(url);
+
     if (proc && typeof proc.kill === 'function') {
       browserProcess = proc;
-      logInfo(`[BrowserSync] Opened browser at ${url} (PID: ${proc.pid})`);
+      logInfo(`[BrowserSync] Browser opened (PID: ${proc.pid})`);
     } else {
       browserProcess = null;
-      logInfo(`[BrowserSync] Opened browser at ${url}`);
+      logInfo(`[BrowserSync] Browser opened (no process handle)`);
     }
+
+    return true;
   } catch (error) {
     logWarn(`[BrowserSync] Failed to open browser: ${error.message}`);
     logInfo(`[BrowserSync] Please manually open: ${url}`);
+    return false;
   }
 };
 
 /**
- * Close the browser process
+ * Close the browser process with timeout
+ * @returns {Promise<void>}
  */
 const closeBrowser = () => {
-  if (!browserProcess || browserProcess.killed) {
-    return;
-  }
-
-  try {
-    if (typeof browserProcess.kill === 'function') {
-      browserProcess.kill('SIGTERM');
-      logInfo(`[BrowserSync] Closed browser (PID: ${browserProcess.pid})`);
-      browserProcess = null;
+  return new Promise(resolve => {
+    if (!browserProcess || browserProcess.killed) {
+      logInfo('[BrowserSync] No browser process to close');
+      resolve();
+      return;
     }
-  } catch (err) {
-    logWarn(`[BrowserSync] Failed to close browser: ${err.message}`);
-  }
+
+    try {
+      if (typeof browserProcess.kill !== 'function') {
+        logWarn('[BrowserSync] Browser process has no kill method');
+        browserProcess = null;
+        resolve();
+        return;
+      }
+
+      const { pid } = browserProcess;
+
+      // Set up timeout in case kill hangs
+      const killTimeout = setTimeout(() => {
+        logWarn(`[BrowserSync] Browser close timeout (PID: ${pid})`);
+        browserProcess = null;
+        resolve();
+      }, CONFIG.BROWSER_KILL_TIMEOUT);
+
+      // Try graceful termination
+      browserProcess.kill('SIGTERM');
+      logInfo(`[BrowserSync] Sent SIGTERM to browser (PID: ${pid})`);
+
+      // Clean up on successful kill
+      browserProcess.once('exit', () => {
+        clearTimeout(killTimeout);
+        logInfo(`[BrowserSync] Browser closed (PID: ${pid})`);
+        browserProcess = null;
+        resolve();
+      });
+
+      // If no exit event within timeout, the timeout handler will resolve
+    } catch (err) {
+      logWarn(`[BrowserSync] Error closing browser: ${err.message}`);
+      browserProcess = null;
+      resolve();
+    }
+  });
 };
 
 /**
- * Check if any clients are connected
+ * Initialize BrowserSync with HMR middleware
+ * @param {object} middleware - Webpack HMR middleware
+ * @returns {boolean}
  */
-const hasClients = () => clients.size > 0;
+const initialize = middleware => {
+  if (!middleware) {
+    logError('[BrowserSync] Cannot initialize: middleware is null/undefined');
+    return false;
+  }
 
-/**
- * Get current client count
- */
-export const getClientCount = () => clients.size;
+  if (typeof middleware.publish !== 'function') {
+    logError(
+      '[BrowserSync] Cannot initialize: middleware missing publish() method',
+    );
+    return false;
+  }
+
+  hotMiddleware = middleware;
+  logInfo('[BrowserSync] Initialized with HMR middleware');
+  return true;
+};
 
 /**
  * Notify clients about server restart
+ * @returns {Promise<boolean>}
  */
-export const notifyRestart = () => {
-  if (!hasClients()) {
-    logInfo('[BrowserSync] No clients to notify about restart');
-    return 0;
+export const notifyRestart = async () => {
+  if (isShuttingDown) {
+    logWarn('[BrowserSync] Cannot notify restart: server is shutting down');
+    return false;
   }
 
   isRestarting = true;
-  return broadcast({
+
+  const success = await broadcast({
     type: 'browser_sync_server_restarting',
-    timestamp: Date.now(),
   });
+
+  if (!success) {
+    logWarn('[BrowserSync] Failed to notify clients about restart');
+  }
+
+  return success;
 };
 
 /**
  * Notify clients that server is ready
+ * @param {boolean} reload - Whether to reload clients
+ * @returns {Promise<boolean>}
  */
-export const notifyReady = (reload = true) => {
-  if (!hasClients()) {
-    logInfo('[BrowserSync] No clients to notify');
-    isRestarting = false;
-    return 0;
+export const notifyReady = async (reload = true) => {
+  if (isShuttingDown) {
+    logWarn('[BrowserSync] Cannot notify ready: server is shutting down');
+    return false;
   }
 
   isRestarting = false;
-  return broadcast({
+
+  const success = await broadcast({
     type: 'browser_sync_server_ready',
     action: reload ? 'reload' : 'clear_overlay',
-    timestamp: Date.now(),
   });
+
+  if (!success) {
+    logWarn('[BrowserSync] Failed to notify clients that server is ready');
+  }
+
+  return success;
 };
 
 /**
  * Force reload all clients
+ * @returns {Promise<boolean>}
  */
-export const reloadClients = () =>
-  broadcast({
-    type: 'browser_sync_reload',
-    timestamp: Date.now(),
-  });
-
-/**
- * Start dev mode: initialize WS and open browser if needed
- */
-export const start = async server => {
-  initialize(server);
-
-  // Wait for potential client reconnections
-  await new Promise(resolve => setTimeout(resolve, 500));
-
-  if (hasClients()) {
-    logInfo('[BrowserSync] Active clients detected, skipping browser open');
-    // Use false to clear overlay without triggering reload
-    // This prevents duplicate fetches when clients reconnect after server restart
-    notifyReady(false);
+export const reloadClients = async () => {
+  if (isShuttingDown) {
+    logWarn('[BrowserSync] Cannot reload: server is shutting down');
     return false;
   }
 
-  logInfo('[BrowserSync] No active clients, opening browser');
-  await openBrowser(server);
+  const success = await broadcast({
+    type: 'browser_sync_reload',
+  });
+
+  if (!success) {
+    logWarn('[BrowserSync] Failed to reload clients');
+  }
+
+  return success;
+};
+
+/**
+ * Start dev mode: initialize and open browser
+ * @param {object} server - Express server instance
+ * @param {object} middleware - Webpack HMR middleware
+ * @returns {Promise<boolean>}
+ */
+export const start = async (server, middleware) => {
+  if (isShuttingDown) {
+    logError('[BrowserSync] Cannot start: server is shutting down');
+    return false;
+  }
+
+  logInfo('[BrowserSync] Starting...');
+
+  // Validate inputs
+  if (!isValidServer(server)) {
+    return false;
+  }
+
+  // Initialize middleware
+  if (!initialize(middleware)) {
+    return false;
+  }
+
+  // Open browser
+  logInfo('[BrowserSync] Opening browser for new session');
+  const browserOpened = await openBrowser(server);
+
+  if (!browserOpened) {
+    logWarn('[BrowserSync] Started without browser (manual open required)');
+  }
+
+  logInfo('[BrowserSync] Start complete');
   return true;
 };
 
 /**
  * Handle server restart flow
+ * @param {object} server - Express server instance
+ * @param {object} middleware - Webpack HMR middleware (optional)
+ * @returns {Promise<boolean>}
  */
-export const restart = async server => {
+export const restart = async (server, middleware) => {
+  if (isShuttingDown) {
+    logError('[BrowserSync] Cannot restart: server is shutting down');
+    return false;
+  }
+
   logInfo('[BrowserSync] Server restart initiated');
 
-  // Re-initialize WebSocket with new server instance
-  initialize(server);
-
-  // Wait for clients to reconnect
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  if (hasClients()) {
-    logInfo('[BrowserSync] Clients detected after restart, notifying them');
-    notifyReady(true);
-  } else {
-    logInfo('[BrowserSync] No clients detected, opening browser');
-    await openBrowser(server);
+  // Re-initialize middleware reference if provided
+  if (middleware && !initialize(middleware)) {
+    logWarn('[BrowserSync] Restart continuing with existing middleware');
   }
+
+  // Validate server
+  if (!isValidServer(server)) {
+    logError('[BrowserSync] Restart failed: invalid server');
+    return false;
+  }
+
+  // Wait for server to stabilize
+  await new Promise(resolve =>
+    setTimeout(resolve, CONFIG.RESTART_NOTIFICATION_DELAY),
+  );
+
+  // Notify clients
+  const success = await notifyReady(true);
+
+  if (success) {
+    logInfo('[BrowserSync] Restart complete');
+  } else {
+    logWarn('[BrowserSync] Restart completed with warnings');
+  }
+
+  return success;
 };
 
 /**
  * Graceful shutdown with proper async handling
+ * @returns {Promise<void>}
  */
-export const shutdown = () => {
-  // Cleanup function: always safe to call
-  const cleanup = () => {
-    closeBrowser();
-
-    if (clients) clients.clear();
-    wss = null;
-    currentServer = null;
-    logInfo('[BrowserSync] Shutdown complete');
-  };
-
-  // Already shut down → just cleanup and return
-  if (!wss) {
-    logInfo('[BrowserSync] Already shut down');
-    return cleanup();
+export const shutdown = async () => {
+  if (isShuttingDown) {
+    logWarn('[BrowserSync] Shutdown already in progress');
+    return;
   }
 
-  logInfo('[BrowserSync] Shutting down...');
+  isShuttingDown = true;
+  logInfo('[BrowserSync] Shutdown initiated');
 
-  // Notify connected clients to close tabs
-  broadcast({
-    type: 'browser_sync_server_shutdown',
-    action: 'close_tab',
-    timestamp: Date.now(),
-  });
-
-  // Stop heartbeat timer
-  stopHeartbeat();
-
-  // Close a single WebSocket client with timeout fallback
-  const closeClients = () => {
-    const clientsArray = Array.from(wss.clients || []);
-    return clientsArray.map(ws => {
-      // Determine client identifier (IP:Port or custom id)
-      const clientName =
-        // eslint-disable-next-line no-underscore-dangle
-        (ws._socket &&
-          // eslint-disable-next-line no-underscore-dangle
-          ws._socket.remoteAddress + ':' + ws._socket.remotePort) ||
-        ws.id ||
-        'unknown-client';
-
-      return new Promise(resolve => {
-        // Already closed → resolve immediately
-        if (ws.readyState === WebSocket.CLOSED) {
-          logInfo(
-            `[BrowserSync] Client ${clientName} already closed, skipping.`,
-          );
-          return resolve();
-        }
-
-        // Timeout fallback so shutdown never hangs
-        const timeout = setTimeout(() => {
-          logInfo(
-            `[BrowserSync] Client ${clientName} close timeout, resolving.`,
-          );
-          resolve();
-        }, 1000);
-
-        // Called when client is closed or errors
-        const done = () => {
-          clearTimeout(timeout);
-          logInfo(`[BrowserSync] Client ${clientName} closed.`);
-          resolve();
-        };
-
-        // Listen for client close and error events
-        ws.once('close', done);
-        ws.once('error', done);
-
-        // Attempt graceful close
-        try {
-          ws.close(1000, 'Server shutdown');
-          logInfo(`[BrowserSync] Closing client ${clientName}...`);
-        } catch (err) {
-          logInfo(
-            `[BrowserSync] Error closing client ${clientName}, resolving.`,
-          );
-          done();
-        }
-      });
+  try {
+    // Notify clients to close
+    await broadcast({
+      type: 'browser_sync_server_shutdown',
     });
-  };
 
-  // Create all async shutdown tasks
-  const tasks = [
-    // Close all WebSocket clients
-    ...closeClients(),
+    // Allow time for broadcast to be sent
+    await new Promise(resolve => setTimeout(resolve, CONFIG.SHUTDOWN_DELAY));
 
-    // Close the WebSocket server
-    new Promise(res => {
-      wss.removeAllListeners();
-      wss.close(err => {
-        if (err) {
-          logWarn('[BrowserSync] Server close error:', err.message);
-        }
-        res();
-      });
-    }),
+    // Close browser process
+    await closeBrowser();
 
-    // Cleanup (added as a Promise to run inside allSettled)
-    new Promise(res => {
-      cleanup();
-      res();
-    }),
-  ];
+    // Clean up state
+    hotMiddleware = null;
+    isRestarting = false;
 
-  // Wait for *all* shutdown operations to finish (no rejections)
-  return Promise.allSettled(tasks);
+    logInfo('[BrowserSync] Shutdown complete');
+  } catch (error) {
+    logError(`[BrowserSync] Error during shutdown: ${error.message}`);
+  } finally {
+    isShuttingDown = false;
+  }
 };
 
 /**
  * Get current state for debugging
+ * @returns {object}
  */
 export const getState = () => ({
-  hasWebSocketServer: !!wss,
-  clientCount: clients.size,
+  hasHotMiddleware: !!hotMiddleware,
   isRestarting,
+  isShuttingDown,
   hasBrowserProcess: !!browserProcess,
+  browserPid: (browserProcess && browserProcess.pid) || null,
 });

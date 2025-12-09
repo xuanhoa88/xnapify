@@ -31,7 +31,8 @@ export class FetchError extends Error {
  * Configuration options for createFetch
  *
  * @typedef {Object} FetchConfig
- * @property {string} [cookie] - Cookie string for server-side requests
+ * @property {string} [baseUrl] - Base URL for relative paths
+ * @property {Object} [headers] - Default headers
  * @property {Function} [onRequest] - Request interceptor
  * @property {Function} [onResponse] - Response interceptor
  * @property {Function} [onError] - Error interceptor
@@ -42,7 +43,7 @@ export class FetchError extends Error {
  *
  * @param {Function} fetch - Native fetch function or polyfill
  * @param {FetchConfig} config - Configuration options
- * @returns {Function} Enhanced fetch function
+ * @returns {Function} Enhanced fetch function that returns parsed data or throws FetchError
  */
 export function createFetch(fetch, config = {}) {
   const {
@@ -51,7 +52,7 @@ export function createFetch(fetch, config = {}) {
     onResponse = null,
     onError = null,
     headers = {},
-  } = config;
+  } = config || {};
 
   // Default fetch options for internal API requests
   const defaults = {
@@ -65,55 +66,122 @@ export function createFetch(fetch, config = {}) {
     },
   };
 
-  // Execute fetch with optional timeout using AbortController
+  /**
+   * Merges multiple AbortSignals into one
+   * @param {AbortSignal[]} signals - Array of signals to merge
+   * @returns {AbortSignal} Merged signal
+   */
+  const mergeSignals = (...signals) => {
+    const controller = new AbortController();
+
+    for (const signal of signals) {
+      if (signal) {
+        if (signal.aborted) {
+          controller.abort();
+          break;
+        }
+        signal.addEventListener('abort', () => controller.abort(), {
+          once: true,
+        });
+      }
+    }
+
+    return controller.signal;
+  };
+
+  /**
+   * Execute fetch with optional timeout using AbortController
+   * @param {string} url - Request URL
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Response>} Fetch response
+   */
   const executeRequest = async (url, options) => {
-    const timeoutMs = options.timeout;
+    const { timeout, signal: userSignal, ...fetchOptions } = options;
 
     // No timeout specified or AbortController not available, use regular fetch
-    if (!timeoutMs || typeof AbortController === 'undefined') {
+    if (!timeout || typeof AbortController === 'undefined') {
       return fetch(url, options);
     }
 
     // Use AbortController for proper cancellation
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
+      // Merge timeout signal with user-provided signal if exists
+      const signal = userSignal
+        ? mergeSignals(controller.signal, userSignal)
+        : controller.signal;
+
       const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
+        ...fetchOptions,
+        signal,
       });
-      clearTimeout(timeoutId);
+
       return response;
     } catch (error) {
-      clearTimeout(timeoutId);
       if (error.name === 'AbortError') {
         throw new FetchError(
-          `Request timeout after ${timeoutMs}ms`,
+          `Request timeout after ${timeout}ms`,
           408,
           'Request Timeout',
           url,
         );
       }
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 
-  //  Process response and handle errors
+  /**
+   * Process response and handle errors
+   * @param {Response} response - Fetch response
+   * @param {string} url - Request URL
+   * @returns {Promise<any>} Parsed response data
+   */
   const processResponse = async (response, url) => {
-    const contentType = response.headers.get('content-type');
-    const isJson = contentType && contentType.includes('application/json');
-
-    let data = null;
-    try {
-      data = isJson ? await response.json() : await response.text();
-    } catch (error) {
-      // Ignore parsing errors for empty responses (204 No Content)
-      if (response.status !== 204) {
-        throw error;
-      }
+    // Handle redirect responses
+    if (response.type === 'opaqueredirect') {
+      return {
+        redirected: true,
+        status: response.status,
+        location: response.headers.get('Location'),
+      };
     }
 
+    // Handle empty responses (204 No Content or empty body)
+    const contentLength = response.headers.get('content-length');
+    if (response.status === 204 || contentLength === '0') {
+      if (!response.ok) {
+        throw new FetchError(
+          `HTTP ${response.status}: ${response.statusText}`,
+          response.status,
+          response.statusText,
+          url,
+          null,
+        );
+      }
+      return null;
+    }
+
+    // Parse response body
+    let data = null;
+    try {
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType && contentType.includes('application/json');
+      data = isJson ? await response.json() : await response.text();
+    } catch (error) {
+      throw new FetchError(
+        'Failed to parse response body',
+        response.status,
+        response.statusText,
+        url,
+        null,
+      );
+    }
+
+    // Check for HTTP errors
     if (!response.ok) {
       throw new FetchError(
         (data && data.message) ||
@@ -128,7 +196,12 @@ export function createFetch(fetch, config = {}) {
     return data;
   };
 
-  // Auto-detects absolute URLs vs relative paths
+  /**
+   * Enhanced fetch function with interceptors and error handling
+   * @param {string} url - Request URL (absolute or relative)
+   * @param {Object} options - Fetch options
+   * @returns {Promise<any>} Parsed response data
+   */
   return async function enhancedFetch(url, options = {}) {
     try {
       // Auto-detect: absolute URL (http/https) or relative path
@@ -147,11 +220,18 @@ export function createFetch(fetch, config = {}) {
               ...(options.headers || {}),
             },
           }
-        : options;
+        : {
+            ...options,
+            headers: {
+              ...(options.headers || {}),
+            },
+          };
 
       // Apply request interceptor
       if (typeof onRequest === 'function') {
-        mergedOptions = await onRequest(fullUrl, mergedOptions);
+        const interceptedOptions = await onRequest(fullUrl, mergedOptions);
+        // Allow interceptor to modify or replace options
+        mergedOptions = interceptedOptions || mergedOptions;
       }
 
       // Execute request (with optional timeout from options)
@@ -165,7 +245,11 @@ export function createFetch(fetch, config = {}) {
     } catch (error) {
       // Apply error interceptor
       if (typeof onError === 'function') {
-        return onError(error);
+        const result = await onError(error);
+        // If error interceptor returns a value, use it; otherwise rethrow
+        if (result !== undefined) {
+          return result;
+        }
       }
       throw error;
     }

@@ -17,7 +17,7 @@ import {
   setLocale,
   getI18nInstance,
 } from './redux';
-import { createWebSocketClient, EventType } from './ws/client';
+import { createWebSocketClient, EventType, MessageType } from './ws/client';
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION
@@ -421,7 +421,7 @@ async function initializeApp() {
       wsClient = createWebSocketClient({ url: wsUrl, autoReconnect: true });
 
       // Listen for connection events
-      wsClient.on(EventType.WELCOME, data => {
+      wsClient.on(MessageType.WELCOME, data => {
         if (__DEV__) {
           console.log(
             '✅ WebSocket connected',
@@ -437,7 +437,17 @@ async function initializeApp() {
           console.log('✅ WebSocket authenticated as:', user && user.id);
       });
 
-      wsClient.on(EventType.ERROR, error => {
+      wsClient.on(EventType.DISCONNECTED, info => {
+        if (__DEV__) console.log('🔌 WebSocket disconnected:', info);
+      });
+
+      wsClient.on(EventType.RECONNECTING, attempt => {
+        if (__DEV__)
+          console.log(`🔄 WebSocket reconnecting (attempt ${attempt})`);
+      });
+
+      // Note: error event is emitted as 'error', not EventType.ERROR
+      wsClient.on('error', error => {
         if (__DEV__) console.warn('⚠️ WebSocket error:', error);
       });
 

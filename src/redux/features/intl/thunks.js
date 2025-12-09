@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { serialize } from 'cookie';
 import {
   setLocaleStart,
   setLocaleSuccess,
@@ -19,30 +20,32 @@ import {
 } from './config';
 
 // =============================================================================
-// UTILITIES
-// =============================================================================
-
-/**
- * Check if running in browser environment
- * @returns {boolean}
- */
-function isBrowser() {
-  return typeof window !== 'undefined';
-}
-
-/**
- * Set locale cookie in browser
- * @param {string} locale - Locale code
- */
-function setLocaleCookie(locale) {
-  if (!isBrowser()) return;
-
-  document.cookie = `${LOCALE_COOKIE_NAME}=${locale};path=/;max-age=${LOCALE_COOKIE_MAX_AGE}`;
-}
-
-// =============================================================================
 // THUNKS
 // =============================================================================
+
+/**
+ * Persist locale to cookie via express-request-language URL
+ * @param {string} locale - Locale code
+ * @returns {Object}
+ */
+function persistLocaleCookie(locale) {
+  // Skip on server-side
+  if (typeof window === 'undefined') {
+    return { success: true, skipped: true };
+  }
+
+  try {
+    document.cookie = serialize(LOCALE_COOKIE_NAME, locale, {
+      path: '/',
+      secure: true,
+      maxAge: LOCALE_COOKIE_MAX_AGE,
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to persist locale cookie:', error);
+    return { success: false, error: error.message };
+  }
+}
 
 /**
  * Set application locale
@@ -109,7 +112,7 @@ export function setLocale(locale) {
       dispatch(setLocaleSuccess({ locale }));
 
       // Persist locale (browser only)
-      setLocaleCookie(locale);
+      persistLocaleCookie(locale);
 
       return { success: true, data: locale };
     } catch (error) {
@@ -132,19 +135,8 @@ export function setLocale(locale) {
  * - 'remove': Remove specified locales
  *
  * @param {Object|string[]} locales - Locales to add/set ({ code: name }) or remove ([codes])
- * @param {Object} options - Operation options
- * @param {string} options.operation - 'set' | 'add' | 'remove' (default: 'set')
+ * @param {string} operation - 'set' | 'add' | 'remove' (default: 'set')
  * @returns {Function} Redux thunk action
- *
- * @example
- * // Replace all locales
- * dispatch(setAvailableLocales({ 'en-US': 'English', 'fr-FR': 'Français' }));
- *
- * // Add/update locales (merge)
- * dispatch(setAvailableLocales({ 'de-DE': 'Deutsch' }, 'add'));
- *
- * // Remove locales
- * dispatch(setAvailableLocales(['de-DE', 'fr-FR'], 'remove'));
  */
 export function setAvailableLocales(locales, operation = 'set') {
   return (dispatch, getState) => {

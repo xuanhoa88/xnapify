@@ -85,7 +85,7 @@ const groupsSlice = createSlice({
       if (index !== -1) {
         state.items[index] = action.payload;
       }
-      if (state.currentGroup?.id === action.payload.id) {
+      if (state.currentGroup && state.currentGroup.id === action.payload.id) {
         state.currentGroup = action.payload;
       }
       state.loading = false;
@@ -103,7 +103,7 @@ const groupsSlice = createSlice({
     },
     deleteGroupSuccess: (state, action) => {
       state.items = state.items.filter(g => g.id !== action.payload);
-      if (state.currentGroup?.id === action.payload) {
+      if (state.currentGroup && state.currentGroup.id === action.payload) {
         state.currentGroup = null;
       }
       state.loading = false;

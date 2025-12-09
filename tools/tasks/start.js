@@ -30,6 +30,8 @@ import {
   webpackServerConfig,
   start as startBrowserSync,
   shutdown as shutdownBrowserSync,
+  notifyRestart as notifyBrowserSyncRestart,
+  notifyReady as notifyBrowserSyncReady,
 } from '../webpack';
 import clean from './clean';
 import generateJWT from './jwt';
@@ -126,9 +128,8 @@ function configureWebpackForDev(config, isClient = true) {
       }),
     );
 
-    // Ensure webpack-hot-middleware client has overlay disabled
-    const whm =
-      'webpack-hot-middleware/client?path=/~/__webpack_hmr&overlay=false&reload=false';
+    // Use shared HMR client to ensure singleton connection
+    const whm = require.resolve('../webpack/hotClient');
     Object.keys(config.entry).forEach(name => {
       if (Array.isArray(config.entry[name])) {
         config.entry[name] = [whm, ...config.entry[name]];
@@ -214,6 +215,9 @@ async function reinitializeServerAndMiddlewares() {
       app._router.stack.splice(boundaryIndex);
     }
 
+    // Notify clients that server is restarting
+    notifyBrowserSyncRestart();
+
     // Reload the latest server bundle
     const serverBundle = loadServerBundle();
 
@@ -221,6 +225,9 @@ async function reinitializeServerAndMiddlewares() {
     await serverBundle.initializeApp(app);
 
     logInfo('✅ Server bundle and middlewares reinitialized successfully');
+
+    // Notify clients that server is ready (triggers reload)
+    notifyBrowserSyncReady();
   } catch (err) {
     logError('❌ Failed to reinitialize server and middlewares');
     if (isVerbose()) {
@@ -344,6 +351,8 @@ function setupWebpackMiddlewares(clientCompiler) {
     heartbeat: 10_000, // Heartbeat interval in ms
   });
   app.use(wrapWebpackMiddleware(hotMiddleware));
+
+  return hotMiddleware;
 }
 
 /**
@@ -422,10 +431,7 @@ export default async function main() {
 
     Promise.allSettled([
       // Shutdown BrowserSync safely (won't throw)
-      new Promise(resolve => {
-        shutdownBrowserSync();
-        resolve();
-      }),
+      shutdownBrowserSync(),
 
       // Print goodbye message (synchronous)
       new Promise(resolve => {
@@ -461,7 +467,7 @@ export default async function main() {
     const { clientCompiler, serverCompiler } = setupWebpackCompilers();
 
     // Setup webpack dev middleware (HMR, hot reload)
-    setupWebpackMiddlewares(clientCompiler);
+    const hotMiddleware = setupWebpackMiddlewares(clientCompiler);
 
     // Watch for server bundle changes to enable HMR for server code
     // This allows server-side code to be updated without restarting the dev server
@@ -486,7 +492,7 @@ export default async function main() {
 
     // Initialize BrowserSync WebSocket server for live reload and HMR
     // This will also open the browser automatically if no clients are connected
-    startBrowserSync(server);
+    startBrowserSync(server, hotMiddleware);
 
     // Success
     const duration = Date.now() - startTime;

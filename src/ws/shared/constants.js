@@ -7,9 +7,9 @@
  */
 export const MessageType = Object.freeze({
   // System messages
-  SYSTEM_WELCOME: 'system:welcome',
-  SYSTEM_PING: 'system:ping',
-  SYSTEM_PONG: 'system:pong',
+  WELCOME: 'welcome',
+  PING: 'ping',
+  PONG: 'pong',
 
   // Authentication messages
   AUTH_LOGIN: 'auth:login',
@@ -34,19 +34,6 @@ export const ErrorCode = Object.freeze({
   NOT_AUTHENTICATED: 'not_authenticated',
   UNAUTHORIZED: 'unauthorized',
   INTERNAL_ERROR: 'internal_error',
-});
-
-/**
- * WebSocket connection states
- */
-export const ConnectionState = Object.freeze({
-  CONNECTING: 'connecting',
-  CONNECTED: 'connected',
-  AUTHENTICATED: 'authenticated',
-  DISCONNECTING: 'disconnecting',
-  DISCONNECTED: 'disconnected',
-  RECONNECTING: 'reconnecting',
-  FAILED: 'failed',
 });
 
 /**
@@ -96,26 +83,10 @@ export const LogLevel = Object.freeze({
 });
 
 /**
- * Event types
+ * Event types (shared between server and client)
+ * Environment-specific events are defined in server/index.js and client/index.js
  */
 export const EventType = Object.freeze({
-  // Server events
-  SERVER_STARTED: 'server:started',
-  SERVER_STOPPED: 'server:stopped',
-  CONNECTION_NEW: 'connection:new',
-  CONNECTION_READY: 'connection:ready',
-  CONNECTION_AUTHENTICATED: 'connection:authenticated',
-  CONNECTION_CLOSED: 'connection:closed',
-  CONNECTION_ERROR: 'connection:error',
-
-  MESSAGE: 'message',
-
-  // Client events
-  CONNECTED: 'connected',
-  DISCONNECTED: 'disconnected',
   AUTHENTICATED: 'authenticated',
-  WELCOME: 'welcome',
-  RECONNECTING: 'reconnecting',
-  RECONNECT_FAILED: 'reconnect_failed',
-  CONNECTION_ERROR_CLIENT: 'connection_error',
+  MESSAGE: 'message',
 });

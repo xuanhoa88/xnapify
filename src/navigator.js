@@ -23,8 +23,12 @@ let unsubscribe = null;
  */
 export function getHistory(initialUrl = '/') {
   if (!isBrowser) {
+    const url =
+      typeof initialUrl === 'string' && initialUrl.length > 0
+        ? initialUrl
+        : '/';
     return createMemoryHistory({
-      initialEntries: [initialUrl],
+      initialEntries: [url],
       initialIndex: 0,
     });
   }

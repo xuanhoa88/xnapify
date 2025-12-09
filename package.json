@@ -49,7 +49,6 @@
   "dependencies": {
     "@loadable/component": "5.16.4",
     "@loadable/server": "5.16.4",
-    "@redux-devtools/extension": "3.3.0",
     "@reduxjs/toolkit": "2.11.1",
     "adm-zip": "0.5.16",
     "clsx": "2.1.1",

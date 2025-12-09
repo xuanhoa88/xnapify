@@ -58,17 +58,5 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
       : false,
   });
 
-  // Enable Hot Module Replacement for reducers
-  if (__DEV__ && module.hot) {
-    module.hot.accept('./rootReducer', () => {
-      try {
-        const nextRootReducer = require('./rootReducer').default;
-        store.replaceReducer(nextRootReducer);
-      } catch (err) {
-        console.error('Error during HMR of rootReducer:', err);
-      }
-    });
-  }
-
   return store;
 }
