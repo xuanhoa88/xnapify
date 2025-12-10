@@ -1,12 +1,13 @@
 /**
- * WebSocket Server - Simplified Implementation
- * Consolidates ConnectionManager, AuthHandler, MessageRouter into a single file
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
 
 import {
   DefaultConfig,
@@ -14,6 +15,7 @@ import {
   ErrorCode,
   EventType as SharedEventType,
   CloseCode,
+  ChannelType,
 } from '../shared/constants';
 import { createMessage, parseMessage } from '../shared/messages';
 import { createLogger } from '../shared/logger';
@@ -48,11 +50,11 @@ export class WebSocketServer extends EventEmitter {
     this.config = {
       path:
         options.path !== undefined ? options.path : DefaultConfig.SERVER_PATH,
-      enableAuth: options.enableAuth !== undefined ? options.enableAuth : false,
-      requireAuth:
-        options.requireAuth !== undefined ? options.requireAuth : false,
-      jwtSecret: options.jwtSecret !== undefined ? options.jwtSecret : null,
       authTimeout: options.authTimeout || DefaultConfig.AUTH_TIMEOUT,
+      onAuthentication:
+        typeof options.onAuthentication === 'function'
+          ? options.onAuthentication
+          : null,
       heartbeatInterval:
         options.heartbeatInterval || DefaultConfig.HEARTBEAT_INTERVAL,
       enableLogging:
@@ -75,8 +77,10 @@ export class WebSocketServer extends EventEmitter {
 
     // Connection storage
     this.connections = new Map(); // connectionId -> WebSocket
-    this.userConnections = new Map(); // userId -> Set<connectionId>
-    this.groups = new Map(); // groupId -> Set<connectionId>
+
+    // Channel storage
+    this.channels = new Map(); // channelName -> { type, subscribers: Set<connectionId>, metadata }
+    this.connectionChannels = new Map(); // connectionId -> Set<channelName>
 
     // Auth timeouts
     this.authTimeouts = new Map(); // connectionId -> timeout
@@ -144,6 +148,14 @@ export class WebSocketServer extends EventEmitter {
     this.isRunning = true;
     this.startTime = Date.now();
 
+    // Initialize default channels
+    this.createPublicChannel({
+      description: 'Public channel for all connections',
+    });
+    this.createProtectedChannel({
+      description: 'Protected channel for authenticated users',
+    });
+
     this.emit(EventType.STARTED, { path: this.config.path });
     this.logger.info('Server started', { path: this.config.path });
 
@@ -171,8 +183,8 @@ export class WebSocketServer extends EventEmitter {
       ws.close(CloseCode.GOING_AWAY, 'Server shutting down'),
     );
     this.connections.clear();
-    this.userConnections.clear();
-    this.groups.clear();
+    this.channels.clear();
+    this.connectionChannels.clear();
 
     // Close server
     if (this.server) {
@@ -234,38 +246,24 @@ export class WebSocketServer extends EventEmitter {
     this.logger.info(`🔗 New connection: ${connectionId}`, { ip });
     this.emit(EventType.CONNECTION, ws);
 
-    // Send welcome
+    // Auto-subscribe to public channel
+    // eslint-disable-next-line no-underscore-dangle
+    this._subscribeToChannel(ws, ChannelType.PUBLIC);
+
+    // Send welcome immediately (minimal - just connection info)
+    // eslint-disable-next-line no-underscore-dangle
+    this._send(ws, MessageType.WELCOME, {
+      connectionId,
+      serverTime: new Date().toISOString(),
+    });
+
+    // Handle authentication if configured
     setImmediate(async () => {
       // eslint-disable-next-line no-underscore-dangle
-      this._send(ws, MessageType.WELCOME, {
-        connectionId,
-        serverTime: new Date().toISOString(),
-        features: { auth: this.config.enableAuth },
-        authenticated: false,
-      });
+      await this._authenticate(ws);
 
-      // Auth handling
-      if (!this.config.enableAuth) {
-        ws.authenticated = true;
-        this.emit(EventType.READY, ws);
-        return;
-      }
-
-      // Try auto-auth from cookies
-      // eslint-disable-next-line no-underscore-dangle
-      const token = this._extractToken(req);
-      if (token) {
-        try {
-          // eslint-disable-next-line no-underscore-dangle
-          await this._authenticate(ws, token);
-          return;
-        } catch {
-          // Cookie auth failed, continue to timeout setup
-        }
-      }
-
-      // Setup auth timeout if required
-      if (this.config.requireAuth) {
+      // Setup auth timeout for connections not yet authenticated
+      if (!ws.authenticated) {
         const timeout = setTimeout(() => {
           if (!ws.authenticated) {
             this.logger.warn(`Auth timeout: ${connectionId}`);
@@ -273,10 +271,9 @@ export class WebSocketServer extends EventEmitter {
           }
         }, this.config.authTimeout);
         this.authTimeouts.set(connectionId, timeout);
-      } else {
-        // Auth optional - mark as ready
-        this.emit(EventType.READY, ws);
       }
+
+      this.emit(EventType.READY, ws);
     });
   }
 
@@ -296,20 +293,17 @@ export class WebSocketServer extends EventEmitter {
       this.authTimeouts.delete(ws.id);
     }
 
-    // Remove from user connections
-    if (ws.user) {
-      const userConns = this.userConnections.get(ws.user.id);
-      if (userConns) {
-        userConns.delete(ws.id);
-        if (userConns.size === 0) this.userConnections.delete(ws.user.id);
-      }
+    // Remove from all channels
+    const connectionChannels = this.connectionChannels.get(ws.id);
+    if (connectionChannels) {
+      connectionChannels.forEach(channelName => {
+        const channel = this.channels.get(channelName);
+        if (channel) {
+          channel.subscribers.delete(ws.id);
+        }
+      });
+      this.connectionChannels.delete(ws.id);
     }
-
-    // Remove from groups
-    this.groups.forEach((members, groupId) => {
-      members.delete(ws.id);
-      if (members.size === 0) this.groups.delete(groupId);
-    });
 
     this.connections.delete(ws.id);
     this.emit(EventType.CLOSED, ws, code, reason);
@@ -320,44 +314,53 @@ export class WebSocketServer extends EventEmitter {
   // ============================================================================
 
   /**
-   * Extract token from cookies
-   */
-  _extractToken(req) {
-    const { cookie } = req.headers;
-    if (!cookie) return null;
-
-    const cookies = cookie.split(';').reduce((acc, c) => {
-      const [k, v] = c.trim().split('=');
-      if (k && v) acc[k] = v;
-      return acc;
-    }, {});
-
-    return cookies.id_token || cookies.auth_token || null;
-  }
-
-  /**
    * Authenticate connection
    */
   async _authenticate(ws, token) {
-    if (!this.config.enableAuth) {
-      throw new Error('Authentication is disabled');
-    }
-
     if (ws.authenticated) {
-      throw new Error('Already authenticated');
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.ALREADY_AUTHENTICATED,
+        'Already authenticated',
+      );
+      return;
     }
 
-    if (!token) {
-      throw new Error('Token required');
+    let user;
+
+    if (typeof this.config.onAuthentication === 'function') {
+      try {
+        user = await this.config.onAuthentication(token, ws.id);
+      } catch (err) {
+        // eslint-disable-next-line no-underscore-dangle
+        this._sendError(
+          ws,
+          ErrorCode.AUTHENTICATION_FAILED,
+          `Authentication failed: ${err.message}`,
+        );
+        return;
+      }
+    } else {
+      // Fallback or warning if no auth handler provided
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.AUTHENTICATION_NOT_CONFIGURED,
+        'Authentication handler not configured',
+      );
+      return;
     }
 
-    const decoded = jwt.verify(token, this.config.jwtSecret);
-    const user = {
-      id: decoded.id || decoded.userId || decoded.sub,
-      email: decoded.email,
-      role: decoded.role,
-      permissions: decoded.permissions || [],
-    };
+    if (!user || !user.id) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.INVALID_AUTHENTICATION_RESULT,
+        `Invalid user returned from authentication handler. The user must include the '#id' property.`,
+      );
+      return;
+    }
 
     // Clear auth timeout
     const timeout = this.authTimeouts.get(ws.id);
@@ -369,15 +372,17 @@ export class WebSocketServer extends EventEmitter {
     ws.authenticated = true;
     ws.user = user;
 
-    // Track user connections
-    if (!this.userConnections.has(user.id)) {
-      this.userConnections.set(user.id, new Set());
-    }
-    this.userConnections.get(user.id).add(ws.id);
+    // Auto-subscribe to protected channel
+    // eslint-disable-next-line no-underscore-dangle
+    this._subscribeToChannel(ws, ChannelType.PROTECTED);
+
+    // Create and subscribe to private user channel
+    this.createPrivateChannel(user.id);
+    // eslint-disable-next-line no-underscore-dangle
+    this._subscribeToChannel(ws, `user:${user.id}`);
 
     this.logger.info(`🔐 Authenticated: ${user.id} on ${ws.id}`);
     this.emit(EventType.AUTHENTICATED, ws, user);
-    this.emit(EventType.READY, ws);
 
     return user;
   }
@@ -390,35 +395,133 @@ export class WebSocketServer extends EventEmitter {
    * Register default message handlers
    */
   _registerDefaultHandlers() {
-    // Ping/Pong
-    this.messageHandlers.set(MessageType.PING, ws => {
-      // eslint-disable-next-line no-underscore-dangle
-      this._send(ws, MessageType.PONG, {
-        timestamp: new Date().toISOString(),
-      });
-    });
+    // eslint-disable-next-line no-underscore-dangle
+    this.messageHandlers.set(MessageType.PING, ws => this._handlePing(ws));
 
-    // Auth login
-    this.messageHandlers.set(MessageType.AUTH_LOGIN, async (ws, message) => {
-      try {
+    this.messageHandlers.set(MessageType.AUTH_LOGIN, (ws, msg) =>
+      // eslint-disable-next-line no-underscore-dangle
+      this._handleAuthLogin(ws, msg),
+    );
+
+    this.messageHandlers.set(MessageType.CHANNEL_SUBSCRIBE, (ws, msg) =>
+      // eslint-disable-next-line no-underscore-dangle
+      this._handleChannelSubscribe(ws, msg),
+    );
+
+    this.messageHandlers.set(MessageType.CHANNEL_UNSUBSCRIBE, (ws, msg) =>
+      // eslint-disable-next-line no-underscore-dangle
+      this._handleChannelUnsubscribe(ws, msg),
+    );
+  }
+
+  /**
+   * Handle Ping
+   */
+  _handlePing(ws) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._send(ws, MessageType.PONG, {
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  /**
+   * Handle Auth Login
+   */
+  async _handleAuthLogin(ws, message) {
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const user = await this._authenticate(
+        ws,
+        message.data && message.data.token,
+      );
+      // eslint-disable-next-line no-underscore-dangle
+      this._send(ws, MessageType.AUTH_SUCCESS, { user });
+    } catch (err) {
+      this.logger.warn(`Auth failed: ${ws.id}`, { error: err.message });
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(ws, ErrorCode.AUTHENTICATION_FAILED, err.message);
+      setTimeout(
+        () => ws.close(CloseCode.POLICY_VIOLATION, 'Auth failed'),
+        1000,
+      );
+    }
+  }
+
+  /**
+   * Handle Channel Subscribe
+   */
+  _handleChannelSubscribe(ws, message) {
+    const channelName = message && message.data && message.data.channel;
+    if (!channelName) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.CHANNEL_NAME_REQUIRED,
+        'Channel name required',
+      );
+      return;
+    }
+
+    const channel = this.channels.get(channelName);
+    if (!channel) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.CHANNEL_NOT_FOUND,
+        `Channel not found: ${channelName}`,
+      );
+      return;
+    }
+
+    // Check access based on channel type
+    if (channel.type === ChannelType.PROTECTED && !ws.authenticated) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.AUTHENTICATION_REQUIRED,
+        'Authentication required',
+      );
+      return;
+    }
+
+    if (channel.type === ChannelType.PRIVATE) {
+      const expectedUserId = channel.metadata && channel.metadata.userId;
+      if (!ws.user || ws.user.id !== expectedUserId) {
         // eslint-disable-next-line no-underscore-dangle
-        const user = await this._authenticate(
-          ws,
-          message.data && message.data.token,
-        );
-        // eslint-disable-next-line no-underscore-dangle
-        this._send(ws, MessageType.AUTH_SUCCESS, {
-          user: { id: user.id, email: user.email, role: user.role },
-        });
-      } catch (err) {
-        this.logger.warn(`Auth failed: ${ws.id}`, { error: err.message });
-        // eslint-disable-next-line no-underscore-dangle
-        this._sendError(ws, ErrorCode.AUTH_FAILED, err.message);
-        setTimeout(
-          () => ws.close(CloseCode.POLICY_VIOLATION, 'Auth failed'),
-          1000,
-        );
+        this._sendError(ws, ErrorCode.ACCESS_DENIED, 'Access denied');
+        return;
       }
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._subscribeToChannel(ws, channelName);
+    // eslint-disable-next-line no-underscore-dangle
+    this._send(ws, MessageType.CHANNEL_SUBSCRIBED, {
+      channel: channelName,
+      type: channel.type,
+    });
+  }
+
+  /**
+   * Handle Channel Unsubscribe
+   */
+  _handleChannelUnsubscribe(ws, message) {
+    const channelName = message.data && message.data.channel;
+    if (!channelName) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._sendError(
+        ws,
+        ErrorCode.CHANNEL_NAME_REQUIRED,
+        'Channel name required',
+      );
+      return;
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._unsubscribeFromChannel(ws, channelName);
+    // eslint-disable-next-line no-underscore-dangle
+    this._send(ws, MessageType.CHANNEL_UNSUBSCRIBED, {
+      channel: channelName,
     });
   }
 
@@ -500,34 +603,6 @@ export class WebSocketServer extends EventEmitter {
   }
 
   /**
-   * Send to user (all their connections)
-   */
-  sendToUser(userId, type, data) {
-    const conns = this.userConnections.get(userId);
-    if (!conns) return 0;
-
-    let sent = 0;
-    conns.forEach(id => {
-      if (this.sendToConnection(id, type, data)) sent++;
-    });
-    return sent;
-  }
-
-  /**
-   * Send to group
-   */
-  sendToGroup(groupId, type, data) {
-    const conns = this.groups.get(groupId);
-    if (!conns) return 0;
-
-    let sent = 0;
-    conns.forEach(id => {
-      if (this.sendToConnection(id, type, data)) sent++;
-    });
-    return sent;
-  }
-
-  /**
    * Broadcast to all connections
    */
   broadcast(type, data, filter = null) {
@@ -535,7 +610,10 @@ export class WebSocketServer extends EventEmitter {
     let sent = 0;
 
     this.connections.forEach(ws => {
-      if (ws.readyState === WebSocket.OPEN && (!filter || filter(ws))) {
+      if (
+        ws.readyState === WebSocket.OPEN &&
+        (typeof filter === 'function' ? filter(ws) : true)
+      ) {
         ws.send(message);
         sent++;
       }
@@ -545,39 +623,226 @@ export class WebSocketServer extends EventEmitter {
   }
 
   // ============================================================================
-  // GROUPS
+  // CHANNELS
   // ============================================================================
 
   /**
-   * Add connection to group
+   * Create a new channel
    */
-  joinGroup(connectionId, groupId) {
-    if (!this.connections.has(connectionId)) return false;
-
-    if (!this.groups.has(groupId)) {
-      this.groups.set(groupId, new Set());
+  _createChannel(name, type = ChannelType.PUBLIC, metadata = {}) {
+    if (this.channels.has(name)) {
+      this.logger.warn(`Channel already exists: ${name}`);
+      return false;
     }
-    this.groups.get(groupId).add(connectionId);
+
+    this.channels.set(name, {
+      type,
+      subscribers: new Set(),
+      metadata,
+      createdAt: new Date().toISOString(),
+    });
+
+    this.logger.info(`📢 Channel created: ${name} (${type})`);
     return true;
   }
 
   /**
-   * Remove connection from group
+   * Create a private channel
    */
-  leaveGroup(connectionId, groupId) {
-    const group = this.groups.get(groupId);
-    if (!group) return false;
-
-    const removed = group.delete(connectionId);
-    if (group.size === 0) this.groups.delete(groupId);
-    return removed;
+  createPrivateChannel(userId, metadata = {}) {
+    // eslint-disable-next-line no-underscore-dangle
+    return this._createChannel(`user:${userId}`, ChannelType.PRIVATE, {
+      userId,
+      ...metadata,
+    });
   }
 
   /**
-   * Get group members
+   * Create a protected channel
    */
-  getGroupConnections(groupId) {
-    return this.groups.get(groupId) || new Set();
+  createProtectedChannel(metadata = {}) {
+    // eslint-disable-next-line no-underscore-dangle
+    return this._createChannel(ChannelType.PROTECTED, ChannelType.PROTECTED, {
+      protected: true,
+      ...metadata,
+    });
+  }
+
+  /**
+   * Create a public channel
+   */
+  createPublicChannel(metadata = {}) {
+    // eslint-disable-next-line no-underscore-dangle
+    return this._createChannel(ChannelType.PUBLIC, ChannelType.PUBLIC, {
+      public: true,
+      ...metadata,
+    });
+  }
+
+  /**
+   * Delete a channel
+   */
+  deleteChannel(name) {
+    const channel = this.channels.get(name);
+    if (!channel) return false;
+
+    // Notify subscribers before deletion
+    channel.subscribers.forEach(connectionId => {
+      const ws = this.connections.get(connectionId);
+      if (ws) {
+        // eslint-disable-next-line no-underscore-dangle
+        this._send(ws, MessageType.CHANNEL_UNSUBSCRIBED, {
+          channel: name,
+          reason: 'Channel deleted',
+        });
+      }
+
+      // Remove from connection's channel list
+      const connectionChannels = this.connectionChannels.get(connectionId);
+      if (connectionChannels) {
+        connectionChannels.delete(name);
+      }
+    });
+
+    this.channels.delete(name);
+    this.logger.info(`📢 Channel deleted: ${name}`);
+    return true;
+  }
+
+  /**
+   * Get channel info
+   */
+  getChannel(name) {
+    const channel = this.channels.get(name);
+    if (!channel) return null;
+
+    return {
+      name,
+      type: channel.type,
+      subscriberCount: channel.subscribers.size,
+      metadata: channel.metadata,
+      createdAt: channel.createdAt,
+    };
+  }
+
+  /**
+   * Get all channels
+   */
+  getChannels() {
+    const result = [];
+    this.channels.forEach((channel, name) => {
+      result.push({
+        name,
+        type: channel.type,
+        subscriberCount: channel.subscribers.size,
+      });
+    });
+    return result;
+  }
+
+  /**
+   * Internal: Subscribe connection to channel
+   */
+  _subscribeToChannel(ws, channelName) {
+    const channel = this.channels.get(channelName);
+    if (!channel) return false;
+
+    // Add to channel subscribers
+    channel.subscribers.add(ws.id);
+
+    // Track in connection's channels
+    if (!this.connectionChannels.has(ws.id)) {
+      this.connectionChannels.set(ws.id, new Set());
+    }
+    this.connectionChannels.get(ws.id).add(channelName);
+
+    this.logger.debug(`Subscribed ${ws.id} to channel ${channelName}`);
+    return true;
+  }
+
+  /**
+   * Internal: Unsubscribe connection from channel
+   */
+  _unsubscribeFromChannel(ws, channelName) {
+    const channel = this.channels.get(channelName);
+    if (!channel) return false;
+
+    // Remove from channel subscribers
+    channel.subscribers.delete(ws.id);
+
+    // Remove from connection's channels
+    const connectionChannels = this.connectionChannels.get(ws.id);
+    if (connectionChannels) {
+      connectionChannels.delete(channelName);
+    }
+
+    this.logger.debug(`Unsubscribed ${ws.id} from channel ${channelName}`);
+    return true;
+  }
+
+  /**
+   * Get channel subscribers
+   */
+  getChannelSubscribers(channelName) {
+    const channel = this.channels.get(channelName);
+    return channel ? channel.subscribers : new Set();
+  }
+
+  /**
+   * Get channels a connection is subscribed to
+   */
+  getConnectionChannels(connectionId) {
+    return this.connectionChannels.get(connectionId) || new Set();
+  }
+
+  /**
+   * Send message to a channel
+   */
+  sendToChannel(channelName, type, data) {
+    const channel = this.channels.get(channelName);
+    if (!channel) {
+      this.logger.warn(`Channel not found: ${channelName}`);
+      return 0;
+    }
+
+    const message = createMessage(MessageType.CHANNEL_MESSAGE, {
+      channel: channelName,
+      type,
+      data,
+    });
+
+    let sent = 0;
+    channel.subscribers.forEach(connectionId => {
+      const ws = this.connections.get(connectionId);
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(message);
+        sent++;
+      }
+    });
+
+    this.logger.debug(`Sent to channel ${channelName}: ${sent} recipients`);
+    return sent;
+  }
+
+  /**
+   * Convenience: Send to public channel (all connections)
+   */
+  sendToPublicChannel(type, data) {
+    return this.sendToChannel(ChannelType.PUBLIC, type, data);
+  }
+
+  /**
+   * Convenience: Send to protected channel (authenticated users)
+   */
+  sendToProtectedChannel(type, data) {
+    return this.sendToChannel(ChannelType.PROTECTED, type, data);
+  }
+
+  /**
+   * Convenience: Send to user's private channel
+   */
+  sendToPrivateChannel(userId, type, data) {
+    return this.sendToChannel(`user:${userId}`, type, data);
   }
 
   // ============================================================================
@@ -615,8 +880,7 @@ export class WebSocketServer extends EventEmitter {
           ws => ws.authenticated,
         ).length,
       },
-      users: this.userConnections.size,
-      groups: this.groups.size,
+      channels: this.channels.size,
     };
   }
 }
@@ -625,11 +889,6 @@ export class WebSocketServer extends EventEmitter {
  * Factory function
  */
 export function createWebSocketServer(options = {}, httpServer = null) {
-  if (options.enableAuth && !options.jwtSecret) {
-    console.warn('⚠️ JWT secret not provided, disabling authentication');
-    options.enableAuth = false;
-  }
-
   const server = new WebSocketServer(options);
   server.start(httpServer);
   return server;
@@ -637,4 +896,4 @@ export function createWebSocketServer(options = {}, httpServer = null) {
 
 // Re-export types for convenience
 export { EventType };
-export { MessageType, CloseCode } from '../shared/constants';
+export { MessageType, CloseCode, ChannelType } from '../shared/constants';

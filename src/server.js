@@ -16,6 +16,7 @@ import { ChunkExtractor } from '@loadable/server';
 import Youch from 'youch';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
+import { createMemoryHistory } from 'history';
 import {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
@@ -154,8 +155,11 @@ function getInnerHTML(element) {
   );
 }
 
-async function createReduxStore(req, fetch, locale) {
-  const store = configureStore({ user: req.user || null }, { fetch, i18n });
+async function createReduxStore(req, { fetch, history }, locale) {
+  const store = configureStore(
+    { user: req.user || null },
+    { fetch, history, i18n },
+  );
 
   // Set authenticated user
   if (req && req.user && req.user.id) {
@@ -304,10 +308,20 @@ export function startServer(app, port = config.port, host = config.host) {
         wsServer = createWebSocketServer(
           {
             path: config.wsPath,
-            enableAuth: !!config.jwtSecret,
-            jwtSecret: config.jwtSecret,
             enableLogging: !config.isProduction,
-            requireAuth: false, // Allow anonymous connections (fixes infinite loop)
+            onAuthentication: async token => {
+              if (!token) {
+                const error = new Error('Unauthorized');
+                error.code = 'E_UNAUTHORIZED';
+                throw error;
+              }
+              // const decoded = jwt.verify(token, config.jwtSecret);
+              // socket.user = decoded;
+              return {
+                id: '123',
+                name: 'John Doe',
+              };
+            },
           },
           server,
         );
@@ -409,15 +423,17 @@ async function main(app, staticPath) {
   await import('./api').then(api => api.default(app, i18n, config));
   setupApiProxy(app);
 
-  // SSR handler (skip WebSocket path)
+  // SSR handler
   app.get('*', async (req, res, next) => {
-    // Skip WebSocket path - handled by ws package
-    if (req.path === config.wsPath) {
-      return next();
-    }
-
     const startTime = Date.now();
     try {
+      // Create memory history for this SSR request (isolated per-request)
+      const history = createMemoryHistory({
+        initialEntries: [req.originalUrl || req.url || '/'],
+        initialIndex: 0,
+      });
+
+      // Create fetch instance for this SSR request
       const fetch = createFetch(nodeFetch, {
         baseUrl: getBaseUrl({ host: config.host, port: config.port }),
         headers: {
@@ -430,7 +446,7 @@ async function main(app, staticPath) {
       const locale = req.language || DEFAULT_LOCALE;
 
       // Create Redux store
-      const store = await createReduxStore(req, fetch, locale);
+      const store = await createReduxStore(req, { fetch, history }, locale);
 
       // Create context for rendering
       const context = {
@@ -438,9 +454,14 @@ async function main(app, staticPath) {
         store,
         i18n,
         locale,
-        pathname: req.path,
-        query: req.query,
+        history,
+        pathname: history.location.pathname,
       };
+
+      // Parse query params
+      context.query = Object.fromEntries(
+        new URLSearchParams(history.location.search),
+      );
 
       const route = await router.resolve(context);
       if (!route) {

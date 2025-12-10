@@ -12,6 +12,9 @@ import rootReducer from './rootReducer';
  * Configure and create Redux store using Redux Toolkit
  * @param {Object} initialState - Initial Redux state
  * @param {Object} helpersConfig - Extra argument for thunk middleware
+ * @param {Function} helpersConfig.fetch - Isomorphic fetch function
+ * @param {Object} helpersConfig.history - History instance (memory on server, browser on client)
+ * @param {Object} helpersConfig.i18n - i18next instance
  * @returns {Store} Configured Redux store
  */
 export default function configureStore(initialState = {}, helpersConfig = {}) {

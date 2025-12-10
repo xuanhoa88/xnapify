@@ -10,18 +10,23 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
-import * as navigator from '../../navigator';
+import { useHistory, useLocation } from '../../contexts/history';
 import s from './Register.css';
 
 function Register({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Get returnTo from query params
+  const returnTo = new URLSearchParams(location.search).get('returnTo') || '/';
 
   const handleSubmit = useCallback(
     async e => {
@@ -59,10 +64,18 @@ function Register({ title }) {
       if (!result.success) {
         setError(result.error);
       } else {
-        navigator.replaceTo(navigator.getQueryParam('returnTo', '/'));
+        history.replace(returnTo);
       }
     },
-    [displayName, email, password, confirmPassword, dispatch],
+    [
+      displayName,
+      email,
+      password,
+      confirmPassword,
+      dispatch,
+      history,
+      returnTo,
+    ],
   );
 
   return (

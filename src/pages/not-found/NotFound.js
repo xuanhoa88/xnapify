@@ -6,7 +6,7 @@
  */
 
 import PropTypes from 'prop-types';
-import Link from '../../components/Link';
+import { Link } from '../../contexts/history';
 import s from './NotFound.css';
 
 function NotFound({ title = 'Page Not Found' }) {

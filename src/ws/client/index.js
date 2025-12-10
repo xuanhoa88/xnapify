@@ -1,6 +1,8 @@
 /**
- * WebSocket Client - Simplified Implementation
- * Consolidates ConnectionManager, ReconnectionHandler, MessageQueue, HeartbeatManager
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { EventEmitter } from 'events';
@@ -21,6 +23,10 @@ const ClientEventType = Object.freeze({
   DISCONNECTED: 'disconnected',
   RECONNECTING: 'reconnecting',
   RECONNECT_FAILED: 'reconnect:failed',
+  CHANNEL_SUBSCRIBED: 'channel:subscribed',
+  CHANNEL_UNSUBSCRIBED: 'channel:unsubscribed',
+  CHANNEL_MESSAGE: 'channel:message',
+  CHANNEL_ERROR: 'channel:error',
   ERROR: 'error',
 });
 
@@ -43,7 +49,7 @@ export class WebSocketClient extends EventEmitter {
     this.config = {
       url: options.url || DefaultConfig.CLIENT_URL,
       autoReconnect:
-        options.autoReconnect !== undefined
+        options.autoReconnect != null
           ? options.autoReconnect
           : DefaultConfig.AUTO_RECONNECT,
       reconnectInterval:
@@ -53,7 +59,7 @@ export class WebSocketClient extends EventEmitter {
       heartbeatInterval:
         options.heartbeatInterval || DefaultConfig.HEARTBEAT_INTERVAL,
       enableLogging:
-        options.enableLogging !== undefined
+        options.enableLogging != null
           ? options.enableLogging
           : DefaultConfig.ENABLE_LOGGING,
       logLevel: options.logLevel || DefaultConfig.LOG_LEVEL,
@@ -83,6 +89,9 @@ export class WebSocketClient extends EventEmitter {
     // Message queue (for offline messages)
     this.messageQueue = [];
 
+    // Channel subscriptions
+    this.subscribedChannels = new Set();
+
     this.logger.info('Client initialized', { url: this.config.url });
   }
 
@@ -105,7 +114,6 @@ export class WebSocketClient extends EventEmitter {
       this.ws = new WebSocket(this.config.url);
 
       this.ws.onopen = () => {
-        this.logger.info('✅ Connected');
         this.reconnectAttempts = 0;
         // eslint-disable-next-line no-underscore-dangle
         this._startHeartbeat();
@@ -170,6 +178,7 @@ export class WebSocketClient extends EventEmitter {
     this.connectionId = null;
     this.isAuthenticated = false;
     this.user = null;
+    this.subscribedChannels.clear();
   }
 
   /**
@@ -254,53 +263,129 @@ export class WebSocketClient extends EventEmitter {
    * Handle incoming message
    */
   _handleMessage(event) {
-    try {
-      const message = parseMessage(event.data);
-      if (!message) {
-        this.logger.warn('Invalid message received');
-        return;
-      }
-
-      this.logger.debug(`Received: ${message.type}`, { data: message.data });
-
-      switch (message.type) {
-        case MessageType.WELCOME:
-          this.connectionId = message.data && message.data.connectionId;
-          this.reconnectAttempts = 0;
-          this.emit(MessageType.WELCOME, message.data);
-          break;
-
-        case MessageType.PONG:
-          // Heartbeat response - no action needed
-          break;
-
-        case MessageType.AUTH_SUCCESS:
-          this.isAuthenticated = true;
-          this.user = (message.data && message.data.user) || null;
-          this.logger.info(
-            '🔐 Authenticated as: ' + (this.user && this.user.id),
-          );
-          this.emit(EventType.AUTHENTICATED, this.user);
-          break;
-
-        case MessageType.ERROR:
-          this.logger.warn(
-            'Server error: ' + (message.data && message.data.code),
-            {
-              error: message.data,
-            },
-          );
-          this.emit('error', message.data);
-          break;
-
-        default:
-          // Custom message - emit both generic and specific
-          this.emit(EventType.MESSAGE, message);
-          this.emit(message.type, message.data);
-      }
-    } catch (err) {
-      this.logger.error('Message handling error', { error: err.message });
+    const message = parseMessage(event.data);
+    if (!message) {
+      this.logger.warn('Invalid message received');
+      return;
     }
+
+    this.logger.debug(`Received: ${message.type}`, { data: message.data });
+
+    // eslint-disable-next-line no-underscore-dangle
+    const handler = this._getMessageHandler(message.type);
+    if (typeof handler === 'function') {
+      try {
+        handler.call(this, message.data);
+      } catch (err) {
+        this.logger.error('Message handling error', { error: err.message });
+      }
+    } else {
+      // Custom message - emit both generic and specific
+      this.emit(EventType.MESSAGE, message);
+      this.emit(message.type, message.data);
+    }
+  }
+
+  /**
+   * Get handler for message type
+   */
+  _getMessageHandler(type) {
+    const handlers = {
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.WELCOME]: this._handleWelcome.bind(this),
+      [MessageType.PONG]: () => {}, // No-op
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.AUTH_SUCCESS]: this._handleAuthSuccess.bind(this),
+      [MessageType.CHANNEL_SUBSCRIBED]:
+        // eslint-disable-next-line no-underscore-dangle
+        this._handleChannelSubscribed.bind(this),
+      [MessageType.CHANNEL_UNSUBSCRIBED]:
+        // eslint-disable-next-line no-underscore-dangle
+        this._handleChannelUnsubscribed.bind(this),
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.CHANNEL_MESSAGE]: this._handleChannelMessage.bind(this),
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.CHANNEL_ERROR]: this._handleChannelError.bind(this),
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.ERROR]: this._handleError.bind(this),
+    };
+    return handlers[type];
+  }
+
+  /**
+   * Handle Welcome message
+   */
+  _handleWelcome(data) {
+    this.connectionId = data && data.connectionId;
+    this.reconnectAttempts = 0;
+    this.emit(MessageType.WELCOME, data);
+  }
+
+  /**
+   * Handle Auth Success
+   */
+  _handleAuthSuccess(data) {
+    this.isAuthenticated = true;
+    this.user = (data && data.user) || null;
+    this.logger.info(`🔐 Authenticated as: ${this.user && this.user.id}`);
+    this.emit(EventType.AUTHENTICATED, this.user);
+  }
+
+  /**
+   * Handle Channel Subscribed
+   */
+  _handleChannelSubscribed(data) {
+    const channel = (data && data.channel) || null;
+    if (!channel) return;
+
+    this.subscribedChannels.add(channel);
+    this.logger.info(`📢 Subscribed to: ${channel}`);
+    this.emit(EventType.CHANNEL_SUBSCRIBED, data);
+  }
+
+  /**
+   * Handle Channel Unsubscribed
+   */
+  _handleChannelUnsubscribed(data) {
+    const channel = (data && data.channel) || null;
+    if (!channel) return;
+
+    this.subscribedChannels.delete(channel);
+    this.logger.info(`📢 Unsubscribed from: ${channel}`);
+    this.emit(EventType.CHANNEL_UNSUBSCRIBED, data);
+  }
+
+  /**
+   * Handle Channel Message
+   */
+  _handleChannelMessage(data) {
+    if (!data) return;
+
+    const { channel, type, data: payload } = data;
+    this.logger.debug(`📢 Channel message from ${channel}: ${type}`);
+
+    // Emit generic channel message event
+    this.emit(EventType.CHANNEL_MESSAGE, { channel, type, data: payload });
+    // Emit channel-specific event
+    this.emit(`channel:${channel}`, { type, data: payload });
+    // Emit message type event
+    if (type) this.emit(type, payload);
+  }
+
+  /**
+   * Handle Channel Error
+   */
+  _handleChannelError(data) {
+    this.logger.warn('Channel error', { error: data });
+    this.emit(EventType.CHANNEL_ERROR, data);
+  }
+
+  /**
+   * Handle Server Error
+   */
+  _handleError(data) {
+    this.logger.warn(`Server error: ${data && data.code}`, { error: data });
+    this.emit('error', data);
   }
 
   // ============================================================================
@@ -382,6 +467,51 @@ export class WebSocketClient extends EventEmitter {
   }
 
   // ============================================================================
+  // CHANNELS
+  // ============================================================================
+
+  /**
+   * Subscribe to a channel
+   */
+  subscribe(channelName) {
+    if (!this.isConnected()) {
+      this.logger.warn('Cannot subscribe: not connected');
+      return false;
+    }
+
+    if (this.subscribedChannels.has(channelName)) {
+      this.logger.warn(`Already subscribed to: ${channelName}`);
+      return true;
+    }
+
+    return this.send(MessageType.CHANNEL_SUBSCRIBE, { channel: channelName });
+  }
+
+  /**
+   * Unsubscribe from a channel
+   */
+  unsubscribe(channelName) {
+    if (!this.isConnected()) {
+      this.logger.warn('Cannot unsubscribe: not connected');
+      return false;
+    }
+
+    if (!this.subscribedChannels.has(channelName)) {
+      this.logger.warn(`Not subscribed to: ${channelName}`);
+      return false;
+    }
+
+    return this.send(MessageType.CHANNEL_UNSUBSCRIBE, { channel: channelName });
+  }
+
+  /**
+   * Get list of subscribed channels
+   */
+  getSubscribedChannels() {
+    return [...this.subscribedChannels];
+  }
+
+  // ============================================================================
   // STATUS
   // ============================================================================
 
@@ -396,6 +526,7 @@ export class WebSocketClient extends EventEmitter {
       user: this.user,
       reconnectAttempts: this.reconnectAttempts,
       queuedMessages: this.messageQueue.length,
+      subscribedChannels: this.getSubscribedChannels(),
     };
   }
 
@@ -409,6 +540,7 @@ export class WebSocketClient extends EventEmitter {
   dispose() {
     this.disconnect();
     this.messageQueue = [];
+    this.subscribedChannels.clear();
     this.removeAllListeners();
     this.logger.info('Client disposed');
   }

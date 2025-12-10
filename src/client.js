@@ -5,12 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { loadableReady } from '@loadable/component';
-import queryString from 'query-string';
 import 'whatwg-fetch';
+import { loadableReady } from '@loadable/component';
+import { createBrowserHistory } from 'history';
 import App from './components/App';
 import { createFetch } from './createFetch';
-import * as navigator from './navigator';
 import {
   DEFAULT_LOCALE,
   configureStore,
@@ -31,6 +30,7 @@ const ROOT_KEY = '__reactRoot';
 // INITIALIZATION
 // =============================================================================
 
+const history = createBrowserHistory({ basename: '' });
 const i18n = getI18nInstance();
 const fetch = createFetch(window.fetch);
 
@@ -38,12 +38,17 @@ const fetch = createFetch(window.fetch);
 const { reduxState: preloadedState = {} } = window.__PRELOADED_STATE__ || {};
 // eslint-disable-next-line no-underscore-dangle
 delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
-const store = configureStore(preloadedState, { fetch, i18n });
+const store = configureStore(preloadedState, {
+  fetch,
+  history,
+  i18n,
+});
 
 const context = {
   store,
   fetch,
   i18n,
+  history,
   get locale() {
     const { intl } = store.getState();
     return (intl && intl.locale) || DEFAULT_LOCALE;
@@ -54,7 +59,7 @@ const context = {
 // STATE
 // =============================================================================
 
-let currentLocation = navigator.getCurrentLocation();
+let currentLocation = history.location;
 let unsubscribeNavigation = null;
 let cachedRouter = null;
 let wsClient = null;
@@ -306,10 +311,15 @@ async function handleRouteChange(location, action) {
   try {
     if (signal.aborted) return;
 
-    const router = await getRouter();
-    context.pathname = location.pathname;
-    context.query = queryString.parse(location.search);
+    // Parse pathname
+    context.pathname = history.location.pathname;
 
+    // Parse query params
+    context.query = Object.fromEntries(
+      new URLSearchParams(history.location.search),
+    );
+
+    const router = await getRouter();
     const route = await router.resolve(context);
     if (!route) {
       const err = new Error(`Route ${location.pathname} not found`);
@@ -399,7 +409,7 @@ async function initializeApp() {
   // Initialize React DOM client
   await initReactDOMClient();
 
-  currentLocation = navigator.getCurrentLocation();
+  currentLocation = history.location;
 
   window.addEventListener('beforeunload', cleanup);
 
@@ -422,14 +432,8 @@ async function initializeApp() {
 
       // Listen for connection events
       wsClient.on(MessageType.WELCOME, data => {
-        if (__DEV__) {
-          console.log(
-            '✅ WebSocket connected',
-            data && data.authenticated
-              ? '(authenticated)'
-              : '(unauthenticated)',
-          );
-        }
+        if (__DEV__)
+          console.log('✅ WebSocket connected:', data && data.connectionId);
       });
 
       wsClient.on(EventType.AUTHENTICATED, user => {
@@ -446,7 +450,6 @@ async function initializeApp() {
           console.log(`🔄 WebSocket reconnecting (attempt ${attempt})`);
       });
 
-      // Note: error event is emitted as 'error', not EventType.ERROR
       wsClient.on('error', error => {
         if (__DEV__) console.warn('⚠️ WebSocket error:', error);
       });
@@ -463,7 +466,7 @@ async function initializeApp() {
   await handleRouteChange(currentLocation);
 
   // Subscribe to navigation AFTER initial render to avoid duplicate triggers
-  unsubscribeNavigation = navigator.subscribe(handleRouteChange);
+  unsubscribeNavigation = history.listen(handleRouteChange);
 }
 
 // =============================================================================

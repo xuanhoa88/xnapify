@@ -9,19 +9,19 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import Link from '../Link';
+import { Link, useHistory } from '../../contexts/history';
 import {
   isAuthenticated,
   isAdmin,
   getCurrentUserDisplayName,
   logout,
 } from '../../redux';
-import * as navigator from '../../navigator';
 import s from './Navigation.css';
 
 function Navigation() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const history = useHistory();
   const isAuth = useSelector(isAuthenticated);
   const isAdminActive = useSelector(isAdmin);
   const displayName = useSelector(getCurrentUserDisplayName);
@@ -32,7 +32,7 @@ function Navigation() {
     e.preventDefault();
     setIsDropdownOpen(false);
     await dispatch(logout());
-    navigator.replaceTo('/');
+    history.replace('/');
   };
 
   const toggleDropdown = () => {

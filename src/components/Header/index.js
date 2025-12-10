@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleSidebar, shouldShowPageHeader } from '../../redux';
 import LanguageSwitcher from './LanguageSwitcher';
-import Link from '../Link';
+import { Link } from '../../contexts/history';
 import s from './Header.css';
 
 function Header() {

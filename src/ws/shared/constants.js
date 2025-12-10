@@ -1,5 +1,8 @@
 /**
- * WebSocket Shared Constants
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**
@@ -17,22 +20,49 @@ export const MessageType = Object.freeze({
   AUTH_FAILED: 'auth:failed',
   AUTH_LOGOUT: 'auth:logout',
 
+  // Channel messages
+  CHANNEL_SUBSCRIBE: 'channel:subscribe',
+  CHANNEL_UNSUBSCRIBE: 'channel:unsubscribe',
+  CHANNEL_SUBSCRIBED: 'channel:subscribed',
+  CHANNEL_UNSUBSCRIBED: 'channel:unsubscribed',
+  CHANNEL_MESSAGE: 'channel:message',
+  CHANNEL_ERROR: 'channel:error',
+
   // Error messages
   ERROR: 'error',
+});
+
+/**
+ * Channel types
+ */
+export const ChannelType = Object.freeze({
+  PUBLIC: 'public', // Anyone can subscribe
+  PROTECTED: 'protected', // Only authenticated users
 });
 
 /**
  * WebSocket error codes
  */
 export const ErrorCode = Object.freeze({
+  // Message errors
   INVALID_MESSAGE: 'invalid_message',
   MESSAGE_ERROR: 'message_error',
-  AUTH_DISABLED: 'auth_disabled',
+
+  // Authentication errors
+  AUTHENTICATION_REQUIRED: 'authentication_required',
+  AUTHENTICATION_FAILED: 'authentication_failed',
   ALREADY_AUTHENTICATED: 'already_authenticated',
-  MISSING_TOKEN: 'missing_token',
-  AUTH_FAILED: 'auth_failed',
-  NOT_AUTHENTICATED: 'not_authenticated',
-  UNAUTHORIZED: 'unauthorized',
+  AUTHENTICATION_NOT_CONFIGURED: 'authentication_not_configured',
+  INVALID_AUTHENTICATION_RESULT: 'invalid_authentication_result',
+
+  // Channel errors
+  CHANNEL_NAME_REQUIRED: 'channel_name_required',
+  CHANNEL_NOT_FOUND: 'channel_not_found',
+
+  // Access errors
+  ACCESS_DENIED: 'access_denied',
+
+  // System errors
   INTERNAL_ERROR: 'internal_error',
 });
 

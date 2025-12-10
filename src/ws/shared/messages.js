@@ -1,5 +1,8 @@
 /**
- * WebSocket Message Utilities
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**
@@ -14,7 +17,7 @@ export function parseMessage(data) {
       return null;
     }
     return message;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -31,69 +34,4 @@ export function createMessage(type, data = {}) {
     data,
     timestamp: new Date().toISOString(),
   });
-}
-
-/**
- * Validate message structure
- * @param {Object} message - Message to validate
- * @returns {boolean} True if valid
- */
-export function isValidMessage(message) {
-  if (!message || typeof message !== 'object') {
-    return false;
-  }
-
-  if (!message.type || typeof message.type !== 'string') {
-    return false;
-  }
-
-  return true;
-}
-
-/**
- * Create error message
- * @param {string} code - Error code
- * @param {string} message - Error message
- * @param {Object} details - Additional error details
- * @returns {string} Serialized error message
- */
-export function createErrorMessage(code, message, details = null) {
-  return createMessage('error', {
-    code,
-    message,
-    details,
-  });
-}
-
-/**
- * Create system message
- * @param {string} subtype - System message subtype (welcome, ping, pong)
- * @param {Object} data - Message data
- * @returns {string} Serialized system message
- */
-export function createSystemMessage(subtype, data = {}) {
-  return createMessage(`system:${subtype}`, data);
-}
-
-/**
- * Create authentication message
- * @param {string} subtype - Auth message subtype (login, success, failed)
- * @param {Object} data - Message data
- * @returns {string} Serialized auth message
- */
-export function createAuthMessage(subtype, data = {}) {
-  return createMessage(`auth:${subtype}`, data);
-}
-
-/**
- * Extract message type category
- * @param {string} type - Full message type (e.g., 'system:ping')
- * @returns {Object} Category and subtype
- */
-export function parseMessageType(type) {
-  const parts = type.split(':');
-  return {
-    category: parts[0] || 'custom',
-    subtype: parts[1] || null,
-  };
 }

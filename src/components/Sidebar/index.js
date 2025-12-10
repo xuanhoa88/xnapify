@@ -17,13 +17,13 @@ import {
   isAdmin,
   logout,
 } from '../../redux';
-import * as navigator from '../../navigator';
-import Link from '../Link';
+import { useHistory, Link } from '../../contexts/history';
 import s from './Sidebar.css';
 
 function Sidebar() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const history = useHistory();
 
   const sidebarOpen = useSelector(isSidebarOpen);
   const isAdminPanelActive = useSelector(isAdminPanel);
@@ -36,15 +36,15 @@ function Sidebar() {
   // Update current path on client-side after hydration and on route changes
   useEffect(() => {
     // Set initial path
-    setCurrentPath(navigator.getCurrentLocation().pathname);
+    setCurrentPath(history.location.pathname);
 
     // Listen for route changes
-    const unsubscribe = navigator.listen(location => {
+    const unsubscribe = history.listen(location => {
       setCurrentPath(location.pathname);
     });
 
     return unsubscribe;
-  }, []);
+  }, [history]);
 
   const handleCloseSidebar = useCallback(() => {
     dispatch(closeSidebar());

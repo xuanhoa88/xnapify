@@ -10,16 +10,21 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
+import { useHistory, useLocation } from '../../contexts/history';
 import s from './Login.css';
-import * as navigator from '../../navigator';
 
 function Login({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const history = useHistory();
+  const location = useLocation();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Get returnTo from query params
+  const returnTo = new URLSearchParams(location.search).get('returnTo') || '/';
 
   const handleSubmit = useCallback(
     async e => {
@@ -34,10 +39,10 @@ function Login({ title }) {
       if (!result.success) {
         setError(result.error);
       } else {
-        navigator.replaceTo(navigator.getQueryParam('returnTo', '/'));
+        history.replace(returnTo);
       }
     },
-    [email, password, dispatch],
+    [email, password, dispatch, history, returnTo],
   );
 
   return (
