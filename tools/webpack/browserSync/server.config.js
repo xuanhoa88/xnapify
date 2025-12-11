@@ -11,10 +11,11 @@ import { logInfo, logWarn, logError } from '../../lib/logger';
 // Configuration
 const CONFIG = Object.freeze({
   BROADCAST_RETRY_ATTEMPTS: 3,
-  BROADCAST_RETRY_DELAY: 100, // ms
-  RESTART_NOTIFICATION_DELAY: 1000, // ms
-  SHUTDOWN_DELAY: 1000, // ms
-  BROWSER_KILL_TIMEOUT: 5000, // ms
+  BROADCAST_RETRY_DELAY: 100, // 100ms
+  RESTART_NOTIFICATION_DELAY: 1 * 1000, // 1 second
+  SHUTDOWN_DELAY: 1 * 1000, // 1 second
+  BROWSER_KILL_TIMEOUT: 5 * 1000, // 5 seconds
+  CLIENT_WAIT_TIMEOUT: 3 * 1000, // Wait 3 seconds for existing client to reconnect
 });
 
 // State management
@@ -22,6 +23,8 @@ let hotMiddleware = null;
 let browserProcess = null;
 let isRestarting = false;
 let isShuttingDown = false;
+let pendingBrowserOpen = null; // Pending timeout for opening browser
+let serverRef = null; // Reference to server for deferred browser open
 
 /**
  * Validate server object
@@ -299,7 +302,19 @@ export const reloadClients = async () => {
 };
 
 /**
- * Start dev mode: initialize and open browser
+ * Cancel pending browser open (called when client connects)
+ */
+export const onClientConnected = () => {
+  if (pendingBrowserOpen) {
+    clearTimeout(pendingBrowserOpen);
+    pendingBrowserOpen = null;
+    logInfo('[BrowserSync] Client reconnected, cancelled browser open');
+  }
+};
+
+/**
+ * Start dev mode: initialize and schedule browser open
+ * Browser opens after timeout unless a client reconnects first
  * @param {object} server - Express server instance
  * @param {object} middleware - Webpack HMR middleware
  * @returns {Promise<boolean>}
@@ -322,13 +337,20 @@ export const start = async (server, middleware) => {
     return false;
   }
 
-  // Open browser
-  logInfo('[BrowserSync] Opening browser for new session');
-  const browserOpened = await openBrowser(server);
+  // Store server reference for deferred browser open
+  serverRef = server;
 
-  if (!browserOpened) {
-    logWarn('[BrowserSync] Started without browser (manual open required)');
-  }
+  // Schedule browser open after timeout
+  // If a client reconnects before timeout, it will be cancelled
+  logInfo(
+    `[BrowserSync] Waiting ${CONFIG.CLIENT_WAIT_TIMEOUT}ms for existing client...`,
+  );
+
+  pendingBrowserOpen = setTimeout(async () => {
+    pendingBrowserOpen = null;
+    logInfo('[BrowserSync] No client reconnected, opening browser...');
+    await openBrowser(serverRef);
+  }, CONFIG.CLIENT_WAIT_TIMEOUT);
 
   logInfo('[BrowserSync] Start complete');
   return true;

@@ -92,6 +92,12 @@ function showShutdownUI() {
         document.title = 'Server Stopped';
 
         const shutdownHTML = `
+          <style>
+            @keyframes pulse {
+              0%, 100% { opacity: 1; }
+              50% { opacity: 0.5; }
+            }
+          </style>
           <div style="
             background: #f0f0f0;
             display: flex;
@@ -105,7 +111,8 @@ function showShutdownUI() {
           ">
             <div style="font-size: 48px; margin-bottom: 16px;">🛑</div>
             <h1 style="margin: 0 0 8px;">Server Stopped</h1>
-            <p style="margin: 0; color: #666;">You can close this tab.</p>
+            <p style="margin: 0 0 16px; color: #666;">Waiting for server to restart...</p>
+            <p style="margin: 0; color: #999; font-size: 14px; animation: pulse 2s infinite;">This page will reload automatically</p>
           </div>
         `;
 
@@ -123,55 +130,91 @@ function showShutdownUI() {
 }
 
 /**
- * Attempt to close the browser tab with multiple fallback strategies
+ * Attempt to close the browser tab
+ * @returns {boolean} True if close was successful
  */
-async function attemptClose() {
-  logger.debug('Attempting to close tab...');
-
+function attemptClose() {
   try {
+    logger.debug('Attempting to close tab...');
+    // Standard close
     window.close();
-    logger.debug('Standard close attempted');
   } catch (err) {
-    logger.warn('Standard close failed:', err);
+    logger.debug('Standard close failed:', err);
   }
 
-  try {
-    window.open('', '_self');
-    window.close();
-    logger.debug('Context clear close attempted');
-  } catch (err) {
-    logger.warn('Context clear close failed:', err);
-  }
-
+  // Schedule a check to see if we're still here
   setTimeout(() => {
+    logger.debug('Window still open, trying alternative method');
     try {
-      logger.debug('Redirecting to about:blank');
-      window.location.href = 'about:blank';
+      const tab = window.open('', '_self');
+      if (tab && typeof tab.close === 'function') tab.close();
     } catch (err) {
-      logger.error('Redirect to about:blank failed:', err);
+      logger.debug('Alternative close failed:', err);
     }
-  }, CONFIG.REDIRECT_DELAY);
+  }, 100);
+
+  return false;
 }
 
 /**
- * Close the browser tab with UI feedback
+ * Wait for server to come back online and reload
  */
-async function closeTab() {
+function waitForReconnect() {
+  const POLL_INTERVAL = 2000;
+  const MAX_POLLS = 300; // 10 minutes max
+  let pollCount = 0;
+
+  logger.log('Waiting for server to restart...');
+
+  const checkServer = async () => {
+    pollCount++;
+
+    if (pollCount > MAX_POLLS) {
+      logger.warn('Server did not restart within timeout');
+      return;
+    }
+
+    try {
+      // Try to fetch the page to check if server is back
+      const response = await fetch(window.location.href, {
+        method: 'HEAD',
+        cache: 'no-store',
+      });
+
+      if (response.ok) {
+        logger.log('Server is back online, reloading...');
+        window.location.reload();
+        return;
+      }
+    } catch (err) {
+      // Server not ready yet, continue polling
+      logger.debug(`Poll ${pollCount}: Server not ready`);
+    }
+
+    setTimeout(checkServer, POLL_INTERVAL);
+  };
+
+  // Start polling after a short delay
+  setTimeout(checkServer, POLL_INTERVAL);
+}
+
+/**
+ * Handle server shutdown: try to close tab, if fails show UI and wait for reconnect
+ */
+async function handleShutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  logger.log('Closing tab...');
+  logger.log('Server shutdown detected');
   cleanup();
 
-  try {
-    await showShutdownUI();
-    setTimeout(() => {
-      attemptClose();
-    }, CONFIG.SHUTDOWN_UI_DELAY);
-  } catch (err) {
-    logger.error('Error during tab close:', err);
-    attemptClose();
-  }
+  // Try to close the tab first
+  attemptClose();
+
+  // If we're still here, tab couldn't be closed
+  // Show shutdown UI and wait for server to come back
+  await showShutdownUI();
+  waitForReconnect();
 }
 
 /**
@@ -221,7 +264,7 @@ function handleMessage(data) {
 
     case 'browser_sync_server_shutdown':
       logger.log('Server shutdown detected');
-      closeTab();
+      handleShutdown();
       break;
 
     case 'browser_sync_reload':
@@ -246,7 +289,7 @@ function handleConnectionLoss() {
   setTimeout(() => {
     if (!reconnected && !isShuttingDown) {
       logger.log('Server connection not restored, closing tab...');
-      closeTab();
+      handleShutdown();
     }
   }, CONFIG.RECONNECT_WAIT);
 
@@ -363,6 +406,11 @@ function initialize() {
       const unsubOpen = hotClient.onOpen(() => {
         logger.log('✅ HMR connected');
         lastMessageTime = Date.now();
+
+        // Notify server that a client has connected (to cancel pending browser open)
+        fetch('/~/__bs_connected', { method: 'POST' }).catch(() => {
+          // Ignore errors - server may not have this endpoint
+        });
       });
       unsubscribers.push(unsubOpen);
 

@@ -32,6 +32,7 @@ import {
   shutdown as shutdownBrowserSync,
   notifyRestart as notifyBrowserSyncRestart,
   notifyReady as notifyBrowserSyncReady,
+  onClientConnected as onBrowserSyncClientConnected,
 } from '../webpack';
 import clean from './clean';
 import generateJWT from './jwt';
@@ -351,6 +352,17 @@ function setupWebpackMiddlewares(clientCompiler) {
     heartbeat: 10_000, // Heartbeat interval in ms
   });
   app.use(wrapWebpackMiddleware(hotMiddleware));
+
+  // ---------------------------
+  // BrowserSync Client Connection Endpoint
+  // ---------------------------
+  // When a client reconnects via HMR, it POSTs here to cancel pending browser open
+  const browserSyncEndpoint = (req, res) => {
+    onBrowserSyncClientConnected();
+    res.status(204).end();
+  };
+  browserSyncEndpoint[kWebpackMiddleware] = true;
+  app.post('/~/__bs_connected', browserSyncEndpoint);
 
   return hotMiddleware;
 }
