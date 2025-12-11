@@ -10,21 +10,23 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
-import { useHistory, useLocation } from '../../contexts/history';
+import { useHistory, useQuery } from '../../contexts/history';
+import { useWebSocket } from '../../contexts/ws';
 import s from './Login.css';
 
 function Login({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
-  const location = useLocation();
+  const ws = useWebSocket();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Get returnTo from query params
-  const returnTo = new URLSearchParams(location.search).get('returnTo') || '/';
+  const returnTo = useQuery('returnTo') || '/';
 
   const handleSubmit = useCallback(
     async e => {
@@ -32,17 +34,20 @@ function Login({ title }) {
       setError('');
       setLoading(true);
 
-      const result = await dispatch(login({ email, password }));
+      const result = await dispatch(login({ email, password, rememberMe }));
 
       setLoading(false);
 
       if (!result.success) {
         setError(result.error);
       } else {
+        if (ws && result.accessToken) {
+          ws.authenticate(result.accessToken);
+        }
         history.replace(returnTo);
       }
     },
-    [email, password, dispatch, history, returnTo],
+    [email, password, rememberMe, dispatch, history, returnTo, ws],
   );
 
   return (
@@ -88,6 +93,18 @@ function Login({ title }) {
             <a href='/reset-password' className={s.forgotPasswordLink}>
               {t('login.forgotPassword')}
             </a>
+          </div>
+          <div className={s.formGroupCheckbox}>
+            <label htmlFor='rememberMe'>
+              <input
+                id='rememberMe'
+                type='checkbox'
+                name='rememberMe'
+                checked={rememberMe}
+                onChange={e => setRememberMe(e.target.checked)}
+              />
+              {t('login.rememberMe', 'Remember me')}
+            </label>
           </div>
           <div className={s.formGroup}>
             <button className={s.button} type='submit' disabled={loading}>

@@ -23,9 +23,9 @@ import { authController } from '../controllers';
  */
 export default function authRoutes(deps, middlewares, app) {
   const auth = app.get('auth');
-  const requireAuth = auth.middlewares.requireAuth({
-    jwtSecret: app.get('jwtSecret'),
-  });
+
+  // Create requireAuth middleware
+  const requireAuth = auth.middlewares.requireAuth();
 
   const router = deps.Router();
 

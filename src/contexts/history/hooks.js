@@ -1,7 +1,8 @@
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * History context hooks
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import {
@@ -13,7 +14,7 @@ import {
   useRef,
 } from 'react';
 import { match as matchPath, compile as compilePath } from 'path-to-regexp';
-import HistoryContext from './Context';
+import HistoryContext from './Provider';
 
 /**
  * Hook to access history instance from context

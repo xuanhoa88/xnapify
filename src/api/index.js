@@ -87,16 +87,12 @@ function processFiles(context, typeName, processor) {
  * Each module receives dependencies via dependency injection.
  *
  * @param {Object} app - Express app instance (for accessing app-level settings)
- * @param {Object} dependencies - Dependencies to inject into modules
- * @param {Object} dependencies.Model - Sequelize instance for database operations
- * @param {Object} dependencies.jwtConfig - JWT configuration
- * @param {string} dependencies.jwtConfig.secret - JWT secret key
- * @param {string} dependencies.jwtConfig.expiresIn - JWT expiration time (e.g., '7d')
+ * @param {Object} db - Sequelize instance for database operations
  * @returns {Object} Discovery result
  * @returns {Object} .models - All discovered models from all modules
  * @returns {Router} .apiRoutes - Express router with all module routes mounted
  */
-async function discoverModules(app, dependencies) {
+async function discoverModules(app, db) {
   // Step 1: Discover and initialize models
   const modelsContext = require.context(
     './modules',
@@ -120,7 +116,7 @@ async function discoverModules(app, dependencies) {
 
           try {
             // Support both sync and async factories
-            const modelSet = await Promise.resolve(factory(dependencies, app));
+            const modelSet = await Promise.resolve(factory(db, app));
 
             if (!modelSet || typeof modelSet !== 'object') {
               console.warn(
@@ -186,10 +182,7 @@ async function discoverModules(app, dependencies) {
             // Support both sync and async factories
             // Pass the shared guarded app to prevent modules from modifying critical dependencies
             const moduleRouter = await Promise.resolve(
-              factory(
-                Object.assign(dependencies, { models, Router }),
-                guardedApp,
-              ),
+              factory({ db, models, Router }, guardedApp),
             );
 
             if (!moduleRouter) {
@@ -306,13 +299,8 @@ function createHealthCheckHandler(options = {}) {
  * Setup app dependencies in Express app settings
  *
  * @param {Object} app - Express app
- * @param {Object} options - API configuration
  */
-function setupAppDependencies(app, options = {}) {
-  // JWT configuration (used by auth middleware)
-  app.set('jwtSecret', options.jwtSecret);
-  app.set('jwtExpiresIn', options.jwtExpiresIn);
-
+function setupAppDependencies(app) {
   // Freeze complex objects to prevent modification
   app.set('db', db);
 
@@ -345,11 +333,10 @@ function createAppGuard(app) {
   // Critical application dependencies that should not be modified at runtime
   // These are protected by the app guard to maintain application integrity
   const protectedKeys = new Set([
-    'jwtSecret', // JWT authentication secret
-    'jwtExpiresIn', // JWT token expiration
+    'jwt', // JWT utilities
+    'ws', // WebSocket server instance
     'db', // Database ORM instance
     'fs', // Filesystem utilities
-    'i18n', // Internationalization utilities
     'http', // HTTP utilities
     'auth', // Authentication engine
     'models', // Database models
@@ -566,18 +553,10 @@ function createLoggingMiddleware(options) {
  * @param {Object} config - Configuration object
  * @throws {Error} If configuration is invalid or initialization fails
  */
-export default async function main(app, i18n, config = {}) {
+export default async function main(app, config = {}) {
   try {
-    // Validate required configuration
-    if (!config.jwtSecret) {
-      const error = new Error('JWT secret is required');
-      error.name = 'MissingJwtSecretError';
-      error.status = 500;
-      throw error;
-    }
-
     // Setup app dependencies for dependency injection
-    setupAppDependencies(app, config);
+    setupAppDependencies(app);
 
     // Initialize database migrations
     await db.runMigrations(null, db.connection);
@@ -597,33 +576,26 @@ export default async function main(app, i18n, config = {}) {
     app.get('/health', rateLimiter, createHealthCheckHandler(config));
 
     // Discover and initialize modules
-    const { apiModels, apiRoutes } = await discoverModules(app, {
-      db,
-      jwtConfig: {
-        secret: config.jwtSecret,
-        expiresIn: config.jwtExpiresIn,
-      },
-    });
-
-    // Store i18n in app settings
-    app.set('i18n', i18n);
+    const { apiModels, apiRoutes } = await discoverModules(app, db);
 
     // Store models in app settings
     app.set('models', apiModels);
 
-    // This populates req.user from JWT cookies if present, allowing SSR to include user in initial state
-    app.use(auth.middlewares.optionalAuth({ jwtSecret: config.jwtSecret }));
+    // Create API middlewares
+    const apiMiddlewares = [rateLimiter];
 
-    // Auto-refresh token if expiring (Dual-Token Strategy)
-    app.use(
-      auth.middlewares.refreshToken({
-        jwtSecret: config.jwtSecret,
-        refreshThreshold: 5 * 60, // 5 minutes
-      }),
-    );
+    // JWT authentication middleware
+    const jwt = app.get('jwt');
+    if (jwt) {
+      // Auto-refresh token if expiring (Dual-Token Strategy) - runs first
+      apiMiddlewares.push(auth.middlewares.refreshToken());
 
-    // Mount API routes with rate limiting only
-    app.use(config.apiPrefix, rateLimiter, apiRoutes);
+      // Populate req.user from JWT cookies if present
+      apiMiddlewares.push(auth.middlewares.optionalAuth());
+    }
+
+    // Mount API routes with middleware stack
+    app.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);
 
     // Setup enhanced error handler for API routes
     app.use(config.apiPrefix, http.errorHandler);

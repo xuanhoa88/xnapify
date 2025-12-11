@@ -1,8 +1,8 @@
 /**
- * Cookie and Session Utilities
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * Simplified and robust cookie management for authentication.
- * Provides a unified interface for all cookie operations.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import crypto from 'crypto';
@@ -18,20 +18,22 @@ export const DEFAULT_COOKIE_CONFIG = Object.freeze({
 });
 
 /**
+ * Cookie names
+ */
+const JWT_COOKIE_NAME = 'id_token';
+const REFRESH_COOKIE_NAME = 'refresh_token';
+
+/**
  * Predefined cookie types with their configurations
  */
 const COOKIE_TYPES = Object.freeze({
   jwt: {
-    name: 'id_token',
+    name: JWT_COOKIE_NAME,
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
   refresh: {
-    name: 'refresh_token',
+    name: REFRESH_COOKIE_NAME,
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-  },
-  session: {
-    name: 'session_id',
-    maxAge: 24 * 60 * 60 * 1000, // 24 hours
   },
 });
 
@@ -42,20 +44,25 @@ const COOKIE_TYPES = Object.freeze({
  * @param {string} name - Cookie name
  * @param {string} value - Cookie value
  * @param {Object} [options] - Cookie options
+ * @param {number} [options.maxAge] - Max age in ms (undefined = session cookie)
  */
-export function setSecureCookie(res, name, value, options = {}) {
+function setSecureCookie(res, name, value, options = {}) {
   const config = {
     ...DEFAULT_COOKIE_CONFIG,
     ...options,
   };
 
   const cookieOptions = {
-    maxAge: config.maxAge,
     httpOnly: config.httpOnly,
     secure: config.secure,
     sameSite: config.sameSite,
     path: config.path,
   };
+
+  // Only set maxAge if provided (undefined = session cookie, expires on browser close)
+  if (config.maxAge != null) {
+    cookieOptions.maxAge = config.maxAge;
+  }
 
   if (config.domain) {
     cookieOptions.domain = config.domain;
@@ -71,7 +78,7 @@ export function setSecureCookie(res, name, value, options = {}) {
  * @param {string} name - Cookie name
  * @param {Object} [options] - Cookie options
  */
-export function clearSecureCookie(res, name, options = {}) {
+function clearSecureCookie(res, name, options = {}) {
   const config = {
     path: DEFAULT_COOKIE_CONFIG.path,
     ...options,
@@ -95,7 +102,7 @@ export function clearSecureCookie(res, name, options = {}) {
  * @param {string} name - Cookie name
  * @returns {string|null} Cookie value or null if not found
  */
-export function getCookieValue(req, name) {
+function getCookieValue(req, name) {
   return (req.cookies && req.cookies[name]) || null;
 }
 
@@ -106,7 +113,7 @@ export function getCookieValue(req, name) {
  * @param {string} name - Cookie name
  * @returns {boolean} True if cookie exists with value
  */
-export function hasCookie(req, name) {
+function hasCookie(req, name) {
   const value = getCookieValue(req, name);
   return value != null && value !== '';
 }
@@ -115,7 +122,7 @@ export function hasCookie(req, name) {
  * Unified cookie management function
  *
  * @param {string} action - Action to perform ('set', 'get', 'clear', 'has')
- * @param {string} type - Cookie type ('jwt', 'refresh', 'session', or custom name)
+ * @param {string} type - Cookie type ('jwt', 'refresh', or custom name)
  * @param {Object} context - Request/Response context
  * @param {string} [value] - Value to set (for 'set' action)
  * @param {Object} [options] - Additional options
@@ -124,20 +131,39 @@ export function hasCookie(req, name) {
 export function manageCookie(
   action,
   type,
-  context,
+  context = {},
   value = null,
   options = {},
 ) {
+  // Validate required parameters
+  if (typeof action !== 'string' || action.trim().length === 0) {
+    const error = new Error('Action must be a non-empty string');
+    error.name = 'InvalidParameterError';
+    error.status = 400;
+    throw error;
+  }
+
+  if (typeof type !== 'string' || type.trim().length === 0) {
+    const error = new Error('Type must be a non-empty string');
+    error.name = 'InvalidParameterError';
+    error.status = 400;
+    throw error;
+  }
+
   // Determine cookie configuration
   const cookieConfig = COOKIE_TYPES[type] || { name: type };
   const config = { ...cookieConfig, ...options };
 
   switch (action) {
     case 'set':
-      if (!context.res || !value) {
-        const error = new Error(
-          'Response object and value required for set action',
-        );
+      if (!context.res) {
+        const error = new Error('Response object required for set action');
+        error.name = 'MissingResponseError';
+        error.status = 400;
+        throw error;
+      }
+      if (!value) {
+        const error = new Error('Value required for set action');
         error.name = 'MissingCookieValueError';
         error.status = 400;
         throw error;
@@ -151,7 +177,7 @@ export function manageCookie(
     case 'get':
       if (!context.req) {
         const error = new Error('Request object required for get action');
-        error.name = 'MissingCookieValueError';
+        error.name = 'MissingRequestError';
         error.status = 400;
         throw error;
       }
@@ -160,7 +186,7 @@ export function manageCookie(
     case 'clear':
       if (!context.res) {
         const error = new Error('Response object required for clear action');
-        error.name = 'MissingCookieValueError';
+        error.name = 'MissingResponseError';
         error.status = 400;
         throw error;
       }
@@ -172,7 +198,7 @@ export function manageCookie(
     case 'has':
       if (!context.req) {
         const error = new Error('Request object required for has action');
-        error.name = 'MissingCookieValueError';
+        error.name = 'MissingRequestError';
         error.status = 400;
         throw error;
       }
@@ -188,9 +214,9 @@ export function manageCookie(
 }
 
 /**
- * Generate a cryptographically secure session ID
+ * Generate a cryptographically secure random ID
  */
-export function generateSessionId(length = 32) {
+export function generateSecureId(length = 32) {
   return crypto.randomBytes(length).toString('hex');
 }
 
@@ -230,6 +256,20 @@ export function setRefreshTokenCookie(res, refreshToken, options = {}) {
 }
 
 /**
+ * Check if refresh token cookie exists
+ */
+export function hasRefreshTokenCookie(req, options = {}) {
+  return manageCookie('has', 'refresh', { req }, null, options);
+}
+
+/**
+ * Get refresh token from cookie
+ */
+export function getRefreshTokenFromCookie(req, options = {}) {
+  return manageCookie('get', 'refresh', { req }, null, options);
+}
+
+/**
  * Clear refresh token cookie
  */
 export function clearRefreshTokenCookie(res, options = {}) {
@@ -237,106 +277,28 @@ export function clearRefreshTokenCookie(res, options = {}) {
 }
 
 /**
- * Create session with cookie
- */
-export function createSession(res, sessionData, options = {}) {
-  const sessionId = generateSessionId();
-
-  // In production, store sessionData in database/cache with sessionId
-  // For now, we just set the session cookie
-
-  manageCookie('set', 'session', { res }, sessionId, options);
-  return sessionId;
-}
-
-/**
- * Get session ID from cookie
- */
-export function getSessionId(req, options = {}) {
-  return manageCookie('get', 'session', { req }, null, options);
-}
-
-/**
- * Destroy session
- */
-export function destroySession(res, sessionId, options = {}) {
-  // In production, remove sessionData from database/cache
-  return manageCookie('clear', 'session', { res }, null, options);
-}
-
-/**
  * Clear all authentication cookies
  */
 export function clearAllAuthCookies(res, options = {}) {
-  const cookieNames = options.cookieNames || [
-    'id_token',
-    'refresh_token',
-    'session_id',
-  ];
+  // Validate required parameters
+  if (!res) {
+    const error = new Error('Response object required for clearAllAuthCookies');
+    error.name = 'MissingResponseError';
+    error.status = 400;
+    throw error;
+  }
 
-  cookieNames.forEach(name => {
+  // Default to JWT and refresh cookies if none provided
+  const cookieNames =
+    options && Array.isArray(options.cookieNames)
+      ? options.cookieNames
+      : [JWT_COOKIE_NAME, REFRESH_COOKIE_NAME];
+
+  // Clear each cookie
+  cookieNames.forEach(name =>
     clearSecureCookie(res, name, {
       path: options.path || DEFAULT_COOKIE_CONFIG.path,
       domain: options.domain,
-    });
-  });
-}
-
-/**
- * Get cookie configuration for a type
- */
-export function getCookieConfig(type = 'jwt', overrides = {}) {
-  const baseConfig = COOKIE_TYPES[type] || { name: type };
-  return {
-    ...baseConfig,
-    ...DEFAULT_COOKIE_CONFIG,
-    ...overrides,
-  };
-}
-
-/**
- * Validate cookie options
- */
-export function validateCookieOptions(options = {}) {
-  const errors = [];
-
-  if (
-    options.name &&
-    (typeof options.name !== 'string' || options.name.trim().length === 0)
-  ) {
-    errors.push('Cookie name must be a string');
-  }
-
-  if (
-    options.maxAge &&
-    (typeof options.maxAge !== 'number' || options.maxAge < 0)
-  ) {
-    errors.push('Cookie maxAge must be a positive number');
-  }
-
-  if (
-    options.sameSite &&
-    !['strict', 'lax', 'none'].includes(options.sameSite.toLowerCase())
-  ) {
-    errors.push('Cookie sameSite must be "strict", "lax", or "none"');
-  }
-
-  if (
-    options.path &&
-    (typeof options.path !== 'string' || options.path.trim().length === 0)
-  ) {
-    errors.push('Cookie path must be a string');
-  }
-
-  if (
-    options.domain &&
-    (typeof options.domain !== 'string' || options.domain.trim().length === 0)
-  ) {
-    errors.push('Cookie domain must be a string');
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-  };
+    }),
+  );
 }

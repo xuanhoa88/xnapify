@@ -32,6 +32,7 @@ import { createFetch } from './createFetch';
 import App from './components/App';
 import Html from './components/Html';
 import { createWebSocketServer } from './ws/server';
+import { configureJwt } from './jwt';
 
 // =============================================================================
 // CONFIGURATION
@@ -58,9 +59,6 @@ const config = Object.freeze({
   // WebSocket Configuration
   wsPath: process.env.RSK_WS_PATH || '/ws',
 
-  // JWT Configuration
-  jwtSecret: process.env.RSK_JWT_SECRET,
-
   // API Configuration
   apiPrefix: process.env.RSK_API_PREFIX || '/api',
   apiJsonRequestLimit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb',
@@ -70,7 +68,6 @@ const config = Object.freeze({
 
 const i18n = getI18nInstance();
 let cachedRouter = null;
-let wsServer = null;
 
 // =============================================================================
 // ERROR HANDLERS
@@ -86,7 +83,7 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-function setupGracefulShutdown(server) {
+function setupGracefulShutdown(httpServer, wsServer) {
   const shutdown = async signal => {
     console.log(`\n${signal} received, shutting down...`);
 
@@ -100,7 +97,7 @@ function setupGracefulShutdown(server) {
       }
     }
 
-    server.close(err => {
+    httpServer.close(err => {
       if (err) {
         console.error('❌ Shutdown error:', err);
         process.exit(1);
@@ -156,18 +153,15 @@ function getInnerHTML(element) {
 }
 
 async function createReduxStore(req, { fetch, history }, locale) {
-  const store = configureStore(
-    { user: req.user || null },
-    { fetch, history, i18n },
-  );
+  const store = configureStore({ user: null }, { fetch, history, i18n });
 
-  // Set authenticated user
-  if (req && req.user && req.user.id) {
-    try {
-      await store.dispatch(me());
-    } catch {
-      // No authenticated user
-    }
+  // Try to restore authenticated user from cookies via /api/me
+  // The fetch instance forwards cookies from the SSR request,
+  // so if user has valid auth cookies, they'll be authenticated
+  try {
+    await store.dispatch(me());
+  } catch {
+    // No authenticated user or invalid token - continue as guest
   }
 
   // Set runtime variables
@@ -297,40 +291,48 @@ function setupApiProxy(app) {
 
 export function startServer(app, port = config.port, host = config.host) {
   return new Promise((resolve, reject) => {
-    const server = app.listen(port, host, err => {
+    const httpServer = app.listen(port, host, err => {
       if (err) {
         console.error('❌ Server start failed:', err.message);
         return reject(err);
       }
 
       // Initialize WebSocket server
-      try {
-        wsServer = createWebSocketServer(
-          {
-            path: config.wsPath,
-            enableLogging: !config.isProduction,
-            onAuthentication: async token => {
-              if (!token) {
-                const error = new Error('Unauthorized');
-                error.code = 'E_UNAUTHORIZED';
-                throw error;
-              }
-              // const decoded = jwt.verify(token, config.jwtSecret);
-              // socket.user = decoded;
-              return {
-                id: '123',
-                name: 'John Doe',
-              };
-            },
-          },
-          server,
-        );
-        console.info(`🔌 WebSocket server started on ${config.wsPath}`);
-      } catch (wsErr) {
-        console.error('❌ WebSocket server failed:', wsErr.message);
-      }
+      const jwt = app.get('jwt');
+      const wsServer = createWebSocketServer(
+        {
+          path: config.wsPath,
+          enableLogging: !config.isProduction,
+          onAuthentication: async token => {
+            if (!token) {
+              const error = new Error('Token required');
+              error.code = 'E_TOKEN_REQUIRED';
+              throw error;
+            }
 
-      setupGracefulShutdown(server);
+            if (!jwt) {
+              const error = new Error('JWT not configured');
+              error.code = 'E_CONFIG_ERROR';
+              throw error;
+            }
+
+            // Verify token using the configured JWT instance
+            const decoded = jwt.verifyTypedToken(token, 'access');
+
+            // Return user payload (id, email, etc.)
+            return {
+              id: decoded.id,
+              email: decoded.email,
+            };
+          },
+        },
+        httpServer,
+      );
+
+      // Expose wsServer to API routes
+      app.set('ws', wsServer);
+
+      setupGracefulShutdown(httpServer, wsServer);
 
       // Server URL
       const serverUrl = getBaseUrl({ host, port });
@@ -347,10 +349,10 @@ export function startServer(app, port = config.port, host = config.host) {
       console.info(`   Environment: ${nodeEnv}`);
       console.info('='.repeat(50));
 
-      resolve(server);
+      resolve(httpServer);
     });
 
-    server.on('error', err => {
+    httpServer.on('error', err => {
       console.error(
         err.code === 'EADDRINUSE'
           ? `❌ Port ${port} in use`
@@ -366,6 +368,13 @@ export function startServer(app, port = config.port, host = config.host) {
 // =============================================================================
 
 async function main(app, staticPath) {
+  // JWT Configuration
+  configureJwt(app);
+
+  // Expose i18n to API routes
+  app.set('i18n', i18n);
+
+  // Initialize SSR router
   const router = await getRouter();
 
   // Express configuration
@@ -376,7 +385,7 @@ async function main(app, staticPath) {
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     next();
   });
 
@@ -420,7 +429,7 @@ async function main(app, staticPath) {
   );
 
   // API routes
-  await import('./api').then(api => api.default(app, i18n, config));
+  await import('./api').then(api => api.default(app, config));
   setupApiProxy(app);
 
   // SSR handler

@@ -9,6 +9,7 @@ import 'whatwg-fetch';
 import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
 import App from './components/App';
+import { WebSocketProvider } from './contexts/ws';
 import { createFetch } from './createFetch';
 import {
   DEFAULT_LOCALE,
@@ -339,7 +340,11 @@ async function handleRouteChange(location, action) {
       payload: { route, location, action },
     });
 
-    const appElement = <App context={context}>{route.component}</App>;
+    const appElement = (
+      <WebSocketProvider client={wsClient}>
+        <App context={context}>{route.component}</App>
+      </WebSocketProvider>
+    );
     const container = document.getElementById('app');
 
     if (!container) {

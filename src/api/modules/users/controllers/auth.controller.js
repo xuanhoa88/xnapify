@@ -53,12 +53,9 @@ export async function register(req, res) {
     // Get complete user data with RBAC information
     const userData = await authService.getCurrentUser(user.id, models);
 
-    // Generate token pair (access + refresh)
-    const tokens = auth.jwt.generateTokenPair(
-      { id: user.id, email: user.email },
-      req.app.get('jwtSecret'),
-      { expiresIn: req.app.get('jwtExpiresIn') },
-    );
+    // Generate token pair using configured JWT instance
+    const jwt = req.app.get('jwt');
+    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
 
     // Set token cookies
     auth.setTokenCookie(res, tokens.accessToken);
@@ -86,7 +83,7 @@ export async function register(req, res) {
 export async function login(req, res) {
   const http = req.app.get('http');
   try {
-    const { email, password } = req.body;
+    const { email, password, rememberMe = false } = req.body;
 
     // Validate input
     const validationErrors = validateLogin({ email, password });
@@ -107,19 +104,23 @@ export async function login(req, res) {
     // Get complete user data with RBAC information
     const userData = await authService.getCurrentUser(user.id, models);
 
-    // Generate token pair (access + refresh)
-    const tokens = auth.jwt.generateTokenPair(
-      { id: user.id, email: user.email },
-      req.app.get('jwtSecret'),
-      { expiresIn: req.app.get('jwtExpiresIn') },
-    );
+    // Generate token pair using configured JWT instance
+    const jwt = req.app.get('jwt');
+    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
 
-    // Set token cookies
-    auth.setTokenCookie(res, tokens.accessToken);
-    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+    // Set cookie options based on rememberMe
+    // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
+    // If rememberMe is true, use default maxAge from cookie config
+    const cookieOptions = rememberMe ? {} : { maxAge: null };
 
-    // Return user data with RBAC information
-    return http.sendSuccess(res, { user: userData });
+    auth.setTokenCookie(res, tokens.accessToken, cookieOptions);
+    auth.setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
+
+    // Return user data with RBAC information and access token for WS auth
+    return http.sendSuccess(res, {
+      user: userData,
+      accessToken: tokens.accessToken,
+    });
   } catch (error) {
     if (error.name === 'UserNotFoundError') {
       return http.sendUnauthorized(res, 'User not found');
@@ -155,8 +156,7 @@ export async function logout(req, res) {
     const auth = req.app.get('auth');
 
     // Clear token cookies
-    auth.clearTokenCookie(res);
-    auth.clearRefreshTokenCookie(res);
+    auth.clearAllAuthCookies(res);
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });
   } catch (error) {
@@ -201,17 +201,15 @@ export async function refreshToken(req, res) {
   try {
     // Get refresh token from cookie
     const auth = req.app.get('auth');
-    const refreshToken = auth.manageCookie('get', 'refresh', { req });
+    const refreshToken = auth.getTokenFromCookie(req);
 
     if (!refreshToken) {
       return http.sendUnauthorized(res, 'Refresh token required');
     }
 
     // Generate new token pair
-    const newTokens = auth.jwt.refreshTokenPair(
-      refreshToken,
-      req.app.get('jwtSecret'),
-    );
+    const jwt = req.app.get('jwt');
+    const newTokens = jwt.refreshTokenPair(refreshToken);
 
     // Set new token cookies
     auth.setTokenCookie(res, newTokens.accessToken);

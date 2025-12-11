@@ -381,7 +381,7 @@ export async function deleteAccount(req, res) {
     });
 
     // Clear token cookie
-    res.clearCookie('id_token');
+    req.app.get('auth').clearAllAuthCookies(res);
 
     return http.sendSuccess(res, {
       message: 'Account deleted successfully',

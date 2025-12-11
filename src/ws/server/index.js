@@ -157,7 +157,6 @@ export class WebSocketServer extends EventEmitter {
     });
 
     this.emit(EventType.STARTED, { path: this.config.path });
-    this.logger.info('Server started', { path: this.config.path });
 
     return this;
   }
@@ -257,24 +256,59 @@ export class WebSocketServer extends EventEmitter {
       serverTime: new Date().toISOString(),
     });
 
-    // Handle authentication if configured
-    setImmediate(async () => {
-      // eslint-disable-next-line no-underscore-dangle
-      await this._authenticate(ws);
+    // Auto-authenticate from cookies if token present
+    // eslint-disable-next-line no-underscore-dangle
+    await this._tryAutoAuthenticate(ws, req);
 
-      // Setup auth timeout for connections not yet authenticated
-      if (!ws.authenticated) {
-        const timeout = setTimeout(() => {
-          if (!ws.authenticated) {
-            this.logger.warn(`Auth timeout: ${connectionId}`);
-            ws.close(CloseCode.POLICY_VIOLATION, 'Authentication timeout');
-          }
-        }, this.config.authTimeout);
-        this.authTimeouts.set(connectionId, timeout);
+    this.emit(EventType.READY, ws);
+  }
+
+  /**
+   * Try to auto-authenticate from cookies in upgrade request
+   * This handles already-authenticated users opening a new WS connection
+   */
+  async _tryAutoAuthenticate(ws, req) {
+    if (!this.config.onAuthentication) {
+      return; // No auth callback configured
+    }
+
+    // Parse cookies from request headers
+    const cookieHeader = req.headers.cookie;
+    if (!cookieHeader) {
+      return;
+    }
+
+    // Extract id_token from cookies
+    const cookies = cookieHeader.split(';').reduce((acc, cookie) => {
+      const [key, value] = cookie.trim().split('=');
+      if (key && value) {
+        acc[key] = value;
+      }
+      return acc;
+    }, {});
+
+    const token = cookies.id_token;
+    if (!token) {
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      const user = await this._authenticate(ws, token);
+
+      if (user) {
+        this.logger.info(
+          `🔐 Auto-authenticated from cookie: ${ws.id} for user ${user.id}`,
+        );
       }
 
-      this.emit(EventType.READY, ws);
-    });
+      // Send auth success to client
+      // eslint-disable-next-line no-underscore-dangle
+      this._send(ws, MessageType.AUTH_SUCCESS, { user });
+    } catch (err) {
+      // Silent fail - user will need to authenticate manually
+      this.logger.debug(`Auto-auth failed for ${ws.id}: ${err.message}`);
+    }
   }
 
   /**
@@ -434,6 +468,12 @@ export class WebSocketServer extends EventEmitter {
         ws,
         message.data && message.data.token,
       );
+
+      if (!user) {
+        // _authenticate already sent error
+        return;
+      }
+
       // eslint-disable-next-line no-underscore-dangle
       this._send(ws, MessageType.AUTH_SUCCESS, { user });
     } catch (err) {

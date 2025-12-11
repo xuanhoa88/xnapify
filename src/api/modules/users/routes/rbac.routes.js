@@ -34,9 +34,9 @@ export default function rbacRoutes(deps, middlewares, app) {
 
   // Create auth middleware instance
   const auth = app.get('auth');
-  const requireAuth = auth.middlewares.requireAuth({
-    jwtSecret: app.get('jwtSecret'),
-  });
+
+  // Create requireAuth middleware
+  const requireAuth = auth.middlewares.requireAuth();
 
   // ========================================================================
   // ROLE MANAGEMENT ROUTES

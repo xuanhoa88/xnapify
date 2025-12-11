@@ -4,6 +4,7 @@
     "email": "Email",
     "password": "Password",
     "forgotPassword": "Forgot password?",
+    "rememberMe": "Remember me",
     "dontHaveAccount": "Don't have an account? <0>Register</0>",
     "loading": "Please wait...",
     "submit": "Log in",

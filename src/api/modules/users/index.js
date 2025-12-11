@@ -43,25 +43,10 @@ const seedsContext = require.context('./seeds', false, /\.js$/);
  *
  * @param {Object} deps - Dependencies injected by API bootstrap
  * @param {Function} deps.Router - Express Router constructor
- * @param {Object} deps.Model - Sequelize instance for database operations
- * @param {Object} deps.models - Sequelize models (User, UserProfile, Role, Permission, etc.)
- * @param {Object} deps.jwtConfig - JWT configuration
- * @param {string} deps.jwtConfig.secret - JWT secret key for signing tokens
- * @param {string} deps.jwtConfig.expiresIn - JWT expiration time (e.g., '7d')
+ * @param {Object} deps.models - Sequelize models for database operations
+ * @param {Object} deps.db - Sequelize instance for database operations
  * @param {Object} app - Express app instance (for accessing app-level settings and middleware)
  * @returns {Router} Express router with user routes mounted at /users
- *
- * @example
- * // Called by API bootstrap during module discovery
- * const userRouter = userModule(
- *   { Router, db, models, jwtConfig },
- *   app
- * );
- * // Router will be mounted at /api/users
- *
- * @example
- * // Other modules can access user userMiddlewares
- * const userMiddlewares = req.app.get('userMiddlewares');
  */
 export default async function userModule(deps, app) {
   const { Router } = deps;

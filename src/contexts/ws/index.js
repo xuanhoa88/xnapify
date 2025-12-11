@@ -6,10 +6,7 @@
  */
 
 // Context & Provider
-export { HistoryProvider } from './Provider';
+export { WebSocketProvider } from './Provider';
 
 // Hooks
 export * from './hooks';
-
-// Components
-export { default as Link } from './Link';

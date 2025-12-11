@@ -1,8 +1,8 @@
 /**
- * JWT Utilities
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * Comprehensive JWT token management utilities for authentication.
- * Provides token generation, verification, and validation functions.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import jwt from 'jsonwebtoken';
@@ -134,22 +134,22 @@ export function verifyToken(token, secret, options = {}) {
   } catch (error) {
     // Enhance error messages
     if (error.name === 'TokenExpiredError') {
-      const error = new Error('Token has expired');
-      error.name = 'TokenExpiredError';
-      error.status = 401;
-      throw error;
+      const err = new Error('Token has expired');
+      err.name = 'TokenExpiredError';
+      err.status = 401;
+      throw err;
     }
     if (error.name === 'JsonWebTokenError') {
-      const error = new Error('Invalid token format');
-      error.name = 'InvalidTokenFormatError';
-      error.status = 401;
-      throw error;
+      const err = new Error('Invalid token format');
+      err.name = 'InvalidTokenFormatError';
+      err.status = 401;
+      throw err;
     }
     if (error.name === 'NotBeforeError') {
-      const error = new Error('Token not active yet');
-      error.name = 'TokenNotActiveError';
-      error.status = 401;
-      throw error;
+      const err = new Error('Token not active yet');
+      err.name = 'TokenNotActiveError';
+      err.status = 401;
+      throw err;
     }
     throw error;
   }
@@ -202,11 +202,7 @@ export function generateTokenPair(payload, secret, options = {}) {
   const accessToken = generateTypedToken('access', payload, secret, options);
   const refreshToken = generateTypedToken('refresh', payload, secret, options);
 
-  return {
-    accessToken,
-    refreshToken,
-    expiresIn: JWT_TOKEN_TYPES.access.expiresIn,
-  };
+  return { accessToken, refreshToken };
 }
 
 /**
@@ -291,7 +287,7 @@ export function isTokenExpired(token) {
 
     const currentTime = Math.floor(Date.now() / 1000);
     return decoded.payload.exp < currentTime;
-  } catch (error) {
+  } catch {
     return true; // Invalid token is considered expired
   }
 }
@@ -313,7 +309,7 @@ export function getTokenExpiration(token) {
       return new Date(decoded.payload.exp * 1000);
     }
     return null;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -339,7 +335,7 @@ export function getTokenTimeLeft(token) {
       return Math.max(0, timeLeft);
     }
     return 0;
-  } catch (error) {
+  } catch {
     return 0;
   }
 }
@@ -385,7 +381,6 @@ export function refreshTokenPair(refreshToken, secret, options = {}) {
   return {
     accessToken: newAccessToken,
     refreshToken: newRefreshToken,
-    expiresIn: JWT_TOKEN_TYPES.access.expiresIn,
   };
 }
 
@@ -479,9 +474,135 @@ export function validateJwtConfig(config = {}) {
 export function getJwtConfig(type = 'access', overrides = {}) {
   const tokenConfig = JWT_TOKEN_TYPES[type] || JWT_TOKEN_TYPES.access;
 
-  return {
+  return Object.freeze({
     ...DEFAULT_JWT_CONFIG,
     ...tokenConfig,
     ...overrides,
+  });
+}
+
+/**
+ * Create a configured JWT instance
+ *
+ * Factory function that creates a JWT utility object with methods
+ * pre-bound to the provided secret and configuration.
+ *
+ * @param {Object} config - JWT configuration
+ * @param {string} config.secret - JWT secret (required)
+ * @param {string} [config.expiresIn] - Default expiration time
+ * @param {string} [config.algorithm] - JWT algorithm
+ * @param {string} [config.issuer] - Token issuer
+ * @param {string} [config.audience] - Token audience
+ * @returns {Object} JWT utilities with bound secret
+ */
+export function createJwt(config = {}) {
+  const { secret, ...options } = config || {};
+
+  if (!secret) {
+    throw new Error('JWT secret is required');
+  }
+
+  // Merge with defaults
+  const jwtConfig = {
+    ...DEFAULT_JWT_CONFIG,
+    ...options,
   };
+
+  return Object.freeze({
+    // Configuration
+    secret,
+
+    /**
+     * Generate a JWT token
+     */
+    generateToken(payload, overrides = {}) {
+      return generateToken(payload, secret, { ...jwtConfig, ...overrides });
+    },
+
+    /**
+     * Verify and decode a JWT token
+     */
+    verifyToken(token, overrides = {}) {
+      return verifyToken(token, secret, { ...jwtConfig, ...overrides });
+    },
+
+    /**
+     * Generate a typed JWT token (access, refresh, etc.)
+     */
+    generateTypedToken(type, payload, overrides = {}) {
+      return generateTypedToken(type, payload, secret, overrides);
+    },
+
+    /**
+     * Verify a typed JWT token
+     */
+    verifyTypedToken(token, expectedType, overrides = {}) {
+      return verifyTypedToken(token, expectedType, secret, overrides);
+    },
+
+    /**
+     * Generate a token pair (access + refresh tokens)
+     */
+    generateTokenPair(payload, overrides = {}) {
+      return generateTokenPair(payload, secret, overrides);
+    },
+
+    /**
+     * Refresh token pair
+     */
+    refreshTokenPair(refreshToken, overrides = {}) {
+      return refreshTokenPair(refreshToken, secret, overrides);
+    },
+
+    // Static utilities (don't need secret)
+    decodeToken,
+    isTokenExpired,
+    getTokenExpiration,
+    getTokenTimeLeft,
+    createTokenBlacklistEntry,
+    validateJwtConfig,
+    getJwtConfig,
+  });
+}
+
+/**
+ * Create a JWT instance from environment variables
+ *
+ * Convenience factory that reads configuration from env vars.
+ * Returns null if JWT secret is not configured.
+ */
+export function createJwtFromEnv() {
+  const secret = process.env.RSK_JWT_SECRET;
+
+  if (!secret) {
+    return null;
+  }
+
+  return createJwt({
+    secret,
+    expiresIn: process.env.RSK_JWT_EXPIRES_IN || DEFAULT_JWT_CONFIG.expiresIn,
+    algorithm: process.env.RSK_JWT_ALGORITHM || DEFAULT_JWT_CONFIG.algorithm,
+    issuer: process.env.RSK_JWT_ISSUER || DEFAULT_JWT_CONFIG.issuer,
+    audience: process.env.RSK_JWT_AUDIENCE || DEFAULT_JWT_CONFIG.audience,
+  });
+}
+
+/**
+ * Configure JWT on Express app and return the instance
+ *
+ * Helper function to set JWT configuration on an Express app instance.
+ *
+ * @param {Object} app - Express app instance
+ * @returns {Object|null} Configured JWT instance or null if secret not found
+ */
+export function configureJwt(app) {
+  const jwt = createJwtFromEnv();
+
+  if (!jwt) {
+    return null;
+  }
+
+  app.set('jwt', jwt);
+
+  return jwt;
 }

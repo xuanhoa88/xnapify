@@ -145,12 +145,7 @@ function initializeUserRelationships(models) {
  * - User <-> Group (Many-to-Many through UserGroup)
  * - Group <-> Role (Many-to-Many through GroupRole)
  *
- * @param {Object} deps - Dependencies injected by API bootstrap
- * @param {Object} deps.db - Sequelize instance for database operations
- * @param {Object} deps.jwtConfig - JWT configuration
- * @param {string} deps.jwtConfig.secret - JWT secret key
- * @param {string} deps.jwtConfig.expiresIn - JWT expiration time
- * @param {Object} app - Express app instance (for accessing app-level settings like jwtSecret)
+ * @param {Object} db - Sequelize instance for database operations
  * @returns {Object} Auth models with initialized relationships
  * @returns {Model} .User - User model
  * @returns {Model} .UserLogin - UserLogin model (OAuth providers)
@@ -162,16 +157,8 @@ function initializeUserRelationships(models) {
  * @returns {Model} .RolePermission - RolePermission junction table
  * @returns {Model} .UserGroup - UserGroup junction table
  * @returns {Model} .GroupRole - GroupRole junction table
- *
- * @example
- * // Called by API bootstrap during model discovery
- * const userModels = initializeAuthModels(
- *   { db, jwtConfig },
- *   app
- * );
- * // Returns: { User, UserLogin, UserProfile, Role, Permission, ... }
  */
-export default function initializeAuthModels({ db }) {
+export default function initializeAuthModels(db) {
   // Initialize all models with sequelize instance
   const User = createUserModel(db);
   const UserLogin = createUserLoginModel(db);

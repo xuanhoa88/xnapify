@@ -4,6 +4,7 @@
     "email": "Email",
     "password": "Mật khẩu",
     "forgotPassword": "Quên mật khẩu?",
+    "rememberMe": "Luôn đăng nhập",
     "dontHaveAccount": "Không có tài khoản? <0>Đăng ký</0>",
     "loading": "Vui lòng đợi...",
     "submit": "Đăng nhập",

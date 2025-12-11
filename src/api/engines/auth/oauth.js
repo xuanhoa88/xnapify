@@ -1,8 +1,8 @@
 /**
- * OAuth 2.0 Utilities
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * Provides utilities for OAuth 2.0 authentication flows.
- * Supports common OAuth providers and security best practices.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import crypto from 'crypto';

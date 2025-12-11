@@ -1,17 +1,17 @@
 /**
- * Authentication Middleware
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * Comprehensive authentication middleware collection using the auth engine utilities.
- * Provides ready-to-use middleware for various authentication scenarios.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { manageCookie } from './cookies';
 import {
-  verifyTypedToken,
-  isTokenExpired,
-  refreshTokenPair,
-  getTokenTimeLeft,
-} from './jwt';
+  clearAllAuthCookies,
+  getTokenFromCookie,
+  getRefreshTokenFromCookie,
+  setTokenCookie,
+  setRefreshTokenCookie,
+} from './cookies';
 
 /**
  * Extract token from various sources
@@ -26,15 +26,16 @@ function extractToken(req, options = {}) {
     headerName = 'authorization',
     headerPrefix = 'Bearer ',
     queryParam = 'token',
-  } = options;
+  } = options || {};
 
   for (const source of sources) {
     let token = null;
 
     switch (source) {
-      case 'cookie':
-        token = manageCookie('get', 'jwt', { req });
+      case 'cookie': {
+        token = getTokenFromCookie(req);
         break;
+      }
 
       case 'header': {
         const authHeader = req.headers[headerName.toLowerCase()];
@@ -44,9 +45,10 @@ function extractToken(req, options = {}) {
         break;
       }
 
-      case 'query':
+      case 'query': {
         token = req.query[queryParam];
         break;
+      }
     }
 
     if (token) {
@@ -55,21 +57,6 @@ function extractToken(req, options = {}) {
   }
 
   return null;
-}
-
-/**
- * Send standardized error response
- *
- * @param {Object} res - Express response object
- * @param {Error} error - Error object with status and code properties
- * @returns {Object} JSON response
- */
-function sendErrorResponse(res, error) {
-  return res.status(error.status || 500).json({
-    success: false,
-    error: error.message,
-    code: error.code,
-  });
 }
 
 /**
@@ -84,13 +71,11 @@ export function requireAuth(options = {}) {
     sources = ['cookie', 'header'],
     onError,
     includeUser = true,
-    jwtSecret,
-  } = options;
+  } = options || {};
 
   return async (req, res, next) => {
     try {
       const token = extractToken(req, { sources });
-
       if (!token) {
         const error = new Error('Authentication token required');
         error.status = 401;
@@ -98,9 +83,9 @@ export function requireAuth(options = {}) {
         throw error;
       }
 
-      const decoded = verifyTypedToken(token, tokenType, jwtSecret);
-
       if (includeUser) {
+        const jwt = req.app.get('jwt');
+        const decoded = jwt.verifyTypedToken(token, tokenType);
         req.user = decoded;
       }
       req.token = token;
@@ -124,7 +109,11 @@ export function requireAuth(options = {}) {
         return onError(error, req, res, next);
       }
 
-      return sendErrorResponse(res, error);
+      return res.status(error.status || 500).json({
+        success: false,
+        error: error.message,
+        code: error.code,
+      });
     }
   };
 }
@@ -140,22 +129,21 @@ export function optionalAuth(options = {}) {
     tokenType = 'access',
     sources = ['cookie', 'header'],
     includeUser = true,
-    jwtSecret,
-  } = options;
+  } = options || {};
 
   return async (req, res, next) => {
     try {
       const token = extractToken(req, { sources });
-
       if (!token) {
         return next(); // No token, continue without authentication
       }
 
-      const decoded = verifyTypedToken(token, tokenType, jwtSecret);
-
       if (includeUser) {
+        const jwt = req.app.get('jwt');
+        const decoded = jwt.verifyTypedToken(token, tokenType);
         req.user = decoded;
       }
+
       req.token = token;
       req.authMethod = 'jwt';
       req.authenticated = true;
@@ -179,251 +167,69 @@ export function refreshToken(options = {}) {
     refreshThreshold = 5 * 60, // 5 minutes in seconds
     autoRefresh = true,
     onRefresh,
-    jwtSecret,
-  } = options;
+  } = options || {};
 
   return async (req, res, next) => {
     try {
       const token = extractToken(req);
-
       if (!token) {
         return next();
       }
 
-      // Check if token needs refresh
-      if (isTokenExpired(token)) {
-        const error = new Error('Token has expired');
-        error.status = 401;
-        error.code = 'TOKEN_EXPIRED';
-        throw error;
-      }
+      // Get JWT instance from app
+      const jwt = req.app.get('jwt');
 
-      // Check if token is close to expiration
-      const timeLeft = getTokenTimeLeft(token);
+      // Check if token is expired or close to expiration
+      const isExpired = jwt.isTokenExpired(token);
+      const timeLeft = isExpired ? 0 : jwt.getTokenTimeLeft(token);
+      const needsRefresh = isExpired || timeLeft < Math.abs(refreshThreshold);
 
-      if (timeLeft < refreshThreshold) {
-        req.tokenNeedsRefresh = true;
+      if (needsRefresh && autoRefresh) {
+        // Try to get refresh token
+        const existingRefreshToken = getRefreshTokenFromCookie(req);
 
-        if (autoRefresh) {
-          // Try to get refresh token
-          const refreshToken = manageCookie('get', 'refresh', { req });
+        if (existingRefreshToken) {
+          try {
+            const newTokens = jwt.refreshTokenPair(existingRefreshToken);
 
-          if (refreshToken) {
-            try {
-              const newTokens = refreshTokenPair(refreshToken, jwtSecret);
+            // Set new tokens
+            setTokenCookie(res, newTokens.accessToken);
+            setRefreshTokenCookie(res, newTokens.refreshToken);
 
-              // Set new tokens
-              manageCookie('set', 'jwt', { res }, newTokens.accessToken);
-              manageCookie('set', 'refresh', { res }, newTokens.refreshToken);
+            req.token = newTokens.accessToken;
+            req.tokenRefreshed = true;
 
-              req.token = newTokens.accessToken;
-              req.tokenRefreshed = true;
-
-              if (onRefresh) {
-                onRefresh(req, res, newTokens);
-              }
-            } catch (refreshError) {
-              // Refresh failed, let the request continue with existing token
-              req.refreshFailed = true;
+            if (typeof onRefresh === 'function') {
+              onRefresh(req, res, newTokens);
             }
-          }
-        }
-      }
 
-      next();
-    } catch (error) {
-      error.status = error.status || 401;
-      error.code = error.code || 'TOKEN_REFRESH_ERROR';
-      return sendErrorResponse(res, error);
-    }
-  };
-}
-
-/**
- * Session-based authentication middleware
- *
- * @param {Object} [options] - Session options
- * @returns {Function} Express middleware
- */
-export function requireSession(options = {}) {
-  const {
-    sessionStore, // Function to get session data by ID
-    onError,
-  } = options;
-
-  return async (req, res, next) => {
-    try {
-      const sessionId = manageCookie('get', 'session', { req });
-
-      if (!sessionId) {
-        const error = new Error('Session required');
-        error.status = 401;
-        error.code = 'SESSION_REQUIRED';
-        throw error;
-      }
-
-      // Get session data from store (if provided)
-      if (sessionStore) {
-        const sessionData = await sessionStore(sessionId);
-        if (!sessionData) {
-          const error = new Error('Invalid session');
-          error.status = 401;
-          error.code = 'INVALID_SESSION';
-          throw error;
-        }
-
-        req.session = sessionData;
-      }
-
-      req.sessionId = sessionId;
-      req.authMethod = 'session';
-      req.authenticated = true;
-
-      next();
-    } catch (error) {
-      error.status = error.status || 500;
-      error.code = error.code || 'SESSION_ERROR';
-
-      if (typeof onError === 'function') {
-        return onError(error, req, res, next);
-      }
-
-      return sendErrorResponse(res, error);
-    }
-  };
-}
-
-/**
- * Optional session-based authentication middleware
- *
- * Attempts to authenticate via session but allows request to proceed
- * even if no session exists or session is invalid.
- *
- * Sets the following properties on req:
- * - req.session: Session data (if valid session exists)
- * - req.sessionId: Session ID (if exists)
- * - req.authMethod: 'session' (if authenticated)
- * - req.authenticated: true/false
- *
- * @param {Object} [options] - Session options
- * @param {Function} [options.sessionStore] - Function to get session data by ID
- * @returns {Function} Express middleware
- */
-export function optionalSession(options = {}) {
-  const { sessionStore } = options;
-
-  return async (req, res, next) => {
-    try {
-      const sessionId = manageCookie('get', 'session', { req });
-
-      if (!sessionId) {
-        req.authenticated = false;
-        return next(); // No session, continue without authentication
-      }
-
-      // Get session data from store (if provided)
-      if (sessionStore) {
-        const sessionData = await sessionStore(sessionId);
-
-        if (!sessionData) {
-          req.authenticated = false;
-          return next(); // Invalid session, continue without authentication
-        }
-
-        req.session = sessionData;
-      }
-
-      req.sessionId = sessionId;
-      req.authMethod = 'session';
-      req.authenticated = true;
-
-      next();
-    } catch (error) {
-      // On any error, continue without authentication
-      req.authenticated = false;
-      next();
-    }
-  };
-}
-
-/**
- * Combined authentication middleware (tries multiple methods)
- *
- * @param {Object} [options] - Combined auth options
- * @returns {Function} Express middleware
- */
-export function requireAnyAuth(options = {}) {
-  const {
-    methods = ['jwt', 'session'],
-    jwtOptions = {},
-    sessionOptions = {},
-    onError,
-    jwtSecret,
-  } = options;
-
-  return async (req, res, next) => {
-    const errors = [];
-
-    // Try JWT authentication
-    if (methods.includes('jwt')) {
-      try {
-        const token = extractToken(req, jwtOptions.sources);
-        if (token) {
-          const decoded = verifyTypedToken(
-            token,
-            jwtOptions.tokenType || 'access',
-            jwtSecret,
-          );
-
-          req.user = decoded;
-          req.token = token;
-          req.authMethod = 'jwt';
-          return next();
-        }
-      } catch (error) {
-        errors.push({ method: 'jwt', error: error.message });
-      }
-    }
-
-    // Try session authentication
-    if (methods.includes('session')) {
-      try {
-        const sessionId = manageCookie('get', 'session', { req });
-        if (sessionId) {
-          if (sessionOptions.sessionStore) {
-            const sessionData = await sessionOptions.sessionStore(sessionId);
-            if (sessionData) {
-              req.session = sessionData;
-              req.sessionId = sessionId;
-              req.authMethod = 'session';
-              return next();
-            }
-          } else {
-            req.sessionId = sessionId;
-            req.authMethod = 'session';
             return next();
+          } catch (refreshError) {
+            // Refresh failed - clear expired cookies and continue
+            // (requireAuth will block protected routes, this middleware is non-blocking)
+            if (isExpired) {
+              clearAllAuthCookies(res);
+              req.tokenCleared = true;
+            }
+            req.refreshFailed = true;
           }
+        } else if (isExpired) {
+          // No refresh token and access token expired - clear cookies
+          clearAllAuthCookies(res);
+          req.tokenCleared = true;
         }
-      } catch (error) {
-        errors.push({ method: 'session', error: error.message });
       }
+
+      // Mark that token needs refresh (for client-side handling)
+      if (needsRefresh && !req.tokenRefreshed) {
+        req.tokenNeedsRefresh = true;
+      }
+
+      next();
+    } catch (error) {
+      // Non-blocking - log error but continue
+      req.tokenError = error.message;
+      next();
     }
-
-    // No authentication method succeeded
-    const error = new Error('Authentication required');
-    error.status = 401;
-    error.code = 'AUTH_REQUIRED';
-    error.attempts = errors;
-
-    if (typeof onError === 'function') {
-      return onError(error, req, res, next);
-    }
-
-    return res.status(401).json({
-      success: false,
-      error: error.message,
-      code: error.code,
-      attempts: errors,
-    });
   };
 }

@@ -39,7 +39,7 @@ import {
  * @param {string} credentials.password - User password
  * @returns {Function} Redux thunk action
  */
-export function login({ email, password }) {
+export function login({ email, password, rememberMe = false }) {
   return async (dispatch, getState, { fetch }) => {
     dispatch(loginStart());
 
@@ -47,12 +47,16 @@ export function login({ email, password }) {
       const { data } = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, rememberMe }),
       });
 
       dispatch(loginSuccess(data.user));
 
-      return { success: true, user: data.user };
+      return {
+        success: true,
+        user: data.user,
+        accessToken: data.accessToken,
+      };
     } catch (error) {
       dispatch(loginError(error.message));
 
