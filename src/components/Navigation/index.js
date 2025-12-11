@@ -17,10 +17,12 @@ import {
   logout,
 } from '../../redux';
 import s from './Navigation.css';
+import { useWebSocket } from '../../contexts/ws';
 
 function Navigation() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const ws = useWebSocket();
   const history = useHistory();
   const isAuth = useSelector(isAuthenticated);
   const isAdminActive = useSelector(isAdmin);
@@ -32,6 +34,9 @@ function Navigation() {
     e.preventDefault();
     setIsDropdownOpen(false);
     await dispatch(logout());
+    if (ws) {
+      ws.logout();
+    }
     history.replace('/');
   };
 

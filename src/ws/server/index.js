@@ -300,11 +300,10 @@ export class WebSocketServer extends EventEmitter {
         this.logger.info(
           `🔐 Auto-authenticated from cookie: ${ws.id} for user ${user.id}`,
         );
+        // Send auth success to client
+        // eslint-disable-next-line no-underscore-dangle
+        this._send(ws, MessageType.AUTH_SUCCESS, { user });
       }
-
-      // Send auth success to client
-      // eslint-disable-next-line no-underscore-dangle
-      this._send(ws, MessageType.AUTH_SUCCESS, { user });
     } catch (err) {
       // Silent fail - user will need to authenticate manually
       this.logger.debug(`Auto-auth failed for ${ws.id}: ${err.message}`);
@@ -353,11 +352,7 @@ export class WebSocketServer extends EventEmitter {
   async _authenticate(ws, token) {
     if (ws.authenticated) {
       // eslint-disable-next-line no-underscore-dangle
-      this._sendError(
-        ws,
-        ErrorCode.ALREADY_AUTHENTICATED,
-        'Already authenticated',
-      );
+      this._send(ws, MessageType.AUTH_SUCCESS, { user: ws.user });
       return;
     }
 
@@ -368,7 +363,7 @@ export class WebSocketServer extends EventEmitter {
         user = await this.config.onAuthentication(token, ws.id);
       } catch (err) {
         // eslint-disable-next-line no-underscore-dangle
-        this._sendError(
+        this._sendAuthFailed(
           ws,
           ErrorCode.AUTHENTICATION_FAILED,
           `Authentication failed: ${err.message}`,
@@ -378,7 +373,7 @@ export class WebSocketServer extends EventEmitter {
     } else {
       // Fallback or warning if no auth handler provided
       // eslint-disable-next-line no-underscore-dangle
-      this._sendError(
+      this._sendAuthFailed(
         ws,
         ErrorCode.AUTHENTICATION_NOT_CONFIGURED,
         'Authentication handler not configured',
@@ -388,7 +383,7 @@ export class WebSocketServer extends EventEmitter {
 
     if (!user || !user.id) {
       // eslint-disable-next-line no-underscore-dangle
-      this._sendError(
+      this._sendAuthFailed(
         ws,
         ErrorCode.INVALID_AUTHENTICATION_RESULT,
         `Invalid user returned from authentication handler. The user must include the '#id' property.`,
@@ -437,6 +432,11 @@ export class WebSocketServer extends EventEmitter {
       this._handleAuthLogin(ws, msg),
     );
 
+    this.messageHandlers.set(MessageType.AUTH_LOGOUT, ws =>
+      // eslint-disable-next-line no-underscore-dangle
+      this._handleAuthLogout(ws),
+    );
+
     this.messageHandlers.set(MessageType.CHANNEL_SUBSCRIBE, (ws, msg) =>
       // eslint-disable-next-line no-underscore-dangle
       this._handleChannelSubscribe(ws, msg),
@@ -479,12 +479,45 @@ export class WebSocketServer extends EventEmitter {
     } catch (err) {
       this.logger.warn(`Auth failed: ${ws.id}`, { error: err.message });
       // eslint-disable-next-line no-underscore-dangle
-      this._sendError(ws, ErrorCode.AUTHENTICATION_FAILED, err.message);
+      this._sendAuthFailed(ws, ErrorCode.AUTHENTICATION_FAILED, err.message);
       setTimeout(
         () => ws.close(CloseCode.POLICY_VIOLATION, 'Auth failed'),
         1000,
       );
     }
+  }
+
+  /**
+   * Handle Auth Logout
+   */
+  _handleAuthLogout(ws) {
+    if (!ws.authenticated) {
+      this.logger.warn(
+        `Logout attempt from unauthenticated connection: ${ws.id}`,
+      );
+      return;
+    }
+
+    const { user } = ws;
+
+    // Unsubscribe from protected channel
+    // eslint-disable-next-line no-underscore-dangle
+    this._unsubscribeFromChannel(ws, ChannelType.PROTECTED);
+
+    // Unsubscribe from private user channel
+    if (user && user.id) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._unsubscribeFromChannel(ws, `user:${user.id}`);
+    }
+
+    // Clear auth state
+    ws.authenticated = false;
+    ws.user = null;
+
+    this.logger.info(`🔓 Logged out: ${ws.id}`);
+
+    // Emit unauthenticated event
+    this.emit(EventType.UNAUTHENTICATED, ws, { reason: 'logout' });
   }
 
   /**
@@ -631,6 +664,15 @@ export class WebSocketServer extends EventEmitter {
   _sendError(ws, code, message) {
     // eslint-disable-next-line no-underscore-dangle
     this._send(ws, 'error', { code, message });
+  }
+
+  /**
+   * Send auth failed message
+   */
+  _sendAuthFailed(ws, code, message) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._send(ws, MessageType.AUTH_FAILED, { code, message });
+    this.emit(EventType.UNAUTHENTICATED, ws, { code, message });
   }
 
   /**

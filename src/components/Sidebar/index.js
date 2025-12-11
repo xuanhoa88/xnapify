@@ -18,12 +18,14 @@ import {
   logout,
 } from '../../redux';
 import { useHistory, Link } from '../../contexts/history';
+import { useWebSocket } from '../../contexts/ws';
 import s from './Sidebar.css';
 
 function Sidebar() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const ws = useWebSocket();
 
   const sidebarOpen = useSelector(isSidebarOpen);
   const isAdminPanelActive = useSelector(isAdminPanel);
@@ -50,9 +52,12 @@ function Sidebar() {
     dispatch(closeSidebar());
   }, [dispatch]);
 
-  const handleLogout = useCallback(() => {
-    dispatch(logout());
+  const handleLogout = useCallback(async () => {
+    await dispatch(logout());
     handleCloseSidebar();
+    if (ws) {
+      ws.logout();
+    }
   }, [dispatch, handleCloseSidebar]);
 
   const isActive = useCallback(

@@ -87,13 +87,13 @@ export const DefaultConfig = Object.freeze({
   SERVER_PORT: 8080,
   SERVER_PATH: '/ws',
   MAX_PAYLOAD_SIZE: 16 * 1024, // 16KB
-  HEARTBEAT_INTERVAL: 30000, // 30 seconds
-  AUTH_TIMEOUT: 10000, // 10 seconds
+  HEARTBEAT_INTERVAL: 30 * 1000, // 30 seconds
+  AUTH_TIMEOUT: 10 * 1000, // 10 seconds
 
   // Client defaults
   CLIENT_URL: 'ws://localhost:8080/ws',
   AUTO_RECONNECT: true,
-  RECONNECT_INTERVAL: 5000, // 5 seconds
+  RECONNECT_INTERVAL: 5 * 1000, // 5 seconds
   MAX_RECONNECT_ATTEMPTS: 10,
   MESSAGE_QUEUE_SIZE: 100,
 
@@ -118,5 +118,6 @@ export const LogLevel = Object.freeze({
  */
 export const EventType = Object.freeze({
   AUTHENTICATED: 'authenticated',
+  UNAUTHENTICATED: 'unauthenticated',
   MESSAGE: 'message',
 });

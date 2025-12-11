@@ -296,6 +296,8 @@ export class WebSocketClient extends EventEmitter {
       [MessageType.PONG]: () => {}, // No-op
       // eslint-disable-next-line no-underscore-dangle
       [MessageType.AUTH_SUCCESS]: this._handleAuthSuccess.bind(this),
+      // eslint-disable-next-line no-underscore-dangle
+      [MessageType.AUTH_FAILED]: this._handleAuthFailed.bind(this),
       [MessageType.CHANNEL_SUBSCRIBED]:
         // eslint-disable-next-line no-underscore-dangle
         this._handleChannelSubscribed.bind(this),
@@ -325,10 +327,25 @@ export class WebSocketClient extends EventEmitter {
    * Handle Auth Success
    */
   _handleAuthSuccess(data) {
-    this.isAuthenticated = true;
     this.user = (data && data.user) || null;
-    this.logger.info(`🔐 Authenticated as: ${this.user && this.user.id}`);
-    this.emit(EventType.AUTHENTICATED, this.user);
+    if (this.user) {
+      this.isAuthenticated = true;
+      this.logger.info(`🔐 Authenticated as: ${this.user && this.user.id}`);
+      this.emit(EventType.AUTHENTICATED, this.user);
+    } else {
+      // eslint-disable-next-line no-underscore-dangle
+      this._handleAuthFailed({ code: 401, message: 'Invalid authentication' });
+    }
+  }
+
+  /**
+   * Handle Auth Failed
+   */
+  _handleAuthFailed(data) {
+    this.isAuthenticated = false;
+    this.user = null;
+    this.logger.warn(`🔒 Authentication failed: ${data && data.message}`);
+    this.emit(EventType.UNAUTHENTICATED, data);
   }
 
   /**
@@ -450,9 +467,9 @@ export class WebSocketClient extends EventEmitter {
   // ============================================================================
 
   /**
-   * Authenticate with token
+   * Login with token
    */
-  authenticate(token) {
+  login(token) {
     if (!this.isConnected()) {
       this.logger.warn('Cannot authenticate: not connected');
       return false;
@@ -464,6 +481,32 @@ export class WebSocketClient extends EventEmitter {
     }
 
     return this.send(MessageType.AUTH_LOGIN, { token });
+  }
+
+  /**
+   * Logout from server
+   */
+  logout() {
+    if (!this.isConnected()) {
+      this.logger.warn('Cannot logout: not connected');
+      return false;
+    }
+
+    if (!this.isAuthenticated) {
+      this.logger.warn('Not authenticated');
+      return false;
+    }
+
+    const result = this.send(MessageType.AUTH_LOGOUT);
+
+    // Update local state immediately
+    // eslint-disable-next-line no-underscore-dangle
+    this._handleAuthFailed({
+      code: 200,
+      message: 'Logout successfully',
+    });
+
+    return result;
   }
 
   // ============================================================================

@@ -9,7 +9,7 @@
   "editor.formatOnSave": true,
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   // Auto-save configuration
-  "files.autoSave": "onFocusChange",
+  "files.autoSave": "off",
   "files.autoSaveDelay": 1000,
   // ESLint validation
   "eslint.validate": [

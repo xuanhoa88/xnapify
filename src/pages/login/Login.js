@@ -42,7 +42,7 @@ function Login({ title }) {
         setError(result.error);
       } else {
         if (ws && result.accessToken) {
-          ws.authenticate(result.accessToken);
+          ws.login(result.accessToken);
         }
         history.replace(returnTo);
       }
