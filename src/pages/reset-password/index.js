@@ -7,38 +7,58 @@
 
 import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
-import ResetPassword from './ResetPassword';
+import RequestResetPassword from './RequestResetPassword';
+import ResetPasswordConfirmation from './ResetPasswordConfirmation';
 
 /**
- * Route configuration
+ * Route configuration with child routes
  */
 const route = {
   path: '/reset-password',
+  children: [
+    {
+      path: '',
+      action: context => {
+        const title = 'Request Reset Password';
+        const state = context.store.getState();
+
+        if (isAuthenticated(state)) {
+          return { redirect: '/' };
+        }
+
+        return {
+          title,
+          component: (
+            <Layout>
+              <RequestResetPassword title={title} />
+            </Layout>
+          ),
+        };
+      },
+    },
+    {
+      path: '/:token/confirmation',
+      action: context => {
+        const title = 'Reset Password Confirmation';
+        const state = context.store.getState();
+
+        if (isAuthenticated(state)) {
+          return { redirect: '/' };
+        }
+
+        const { token } = context.params;
+
+        return {
+          title,
+          component: (
+            <Layout>
+              <ResetPasswordConfirmation title={title} token={token} />
+            </Layout>
+          ),
+        };
+      },
+    },
+  ],
 };
 
-/**
- * Route action
- * Redirects authenticated users to home page
- */
-function action(context) {
-  const title = 'Reset Password';
-
-  // Get state from Redux store
-  const state = context.store.getState();
-
-  // Redirect authenticated users to home
-  if (isAuthenticated(state)) {
-    return { redirect: '/' };
-  }
-
-  return {
-    title,
-    component: (
-      <Layout>
-        <ResetPassword title={title} />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];
+export default [route];

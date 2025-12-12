@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { profileService } from '../services';
+import * as profileService from '../services/profile.service';
 import { validatePassword } from '../utils/validation';
 
 // ========================================================================
@@ -219,10 +219,10 @@ export async function changePassword(req, res) {
     // Validate input
     const errors = {};
     if (!currentPassword) {
-      errors.currentPassword = 'Current password is required';
+      errors.currentPassword = 'PASSWORD_REQUIRED';
     }
     if (!newPassword) {
-      errors.newPassword = 'New password is required';
+      errors.newPassword = 'PASSWORD_REQUIRED';
     } else {
       const passwordValidation = validatePassword(newPassword);
       if (!passwordValidation.isValid) {
@@ -364,10 +364,10 @@ export async function deleteAccount(req, res) {
     // Validate input
     const errors = {};
     if (!password) {
-      errors.password = 'Password is required to delete account';
+      errors.password = 'PASSWORD_REQUIRED';
     }
     if (confirm !== 'DELETE_MY_ACCOUNT') {
-      errors.confirm = 'Must provide exact confirmation: DELETE_MY_ACCOUNT';
+      errors.confirm = 'CONFIRMATION_REQUIRED';
     }
 
     if (Object.keys(errors).length > 0) {

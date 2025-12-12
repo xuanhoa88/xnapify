@@ -92,7 +92,7 @@ export class WebSocketClient extends EventEmitter {
     // Channel subscriptions
     this.subscribedChannels = new Set();
 
-    this.logger.info('Client initialized', { url: this.config.url });
+    this.logger.info('🚀 Client initialized', { url: this.config.url });
   }
 
   // ============================================================================
@@ -104,11 +104,11 @@ export class WebSocketClient extends EventEmitter {
    */
   connect() {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.logger.warn('Already connected');
+      this.logger.warn('⚠️ Already connected');
       return;
     }
 
-    this.logger.info(`Connecting to ${this.config.url}`);
+    this.logger.info(`🔌 Connecting to ${this.config.url}`);
 
     try {
       this.ws = new WebSocket(this.config.url);
@@ -128,7 +128,7 @@ export class WebSocketClient extends EventEmitter {
         this.isAuthenticated = false;
         this.user = null;
 
-        this.logger.info(`🔌 Disconnected`, {
+        this.logger.info('🔌 Disconnected', {
           code: event.code,
           reason: event.reason,
         });
@@ -145,7 +145,7 @@ export class WebSocketClient extends EventEmitter {
       };
 
       this.ws.onerror = event => {
-        this.logger.error('❌ Error', { error: event });
+        this.logger.error('❌ Connection error', { error: event });
         this.emit(EventType.ERROR, event);
       };
 
@@ -154,7 +154,7 @@ export class WebSocketClient extends EventEmitter {
         this._handleMessage(event);
       };
     } catch (err) {
-      this.logger.error('Connection failed', { error: err.message });
+      this.logger.error('❌ Connection failed', { error: err.message });
       // eslint-disable-next-line no-underscore-dangle
       this._scheduleReconnect();
     }
@@ -199,7 +199,7 @@ export class WebSocketClient extends EventEmitter {
     if (!this.reconnectEnabled) return;
 
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-      this.logger.error('Max reconnect attempts reached');
+      this.logger.error('❌ Max reconnect attempts reached');
       this.emit(EventType.RECONNECT_FAILED);
       return;
     }
@@ -209,7 +209,7 @@ export class WebSocketClient extends EventEmitter {
       this.config.reconnectInterval * Math.min(this.reconnectAttempts, 5);
 
     this.logger.info(
-      `Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,
+      `🔄 Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`,
     );
 
     this.reconnectTimer = setTimeout(() => {
@@ -265,7 +265,7 @@ export class WebSocketClient extends EventEmitter {
   _handleMessage(event) {
     const message = parseMessage(event.data);
     if (!message) {
-      this.logger.warn('Invalid message received');
+      this.logger.warn('⚠️ Invalid message received');
       return;
     }
 
@@ -277,7 +277,7 @@ export class WebSocketClient extends EventEmitter {
       try {
         handler.call(this, message.data);
       } catch (err) {
-        this.logger.error('Message handling error', { error: err.message });
+        this.logger.error('❌ Message handling error', { error: err.message });
       }
     } else {
       // Custom message - emit both generic and specific
@@ -393,7 +393,7 @@ export class WebSocketClient extends EventEmitter {
    * Handle Channel Error
    */
   _handleChannelError(data) {
-    this.logger.warn('Channel error', { error: data });
+    this.logger.warn('⚠️ Channel error', { error: data });
     this.emit(EventType.CHANNEL_ERROR, data);
   }
 
@@ -401,7 +401,7 @@ export class WebSocketClient extends EventEmitter {
    * Handle Server Error
    */
   _handleError(data) {
-    this.logger.warn(`Server error: ${data && data.code}`, { error: data });
+    this.logger.warn(`⚠️ Server error: ${data && data.code}`, { error: data });
     this.emit('error', data);
   }
 
@@ -425,7 +425,7 @@ export class WebSocketClient extends EventEmitter {
         this.messageQueue.push(message);
         this.logger.debug(`Queued: ${type}`);
       } else {
-        this.logger.warn('Queue full, dropping message');
+        this.logger.warn('⚠️ Queue full, dropping message');
       }
       return false;
     }
@@ -435,7 +435,7 @@ export class WebSocketClient extends EventEmitter {
       this.logger.debug(`Sent: ${type}`);
       return true;
     } catch (err) {
-      this.logger.error('Send failed', { type, error: err.message });
+      this.logger.error('❌ Send failed', { type, error: err.message });
       return false;
     }
   }
@@ -447,14 +447,14 @@ export class WebSocketClient extends EventEmitter {
     if (this.messageQueue.length === 0) return;
 
     const count = this.messageQueue.length;
-    this.logger.info(`Flushing ${count} queued messages`);
+    this.logger.info(`📤 Flushing ${count} queued messages`);
 
     while (this.messageQueue.length > 0 && this.isConnected()) {
       const msg = this.messageQueue.shift();
       try {
         this.ws.send(JSON.stringify(msg));
       } catch (err) {
-        this.logger.error('Flush failed', {
+        this.logger.error('❌ Flush failed', {
           type: msg.type,
           error: err.message,
         });
@@ -471,12 +471,12 @@ export class WebSocketClient extends EventEmitter {
    */
   login(token) {
     if (!this.isConnected()) {
-      this.logger.warn('Cannot authenticate: not connected');
+      this.logger.warn('⚠️ Cannot authenticate: not connected');
       return false;
     }
 
     if (this.isAuthenticated) {
-      this.logger.warn('Already authenticated');
+      this.logger.warn('⚠️ Already authenticated');
       return true;
     }
 
@@ -488,12 +488,12 @@ export class WebSocketClient extends EventEmitter {
    */
   logout() {
     if (!this.isConnected()) {
-      this.logger.warn('Cannot logout: not connected');
+      this.logger.warn('⚠️ Cannot logout: not connected');
       return false;
     }
 
     if (!this.isAuthenticated) {
-      this.logger.warn('Not authenticated');
+      this.logger.warn('⚠️ Not authenticated');
       return false;
     }
 
@@ -518,12 +518,12 @@ export class WebSocketClient extends EventEmitter {
    */
   subscribe(channelName) {
     if (!this.isConnected()) {
-      this.logger.warn('Cannot subscribe: not connected');
+      this.logger.warn('⚠️ Cannot subscribe: not connected');
       return false;
     }
 
     if (this.subscribedChannels.has(channelName)) {
-      this.logger.warn(`Already subscribed to: ${channelName}`);
+      this.logger.warn(`⚠️ Already subscribed to: ${channelName}`);
       return true;
     }
 
@@ -535,12 +535,12 @@ export class WebSocketClient extends EventEmitter {
    */
   unsubscribe(channelName) {
     if (!this.isConnected()) {
-      this.logger.warn('Cannot unsubscribe: not connected');
+      this.logger.warn('⚠️ Cannot unsubscribe: not connected');
       return false;
     }
 
     if (!this.subscribedChannels.has(channelName)) {
-      this.logger.warn(`Not subscribed to: ${channelName}`);
+      this.logger.warn(`⚠️ Not subscribed to: ${channelName}`);
       return false;
     }
 
@@ -585,7 +585,7 @@ export class WebSocketClient extends EventEmitter {
     this.messageQueue = [];
     this.subscribedChannels.clear();
     this.removeAllListeners();
-    this.logger.info('Client disposed');
+    this.logger.info('🛑 Client disposed');
   }
 }
 

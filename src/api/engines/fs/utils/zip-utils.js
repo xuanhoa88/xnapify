@@ -55,7 +55,7 @@ export async function createZip(fileInfos, options = {}) {
         if (!fs.existsSync(filePath)) {
           results.errors.push({
             fileName,
-            error: 'File not found',
+            error: 'FILE_NOT_FOUND',
           });
           continue;
         }
@@ -204,7 +204,7 @@ export async function extractZip(zipSource, extractPath, options = {}) {
         if (!entryPath.startsWith(path.resolve(extractPath))) {
           results.errors.push({
             fileName: entry.entryName,
-            error: 'Invalid file path (directory traversal attempt)',
+            error: 'ZIP_INVALID_FILE_PATH',
           });
           continue;
         }

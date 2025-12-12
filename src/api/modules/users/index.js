@@ -6,12 +6,14 @@
  */
 
 import * as userMiddlewares from './middlewares';
-import {
-  authRoutes,
-  profileRoutes,
-  rbacRoutes,
-  dashboardRoutes,
-} from './routes';
+// Public routes
+import authRoutes from './routes/auth.routes';
+import profileRoutes from './routes/profile.routes';
+// Admin routes
+import userRoutes from './routes/admin/user.routes';
+import roleRoutes from './routes/admin/role.routes';
+import permissionRoutes from './routes/admin/permission.routes';
+import groupRoutes from './routes/admin/group.routes';
 
 /**
  * Users Module Migrations Context
@@ -73,7 +75,7 @@ export default async function userModule(deps, app) {
   const router = Router();
 
   // ========================================================================
-  // MOUNT SEPARATED ROUTE MODULES
+  // PUBLIC ROUTES
   // ========================================================================
 
   // Authentication routes (public)
@@ -82,18 +84,26 @@ export default async function userModule(deps, app) {
 
   // Profile management routes (authenticated users)
   // Handles: /profile, /profile/avatar, /profile/password
-  router.use('/', profileRoutes(deps, userMiddlewares, app));
+  router.use('/profile', profileRoutes(deps, userMiddlewares, app));
 
-  // Dashboard routes (admin statistics and activity)
-  // Handles: /admin/dashboard/users
+  // ========================================================================
+  // ADMIN ROUTES
+  // ========================================================================
+
+  // User administration routes: /admin/users (includes dashboard, CRUD, assignments)
+  router.use('/admin/users', userRoutes(deps, userMiddlewares, app));
+
+  // Role management routes: /admin/roles
+  router.use('/admin/roles', roleRoutes(deps, userMiddlewares, app));
+
+  // Permission management routes: /admin/permissions
   router.use(
-    '/admin/dashboard/users',
-    dashboardRoutes(deps, userMiddlewares, app),
+    '/admin/permissions',
+    permissionRoutes(deps, userMiddlewares, app),
   );
 
-  // Admin routes (RBAC + User Administration)
-  // Handles: /admin/roles, /admin/permissions, /admin/groups, /admin/users/list, /admin/users/:id
-  router.use('/admin', rbacRoutes(deps, userMiddlewares, app));
+  // Group management routes: /admin/groups
+  router.use('/admin/groups', groupRoutes(deps, userMiddlewares, app));
 
   console.info('✅ User module loaded with modular routes');
 

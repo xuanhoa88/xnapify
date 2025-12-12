@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { authController } from '../controllers';
+import * as authController from '../controllers/auth.controller';
 
 /**
  * Authentication Routes
@@ -50,7 +50,7 @@ export default function authRoutes(deps, middlewares, app) {
    * @desc    Logout user and clear JWT cookie
    * @access  Public
    */
-  router.post('/logout', authController.logout);
+  router.post('/logout', requireAuth, authController.logout);
 
   /**
    * @route   GET /me
@@ -68,20 +68,23 @@ export default function authRoutes(deps, middlewares, app) {
   router.post('/request-reset-password', authController.forgotPassword);
 
   /**
-   * @route   POST /reset-password
+   * @route   POST /reset-password-confirmation
    * @desc    Reset password with token
    * @access  Public
    * @body    { token, password }
    */
-  router.post('/reset-password', authController.resetPassword);
+  router.post(
+    '/reset-password-confirmation',
+    authController.resetPasswordConfirmation,
+  );
 
   /**
-   * @route   POST /verify-email
+   * @route   POST /email-verification
    * @desc    Verify email address with token
    * @access  Public
    * @body    { token }
    */
-  router.post('/verify-email', authController.verifyEmail);
+  router.post('/email-verification', authController.emailVerification);
 
   return router;
 }

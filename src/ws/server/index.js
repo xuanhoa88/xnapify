@@ -95,7 +95,7 @@ export class WebSocketServer extends EventEmitter {
     // eslint-disable-next-line no-underscore-dangle
     this._registerDefaultHandlers();
 
-    this.logger.info('Server initialized', { config: this.config });
+    this.logger.info('🚀 Server initialized', { config: this.config });
   }
 
   // ============================================================================
@@ -119,7 +119,7 @@ export class WebSocketServer extends EventEmitter {
     // eslint-disable-next-line no-underscore-dangle
     this.server.on('connection', this._handleConnection.bind(this));
     this.server.on('error', err => {
-      this.logger.error('Server error', { error: err.message });
+      this.logger.error('❌ Server error', { error: err.message });
       this.emit('error', err);
     });
 
@@ -192,7 +192,7 @@ export class WebSocketServer extends EventEmitter {
 
     this.isRunning = false;
     this.emit(EventType.STOPPED);
-    this.logger.info('Server stopped');
+    this.logger.info('🛑 Server stopped');
 
     return this;
   }
@@ -233,7 +233,7 @@ export class WebSocketServer extends EventEmitter {
     // eslint-disable-next-line no-underscore-dangle
     ws.on('close', (code, reason) => this._handleClose(ws, code, reason));
     ws.on('error', err =>
-      this.logger.error('Connection error', {
+      this.logger.error('❌ Connection error', {
         id: connectionId,
         error: err.message,
       }),
@@ -298,7 +298,7 @@ export class WebSocketServer extends EventEmitter {
 
       if (user) {
         this.logger.info(
-          `🔐 Auto-authenticated from cookie: ${ws.id} for user ${user.id}`,
+          `🔐 Auto-authentication succeeded using cookie for connection ${ws.id} and user ${user.id}`,
         );
         // Send auth success to client
         // eslint-disable-next-line no-underscore-dangle
@@ -306,7 +306,9 @@ export class WebSocketServer extends EventEmitter {
       }
     } catch (err) {
       // Silent fail - user will need to authenticate manually
-      this.logger.debug(`Auto-auth failed for ${ws.id}: ${err.message}`);
+      this.logger.debug(
+        `Auto-authentication failed for connection ${ws.id}: ${err.message}`,
+      );
     }
   }
 
@@ -410,7 +412,6 @@ export class WebSocketServer extends EventEmitter {
     // eslint-disable-next-line no-underscore-dangle
     this._subscribeToChannel(ws, `user:${user.id}`);
 
-    this.logger.info(`🔐 Authenticated: ${user.id} on ${ws.id}`);
     this.emit(EventType.AUTHENTICATED, ws, user);
 
     return user;
@@ -477,7 +478,7 @@ export class WebSocketServer extends EventEmitter {
       // eslint-disable-next-line no-underscore-dangle
       this._send(ws, MessageType.AUTH_SUCCESS, { user });
     } catch (err) {
-      this.logger.warn(`Auth failed: ${ws.id}`, { error: err.message });
+      this.logger.warn(`🔒 Auth failed: ${ws.id}`, { error: err.message });
       // eslint-disable-next-line no-underscore-dangle
       this._sendAuthFailed(ws, ErrorCode.AUTHENTICATION_FAILED, err.message);
       setTimeout(
@@ -493,7 +494,7 @@ export class WebSocketServer extends EventEmitter {
   _handleAuthLogout(ws) {
     if (!ws.authenticated) {
       this.logger.warn(
-        `Logout attempt from unauthenticated connection: ${ws.id}`,
+        `⚠️ Logout attempt from unauthenticated connection: ${ws.id}`,
       );
       return;
     }
@@ -614,7 +615,7 @@ export class WebSocketServer extends EventEmitter {
       try {
         await handler(ws, message);
       } catch (err) {
-        this.logger.error('Handler error', {
+        this.logger.error('❌ Handler error', {
           type: message.type,
           error: err.message,
         });
@@ -713,7 +714,7 @@ export class WebSocketServer extends EventEmitter {
    */
   _createChannel(name, type = ChannelType.PUBLIC, metadata = {}) {
     if (this.channels.has(name)) {
-      this.logger.warn(`Channel already exists: ${name}`);
+      this.logger.warn(`⚠️ Channel already exists: ${name}`);
       return false;
     }
 
@@ -883,7 +884,7 @@ export class WebSocketServer extends EventEmitter {
   sendToChannel(channelName, type, data) {
     const channel = this.channels.get(channelName);
     if (!channel) {
-      this.logger.warn(`Channel not found: ${channelName}`);
+      this.logger.warn(`⚠️ Channel not found: ${channelName}`);
       return 0;
     }
 

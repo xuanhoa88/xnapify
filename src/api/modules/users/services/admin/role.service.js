@@ -5,7 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SYSTEM_ROLES } from '../constants/roles';
+import {
+  SYSTEM_ROLES,
+  ADMIN_ROLE,
+  STAFF_ROLE,
+  MODERATOR_ROLE,
+} from '../../constants/roles';
+import { createDefaultPermissions } from './permission.service';
+import { createDefaultGroups } from './group.service';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES
@@ -421,5 +428,109 @@ export async function getUsersWithRole(role_id, options, models) {
       total: count,
       pages: Math.ceil(count / limit),
     },
+  };
+}
+
+// ========================================================================
+// RBAC SYSTEM INITIALIZATION
+// ========================================================================
+
+/**
+ * Initialize default RBAC setup
+ *
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Setup result
+ */
+export async function initializeDefaultRBAC(models) {
+  const { Permission } = models;
+
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Create default permissions
+  const permissions = await createDefaultPermissions(models);
+
+  // Create default roles
+  const adminRole = await createRole(
+    {
+      name: 'admin',
+      description: 'System Administrator - Full access',
+    },
+    models,
+  );
+
+  const userRole = await createRole(
+    {
+      name: 'user',
+      description: 'Regular User - Basic access',
+    },
+    models,
+  );
+
+  const moderatorRole = await createRole(
+    {
+      name: 'moderator',
+      description: 'Content Moderator - Limited admin access',
+    },
+    models,
+  );
+
+  // Create default groups
+  const groups = await createDefaultGroups(models);
+
+  // Assign all permissions to admin role
+  const allPermissions = await Permission.findAll();
+  await adminRole.setPermissions(allPermissions);
+
+  // Assign basic permissions to user role
+  const basicPermissions = await Permission.findAll({
+    where: {
+      name: {
+        [Op.in]: ['users:read', 'posts:read', 'comments:read', 'files:read'],
+      },
+    },
+  });
+  await userRole.setPermissions(basicPermissions);
+
+  // Assign moderation permissions to moderator role
+  const moderationPermissions = await Permission.findAll({
+    where: {
+      name: {
+        [Op.in]: [
+          'users:read',
+          'posts:read',
+          'posts:write',
+          'comments:read',
+          'comments:write',
+          'comments:moderate',
+          'files:read',
+        ],
+      },
+    },
+  });
+  await moderatorRole.setPermissions(moderationPermissions);
+
+  // Assign roles to groups
+  const adminGroup = groups.find(g => g.name === ADMIN_ROLE);
+  const staffGroup = groups.find(g => g.name === STAFF_ROLE);
+  const moderatorGroup = groups.find(g => g.name === MODERATOR_ROLE);
+
+  if (adminGroup) {
+    await adminGroup.addRole(adminRole);
+  }
+
+  if (staffGroup) {
+    await staffGroup.addRoles([moderatorRole, userRole]);
+  }
+
+  if (moderatorGroup) {
+    await moderatorGroup.addRole(moderatorRole);
+  }
+
+  return {
+    permissions: permissions.length,
+    roles: 3,
+    groups: groups.length,
+    message: 'Default RBAC setup completed successfully',
   };
 }

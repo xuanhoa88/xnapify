@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { userRbacService } from '../services';
+import * as userRbacService from '../../services/admin/user-assignment.service';
 
 // ========================================================================
 // USER ASSIGNMENT CONTROLLERS

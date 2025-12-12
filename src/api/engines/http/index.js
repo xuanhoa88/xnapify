@@ -11,14 +11,5 @@ export * from './response';
 // Request utilities
 export * from './request';
 
-// Middleware utilities
-export * from './middleware';
-
-// HTTP client utilities
-export * from './client';
-
-// Validation utilities
-export * from './validation';
-
 // Error handling utilities
 export * from './errors';

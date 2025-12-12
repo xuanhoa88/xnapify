@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { hashPassword } from '../utils/password';
+import { hashPassword } from '../../utils/password';
 
 /**
  * Create a new user

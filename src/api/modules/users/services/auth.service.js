@@ -5,7 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { hashPassword, verifyPassword } from '../utils/password';
+import {
+  hashPassword,
+  hashToken,
+  verifyPassword,
+  createTimedResetToken,
+  validateResetToken,
+} from '../utils/password';
 import { DEFAULT_ROLE, isAdmin } from '../constants/roles';
 
 // ========================================================================
@@ -313,13 +319,15 @@ export async function verifyEmail(token, models) {
 /**
  * Request password reset
  *
+ * Generates a secure reset token, stores the hash in the database,
+ * and returns the raw token for sending via email.
+ *
  * @param {string} email - User email
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Reset token info
- * @throws {Error} If user not found
+ * @returns {Promise<Object>} Reset token info (token for email, message)
  */
-export async function requestPasswordReset(email, models) {
-  const { User } = models;
+export async function requestResetPassword(email, models) {
+  const { User, PasswordResetToken } = models;
 
   const user = await User.findOne({ where: { email } });
   if (!user) {
@@ -327,61 +335,110 @@ export async function requestPasswordReset(email, models) {
     return { message: 'If the email exists, a reset link has been sent' };
   }
 
-  // Generate reset token (in real implementation, use JWT with expiration)
-  const resetToken = user.id; // Simplified - use proper JWT in production
+  // Invalidate any existing unused tokens for this user
+  await PasswordResetToken.update(
+    { used_at: new Date() },
+    {
+      where: {
+        user_id: user.id,
+        used_at: null,
+      },
+    },
+  );
 
-  // In a real implementation, you would:
-  // 1. Generate a secure JWT token with expiration
-  // 2. Store token hash in database or use stateless JWT
-  // 3. Send email with reset link
+  // Generate secure reset token (1 hour expiration)
+  const tokenData = createTimedResetToken(user.id, { expiresIn: 3600 });
 
+  // Store hashed token in database
+  await PasswordResetToken.create({
+    user_id: user.id,
+    hashed_token: tokenData.hashedToken,
+    expires_at: tokenData.expiresAt,
+    used_at: null,
+  });
+
+  // Return the raw token (to be sent via email)
+  // In production, you would send this via email instead of returning it
   return {
-    resetToken,
+    resetToken: tokenData.token,
     message: 'Password reset link sent to email',
+    // For development/testing only - remove in production
+    expiresAt: tokenData.expiresAt,
   };
 }
 
 /**
- * Reset password with token
+ * Reset password confirmation
  *
- * @param {string} token - Password reset token
+ * Validates the token using timing-safe comparison, checks expiration
+ * and single-use constraints, then updates the user's password.
+ *
+ * @param {string} token - Password reset token (raw token from email)
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @returns {Promise<Object>} Updated user
- * @throws {Error} If token is invalid or expired
+ * @throws {Error} If token is invalid, expired, or already used
  */
-export async function resetPassword(token, newPassword, { models }) {
-  const { User } = models;
+export async function resetPasswordConfirmation(
+  token,
+  newPassword,
+  { models },
+) {
+  const { User, PasswordResetToken } = models;
 
-  try {
-    // Decode token to get user ID (simplified)
-    const user_id = token; // In reality, decode and verify JWT token
+  // Hash the submitted token and look it up in the database
+  const submittedHash = hashToken(token);
 
-    const user = await User.findByPk(user_id);
-    if (!user) {
-      const error = new Error('User not found');
-      error.name = 'UserNotFoundError';
-      error.status = 404;
-      throw error;
-    }
-
-    // Hash new password using global auth utilities
-    const hashedPassword = await hashPassword(newPassword);
-
-    // Update password and reset failed login attempts
-    await user.update({
-      password: hashedPassword,
-      failed_login_attempts: 0,
-      is_locked: false,
-    });
-
-    return user;
-  } catch (error) {
+  // Find the token record by hash
+  const tokenRecord = await PasswordResetToken.findOne({
+    where: { hashed_token: submittedHash },
+  });
+  if (!tokenRecord) {
+    const error = new Error('Invalid token');
     error.name = 'InvalidTokenError';
     error.status = 400;
     throw error;
   }
+
+  // Validate the token using our secure validation function
+  const validation = validateResetToken(token, {
+    hashedToken: tokenRecord.hashed_token,
+    expiresAt: tokenRecord.expires_at,
+    usedAt: tokenRecord.used_at,
+  });
+
+  if (!validation.valid) {
+    const error = new Error(validation.errors.join(', '));
+    error.name = 'InvalidTokenError';
+    error.status = 400;
+    throw error;
+  }
+
+  // Get the user
+  const user = await User.findByPk(tokenRecord.user_id);
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  // Hash new password
+  const hashedPassword = await hashPassword(newPassword);
+
+  // Update password and reset failed login attempts
+  await user.update({
+    password: hashedPassword,
+    password_changed_at: new Date(),
+    failed_login_attempts: 0,
+    is_locked: false,
+  });
+
+  // Mark token as used (single-use enforcement)
+  await tokenRecord.update({ used_at: new Date() });
+
+  return user;
 }
 
 /**

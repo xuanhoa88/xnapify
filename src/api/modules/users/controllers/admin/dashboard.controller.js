@@ -6,12 +6,6 @@
  */
 
 /**
- * Dashboard Controller
- *
- * Handles admin dashboard statistics and recent activity.
- */
-
-/**
  * Get dashboard statistics
  *
  * Returns system-wide statistics including user counts, role counts,

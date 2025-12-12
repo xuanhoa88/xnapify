@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { roleService } from '../services';
-import { SYSTEM_ROLES } from '../constants/roles';
+import * as roleService from '../../services/admin/role.service';
+import { SYSTEM_ROLES } from '../../constants/roles';
 
 // ========================================================================
 // ROLE MANAGEMENT CONTROLLERS
@@ -220,5 +220,35 @@ export async function assignPermissionsToRole(req, res) {
     }
 
     return http.sendServerError(res, 'Failed to assign permissions to role');
+  }
+}
+
+// ========================================================================
+// RBAC SYSTEM CONTROLLERS
+// ========================================================================
+
+/**
+ * Initialize roles, permissions and groups
+ *
+ * @route   POST /api/admin/roles/initialize
+ * @access  Admin (requires 'system:admin' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function initializeDefaults(req, res) {
+  const http = req.app.get('http');
+  try {
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Initialize RBAC
+    const result = await roleService.initializeDefaultRBAC(models);
+
+    return http.sendSuccess(res, {
+      message: 'RBAC system initialized successfully',
+      ...result,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to initialize RBAC system');
   }
 }

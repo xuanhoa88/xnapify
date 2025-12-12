@@ -30,6 +30,34 @@
     "error": "Lỗi",
     "success": "<0>Thành công!</0> Nếu có tài khoản với email này, bạn sẽ nhận được một liên kết để reset mật khẩu."
   },
+  "resetPasswordConfirmation": {
+    "title": "Đặt lại mật khẩu",
+    "token": "Mã xác nhận",
+    "tokenPlaceholder": "Nhập mã từ email của bạn",
+    "newPassword": "Mật khẩu mới",
+    "confirmPassword": "Xác nhận mật khẩu mới",
+    "passwordMismatch": "Mật khẩu không khớp",
+    "passwordTooShort": "Mật khẩu phải có ít nhất 8 ký tự",
+    "loading": "Đang đặt lại mật khẩu...",
+    "submit": "Đặt lại mật khẩu",
+    "backToLogin": "Quay lại đăng nhập",
+    "goToLogin": "Đi đến đăng nhập",
+    "error": "Lỗi",
+    "success": "<0>Thành công!</0> Mật khẩu của bạn đã được đặt lại. Bạn có thể đăng nhập bằng mật khẩu mới."
+  },
+  "emailVerification": {
+    "title": "Xác minh email",
+    "description": "Nhập mã xác minh từ email của bạn hoặc nhấp vào liên kết trong email.",
+    "token": "Mã xác minh",
+    "tokenPlaceholder": "Nhập mã từ email của bạn",
+    "verifying": "Đang xác minh email của bạn...",
+    "loading": "Đang xác minh...",
+    "submit": "Xác minh email",
+    "backToLogin": "Quay lại đăng nhập",
+    "goToLogin": "Đi đến đăng nhập",
+    "error": "Lỗi",
+    "success": "<0>Thành công!</0> Email của bạn đã được xác minh. Bạn có thể đăng nhập vào tài khoản ngay bây giờ."
+  },
   "profile": {
     "displayName": "Tên hiển thị",
     "firstName": "Tên",

@@ -158,7 +158,7 @@ export async function updatePermission(permission_id, updateData, models) {
  *
  * @param {string} permission_id - Permission ID
  * @param {Object} models - Database models
- * @returns {Promise<boolean>} Success status
+ * @returns {Promise<Object>} Deleted permission
  */
 export async function deletePermission(permission_id, models) {
   const { Permission } = models;
@@ -188,7 +188,7 @@ export async function deletePermission(permission_id, models) {
   }
 
   await permission.destroy();
-  return true;
+  return permission;
 }
 
 /**

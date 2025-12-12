@@ -51,6 +51,16 @@ const userSlice = createSlice({
     resetPasswordSuccess: state => state,
     resetPasswordError: state => state,
 
+    // Reset password confirmation actions (don't affect user state)
+    resetPasswordConfirmationStart: state => state,
+    resetPasswordConfirmationSuccess: state => state,
+    resetPasswordConfirmationError: state => state,
+
+    // Email verification actions (don't affect user state)
+    emailVerificationStart: state => state,
+    emailVerificationSuccess: state => state,
+    emailVerificationError: state => state,
+
     // Update user
     updateUser: (state, action) => {
       if (!state) return action.payload;
@@ -73,6 +83,12 @@ export const {
   resetPasswordStart,
   resetPasswordSuccess,
   resetPasswordError,
+  resetPasswordConfirmationStart,
+  resetPasswordConfirmationSuccess,
+  resetPasswordConfirmationError,
+  emailVerificationStart,
+  emailVerificationSuccess,
+  emailVerificationError,
   updateUser,
 } = userSlice.actions;
 

@@ -30,6 +30,34 @@
     "error": "Error",
     "success": "<0>Success!</0> If an account exists with that email, you will receive a password reset link shortly."
   },
+  "resetPasswordConfirmation": {
+    "title": "Reset Password",
+    "token": "Reset Token",
+    "tokenPlaceholder": "Enter the token from your email",
+    "newPassword": "New Password",
+    "confirmPassword": "Confirm New Password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordTooShort": "Password must be at least 8 characters",
+    "loading": "Resetting password...",
+    "submit": "Reset Password",
+    "backToLogin": "Back to Log In",
+    "goToLogin": "Go to Log In",
+    "error": "Error",
+    "success": "<0>Success!</0> Your password has been reset. You can now log in with your new password."
+  },
+  "emailVerification": {
+    "title": "Email Verification",
+    "description": "Enter the verification token from your email or click the link in the email.",
+    "token": "Verification Token",
+    "tokenPlaceholder": "Enter the token from your email",
+    "verifying": "Verifying your email...",
+    "loading": "Verifying...",
+    "submit": "Verify Email",
+    "backToLogin": "Back to Log In",
+    "goToLogin": "Go to Log In",
+    "error": "Error",
+    "success": "<0>Success!</0> Your email has been verified. You can now log in to your account."
+  },
   "profile": {
     "displayName": "Display Name",
     "firstName": "First Name",

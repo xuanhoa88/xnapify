@@ -97,18 +97,18 @@ export function validateOAuthCallback(params, expectedState) {
   const errors = [];
 
   if (!params.code) {
-    errors.push('Authorization code is missing');
+    errors.push('OAUTH_CODE_REQUIRED');
   }
 
   if (!params.state) {
-    errors.push('State parameter is missing');
+    errors.push('OAUTH_STATE_REQUIRED');
   } else if (params.state !== expectedState) {
-    errors.push('State parameter mismatch - possible CSRF attack');
+    errors.push('OAUTH_STATE_MISMATCH');
   }
 
   if (params.error) {
     errors.push(
-      `OAuth error: ${params.error} - ${params.error_description || 'Unknown error'}`,
+      `OAUTH_ERROR: ${params.error} - ${params.error_description || 'OAUTH_ERROR_UNKNOWN'}`,
     );
   }
 

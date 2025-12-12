@@ -72,14 +72,11 @@ export function getFilters(req, allowedFilters = []) {
 /**
  * Extract search parameters from request query
  * @param {Object} req - Express request object
- * @param {Array} searchFields - Fields to search in
- * @returns {Object} Search parameters
+ * @returns {string} Search query
  */
-export function getSearch(req, searchFields = []) {
+export function getSearch(req) {
   const query = req.query.search || req.query.q || '';
-  const fields = searchFields.length > 0 ? searchFields : ['name', 'title'];
-
-  return { query: query.trim(), fields };
+  return query;
 }
 
 /**
@@ -142,118 +139,4 @@ export function getProtocol(req) {
  */
 export function getFullUrl(req) {
   return `${getProtocol(req)}://${req.get('host')}${req.originalUrl}`;
-}
-
-/**
- * Extract bearer token from Authorization header
- * @param {Object} req - Express request object
- * @returns {string|null} Bearer token or null
- */
-export function getBearerToken(req) {
-  const authHeader = req.get('Authorization');
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    return authHeader.substring(7);
-  }
-  return null;
-}
-
-/**
- * Parse request body safely
- * @param {Object} req - Express request object
- * @param {Array} requiredFields - Required fields in body
- * @param {Array} optionalFields - Optional fields in body
- * @returns {Object} Parsed body with validation
- */
-export function parseBody(req, requiredFields = [], optionalFields = []) {
-  const body = req.body || {};
-  const result = { data: {}, errors: [] };
-
-  // Check required fields
-  requiredFields.forEach(field => {
-    if (body[field] == null || body[field] === '') {
-      result.errors.push(`Field '${field}' is required`);
-    } else {
-      result.data[field] = body[field];
-    }
-  });
-
-  // Add optional fields if present
-  optionalFields.forEach(field => {
-    if (body[field] != null) {
-      result.data[field] = body[field];
-    }
-  });
-
-  result.isValid = result.errors.length === 0;
-  return result;
-}
-
-/**
- * Sanitize string input
- * @param {string} input - Input string
- * @param {Object} options - Sanitization options
- * @returns {string} Sanitized string
- */
-export function sanitizeString(input, options = {}) {
-  if (typeof input !== 'string' || input.trim().length === 0) {
-    return '';
-  }
-
-  let sanitized = input.trim();
-
-  if (options.maxLength) {
-    sanitized = sanitized.substring(0, options.maxLength);
-  }
-
-  if (options.removeHtml) {
-    sanitized = sanitized.replace(/<[^>]*>/g, '');
-  }
-
-  if (options.removeSpecialChars) {
-    sanitized = sanitized.replace(/[^\w\s-]/g, '');
-  }
-
-  return sanitized;
-}
-
-/**
- * Validate email format
- * @param {string} email - Email address
- * @returns {boolean} True if valid email
- */
-export function isValidEmail(email) {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
-}
-
-/**
- * Validate URL format
- * @param {string} url - URL string
- * @returns {boolean} True if valid URL
- */
-export function isValidUrl(url) {
-  try {
-    new URL(url);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Get request metadata for logging
- * @param {Object} req - Express request object
- * @returns {Object} Request metadata
- */
-export function getRequestMetadata(req) {
-  return {
-    method: req.method,
-    url: req.originalUrl,
-    ip: getClientIP(req),
-    user_agent: getUserAgent(req),
-    timestamp: new Date().toISOString(),
-    protocol: getProtocol(req),
-    isAjax: isAjax(req),
-    isJson: isJson(req),
-  };
 }

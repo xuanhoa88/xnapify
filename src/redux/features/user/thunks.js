@@ -19,6 +19,12 @@ import {
   resetPasswordStart,
   resetPasswordSuccess,
   resetPasswordError,
+  resetPasswordConfirmationStart,
+  resetPasswordConfirmationSuccess,
+  resetPasswordConfirmationError,
+  emailVerificationStart,
+  emailVerificationSuccess,
+  emailVerificationError,
   updateUser,
 } from './slice';
 
@@ -173,6 +179,69 @@ export function resetPassword({ email }) {
       return { success: true, message: data.message };
     } catch (error) {
       dispatch(resetPasswordError(error.message));
+
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Reset password confirmation
+ *
+ * Confirms password reset with token and new password
+ *
+ * @param {Object} data - Confirmation data
+ * @param {string} data.token - Reset token from email
+ * @param {string} data.password - New password
+ * @returns {Function} Redux thunk action
+ */
+export function resetPasswordConfirmation({ token, password }) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(resetPasswordConfirmationStart());
+
+    try {
+      const { data } = await fetch('/api/users/reset-password-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token, password }),
+      });
+
+      dispatch(resetPasswordConfirmationSuccess());
+
+      return { success: true, message: data.message };
+    } catch (error) {
+      dispatch(resetPasswordConfirmationError(error.message));
+
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Email verification
+ *
+ * Verifies email address with token
+ *
+ * @param {Object} data - Verification data
+ * @param {string} data.token - Verification token from email
+ * @returns {Function} Redux thunk action
+ */
+export function emailVerification({ token }) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(emailVerificationStart());
+
+    try {
+      const { data } = await fetch('/api/users/email-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
+      dispatch(emailVerificationSuccess());
+
+      return { success: true, message: data.message };
+    } catch (error) {
+      dispatch(emailVerificationError(error.message));
 
       return { success: false, error: error.message };
     }

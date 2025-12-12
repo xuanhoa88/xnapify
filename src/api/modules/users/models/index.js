@@ -21,6 +21,9 @@ import createRolePermissionModel from './RolePermission';
 import createUserGroupModel from './UserGroup';
 import createGroupRoleModel from './GroupRole';
 
+// Token models (factory functions)
+import createPasswordResetTokenModel from './PasswordResetToken';
+
 /**
  * Initialize user-related model relationships
  *
@@ -41,6 +44,7 @@ function initializeUserRelationships(models) {
     RolePermission,
     UserGroup,
     GroupRole,
+    PasswordResetToken,
   } = models;
   // ============================================================================
   // User Relationships
@@ -129,6 +133,22 @@ function initializeUserRelationships(models) {
     otherKey: 'group_id',
     as: 'groups',
   });
+
+  // ============================================================================
+  // Token Relationships
+  // ============================================================================
+
+  // User <-> PasswordResetToken (One-to-Many)
+  User.hasMany(PasswordResetToken, {
+    foreignKey: 'user_id',
+    as: 'passwordResetTokens',
+    onUpdate: 'CASCADE',
+    onDelete: 'CASCADE',
+  });
+  PasswordResetToken.belongsTo(User, {
+    foreignKey: 'user_id',
+    as: 'user',
+  });
 }
 
 /**
@@ -170,6 +190,7 @@ export default function initializeAuthModels(db) {
   const RolePermission = createRolePermissionModel(db);
   const UserGroup = createUserGroupModel(db);
   const GroupRole = createGroupRoleModel(db);
+  const PasswordResetToken = createPasswordResetTokenModel(db);
 
   // Prepare models object for relationships
   const models = {
@@ -183,6 +204,7 @@ export default function initializeAuthModels(db) {
     RolePermission,
     UserGroup,
     GroupRole,
+    PasswordResetToken,
   };
 
   // Initialize all model relationships

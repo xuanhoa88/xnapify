@@ -14,18 +14,6 @@
 export const isAuthenticated = state => state.user && !!state.user.id;
 
 /**
- * Check if user has admin role
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if user is admin
- */
-export const isAdmin = state => {
-  const { user } = state;
-  if (!user) return false;
-  return user.role === 'admin' || user.is_admin === true;
-};
-
-/**
  * Get current user
  *
  * @param {Object} state - Redux state
@@ -65,4 +53,15 @@ export const getCurrentUserDisplayName = state => {
     return state.user.profile.display_name;
   // Fallback to email
   return state.user.email;
+};
+
+/**
+ * Check if user has admin role
+ *
+ * @param {Object} state - Redux state
+ * @returns {boolean} True if user has admin role
+ */
+export const isAdmin = state => {
+  if (!state.user || !state.user.roles) return false;
+  return state.user.roles.includes('admin');
 };

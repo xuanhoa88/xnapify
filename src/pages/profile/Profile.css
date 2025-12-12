@@ -163,6 +163,50 @@
   font-weight: 700;
 }
 
+.success strong {
+  font-weight: 700;
+}
+
+.info {
+  margin-bottom: 15px;
+  padding: 10px 15px;
+  border: 1px solid #bee5eb;
+  border-radius: 4px;
+  background-color: #d1ecf1;
+  color: #0c5460;
+  text-align: center;
+}
+
+.description {
+  color: var(--color-text-secondary);
+  text-align: center;
+  margin-bottom: var(--spacing-6);
+  line-height: var(--line-height-relaxed);
+}
+
+.buttonLink {
+  display: block;
+  width: 100%;
+  margin: var(--spacing-2) 0;
+  padding: var(--spacing-3);
+  border: none;
+  background: transparent;
+  color: var(--color-primary);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: color var(--transition-fast);
+  border-radius: var(--radius-md);
+}
+
+.buttonLink:hover {
+  color: var(--color-primary-hover);
+  text-decoration: underline;
+  background: var(--color-background-tertiary);
+}
+
 .button {
   display: block;
   box-sizing: border-box;

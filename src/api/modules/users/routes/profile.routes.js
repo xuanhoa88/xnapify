@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { profileController } from '../controllers';
+import * as profileController from '../controllers/profile.controller';
 
 /**
  * Profile Management Routes
@@ -30,39 +30,35 @@ export default function profileRoutes(deps, middlewares, app) {
   const router = deps.Router();
 
   /**
-   * @route   GET /profile
+   * @route   GET /
    * @desc    Get user profile with extended information
    * @access  Private (requires authentication)
    */
-  router.get('/profile', requireAuth, profileController.getProfile);
+  router.get('/', requireAuth, profileController.getProfile);
 
   /**
-   * @route   PUT /profile
+   * @route   PUT /
    * @desc    Update user profile information
    * @access  Private (requires authentication)
    * @body    { display_name, first_name, last_name, bio, location, website }
    */
-  router.put('/profile', requireAuth, profileController.updateProfile);
+  router.put('/', requireAuth, profileController.updateProfile);
 
   /**
-   * @route   POST /profile/avatar
+   * @route   POST /avatar
    * @desc    Upload user avatar image
    * @access  Private (requires authentication)
    * @body    FormData with 'avatar' file field
    */
-  router.post('/profile/avatar', requireAuth, profileController.uploadAvatar);
+  router.post('/avatar', requireAuth, profileController.uploadAvatar);
 
   /**
-   * @route   PUT /profile/password
+   * @route   PUT /password
    * @desc    Change user password
    * @access  Private (requires authentication)
    * @body    { currentPassword, newPassword }
    */
-  router.put(
-    '/profile/password',
-    requireAuth,
-    profileController.changePassword,
-  );
+  router.put('/password', requireAuth, profileController.changePassword);
 
   return router;
 }

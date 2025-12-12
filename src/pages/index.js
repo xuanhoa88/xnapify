@@ -97,7 +97,7 @@ async function buildRoutes(pagesContext) {
       // Handle dynamic exports (functions)
       if (typeof pageModule === 'function') {
         // Call function and await result (works for both sync and async)
-        const result = await pageModule();
+        const result = await pageModule(buildRoutes);
         [routeConfig, routeAction] = result;
       }
       // Handle static exports
@@ -113,11 +113,16 @@ async function buildRoutes(pagesContext) {
       }
 
       // Validate route configuration
-      if (!routeConfig || typeof routeConfig !== 'object') {
+      if (!routeConfig) {
         console.error(
-          `[Routes] Invalid route configuration in ${folderName}/index.js. Route must be an object.`,
+          `[Routes] Invalid route configuration in ${folderName}/index.js. Route must be an object or function returning an object.`,
         );
         return null;
+      }
+
+      // Call routeConfig function with buildRoutes to get the actual config
+      if (typeof routeConfig === 'function') {
+        routeConfig = await routeConfig(buildRoutes);
       }
 
       // Validate action function
@@ -208,56 +213,44 @@ export default async function createRouter() {
   const routes = await buildRoutes(pagesContext);
 
   // Create router with loaded routes
-  const router = new IsomorphicRouter(
-    {
-      // Disable auto-delegation for root route since we need to post-process child results
-      autoDelegate: false,
+  const router = new IsomorphicRouter({
+    // Disable auto-delegation for root route since we need to post-process child results
+    autoDelegate: false,
 
-      // Add action to execute child route and wrap with metadata
-      async action(context) {
-        // Reset UI state for non-admin, non-home routes
-        context.store.dispatch(setAdminPanel(false));
-        context.store.dispatch(setPageHeader(false));
+    // Add action to execute child route and wrap with metadata
+    async action(context) {
+      // Reset UI state for non-admin, non-home routes
+      context.store.dispatch(setAdminPanel(false));
+      context.store.dispatch(setPageHeader(false));
 
-        // Execute child route
-        const route = await context.next();
+      // Execute child route
+      const route = await context.next();
 
-        // Handle case where no route matches
-        if (!route) {
-          return null;
-        }
+      // Handle case where no route matches
+      if (!route) {
+        return null;
+      }
 
-        // Get application metadata from Redux runtime variables
-        const state = context.store.getState();
-        const appName = getRuntimeVariable(
-          state,
-          'appName',
-          'React Starter Kit',
-        );
-        const appDescription = getRuntimeVariable(
-          state,
-          'appDescription',
-          'Boilerplate for React.js web applications',
-        );
+      // Get application metadata from Redux runtime variables
+      const state = context.store.getState();
+      const appName = getRuntimeVariable(state, 'appName', 'React Starter Kit');
+      const appDescription = getRuntimeVariable(
+        state,
+        'appDescription',
+        'Boilerplate for React.js web applications',
+      );
 
-        // Apply default metadata
-        return {
-          ...route,
-          title: (route.title && `${route.title} - ${appName}`) || appName,
-          description: route.description || appDescription,
-        };
-      },
-
-      // Add routes from page modules
-      children: routes,
+      // Apply default metadata
+      return {
+        ...route,
+        title: (route.title && `${route.title} - ${appName}`) || appName,
+        description: route.description || appDescription,
+      };
     },
-    {
-      // Pass utilities through context so they're available to all route actions
-      context: {
-        buildRoutes,
-      },
-    },
-  );
+
+    // Add routes from page modules
+    children: routes,
+  });
 
   if (__DEV__) {
     console.log('[Routes] Router created successfully');

@@ -1,8 +1,8 @@
 /**
- * Password Security Utilities
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * Provides utilities for secure password handling, hashing, and validation.
- * Implements modern security best practices for password management.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import crypto from 'crypto';
@@ -20,19 +20,6 @@ const DEFAULT_PASSWORD_CONFIG = Object.freeze({
   iterations: 16384, // scrypt N parameter
   blockSize: 8, // scrypt r parameter
   parallelization: 1, // scrypt p parameter
-});
-
-/**
- * Password strength requirements
- */
-const DEFAULT_STRENGTH_CONFIG = Object.freeze({
-  minLength: 8,
-  maxLength: 128,
-  requireUppercase: true,
-  requireLowercase: true,
-  requireNumbers: true,
-  requireSpecialChars: true,
-  forbidCommonPasswords: true,
 });
 
 /**
@@ -95,7 +82,7 @@ export async function verifyPassword(password, hashedPassword, options = {}) {
  * @param {boolean} [options.excludeAmbiguous=true] - Exclude ambiguous chars
  * @returns {string} Generated password
  */
-export function generateSecurePassword(options = {}) {
+export function generatePassword(options = {}) {
   const {
     length = 16,
     includeSymbols = true,
@@ -122,135 +109,95 @@ export function generateSecurePassword(options = {}) {
 }
 
 /**
- * Validate password strength
+ * Hash a token for secure storage using SHA-256
  *
- * @param {string} password - Password to validate
- * @param {Object} [options] - Validation options
- * @returns {Object} Validation result
+ * @param {string} token - Raw token string
+ * @returns {string} Hashed token (hex encoded)
  */
-export function validatePasswordStrength(password, options = {}) {
-  const config = { ...DEFAULT_STRENGTH_CONFIG, ...options };
-  const errors = [];
-  let score = 0;
-
-  // Length validation
-  if (password.length < config.minLength) {
-    errors.push(
-      `Password must be at least ${config.minLength} characters long`,
-    );
-  } else if (password.length >= config.minLength) {
-    score += 1;
-  }
-
-  if (password.length > config.maxLength) {
-    errors.push(`Password must not exceed ${config.maxLength} characters`);
-  }
-
-  // Character type validation
-  if (config.requireUppercase && !/[A-Z]/.test(password)) {
-    errors.push('Password must contain at least one uppercase letter');
-  } else if (/[A-Z]/.test(password)) {
-    score += 1;
-  }
-
-  if (config.requireLowercase && !/[a-z]/.test(password)) {
-    errors.push('Password must contain at least one lowercase letter');
-  } else if (/[a-z]/.test(password)) {
-    score += 1;
-  }
-
-  if (config.requireNumbers && !/[0-9]/.test(password)) {
-    errors.push('Password must contain at least one number');
-  } else if (/[0-9]/.test(password)) {
-    score += 1;
-  }
-
-  if (config.requireSpecialChars && !/[^A-Za-z0-9]/.test(password)) {
-    errors.push('Password must contain at least one special character');
-  } else if (/[^A-Za-z0-9]/.test(password)) {
-    score += 1;
-  }
-
-  // Common password check (basic implementation)
-  if (config.forbidCommonPasswords) {
-    const commonPasswords = [
-      'password',
-      '123456',
-      '123456789',
-      'qwerty',
-      'abc123',
-      'password123',
-      'admin',
-      'letmein',
-      'welcome',
-      'monkey',
-    ];
-
-    if (commonPasswords.includes(password.toLowerCase())) {
-      errors.push('Password is too common');
-    }
-  }
-
-  // Calculate strength level
-  let strength = 'weak';
-  if (score >= 4 && errors.length === 0) {
-    strength = 'strong';
-  } else if (score >= 3 && errors.length === 0) {
-    strength = 'medium';
-  }
-
-  return {
-    valid: errors.length === 0,
-    errors,
-    strength,
-    score,
-  };
-}
-
-/**
- * Generate a password reset token
- *
- * @param {number} [length=32] - Token length in bytes
- * @returns {string} Secure reset token
- */
-export function generateResetToken(length = 32) {
-  return crypto.randomBytes(length).toString('hex');
+export function hashToken(token) {
+  return crypto.createHash('sha256').update(token).digest('hex');
 }
 
 /**
  * Create a time-limited password reset token
  *
+ * Returns both the raw token (to send to user) and the hashed token (to store in database).
+ * Only store the hashedToken in your database for security.
+ *
  * @param {string} userId - User ID
- * @param {number} [expiresIn=3600] - Expiration time in seconds
- * @returns {Object} Reset token data
+ * @param {Object} [options] - Token options
+ * @param {number} [options.expiresIn=3600] - Expiration time in seconds
+ * @param {number} [options.tokenSize=32] - Token size in bytes (results in hex string of 2x length)
+ * @returns {Object} Reset token data with { token, hashedToken, userId, expiresAt, createdAt, usedAt }
  */
-export function createTimedResetToken(userId, expiresIn = 3600) {
-  const token = generateResetToken();
-  const expiresAt = new Date(Date.now() + expiresIn * 1000);
+export function createTimedResetToken(userId, options = {}) {
+  const { expiresIn = 3600, tokenSize = 32 } = options;
+  const token = crypto.randomBytes(tokenSize).toString('hex');
+  const hashedToken = hashToken(token);
 
   return {
-    token,
+    token, // Send this to the user (e.g., in reset email)
+    hashedToken, // Store this in database
     userId,
-    expiresAt,
+    expiresAt: new Date(Date.now() + expiresIn * 1000),
     createdAt: new Date(),
+    usedAt: null, // Set this when token is used to prevent reuse
   };
 }
 
 /**
  * Validate a timed reset token
  *
- * @param {Object} tokenData - Token data from storage
- * @returns {Object} Validation result
+ * Performs timing-safe comparison of the submitted token against stored hash,
+ * checks expiration, and verifies the token hasn't been used.
+ *
+ * @param {string} submittedToken - Raw token submitted by user
+ * @param {Object} tokenData - Token data from storage (should contain hashedToken)
+ * @returns {Object} Validation result with { valid, errors }
  */
-export function validateResetToken(tokenData) {
+export function validateResetToken(submittedToken, tokenData) {
   const errors = [];
 
+  if (!submittedToken) {
+    errors.push('TOKEN_REQUIRED');
+    return { valid: false, errors };
+  }
+
   if (!tokenData) {
-    errors.push('Reset token not found');
+    errors.push('TOKEN_NOT_FOUND');
+    return { valid: false, errors };
+  }
+
+  // Timing-safe comparison of hashed tokens
+  const submittedHash = hashToken(submittedToken);
+  const storedHash = tokenData.hashedToken;
+
+  if (!storedHash) {
+    errors.push('TOKEN_INVALID');
   } else {
-    if (new Date() > new Date(tokenData.expiresAt)) {
-      errors.push('Reset token has expired');
+    try {
+      const submittedBuffer = Buffer.from(submittedHash, 'hex');
+      const storedBuffer = Buffer.from(storedHash, 'hex');
+
+      if (
+        submittedBuffer.length !== storedBuffer.length ||
+        !crypto.timingSafeEqual(submittedBuffer, storedBuffer)
+      ) {
+        errors.push('TOKEN_INVALID');
+      }
+    } catch {
+      errors.push('TOKEN_INVALID');
     }
+  }
+
+  // Check expiration
+  if (tokenData.expiresAt && new Date() > new Date(tokenData.expiresAt)) {
+    errors.push('TOKEN_EXPIRED');
+  }
+
+  // Check if already used (single-use enforcement)
+  if (tokenData.usedAt) {
+    errors.push('TOKEN_USED');
   }
 
   return {

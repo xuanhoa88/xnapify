@@ -15,8 +15,8 @@ import {
   getDashboardLoading,
   getDashboardError,
   getDashboardRecentActivity,
-} from '../../redux';
-import s from './Admin.css';
+} from '../../../redux';
+import s from './Dashboard.css';
 
 /**
  * Format date to relative time (e.g., "2 mins ago")

@@ -95,7 +95,7 @@ export async function downloadFiles(fileNames, options = {}) {
         if (!exists) {
           errors.push({
             fileName,
-            error: 'File not found',
+            error: 'FILE_NOT_FOUND',
           });
           continue;
         }

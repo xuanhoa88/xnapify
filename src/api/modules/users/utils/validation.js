@@ -37,15 +37,15 @@ export function validatePassword(password) {
   const errors = [];
 
   if (!password) {
-    return { isValid: false, errors: ['Password is required'] };
+    errors.push('PASSWORD_REQUIRED');
   }
 
   if (password.length < PASSWORD_MIN_LENGTH) {
-    errors.push(`Password must be at least ${PASSWORD_MIN_LENGTH} characters`);
+    errors.push('PASSWORD_MIN_LENGTH');
   }
 
   if (password.length > PASSWORD_MAX_LENGTH) {
-    errors.push(`Password must be less than ${PASSWORD_MAX_LENGTH} characters`);
+    errors.push('PASSWORD_MAX_LENGTH');
   }
 
   return {
@@ -65,20 +65,15 @@ export function validateRegistration(data) {
 
   // Email validation
   if (!data.email) {
-    errors.email = 'Email is required';
+    errors.email = 'EMAIL_REQUIRED';
   } else if (!isValidEmail(data.email)) {
-    errors.email = 'Invalid email format';
+    errors.email = 'EMAIL_INVALID';
   }
 
   // Password validation
   const passwordValidation = validatePassword(data.password);
   if (!passwordValidation.isValid) {
     errors.password = passwordValidation.errors[0];
-  }
-
-  // Display name validation (optional)
-  if (data.display_name && data.display_name.length > 100) {
-    errors.display_name = 'Display name must be less than 100 characters';
   }
 
   return errors;
@@ -94,13 +89,13 @@ export function validateLogin(data) {
   const errors = {};
 
   if (!data.email) {
-    errors.email = 'Email is required';
+    errors.email = 'EMAIL_REQUIRED';
   } else if (!isValidEmail(data.email)) {
-    errors.email = 'Invalid email format';
+    errors.email = 'EMAIL_INVALID';
   }
 
   if (!data.password) {
-    errors.password = 'Password is required';
+    errors.password = 'PASSWORD_REQUIRED';
   }
 
   return errors;
@@ -116,9 +111,9 @@ export function validatePasswordReset(data) {
   const errors = {};
 
   if (!data.email) {
-    errors.email = 'Email is required';
+    errors.email = 'EMAIL_REQUIRED';
   } else if (!isValidEmail(data.email)) {
-    errors.email = 'Invalid email format';
+    errors.email = 'EMAIL_INVALID';
   }
 
   return errors;

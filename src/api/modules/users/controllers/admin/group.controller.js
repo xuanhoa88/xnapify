@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { groupService } from '../services';
-import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../constants/roles';
+import * as groupService from '../../services/admin/group.service';
+import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
 
 // ========================================================================
 // GROUP MANAGEMENT CONTROLLERS

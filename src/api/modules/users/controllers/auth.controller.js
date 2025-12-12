@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { authService } from '../services';
+import * as authService from '../services/auth.service';
 import { validateRegistration, validateLogin } from '../utils/validation';
 
 // ========================================================================
@@ -224,12 +224,12 @@ export async function refreshToken(req, res) {
 /**
  * Verify email address
  *
- * @route   POST /api/users/verify-email
+ * @route   POST /api/users/email-verification
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function verifyEmail(req, res) {
+export async function emailVerification(req, res) {
   const http = req.app.get('http');
   try {
     const { token } = req.body;
@@ -277,7 +277,7 @@ export async function verifyEmail(req, res) {
 /**
  * Request password reset
  *
- * @route   POST /api/users/forgot-password
+ * @route   POST /api/users/request-reset-password
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -297,7 +297,7 @@ export async function forgotPassword(req, res) {
     const models = req.app.get('models');
 
     // Request password reset
-    await authService.requestPasswordReset(email, models);
+    await authService.requestResetPassword(email, models);
 
     // Always return success for security (don't reveal if email exists)
     return http.sendSuccess(res, {
@@ -312,22 +312,25 @@ export async function forgotPassword(req, res) {
 }
 
 /**
- * Reset password with token
+ * Confirm reset password with token
  *
- * @route   POST /api/users/reset-password
+ * @route   POST /api/users/reset-password-confirmation
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function resetPassword(req, res) {
+export async function resetPasswordConfirmation(req, res) {
   const http = req.app.get('http');
   try {
-    const { token, password } = req.body;
+    const { token, password, confirmPassword } = req.body;
 
     // Validate input
     const errors = {};
-    if (!token) errors.token = 'Reset token is required';
-    if (!password) errors.password = 'New password is required';
+    if (!token) errors.token = 'RESET_TOKEN_REQUIRED';
+    if (!password) errors.password = 'NEW_PASSWORD_REQUIRED';
+    if (!confirmPassword) errors.confirmPassword = 'CONFIRM_PASSWORD_REQUIRED';
+    if (password && password !== confirmPassword)
+      errors.confirmPassword = 'PASSWORDS_DO_NOT_MATCH';
 
     if (Object.keys(errors).length > 0) {
       return http.sendValidationError(res, errors);
@@ -337,8 +340,11 @@ export async function resetPassword(req, res) {
     const models = req.app.get('models');
     const auth = req.app.get('auth');
 
-    // Reset password with token
-    await authService.resetPassword(token, password, { models, auth });
+    // Confirm reset password with token
+    await authService.resetPasswordConfirmation(token, password, {
+      models,
+      auth,
+    });
 
     return http.sendSuccess(res, {
       message: 'Password reset successfully',

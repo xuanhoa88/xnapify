@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { userAdminService, profileService } from '../services';
-import { SYSTEM_ROLES } from '../constants/roles';
+import * as userAdminService from '../../services/admin/user.service';
+import * as profileService from '../../services/profile.service';
+import { SYSTEM_ROLES } from '../../constants/roles';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)

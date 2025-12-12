@@ -431,9 +431,7 @@ export function validateJwtConfig(config = {}) {
       config.algorithm,
     )
   ) {
-    errors.push(
-      'Invalid algorithm. Must be one of: HS256, HS384, HS512, RS256, RS384, RS512',
-    );
+    errors.push('JWT_INVALID_ALGORITHM');
   }
 
   if (
@@ -441,21 +439,21 @@ export function validateJwtConfig(config = {}) {
     typeof config.expiresIn !== 'string' &&
     typeof config.expiresIn !== 'number'
   ) {
-    errors.push('expiresIn must be a string or number');
+    errors.push('JWT_INVALID_EXPIRES_IN');
   }
 
   if (
     config.issuer &&
     (typeof config.issuer !== 'string' || config.issuer.trim().length === 0)
   ) {
-    errors.push('issuer must be a string');
+    errors.push('JWT_INVALID_ISSUER');
   }
 
   if (
     config.audience &&
     (typeof config.audience !== 'string' || config.audience.trim().length === 0)
   ) {
-    errors.push('audience must be a string');
+    errors.push('JWT_INVALID_AUDIENCE');
   }
 
   return {

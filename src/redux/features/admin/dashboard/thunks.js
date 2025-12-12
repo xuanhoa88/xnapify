@@ -28,7 +28,7 @@ export function fetchDashboard() {
     dispatch(fetchDashboardStart());
 
     try {
-      const { data } = await fetch('/api/admin/dashboard/users');
+      const { data } = await fetch('/api/admin/users/dashboard');
 
       dispatch(fetchDashboardSuccess(data));
 
