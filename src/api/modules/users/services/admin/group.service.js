@@ -23,8 +23,8 @@ import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
  * @returns {Promise<Object>} Created group
  */
 export async function createGroup(groupData, models) {
-  const { Group } = models;
-  const { name, description, category, type } = groupData;
+  const { Group, Role } = models;
+  const { name, description, category, type, role_ids } = groupData;
 
   // Check if group already exists
   const existingGroup = await Group.findOne({ where: { name } });
@@ -42,6 +42,11 @@ export async function createGroup(groupData, models) {
     type,
     is_active: true,
   });
+
+  if (role_ids && Array.isArray(role_ids) && role_ids.length > 0) {
+    const roles = await Role.findAll({ where: { id: role_ids } });
+    await group.setRoles(roles);
+  }
 
   return group;
 }
@@ -180,7 +185,7 @@ export async function getGroupById(group_id, models) {
  * @returns {Promise<Object>} Updated group
  */
 export async function updateGroup(group_id, updateData, models) {
-  const { Group } = models;
+  const { Group, Role } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -204,6 +209,12 @@ export async function updateGroup(group_id, updateData, models) {
   }
 
   await group.update(updateData);
+
+  if (updateData.role_ids && Array.isArray(updateData.role_ids)) {
+    const roles = await Role.findAll({ where: { id: updateData.role_ids } });
+    await group.setRoles(roles);
+  }
+
   return group;
 }
 

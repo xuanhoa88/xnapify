@@ -5,17 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../contexts/history';
-import { updateGroup, fetchGroupById } from '../../../../redux';
+import { updateGroup, fetchGroupById, fetchRoles } from '../../../../redux';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
   const dispatch = useDispatch();
   const history = useHistory();
 
+  const { roles, loading: rolesLoading } = useSelector(
+    state => state.admin.roles,
+  );
   const [group, setGroup] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -23,12 +26,16 @@ function EditGroup({ groupId }) {
     category: '',
     type: '',
   });
+  const [selectedRoleIds, setSelectedRoleIds] = useState([]);
+  const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingGroup, setFetchingGroup] = useState(true);
 
   // Fetch group data on mount
   useEffect(() => {
+    dispatch(fetchRoles());
+
     async function loadGroup() {
       setFetchingGroup(true);
       const result = await dispatch(fetchGroupById(groupId));
@@ -54,8 +61,20 @@ function EditGroup({ groupId }) {
         category: group.category || '',
         type: group.type || '',
       });
+      setSelectedRoleIds(group.roles ? group.roles.map(r => r.id) : []);
     }
   }, [group]);
+
+  const filteredRoles = useMemo(
+    () =>
+      roles.filter(
+        role =>
+          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+          (role.description &&
+            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
+      ),
+    [roles, roleSearch],
+  );
 
   const handleChange = useCallback(e => {
     const { name, value } = e.target;
@@ -69,6 +88,14 @@ function EditGroup({ groupId }) {
     history.push('/admin/groups');
   }, [history]);
 
+  const toggleRole = useCallback(roleId => {
+    setSelectedRoleIds(prev =>
+      prev.includes(roleId)
+        ? prev.filter(id => id !== roleId)
+        : [...prev, roleId],
+    );
+  }, []);
+
   const handleSubmit = useCallback(
     async e => {
       e.preventDefault();
@@ -80,7 +107,9 @@ function EditGroup({ groupId }) {
       }
 
       setLoading(true);
-      const result = await dispatch(updateGroup(group.id, formData));
+      const result = await dispatch(
+        updateGroup(group.id, { ...formData, role_ids: selectedRoleIds }),
+      );
       setLoading(false);
 
       if (result.success) {
@@ -89,7 +118,7 @@ function EditGroup({ groupId }) {
         setError(result.error);
       }
     },
-    [dispatch, formData, history, group],
+    [formData, dispatch, group, selectedRoleIds, history],
   );
 
   if (fetchingGroup) {
@@ -202,6 +231,46 @@ function EditGroup({ groupId }) {
                 />
               </div>
             </div>
+          </div>
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>
+              Roles ({selectedRoleIds.length} selected)
+            </h3>
+            <input
+              type='text'
+              placeholder='Search roles...'
+              value={roleSearch}
+              onChange={e => setRoleSearch(e.target.value)}
+              className={s.searchInput}
+            />
+            {rolesLoading ? (
+              <div className={s.loading}>Loading roles...</div>
+            ) : (
+              <div className={s.checkboxGroup}>
+                {filteredRoles.length > 0 ? (
+                  filteredRoles.map(role => (
+                    <label key={role.id} className={s.checkboxItem}>
+                      <input
+                        type='checkbox'
+                        checked={selectedRoleIds.includes(role.id)}
+                        onChange={() => toggleRole(role.id)}
+                      />
+                      <span>
+                        {role.name}
+                        {role.description && (
+                          <span className={s.itemDescription}>
+                            {role.description}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  ))
+                ) : (
+                  <div className={s.noItemsFound}>No roles found</div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className={s.formActions}>

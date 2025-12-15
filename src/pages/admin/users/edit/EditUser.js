@@ -164,7 +164,7 @@ function EditUser({ userId }) {
         setError(result.error);
       }
     },
-    [dispatch, history, user, formData],
+    [formData, newPassword, dispatch, user, history],
   );
 
   // Filter roles based on search

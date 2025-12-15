@@ -174,7 +174,7 @@ export async function getRoleById(role_id, models) {
  * @returns {Promise<Object>} Updated role
  */
 export async function updateRole(role_id, updateData, models) {
-  const { Role, Permission } = models;
+  const { Role } = models;
 
   const role = await Role.findByPk(role_id);
   if (!role) {

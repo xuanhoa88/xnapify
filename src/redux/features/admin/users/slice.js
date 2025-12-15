@@ -46,7 +46,7 @@ const usersSlice = createSlice({
       state.loading = true;
       state.error = null;
     },
-    fetchUserByIdSuccess: (state, action) => {
+    fetchUserByIdSuccess: state => {
       state.loading = false;
       state.error = null;
     },

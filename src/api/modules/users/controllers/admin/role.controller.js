@@ -6,7 +6,6 @@
  */
 
 import * as roleService from '../../services/admin/role.service';
-import { SYSTEM_ROLES } from '../../constants/roles';
 
 // ========================================================================
 // ROLE MANAGEMENT CONTROLLERS

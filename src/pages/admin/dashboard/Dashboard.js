@@ -7,7 +7,6 @@
 
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import {
   fetchDashboard,
@@ -39,18 +38,7 @@ const formatRelativeTime = dateString => {
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 };
 
-/**
- * Admin Layout Component
- *
- * Provides the main layout for admin pages with a default dashboard view.
- * When children are provided, renders them instead of the default dashboard.
- * The default dashboard displays system statistics and recent activity.
- *
- * @param {Object} props - Component props
- * @param {React.ReactNode} [props.children] - Child components to render (admin sub-pages)
- * @returns {JSX.Element} Admin layout component
- */
-function Admin({ children }) {
+function Dashboard() {
   const dispatch = useDispatch();
   const stats = useSelector(getDashboardStats);
   const loading = useSelector(getDashboardLoading);
@@ -58,17 +46,10 @@ function Admin({ children }) {
   const recentActivity = useSelector(getDashboardRecentActivity);
 
   useEffect(() => {
-    // Only fetch dashboard data if we're showing the default dashboard
-    if (!children) {
-      dispatch(fetchDashboard());
-    }
-  }, [dispatch, children]);
+    dispatch(fetchDashboard());
+  }, [dispatch]);
 
   const renderContent = () => {
-    if (children) {
-      return children;
-    }
-
     // Loading state
     if (loading) {
       return <div className={s.loading}>Loading dashboard...</div>;
@@ -211,18 +192,7 @@ function Admin({ children }) {
     );
   };
 
-  return (
-    <div className={s.root}>
-      <div className={s.mainContent}>
-        <div className={s.container}>{renderContent()}</div>
-      </div>
-    </div>
-  );
+  return <div className={s.root}>{renderContent()}</div>;
 }
 
-Admin.propTypes = {
-  title: PropTypes.string,
-  children: PropTypes.node,
-};
-
-export default Admin;
+export default Dashboard;

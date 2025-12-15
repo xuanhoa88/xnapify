@@ -364,6 +364,7 @@ function initialize() {
 
   const attemptInit = () => {
     // Try to get hotClient from window (in case hotClient.js loaded first)
+    // eslint-disable-next-line no-underscore-dangle
     hotClient = window.__hotClientAPI__;
 
     // Or try requiring it (if this loads first)

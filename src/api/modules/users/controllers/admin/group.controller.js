@@ -22,7 +22,7 @@ import * as groupService from '../../services/admin/group.service';
 export async function createGroup(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, description, category, type } = req.body;
+    const { name, description, category, type, role_ids } = req.body;
 
     // Validate input
     if (!name) {
@@ -36,7 +36,7 @@ export async function createGroup(req, res) {
 
     // Create group
     const group = await groupService.createGroup(
-      { name, description, category, type },
+      { name, description, category, type, role_ids },
       models,
     );
 
@@ -117,7 +117,7 @@ export async function updateGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { name, description, category, type } = req.body;
+    const { name, description, category, type, role_ids } = req.body;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -125,7 +125,7 @@ export async function updateGroup(req, res) {
     // Update group
     const group = await groupService.updateGroup(
       id,
-      { name, description, category, type },
+      { name, description, category, type, role_ids },
       models,
     );
 

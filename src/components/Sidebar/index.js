@@ -58,7 +58,7 @@ function Sidebar() {
     if (ws) {
       ws.logout();
     }
-  }, [dispatch, handleCloseSidebar]);
+  }, [dispatch, handleCloseSidebar, ws]);
 
   const isActive = useCallback(
     (path, exact = false) => {
