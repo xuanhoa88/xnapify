@@ -1,8 +1,8 @@
 /**
- * Migration: Create Roles Table
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This migration creates the roles table for RBAC (Role-Based Access Control).
- * Roles define sets of permissions that can be assigned to users or groups.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**

@@ -1,8 +1,8 @@
 /**
- * Migration: Create Permissions Table
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This migration creates the permissions table for RBAC.
- * Permissions are granular actions that can be assigned to roles.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**

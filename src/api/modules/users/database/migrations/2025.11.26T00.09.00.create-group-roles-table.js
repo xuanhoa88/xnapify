@@ -1,8 +1,8 @@
 /**
- * Migration: Create UserRoles Table
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This migration creates the user_roles junction table for
- * many-to-many relationship between users and roles.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**
@@ -12,24 +12,24 @@ export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
   const { DataTypes } = Sequelize;
 
-  await queryInterface.createTable('user_roles', {
+  await queryInterface.createTable('group_roles', {
     id: {
       type: DataTypes.UUID,
       defaultValue: DataTypes.UUIDV1,
       primaryKey: true,
       allowNull: false,
-      comment: 'Unique user-role assignment identifier',
+      comment: 'Unique group-role assignment identifier',
     },
-    user_id: {
+    group_id: {
       type: DataTypes.UUID,
       allowNull: false,
       references: {
-        model: 'users',
+        model: 'groups',
         key: 'id',
       },
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
-      comment: 'User ID',
+      comment: 'Group ID',
     },
     role_id: {
       type: DataTypes.UUID,
@@ -55,9 +55,9 @@ export async function up({ context, Sequelize }) {
   });
 
   // Add indexes for better query performance
-  await queryInterface.addIndex('user_roles', ['user_id']);
-  await queryInterface.addIndex('user_roles', ['role_id']);
-  await queryInterface.addIndex('user_roles', ['user_id', 'role_id'], {
+  await queryInterface.addIndex('group_roles', ['group_id']);
+  await queryInterface.addIndex('group_roles', ['role_id']);
+  await queryInterface.addIndex('group_roles', ['group_id', 'role_id'], {
     unique: true,
   });
 }
@@ -67,5 +67,5 @@ export async function up({ context, Sequelize }) {
  */
 export async function down({ context }) {
   const { queryInterface } = context;
-  await queryInterface.dropTable('user_roles');
+  await queryInterface.dropTable('group_roles');
 }

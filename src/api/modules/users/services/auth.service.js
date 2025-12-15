@@ -6,7 +6,6 @@
  */
 
 import {
-  hashPassword,
   hashToken,
   verifyPassword,
   createTimedResetToken,
@@ -158,7 +157,7 @@ export async function getCurrentUser(userId, models) {
  */
 export async function registerUser(userData, { models }) {
   const { email, password, display_name } = userData;
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role } = models;
 
   // Check if user already exists
   const existingUser = await User.findOne({ where: { email } });
@@ -169,19 +168,15 @@ export async function registerUser(userData, { models }) {
     throw error;
   }
 
-  // Hash password using global auth utilities
-  const hashedPassword = await hashPassword(password);
-
-  // Create user with profile
+  // Create user with profile (password hashed automatically by model hook)
   const user = await User.create(
     {
       email,
       email_confirmed: false,
-      password: hashedPassword,
+      password,
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
-      role: DEFAULT_ROLE,
       profile: {
         display_name: display_name || email.split('@')[0],
       },
@@ -190,6 +185,12 @@ export async function registerUser(userData, { models }) {
       include: [{ model: UserProfile, as: 'profile' }],
     },
   );
+
+  // Assign default role
+  const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
+  if (defaultRole) {
+    await user.addRole(defaultRole);
+  }
 
   return user;
 }
@@ -227,16 +228,16 @@ export async function authenticateUser(email, password, { models }) {
 
   // Check if account is active
   if (!user.is_active) {
-    const error = new Error('Account inactive');
-    error.name = 'AccountInactiveError';
+    const error = new Error('User inactive');
+    error.name = 'UserInactiveError';
     error.status = 403;
     throw error;
   }
 
   // Check if account is locked
   if (user.is_locked) {
-    const error = new Error('Account locked');
-    error.name = 'AccountLockedError';
+    const error = new Error('User locked');
+    error.name = 'UserLockedError';
     error.status = 403;
     throw error;
   }
@@ -424,12 +425,9 @@ export async function resetPasswordConfirmation(
     throw error;
   }
 
-  // Hash new password
-  const hashedPassword = await hashPassword(newPassword);
-
-  // Update password and reset failed login attempts
+  // Update password (hashed automatically by model hook)
   await user.update({
-    password: hashedPassword,
+    password: newPassword,
     password_changed_at: new Date(),
     failed_login_attempts: 0,
     is_locked: false,

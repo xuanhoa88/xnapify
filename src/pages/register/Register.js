@@ -25,7 +25,7 @@ function Register({ title }) {
   const [loading, setLoading] = useState(false);
 
   // Get returnTo from query params
-  const returnTo = useQuery('returnTo') || '/';
+  const returnTo = useQuery('returnTo') || '/login';
 
   const handleSubmit = useCallback(
     async e => {
@@ -82,11 +82,7 @@ function Register({ title }) {
       <div className={s.container}>
         <h1>{title}</h1>
 
-        {error && (
-          <div className={s.error}>
-            <strong>{t('register.error')}</strong> {error}
-          </div>
-        )}
+        {error && <div className={s.error}> {error}</div>}
 
         <form method='post' onSubmit={handleSubmit}>
           <div className={s.formGroup}>

@@ -19,7 +19,10 @@ const route = {
     {
       path: '',
       action: context => {
-        const title = 'Request Reset Password';
+        const title = context.i18n.t(
+          'resetPassword.title',
+          'Request Reset Password',
+        );
         const state = context.store.getState();
 
         if (isAuthenticated(state)) {
@@ -39,7 +42,10 @@ const route = {
     {
       path: '/:token/confirmation',
       action: context => {
-        const title = 'Reset Password Confirmation';
+        const title = context.i18n.t(
+          'resetPasswordConfirmation.title',
+          'Reset Password Confirmation',
+        );
         const state = context.store.getState();
 
         if (isAuthenticated(state)) {

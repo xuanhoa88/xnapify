@@ -63,11 +63,7 @@ function ResetPasswordConfirmation({ title, token }) {
       <div className={s.container}>
         <h1>{title}</h1>
 
-        {error && (
-          <div className={s.error}>
-            <strong>{t('resetPasswordConfirmation.error')}</strong> {error}
-          </div>
-        )}
+        {error && <div className={s.error}>{error}</div>}
 
         {success ? (
           <div className={s.success}>

@@ -46,11 +46,7 @@ function ResetPassword({ title }) {
       <div className={s.container}>
         <h1>{title}</h1>
 
-        {error && (
-          <div className={s.error}>
-            <strong>{t('resetPassword.error')}</strong> {error}
-          </div>
-        )}
+        {error && <div className={s.error}>{error}</div>}
 
         {success && (
           <div className={s.success}>

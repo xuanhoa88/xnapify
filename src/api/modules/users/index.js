@@ -6,10 +6,8 @@
  */
 
 import * as userMiddlewares from './middlewares';
-// Public routes
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
-// Admin routes
 import userRoutes from './routes/admin/user.routes';
 import roleRoutes from './routes/admin/role.routes';
 import permissionRoutes from './routes/admin/permission.routes';
@@ -18,12 +16,16 @@ import groupRoutes from './routes/admin/group.routes';
 /**
  * Users Module Migrations Context
  */
-const migrationsContext = require.context('./migrations', false, /\.js$/);
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.js$/,
+);
 
 /**
  * Users Module Seeds Context
  */
-const seedsContext = require.context('./seeds', false, /\.js$/);
+const seedsContext = require.context('./database/seeds', false, /\.js$/);
 
 /**
  * User Module Factory

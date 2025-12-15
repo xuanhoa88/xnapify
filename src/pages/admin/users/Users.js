@@ -18,8 +18,7 @@ import {
   fetchGroups,
   getGroups,
 } from '../../../redux';
-import CreateUserModal from './CreateUserModal';
-import EditUserModal from './EditUserModal';
+import { useHistory } from '../../../contexts/history';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -43,6 +42,7 @@ const formatDate = dateString => {
 
 function Users() {
   const dispatch = useDispatch();
+  const history = useHistory();
   const users = useSelector(getUsers);
   const pagination = useSelector(getUsersPagination);
   const loading = useSelector(getUsersLoading);
@@ -55,8 +55,6 @@ function Users() {
   const [groupFilter, setGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingUserId, setEditingUserId] = useState(null);
 
   useEffect(() => {
     dispatch(fetchGroups());
@@ -156,7 +154,7 @@ function Users() {
         <h2 className={s.title}>User Management</h2>
         <button
           className={s.addButton}
-          onClick={() => setShowCreateModal(true)}
+          onClick={() => history.push('/admin/users/create')}
         >
           Add User
         </button>
@@ -277,7 +275,9 @@ function Users() {
                     <button
                       className={s.actionBtn}
                       title='Edit'
-                      onClick={() => setEditingUserId(user.id)}
+                      onClick={() =>
+                        history.push(`/admin/users/${user.id}/edit`)
+                      }
                     >
                       ✏️
                     </button>
@@ -358,17 +358,6 @@ function Users() {
             Next
           </button>
         </div>
-      )}
-
-      {showCreateModal && (
-        <CreateUserModal onClose={() => setShowCreateModal(false)} />
-      )}
-
-      {editingUserId && (
-        <EditUserModal
-          userId={editingUserId}
-          onClose={() => setEditingUserId(null)}
-        />
       )}
     </div>
   );

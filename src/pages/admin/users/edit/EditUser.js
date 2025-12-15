@@ -8,6 +8,7 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from '../../../../contexts/history';
 import {
   updateUser,
   fetchUserById,
@@ -17,11 +18,13 @@ import {
   fetchGroups,
   getGroups,
   getGroupsLoading,
-} from '../../../redux';
-import s from './UserModal.css';
+  generatePassword,
+} from '../../../../redux';
+import s from './EditUser.css';
 
-function EditUserModal({ userId, onClose }) {
+function EditUser({ userId }) {
   const dispatch = useDispatch();
+  const history = useHistory();
   const roles = useSelector(getRoles);
   const rolesLoading = useSelector(getRolesLoading);
   const groups = useSelector(getGroups);
@@ -41,6 +44,9 @@ function EditUserModal({ userId, onClose }) {
   const [fetchingUser, setFetchingUser] = useState(true);
   const [roleSearch, setRoleSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [generatingPassword, setGeneratingPassword] = useState(false);
 
   // Fetch user data on mount
   useEffect(() => {
@@ -110,6 +116,27 @@ function EditUserModal({ userId, onClose }) {
     }));
   }, []);
 
+  const handleCancel = useCallback(() => {
+    history.push('/admin/users');
+  }, [history]);
+
+  const handleGeneratePassword = useCallback(async () => {
+    setGeneratingPassword(true);
+    try {
+      const result = await dispatch(generatePassword());
+      if (result.success && result.password) {
+        setNewPassword(result.password);
+        setShowPassword(true);
+      } else {
+        setError(result.error || 'Failed to generate password');
+      }
+    } catch (err) {
+      setError('Failed to generate password');
+    } finally {
+      setGeneratingPassword(false);
+    }
+  }, [dispatch]);
+
   const handleSubmit = useCallback(
     async e => {
       e.preventDefault();
@@ -122,16 +149,22 @@ function EditUserModal({ userId, onClose }) {
 
       setLoading(true);
 
-      const result = await dispatch(updateUser(user.id, formData));
+      // Include password only if a new one was generated
+      const updateData = { ...formData };
+      if (newPassword) {
+        updateData.password = newPassword;
+      }
+
+      const result = await dispatch(updateUser(user.id, updateData));
       setLoading(false);
 
       if (result.success) {
-        onClose();
+        history.push('/admin/users');
       } else {
         setError(result.error);
       }
     },
-    [dispatch, onClose, user, formData],
+    [dispatch, history, user, formData],
   );
 
   // Filter roles based on search
@@ -160,31 +193,62 @@ function EditUserModal({ userId, onClose }) {
     [groups, groupSearch],
   );
 
-  return (
-    <div className={s.modalOverlay}>
-      <div className={s.modalContent}>
-        <div className={s.modalHeader}>
-          <h3 className={s.modalTitle}>Edit User</h3>
-          <button className={s.closeBtn} onClick={onClose}>
-            &times;
+  if (fetchingUser) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h2 className={s.title}>Edit User</h2>
+          <button type='button' onClick={handleCancel} className={s.backBtn}>
+            ← Back to Users
           </button>
         </div>
-        {fetchingUser ? (
-          <div className={s.modalForm}>
-            <div className={s.loading}>Loading user data...</div>
+        <div className={s.formContainer}>
+          <div className={s.loading}>Loading user data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h2 className={s.title}>Edit User</h2>
+          <button type='button' onClick={handleCancel} className={s.backBtn}>
+            ← Back to Users
+          </button>
+        </div>
+        <div className={s.formContainer}>
+          <div className={s.formError}>Failed to load user data</div>
+          <div className={s.formActions}>
+            <button
+              type='button'
+              onClick={handleCancel}
+              className={s.cancelBtn}
+            >
+              Back to Users
+            </button>
           </div>
-        ) : !user ? (
-          <div className={s.modalForm}>
-            <div className={s.formError}>Failed to load user data</div>
-            <div className={s.modalActions}>
-              <button type='button' onClick={onClose} className={s.cancelBtn}>
-                Close
-              </button>
-            </div>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className={s.modalForm}>
-            {error && <div className={s.formError}>{error}</div>}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.root}>
+      <div className={s.header}>
+        <h2 className={s.title}>Edit User</h2>
+        <button type='button' onClick={handleCancel} className={s.backBtn}>
+          ← Back to Users
+        </button>
+      </div>
+
+      <div className={s.formContainer}>
+        <form onSubmit={handleSubmit} className={s.form}>
+          {error && <div className={s.formError}>{error}</div>}
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Account Information</h3>
 
             <div className={s.formGroup}>
               <label htmlFor='email'>Email</label>
@@ -192,10 +256,47 @@ function EditUserModal({ userId, onClose }) {
                 type='email'
                 value={user.email}
                 disabled
-                className={s.formInput}
-                style={{ backgroundColor: '#f3f4f6', cursor: 'not-allowed' }}
+                className={s.formInputDisabled}
               />
             </div>
+
+            <div className={s.formGroup}>
+              <label htmlFor='password'>Reset Password (optional)</label>
+              <div className={s.passwordInputWrapper}>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={e => setNewPassword(e.target.value)}
+                  className={s.formInput}
+                  placeholder='Leave empty to keep current password'
+                  id='password'
+                />
+                {newPassword && (
+                  <button
+                    type='button'
+                    className={s.showPasswordBtn}
+                    onClick={() => setShowPassword(!showPassword)}
+                    title={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? '🙈' : '👁️'}
+                  </button>
+                )}
+              </div>
+              <button
+                type='button'
+                onClick={handleGeneratePassword}
+                disabled={generatingPassword}
+                className={s.generatePasswordBtn}
+              >
+                {generatingPassword
+                  ? 'Generating...'
+                  : '🔐 Generate New Password'}
+              </button>
+            </div>
+          </div>
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Personal Information</h3>
 
             <div className={s.formRow}>
               <div className={s.formGroup}>
@@ -207,6 +308,7 @@ function EditUserModal({ userId, onClose }) {
                   value={formData.first_name}
                   onChange={handleChange}
                   className={s.formInput}
+                  placeholder='John'
                 />
               </div>
               <div className={s.formGroup}>
@@ -218,6 +320,7 @@ function EditUserModal({ userId, onClose }) {
                   value={formData.last_name}
                   onChange={handleChange}
                   className={s.formInput}
+                  placeholder='Doe'
                 />
               </div>
             </div>
@@ -231,8 +334,13 @@ function EditUserModal({ userId, onClose }) {
                 value={formData.display_name}
                 onChange={handleChange}
                 className={s.formInput}
+                placeholder='John Doe'
               />
             </div>
+          </div>
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Access & Permissions</h3>
 
             <div className={s.formGroup}>
               <label htmlFor='roles'>
@@ -243,15 +351,15 @@ function EditUserModal({ userId, onClose }) {
                 placeholder='Search roles...'
                 value={roleSearch}
                 onChange={e => setRoleSearch(e.target.value)}
-                className={s.roleSearchInput}
+                className={s.searchInput}
               />
               {rolesLoading ? (
-                <div className={s.rolesLoading}>Loading roles...</div>
+                <div className={s.itemsLoading}>Loading roles...</div>
               ) : (
-                <div className={s.rolesCheckboxGroup}>
+                <div className={s.checkboxGroup}>
                   {filteredRoles.length > 0 ? (
                     filteredRoles.map(role => (
-                      <label key={role.name} className={s.roleCheckbox}>
+                      <label key={role.name} className={s.checkboxItem}>
                         <input
                           type='checkbox'
                           name='roles'
@@ -263,7 +371,7 @@ function EditUserModal({ userId, onClose }) {
                           {role.name.charAt(0).toUpperCase() +
                             role.name.slice(1)}
                           {role.description && (
-                            <span className={s.roleDescription}>
+                            <span className={s.itemDescription}>
                               {role.description}
                             </span>
                           )}
@@ -271,7 +379,7 @@ function EditUserModal({ userId, onClose }) {
                       </label>
                     ))
                   ) : (
-                    <div className={s.noRolesFound}>No roles found</div>
+                    <div className={s.noItemsFound}>No roles found</div>
                   )}
                 </div>
               )}
@@ -286,15 +394,15 @@ function EditUserModal({ userId, onClose }) {
                 placeholder='Search groups...'
                 value={groupSearch}
                 onChange={e => setGroupSearch(e.target.value)}
-                className={s.groupSearchInput}
+                className={s.searchInput}
               />
               {groupsLoading ? (
-                <div className={s.groupsLoading}>Loading groups...</div>
+                <div className={s.itemsLoading}>Loading groups...</div>
               ) : (
-                <div className={s.groupsCheckboxGroup}>
+                <div className={s.checkboxGroup}>
                   {filteredGroups.length > 0 ? (
                     filteredGroups.map(group => (
-                      <label key={group.id} className={s.groupCheckbox}>
+                      <label key={group.id} className={s.checkboxItem}>
                         <input
                           type='checkbox'
                           name='groups'
@@ -306,7 +414,7 @@ function EditUserModal({ userId, onClose }) {
                           {group.name.charAt(0).toUpperCase() +
                             group.name.slice(1)}
                           {group.description && (
-                            <span className={s.groupDescription}>
+                            <span className={s.itemDescription}>
                               {group.description}
                             </span>
                           )}
@@ -314,7 +422,7 @@ function EditUserModal({ userId, onClose }) {
                       </label>
                     ))
                   ) : (
-                    <div className={s.noGroupsFound}>No groups found</div>
+                    <div className={s.noItemsFound}>No groups found</div>
                   )}
                 </div>
               )}
@@ -332,25 +440,28 @@ function EditUserModal({ userId, onClose }) {
                 Active
               </label>
             </div>
+          </div>
 
-            <div className={s.modalActions}>
-              <button type='button' onClick={onClose} className={s.cancelBtn}>
-                Cancel
-              </button>
-              <button type='submit' disabled={loading} className={s.submitBtn}>
-                {loading ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </form>
-        )}
+          <div className={s.formActions}>
+            <button
+              type='button'
+              onClick={handleCancel}
+              className={s.cancelBtn}
+            >
+              Cancel
+            </button>
+            <button type='submit' disabled={loading} className={s.submitBtn}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
 }
 
-EditUserModal.propTypes = {
+EditUser.propTypes = {
   userId: PropTypes.string.isRequired,
-  onClose: PropTypes.func.isRequired,
 };
 
-export default EditUserModal;
+export default EditUser;

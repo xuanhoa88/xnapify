@@ -21,7 +21,7 @@ const route = {
  * Redirects authenticated users to home page
  */
 function action(context) {
-  const title = 'Log In';
+  const title = context.i18n.t('navigation.login', 'Log In');
 
   // Get state from Redux store
   const state = context.store.getState();

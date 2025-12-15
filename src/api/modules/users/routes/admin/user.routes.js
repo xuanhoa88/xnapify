@@ -62,6 +62,19 @@ export default function userRoutes(deps, middlewares, app) {
   router.get('/list', requireAuth, requireAdmin, userController.getUserList);
 
   /**
+   * @route   GET /generate-password
+   * @desc    Generate a random secure password
+   * @access  Admin only
+   * @query   { length, includeSymbols }
+   */
+  router.get(
+    '/generate-password',
+    requireAuth,
+    requireAdmin,
+    userController.generateRandomPassword,
+  );
+
+  /**
    * @route   GET /stats
    * @desc    Get user statistics
    * @access  Admin only

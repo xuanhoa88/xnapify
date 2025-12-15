@@ -217,3 +217,31 @@ export function updateUser(userId, userData) {
     }
   };
 }
+
+/**
+ * Generate a random secure password
+ *
+ * @param {Object} options - Generation options
+ * @param {number} options.length - Password length (default 16)
+ * @param {boolean} options.includeSymbols - Include symbols (default true)
+ * @returns {Function} Redux thunk action
+ */
+export function generatePassword(options = {}) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { length = 16, includeSymbols = true } = options;
+
+      const params = new URLSearchParams();
+      if (length) params.append('length', length);
+      if (!includeSymbols) params.append('includeSymbols', 'false');
+
+      const { data } = await fetch(
+        `/api/admin/users/generate-password?${params.toString()}`,
+      );
+
+      return { success: true, password: data.password };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}

@@ -9,9 +9,8 @@
 
 .root {
   padding: var(--spacing-8);
-  background: var(
-    --color-background-secondary
-  ); /* Gray background to match dashboard */
+  background: var(--color-background-secondary);
+  min-height: 100%;
 }
 
 .header {

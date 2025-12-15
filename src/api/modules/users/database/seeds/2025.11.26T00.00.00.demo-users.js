@@ -1,12 +1,12 @@
 /**
- * Seed: Demo Users
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This seed creates demo user accounts for development/testing.
- * Includes users with different statuses and configurations.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { hashPassword } from '../utils/password';
+import createUserModel from '../../models/User';
 
 // Store user IDs for use in other seeds
 export const demoUserIds = {
@@ -20,87 +20,79 @@ export const demoUserIds = {
  * Run the seed
  */
 export async function up({ context }) {
-  const { queryInterface } = context;
+  // Create User model from the connection (DataTypes derived internally)
+  const User = createUserModel({ connection: context });
 
   const now = new Date();
 
-  // Note: In a real application, you would hash these passwords with PBKDF2
-  // This is just for demonstration purposes
+  // Passwords will be automatically hashed by beforeBulkCreate hook
   const users = [
     {
       id: demoUserIds.admin,
       email: 'admin@example.com',
       email_confirmed: true,
-      password: await hashPassword('admin123'),
+      password: 'admin123', // Plain text - will be hashed by hook
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
       last_login_at: now,
       password_changed_at: now,
-      created_at: now,
-      updated_at: now,
-      deleted_at: null,
     },
     {
       id: demoUserIds.john,
       email: 'john.doe@example.com',
       email_confirmed: true,
-      password: await hashPassword('password123'),
+      password: 'password123', // Plain text - will be hashed by hook
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
       last_login_at: new Date(now.getTime() - 86400000), // 1 day ago
       password_changed_at: new Date(now.getTime() - 2592000000), // 30 days ago
-      created_at: new Date(now.getTime() - 7776000000), // 90 days ago
-      updated_at: now,
-      deleted_at: null,
     },
     {
       id: demoUserIds.jane,
       email: 'jane.smith@example.com',
       email_confirmed: true,
-      password: await hashPassword('password123'),
+      password: 'password123', // Plain text - will be hashed by hook
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
       last_login_at: new Date(now.getTime() - 172800000), // 2 days ago
       password_changed_at: new Date(now.getTime() - 1296000000), // 15 days ago
-      created_at: new Date(now.getTime() - 5184000000), // 60 days ago
-      updated_at: now,
-      deleted_at: null,
     },
     {
       id: demoUserIds.locked,
       email: 'locked.user@example.com',
       email_confirmed: true,
-      password: await hashPassword('demo123'),
+      password: 'demo123', // Plain text - will be hashed by hook
       is_active: false,
       is_locked: true,
       failed_login_attempts: 5,
       last_login_at: new Date(now.getTime() - 604800000), // 7 days ago
       password_changed_at: new Date(now.getTime() - 5184000000), // 60 days ago
-      created_at: new Date(now.getTime() - 15552000000), // 180 days ago
-      updated_at: now,
-      deleted_at: null,
     },
   ];
 
-  await queryInterface.bulkInsert('users', users);
+  await User.bulkCreate(users);
 }
 
 /**
  * Revert the seed
  */
 export async function down({ context }) {
-  const { queryInterface } = context;
+  // Create User model from the connection (DataTypes derived internally)
+  const User = createUserModel({ connection: context });
 
   // Remove all seeded users by email
-  await queryInterface.bulkDelete('users', {
-    email: [
-      'admin@example.com',
-      'john.doe@example.com',
-      'jane.smith@example.com',
-      'locked.user@example.com',
-    ],
+  await User.destroy({
+    where: {
+      email: [
+        'admin@example.com',
+        'john.doe@example.com',
+        'jane.smith@example.com',
+        'locked.user@example.com',
+      ],
+    },
+    force: true, // Hard delete (bypass paranoid)
   });
 }

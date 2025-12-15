@@ -14,6 +14,38 @@ import { useHistory, useQuery } from '../../contexts/history';
 import { useWebSocket } from '../../contexts/ws';
 import s from './Login.css';
 
+// Demo users for quick access
+const DEMO_USERS = [
+  {
+    name: 'Admin User',
+    email: 'admin@example.com',
+    password: 'admin123',
+    role: 'Administrator',
+    avatar: '👑',
+  },
+  {
+    name: 'John Doe',
+    email: 'john.doe@example.com',
+    password: 'password123',
+    role: 'Editor',
+    avatar: '👤',
+  },
+  {
+    name: 'Jane Smith',
+    email: 'jane.smith@example.com',
+    password: 'password123',
+    role: 'Viewer',
+    avatar: '👩',
+  },
+  {
+    name: 'Locked User',
+    email: 'locked.user@example.com',
+    password: 'demo123',
+    role: 'Viewer',
+    avatar: '🔒',
+  },
+];
+
 function Login({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -27,6 +59,13 @@ function Login({ title }) {
 
   // Get returnTo from query params
   const returnTo = useQuery('returnTo') || '/';
+
+  // Handle quick login user selection
+  const handleQuickLogin = useCallback(user => {
+    setEmail(user.email);
+    setPassword(user.password);
+    setError('');
+  }, []);
 
   const handleSubmit = useCallback(
     async e => {
@@ -54,11 +93,7 @@ function Login({ title }) {
     <div className={s.root}>
       <div className={s.container}>
         <h1>{title}</h1>
-        {error && (
-          <div className={s.error}>
-            <strong>{t('login.error')}</strong> {error}
-          </div>
-        )}
+        {error && <div className={s.error}>{error}</div>}
 
         <form method='post' onSubmit={handleSubmit}>
           <div className={s.formGroup}>
@@ -119,6 +154,29 @@ function Login({ title }) {
             // eslint-disable-next-line jsx-a11y/anchor-has-content, react/jsx-key
             components={[<a href='/register' className={s.buttonLink} />]}
           />
+        </div>
+
+        {/* Quick Access User List */}
+        <div className={s.quickAccess}>
+          <h3 className={s.quickAccessTitle}>
+            {t('login.quickAccess', 'Quick Access')}
+          </h3>
+          <div className={s.userList}>
+            {DEMO_USERS.map(user => (
+              <button
+                key={user.email}
+                type='button'
+                className={s.userCard}
+                onClick={() => handleQuickLogin(user)}
+              >
+                <span className={s.userAvatar}>{user.avatar}</span>
+                <div className={s.userInfo}>
+                  <span className={s.userName}>{user.name}</span>
+                  <span className={s.userRole}>{user.role}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       </div>
     </div>

@@ -1,12 +1,13 @@
 /**
- * Seed: Demo User Roles
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This seed assigns roles to users.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { v4 as uuidv4 } from 'uuid';
 import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
-import { demoRoleIds } from './2025.11.26T00.03.00.demo-roles';
+import { demoGroupIds } from './2025.11.26T00.05.00.demo-groups';
 
 /**
  * Run the seed
@@ -16,59 +17,59 @@ export async function up({ context }) {
 
   const now = new Date();
 
-  const userRoles = [
-    // Admin user - admin role
+  const userGroups = [
+    // Admin - Management and Engineering groups (multi-group membership)
     {
       id: uuidv4(),
       user_id: demoUserIds.admin,
-      role_id: demoRoleIds.admin,
+      group_id: demoGroupIds.management,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      user_id: demoUserIds.admin,
+      group_id: demoGroupIds.engineering,
       created_at: now,
       updated_at: now,
     },
 
-    // John - user and editor roles
+    // John - Engineering group only
     {
       id: uuidv4(),
       user_id: demoUserIds.john,
-      role_id: demoRoleIds.user,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      user_id: demoUserIds.john,
-      role_id: demoRoleIds.editor,
+      group_id: demoGroupIds.engineering,
       created_at: now,
       updated_at: now,
     },
 
-    // Jane - user and moderator roles
+    // Jane - Marketing and Support groups (multi-group membership)
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      role_id: demoRoleIds.user,
+      group_id: demoGroupIds.marketing,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      role_id: demoRoleIds.moderator,
+      group_id: demoGroupIds.support,
       created_at: now,
       updated_at: now,
     },
 
-    // Locked user - viewer role only
+    // Locked user - Support group only
     {
       id: uuidv4(),
       user_id: demoUserIds.locked,
-      role_id: demoRoleIds.viewer,
+      group_id: demoGroupIds.support,
       created_at: now,
       updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('user_roles', userRoles);
+  await queryInterface.bulkInsert('user_groups', userGroups);
 }
 
 /**
@@ -77,8 +78,8 @@ export async function up({ context }) {
 export async function down({ context }) {
   const { queryInterface } = context;
 
-  // Remove all seeded user roles by userId
-  await queryInterface.bulkDelete('user_roles', {
+  // Remove all seeded user groups by userId
+  await queryInterface.bulkDelete('user_groups', {
     user_id: Object.values(demoUserIds),
   });
 }

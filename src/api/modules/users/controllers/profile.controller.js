@@ -384,7 +384,7 @@ export async function deleteAccount(req, res) {
     req.app.get('auth').clearAllAuthCookies(res);
 
     return http.sendSuccess(res, {
-      message: 'Account deleted successfully',
+      message: 'User deleted successfully',
     });
   } catch (error) {
     if (error.name === 'InvalidPasswordError') {
@@ -393,6 +393,6 @@ export async function deleteAccount(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to delete account');
+    return http.sendServerError(res, 'Failed to delete user');
   }
 }

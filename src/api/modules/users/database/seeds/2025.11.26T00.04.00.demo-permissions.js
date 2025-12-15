@@ -1,7 +1,8 @@
 /**
- * Seed: Demo Permissions
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This seed creates common permissions for RBAC system.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { v4 as uuidv4 } from 'uuid';

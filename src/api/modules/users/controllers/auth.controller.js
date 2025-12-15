@@ -126,12 +126,12 @@ export async function login(req, res) {
       return http.sendUnauthorized(res, 'User not found');
     }
 
-    if (error.name === 'AccountInactiveError') {
-      return http.sendUnauthorized(res, 'Account is inactive');
+    if (error.name === 'UserInactiveError') {
+      return http.sendUnauthorized(res, 'User is inactive');
     }
 
-    if (error.name === 'AccountLockedError') {
-      return http.sendUnauthorized(res, 'Account is locked');
+    if (error.name === 'UserLockedError') {
+      return http.sendUnauthorized(res, 'User is locked');
     }
 
     if (error.name === 'InvalidCredentialsError') {

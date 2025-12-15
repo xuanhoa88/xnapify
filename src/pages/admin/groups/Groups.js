@@ -108,17 +108,23 @@ function Groups() {
                   {group.description || 'No description'}
                 </p>
                 <div className={s.members}>
-                  {visibleUsers.map(user => (
-                    <div
-                      key={user.id}
-                      className={s.avatar}
-                      title={user.display_name || user.email}
-                    >
-                      {getInitials(user.display_name || user.email)}
-                    </div>
-                  ))}
-                  {remainingCount > 0 && (
-                    <div className={s.avatar}>+{remainingCount}</div>
+                  {visibleUsers.length > 0 ? (
+                    <>
+                      {visibleUsers.map(user => (
+                        <div
+                          key={user.id}
+                          className={s.avatar}
+                          title={user.display_name || user.email}
+                        >
+                          {getInitials(user.display_name || user.email)}
+                        </div>
+                      ))}
+                      {remainingCount > 0 && (
+                        <div className={s.avatar}>+{remainingCount}</div>
+                      )}
+                    </>
+                  ) : (
+                    <span className={s.noMembers}>No members yet</span>
                   )}
                 </div>
                 <div className={s.groupActions}>

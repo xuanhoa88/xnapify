@@ -1,7 +1,8 @@
 /**
- * Seed: Demo User Profiles
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
- * This seed creates user profiles for the demo users.
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
 
 import { demoUserIds } from './2025.11.26T00.00.00.demo-users';

@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { hashPassword } from '../../utils/password';
-
 /**
  * Create a new user
  *
@@ -36,13 +34,10 @@ export async function createUser(userData, models) {
     throw error;
   }
 
-  // Hash password
-  const hashedPassword = await hashPassword(password);
-
-  // Create user
+  // Create user (password hashed automatically by model hook)
   const user = await User.create({
     email,
-    password: hashedPassword,
+    password,
     is_active,
     email_confirmed: true, // Admin created users are auto-confirmed
   });
@@ -284,6 +279,7 @@ export async function updateUserById(user_id, userData, models) {
 
   const {
     email,
+    password,
     display_name,
     first_name,
     last_name,
@@ -322,6 +318,7 @@ export async function updateUserById(user_id, userData, models) {
   // Update user fields
   const userUpdates = {};
   if (email) userUpdates.email = email;
+  if (password) userUpdates.password = password; // Password hashed by model hook
   if (role) userUpdates.role = role;
   if (typeof is_active === 'boolean') userUpdates.is_active = is_active;
 
@@ -651,12 +648,9 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
     throw error;
   }
 
-  // Hash new password
-  const hashedPassword = await hashPassword(newPassword);
-
-  // Update password and reset security fields
+  // Update password (hashed automatically by model hook)
   await user.update({
-    password: hashedPassword,
+    password: newPassword,
     failed_login_attempts: 0,
     is_locked: false,
   });

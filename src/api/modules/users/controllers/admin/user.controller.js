@@ -7,6 +7,7 @@
 
 import * as userAdminService from '../../services/admin/user.service';
 import * as profileService from '../../services/profile.service';
+import { generatePassword } from '../../utils/password';
 import { SYSTEM_ROLES } from '../../constants/roles';
 
 // ========================================================================
@@ -539,5 +540,30 @@ export async function bulkUpdateUsers(req, res) {
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to bulk update users');
+  }
+}
+
+/**
+ * Generate a random secure password
+ *
+ * @route   GET /api/admin/users/generate-password
+ * @access  Admin
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function generateRandomPassword(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { length = 16, includeSymbols = true } = req.query;
+
+    const password = generatePassword({
+      length: parseInt(length, 10) || 16,
+      includeSymbols: includeSymbols !== 'false',
+      excludeAmbiguous: true,
+    });
+
+    return http.sendSuccess(res, { password });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to generate password');
   }
 }

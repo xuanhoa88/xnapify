@@ -6,7 +6,7 @@
  */
 
 import path from 'path';
-import { hashPassword, verifyPassword } from '../utils/password';
+import { verifyPassword } from '../utils/password';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -246,11 +246,8 @@ export async function changeUserPassword(
     throw error;
   }
 
-  // Hash new password
-  const hashedPassword = await hashPassword(newPassword);
-
-  // Update password
-  await user.update({ password: hashedPassword });
+  // Update password (hashed automatically by model hook)
+  await user.update({ password: newPassword });
 
   return true;
 }

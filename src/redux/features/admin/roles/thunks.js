@@ -46,7 +46,9 @@ export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
       if (limit) params.append('limit', limit);
       if (search) params.append('search', search);
 
-      const { data } = await fetch(`/api/admin/roles?${params.toString()}`);
+      const { data } = await fetch(
+        `/api/admin/roles/list?${params.toString()}`,
+      );
 
       dispatch(fetchRolesSuccess(data));
 

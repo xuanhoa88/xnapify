@@ -8,7 +8,9 @@
 @import '../../../components/variables.css';
 
 .root {
-  padding: var(--spacing-6);
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
 }
 
 .header {
@@ -16,13 +18,18 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: var(--spacing-6);
+  background: var(--color-background);
+  padding: var(--spacing-6);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .title {
   margin: 0;
-  font-size: var(--font-size-3xl);
+  font-size: var(--font-size-2xl);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  color: var(--color-text-primary);
 }
 
 .addButton {
