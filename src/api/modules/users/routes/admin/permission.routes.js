@@ -66,5 +66,41 @@ export default function permissionRoutes(deps, middlewares, app) {
     permissionController.initializeDefaults,
   );
 
+  /**
+   * @route   GET /:id
+   * @desc    Get permission by ID
+   * @access  Admin (requires 'permissions:read' permission)
+   */
+  router.get(
+    '/:id',
+    requireAuth,
+    requirePermission('permissions:read'),
+    permissionController.getPermissionById,
+  );
+
+  /**
+   * @route   PUT /:id
+   * @desc    Update permission by ID
+   * @access  Admin (requires 'permissions:write' permission)
+   */
+  router.put(
+    '/:id',
+    requireAuth,
+    requirePermission('permissions:write'),
+    permissionController.updatePermission,
+  );
+
+  /**
+   * @route   DELETE /:id
+   * @desc    Delete permission by ID
+   * @access  Admin (requires 'permissions:delete' permission)
+   */
+  router.delete(
+    '/:id',
+    requireAuth,
+    requirePermission('permissions:delete'),
+    permissionController.deletePermission,
+  );
+
   return router;
 }

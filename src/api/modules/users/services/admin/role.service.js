@@ -174,7 +174,7 @@ export async function getRoleById(role_id, models) {
  * @returns {Promise<Object>} Updated role
  */
 export async function updateRole(role_id, updateData, models) {
-  const { Role } = models;
+  const { Role, Permission } = models;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -184,13 +184,16 @@ export async function updateRole(role_id, updateData, models) {
     throw error;
   }
 
+  // Extract permissions and other attributes
+  const { permissions, ...attributes } = updateData;
+
   // Check if name is being changed and if it already exists
-  if (updateData.name && updateData.name !== role.name) {
+  if (attributes.name && attributes.name !== role.name) {
     const existingRole = await Role.findOne({
-      where: { name: updateData.name },
+      where: { name: attributes.name },
     });
     if (existingRole) {
-      const error = new Error(`Role '${updateData.name}' already exists`);
+      const error = new Error(`Role '${attributes.name}' already exists`);
       error.name = 'RoleAlreadyExistsError';
       error.status = 400;
       throw error;
@@ -198,6 +201,15 @@ export async function updateRole(role_id, updateData, models) {
   }
 
   await role.update(updateData);
+
+  // Update permissions if provided
+  if (Array.isArray(permissions)) {
+    await assignPermissionsToRole(role_id, permissions, models);
+
+    // Reload with permissions
+    role.reload();
+  }
+
   return role;
 }
 
@@ -394,7 +406,7 @@ export async function roleHasPermission(role_id, permissionName, models) {
 export async function getUsersWithRole(role_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
-  const { Role, User } = models;
+  const { Role, User, UserProfile } = models;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -412,11 +424,16 @@ export async function getUsersWithRole(role_id, options, models) {
         where: { id: role_id },
         through: { attributes: [] },
       },
+      {
+        model: UserProfile,
+        as: 'profile',
+        attributes: ['first_name', 'last_name', 'display_name'],
+      },
     ],
-    attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
+    attributes: ['id', 'email', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['created_at', 'DESC']],
+    order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
   });
 
   return {

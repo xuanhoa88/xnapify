@@ -298,19 +298,12 @@ export async function deleteUserById(req, res) {
 
     // Get models from app context
     const models = req.app.get('models');
-    const { User } = models;
-
-    // Get user
-    const user = await User.findByPk(id);
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
 
     // Delete user (cascade will handle profile)
-    await user.destroy();
+    await userAdminService.deleteUserById(id, models);
 
     return http.sendSuccess(res, {
-      message: `User ${user.email} deleted successfully`,
+      message: 'User deleted successfully',
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete user');

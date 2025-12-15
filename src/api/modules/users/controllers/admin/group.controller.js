@@ -6,7 +6,6 @@
  */
 
 import * as groupService from '../../services/admin/group.service';
-import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
 
 // ========================================================================
 // GROUP MANAGEMENT CONTROLLERS
@@ -23,7 +22,7 @@ import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
 export async function createGroup(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, description } = req.body;
+    const { name, description, category, type } = req.body;
 
     // Validate input
     if (!name) {
@@ -36,7 +35,10 @@ export async function createGroup(req, res) {
     const models = req.app.get('models');
 
     // Create group
-    const group = await groupService.createGroup({ name, description }, models);
+    const group = await groupService.createGroup(
+      { name, description, category, type },
+      models,
+    );
 
     return http.sendSuccess(res, { group }, 201);
   } catch (error) {
@@ -72,7 +74,6 @@ export async function getGroups(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
-    console.error('getGroups error:', error);
     return http.sendServerError(res, 'Failed to get groups');
   }
 }
@@ -89,25 +90,11 @@ export async function getGroupById(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { Group, Role, User } = models;
 
-    const group = await Group.findByPk(id, {
-      include: [
-        {
-          model: Role,
-          as: 'roles',
-          through: { attributes: [] },
-        },
-        {
-          model: User,
-          as: 'users',
-          through: { attributes: [] },
-          attributes: ['id', 'email', 'display_name'],
-        },
-      ],
-    });
-
+    const group = await groupService.getGroupById(id, models);
     if (!group) {
       return http.sendNotFound(res, 'Group not found');
     }
@@ -130,20 +117,17 @@ export async function updateGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
-    const models = req.app.get('models');
-    const { Group } = models;
+    const { name, description, category, type } = req.body;
 
-    const group = await Group.findByPk(id);
-    if (!group) {
-      return http.sendNotFound(res, 'Group not found');
-    }
+    // Get models from app context
+    const models = req.app.get('models');
 
     // Update group
-    await group.update({
-      name: name || group.name,
-      description: description != null ? description : group.description,
-    });
+    const group = await groupService.updateGroup(
+      id,
+      { name, description, category, type },
+      models,
+    );
 
     return http.sendSuccess(res, { group });
   } catch (error) {
@@ -167,23 +151,14 @@ export async function deleteGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { Group } = models;
 
-    const group = await Group.findByPk(id);
-    if (!group) {
-      return http.sendNotFound(res, 'Group not found');
-    }
-
-    // Prevent deletion of system groups
-    if ([ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE].includes(group.name)) {
-      return http.sendError(res, 'Cannot delete system groups', 400);
-    }
-
-    await group.destroy();
+    await groupService.deleteGroup(id, models);
 
     return http.sendSuccess(res, {
-      message: `Group '${group.name}' deleted successfully`,
+      message: `Group deleted successfully`,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete group');
@@ -211,38 +186,15 @@ export async function assignRolesToGroup(req, res) {
       });
     }
 
+    // Get models from app context
     const models = req.app.get('models');
-    const { Group, Role } = models;
-
-    const group = await Group.findByPk(id);
-    if (!group) {
-      return http.sendNotFound(res, 'Group not found');
-    }
-
-    // Verify all roles exist
-    const roles = await Role.findAll({
-      where: { id: role_ids },
-    });
-
-    if (roles.length !== role_ids.length) {
-      return http.sendValidationError(res, {
-        role_ids: 'One or more roles not found',
-      });
-    }
-
-    // Set roles for group (replaces existing)
-    await group.setRoles(roles);
 
     // Return group with roles
-    const updatedGroup = await Group.findByPk(id, {
-      include: [
-        {
-          model: Role,
-          as: 'roles',
-          through: { attributes: [] },
-        },
-      ],
-    });
+    const updatedGroup = await groupService.assignRolesToGroup(
+      id,
+      role_ids,
+      models,
+    );
 
     return http.sendSuccess(res, { group: updatedGroup });
   } catch (error) {
@@ -265,39 +217,16 @@ export async function getGroupMembers(req, res) {
     const { page = 1, limit = 10 } = req.query;
     const offset = (page - 1) * limit;
 
+    // Get models from app context
     const models = req.app.get('models');
-    const { Group, User } = models;
 
-    const group = await Group.findByPk(id);
-    if (!group) {
-      return http.sendNotFound(res, 'Group not found');
-    }
+    const data = await groupService.getGroupMembers(
+      id,
+      { page, limit, offset },
+      models,
+    );
 
-    const { count, rows: users } = await User.findAndCountAll({
-      include: [
-        {
-          model: Group,
-          as: 'groups',
-          where: { id },
-          through: { attributes: [] },
-        },
-      ],
-      attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['display_name', 'ASC']],
-    });
-
-    return http.sendSuccess(res, {
-      group: { id: group.id, name: group.name },
-      members: users,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: count,
-        pages: Math.ceil(count / limit),
-      },
-    });
+    return http.sendSuccess(res, data);
   } catch (error) {
     return http.sendServerError(res, 'Failed to get group members');
   }

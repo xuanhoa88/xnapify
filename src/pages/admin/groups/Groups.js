@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from '../../../contexts/history';
 import {
   fetchGroups,
   getGroups,
@@ -27,16 +28,33 @@ function getInitials(name) {
 
 function Groups() {
   const dispatch = useDispatch();
+  const history = useHistory();
   const groups = useSelector(getGroups);
   const loading = useSelector(getGroupsLoading);
   const error = useSelector(getGroupsError);
-
-  console.log(groups);
 
   useEffect(() => {
     // Fetch groups on component mount
     dispatch(fetchGroups({ page: 1 }));
   }, [dispatch]);
+
+  const handleAddGroup = useCallback(() => {
+    history.push('/admin/groups/create');
+  }, [history]);
+
+  const handleEditGroup = useCallback(
+    groupId => {
+      history.push(`/admin/groups/${groupId}/edit`);
+    },
+    [history],
+  );
+
+  const handleViewMembers = useCallback(
+    groupId => {
+      history.push(`/admin/groups/${groupId}/members`);
+    },
+    [history],
+  );
 
   if (loading && groups.length === 0) {
     return (
@@ -64,7 +82,7 @@ function Groups() {
     <div className={s.root}>
       <div className={s.header}>
         <h1 className={s.title}>Group Management</h1>
-        <button className={s.addButton}>
+        <button className={s.addButton} onClick={handleAddGroup}>
           <svg
             width='16'
             height='16'
@@ -128,8 +146,18 @@ function Groups() {
                   )}
                 </div>
                 <div className={s.groupActions}>
-                  <button className={s.viewBtn}>View Members</button>
-                  <button className={s.editBtn}>Edit</button>
+                  <button
+                    className={s.viewBtn}
+                    onClick={() => handleViewMembers(group.id)}
+                  >
+                    View Members
+                  </button>
+                  <button
+                    className={s.editBtn}
+                    onClick={() => handleEditGroup(group.id)}
+                  >
+                    Edit
+                  </button>
                 </div>
               </div>
             );

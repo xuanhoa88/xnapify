@@ -7,6 +7,7 @@
 
 import { useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from '../../../contexts/history';
 import {
   fetchPermissions,
   deletePermission,
@@ -18,6 +19,7 @@ import s from './Permissions.css';
 
 function Permissions() {
   const dispatch = useDispatch();
+  const history = useHistory();
   const permissions = useSelector(getPermissions);
   const loading = useSelector(getPermissionsLoading);
   const error = useSelector(getPermissionsError);
@@ -42,6 +44,17 @@ function Permissions() {
       }
     },
     [dispatch],
+  );
+
+  const handleAdd = useCallback(() => {
+    history.push('/admin/permissions/create');
+  }, [history]);
+
+  const handleEdit = useCallback(
+    permissionId => {
+      history.push(`/admin/permissions/${permissionId}/edit`);
+    },
+    [history],
   );
 
   // Group permissions by resource
@@ -93,7 +106,7 @@ function Permissions() {
     <div className={s.root}>
       <div className={s.header}>
         <h1 className={s.title}>Permission Management</h1>
-        <button className={s.addButton}>
+        <button className={s.addButton} onClick={handleAdd}>
           <svg
             width='16'
             height='16'
@@ -122,7 +135,11 @@ function Permissions() {
                 <div className={s.permissionHeader}>
                   <h3 className={s.permissionName}>{permission.name}</h3>
                   <div className={s.permissionActions}>
-                    <button className={s.editBtn} title='Edit'>
+                    <button
+                      className={s.editBtn}
+                      title='Edit'
+                      onClick={() => handleEdit(permission.id)}
+                    >
                       ✏️
                     </button>
                     <button

@@ -62,6 +62,24 @@ export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
 }
 
 /**
+ * Fetch role by ID
+ *
+ * @param {string} roleId - Role ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchRoleById(roleId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/roles/${roleId}`);
+
+      return { success: true, role: data.role };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
  * Delete a role
  *
  * @param {string} roleId - Role ID to delete

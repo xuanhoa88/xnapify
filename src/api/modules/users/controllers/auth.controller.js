@@ -183,7 +183,6 @@ export async function me(req, res) {
 
     return http.sendSuccess(res, { user: userData });
   } catch (error) {
-    console.error('me error:', error);
     return http.sendServerError(res, 'Failed to get user information');
   }
 }

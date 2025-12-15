@@ -66,36 +66,16 @@ export async function getUserRoles(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
     const models = req.app.get('models');
-    const { User, Role, Permission } = models;
 
-    const user = await User.findByPk(id, {
-      include: [
-        {
-          model: Role,
-          as: 'roles',
-          through: { attributes: [] },
-          include: [
-            {
-              model: Permission,
-              as: 'permissions',
-              through: { attributes: [] },
-            },
-          ],
-        },
-      ],
-      attributes: ['id', 'email', 'display_name'],
-    });
-
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
+    const user = await userRbacService.getUserRoles(id, models);
 
     return http.sendSuccess(res, {
       user: {
         id: user.id,
         email: user.email,
-        display_name: user.display_name,
+        display_name: (user.profile && user.profile.display_name) || null,
       },
       roles: user.roles,
     });
@@ -164,35 +144,14 @@ export async function getUserGroups(req, res) {
   try {
     const { id } = req.params;
     const models = req.app.get('models');
-    const { User, Group, Role } = models;
 
-    const user = await User.findByPk(id, {
-      include: [
-        {
-          model: Group,
-          as: 'groups',
-          through: { attributes: [] },
-          include: [
-            {
-              model: Role,
-              as: 'roles',
-              through: { attributes: [] },
-            },
-          ],
-        },
-      ],
-      attributes: ['id', 'email', 'display_name'],
-    });
-
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
+    const user = await userRbacService.getUserGroups(id, models);
 
     return http.sendSuccess(res, {
       user: {
         id: user.id,
         email: user.email,
-        display_name: user.display_name,
+        display_name: (user.profile && user.profile.display_name) || null,
       },
       groups: user.groups,
     });
@@ -279,24 +238,14 @@ export async function removeRoleFromUser(req, res) {
   const http = req.app.get('http');
   try {
     const { id, role_id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { User, Role } = models;
 
-    const user = await User.findByPk(id);
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
-
-    const role = await Role.findByPk(role_id);
-    if (!role) {
-      return http.sendNotFound(res, 'Role not found');
-    }
-
-    // Remove role from user
-    await user.removeRole(role);
+    await userRbacService.removeRoleFromUser(id, role_id, models);
 
     return http.sendSuccess(res, {
-      message: `Role '${role.name}' removed from user successfully`,
+      message: `Role '${role_id}' removed from user successfully`,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to remove role from user');
@@ -315,24 +264,14 @@ export async function removeGroupFromUser(req, res) {
   const http = req.app.get('http');
   try {
     const { id, group_id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { User, Group } = models;
 
-    const user = await User.findByPk(id);
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
-
-    const group = await Group.findByPk(group_id);
-    if (!group) {
-      return http.sendNotFound(res, 'Group not found');
-    }
-
-    // Remove group from user
-    await user.removeGroup(group);
+    await userRbacService.removeGroupFromUser(id, group_id, models);
 
     return http.sendSuccess(res, {
-      message: `Group '${group.name}' removed from user successfully`,
+      message: `Group '${group_id}' removed from user successfully`,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to remove group from user');

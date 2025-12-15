@@ -7,6 +7,7 @@
 
 import { useEffect, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from '../../../contexts/history';
 import { fetchRoles, deleteRole } from '../../../redux';
 import s from './Roles.css';
 
@@ -26,11 +27,23 @@ const getRoleIcon = roleName => {
 
 function Roles() {
   const dispatch = useDispatch();
+  const history = useHistory();
   const { roles, loading, error } = useSelector(state => state.admin.roles);
 
   useEffect(() => {
     dispatch(fetchRoles({ limit: 100 }));
   }, [dispatch]);
+
+  const handleAddRole = useCallback(() => {
+    history.push('/admin/roles/create');
+  }, [history]);
+
+  const handleEditRole = useCallback(
+    roleId => {
+      history.push(`/admin/roles/${roleId}/edit`);
+    },
+    [history],
+  );
 
   const handleDelete = useCallback(
     async (roleId, roleName) => {
@@ -80,7 +93,7 @@ function Roles() {
     <div className={s.root}>
       <div className={s.header}>
         <h1 className={s.title}>Role Management</h1>
-        <button className={s.addButton}>
+        <button className={s.addButton} onClick={handleAddRole}>
           <svg
             width='16'
             height='16'
@@ -123,7 +136,12 @@ function Roles() {
               </div>
             </div>
             <div className={s.roleActions}>
-              <button className={s.editBtn}>Edit</button>
+              <button
+                className={s.editBtn}
+                onClick={() => handleEditRole(role.id)}
+              >
+                Edit
+              </button>
               <button
                 className={s.deleteBtn}
                 onClick={() => handleDelete(role.id, role.name)}

@@ -62,7 +62,6 @@ export function requireGroup(groupName) {
 
       next();
     } catch (error) {
-      console.error('Group check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Group check failed',
@@ -126,7 +125,6 @@ export function requireAnyGroup(groupNames) {
 
       next();
     } catch (error) {
-      console.error('Groups check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Groups check failed',
@@ -193,7 +191,6 @@ export function requireAllGroups(groupNames) {
 
       next();
     } catch (error) {
-      console.error('All groups check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Groups check failed',
@@ -272,7 +269,6 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
 
       next();
     } catch (error) {
-      console.error('Group level check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Group level check failed',
@@ -336,7 +332,6 @@ export function requireDepartment(department) {
 
       next();
     } catch (error) {
-      console.error('Department check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Department check failed',
@@ -432,7 +427,6 @@ export function requireSameTeam(
       req.resource = resource;
       next();
     } catch (error) {
-      console.error('Same team check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Team authorization failed',
@@ -488,8 +482,7 @@ export function cacheUserGroups(req, res, next) {
       }
       next();
     })
-    .catch(error => {
-      console.error('Group caching error:', error);
+    .catch(() => {
       next(); // Continue without caching
     });
 }

@@ -54,5 +54,67 @@ export default function groupRoutes(deps, middlewares, app) {
     groupController.getGroups,
   );
 
+  /**
+   * @route   GET /:id/members
+   * @desc    Get group members
+   * @access  Admin (requires 'groups:read' permission)
+   */
+  router.get(
+    '/:id/members',
+    requireAuth,
+    requirePermission('groups:read'),
+    groupController.getGroupMembers,
+  );
+
+  /**
+   * @route   PUT /:id/roles
+   * @desc    Assign roles to group
+   * @access  Admin (requires 'groups:write' permission)
+   * @body    { role_ids: [] }
+   */
+  router.put(
+    '/:id/roles',
+    requireAuth,
+    requirePermission('groups:write'),
+    groupController.assignRolesToGroup,
+  );
+
+  /**
+   * @route   GET /:id
+   * @desc    Get group by ID
+   * @access  Admin (requires 'groups:read' permission)
+   */
+  router.get(
+    '/:id',
+    requireAuth,
+    requirePermission('groups:read'),
+    groupController.getGroupById,
+  );
+
+  /**
+   * @route   PUT /:id
+   * @desc    Update group by ID
+   * @access  Admin (requires 'groups:write' permission)
+   * @body    { name, description, category, type }
+   */
+  router.put(
+    '/:id',
+    requireAuth,
+    requirePermission('groups:write'),
+    groupController.updateGroup,
+  );
+
+  /**
+   * @route   DELETE /:id
+   * @desc    Delete group by ID
+   * @access  Admin (requires 'groups:delete' permission)
+   */
+  router.delete(
+    '/:id',
+    requireAuth,
+    requirePermission('groups:delete'),
+    groupController.deleteGroup,
+  );
+
   return router;
 }

@@ -23,7 +23,7 @@ import { SYSTEM_ROLES } from '../../constants/roles';
 export async function createRole(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, description } = req.body;
+    const { name, description, permissions } = req.body;
 
     // Validate input
     if (!name) {
@@ -36,12 +36,27 @@ export async function createRole(req, res) {
     const models = req.app.get('models');
 
     // Create role
-    const role = await roleService.createRole({ name, description }, models);
+    let role = await roleService.createRole({ name, description }, models);
+
+    // Assign permissions if provided
+    if (permissions && Array.isArray(permissions) && permissions.length > 0) {
+      role = await roleService.assignPermissionsToRole(
+        role.id,
+        permissions,
+        models,
+      );
+    }
 
     return http.sendSuccess(res, { role }, 201);
   } catch (error) {
     if (error.name === 'RoleAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
+    }
+
+    if (error.name === 'PermissionNotFoundError') {
+      return http.sendValidationError(res, {
+        permissions: error.message,
+      });
     }
 
     return http.sendServerError(res, 'Failed to create role');
@@ -85,22 +100,11 @@ export async function getRoleById(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { Role, Permission } = models;
 
-    const role = await Role.findByPk(id, {
-      include: [
-        {
-          model: Permission,
-          as: 'permissions',
-          through: { attributes: [] },
-        },
-      ],
-    });
-
-    if (!role) {
-      return http.sendNotFound(res, 'Role not found');
-    }
+    const role = await roleService.getRoleById(id, models);
 
     return http.sendSuccess(res, { role });
   } catch (error) {
@@ -120,25 +124,27 @@ export async function updateRole(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { name, description } = req.body;
+    const { name, description, permissions } = req.body;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { Role } = models;
 
-    const role = await Role.findByPk(id);
-    if (!role) {
-      return http.sendNotFound(res, 'Role not found');
-    }
-
-    // Update role
-    await role.update({
-      name: name || role.name,
-      description: description != null ? description : role.description,
-    });
+    const role = await roleService.updateRole(
+      id,
+      { name, description, permissions },
+      models,
+    );
 
     return http.sendSuccess(res, { role });
   } catch (error) {
     if (error.name === 'RoleAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
+    }
+
+    if (error.name === 'PermissionNotFoundError') {
+      return http.sendValidationError(res, {
+        permissions: error.message,
+      });
     }
 
     return http.sendServerError(res, 'Failed to update role');
@@ -157,23 +163,14 @@ export async function deleteRole(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
+    // Get models from app context
     const models = req.app.get('models');
-    const { Role } = models;
 
-    const role = await Role.findByPk(id);
-    if (!role) {
-      return http.sendNotFound(res, 'Role not found');
-    }
-
-    // Prevent deletion of system roles
-    if (SYSTEM_ROLES.includes(role.name)) {
-      return http.sendError(res, 'Cannot delete system roles', 400);
-    }
-
-    await role.destroy();
+    await roleService.deleteRole(id, models);
 
     return http.sendSuccess(res, {
-      message: `Role '${role.name}' deleted successfully`,
+      message: `Role deleted successfully`,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete role');

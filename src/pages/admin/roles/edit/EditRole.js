@@ -1,0 +1,324 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import PropTypes from 'prop-types';
+import { useDispatch, useSelector } from 'react-redux';
+import { useHistory } from '../../../../contexts/history';
+import {
+  updateRole,
+  fetchRoleById,
+  fetchPermissions,
+  getPermissions,
+  getPermissionsLoading,
+} from '../../../../redux';
+import s from './EditRole.css';
+
+function EditRole({ roleId }) {
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const permissions = useSelector(getPermissions);
+  const permissionsLoading = useSelector(getPermissionsLoading);
+
+  const [role, setRole] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    permissions: [],
+  });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [fetchingRole, setFetchingRole] = useState(true);
+  const [permissionSearch, setPermissionSearch] = useState('');
+
+  // Fetch role data on mount
+  useEffect(() => {
+    async function loadRole() {
+      setFetchingRole(true);
+      const result = await dispatch(fetchRoleById(roleId));
+      if (result.success) {
+        setRole(result.role);
+      } else {
+        setError(result.error);
+      }
+      setFetchingRole(false);
+    }
+
+    if (roleId) {
+      loadRole();
+    }
+  }, [dispatch, roleId]);
+
+  useEffect(() => {
+    dispatch(fetchPermissions({ limit: 100 }));
+  }, [dispatch]);
+
+  // Update form data when role is loaded
+  useEffect(() => {
+    if (role) {
+      setFormData({
+        name: role.name || '',
+        description: role.description || '',
+        permissions:
+          role.permissions && role.permissions.length > 0
+            ? role.permissions.map(p => p.id)
+            : [],
+      });
+    }
+  }, [role]);
+
+  const handleChange = useCallback(e => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
+
+  const handlePermissionChange = useCallback(e => {
+    const { value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      permissions: checked
+        ? [...prev.permissions, value]
+        : prev.permissions.filter(p => p !== value),
+    }));
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    history.push('/admin/roles');
+  }, [history]);
+
+  const handleSubmit = useCallback(
+    async e => {
+      e.preventDefault();
+      setError(null);
+
+      if (!formData.name.trim()) {
+        setError('Role name is required');
+        return;
+      }
+
+      setLoading(true);
+      const result = await dispatch(updateRole(role.id, formData));
+      setLoading(false);
+
+      if (result.success) {
+        history.push('/admin/roles');
+      } else {
+        setError(result.error);
+      }
+    },
+    [dispatch, formData, history, role],
+  );
+
+  // Filter permissions based on search
+  const filteredPermissions = useMemo(
+    () =>
+      permissions.filter(
+        permission =>
+          permission.name
+            .toLowerCase()
+            .includes(permissionSearch.toLowerCase()) ||
+          (permission.description &&
+            permission.description
+              .toLowerCase()
+              .includes(permissionSearch.toLowerCase())) ||
+          (permission.resource &&
+            permission.resource
+              .toLowerCase()
+              .includes(permissionSearch.toLowerCase())) ||
+          (permission.action &&
+            permission.action
+              .toLowerCase()
+              .includes(permissionSearch.toLowerCase())),
+      ),
+    [permissions, permissionSearch],
+  );
+
+  // Group permissions by resource for better organization
+  const groupedPermissions = useMemo(() => {
+    const grouped = {};
+    filteredPermissions.forEach(permission => {
+      const resource = permission.resource || 'Other';
+      if (!grouped[resource]) {
+        grouped[resource] = [];
+      }
+      grouped[resource].push(permission);
+    });
+    return grouped;
+  }, [filteredPermissions]);
+
+  if (fetchingRole) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h2 className={s.title}>Edit Role</h2>
+          <button type='button' onClick={handleCancel} className={s.backBtn}>
+            ← Back to Roles
+          </button>
+        </div>
+        <div className={s.formContainer}>
+          <div className={s.loading}>Loading role data...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!role) {
+    return (
+      <div className={s.root}>
+        <div className={s.header}>
+          <h2 className={s.title}>Edit Role</h2>
+          <button type='button' onClick={handleCancel} className={s.backBtn}>
+            ← Back to Roles
+          </button>
+        </div>
+        <div className={s.formContainer}>
+          <div className={s.formError}>Failed to load role data</div>
+          <div className={s.formActions}>
+            <button
+              type='button'
+              onClick={handleCancel}
+              className={s.cancelBtn}
+            >
+              Back to Roles
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={s.root}>
+      <div className={s.header}>
+        <h2 className={s.title}>Edit Role</h2>
+        <button type='button' onClick={handleCancel} className={s.backBtn}>
+          ← Back to Roles
+        </button>
+      </div>
+
+      <div className={s.formContainer}>
+        <form onSubmit={handleSubmit} className={s.form}>
+          {error && <div className={s.formError}>{error}</div>}
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Role Information</h3>
+
+            <div className={s.formGroup}>
+              <label htmlFor='name'>Role Name *</label>
+              <input
+                type='text'
+                id='name'
+                name='name'
+                value={formData.name}
+                onChange={handleChange}
+                required
+                className={s.formInput}
+                placeholder='e.g., editor, moderator, viewer'
+              />
+            </div>
+
+            <div className={s.formGroup}>
+              <label htmlFor='description'>Description</label>
+              <textarea
+                id='description'
+                name='description'
+                value={formData.description}
+                onChange={handleChange}
+                className={s.formTextarea}
+                placeholder='Describe what this role is for...'
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>
+              Permissions ({formData.permissions.length} selected)
+            </h3>
+
+            <div className={s.formGroup}>
+              <input
+                type='text'
+                placeholder='Search permissions...'
+                value={permissionSearch}
+                onChange={e => setPermissionSearch(e.target.value)}
+                className={s.searchInput}
+              />
+              {permissionsLoading ? (
+                <div className={s.itemsLoading}>Loading permissions...</div>
+              ) : (
+                <div className={s.permissionsContainer}>
+                  {Object.keys(groupedPermissions).length > 0 ? (
+                    Object.entries(groupedPermissions).map(
+                      ([resource, perms]) => (
+                        <div key={resource} className={s.permissionGroup}>
+                          <h4 className={s.resourceTitle}>{resource}</h4>
+                          <div className={s.checkboxGroup}>
+                            {perms.map(permission => (
+                              <label
+                                key={permission.id}
+                                className={s.checkboxItem}
+                              >
+                                <input
+                                  type='checkbox'
+                                  name='permissions'
+                                  value={permission.id}
+                                  checked={formData.permissions.includes(
+                                    permission.id,
+                                  )}
+                                  onChange={handlePermissionChange}
+                                />
+                                <span>
+                                  <span className={s.permissionName}>
+                                    {permission.action || permission.name}
+                                  </span>
+                                  {permission.description && (
+                                    <span className={s.itemDescription}>
+                                      {permission.description}
+                                    </span>
+                                  )}
+                                </span>
+                              </label>
+                            ))}
+                          </div>
+                        </div>
+                      ),
+                    )
+                  ) : (
+                    <div className={s.noItemsFound}>No permissions found</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className={s.formActions}>
+            <button
+              type='button'
+              onClick={handleCancel}
+              className={s.cancelBtn}
+            >
+              Cancel
+            </button>
+            <button type='submit' disabled={loading} className={s.submitBtn}>
+              {loading ? 'Saving...' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+EditRole.propTypes = {
+  roleId: PropTypes.string.isRequired,
+};
+
+export default EditRole;

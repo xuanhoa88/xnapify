@@ -6,25 +6,45 @@
  */
 
 import Groups from './Groups';
+import CreateGroup from './create/CreateGroup';
+import EditGroup from './edit/EditGroup';
+import GroupMembers from './members/GroupMembers';
 
 /**
- * Route configuration
+ * Route configuration with child routes
  */
 const route = {
   path: '/groups',
+  children: [
+    {
+      path: '',
+      action: () => ({
+        title: 'Group Management - Admin',
+        component: <Groups />,
+      }),
+    },
+    {
+      path: '/create',
+      action: () => ({
+        title: 'Create Group - Admin',
+        component: <CreateGroup />,
+      }),
+    },
+    {
+      path: '/:groupId/edit',
+      action: context => ({
+        title: 'Edit Group - Admin',
+        component: <EditGroup groupId={context.params.groupId} />,
+      }),
+    },
+    {
+      path: '/:groupId/members',
+      action: context => ({
+        title: 'Group Members - Admin',
+        component: <GroupMembers groupId={context.params.groupId} />,
+      }),
+    },
+  ],
 };
 
-/**
- * Route action
- * Authentication and authorization handled by parent route
- */
-async function action() {
-  const title = 'Group Management - Admin';
-
-  return {
-    title,
-    component: <Groups />,
-  };
-}
-
-export default [route, action];
+export default [route];

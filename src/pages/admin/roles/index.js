@@ -6,25 +6,37 @@
  */
 
 import Roles from './Roles';
+import CreateRole from './create/CreateRole';
+import EditRole from './edit/EditRole';
 
 /**
- * Route configuration
+ * Route configuration with child routes
  */
 const route = {
   path: '/roles',
+  children: [
+    {
+      path: '',
+      action: () => ({
+        title: 'Role Management - Admin',
+        component: <Roles />,
+      }),
+    },
+    {
+      path: '/create',
+      action: () => ({
+        title: 'Create Role - Admin',
+        component: <CreateRole />,
+      }),
+    },
+    {
+      path: '/:roleId/edit',
+      action: context => ({
+        title: 'Edit Role - Admin',
+        component: <EditRole roleId={context.params.roleId} />,
+      }),
+    },
+  ],
 };
 
-/**
- * Route action
- * Authentication and authorization handled by parent route
- */
-async function action() {
-  const title = 'Role Management - Admin';
-
-  return {
-    title,
-    component: <Roles />,
-  };
-}
-
-export default [route, action];
+export default [route];

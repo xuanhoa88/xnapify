@@ -348,10 +348,11 @@ export async function userHasAllPermissions(user_id, permissionNames, models) {
  * @returns {Promise<Object[]>} Array of roles
  */
 export async function getUserRoles(user_id, models) {
-  const { User, Role, Permission } = models;
+  const { User, Role, Permission, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
     include: [
+      { model: UserProfile, as: 'profile' },
       {
         model: Role,
         as: 'roles',
@@ -385,10 +386,11 @@ export async function getUserRoles(user_id, models) {
  * @returns {Promise<Object[]>} Array of groups
  */
 export async function getUserGroups(user_id, models) {
-  const { User, Group, Role } = models;
+  const { User, Group, Role, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
     include: [
+      { model: UserProfile, as: 'profile' },
       {
         model: Group,
         as: 'groups',
@@ -448,10 +450,15 @@ export async function userInGroup(user_id, groupName, models) {
  * @returns {Promise<Object>} Complete RBAC profile
  */
 export async function getUserRBACProfile(user_id, models) {
-  const { User, Role, Permission, Group } = models;
+  const { User, Role, Permission, Group, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
     include: [
+      {
+        model: UserProfile,
+        as: 'profile',
+        attributes: ['first_name', 'last_name', 'display_name'],
+      },
       {
         model: Role,
         as: 'roles',
@@ -500,7 +507,7 @@ export async function getUserRBACProfile(user_id, models) {
     user: {
       id: user.id,
       email: user.email,
-      display_name: user.display_name,
+      display_name: (user.profile && user.profile.display_name) || null,
       is_active: user.is_active,
     },
     roles: user.roles.map(role => ({

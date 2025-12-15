@@ -193,6 +193,33 @@ export function deleteGroup(groupId) {
 }
 
 /**
+ * Fetch group members
+ *
+ * @param {string} groupId - Group ID
+ * @param {Object} options - Pagination options
+ * @returns {Function} Redux thunk action
+ */
+export function fetchGroupMembers(groupId, options = {}) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { page = 1, limit = 10 } = options;
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+      });
+
+      const { data } = await fetch(
+        `/api/admin/groups/${groupId}/members?${params.toString()}`,
+      );
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
  * Clear groups error
  *
  * @returns {Object} Redux action

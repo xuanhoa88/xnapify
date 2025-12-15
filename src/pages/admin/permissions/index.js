@@ -6,25 +6,39 @@
  */
 
 import Permissions from './Permissions';
+import CreatePermission from './create/CreatePermission';
+import EditPermission from './edit/EditPermission';
 
 /**
  * Route configuration
  */
 const route = {
   path: '/permissions',
+  children: [
+    {
+      path: '',
+      action: () => ({
+        title: 'Permission Management - Admin',
+        component: <Permissions />,
+      }),
+    },
+    {
+      path: '/create',
+      action: () => ({
+        title: 'Create Permission - Admin',
+        component: <CreatePermission />,
+      }),
+    },
+    {
+      path: '/:permissionId/edit',
+      action: context => ({
+        title: 'Edit Permission - Admin',
+        component: (
+          <EditPermission permissionId={context.params.permissionId} />
+        ),
+      }),
+    },
+  ],
 };
 
-/**
- * Route action
- * Authentication and authorization handled by parent route
- */
-async function action() {
-  const title = 'Permission Management - Admin';
-
-  return {
-    title,
-    component: <Permissions />,
-  };
-}
-
-export default [route, action];
+export default [route];

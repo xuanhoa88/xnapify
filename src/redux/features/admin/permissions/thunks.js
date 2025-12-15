@@ -63,6 +63,23 @@ export function fetchPermissions(options = {}) {
 }
 
 /**
+ * Fetch permission by ID
+ *
+ * @param {string} permissionId - Permission ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchPermissionById(permissionId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/permissions/${permissionId}`);
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
  * Delete a permission
  *
  * @param {string} permissionId - Permission ID to delete

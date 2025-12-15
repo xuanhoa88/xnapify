@@ -136,7 +136,7 @@ export async function getGroups(options, models) {
  * @returns {Promise<Object>} Group with roles and users
  */
 export async function getGroupById(group_id, models) {
-  const { Group, Role, User } = models;
+  const { Group, Role, User, UserProfile } = models;
 
   const group = await Group.findByPk(group_id, {
     include: [
@@ -149,7 +149,14 @@ export async function getGroupById(group_id, models) {
         model: User,
         as: 'users',
         through: { attributes: [] },
-        attributes: ['id', 'email', 'display_name', 'is_active'],
+        attributes: ['id', 'email', 'is_active'],
+        include: [
+          {
+            model: UserProfile,
+            as: 'profile',
+            attributes: ['first_name', 'last_name', 'display_name'],
+          },
+        ],
       },
     ],
   });
@@ -350,7 +357,7 @@ export async function removeRoleFromGroup(group_id, role_id, models) {
 export async function getGroupMembers(group_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
-  const { Group, User } = models;
+  const { Group, User, UserProfile } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -368,11 +375,16 @@ export async function getGroupMembers(group_id, options, models) {
         where: { id: group_id },
         through: { attributes: [] },
       },
+      {
+        model: UserProfile,
+        as: 'profile',
+        attributes: ['first_name', 'last_name', 'display_name'],
+      },
     ],
-    attributes: ['id', 'email', 'display_name', 'is_active', 'created_at'],
+    attributes: ['id', 'email', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [['display_name', 'ASC']],
+    order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
   });
 
   return {

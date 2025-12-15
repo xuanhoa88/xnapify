@@ -87,7 +87,6 @@ export function requireRole(requiredRole) {
 
       next();
     } catch (error) {
-      console.error('requireRole error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -165,7 +164,6 @@ export function requireAnyRole(allowedRoles) {
 
       next();
     } catch (error) {
-      console.error('requireAnyRole error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -324,7 +322,6 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
 
       next();
     } catch (error) {
-      console.error('requireRoleLevel error:', error);
       return res.status(500).json({
         success: false,
         error: 'Role level authorization failed',

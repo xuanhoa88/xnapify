@@ -75,7 +75,6 @@ export function requireOwnership(
       req.resource = resource;
       next();
     } catch (error) {
-      console.error('Ownership check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Ownership check failed',
@@ -187,7 +186,6 @@ export function requireFlexibleOwnership(options) {
 
       next();
     } catch (error) {
-      console.error('Flexible ownership check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Ownership check failed',
@@ -284,7 +282,6 @@ export function requireSharedOwnership(
 
       next();
     } catch (error) {
-      console.error('Shared ownership check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Shared ownership check failed',
@@ -371,7 +368,6 @@ export function requireHierarchicalOwnership(
 
       next();
     } catch (error) {
-      console.error('Hierarchical ownership check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Hierarchical ownership check failed',
@@ -461,7 +457,6 @@ export function requireTimeBasedOwnership(
 
       next();
     } catch (error) {
-      console.error('Time-based ownership check error:', error);
       return res.status(500).json({
         success: false,
         error: 'Time-based ownership check failed',
