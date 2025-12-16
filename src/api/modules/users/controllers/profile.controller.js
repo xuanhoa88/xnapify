@@ -170,6 +170,57 @@ export async function uploadAvatar(req, res) {
 }
 
 /**
+ * Link uploaded file as user avatar
+ *
+ * @route   PUT /api/profile/avatar
+ * @access  Private (requires authentication)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function linkAvatar(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { fileName } = req.body;
+
+    if (!fileName) {
+      return http.sendValidationError(res, {
+        fileName: 'fileName is required',
+      });
+    }
+
+    // Get filesystem actions and models from app context
+    const fs = req.app.get('fs');
+    const models = req.app.get('models');
+
+    // Validate file exists
+    const fileExists = await fs.actions.fileExists(fileName);
+    if (!fileExists) {
+      return http.sendValidationError(res, {
+        fileName: 'File not found. Please upload the file first.',
+      });
+    }
+
+    // Update user profile with avatar
+    const user = await profileService.linkUserAvatar(req.user.id, fileName, {
+      models,
+      fs,
+    });
+
+    // Respond with success message and updated profile
+    return http.sendSuccess(res, {
+      message: 'Avatar linked successfully',
+      profile: {
+        id: user.id,
+        email: user.email,
+        picture: (user.profile && user.profile.picture) || null,
+      },
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to link avatar');
+  }
+}
+
+/**
  * Remove user avatar
  *
  * @route   DELETE /api/profile/avatar

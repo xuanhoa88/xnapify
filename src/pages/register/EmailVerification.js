@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { emailVerification } from '../../redux';
-import s from './Profile.css';
+import s from './EmailVerification.css';
 
 function EmailVerification({ title, token: initialToken }) {
   const { t } = useTranslation();

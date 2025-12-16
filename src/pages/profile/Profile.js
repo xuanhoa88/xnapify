@@ -5,17 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { getCurrentUser, updateCurrentUser } from '../../redux';
+import {
+  getCurrentUser,
+  getCurrentUserAvatarUrl,
+  updateCurrentUser,
+  uploadUserAvatar,
+} from '../../redux';
 import s from './Profile.css';
 
 function Profile({ title }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(getCurrentUser);
+  const avatarUrl = useSelector(getCurrentUserAvatarUrl);
+  const fileInputRef = useRef(null);
 
   const [formData, setFormData] = useState({
     display_name: '',
@@ -67,12 +74,43 @@ function Profile({ title }) {
     [dispatch, formData],
   );
 
-  // Get first letter of display name for avatar
   const avatarInitial = useMemo(() => {
     return formData.display_name
       ? formData.display_name.charAt(0).toUpperCase()
       : 'U';
   }, [formData.display_name]);
+
+  const handleAvatarClick = useCallback(() => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  }, []);
+
+  const handleFileChange = useCallback(
+    async e => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      setLoading(true);
+      setMessage({ type: '', text: '' });
+
+      const result = await dispatch(uploadUserAvatar(file));
+
+      setLoading(false);
+      if (result.success) {
+        setMessage({ type: 'success', text: 'Avatar updated successfully' });
+      } else {
+        setMessage({
+          type: 'error',
+          text: result.error || 'Failed to update avatar',
+        });
+      }
+
+      // Reset input
+      e.target.value = '';
+    },
+    [dispatch],
+  );
 
   return (
     <div className={s.root}>
@@ -80,7 +118,43 @@ function Profile({ title }) {
         <h1>{title}</h1>
 
         <div className={s.avatarContainer}>
-          <div className={s.avatar}>{avatarInitial}</div>
+          <div
+            className={s.avatarWrapper}
+            onClick={handleAvatarClick}
+            role='button'
+            tabIndex={0}
+            onKeyDown={e => {
+              if (e.key === 'Enter') handleAvatarClick();
+            }}
+          >
+            {avatarUrl ? (
+              <img src={avatarUrl} alt='Profile' className={s.avatarImg} />
+            ) : (
+              <div className={s.avatar}>{avatarInitial}</div>
+            )}
+            <div className={s.avatarOverlay}>
+              <svg
+                className={s.cameraIcon}
+                xmlns='http://www.w3.org/2000/svg'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2'
+                strokeLinecap='round'
+                strokeLinejoin='round'
+              >
+                <path d='M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z'></path>
+                <circle cx='12' cy='13' r='4'></circle>
+              </svg>
+            </div>
+          </div>
+          <input
+            type='file'
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={handleFileChange}
+            accept='image/*'
+          />
         </div>
 
         {message.text && (

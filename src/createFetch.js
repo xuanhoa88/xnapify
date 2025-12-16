@@ -227,6 +227,17 @@ export function createFetch(fetch, config = {}) {
             },
           };
 
+      // Detect FormData and remove Content-Type to allow browser to set boundary
+      if (
+        mergedOptions.body &&
+        (mergedOptions.body instanceof FormData ||
+          mergedOptions.body.constructor.name === 'FormData')
+      ) {
+        if (mergedOptions.headers && mergedOptions.headers['Content-Type']) {
+          delete mergedOptions.headers['Content-Type'];
+        }
+      }
+
       // Apply request interceptor
       if (typeof onRequest === 'function') {
         const interceptedOptions = await onRequest(fullUrl, mergedOptions);

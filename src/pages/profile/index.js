@@ -8,57 +8,33 @@
 import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
 import Profile from './Profile';
-import EmailVerification from './EmailVerification';
 
 /**
- * Route configuration with child routes
+ * Route configuration
  */
 const route = {
   path: '/profile',
-  children: [
-    {
-      path: '',
-      action: context => {
-        const title = context.i18n.t('navigation.profile', 'User Profile');
-
-        if (!isAuthenticated(context.store.getState())) {
-          return { redirect: '/login' };
-        }
-
-        return {
-          title,
-          component: (
-            <Layout>
-              <Profile title={title} />
-            </Layout>
-          ),
-        };
-      },
-    },
-    {
-      path: '/:token/email-verification',
-      action: context => {
-        const title = 'Email Verification';
-        const state = context.store.getState();
-
-        // Redirect authenticated users to home
-        if (isAuthenticated(state)) {
-          return { redirect: '/' };
-        }
-
-        const { token } = context.params;
-
-        return {
-          title,
-          component: (
-            <Layout>
-              <EmailVerification title={title} token={token} />
-            </Layout>
-          ),
-        };
-      },
-    },
-  ],
 };
 
-export default [route];
+/**
+ * Route action
+ * Redirects authenticated users to home page
+ */
+function action(context) {
+  const title = context.i18n.t('navigation.profile', 'Profile');
+
+  if (!isAuthenticated(context.store.getState())) {
+    return { redirect: '/login' };
+  }
+
+  return {
+    title,
+    component: (
+      <Layout>
+        <Profile title={title} />
+      </Layout>
+    ),
+  };
+}
+
+export default [route, action];

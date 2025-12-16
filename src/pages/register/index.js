@@ -8,37 +8,61 @@
 import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
 import Register from './Register';
+import EmailVerification from './EmailVerification';
 
 /**
  * Route configuration
  */
 const route = {
   path: '/register',
+  children: [
+    {
+      path: '',
+      action: context => {
+        const title = context.i18n.t('navigation.register', 'Register');
+
+        // Get state from Redux store
+        const state = context.store.getState();
+
+        // Redirect authenticated users to home
+        if (isAuthenticated(state)) {
+          return { redirect: '/' };
+        }
+
+        return {
+          title,
+          component: (
+            <Layout>
+              <Register title={title} />
+            </Layout>
+          ),
+        };
+      },
+    },
+    {
+      path: '/:token/email-verification',
+      action: context => {
+        const title = 'Email Verification'; // Localized string should be used in real app
+        const state = context.store.getState();
+
+        // Redirect authenticated users to home
+        if (isAuthenticated(state)) {
+          return { redirect: '/' };
+        }
+
+        const { token } = context.params;
+
+        return {
+          title,
+          component: (
+            <Layout>
+              <EmailVerification title={title} token={token} />
+            </Layout>
+          ),
+        };
+      },
+    },
+  ],
 };
 
-/**
- * Route action
- * Redirects authenticated users to home page
- */
-function action(context) {
-  const title = context.i18n.t('navigation.register', 'Register');
-
-  // Get state from Redux store
-  const state = context.store.getState();
-
-  // Redirect authenticated users to home
-  if (isAuthenticated(state)) {
-    return { redirect: '/' };
-  }
-
-  return {
-    title,
-    component: (
-      <Layout>
-        <Register title={title} />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];
+export default [route];

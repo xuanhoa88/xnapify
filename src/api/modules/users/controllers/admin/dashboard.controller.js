@@ -45,7 +45,7 @@ export async function getDashboard(req, res, next) {
     });
 
     // Get recent user logins (last 10)
-    const recentActivity = await UserLogin.findAll({
+    const recentActivities = await UserLogin.findAll({
       limit: 10,
       order: [['created_at', 'DESC']],
       include: [
@@ -65,8 +65,8 @@ export async function getDashboard(req, res, next) {
     });
 
     // Format recent activity
-    const formattedActivity = recentActivity.map(login => {
-      const { user } = login;
+    const formattedActivities = recentActivities.map(activity => {
+      const { user } = activity;
       let displayName = '';
 
       if (user) {
@@ -85,7 +85,7 @@ export async function getDashboard(req, res, next) {
       }
 
       return {
-        id: login.id,
+        id: activity.id,
         user: user
           ? {
               id: user.id,
@@ -93,10 +93,10 @@ export async function getDashboard(req, res, next) {
               displayName,
             }
           : null,
-        action: login.success ? 'Login' : 'Failed login attempt',
-        date: login.created_at,
-        status: login.success ? 'success' : 'warning',
-        ip: login.ip_address,
+        action: activity.success ? 'Login' : 'Failed login attempt',
+        date: activity.created_at,
+        status: activity.success ? 'success' : 'warning',
+        ip: activity.ip_address,
       };
     });
 
@@ -117,7 +117,7 @@ export async function getDashboard(req, res, next) {
           systemStatus,
           uptime,
         },
-        recentActivity: formattedActivity,
+        recentActivities: formattedActivities,
       },
     });
   } catch (error) {

@@ -16,7 +16,7 @@ const initialState = {
     systemStatus: 'Unknown',
     uptime: '0%',
   },
-  recentActivity: [],
+  recentActivities: [],
   loading: false,
   error: null,
 };
@@ -37,7 +37,7 @@ const dashboardSlice = createSlice({
     fetchDashboardSuccess: (state, action) => {
       state.loading = false;
       state.stats = action.payload.stats || initialState.stats;
-      state.recentActivity = action.payload.recentActivity || [];
+      state.recentActivities = action.payload.recentActivities || [];
       state.error = null;
     },
     fetchDashboardError: (state, action) => {

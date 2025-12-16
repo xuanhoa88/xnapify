@@ -51,7 +51,7 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
   // Create store with RTK's configureStore
   const store = createStore({
     reducer: rootReducer,
-    preloadedState: initialState,
+    appState: initialState,
     middleware: getMiddleware,
     devTools: __DEV__
       ? {

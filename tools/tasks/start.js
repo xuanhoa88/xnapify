@@ -356,13 +356,15 @@ function setupWebpackMiddlewares(clientCompiler) {
   // ---------------------------
   // BrowserSync Client Connection Endpoint
   // ---------------------------
-  // When a client reconnects via HMR, it POSTs here to cancel pending browser open
-  const browserSyncEndpoint = (req, res) => {
-    onBrowserSyncClientConnected();
-    res.status(204).end();
-  };
-  browserSyncEndpoint[kWebpackMiddleware] = true;
-  app.post('/~/__bs_connected', browserSyncEndpoint);
+  app.use(
+    wrapWebpackMiddleware((req, res, next) => {
+      if (req.method === 'POST' && req.path === '/~/__bs_connected') {
+        onBrowserSyncClientConnected();
+        return res.status(204).end();
+      }
+      next();
+    }),
+  );
 
   return hotMiddleware;
 }

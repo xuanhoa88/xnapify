@@ -68,3 +68,18 @@ export async function getFileInfo(fileName, options = {}) {
     );
   }
 }
+
+/**
+ * Check if file exists
+ * @param {string} fileName - Name of file to check
+ * @param {Object} options - Options
+ * @returns {Promise<boolean>} True if file exists
+ */
+export async function fileExists(fileName, options = {}) {
+  try {
+    const manager = new FilesystemManager(options);
+    return await manager.exists(fileName);
+  } catch (error) {
+    return false;
+  }
+}

@@ -5,7 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
+import express, { Router } from 'express';
+import path from 'path';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
@@ -593,6 +594,15 @@ export default async function main(app, config = {}) {
       // Populate req.user from JWT cookies if present
       apiMiddlewares.push(auth.middlewares.optionalAuth());
     }
+
+    // Mount filesystem routes on apiRoutes
+    const fsRouter = fs.createRouter(Router, {
+      upload: {
+        maxFiles: 10,
+        maxFileSize: 50 * 1024 * 1024, // 50MB
+      },
+    });
+    apiRoutes.use('/fs', fsRouter);
 
     // Mount API routes with middleware stack
     app.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);

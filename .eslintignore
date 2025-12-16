@@ -50,3 +50,6 @@ pnpm-lock.yaml
 
 # JSON files (not JavaScript)
 *.json
+
+# Uploads
+uploads/

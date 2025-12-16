@@ -167,6 +167,61 @@ export async function uploadUserAvatar(user_id, file, { models, fs }) {
 }
 
 /**
+ * Link existing file as user avatar
+ *
+ * @param {string} user_id - User ID
+ * @param {string} fileName - Uploaded file name
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} options.fs - Filesystem actions
+ * @returns {Promise<Object>} Updated user with profile
+ */
+export async function linkUserAvatar(user_id, fileName, { models, fs }) {
+  const { User, UserProfile } = models;
+
+  // Verify user exists
+  const user = await User.findByPk(user_id, {
+    include: [{ model: UserProfile, as: 'profile' }],
+  });
+
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  // Store old avatar path for cleanup
+  const oldAvatarPath = user.profile && user.profile.picture;
+
+  // Update profile with new avatar path
+  if (user.profile) {
+    await user.profile.update({ picture: fileName });
+  } else {
+    await UserProfile.create({
+      user_id,
+      picture: fileName,
+    });
+  }
+
+  // Delete old avatar if different
+  if (oldAvatarPath && oldAvatarPath !== fileName) {
+    try {
+      await fs.actions.deleteFile(oldAvatarPath);
+    } catch (error) {
+      console.warn('Failed to delete old avatar:', error.message);
+    }
+  }
+
+  // Reload user with updated profile
+  await user.reload({
+    include: [{ model: UserProfile, as: 'profile' }],
+  });
+
+  return user;
+}
+
+/**
  * Remove user avatar
  *
  * @param {string} user_id - User ID

@@ -105,7 +105,7 @@ function GroupMembers({ groupId }) {
                 members.map(member => (
                   <tr key={member.id}>
                     <td>
-                      {member.profile?.display_name ||
+                      {(member.profile && member.profile.display_name) ||
                         member.display_name ||
                         'N/A'}
                     </td>

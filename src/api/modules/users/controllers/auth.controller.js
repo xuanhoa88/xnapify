@@ -200,7 +200,7 @@ export async function refreshToken(req, res) {
   try {
     // Get refresh token from cookie
     const auth = req.app.get('auth');
-    const refreshToken = auth.getTokenFromCookie(req);
+    const refreshToken = auth.getRefreshTokenFromCookie(req);
 
     if (!refreshToken) {
       return http.sendUnauthorized(res, 'Refresh token required');

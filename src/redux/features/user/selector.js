@@ -65,3 +65,19 @@ export const isAdmin = state => {
   if (!state.user || !state.user.roles) return false;
   return state.user.roles.includes('admin');
 };
+
+/**
+ * Get current user's avatar URL
+ *
+ * @param {Object} state - Redux state
+ * @returns {string|null} Avatar URL or null
+ */
+export const getCurrentUserAvatarUrl = state => {
+  if (!state.user || !state.user.picture) return null;
+  // External URL (http/https)
+  if (state.user.picture.startsWith('http')) {
+    return state.user.picture;
+  }
+  // Internal file - use fs preview endpoint
+  return `/api/fs/preview?fileName=${encodeURIComponent(state.user.picture)}`;
+};

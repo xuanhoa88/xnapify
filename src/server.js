@@ -224,7 +224,7 @@ async function renderPageToHtml({ context, component, metadata = {} }) {
       requiredChunks: getInnerHTML(requiredChunksScript) || '',
       namedChunks: getInnerHTML(namedChunksScript) || '',
     },
-    appState: { reduxState: context.store.getState() },
+    appState: { redux: context.store.getState() },
     children,
   };
 

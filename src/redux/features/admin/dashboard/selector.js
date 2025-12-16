@@ -14,13 +14,13 @@
 export const getDashboardStats = state => state.admin.dashboard.stats;
 
 /**
- * Get recent activity
+ * Get recent activities
  *
  * @param {Object} state - Redux state
  * @returns {Array} Recent activity items
  */
-export const getDashboardRecentActivity = state =>
-  state.admin.dashboard.recentActivity;
+export const getDashboardRecentActivities = state =>
+  state.admin.dashboard.recentActivities;
 
 /**
  * Get dashboard loading state

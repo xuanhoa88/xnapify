@@ -26,6 +26,7 @@ import {
   emailVerificationSuccess,
   emailVerificationError,
   updateUser,
+  updateUserAvatar,
 } from './slice';
 
 /**
@@ -266,6 +267,49 @@ export function updateCurrentUser(userData) {
       dispatch(updateUser(data.profile));
 
       return { success: true, user: data.profile };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Upload user avatar
+ *
+ * Uploads a new avatar image for the current user
+ *
+ * @param {File} file - Avatar image file
+ * @returns {Function} Redux thunk action
+ */
+export function uploadUserAvatar(file) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const formData = new FormData();
+      formData.append('files', file);
+
+      const { data } = await fetch('/api/fs/upload', {
+        method: 'POST',
+        body: formData,
+        // Content-Type header is not set for FormData,
+        // fetch/browser will set it with boundary automatically
+      });
+
+      // The fs upload returns { success, data: { successful: [...] } }
+      if (data && data.successful.length > 0) {
+        const uploadedFile = data.successful[0];
+        // Link avatar to user profile (validates file exists)
+        const linkResponse = await fetch('/api/profile/avatar', {
+          method: 'PUT',
+          body: JSON.stringify({ fileName: uploadedFile.data.fileName }),
+        });
+
+        if (linkResponse.data) {
+          dispatch(updateUserAvatar(linkResponse.data.profile.picture));
+          return { success: true, user: linkResponse.data.profile };
+        }
+      }
+
+      return { success: false, error: 'Upload failed' };
     } catch (error) {
       return { success: false, error: error.message };
     }

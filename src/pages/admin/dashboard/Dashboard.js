@@ -13,7 +13,7 @@ import {
   getDashboardStats,
   getDashboardLoading,
   getDashboardError,
-  getDashboardRecentActivity,
+  getDashboardRecentActivities,
 } from '../../../redux';
 import s from './Dashboard.css';
 
@@ -43,7 +43,7 @@ function Dashboard() {
   const stats = useSelector(getDashboardStats);
   const loading = useSelector(getDashboardLoading);
   const error = useSelector(getDashboardError);
-  const recentActivity = useSelector(getDashboardRecentActivity);
+  const recentActivities = useSelector(getDashboardRecentActivities);
 
   useEffect(() => {
     dispatch(fetchDashboard());
@@ -123,13 +123,13 @@ function Dashboard() {
           <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
         </div>
 
-        {/* Recent Activity Table */}
+        {/* Recent Activities Table */}
         <div className={s.fullWidthCard}>
           <div className={s.cardHeader}>
-            <h3 className={s.cardTitle}>Recent Activity</h3>
+            <h3 className={s.cardTitle}>Recent Activities</h3>
           </div>
           <div className={s.tableContainer}>
-            {recentActivity && recentActivity.length > 0 ? (
+            {recentActivities && recentActivities.length > 0 ? (
               <table className={s.table}>
                 <thead>
                   <tr>
@@ -140,7 +140,7 @@ function Dashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {recentActivity.map(activity => (
+                  {recentActivities.map(activity => (
                     <tr key={activity.id}>
                       <td>
                         <div className={s.userCell}>

@@ -188,3 +188,6 @@ docker-compose.override.yml
 
 # Misc
 .DS_Store
+
+# Uploads
+uploads/

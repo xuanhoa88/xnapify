@@ -66,6 +66,12 @@ const userSlice = createSlice({
       if (!state) return action.payload;
       return { ...state, ...action.payload };
     },
+
+    // Update user avatar only
+    updateUserAvatar: (state, action) => {
+      if (!state) return state;
+      return { ...state, picture: action.payload };
+    },
   },
 });
 
@@ -90,6 +96,7 @@ export const {
   emailVerificationSuccess,
   emailVerificationError,
   updateUser,
+  updateUserAvatar,
 } = userSlice.actions;
 
 export default userSlice.reducer;

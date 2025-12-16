@@ -82,7 +82,7 @@ LoadableStateScripts.propTypes = {
  * @param {Array} [props.styleLinks=[]] - CSS file URLs
  * @param {Array} [props.scripts=[]] - JavaScript file URLs
  * @param {Object} [props.loadableState] - Loadable component state for SSR
- * @param {Object} props.appState - Application state and configuration (reduxState)
+ * @param {Object} props.appState - Application state and configuration (redux)
  * @param {string} props.children - Rendered React app HTML
  */
 function Html({
@@ -192,8 +192,8 @@ Html.propTypes = {
     namedChunks: PropTypes.string,
   }),
   appState: PropTypes.shape({
-    reduxState: PropTypes.object.isRequired,
-  }).isRequired,
+    redux: PropTypes.object,
+  }),
   children: PropTypes.string.isRequired,
 };
 

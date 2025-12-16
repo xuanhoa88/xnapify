@@ -16,6 +16,8 @@ import {
   configureStore,
   setLocale,
   getI18nInstance,
+  me,
+  isAuthenticated,
 } from './redux';
 import { createWebSocketClient, EventType, MessageType } from './ws/client';
 
@@ -25,7 +27,7 @@ import { createWebSocketClient, EventType, MessageType } from './ws/client';
 
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
-const ROOT_KEY = '__reactRoot';
+const ROOT_KEY = '__rskRoot';
 
 // =============================================================================
 // INITIALIZATION
@@ -36,10 +38,10 @@ const i18n = getI18nInstance();
 const fetch = createFetch(window.fetch);
 
 // eslint-disable-next-line no-underscore-dangle
-const { reduxState: preloadedState = {} } = window.__PRELOADED_STATE__ || {};
+const { redux: preloadedReduxState = {} } = window.__PRELOADED_STATE__ || {};
 // eslint-disable-next-line no-underscore-dangle
 delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
-const store = configureStore(preloadedState, {
+const store = configureStore(preloadedReduxState, {
   fetch,
   history,
   i18n,
@@ -68,6 +70,7 @@ let isNavigating = false;
 let navigationAbortController = null;
 let hasHydrated = false;
 let ReactDOMClient = null;
+let visibilityChangeHandler = null;
 
 const scrollPositionsHistory = {};
 
@@ -402,6 +405,12 @@ function cleanup() {
   window.removeEventListener('beforeunload', cleanup);
   window.removeEventListener('scroll', saveScrollPosition, { passive: true });
 
+  // Remove visibility change listener
+  if (visibilityChangeHandler) {
+    document.removeEventListener('visibilitychange', visibilityChangeHandler);
+    visibilityChangeHandler = null;
+  }
+
   if (__DEV__) console.log('✅ Cleanup completed');
 }
 
@@ -409,6 +418,20 @@ async function initializeApp() {
   // Set locale
   if (context.locale && i18n.language !== context.locale) {
     await store.dispatch(setLocale(context.locale));
+  }
+
+  // Client-side session restoration:
+  // If SSR failed to authenticate (e.g., transient error), try to restore session
+  // This handles cases where cookies exist but SSR couldn't verify them
+  if (!isAuthenticated(store.getState())) {
+    try {
+      await store.dispatch(me());
+      if (__DEV__ && isAuthenticated(store.getState())) {
+        console.log('✅ Session restored from cookies');
+      }
+    } catch {
+      // No valid session - user will remain as guest
+    }
   }
 
   // Initialize React DOM client
@@ -472,6 +495,27 @@ async function initializeApp() {
 
   // Subscribe to navigation AFTER initial render to avoid duplicate triggers
   unsubscribeNavigation = history.listen(handleRouteChange);
+
+  // Session restoration on tab visibility change:
+  // When user returns to tab, check if session is still valid
+  // The refresh token middleware will handle token refresh automatically
+  visibilityChangeHandler = async () => {
+    if (
+      document.visibilityState === 'visible' &&
+      isAuthenticated(store.getState())
+    ) {
+      try {
+        // Trigger a lightweight session check - the refresh middleware will
+        // automatically refresh expired tokens if refresh token is valid
+        await store.dispatch(me());
+      } catch {
+        // Session is no longer valid - force logout state update
+        // This happens when both access and refresh tokens have expired
+        if (__DEV__) console.log('⚠️ Session expired while away');
+      }
+    }
+  };
+  document.addEventListener('visibilitychange', visibilityChangeHandler);
 }
 
 // =============================================================================
