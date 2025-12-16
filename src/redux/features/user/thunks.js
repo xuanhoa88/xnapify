@@ -53,7 +53,6 @@ export function login({ email, password, rememberMe = false }) {
     try {
       const { data } = await fetch('/api/login', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, rememberMe }),
       });
 
@@ -90,7 +89,6 @@ export function register({ email, password, displayName }) {
     try {
       const { data } = await fetch('/api/register', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
           password,
@@ -171,7 +169,6 @@ export function resetPassword({ email }) {
     try {
       const { data } = await fetch('/api/users/request-reset-password', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
 
@@ -203,7 +200,6 @@ export function resetPasswordConfirmation({ token, password }) {
     try {
       const { data } = await fetch('/api/users/reset-password-confirmation', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, password }),
       });
 
@@ -234,7 +230,6 @@ export function emailVerification({ token }) {
     try {
       const { data } = await fetch('/api/users/email-verification', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token }),
       });
 
@@ -260,7 +255,6 @@ export function updateCurrentUser(userData) {
     try {
       const { data } = await fetch('/api/profile', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(userData),
       });
 

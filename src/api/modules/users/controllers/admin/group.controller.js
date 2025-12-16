@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ROLE } from '../../constants/roles';
 import * as groupService from '../../services/admin/group.service';
 
 // ========================================================================
@@ -22,7 +23,7 @@ import * as groupService from '../../services/admin/group.service';
 export async function createGroup(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, description, category, type, role_ids } = req.body;
+    const { name, description, category, type, roles } = req.body;
 
     // Validate input
     if (!name) {
@@ -36,11 +37,23 @@ export async function createGroup(req, res) {
 
     // Create group
     const group = await groupService.createGroup(
-      { name, description, category, type, role_ids },
+      { name, description, category, type, roles },
       models,
     );
 
-    return http.sendSuccess(res, { group }, 201);
+    return http.sendSuccess(
+      res,
+      {
+        group: {
+          ...group.toJSON(),
+          roles:
+            Array.isArray(group.roles) && group.roles.length > 0
+              ? group.roles.map(r => r.name)
+              : [DEFAULT_ROLE],
+        },
+      },
+      201,
+    );
   } catch (error) {
     if (error.name === 'GroupAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
@@ -99,7 +112,15 @@ export async function getGroupById(req, res) {
       return http.sendNotFound(res, 'Group not found');
     }
 
-    return http.sendSuccess(res, { group });
+    return http.sendSuccess(res, {
+      group: {
+        ...group.toJSON(),
+        roles:
+          Array.isArray(group.roles) && group.roles.length > 0
+            ? group.roles.map(r => r.name)
+            : [DEFAULT_ROLE],
+      },
+    });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get group');
   }
@@ -113,23 +134,31 @@ export async function getGroupById(req, res) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function updateGroup(req, res) {
+export async function updateGroupById(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { name, description, category, type, role_ids } = req.body;
+    const { name, description, category, type, roles } = req.body;
 
     // Get models from app context
     const models = req.app.get('models');
 
     // Update group
-    const group = await groupService.updateGroup(
+    const group = await groupService.updateGroupById(
       id,
-      { name, description, category, type, role_ids },
+      { name, description, category, type, roles },
       models,
     );
 
-    return http.sendSuccess(res, { group });
+    return http.sendSuccess(res, {
+      group: {
+        ...group.toJSON(),
+        roles:
+          Array.isArray(group.roles) && group.roles.length > 0
+            ? group.roles.map(r => r.name)
+            : [DEFAULT_ROLE],
+      },
+    });
   } catch (error) {
     if (error.name === 'GroupAlreadyExistsError') {
       return http.sendError(res, error.message, 409);
@@ -162,43 +191,6 @@ export async function deleteGroup(req, res) {
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete group');
-  }
-}
-
-/**
- * Assign roles to a group
- *
- * @route   PUT /api/admin/groups/:id/roles
- * @access  Admin (requires 'groups:write' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function assignRolesToGroup(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const { role_ids } = req.body;
-
-    // Validate input
-    if (!Array.isArray(role_ids)) {
-      return http.sendValidationError(res, {
-        role_ids: 'Role IDs must be an array',
-      });
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Return group with roles
-    const updatedGroup = await groupService.assignRolesToGroup(
-      id,
-      role_ids,
-      models,
-    );
-
-    return http.sendSuccess(res, { group: updatedGroup });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to assign roles to group');
   }
 }
 

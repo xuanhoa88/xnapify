@@ -10,9 +10,11 @@ import {
   ADMIN_ROLE,
   STAFF_ROLE,
   MODERATOR_ROLE,
+  DEFAULT_ROLE,
 } from '../../constants/roles';
 import { createDefaultPermissions } from './permission.service';
 import { createDefaultGroups } from './group.service';
+import { assignPermissionsToRole } from './rbac.service';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES
@@ -24,12 +26,13 @@ import { createDefaultGroups } from './group.service';
  * @param {Object} roleData - Role data
  * @param {string} roleData.name - Role name
  * @param {string} roleData.description - Role description
+ * @param {Array<string>} roleData.permissions - Role permissions
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Created role
  */
 export async function createRole(roleData, models) {
   const { Role } = models;
-  const { name, description } = roleData;
+  const { name, description, permissions } = roleData;
 
   // Check if role already exists
   const existingRole = await Role.findOne({ where: { name } });
@@ -45,6 +48,14 @@ export async function createRole(roleData, models) {
     description,
     is_active: true,
   });
+
+  // Assign permissions if provided
+  if (Array.isArray(permissions)) {
+    await assignPermissionsToRole(role.id, permissions, models);
+
+    // Reload with permissions
+    role.reload();
+  }
 
   return role;
 }
@@ -245,157 +256,6 @@ export async function deleteRole(role_id, models) {
 }
 
 /**
- * Assign permissions to a role
- *
- * @param {string} role_id - Role ID
- * @param {string[]} permission_ids - Array of permission IDs
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Role with updated permissions
- */
-export async function assignPermissionsToRole(role_id, permission_ids, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Verify all permissions exist
-  const permissions = await Permission.findAll({
-    where: { id: permission_ids },
-  });
-
-  if (permissions.length !== permission_ids.length) {
-    const error = new Error('One or more permissions not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Set permissions for role (replaces existing)
-  await role.setPermissions(permissions);
-
-  // Return role with permissions
-  return await Role.findByPk(role_id, {
-    include: [
-      {
-        model: Permission,
-        as: 'permissions',
-        through: { attributes: [] },
-      },
-    ],
-  });
-}
-
-/**
- * Add permission to role
- *
- * @param {string} role_id - Role ID
- * @param {string} permission_id - Permission ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated role
- */
-export async function addPermissionToRole(role_id, permission_id, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const permission = await Permission.findByPk(permission_id);
-  if (!permission) {
-    const error = new Error('Permission not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await role.addPermission(permission);
-  return role;
-}
-
-/**
- * Remove permission from role
- *
- * @param {string} role_id - Role ID
- * @param {string} permission_id - Permission ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated role
- */
-export async function removePermissionFromRole(role_id, permission_id, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const permission = await Permission.findByPk(permission_id);
-  if (!permission) {
-    const error = new Error('Permission not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await role.removePermission(permission);
-  return role;
-}
-
-/**
- * Get role permissions
- *
- * @param {string} role_id - Role ID
- * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Array of permissions
- */
-export async function getRolePermissions(role_id, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id, {
-    include: [
-      {
-        model: Permission,
-        as: 'permissions',
-        through: { attributes: [] },
-      },
-    ],
-  });
-
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  return role.permissions;
-}
-
-/**
- * Check if role has permission
- *
- * @param {string} role_id - Role ID
- * @param {string} permissionName - Permission name
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if role has permission
- */
-export async function roleHasPermission(role_id, permissionName, models) {
-  const permissions = await getRolePermissions(role_id, models);
-  return permissions.some(permission => permission.name === permissionName);
-}
-
-/**
  * Get users with specific role
  *
  * @param {string} role_id - Role ID
@@ -453,12 +313,12 @@ export async function getUsersWithRole(role_id, options, models) {
 // ========================================================================
 
 /**
- * Initialize default RBAC setup
+ * Initialize default roles
  *
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Setup result
  */
-export async function initializeDefaultRBAC(models) {
+export async function initializeDefaultRoles(models) {
   const { Permission } = models;
 
   const { sequelize } = Permission;
@@ -470,7 +330,7 @@ export async function initializeDefaultRBAC(models) {
   // Create default roles
   const adminRole = await createRole(
     {
-      name: 'admin',
+      name: ADMIN_ROLE,
       description: 'System Administrator - Full access',
     },
     models,
@@ -478,7 +338,7 @@ export async function initializeDefaultRBAC(models) {
 
   const userRole = await createRole(
     {
-      name: 'user',
+      name: DEFAULT_ROLE,
       description: 'Regular User - Basic access',
     },
     models,
@@ -486,7 +346,7 @@ export async function initializeDefaultRBAC(models) {
 
   const moderatorRole = await createRole(
     {
-      name: 'moderator',
+      name: MODERATOR_ROLE,
       description: 'Content Moderator - Limited admin access',
     },
     models,

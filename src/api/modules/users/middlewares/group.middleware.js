@@ -18,7 +18,7 @@
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/team/dashboard', requireAuth, requireGroup('developers'), controller.getTeamDashboard);
+ * router.get('/team/dashboard', requireGroup('developers'), controller.getTeamDashboard);
  */
 export function requireGroup(groupName) {
   return async (req, res, next) => {
@@ -31,6 +31,12 @@ export function requireGroup(groupName) {
 
     try {
       const models = req.app.get('models');
+      if (!models) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       const { User, Group } = models;
 
       const user = await User.findByPk(req.user.id, {
@@ -79,7 +85,7 @@ export function requireGroup(groupName) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/admin/panel', requireAuth, requireAnyGroup(['admins', 'moderators']), controller.getAdminPanel);
+ * router.get('/admin/panel', requireAnyGroup(['admins', 'moderators']), controller.getAdminPanel);
  */
 export function requireAnyGroup(groupNames) {
   return async (req, res, next) => {
@@ -92,6 +98,12 @@ export function requireAnyGroup(groupNames) {
 
     try {
       const models = req.app.get('models');
+      if (!models) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       const { User, Group } = models;
 
       const user = await User.findByPk(req.user.id, {
@@ -142,7 +154,7 @@ export function requireAnyGroup(groupNames) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/special/access', requireAuth, requireAllGroups(['developers', 'senior']), controller.specialAccess);
+ * router.get('/special/access', requireAllGroups(['developers', 'senior']), controller.specialAccess);
  */
 export function requireAllGroups(groupNames) {
   return async (req, res, next) => {
@@ -155,6 +167,12 @@ export function requireAllGroups(groupNames) {
 
     try {
       const models = req.app.get('models');
+      if (!models) {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       const { User, Group } = models;
 
       const user = await User.findByPk(req.user.id, {
@@ -210,7 +228,7 @@ export function requireAllGroups(groupNames) {
  *
  * @example
  * const hierarchy = ['junior', 'senior', 'lead', 'manager'];
- * router.get('/leadership', requireAuth, requireGroupLevel('lead', hierarchy), controller.leadership);
+ * router.get('/leadership', requireGroupLevel('lead', hierarchy), controller.leadership);
  */
 export function requireGroupLevel(minimumGroup, groupHierarchy) {
   return async (req, res, next) => {
@@ -286,7 +304,7 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/engineering/tools', requireAuth, requireDepartment('engineering'), controller.getTools);
+ * router.get('/engineering/tools', requireDepartment('engineering'), controller.getTools);
  */
 export function requireDepartment(department) {
   return async (req, res, next) => {
@@ -351,7 +369,7 @@ export function requireDepartment(department) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/projects/:id', requireAuth, requireSameTeam('id', 'Project', 'teamId'), controller.getProject);
+ * router.get('/projects/:id', requireSameTeam('id', 'Project', 'teamId'), controller.getProject);
  */
 export function requireSameTeam(
   resource_idParam = 'id',

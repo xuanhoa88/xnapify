@@ -12,8 +12,13 @@ const initialState = {
   pagination: null,
   loading: false,
   error: null,
-  roles: [],
-  rolesLoading: false,
+  // User permissions state
+  permissions: {
+    userId: null,
+    items: [],
+    loading: false,
+    error: null,
+  },
 };
 
 /**
@@ -120,6 +125,25 @@ const usersSlice = createSlice({
       state.loading = false;
       state.error = action.payload;
     },
+
+    // Fetch user permissions
+    fetchUserPermissionsStart: (state, action) => {
+      state.permissions.userId = action.payload;
+      state.permissions.loading = true;
+      state.permissions.error = null;
+    },
+    fetchUserPermissionsSuccess: (state, action) => {
+      state.permissions.loading = false;
+      state.permissions.items = action.payload;
+      state.permissions.error = null;
+    },
+    fetchUserPermissionsError: (state, action) => {
+      state.permissions.loading = false;
+      state.permissions.error = action.payload;
+    },
+    clearUserPermissions: state => {
+      state.permissions = initialState.permissions;
+    },
   },
 });
 
@@ -142,6 +166,10 @@ export const {
   updateUserByIdStart,
   updateUserByIdSuccess,
   updateUserByIdError,
+  fetchUserPermissionsStart,
+  fetchUserPermissionsSuccess,
+  fetchUserPermissionsError,
+  clearUserPermissions,
 } = usersSlice.actions;
 
 export default usersSlice.reducer;

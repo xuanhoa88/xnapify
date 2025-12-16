@@ -9,33 +9,97 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../contexts/history';
-import { updateGroup, fetchGroupById, fetchRoles } from '../../../../redux';
+import {
+  updateGroup,
+  fetchGroupById,
+  fetchRoles,
+  getRoles,
+  getRolesLoading,
+} from '../../../../redux';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
   const dispatch = useDispatch();
   const history = useHistory();
 
-  const { roles, loading: rolesLoading } = useSelector(
-    state => state.admin.roles,
-  );
+  const roles = useSelector(getRoles);
+  const rolesLoading = useSelector(getRolesLoading);
+
   const [group, setGroup] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     category: '',
     type: '',
+    roles: [],
   });
-  const [selectedRoleIds, setSelectedRoleIds] = useState([]);
   const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingGroup, setFetchingGroup] = useState(true);
 
-  // Fetch group data on mount
   useEffect(() => {
     dispatch(fetchRoles());
+  }, [dispatch]);
 
+  const handleChange = useCallback(e => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+  }, []);
+
+  const handleRoleChange = useCallback(e => {
+    const { value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      roles: checked
+        ? [...prev.roles, value]
+        : prev.roles.filter(r => r !== value),
+    }));
+  }, []);
+
+  const handleCancel = useCallback(() => {
+    history.push('/admin/groups');
+  }, [history]);
+
+  const handleSubmit = useCallback(
+    async e => {
+      e.preventDefault();
+      setError(null);
+
+      if (!formData.name.trim()) {
+        setError('Group name is required');
+        return;
+      }
+
+      setLoading(true);
+      const result = await dispatch(updateGroup(group.id, formData));
+      setLoading(false);
+
+      if (result.success) {
+        history.push('/admin/groups');
+      } else {
+        setError(result.error);
+      }
+    },
+    [formData, dispatch, group, history],
+  );
+
+  const filteredRoles = useMemo(
+    () =>
+      roles.filter(
+        role =>
+          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+          (role.description &&
+            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
+      ),
+    [roles, roleSearch],
+  );
+
+  // Fetch group data on mount
+  useEffect(() => {
     async function loadGroup() {
       setFetchingGroup(true);
       const result = await dispatch(fetchGroupById(groupId));
@@ -60,66 +124,13 @@ function EditGroup({ groupId }) {
         description: group.description || '',
         category: group.category || '',
         type: group.type || '',
+        roles:
+          Array.isArray(group.roles) && group.roles.length > 0
+            ? group.roles
+            : [],
       });
-      setSelectedRoleIds(group.roles ? group.roles.map(r => r.id) : []);
     }
   }, [group]);
-
-  const filteredRoles = useMemo(
-    () =>
-      roles.filter(
-        role =>
-          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
-          (role.description &&
-            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
-      ),
-    [roles, roleSearch],
-  );
-
-  const handleChange = useCallback(e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    history.push('/admin/groups');
-  }, [history]);
-
-  const toggleRole = useCallback(roleId => {
-    setSelectedRoleIds(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId],
-    );
-  }, []);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setError(null);
-
-      if (!formData.name.trim()) {
-        setError('Group name is required');
-        return;
-      }
-
-      setLoading(true);
-      const result = await dispatch(
-        updateGroup(group.id, { ...formData, role_ids: selectedRoleIds }),
-      );
-      setLoading(false);
-
-      if (result.success) {
-        history.push('/admin/groups');
-      } else {
-        setError(result.error);
-      }
-    },
-    [formData, dispatch, group, selectedRoleIds, history],
-  );
 
   if (fetchingGroup) {
     return (
@@ -235,7 +246,7 @@ function EditGroup({ groupId }) {
 
           <div className={s.formSection}>
             <h3 className={s.sectionTitle}>
-              Roles ({selectedRoleIds.length} selected)
+              Roles ({formData.roles.length} selected)
             </h3>
             <input
               type='text'
@@ -253,8 +264,9 @@ function EditGroup({ groupId }) {
                     <label key={role.id} className={s.checkboxItem}>
                       <input
                         type='checkbox'
-                        checked={selectedRoleIds.includes(role.id)}
-                        onChange={() => toggleRole(role.id)}
+                        value={role.name}
+                        checked={formData.roles.includes(role.name)}
+                        onChange={handleRoleChange}
                       />
                       <span>
                         {role.name}

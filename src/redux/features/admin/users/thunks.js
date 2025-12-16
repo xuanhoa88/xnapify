@@ -24,6 +24,10 @@ import {
   updateUserByIdStart,
   updateUserByIdSuccess,
   updateUserByIdError,
+  fetchUserPermissionsStart,
+  fetchUserPermissionsSuccess,
+  fetchUserPermissionsError,
+  clearUserPermissions,
 } from './slice';
 
 /**
@@ -142,7 +146,6 @@ export function updateUserStatus(userId, isActive) {
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: isActive }),
       });
 
@@ -243,5 +246,95 @@ export function generatePassword(options = {}) {
     } catch (error) {
       return { success: false, error: error.message };
     }
+  };
+}
+
+// ========================================================================
+// RBAC THUNKS
+// ========================================================================
+
+/**
+ * Assign roles to a user
+ *
+ * @param {string} userId - User ID
+ * @param {string[]} roleNames - Array of role names
+ * @returns {Function} Redux thunk action
+ */
+export function assignRolesToUser(userId, roleNames) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/roles`, {
+        method: 'PUT',
+        body: JSON.stringify({ role_names: roleNames }),
+      });
+
+      // Refresh user data
+      dispatch(fetchUserById(userId));
+
+      return { success: true, user: data.user };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Assign groups to a user
+ *
+ * @param {string} userId - User ID
+ * @param {string[]} groupIds - Array of group IDs
+ * @returns {Function} Redux thunk action
+ */
+export function assignGroupsToUser(userId, groupIds) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/groups`, {
+        method: 'PUT',
+        body: JSON.stringify({ group_ids: groupIds }),
+      });
+
+      // Refresh user data
+      dispatch(fetchUserById(userId));
+
+      return { success: true, user: data.user };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Fetch user's effective permissions
+ *
+ * @param {string} userId - User ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchUserPermissions(userId) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(fetchUserPermissionsStart(userId));
+
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/permissions`);
+      const permissions = data.permissions || [];
+
+      dispatch(fetchUserPermissionsSuccess(permissions));
+
+      return { success: true, permissions };
+    } catch (error) {
+      dispatch(fetchUserPermissionsError(error.message));
+
+      return { success: false, permissions: [], error: error.message };
+    }
+  };
+}
+
+/**
+ * Clear user permissions from state
+ *
+ * @returns {Function} Redux thunk action
+ */
+export function clearPermissions() {
+  return async dispatch => {
+    dispatch(clearUserPermissions());
   };
 }

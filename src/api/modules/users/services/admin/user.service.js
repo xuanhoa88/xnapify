@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ROLE } from '../../constants/roles';
+
 /**
  * Create a new user
  *
@@ -21,7 +23,7 @@ export async function createUser(userData, models) {
     display_name,
     first_name,
     last_name,
-    role,
+    roles,
     groups,
     is_active = true,
   } = userData;
@@ -51,21 +53,23 @@ export async function createUser(userData, models) {
   });
 
   // Assign role
-  if (role) {
-    const roleRecord = await Role.findOne({ where: { name: role } });
-    if (roleRecord) {
-      await user.addRole(roleRecord);
+  if (Array.isArray(roles) && roles.length > 0) {
+    const roleRecords = await Role.findAll({
+      where: { name: roles },
+    });
+    if (roleRecords.length > 0) {
+      await user.addRoles(roleRecords);
     }
   } else {
     // Default role
-    const defaultRole = await Role.findOne({ where: { name: 'user' } });
+    const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
     if (defaultRole) {
       await user.addRole(defaultRole);
     }
   }
 
   // Assign groups
-  if (groups && Array.isArray(groups) && groups.length > 0) {
+  if (Array.isArray(groups) && groups.length > 0) {
     const groupRecords = await Group.findAll({
       where: { id: groups },
     });
@@ -89,6 +93,14 @@ export async function createUser(userData, models) {
         as: 'groups',
         attributes: ['id', 'name', 'description'],
         through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
       },
     ],
   });
@@ -180,6 +192,14 @@ export async function getUserList(options, models) {
         required: !!group,
         attributes: ['id', 'name', 'description', 'category', 'type'],
         through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
       },
     ],
     distinct: true,
@@ -208,11 +228,20 @@ export async function getUserList(options, models) {
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserById(user_id, models) {
-  const { User, UserProfile, UserLogin, Group, Role } = models;
+  const { User, UserProfile, Group, Role } = models;
 
   const user = await User.findByPk(user_id, {
     include: [
-      { model: UserProfile, as: 'profile' },
+      {
+        model: UserProfile,
+        as: 'profile',
+      },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
       {
         model: Group,
         as: 'groups',
@@ -237,29 +266,7 @@ export async function getUserById(user_id, models) {
     throw error;
   }
 
-  // Get additional stats
-  const loginCount = UserLogin
-    ? await UserLogin.count({
-        where: { user_id, success: true },
-      })
-    : 0;
-
-  const lastLogin = UserLogin
-    ? await UserLogin.findOne({
-        where: { user_id, success: true },
-        order: [['login_at', 'DESC']],
-        attributes: ['login_at', 'ip_address'],
-      })
-    : null;
-
-  return {
-    ...user.toJSON(),
-    stats: {
-      loginCount,
-      lastLogin: (lastLogin && lastLogin.login_at) || null,
-      lastLoginIp: (lastLogin && lastLogin.ip_address) || null,
-    },
-  };
+  return user;
 }
 
 /**
@@ -286,7 +293,7 @@ export async function updateUserById(user_id, userData, models) {
     bio,
     location,
     website,
-    role,
+    roles,
     groups,
     is_active,
   } = userData;
@@ -319,7 +326,6 @@ export async function updateUserById(user_id, userData, models) {
   const userUpdates = {};
   if (email) userUpdates.email = email;
   if (password) userUpdates.password = password; // Password hashed by model hook
-  if (role) userUpdates.role = role;
   if (typeof is_active === 'boolean') userUpdates.is_active = is_active;
 
   if (Object.keys(userUpdates).length > 0) {
@@ -343,6 +349,22 @@ export async function updateUserById(user_id, userData, models) {
         user_id,
         ...profileUpdates,
       });
+    }
+  }
+
+  // Update roles if provided
+  if (roles !== undefined && Array.isArray(roles)) {
+    // Remove all existing roles
+    await user.setRoles([]);
+
+    // Add new roles
+    if (roles.length > 0) {
+      const roleRecords = await Role.findAll({
+        where: { name: roles },
+      });
+      if (roleRecords.length > 0) {
+        await user.addRoles(roleRecords);
+      }
     }
   }
 
@@ -377,6 +399,14 @@ export async function updateUserById(user_id, userData, models) {
         as: 'groups',
         attributes: ['id', 'name', 'description'],
         through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
       },
     ],
   });
@@ -407,31 +437,6 @@ export async function deleteUserById(user_id, models) {
   await user.destroy();
 
   return true;
-}
-
-/**
- * Update user role
- *
- * @param {string} user_id - User ID
- * @param {string} role - New role
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated user
- * @throws {Error} If UserNotFoundError
- */
-export async function updateUserRole(user_id, role, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await user.update({ role });
-
-  return user;
 }
 
 /**
@@ -572,59 +577,6 @@ export async function getUserStats(models) {
     }, {}),
     logins: loginStats,
     generatedAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Bulk update users
- *
- * @param {string[]} user_ids - Array of user IDs
- * @param {Object} updates - Updates to apply
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Update result
- */
-export async function bulkUpdateUsers(user_ids, updates, models) {
-  const { User, UserProfile } = models;
-
-  // Separate user and profile updates
-  const userUpdates = {};
-  const profileUpdates = {};
-
-  // User fields
-  if (updates.role) userUpdates.role = updates.role;
-  if (typeof updates.is_active === 'boolean')
-    userUpdates.is_active = updates.is_active;
-  if (typeof updates.is_locked === 'boolean')
-    userUpdates.is_locked = updates.is_locked;
-
-  // Profile fields
-  if (updates.display_name != null)
-    profileUpdates.display_name = updates.display_name;
-  if (updates.first_name != null)
-    profileUpdates.first_name = updates.first_name;
-  if (updates.last_name != null) profileUpdates.last_name = updates.last_name;
-
-  let updatedCount = 0;
-
-  // Update users
-  if (Object.keys(userUpdates).length > 0) {
-    const [affectedRows] = await User.update(userUpdates, {
-      where: { id: user_ids },
-    });
-    updatedCount = affectedRows;
-  }
-
-  // Update profiles
-  if (Object.keys(profileUpdates).length > 0) {
-    await UserProfile.update(profileUpdates, {
-      where: { user_id: user_ids },
-    });
-  }
-
-  return {
-    updatedCount,
-    user_ids,
-    updates: { ...userUpdates, ...profileUpdates },
   };
 }
 

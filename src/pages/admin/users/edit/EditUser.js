@@ -25,6 +25,7 @@ import s from './EditUser.css';
 function EditUser({ userId }) {
   const dispatch = useDispatch();
   const history = useHistory();
+
   const roles = useSelector(getRoles);
   const rolesLoading = useSelector(getRolesLoading);
   const groups = useSelector(getGroups);
@@ -34,7 +35,7 @@ function EditUser({ userId }) {
     display_name: '',
     first_name: '',
     last_name: '',
-    role: [],
+    roles: [],
     groups: [],
     is_active: true,
   });
@@ -74,13 +75,15 @@ function EditUser({ userId }) {
   // Update form data when user is loaded
   useEffect(() => {
     if (user) {
+      console.log(user);
       setFormData({
         display_name: user.display_name || '',
         first_name: user.first_name || '',
         last_name: user.last_name || '',
-        role: user.roles && user.roles.length > 0 ? user.roles : ['user'],
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [],
         groups:
-          user.groups && user.groups.length > 0
+          Array.isArray(user.groups) && user.groups.length > 0
             ? user.groups.map(g => g.id)
             : [],
         is_active: user.is_active,
@@ -100,9 +103,9 @@ function EditUser({ userId }) {
     const { value, checked } = e.target;
     setFormData(prev => ({
       ...prev,
-      role: checked
-        ? [...prev.role, value]
-        : prev.role.filter(r => r !== value),
+      roles: checked
+        ? [...prev.roles, value]
+        : prev.roles.filter(r => r !== value),
     }));
   }, []);
 
@@ -142,7 +145,7 @@ function EditUser({ userId }) {
       e.preventDefault();
       setError(null);
 
-      if (formData.role.length === 0) {
+      if (formData.roles.length === 0) {
         setError('Please select at least one role');
         return;
       }
@@ -344,7 +347,7 @@ function EditUser({ userId }) {
 
             <div className={s.formGroup}>
               <label htmlFor='roles'>
-                Roles ({formData.role.length} selected)
+                Roles ({formData.roles.length} selected)
               </label>
               <input
                 type='text'
@@ -364,12 +367,11 @@ function EditUser({ userId }) {
                           type='checkbox'
                           name='roles'
                           value={role.name}
-                          checked={formData.role.includes(role.name)}
+                          checked={formData.roles.includes(role.name)}
                           onChange={handleRoleChange}
                         />
                         <span>
-                          {role.name.charAt(0).toUpperCase() +
-                            role.name.slice(1)}
+                          {role.name}
                           {role.description && (
                             <span className={s.itemDescription}>
                               {role.description}
@@ -411,8 +413,7 @@ function EditUser({ userId }) {
                           onChange={handleGroupChange}
                         />
                         <span>
-                          {group.name.charAt(0).toUpperCase() +
-                            group.name.slice(1)}
+                          {group.name}
                           {group.description && (
                             <span className={s.itemDescription}>
                               {group.description}

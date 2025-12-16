@@ -17,11 +17,11 @@ import * as authController from '../controllers/auth.controller';
  *
  * @param {Object} deps - Dependencies injected by parent router
  * @param {Function} deps.Router - Express Router constructor
- * @param {Object} middlewares - Authentication middlewares
+ * @param {Object} userMiddlewares - Authentication middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with authentication routes
  */
-export default function authRoutes(deps, middlewares, app) {
+export default function authRoutes(deps, userMiddlewares, app) {
   const auth = app.get('auth');
 
   // Create requireAuth middleware

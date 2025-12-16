@@ -16,17 +16,13 @@ import * as permissionController from '../../controllers/admin/permission.contro
  *
  * @param {Object} deps - Dependencies injected by parent router
  * @param {Function} deps.Router - Express Router constructor
- * @param {Object} middlewares - Authentication and authorization middlewares
+ * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with permission routes
  */
-export default function permissionRoutes(deps, middlewares, app) {
-  const { requirePermission } = middlewares;
+export default function permissionRoutes(deps, userMiddlewares) {
+  const { requirePermission } = userMiddlewares;
   const router = deps.Router();
-
-  // Create auth middleware instance
-  const auth = app.get('auth');
-  const requireAuth = auth.middlewares.requireAuth();
 
   /**
    * @route   POST /
@@ -36,7 +32,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.post(
     '/',
-    requireAuth,
     requirePermission('permissions:write'),
     permissionController.createPermission,
   );
@@ -49,7 +44,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.get(
     '/',
-    requireAuth,
     requirePermission('permissions:read'),
     permissionController.getPermissions,
   );
@@ -61,7 +55,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.post(
     '/initialize',
-    requireAuth,
     requirePermission('system:admin'),
     permissionController.initializeDefaults,
   );
@@ -73,7 +66,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.get(
     '/:id',
-    requireAuth,
     requirePermission('permissions:read'),
     permissionController.getPermissionById,
   );
@@ -85,7 +77,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.put(
     '/:id',
-    requireAuth,
     requirePermission('permissions:write'),
     permissionController.updatePermission,
   );
@@ -97,7 +88,6 @@ export default function permissionRoutes(deps, middlewares, app) {
    */
   router.delete(
     '/:id',
-    requireAuth,
     requirePermission('permissions:delete'),
     permissionController.deletePermission,
   );

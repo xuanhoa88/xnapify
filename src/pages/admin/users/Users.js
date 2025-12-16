@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
@@ -17,8 +17,17 @@ import {
   getUsersError,
   fetchGroups,
   getGroups,
+  fetchRoles,
+  getRoles,
 } from '../../../redux';
 import { useHistory } from '../../../contexts/history';
+import {
+  BulkActionsBar,
+  UserActionsDropdown,
+  RolesModal,
+  GroupsModal,
+  PermissionsModal,
+} from './components';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -47,8 +56,10 @@ function Users() {
   const pagination = useSelector(getUsersPagination);
   const loading = useSelector(getUsersLoading);
   const error = useSelector(getUsersError);
-
   const groups = useSelector(getGroups);
+  const roles = useSelector(getRoles);
+
+  // Filter state
   const [search, setSearch] = useState('');
   const [inputValue, setInputValue] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -56,11 +67,33 @@ function Users() {
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Selection state
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
+
+  // Modal refs
+  const rolesModalRef = useRef();
+  const groupsModalRef = useRef();
+  const permissionsModalRef = useRef();
+
   useEffect(() => {
     dispatch(fetchGroups());
+    dispatch(fetchRoles());
   }, [dispatch]);
 
   useEffect(() => {
+    dispatch(
+      fetchUsers({
+        page: currentPage,
+        search,
+        role: roleFilter,
+        group: groupFilter,
+        status: statusFilter,
+      }),
+    );
+  }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
+
+  const refreshUsers = useCallback(() => {
     dispatch(
       fetchUsers({
         page: currentPage,
@@ -77,7 +110,6 @@ function Users() {
       if (!confirm(`Are you sure you want to delete user "${userEmail}"?`)) {
         return;
       }
-
       const result = await dispatch(deleteUser(userId));
       if (!result.success) {
         alert(`Failed to delete user: ${result.error}`);
@@ -86,37 +118,69 @@ function Users() {
     [dispatch],
   );
 
-  const handleSearchChange = e => {
-    setInputValue(e.target.value);
-  };
-
-  const handleSearchSubmit = () => {
+  // Filter handlers
+  const handleSearchChange = useCallback(
+    e => setInputValue(e.target.value),
+    [],
+  );
+  const handleSearchSubmit = useCallback(() => {
     if (inputValue !== search) {
       setSearch(inputValue);
       setCurrentPage(1);
     }
-  };
-
-  const handleKeyDown = e => {
-    if (e.key === 'Enter') {
-      handleSearchSubmit();
-    }
-  };
-
-  const handleRoleFilterChange = e => {
+  }, [inputValue, search]);
+  const handleKeyDown = useCallback(
+    e => e.key === 'Enter' && handleSearchSubmit(),
+    [handleSearchSubmit],
+  );
+  const handleRoleFilterChange = useCallback(e => {
     setRoleFilter(e.target.value);
     setCurrentPage(1);
-  };
-
-  const handleGroupFilterChange = e => {
+  }, []);
+  const handleGroupFilterChange = useCallback(e => {
     setGroupFilter(e.target.value);
     setCurrentPage(1);
-  };
-
-  const handleStatusFilterChange = e => {
+  }, []);
+  const handleStatusFilterChange = useCallback(e => {
     setStatusFilter(e.target.value);
     setCurrentPage(1);
-  };
+  }, []);
+
+  // Bulk selection
+  const handleSelectAll = useCallback(
+    e => {
+      setSelectedUsers(e.target.checked ? users.map(u => u.id) : []);
+    },
+    [users],
+  );
+  const handleSelectUser = useCallback((userId, checked) => {
+    setSelectedUsers(prev =>
+      checked ? [...prev, userId] : prev.filter(id => id !== userId),
+    );
+  }, []);
+  const clearSelection = useCallback(() => setSelectedUsers([]), []);
+
+  // Modal handlers
+  const openRolesModal = useCallback(
+    user => rolesModalRef.current?.open(user),
+    [],
+  );
+  const openGroupsModal = useCallback(
+    user => groupsModalRef.current?.open(user),
+    [],
+  );
+  const openPermissionsModal = useCallback(
+    user => permissionsModalRef.current?.open(user),
+    [],
+  );
+  const openBulkRolesModal = useCallback(
+    () => rolesModalRef.current?.openBulk(selectedUsers),
+    [selectedUsers],
+  );
+  const openBulkGroupsModal = useCallback(
+    () => groupsModalRef.current?.openBulk(selectedUsers),
+    [selectedUsers],
+  );
 
   if (loading && users.length === 0) {
     return (
@@ -137,10 +201,7 @@ function Users() {
         </div>
         <div className={s.error}>
           <p>Error loading users: {error}</p>
-          <button
-            className={s.addButton}
-            onClick={() => dispatch(fetchUsers({ page: 1 }))}
-          >
+          <button className={s.addButton} onClick={refreshUsers}>
             Retry
           </button>
         </div>
@@ -160,6 +221,15 @@ function Users() {
         </button>
       </div>
 
+      {selectedUsers.length > 0 && (
+        <BulkActionsBar
+          count={selectedUsers.length}
+          onAssignRoles={openBulkRolesModal}
+          onAssignGroups={openBulkGroupsModal}
+          onClear={clearSelection}
+        />
+      )}
+
       <div className={s.filters}>
         <input
           type='text'
@@ -176,11 +246,11 @@ function Users() {
           onChange={handleRoleFilterChange}
         >
           <option value=''>All Roles</option>
-          <option value='admin'>Admin</option>
-          <option value='user'>User</option>
-          <option value='moderator'>Moderator</option>
-          <option value='editor'>Editor</option>
-          <option value='viewer'>Viewer</option>
+          {roles.map(role => (
+            <option key={role.id} value={role.name}>
+              {role.name}
+            </option>
+          ))}
         </select>
         <select
           className={s.filterSelect}
@@ -190,7 +260,7 @@ function Users() {
           <option value=''>All Groups</option>
           {groups.map(group => (
             <option key={group.id} value={group.name}>
-              {group.name.charAt(0).toUpperCase() + group.name.slice(1)}
+              {group.name}
             </option>
           ))}
         </select>
@@ -209,6 +279,16 @@ function Users() {
         <table className={s.table}>
           <thead>
             <tr>
+              <th className={s.checkboxCol}>
+                <input
+                  type='checkbox'
+                  className={s.checkbox}
+                  checked={
+                    selectedUsers.length === users.length && users.length > 0
+                  }
+                  onChange={handleSelectAll}
+                />
+              </th>
               <th>User</th>
               <th>Email</th>
               <th>Role</th>
@@ -221,6 +301,14 @@ function Users() {
           <tbody>
             {users.map(user => (
               <tr key={user.id}>
+                <td className={s.checkboxCol}>
+                  <input
+                    type='checkbox'
+                    className={s.checkbox}
+                    checked={selectedUsers.includes(user.id)}
+                    onChange={e => handleSelectUser(user.id, e.target.checked)}
+                  />
+                </td>
                 <td>
                   <div className={s.userCell}>
                     <div className={s.avatar}>
@@ -288,6 +376,16 @@ function Users() {
                     >
                       🗑️
                     </button>
+                    <UserActionsDropdown
+                      user={user}
+                      isOpen={activeDropdownId === user.id}
+                      onToggle={id =>
+                        setActiveDropdownId(prev => (prev === id ? null : id))
+                      }
+                      onManageRoles={openRolesModal}
+                      onManageGroups={openGroupsModal}
+                      onViewPermissions={openPermissionsModal}
+                    />
                   </div>
                 </td>
               </tr>
@@ -311,45 +409,30 @@ function Users() {
           >
             Previous
           </button>
-
           <div className={s.pageNumbers}>
-            {(() => {
-              const pages = [];
-              const { pages: totalPages } = pagination;
-              const delta = 1; // Number of pages to show on each side of current page
-
-              for (let i = 1; i <= totalPages; i++) {
-                if (
+            {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+              .filter(
+                i =>
                   i === 1 ||
-                  i === totalPages ||
-                  (i >= currentPage - delta && i <= currentPage + delta)
-                ) {
-                  pages.push(
-                    <button
-                      key={i}
-                      className={clsx(s.pageNumber, {
-                        [s.activePage]: currentPage === i,
-                      })}
-                      onClick={() => setCurrentPage(i)}
-                    >
-                      {i}
-                    </button>,
-                  );
-                } else if (
-                  (i === currentPage - delta - 1 && i > 1) ||
-                  (i === currentPage + delta + 1 && i < totalPages)
-                ) {
-                  pages.push(
-                    <span key={`dots-${i}`} className={s.ellipsis}>
-                      ...
-                    </span>,
-                  );
-                }
-              }
-              return pages;
-            })()}
+                  i === pagination.pages ||
+                  Math.abs(i - currentPage) <= 1,
+              )
+              .map((i, idx, arr) => (
+                <span key={i}>
+                  {idx > 0 && arr[idx - 1] < i - 1 && (
+                    <span className={s.ellipsis}>...</span>
+                  )}
+                  <button
+                    className={clsx(s.pageNumber, {
+                      [s.activePage]: currentPage === i,
+                    })}
+                    onClick={() => setCurrentPage(i)}
+                  >
+                    {i}
+                  </button>
+                </span>
+              ))}
           </div>
-
           <button
             className={s.pageBtn}
             disabled={currentPage >= pagination.pages}
@@ -359,6 +442,11 @@ function Users() {
           </button>
         </div>
       )}
+
+      {/* Modals - self-contained with ref-based API */}
+      <RolesModal ref={rolesModalRef} />
+      <GroupsModal ref={groupsModalRef} />
+      <PermissionsModal ref={permissionsModalRef} />
     </div>
   );
 }

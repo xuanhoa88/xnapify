@@ -5,9 +5,103 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  getCachedUserRBAC,
+  setCachedUserRBAC,
+  collectUserRBACData,
+} from '../utils/rbac-cache';
+
 // ========================================================================
 // PERMISSION-BASED AUTHORIZATION MIDDLEWARES
 // ========================================================================
+
+/**
+ * Helper: Get user permissions from cache or database
+ *
+ * @param {Object} req - Express request object
+ * @returns {Promise<string[]>} User's permission names
+ */
+async function getUserPermissionsWithCache(req) {
+  const userId = req.user.id;
+
+  // Check cache first
+  const cached = getCachedUserRBAC(userId);
+  if (cached) {
+    // Attach cached data to request
+    req.user = {
+      ...req.user,
+      roles: cached.roles,
+      permissions: cached.permissions,
+    };
+    return cached.permissions;
+  }
+
+  // Get models from app context
+  const models = req.app.get('models');
+  if (!models) {
+    throw new Error('Database models not available');
+  }
+
+  const { User, Role, Group, Permission } = models;
+
+  // Fetch from database with full RBAC associations
+  const user = await User.findByPk(userId, {
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['name'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            attributes: ['name'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+      {
+        model: Group,
+        as: 'groups',
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                attributes: ['name'],
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Collect and cache RBAC data
+  const rbacData = collectUserRBACData(user);
+  setCachedUserRBAC(userId, rbacData);
+
+  // Attach to request
+  req.user = {
+    ...req.user,
+    roles: rbacData.roles,
+    permissions: rbacData.permissions,
+  };
+
+  return rbacData.permissions;
+}
 
 /**
  * Permission-based authorization middleware
@@ -19,7 +113,7 @@
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/admin/users', requireAuth, requirePermission('users:read'), controller.getUsers);
+ * router.get('/admin/users', requirePermission('users:read'), controller.getUsers);
  */
 export function requirePermission(permission) {
   return async (req, res, next) => {
@@ -31,48 +125,9 @@ export function requirePermission(permission) {
     }
 
     try {
-      // Get models from app context
-      const models = req.app.get('models');
-      if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
+      const userPermissions = await getUserPermissionsWithCache(req);
 
-      const { User, Role, Permission } = models;
-
-      // Get user with roles and permissions
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Check if user has the required permission
-      const hasPermission = user.roles.some(role =>
-        role.permissions.some(perm => perm.name === permission),
-      );
-
-      if (!hasPermission) {
+      if (!userPermissions.includes(permission)) {
         return res.status(403).json({
           success: false,
           error: `Access denied. Required permission: ${permission}`,
@@ -81,6 +136,18 @@ export function requirePermission(permission) {
 
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Permission check failed',
@@ -98,7 +165,7 @@ export function requirePermission(permission) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.post('/admin/users', requireAuth, requirePermissions(['users:write', 'users:create']), controller.createUser);
+ * router.post('/admin/users', requirePermissions(['users:write', 'users:create']), controller.createUser);
  */
 export function requirePermissions(permissions) {
   return async (req, res, next) => {
@@ -110,42 +177,11 @@ export function requirePermissions(permissions) {
     }
 
     try {
-      const models = req.app.get('models');
-      const { User, Role, Permission } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Get all user permissions
-      const userPermissions = user.roles.reduce((perms, role) => {
-        role.permissions.forEach(perm => perms.add(perm.name));
-        return perms;
-      }, new Set());
+      const userPermissions = await getUserPermissionsWithCache(req);
 
       // Check if user has all required permissions
       const missingPermissions = permissions.filter(
-        perm => !userPermissions.has(perm),
+        perm => !userPermissions.includes(perm),
       );
 
       if (missingPermissions.length > 0) {
@@ -157,6 +193,18 @@ export function requirePermissions(permissions) {
 
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Permissions check failed',
@@ -174,7 +222,7 @@ export function requirePermissions(permissions) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/content', requireAuth, requireAnyPermission(['posts:read', 'posts:moderate']), controller.getContent);
+ * router.get('/content', requireAnyPermission(['posts:read', 'posts:moderate']), controller.getContent);
  */
 export function requireAnyPermission(permissions) {
   return async (req, res, next) => {
@@ -186,36 +234,11 @@ export function requireAnyPermission(permissions) {
     }
 
     try {
-      const models = req.app.get('models');
-      const { User, Role, Permission } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
+      const userPermissions = await getUserPermissionsWithCache(req);
 
       // Check if user has any of the required permissions
-      const hasAnyPermission = user.roles.some(role =>
-        role.permissions.some(perm => permissions.includes(perm.name)),
+      const hasAnyPermission = permissions.some(perm =>
+        userPermissions.includes(perm),
       );
 
       if (!hasAnyPermission) {
@@ -227,6 +250,18 @@ export function requireAnyPermission(permissions) {
 
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Permission check failed',
@@ -246,8 +281,8 @@ export function requireAnyPermission(permissions) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/posts', requireAuth, requireResourcePermission('posts', 'read'), controller.getPosts);
- * router.put('/posts/:id', requireAuth, requireResourcePermission('posts', 'write', 'own'), controller.updatePost);
+ * router.get('/posts', requireResourcePermission('posts', 'read'), controller.getPosts);
+ * router.put('/posts/:id', requireResourcePermission('posts', 'write', 'own'), controller.updatePost);
  */
 export function requireResourcePermission(resource, action, scope = null) {
   return async (req, res, next) => {
@@ -348,7 +383,7 @@ export function requireResourcePermission(resource, action, scope = null) {
  *
  * @example
  * const getPermission = (req) => req.body.public ? 'posts:create:public' : 'posts:create:private';
- * router.post('/posts', requireAuth, requireConditionalPermission(getPermission), controller.createPost);
+ * router.post('/posts', requireConditionalPermission(getPermission), controller.createPost);
  */
 export function requireConditionalPermission(getPermissionRequirement) {
   return async (req, res, next) => {
@@ -386,64 +421,4 @@ export function requireConditionalPermission(getPermissionRequirement) {
       });
     }
   };
-}
-
-/**
- * Permission caching middleware
- *
- * Caches user permissions for the duration of the request to avoid repeated database queries.
- *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
- */
-export function cacheUserPermissions(req, res, next) {
-  if (!req.user) {
-    return next();
-  }
-
-  // Skip if permissions already cached
-  if (req.user.permissions) {
-    return next();
-  }
-
-  const models = req.app.get('models');
-  if (!models) {
-    return next();
-  }
-
-  const { User, Role, Permission } = models;
-
-  User.findByPk(req.user.id, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
-  })
-    .then(user => {
-      if (user) {
-        // Cache permissions in request
-        const permissions = user.roles.reduce((perms, role) => {
-          role.permissions.forEach(perm => perms.add(perm.name));
-          return perms;
-        }, new Set());
-
-        req.user.permissions = Array.from(permissions);
-        req.user.roles = user.roles.map(role => role.name);
-      }
-      next();
-    })
-    .catch(() => {
-      next(); // Continue without caching
-    });
 }

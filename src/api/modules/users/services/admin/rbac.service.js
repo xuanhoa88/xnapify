@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  invalidateUserCache,
+  invalidateUsersCache,
+} from '../../utils/rbac-cache';
+
 // ========================================================================
 // USER ASSIGNMENT SERVICES
 // ========================================================================
@@ -13,11 +18,11 @@
  * Assign roles to a user
  *
  * @param {string} user_id - User ID
- * @param {string[]} role_ids - Array of role IDs
+ * @param {string[]} role_names - Array of role names
  * @param {Object} models - Database models
  * @returns {Promise<Object>} User with roles
  */
-export async function assignRolesToUser(user_id, role_ids, models) {
+export async function assignRolesToUser(user_id, role_names, models) {
   const { User, Role } = models;
 
   const user = await User.findByPk(user_id);
@@ -28,20 +33,28 @@ export async function assignRolesToUser(user_id, role_ids, models) {
     throw error;
   }
 
-  // Verify all roles exist
-  const roles = await Role.findAll({
-    where: { id: role_ids },
-  });
+  // Verify all roles exist (skip if empty array)
+  if (role_names.length > 0) {
+    const roles = await Role.findAll({
+      where: { name: role_names },
+    });
 
-  if (roles.length !== role_ids.length) {
-    const error = new Error('One or more roles not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
+    if (roles.length !== role_names.length) {
+      const error = new Error('One or more roles not found');
+      error.name = 'RoleNotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    // Set roles for user (replaces existing)
+    await user.setRoles(roles.map(role => role.id));
+  } else {
+    // Clear all roles
+    await user.setRoles([]);
   }
 
-  // Set roles for user (replaces existing)
-  await user.setRoles(roles);
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
 
   // Reload user with roles
   await user.reload({
@@ -75,20 +88,28 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
     throw error;
   }
 
-  // Verify all groups exist
-  const groups = await Group.findAll({
-    where: { id: group_ids },
-  });
+  // Verify all groups exist (skip if empty array)
+  if (group_ids.length > 0) {
+    const groups = await Group.findAll({
+      where: { id: group_ids },
+    });
 
-  if (groups.length !== group_ids.length) {
-    const error = new Error('One or more groups not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
+    if (groups.length !== group_ids.length) {
+      const error = new Error('One or more groups not found');
+      error.name = 'GroupNotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    // Set groups for user (replaces existing)
+    await user.setGroups(groups);
+  } else {
+    // Clear all groups
+    await user.setGroups([]);
   }
 
-  // Set groups for user (replaces existing)
-  await user.setGroups(groups);
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
 
   // Reload user with groups
   await user.reload({
@@ -131,6 +152,10 @@ export async function addRoleToUser(user_id, role_id, models) {
   }
 
   await user.addRole(role);
+
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
+
   return user;
 }
 
@@ -162,6 +187,10 @@ export async function removeRoleFromUser(user_id, role_id, models) {
   }
 
   await user.removeRole(role);
+
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
+
   return user;
 }
 
@@ -193,6 +222,10 @@ export async function addGroupToUser(user_id, group_id, models) {
   }
 
   await user.addGroup(group);
+
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
+
   return user;
 }
 
@@ -224,6 +257,10 @@ export async function removeGroupFromUser(user_id, group_id, models) {
   }
 
   await user.removeGroup(group);
+
+  // Invalidate RBAC cache for this user
+  invalidateUserCache(user_id);
+
   return user;
 }
 
@@ -532,52 +569,415 @@ export async function getUserRBACProfile(user_id, models) {
   };
 }
 
+// ========================================================================
+// GROUP-ROLE ASSIGNMENT SERVICES
+// ========================================================================
+
 /**
- * Bulk assign roles to multiple users
+ * Assign roles to group
  *
- * @param {string[]} user_ids - Array of user IDs
- * @param {string[]} role_ids - Array of role IDs
+ * @param {string} group_id - Group ID
+ * @param {string[]} role_names - Array of role names
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Assignment result
+ * @returns {Promise<Object>} Group with updated roles
  */
-export async function bulkAssignRolesToUsers(user_ids, role_ids, models) {
-  const { User, Role } = models;
+export async function assignRolesToGroup(group_id, role_names, models) {
+  const { Group, Role } = models;
 
-  // Verify users exist
-  const users = await User.findAll({
-    where: { id: user_ids },
-  });
-
-  if (users.length !== user_ids.length) {
-    const error = new Error('One or more users not found');
-    error.name = 'UserNotFoundError';
+  const group = await Group.findByPk(group_id);
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
     error.status = 404;
     throw error;
   }
 
-  // Verify roles exist
-  const roles = await Role.findAll({
-    where: { id: role_ids },
-  });
+  // Verify all roles exist (skip if empty array)
+  if (role_names.length > 0) {
+    const roles = await Role.findAll({
+      where: { name: role_names },
+    });
 
-  if (roles.length !== role_ids.length) {
-    const error = new Error('One or more roles not found');
+    if (roles.length !== role_names.length) {
+      const error = new Error('One or more roles not found');
+      error.name = 'RoleNotFoundError';
+      error.status = 404;
+      throw error;
+    }
+
+    // Set roles for user (replaces existing)
+    await group.setRoles(roles.map(role => role.id));
+  } else {
+    // Clear all roles
+    await group.setRoles([]);
+  }
+
+  // Invalidate RBAC cache for all users in this group
+  const groupWithUsers = await Group.findByPk(group_id, {
+    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+  });
+  if (
+    groupWithUsers &&
+    groupWithUsers.users &&
+    groupWithUsers.users.length > 0
+  ) {
+    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
+  }
+
+  // Return group with roles
+  return await Group.findByPk(group_id, {
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+      },
+    ],
+  });
+}
+
+/**
+ * Add role to group
+ *
+ * @param {string} group_id - Group ID
+ * @param {string} role_id - Role ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated group
+ */
+export async function addRoleToGroup(group_id, role_id, models) {
+  const { Group, Role } = models;
+
+  const group = await Group.findByPk(group_id);
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
     error.name = 'RoleNotFoundError';
     error.status = 404;
     throw error;
   }
 
-  let assignedCount = 0;
+  await group.addRole(role);
 
-  // Assign roles to each user
-  for (const user of users) {
-    await user.addRoles(roles);
-    assignedCount++;
+  // Invalidate RBAC cache for all users in this group
+  const groupWithUsers = await Group.findByPk(group_id, {
+    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+  });
+  if (
+    groupWithUsers &&
+    groupWithUsers.users &&
+    groupWithUsers.users.length > 0
+  ) {
+    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
   }
 
-  return {
-    assignedCount,
-    user_ids,
-    role_ids,
-  };
+  return group;
+}
+
+/**
+ * Remove role from group
+ *
+ * @param {string} group_id - Group ID
+ * @param {string} role_id - Role ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated group
+ */
+export async function removeRoleFromGroup(group_id, role_id, models) {
+  const { Group, Role } = models;
+
+  const group = await Group.findByPk(group_id);
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await group.removeRole(role);
+
+  // Invalidate RBAC cache for all users in this group
+  const groupWithUsers = await Group.findByPk(group_id, {
+    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+  });
+  if (
+    groupWithUsers &&
+    groupWithUsers.users &&
+    groupWithUsers.users.length > 0
+  ) {
+    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
+  }
+
+  return group;
+}
+
+// ========================================================================
+// GROUP-USER ASSIGNMENT SERVICES
+// ========================================================================
+
+/**
+ * Add user to group
+ *
+ * @param {string} group_id - Group ID
+ * @param {string} user_id - User ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated group
+ */
+export async function addUserToGroup(group_id, user_id, models) {
+  const { Group, User } = models;
+
+  const group = await Group.findByPk(group_id);
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const user = await User.findByPk(user_id);
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await group.addUser(user);
+
+  // Invalidate RBAC cache for this user (they now inherit group's roles)
+  invalidateUserCache(user_id);
+
+  return group;
+}
+
+/**
+ * Remove user from group
+ *
+ * @param {string} group_id - Group ID
+ * @param {string} user_id - User ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated group
+ */
+export async function removeUserFromGroup(group_id, user_id, models) {
+  const { Group, User } = models;
+
+  const group = await Group.findByPk(group_id);
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const user = await User.findByPk(user_id);
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await group.removeUser(user);
+
+  // Invalidate RBAC cache for this user (they no longer inherit group's roles)
+  invalidateUserCache(user_id);
+
+  return group;
+}
+
+// ========================================================================
+// ROLE-PERMISSION ASSIGNMENT SERVICES
+// ========================================================================
+
+/**
+ * Assign permissions to a role
+ *
+ * @param {string} role_id - Role ID
+ * @param {string[]} permission_ids - Array of permission IDs
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Role with updated permissions
+ */
+export async function assignPermissionsToRole(role_id, permission_ids, models) {
+  const { Role, Permission } = models;
+
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  // Verify all permissions exist
+  const permissions = await Permission.findAll({
+    where: { id: permission_ids },
+  });
+
+  if (permissions.length !== permission_ids.length) {
+    const error = new Error('One or more permissions not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  // Set permissions for role (replaces existing)
+  await role.setPermissions(permissions);
+
+  // Invalidate cache for all users with this role
+  const usersWithRole = await models.User.findAll({
+    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
+    attributes: ['id'],
+  });
+  if (usersWithRole.length > 0) {
+    invalidateUsersCache(usersWithRole.map(u => u.id));
+  }
+
+  // Return role with permissions
+  return await Role.findByPk(role_id, {
+    include: [
+      {
+        model: Permission,
+        as: 'permissions',
+        through: { attributes: [] },
+      },
+    ],
+  });
+}
+
+/**
+ * Add permission to role
+ *
+ * @param {string} role_id - Role ID
+ * @param {string} permission_id - Permission ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated role
+ */
+export async function addPermissionToRole(role_id, permission_id, models) {
+  const { Role, Permission } = models;
+
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const permission = await Permission.findByPk(permission_id);
+  if (!permission) {
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await role.addPermission(permission);
+
+  // Invalidate cache for all users with this role
+  const usersWithRole = await models.User.findAll({
+    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
+    attributes: ['id'],
+  });
+  if (usersWithRole.length > 0) {
+    invalidateUsersCache(usersWithRole.map(u => u.id));
+  }
+
+  return role;
+}
+
+/**
+ * Remove permission from role
+ *
+ * @param {string} role_id - Role ID
+ * @param {string} permission_id - Permission ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated role
+ */
+export async function removePermissionFromRole(role_id, permission_id, models) {
+  const { Role, Permission } = models;
+
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const permission = await Permission.findByPk(permission_id);
+  if (!permission) {
+    const error = new Error('Permission not found');
+    error.name = 'PermissionNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await role.removePermission(permission);
+
+  // Invalidate cache for all users with this role
+  const usersWithRole = await models.User.findAll({
+    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
+    attributes: ['id'],
+  });
+  if (usersWithRole.length > 0) {
+    invalidateUsersCache(usersWithRole.map(u => u.id));
+  }
+
+  return role;
+}
+
+/**
+ * Get role permissions
+ *
+ * @param {string} role_id - Role ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object[]>} Array of permissions
+ */
+export async function getRolePermissions(role_id, models) {
+  const { Role, Permission } = models;
+
+  const role = await Role.findByPk(role_id, {
+    include: [
+      {
+        model: Permission,
+        as: 'permissions',
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  return role.permissions;
+}
+
+/**
+ * Check if role has permission
+ *
+ * @param {string} role_id - Role ID
+ * @param {string} permissionName - Permission name
+ * @param {Object} models - Database models
+ * @returns {Promise<boolean>} True if role has permission
+ */
+export async function roleHasPermission(role_id, permissionName, models) {
+  const permissions = await getRolePermissions(role_id, models);
+  return permissions.some(permission => permission.name === permissionName);
 }

@@ -6,6 +6,7 @@
  */
 
 import * as roleController from '../../controllers/admin/role.controller';
+import * as rbacController from '../../controllers/admin/rbac.controller';
 
 /**
  * Role Management Routes
@@ -16,21 +17,13 @@ import * as roleController from '../../controllers/admin/role.controller';
  *
  * @param {Object} deps - Dependencies injected by parent router
  * @param {Function} deps.Router - Express Router constructor
- * @param {Object} middlewares - Authentication and authorization middlewares
+ * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with role routes
  */
-export default function roleRoutes(deps, middlewares, app) {
-  const { requirePermission } = middlewares;
+export default function roleRoutes(deps, userMiddlewares) {
+  const { requirePermission } = userMiddlewares;
   const router = deps.Router();
-
-  // Create auth middleware instance
-  const auth = app.get('auth');
-  const requireAuth = auth.middlewares.requireAuth();
-
-  // ========================================================================
-  // ROLE CRUD ROUTES
-  // ========================================================================
 
   /**
    * @route   POST /initialize
@@ -39,7 +32,6 @@ export default function roleRoutes(deps, middlewares, app) {
    */
   router.post(
     '/initialize',
-    requireAuth,
     requirePermission('system:admin'),
     roleController.initializeDefaults,
   );
@@ -50,12 +42,7 @@ export default function roleRoutes(deps, middlewares, app) {
    * @access  Admin (requires 'roles:read' permission)
    * @query   { page, limit, search }
    */
-  router.get(
-    '/list',
-    requireAuth,
-    requirePermission('roles:read'),
-    roleController.getRoles,
-  );
+  router.get('/list', requirePermission('roles:read'), roleController.getRoles);
 
   /**
    * @route   POST /
@@ -63,12 +50,7 @@ export default function roleRoutes(deps, middlewares, app) {
    * @access  Admin (requires 'roles:write' permission)
    * @body    { name, description }
    */
-  router.post(
-    '/',
-    requireAuth,
-    requirePermission('roles:write'),
-    roleController.createRole,
-  );
+  router.post('/', requirePermission('roles:write'), roleController.createRole);
 
   /**
    * @route   GET /:id
@@ -78,7 +60,6 @@ export default function roleRoutes(deps, middlewares, app) {
    */
   router.get(
     '/:id',
-    requireAuth,
     requirePermission('roles:read'),
     roleController.getRoleById,
   );
@@ -92,7 +73,6 @@ export default function roleRoutes(deps, middlewares, app) {
    */
   router.put(
     '/:id',
-    requireAuth,
     requirePermission('roles:write'),
     roleController.updateRole,
   );
@@ -105,10 +85,13 @@ export default function roleRoutes(deps, middlewares, app) {
    */
   router.delete(
     '/:id',
-    requireAuth,
     requirePermission('roles:delete'),
     roleController.deleteRole,
   );
+
+  // ========================================================================
+  // ROLE-PERMISSION ROUTES (via RBAC Controller)
+  // ========================================================================
 
   /**
    * @route   PUT /:id/permissions
@@ -119,9 +102,30 @@ export default function roleRoutes(deps, middlewares, app) {
    */
   router.put(
     '/:id/permissions',
-    requireAuth,
     requirePermission('roles:write'),
-    roleController.assignPermissionsToRole,
+    rbacController.assignPermissionsToRole,
+  );
+
+  /**
+   * @route   POST /:id/permissions/:permission_id
+   * @desc    Add a single permission to a role
+   * @access  Admin (requires 'roles:write' permission)
+   */
+  router.post(
+    '/:id/permissions/:permission_id',
+    requirePermission('roles:write'),
+    rbacController.addPermissionToRole,
+  );
+
+  /**
+   * @route   DELETE /:id/permissions/:permission_id
+   * @desc    Remove a permission from a role
+   * @access  Admin (requires 'roles:write' permission)
+   */
+  router.delete(
+    '/:id/permissions/:permission_id',
+    requirePermission('roles:write'),
+    rbacController.removePermissionFromRole,
   );
 
   return router;

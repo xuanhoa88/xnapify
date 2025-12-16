@@ -35,16 +35,10 @@ export async function createRole(req, res) {
     const models = req.app.get('models');
 
     // Create role
-    let role = await roleService.createRole({ name, description }, models);
-
-    // Assign permissions if provided
-    if (permissions && Array.isArray(permissions) && permissions.length > 0) {
-      role = await roleService.assignPermissionsToRole(
-        role.id,
-        permissions,
-        models,
-      );
-    }
+    let role = await roleService.createRole(
+      { name, description, permissions },
+      models,
+    );
 
     return http.sendSuccess(res, { role }, 201);
   } catch (error) {
@@ -176,49 +170,6 @@ export async function deleteRole(req, res) {
   }
 }
 
-/**
- * Assign permissions to a role
- *
- * @route   PUT /api/admin/roles/:id/permissions
- * @access  Admin (requires 'roles:write' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function assignPermissionsToRole(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const { permission_ids } = req.body;
-
-    // Validate input
-    if (!Array.isArray(permission_ids)) {
-      return http.sendValidationError(res, {
-        permission_ids: 'Permission IDs must be an array',
-      });
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Assign permissions
-    const role = await assignPermissionsToRole(id, permission_ids, models);
-
-    return http.sendSuccess(res, { role });
-  } catch (error) {
-    if (error.name === 'RoleNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-
-    if (error.name === 'PermissionNotFoundError') {
-      return http.sendValidationError(res, {
-        permission_ids: error.message,
-      });
-    }
-
-    return http.sendServerError(res, 'Failed to assign permissions to role');
-  }
-}
-
 // ========================================================================
 // RBAC SYSTEM CONTROLLERS
 // ========================================================================
@@ -238,7 +189,7 @@ export async function initializeDefaults(req, res) {
     const models = req.app.get('models');
 
     // Initialize RBAC
-    const result = await roleService.initializeDefaultRBAC(models);
+    const result = await roleService.initializeDefaultRoles(models);
 
     return http.sendSuccess(res, {
       message: 'RBAC system initialized successfully',

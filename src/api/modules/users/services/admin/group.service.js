@@ -5,7 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
+import {
+  ADMIN_ROLE,
+  STAFF_ROLE,
+  MODERATOR_ROLE,
+  DEFAULT_ROLE,
+} from '../../constants/roles';
 
 // ========================================================================
 // GROUP MANAGEMENT SERVICES
@@ -23,8 +28,8 @@ import { ADMIN_ROLE, STAFF_ROLE, MODERATOR_ROLE } from '../../constants/roles';
  * @returns {Promise<Object>} Created group
  */
 export async function createGroup(groupData, models) {
-  const { Group, Role } = models;
-  const { name, description, category, type, role_ids } = groupData;
+  const { Group, Role, User, UserProfile } = models;
+  const { name, description, category, type, roles } = groupData;
 
   // Check if group already exists
   const existingGroup = await Group.findOne({ where: { name } });
@@ -43,10 +48,45 @@ export async function createGroup(groupData, models) {
     is_active: true,
   });
 
-  if (role_ids && Array.isArray(role_ids) && role_ids.length > 0) {
-    const roles = await Role.findAll({ where: { id: role_ids } });
-    await group.setRoles(roles);
+  // Assign role
+  if (Array.isArray(roles) && roles.length > 0) {
+    const roleRecords = await Role.findAll({
+      where: { name: roles },
+    });
+    if (roleRecords.length > 0) {
+      await group.addRoles(roleRecords);
+    }
+  } else {
+    // Default role
+    const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
+    if (defaultRole) {
+      await group.addRole(defaultRole);
+    }
   }
+
+  // Reload group with updated data
+  await group.reload({
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+      },
+      {
+        model: User,
+        as: 'users',
+        through: { attributes: [] },
+        attributes: ['id', 'email', 'is_active'],
+        include: [
+          {
+            model: UserProfile,
+            as: 'profile',
+            attributes: ['first_name', 'last_name', 'display_name'],
+          },
+        ],
+      },
+    ],
+  });
 
   return group;
 }
@@ -184,8 +224,10 @@ export async function getGroupById(group_id, models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Updated group
  */
-export async function updateGroup(group_id, updateData, models) {
-  const { Group, Role } = models;
+export async function updateGroupById(group_id, groupData, models) {
+  const { Group, Role, User, UserProfile } = models;
+
+  const { roles, ...groupUpdates } = groupData;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -196,24 +238,59 @@ export async function updateGroup(group_id, updateData, models) {
   }
 
   // Check if name is being changed and if it already exists
-  if (updateData.name && updateData.name !== group.name) {
+  if (groupUpdates.name && groupUpdates.name !== group.name) {
     const existingGroup = await Group.findOne({
-      where: { name: updateData.name },
+      where: { name: groupUpdates.name },
     });
     if (existingGroup) {
-      const error = new Error(`Group '${updateData.name}' already exists`);
+      const error = new Error(`Group '${groupUpdates.name}' already exists`);
       error.name = 'GroupAlreadyExistsError';
       error.status = 400;
       throw error;
     }
   }
 
-  await group.update(updateData);
+  await group.update(groupUpdates);
 
-  if (updateData.role_ids && Array.isArray(updateData.role_ids)) {
-    const roles = await Role.findAll({ where: { id: updateData.role_ids } });
-    await group.setRoles(roles);
+  // Update roles if provided
+  if (roles !== undefined && Array.isArray(roles)) {
+    // Remove all existing roles
+    await group.setRoles([]);
+
+    // Add new roles
+    if (roles.length > 0) {
+      const roleRecords = await Role.findAll({
+        where: { name: roles },
+      });
+      if (roleRecords.length > 0) {
+        await group.addRoles(roleRecords);
+      }
+    }
   }
+
+  // Reload group with updated data
+  await group.reload({
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+      },
+      {
+        model: User,
+        as: 'users',
+        through: { attributes: [] },
+        attributes: ['id', 'email', 'is_active'],
+        include: [
+          {
+            model: UserProfile,
+            as: 'profile',
+            attributes: ['first_name', 'last_name', 'display_name'],
+          },
+        ],
+      },
+    ],
+  });
 
   return group;
 }
@@ -247,114 +324,6 @@ export async function deleteGroup(group_id, models) {
 
   await group.destroy();
   return true;
-}
-
-/**
- * Assign roles to group
- *
- * @param {string} group_id - Group ID
- * @param {string[]} role_ids - Array of role IDs
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Group with updated roles
- */
-export async function assignRolesToGroup(group_id, role_ids, models) {
-  const { Group, Role } = models;
-
-  const group = await Group.findByPk(group_id);
-  if (!group) {
-    const error = new Error('Group not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Verify all roles exist
-  const roles = await Role.findAll({
-    where: { id: role_ids },
-  });
-
-  if (roles.length !== role_ids.length) {
-    const error = new Error('One or more roles not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Set roles for group (replaces existing)
-  await group.setRoles(roles);
-
-  // Return group with roles
-  return await Group.findByPk(group_id, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-      },
-    ],
-  });
-}
-
-/**
- * Add role to group
- *
- * @param {string} group_id - Group ID
- * @param {string} role_id - Role ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated group
- */
-export async function addRoleToGroup(group_id, role_id, models) {
-  const { Group, Role } = models;
-
-  const group = await Group.findByPk(group_id);
-  if (!group) {
-    const error = new Error('Group not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await group.addRole(role);
-  return group;
-}
-
-/**
- * Remove role from group
- *
- * @param {string} group_id - Group ID
- * @param {string} role_id - Role ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated group
- */
-export async function removeRoleFromGroup(group_id, role_id, models) {
-  const { Group, Role } = models;
-
-  const group = await Group.findByPk(group_id);
-  if (!group) {
-    const error = new Error('Group not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await group.removeRole(role);
-  return group;
 }
 
 /**
@@ -408,68 +377,6 @@ export async function getGroupMembers(group_id, options, models) {
       pages: Math.ceil(count / limit),
     },
   };
-}
-
-/**
- * Add user to group
- *
- * @param {string} group_id - Group ID
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated group
- */
-export async function addUserToGroup(group_id, user_id, models) {
-  const { Group, User } = models;
-
-  const group = await Group.findByPk(group_id);
-  if (!group) {
-    const error = new Error('Group not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await group.addUser(user);
-  return group;
-}
-
-/**
- * Remove user from group
- *
- * @param {string} group_id - Group ID
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated group
- */
-export async function removeUserFromGroup(group_id, user_id, models) {
-  const { Group, User } = models;
-
-  const group = await Group.findByPk(group_id);
-  if (!group) {
-    const error = new Error('Group not found');
-    error.name = 'GroupNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await group.removeUser(user);
-  return group;
 }
 
 /**

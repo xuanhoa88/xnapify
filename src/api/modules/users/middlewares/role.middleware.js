@@ -12,9 +12,103 @@ import {
   STAFF_ROLE,
 } from '../constants/roles';
 
+import {
+  getCachedUserRBAC,
+  setCachedUserRBAC,
+  collectUserRBACData,
+} from '../utils/rbac-cache';
+
 // ========================================================================
 // ROLE-BASED ACCESS CONTROL (RBAC) MIDDLEWARE
 // ========================================================================
+
+/**
+ * Helper: Get user roles from cache or database
+ *
+ * @param {Object} req - Express request object
+ * @returns {Promise<string[]>} User's role names
+ */
+async function getUserRolesWithCache(req) {
+  const userId = req.user.id;
+
+  // Check cache first
+  const cached = getCachedUserRBAC(userId);
+  if (cached) {
+    // Attach cached data to request
+    req.user = {
+      ...req.user,
+      roles: cached.roles,
+      permissions: cached.permissions,
+    };
+    return cached.roles;
+  }
+
+  // Get models from app context
+  const models = req.app.get('models');
+  if (!models) {
+    throw new Error('Database models not available');
+  }
+
+  const { User, Role, Group, Permission } = models;
+
+  // Fetch from database with full RBAC associations
+  const user = await User.findByPk(userId, {
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['name'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            attributes: ['name'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+      {
+        model: Group,
+        as: 'groups',
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                attributes: ['name'],
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!user) {
+    throw new Error('User not found');
+  }
+
+  // Collect and cache RBAC data
+  const rbacData = collectUserRBACData(user);
+  setCachedUserRBAC(userId, rbacData);
+
+  // Attach to request
+  req.user = {
+    ...req.user,
+    roles: rbacData.roles,
+    permissions: rbacData.permissions,
+  };
+
+  return rbacData.roles;
+}
 
 /**
  * Role-based authorization middleware
@@ -26,7 +120,7 @@ import {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/admin', requireAuth, requireRole('admin'), controller.adminAction);
+ * router.get('/admin', requireRole('admin'), controller.adminAction);
  */
 export function requireRole(requiredRole) {
   return async (req, res, next) => {
@@ -38,40 +132,8 @@ export function requireRole(requiredRole) {
     }
 
     try {
-      // Get models from app context
-      const models = req.app.get('models');
-      if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
+      const userRoles = await getUserRolesWithCache(req);
 
-      const { User, Role } = models;
-
-      // Get user with roles through association
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Check if user has the required role
-      const userRoles = Array.isArray(user.roles)
-        ? user.roles.map(r => r.name)
-        : [];
       if (!userRoles.includes(requiredRole)) {
         return res.status(403).json({
           success: false,
@@ -79,14 +141,20 @@ export function requireRole(requiredRole) {
         });
       }
 
-      // Attach roles to request
-      req.user = {
-        ...req.user,
-        roles: userRoles,
-      };
-
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -104,7 +172,7 @@ export function requireRole(requiredRole) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/moderation', requireAuth, requireAnyRole(['admin', 'moderator']), controller.moderate);
+ * router.get('/moderation', requireAnyRole(['admin', 'moderator']), controller.moderate);
  */
 export function requireAnyRole(allowedRoles) {
   return async (req, res, next) => {
@@ -116,38 +184,7 @@ export function requireAnyRole(allowedRoles) {
     }
 
     try {
-      const models = req.app.get('models');
-      if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-
-      const { User, Role } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Check if user has any of the allowed roles
-      const userRoles = Array.isArray(user.roles)
-        ? user.roles.map(r => r.name)
-        : [];
+      const userRoles = await getUserRolesWithCache(req);
       const hasRole = userRoles.some(role => allowedRoles.includes(role));
 
       if (!hasRole) {
@@ -157,13 +194,20 @@ export function requireAnyRole(allowedRoles) {
         });
       }
 
-      req.user = {
-        ...req.user,
-        roles: userRoles,
-      };
-
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Role authorization failed',
@@ -184,7 +228,7 @@ export function requireAnyRole(allowedRoles) {
  * @param {Function} next - Express next middleware function
  *
  * @example
- * router.get('/admin', requireAuth, requireAdmin, controller.adminAction);
+ * router.get('/admin', requireAdmin, controller.adminAction);
  */
 export function requireAdmin(req, res, next) {
   return requireRole(ADMIN_ROLE)(req, res, next);
@@ -201,7 +245,7 @@ export function requireAdmin(req, res, next) {
  * @param {Function} next - Express next middleware function
  *
  * @example
- * router.delete('/posts/:id', requireAuth, requireModerator, controller.deletePost);
+ * router.delete('/posts/:id', requireModerator, controller.deletePost);
  */
 export function requireModerator(req, res, next) {
   return requireAnyRole([ADMIN_ROLE, MODERATOR_ROLE])(req, res, next);
@@ -218,7 +262,7 @@ export function requireModerator(req, res, next) {
  * @param {Function} next - Express next middleware function
  *
  * @example
- * router.get('/staff/dashboard', requireAuth, requireStaff, controller.staffDashboard);
+ * router.get('/staff/dashboard', requireStaff, controller.staffDashboard);
  */
 export function requireStaff(req, res, next) {
   return requireAnyRole(
@@ -240,7 +284,7 @@ export function requireStaff(req, res, next) {
  *
  * @example
  * const hierarchy = ['user', 'staff', 'moderator', 'admin'];
- * router.get('/management', requireAuth, requireRoleLevel('staff', hierarchy), controller.manage);
+ * router.get('/management', requireRoleLevel('staff', hierarchy), controller.manage);
  */
 export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
   return async (req, res, next) => {
@@ -252,38 +296,8 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
     }
 
     try {
-      const models = req.app.get('models');
-      if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
+      const userRoles = await getUserRolesWithCache(req);
 
-      const { User, Role } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Get user's highest role level
-      const userRoles = Array.isArray(user.roles)
-        ? user.roles.map(r => r.name)
-        : [];
       const userRoleLevels = userRoles
         .map(role => roleHierarchy.indexOf(role))
         .filter(level => level !== -1);
@@ -314,14 +328,22 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
         });
       }
 
-      req.user = {
-        ...req.user,
-        roles: userRoles,
-        roleLevel: highestUserRoleLevel,
-      };
+      req.user.roleLevel = highestUserRoleLevel;
 
       next();
     } catch (error) {
+      if (error.message === 'User not found') {
+        return res.status(401).json({
+          success: false,
+          error: 'User not found',
+        });
+      }
+      if (error.message === 'Database models not available') {
+        return res.status(500).json({
+          success: false,
+          error: 'Database models not available',
+        });
+      }
       return res.status(500).json({
         success: false,
         error: 'Role level authorization failed',
@@ -341,7 +363,7 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
  *
  * @example
  * const dynamicRole = (req) => req.params.type === 'sensitive' ? 'admin' : 'staff';
- * router.get('/data/:type', requireAuth, requireDynamicRole(dynamicRole), controller.getData);
+ * router.get('/data/:type', requireDynamicRole(dynamicRole), controller.getData);
  */
 export function requireDynamicRole(getRoleRequirement) {
   return async (req, res, next) => {

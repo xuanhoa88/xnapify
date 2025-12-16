@@ -46,3 +46,29 @@ export const getUsersError = state => state.admin.users.error;
  */
 export const getUserById = (state, id) =>
   state.admin.users.users.find(user => user.id === id);
+
+/**
+ * Get user permissions
+ *
+ * @param {Object} state - Redux state
+ * @returns {Array} Array of permission strings
+ */
+export const getUserPermissions = state => state.admin.users.permissions.items;
+
+/**
+ * Get user permissions loading state
+ *
+ * @param {Object} state - Redux state
+ * @returns {boolean} True if permissions are loading
+ */
+export const getUserPermissionsLoading = state =>
+  state.admin.users.permissions.loading;
+
+/**
+ * Get user permissions error
+ *
+ * @param {Object} state - Redux state
+ * @returns {string|null} Error message or null
+ */
+export const getUserPermissionsError = state =>
+  state.admin.users.permissions.error;

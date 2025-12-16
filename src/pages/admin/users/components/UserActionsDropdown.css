@@ -1,0 +1,77 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * UserActionsDropdown Component Styles
+ */
+
+@import '../../../../components/variables.css';
+
+.actionDropdown {
+  position: relative;
+}
+
+.actionDropdownBtn {
+  padding: var(--spacing-2);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--transition-base);
+  border-radius: var(--radius-sm);
+}
+
+.actionDropdownBtn:hover {
+  background: var(--color-background-tertiary);
+  border-color: var(--color-border);
+}
+
+.actionDropdownMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  min-width: 180px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  z-index: 1000;
+  overflow: visible;
+  animation: dropdownFadeIn 0.15s ease-out;
+}
+
+@keyframes dropdownFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: transparent;
+  border: none;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  text-align: left;
+  transition: var(--transition-base);
+}
+
+.dropdownItem:hover {
+  background: var(--color-background-secondary);
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--spacing-1) 0;
+}

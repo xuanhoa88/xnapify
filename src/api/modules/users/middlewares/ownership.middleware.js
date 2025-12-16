@@ -22,7 +22,7 @@ import { isAdmin } from '../constants/roles';
  * @returns {Function} Express middleware function
  *
  * @example
- * router.put('/posts/:id', requireAuth, requireOwnership('id', 'Post', 'authorId'), controller.updatePost);
+ * router.put('/posts/:id', requireOwnership('id', 'Post', 'authorId'), controller.updatePost);
  */
 export function requireOwnership(
   resource_idParam = 'id',
@@ -98,7 +98,7 @@ export function requireOwnership(
  * @returns {Function} Express middleware function
  *
  * @example
- * router.put('/posts/:id', requireAuth, requireFlexibleOwnership({
+ * router.put('/posts/:id', requireFlexibleOwnership({
  *   resourceModel: 'Post',
  *   ownerField: 'authorId',
  *   bypassRoles: ['admin', 'moderator'],
@@ -161,8 +161,15 @@ export function requireFlexibleOwnership(options) {
       }
 
       // Role bypass
-      if (bypassRoles.length > 0 && bypassRoles.includes(req.user.role)) {
-        canBypass = true;
+      if (bypassRoles.length > 0) {
+        if (Array.isArray(req.user.roles)) {
+          const userRoleNames = req.user.roles.map(r =>
+            typeof r === 'string' ? r : r && r.name,
+          );
+          if (bypassRoles.some(role => userRoleNames.includes(role))) {
+            canBypass = true;
+          }
+        }
       }
 
       // Permission bypass (requires cached permissions)
@@ -207,7 +214,7 @@ export function requireFlexibleOwnership(options) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/documents/:id', requireAuth, requireSharedOwnership('id', 'Document', 'ownerId', 'DocumentShare', 'user_id'), controller.getDocument);
+ * router.get('/documents/:id', requireSharedOwnership('id', 'Document', 'ownerId', 'DocumentShare', 'user_id'), controller.getDocument);
  */
 export function requireSharedOwnership(
   resource_idParam = 'id',
@@ -302,8 +309,8 @@ export function requireSharedOwnership(
  * @returns {Function} Express middleware function
  *
  * @example
- * const isManager = (resource, user) => user.role === 'manager' && resource.departmentId === user.departmentId;
- * router.get('/reports/:id', requireAuth, requireHierarchicalOwnership('id', 'Report', 'authorId', isManager), controller.getReport);
+ * const isManager = (resource, user) => user.roles.some(r => r.name === 'manager') && resource.departmentId === user.departmentId;
+ * router.get('/reports/:id', requireHierarchicalOwnership('id', 'Report', 'authorId', isManager), controller.getReport);
  */
 export function requireHierarchicalOwnership(
   resource_idParam = 'id',
@@ -390,7 +397,7 @@ export function requireHierarchicalOwnership(
  *
  * @example
  * const oneHour = 60 * 60 * 1000;
- * router.put('/comments/:id', requireAuth, requireTimeBasedOwnership('id', 'Comment', 'authorId', oneHour), controller.updateComment);
+ * router.put('/comments/:id', requireTimeBasedOwnership('id', 'Comment', 'authorId', oneHour), controller.updateComment);
  */
 export function requireTimeBasedOwnership(
   resource_idParam = 'id',

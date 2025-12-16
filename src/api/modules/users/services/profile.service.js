@@ -7,6 +7,7 @@
 
 import path from 'path';
 import { verifyPassword } from '../utils/password';
+import { DEFAULT_ROLE } from '../constants/roles';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -21,10 +22,32 @@ import { verifyPassword } from '../utils/password';
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserWithProfile(user_id, models) {
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      { model: UserProfile, as: 'profile' },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description', 'category', 'type'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
   });
 
   if (!user) {
@@ -47,10 +70,32 @@ export async function getUserWithProfile(user_id, models) {
  * @throws {Error} If UserNotFoundError
  */
 export async function updateUserProfile(user_id, profileData, models) {
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      { model: UserProfile, as: 'profile' },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description', 'category', 'type'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
   });
 
   if (!user) {
@@ -456,10 +501,32 @@ export async function deleteUserAccount(user_id, password, { models }) {
  * @returns {Promise<Object>} User data export
  */
 export async function exportUserData(user_id, models) {
-  const { User, UserProfile, UserLogin } = models;
+  const { User, UserProfile, UserLogin, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      { model: UserProfile, as: 'profile' },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['id', 'name', 'description'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['id', 'name', 'description'],
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
   });
 
   if (!user) {
@@ -487,7 +554,11 @@ export async function exportUserData(user_id, models) {
       is_active: user.is_active,
       created_at: user.created_at,
       updated_at: user.updated_at,
-      role: user.role,
+      roles:
+        Array.isArray(user.roles) && user.roles.length > 0
+          ? user.roles.map(r => r.name)
+          : [DEFAULT_ROLE],
+      groups: user.groups || [],
     },
     profile: user.profile
       ? {

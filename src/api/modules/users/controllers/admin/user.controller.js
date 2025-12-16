@@ -6,9 +6,8 @@
  */
 
 import * as userAdminService from '../../services/admin/user.service';
-import * as profileService from '../../services/profile.service';
 import { generatePassword } from '../../utils/password';
-import { SYSTEM_ROLES } from '../../constants/roles';
+import { DEFAULT_ROLE } from '../../constants/roles';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)
@@ -32,7 +31,8 @@ export async function createUser(req, res) {
       display_name,
       first_name,
       last_name,
-      role,
+      roles,
+      groups,
       is_active,
     } = req.body;
 
@@ -62,7 +62,8 @@ export async function createUser(req, res) {
         display_name,
         first_name,
         last_name,
-        role,
+        roles,
+        groups,
         is_active,
       },
       models,
@@ -77,7 +78,11 @@ export async function createUser(req, res) {
         is_active: user.is_active,
         created_at: user.created_at,
         display_name: (user.profile && user.profile.display_name) || null,
-        role: user.roles && user.roles.length > 0 ? user.roles[0].name : 'user',
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles.map(r => r.name)
+            : [DEFAULT_ROLE],
+        groups: user.groups || [],
       },
     });
   } catch (error) {
@@ -133,7 +138,10 @@ export async function getUserList(req, res) {
       first_name: (user.profile && user.profile.first_name) || null,
       last_name: (user.profile && user.profile.last_name) || null,
       picture: (user.profile && user.profile.picture) || null,
-      roles: user.roles ? user.roles.map(r => r.name) : [],
+      roles:
+        Array.isArray(user.roles) && user.roles.length > 0
+          ? user.roles.map(r => r.name)
+          : [DEFAULT_ROLE],
       groups: user.groups || [],
     }));
 
@@ -163,11 +171,7 @@ export async function getUserById(req, res) {
     const models = req.app.get('models');
 
     // Get user by ID
-    const user = await profileService.getUserWithProfile(id, models);
-
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
+    const user = await userAdminService.getUserById(id, models);
 
     return http.sendSuccess(res, {
       user: {
@@ -186,7 +190,11 @@ export async function getUserById(req, res) {
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
         website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles.map(r => r.name)
+            : [DEFAULT_ROLE],
+        groups: user.groups || [],
       },
     });
   } catch (error) {
@@ -214,7 +222,8 @@ export async function updateUserById(req, res) {
       bio,
       location,
       website,
-      role,
+      roles,
+      groups,
       is_active,
     } = req.body;
 
@@ -237,7 +246,8 @@ export async function updateUserById(req, res) {
         bio,
         location,
         website,
-        role,
+        roles,
+        groups,
         is_active,
       },
       models,
@@ -258,7 +268,11 @@ export async function updateUserById(req, res) {
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
         website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles.map(r => r.name)
+            : [DEFAULT_ROLE],
+        groups: user.groups || [],
       },
     });
   } catch (error) {
@@ -307,55 +321,6 @@ export async function deleteUserById(req, res) {
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete user');
-  }
-}
-
-/**
- * Update user role
- *
- * @route   PUT /api/users/:id/role
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function updateUserRole(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const { role } = req.body;
-
-    // Validate role
-    if (!role) {
-      return http.sendValidationError(res, {
-        role: `Role must be one of: ${SYSTEM_ROLES.join(', ')}`,
-      });
-    }
-
-    // Prevent admin from changing their own role
-    if (req.user.id === id) {
-      return http.sendError(res, 'Cannot change your own role', 400);
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Update user role
-    const user = await userAdminService.updateUserRole(id, role, models);
-
-    return http.sendSuccess(res, {
-      message: `User role updated to ${role}`,
-      user: {
-        id: user.id,
-        email: user.email,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    if (error.name === 'UserNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-
-    return http.sendServerError(res, 'Failed to update user role');
   }
 }
 
@@ -483,56 +448,6 @@ export async function getUserStats(req, res) {
     return http.sendSuccess(res, { stats });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user statistics');
-  }
-}
-
-/**
- * Bulk update users
- *
- * @route   PUT /api/users/bulk
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function bulkUpdateUsers(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { user_ids, updates } = req.body;
-
-    // Validate input
-    if (!Array.isArray(user_ids) || user_ids.length === 0) {
-      return http.sendValidationError(res, {
-        user_ids: 'User IDs must be a non-empty array',
-      });
-    }
-
-    if (!updates || typeof updates !== 'object') {
-      return http.sendValidationError(res, {
-        updates: 'Updates must be an object',
-      });
-    }
-
-    // Prevent admin from updating themselves
-    if (user_ids.includes(req.user.id)) {
-      return http.sendError(res, 'Cannot bulk update your own account', 400);
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Perform bulk update
-    const result = await userAdminService.bulkUpdateUsers(
-      user_ids,
-      updates,
-      models,
-    );
-
-    return http.sendSuccess(res, {
-      message: `${result.updatedCount} users updated successfully`,
-      ...result,
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to bulk update users');
   }
 }
 

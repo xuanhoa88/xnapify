@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ROLE } from '../constants/roles';
 import * as profileService from '../services/profile.service';
 import { validatePassword } from '../utils/validation';
 
@@ -48,7 +49,11 @@ export async function getProfile(req, res) {
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
         website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles.map(role => role.name)
+            : [DEFAULT_ROLE],
+        groups: user.groups || [],
       },
     });
   } catch (error) {
@@ -102,7 +107,11 @@ export async function updateProfile(req, res) {
         bio: (user.profile && user.profile.bio) || null,
         location: (user.profile && user.profile.location) || null,
         website: (user.profile && user.profile.website) || null,
-        role: user.role || 'user',
+        roles:
+          Array.isArray(user.roles) && user.roles.length > 0
+            ? user.roles.map(role => role.name)
+            : [DEFAULT_ROLE],
+        groups: user.groups || [],
       },
     });
   } catch (error) {

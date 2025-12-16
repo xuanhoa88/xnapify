@@ -63,7 +63,9 @@ export function fetchGroups(options = {}) {
       if (category) params.append('category', category);
       if (type) params.append('type', type);
 
-      const { data } = await fetch(`/api/admin/groups?${params.toString()}`);
+      const { data } = await fetch(
+        `/api/admin/groups/list?${params.toString()}`,
+      );
 
       dispatch(
         fetchGroupsSuccess({
@@ -122,7 +124,6 @@ export function createGroup(groupData) {
     try {
       const { data } = await fetch('/api/admin/groups', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(groupData),
       });
 
@@ -151,7 +152,6 @@ export function updateGroup(groupId, updateData) {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateData),
       });
 

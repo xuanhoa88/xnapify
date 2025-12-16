@@ -122,7 +122,6 @@ export function createPermission(permissionData) {
     try {
       const { data } = await fetch('/api/admin/permissions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(permissionData),
       });
 
@@ -151,7 +150,6 @@ export function updatePermission(permissionId, permissionData) {
     try {
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(permissionData),
       });
 

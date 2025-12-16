@@ -23,7 +23,6 @@ export {
   requireAnyPermission,
   requireResourcePermission,
   requireConditionalPermission,
-  cacheUserPermissions,
 } from './permission.middleware';
 
 // Group-based middlewares

@@ -8,23 +8,27 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../contexts/history';
-import { createGroup, fetchRoles } from '../../../../redux';
+import {
+  createGroup,
+  fetchRoles,
+  getRoles,
+  getRolesLoading,
+} from '../../../../redux';
 import s from './CreateGroup.css';
 
 function CreateGroup() {
   const dispatch = useDispatch();
   const history = useHistory();
 
-  const { roles, loading: rolesLoading } = useSelector(
-    state => state.admin.roles,
-  );
+  const roles = useSelector(getRoles);
+  const rolesLoading = useSelector(getRolesLoading);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
     category: '',
     type: '',
+    roles: [],
   });
-  const [selectedRoleIds, setSelectedRoleIds] = useState([]);
   const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -33,31 +37,21 @@ function CreateGroup() {
     dispatch(fetchRoles());
   }, [dispatch]);
 
-  const toggleRole = useCallback(roleId => {
-    setSelectedRoleIds(prev =>
-      prev.includes(roleId)
-        ? prev.filter(id => id !== roleId)
-        : [...prev, roleId],
-    );
-  }, []);
-
-  // Filter roles based on search
-  const filteredRoles = useMemo(
-    () =>
-      roles.filter(
-        role =>
-          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
-          (role.description &&
-            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
-      ),
-    [roles, roleSearch],
-  );
-
   const handleChange = useCallback(e => {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
       [name]: value,
+    }));
+  }, []);
+
+  const handleRoleChange = useCallback(e => {
+    const { value, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      roles: checked
+        ? [...prev.roles, value]
+        : prev.roles.filter(r => r !== value),
     }));
   }, []);
 
@@ -76,9 +70,7 @@ function CreateGroup() {
       }
 
       setLoading(true);
-      const result = await dispatch(
-        createGroup({ ...formData, role_ids: selectedRoleIds }),
-      );
+      const result = await dispatch(createGroup(formData));
       setLoading(false);
 
       if (result.success) {
@@ -87,7 +79,19 @@ function CreateGroup() {
         setError(result.error);
       }
     },
-    [dispatch, formData, history, selectedRoleIds],
+    [dispatch, formData, history],
+  );
+
+  // Filter roles based on search
+  const filteredRoles = useMemo(
+    () =>
+      roles.filter(
+        role =>
+          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
+          (role.description &&
+            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
+      ),
+    [roles, roleSearch],
   );
 
   return (
@@ -163,7 +167,7 @@ function CreateGroup() {
 
           <div className={s.formSection}>
             <h3 className={s.sectionTitle}>
-              Roles ({selectedRoleIds.length} selected)
+              Roles ({formData.roles.length} selected)
             </h3>
             <input
               type='text'
@@ -181,8 +185,10 @@ function CreateGroup() {
                     <label key={role.id} className={s.checkboxItem}>
                       <input
                         type='checkbox'
-                        checked={selectedRoleIds.includes(role.id)}
-                        onChange={() => toggleRole(role.id)}
+                        name='roles'
+                        value={role.name}
+                        checked={formData.roles.includes(role.name)}
+                        onChange={handleRoleChange}
                       />
                       <span>
                         {role.name}

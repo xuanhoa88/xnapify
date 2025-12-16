@@ -6,6 +6,7 @@
  */
 
 import * as groupController from '../../controllers/admin/group.controller';
+import * as rbacController from '../../controllers/admin/rbac.controller';
 
 /**
  * Group Management Routes
@@ -16,17 +17,25 @@ import * as groupController from '../../controllers/admin/group.controller';
  *
  * @param {Object} deps - Dependencies injected by parent router
  * @param {Function} deps.Router - Express Router constructor
- * @param {Object} middlewares - Authentication and authorization middlewares
+ * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with group routes
  */
-export default function groupRoutes(deps, middlewares, app) {
-  const { requirePermission } = middlewares;
+export default function groupRoutes(deps, userMiddlewares) {
+  const { requirePermission } = userMiddlewares;
   const router = deps.Router();
 
-  // Create auth middleware instance
-  const auth = app.get('auth');
-  const requireAuth = auth.middlewares.requireAuth();
+  /**
+   * @route   GET /
+   * @desc    Get all groups with pagination
+   * @access  Admin (requires 'groups:read' permission)
+   * @query   { page, limit, search, category, type }
+   */
+  router.get(
+    '/list',
+    requirePermission('groups:read'),
+    groupController.getGroups,
+  );
 
   /**
    * @route   POST /
@@ -36,22 +45,8 @@ export default function groupRoutes(deps, middlewares, app) {
    */
   router.post(
     '/',
-    requireAuth,
     requirePermission('groups:write'),
     groupController.createGroup,
-  );
-
-  /**
-   * @route   GET /
-   * @desc    Get all groups with pagination
-   * @access  Admin (requires 'groups:read' permission)
-   * @query   { page, limit, search, category, type }
-   */
-  router.get(
-    '/',
-    requireAuth,
-    requirePermission('groups:read'),
-    groupController.getGroups,
   );
 
   /**
@@ -61,7 +56,6 @@ export default function groupRoutes(deps, middlewares, app) {
    */
   router.get(
     '/:id/members',
-    requireAuth,
     requirePermission('groups:read'),
     groupController.getGroupMembers,
   );
@@ -70,13 +64,34 @@ export default function groupRoutes(deps, middlewares, app) {
    * @route   PUT /:id/roles
    * @desc    Assign roles to group
    * @access  Admin (requires 'groups:write' permission)
-   * @body    { role_ids: [] }
+   * @body    { role_names: [] }
    */
   router.put(
     '/:id/roles',
-    requireAuth,
     requirePermission('groups:write'),
-    groupController.assignRolesToGroup,
+    rbacController.assignRolesToGroup,
+  );
+
+  /**
+   * @route   POST /:id/roles/:role_id
+   * @desc    Add a single role to group
+   * @access  Admin (requires 'groups:write' permission)
+   */
+  router.post(
+    '/:id/roles/:role_id',
+    requirePermission('groups:write'),
+    rbacController.addRoleToGroup,
+  );
+
+  /**
+   * @route   DELETE /:id/roles/:role_id
+   * @desc    Remove a role from group
+   * @access  Admin (requires 'groups:write' permission)
+   */
+  router.delete(
+    '/:id/roles/:role_id',
+    requirePermission('groups:write'),
+    rbacController.removeRoleFromGroup,
   );
 
   /**
@@ -86,7 +101,6 @@ export default function groupRoutes(deps, middlewares, app) {
    */
   router.get(
     '/:id',
-    requireAuth,
     requirePermission('groups:read'),
     groupController.getGroupById,
   );
@@ -99,9 +113,8 @@ export default function groupRoutes(deps, middlewares, app) {
    */
   router.put(
     '/:id',
-    requireAuth,
     requirePermission('groups:write'),
-    groupController.updateGroup,
+    groupController.updateGroupById,
   );
 
   /**
@@ -111,7 +124,6 @@ export default function groupRoutes(deps, middlewares, app) {
    */
   router.delete(
     '/:id',
-    requireAuth,
     requirePermission('groups:delete'),
     groupController.deleteGroup,
   );
