@@ -46,3 +46,52 @@ export const getRolesError = state => state.admin.roles.error;
  */
 export const getRoleById = (state, id) =>
   state.admin.roles.roles.find(role => role.id === id);
+
+/**
+ * Get roles by array of IDs
+ *
+ * @param {Object} state - Redux state
+ * @param {string[]} ids - Array of role IDs
+ * @returns {Array} Array of role objects
+ */
+export const getRolesByIds = (state, ids) => {
+  if (!ids || ids.length === 0) return [];
+  const idSet = new Set(ids);
+  return state.admin.roles.roles.filter(role => idSet.has(role.id));
+};
+
+/**
+ * Get all role names
+ *
+ * @param {Object} state - Redux state
+ * @returns {string[]} Array of role names
+ */
+export const getRoleNames = state =>
+  state.admin.roles.roles.map(role => role.name);
+
+/**
+ * Get role by name
+ *
+ * @param {Object} state - Redux state
+ * @param {string} name - Role name
+ * @returns {Object|undefined} Role object or undefined
+ */
+export const getRoleByName = (state, name) =>
+  state.admin.roles.roles.find(
+    role => role.name.toLowerCase() === name.toLowerCase(),
+  );
+
+/**
+ * Get roles by array of names
+ *
+ * @param {Object} state - Redux state
+ * @param {string[]} names - Array of role names
+ * @returns {Array} Array of role objects
+ */
+export const getRolesByNames = (state, names) => {
+  if (!names || names.length === 0) return [];
+  const nameSet = new Set(names.map(n => n.toLowerCase()));
+  return state.admin.roles.roles.filter(role =>
+    nameSet.has(role.name.toLowerCase()),
+  );
+};

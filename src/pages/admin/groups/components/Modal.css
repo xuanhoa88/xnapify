@@ -79,14 +79,39 @@
   flex: 1;
 }
 
+.modalDescription {
+  margin: 0 0 var(--spacing-4) 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.modalError {
+  padding: var(--spacing-3);
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-4);
+  font-size: var(--font-size-sm);
+}
+
 .modalFooter {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4) var(--spacing-6);
   border-top: 1px solid var(--color-border);
   background: var(--color-background-secondary);
+}
+
+.modalActions {
+  display: flex;
+  gap: var(--spacing-3);
+}
+
+.selectionCount {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
 }
 
 /* Checkbox List */
@@ -151,25 +176,6 @@
   text-align: center;
 }
 
-.modalError {
-  padding: var(--spacing-3);
-  background: #fee2e2;
-  color: #991b1b;
-  border-radius: var(--radius-md);
-  margin-bottom: var(--spacing-4);
-  font-size: var(--font-size-sm);
-}
-
-.selectionCount {
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-.modalActions {
-  display: flex;
-  gap: var(--spacing-3);
-}
-
 /* Modal Buttons */
 .modalBtn {
   padding: var(--spacing-3) var(--spacing-5);
@@ -205,37 +211,7 @@
   background: var(--color-background-secondary);
 }
 
-/* Permissions List */
-.permissionsList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-}
-
-.permissionBadge {
-  display: inline-flex;
-  padding: var(--spacing-2) var(--spacing-3);
-  background: #f0fdf4;
-  color: #166534;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.noPermissions {
-  color: var(--color-text-secondary);
-  font-style: italic;
-  font-size: var(--font-size-sm);
-}
-
-/* Modal Description */
-.modalDescription {
-  margin: 0 0 var(--spacing-4) 0;
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-}
-
-/* Role Breakdown Styles */
+/* Permissions Styles */
 .sectionTitle {
   margin: 0 0 var(--spacing-3) 0;
   font-size: var(--font-size-sm);
@@ -277,4 +253,26 @@
 
 .permissionsSection {
   margin-top: var(--spacing-2);
+}
+
+.permissionsList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.permissionBadge {
+  display: inline-flex;
+  padding: var(--spacing-2) var(--spacing-3);
+  background: #f0fdf4;
+  color: #166534;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.noPermissions {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-sm);
 }

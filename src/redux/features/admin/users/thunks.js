@@ -81,6 +81,7 @@ export function fetchUsers(options = {}) {
         limit = 10,
         search = '',
         role = '',
+        group = '',
         status = '',
       } = options || {};
 
@@ -89,6 +90,7 @@ export function fetchUsers(options = {}) {
       if (limit) params.append('limit', limit);
       if (search) params.append('search', search);
       if (role) params.append('role', role);
+      if (group) params.append('group', group);
       if (status) params.append('status', status);
 
       const { data } = await fetch(
@@ -146,7 +148,7 @@ export function updateUserStatus(userId, isActive) {
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        body: JSON.stringify({ is_active: isActive }),
+        body: { is_active: isActive },
       });
 
       dispatch(updateUserStatusSuccess(data.user));
@@ -173,7 +175,7 @@ export function createUser(userData) {
     try {
       const { data } = await fetch('/api/admin/users', {
         method: 'POST',
-        body: JSON.stringify(userData),
+        body: userData,
       });
 
       dispatch(createUserSuccess(data.user));
@@ -204,7 +206,7 @@ export function updateUser(userId, userData) {
     try {
       const { data } = await fetch(`/api/admin/users/${userId}`, {
         method: 'PUT',
-        body: JSON.stringify(userData),
+        body: userData,
       });
 
       dispatch(updateUserByIdSuccess(data.user));
@@ -265,7 +267,7 @@ export function assignRolesToUser(userId, roleNames) {
     try {
       const { data } = await fetch(`/api/admin/users/${userId}/roles`, {
         method: 'PUT',
-        body: JSON.stringify({ role_names: roleNames }),
+        body: { role_names: roleNames },
       });
 
       // Refresh user data
@@ -290,7 +292,7 @@ export function assignGroupsToUser(userId, groupIds) {
     try {
       const { data } = await fetch(`/api/admin/users/${userId}/groups`, {
         method: 'PUT',
-        body: JSON.stringify({ group_ids: groupIds }),
+        body: { group_ids: groupIds },
       });
 
       // Refresh user data

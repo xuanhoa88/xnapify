@@ -12,7 +12,7 @@ import { getRoles, assignRolesToUser, fetchUsers } from '../../../../redux';
 import s from './Modal.css';
 
 /**
- * RolesModal - Self-contained modal for managing user roles
+ * UserRolesModal - Self-contained modal for managing user roles
  *
  * Usage:
  *   const rolesModalRef = useRef();
@@ -20,7 +20,7 @@ import s from './Modal.css';
  *   rolesModalRef.current.openBulk(userIds);    // Open for bulk assignment
  *   rolesModalRef.current.close();              // Close modal
  */
-const RolesModal = forwardRef((props, ref) => {
+const UserRolesModal = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const roles = useSelector(getRoles);
 
@@ -31,6 +31,7 @@ const RolesModal = forwardRef((props, ref) => {
   const [bulkUserIds, setBulkUserIds] = useState([]);
   const [selections, setSelections] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   // Initialize selections from user roles
   const initSelections = useCallback(targetUser => {
@@ -53,6 +54,7 @@ const RolesModal = forwardRef((props, ref) => {
         setIsBulk(false);
         setBulkUserIds([]);
         initSelections(targetUser);
+        setError(null);
         setIsOpen(true);
       },
       openBulk: userIds => {
@@ -60,6 +62,7 @@ const RolesModal = forwardRef((props, ref) => {
         setIsBulk(true);
         setBulkUserIds(userIds);
         setSelections([]);
+        setError(null);
         setIsOpen(true);
       },
       close: () => {
@@ -68,6 +71,7 @@ const RolesModal = forwardRef((props, ref) => {
         setIsBulk(false);
         setBulkUserIds([]);
         setSelections([]);
+        setError(null);
       },
     }),
     [initSelections],
@@ -85,18 +89,27 @@ const RolesModal = forwardRef((props, ref) => {
     setIsBulk(false);
     setBulkUserIds([]);
     setSelections([]);
+    setError(null);
   }, []);
 
   const handleSave = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const targetUsers = isBulk ? bulkUserIds : [user.id];
       for (const userId of targetUsers) {
-        await dispatch(assignRolesToUser(userId, selections));
+        const result = await dispatch(assignRolesToUser(userId, selections));
+        if (!result.success) {
+          setError(result.error || 'Failed to assign roles');
+          setLoading(false);
+          return;
+        }
       }
       // Refresh users list
       dispatch(fetchUsers({}));
       handleClose();
+    } catch (err) {
+      setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
@@ -107,7 +120,11 @@ const RolesModal = forwardRef((props, ref) => {
 
   const title = isBulk
     ? `Assign Roles to ${bulkUserIds.length} Users`
-    : `Manage Roles for ${user && (user.display_name || user.email)}`;
+    : `Manage Roles for "${user?.display_name || user?.email}"`;
+
+  const description = isBulk
+    ? 'Select roles to assign to the selected users.'
+    : "Select roles to assign to this user. The user's permissions will be based on these roles.";
 
   return (
     <div className={s.modalOverlay} onClick={handleClose} role='presentation'>
@@ -124,58 +141,77 @@ const RolesModal = forwardRef((props, ref) => {
           </button>
         </div>
         <div className={s.modalBody}>
+          {error && <div className={s.modalError}>{error}</div>}
+          <p className={s.modalDescription}>{description}</p>
           <div className={s.checkboxList}>
-            {roles.map(role => (
-              <div
-                key={role.id}
-                className={clsx(s.checkboxListItem, {
-                  [s.selected]: selections.includes(role.name),
-                })}
-                onClick={() => toggleSelection(role.name)}
-                role='checkbox'
-                aria-checked={selections.includes(role.name)}
-                tabIndex={0}
-                onKeyDown={e => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    toggleSelection(role.name);
-                  }
-                }}
-              >
-                <input
-                  type='checkbox'
-                  className={s.checkbox}
-                  checked={selections.includes(role.name)}
-                  onChange={() => {}}
-                  tabIndex={-1}
-                />
-                <span className={s.checkboxListLabel}>{role.name}</span>
-              </div>
-            ))}
+            {roles.length === 0 ? (
+              <div className={s.noItems}>No roles available</div>
+            ) : (
+              roles.map(role => (
+                <div
+                  key={role.id}
+                  className={clsx(s.checkboxListItem, {
+                    [s.selected]: selections.includes(role.name),
+                  })}
+                  onClick={() => toggleSelection(role.name)}
+                  role='checkbox'
+                  aria-checked={selections.includes(role.name)}
+                  tabIndex={0}
+                  onKeyDown={e => {
+                    if (e.key === ' ' || e.key === 'Enter') {
+                      e.preventDefault();
+                      toggleSelection(role.name);
+                    }
+                  }}
+                >
+                  <input
+                    type='checkbox'
+                    className={s.checkbox}
+                    checked={selections.includes(role.name)}
+                    onChange={() => {}}
+                    tabIndex={-1}
+                  />
+                  <div className={s.checkboxContent}>
+                    <span className={s.checkboxListLabel}>{role.name}</span>
+                    {role.description && (
+                      <span className={s.checkboxListDesc}>
+                        {role.description}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
         <div className={s.modalFooter}>
-          <button
-            className={clsx(s.modalBtn, s.modalBtnSecondary)}
-            onClick={handleClose}
-            type='button'
-          >
-            Cancel
-          </button>
-          <button
-            className={clsx(s.modalBtn, s.modalBtnPrimary)}
-            onClick={handleSave}
-            disabled={loading}
-            type='button'
-          >
-            {loading ? 'Saving...' : 'Save'}
-          </button>
+          <span className={s.selectionCount}>
+            {selections.length} role{selections.length !== 1 ? 's' : ''}{' '}
+            selected
+          </span>
+          <div className={s.modalActions}>
+            <button
+              className={clsx(s.modalBtn, s.modalBtnSecondary)}
+              onClick={handleClose}
+              type='button'
+            >
+              Cancel
+            </button>
+            <button
+              className={clsx(s.modalBtn, s.modalBtnPrimary)}
+              onClick={handleSave}
+              disabled={loading}
+              type='button'
+            >
+              {loading ? 'Saving...' : 'Save'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 });
 
-RolesModal.displayName = 'RolesModal';
+UserRolesModal.displayName = 'UserRolesModal';
 
-export default RolesModal;
+export default UserRolesModal;

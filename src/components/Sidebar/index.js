@@ -82,12 +82,12 @@ function Sidebar() {
       exact: true,
     },
     { path: '/admin/users', label: t('navigation.users', 'Users'), icon: '👥' },
-    { path: '/admin/roles', label: t('navigation.roles', 'Roles'), icon: '🎭' },
     {
       path: '/admin/groups',
       label: t('navigation.groups', 'Groups'),
       icon: '👨‍👩‍👧‍👦',
     },
+    { path: '/admin/roles', label: t('navigation.roles', 'Roles'), icon: '🎭' },
     {
       path: '/admin/permissions',
       label: t('navigation.permissions', 'Permissions'),

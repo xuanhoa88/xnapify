@@ -124,7 +124,7 @@ export function createGroup(groupData) {
     try {
       const { data } = await fetch('/api/admin/groups', {
         method: 'POST',
-        body: JSON.stringify(groupData),
+        body: groupData,
       });
 
       dispatch(createGroupSuccess(data.group));
@@ -152,7 +152,7 @@ export function updateGroup(groupId, updateData) {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`, {
         method: 'PUT',
-        body: JSON.stringify(updateData),
+        body: updateData,
       });
 
       dispatch(updateGroupSuccess(data.group));
@@ -226,4 +226,31 @@ export function fetchGroupMembers(groupId, options = {}) {
  */
 export function clearGroupsError() {
   return clearError();
+}
+
+/**
+ * Assign roles to a group
+ *
+ * @param {string} groupId - Group ID
+ * @param {string[]} roleNames - Array of role names to assign
+ * @returns {Function} Redux thunk action
+ */
+export function assignRolesToGroup(groupId, roleNames) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/groups/${groupId}/roles`, {
+        method: 'POST',
+        body: { roles: roleNames },
+      });
+
+      // Update the group in state with new roles
+      if (data.group) {
+        dispatch(updateGroupSuccess(data.group));
+      }
+
+      return { success: true, group: data.group };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
 }

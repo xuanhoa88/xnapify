@@ -122,7 +122,7 @@ export function createPermission(permissionData) {
     try {
       const { data } = await fetch('/api/admin/permissions', {
         method: 'POST',
-        body: JSON.stringify(permissionData),
+        body: permissionData,
       });
 
       dispatch(createPermissionSuccess(data.permission));
@@ -150,7 +150,7 @@ export function updatePermission(permissionId, permissionData) {
     try {
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`, {
         method: 'PUT',
-        body: JSON.stringify(permissionData),
+        body: permissionData,
       });
 
       dispatch(updatePermissionSuccess(data.permission));

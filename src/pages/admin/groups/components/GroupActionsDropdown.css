@@ -71,6 +71,14 @@
   background: var(--color-background-secondary);
 }
 
+.dropdownItemDanger {
+  color: var(--color-error);
+}
+
+.dropdownItemDanger:hover {
+  background: #fee2e2;
+}
+
 .dropdownDivider {
   height: 1px;
   background: var(--color-border);

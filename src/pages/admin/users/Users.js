@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
@@ -21,13 +21,11 @@ import {
   getRoles,
 } from '../../../redux';
 import { useHistory } from '../../../contexts/history';
-import {
-  BulkActionsBar,
-  UserActionsDropdown,
-  RolesModal,
-  GroupsModal,
-  PermissionsModal,
-} from './components';
+import UserBulkActionsBar from './components/UserBulkActionsBar';
+import UserActionsDropdown from './components/UserActionsDropdown';
+import UserRolesModal from './components/UserRolesModal';
+import UserGroupsModal from './components/UserGroupsModal';
+import UserPermissionsModal from './components/UserPermissionsModal';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -119,16 +117,60 @@ function Users() {
   );
 
   // Filter handlers
+  const debounceTimer = useRef(null);
+
   const handleSearchChange = useCallback(
-    e => setInputValue(e.target.value),
-    [],
+    e => {
+      const { value } = e.target;
+      setInputValue(value);
+
+      // Debounced search - auto-search after 500ms
+      if (debounceTimer.current) {
+        clearTimeout(debounceTimer.current);
+      }
+      debounceTimer.current = setTimeout(() => {
+        if (value !== search) {
+          setSearch(value);
+          setCurrentPage(1);
+        }
+      }, 500);
+    },
+    [search],
   );
+
   const handleSearchSubmit = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
     if (inputValue !== search) {
       setSearch(inputValue);
       setCurrentPage(1);
     }
   }, [inputValue, search]);
+
+  const handleClearAllFilters = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setInputValue('');
+    setSearch('');
+    setRoleFilter('');
+    setGroupFilter('');
+    setStatusFilter('');
+    setCurrentPage(1);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setInputValue('');
+    setSearch('');
+    setCurrentPage(1);
+  }, []);
+
+  const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
+
   const handleKeyDown = useCallback(
     e => e.key === 'Enter' && handleSearchSubmit(),
     [handleSearchSubmit],
@@ -162,23 +204,26 @@ function Users() {
 
   // Modal handlers
   const openRolesModal = useCallback(
-    user => rolesModalRef.current?.open(user),
+    user => rolesModalRef.current && rolesModalRef.current.open(user),
     [],
   );
   const openGroupsModal = useCallback(
-    user => groupsModalRef.current?.open(user),
+    user => groupsModalRef.current && groupsModalRef.current.open(user),
     [],
   );
   const openPermissionsModal = useCallback(
-    user => permissionsModalRef.current?.open(user),
+    user =>
+      permissionsModalRef.current && permissionsModalRef.current.open(user),
     [],
   );
   const openBulkRolesModal = useCallback(
-    () => rolesModalRef.current?.openBulk(selectedUsers),
+    () =>
+      rolesModalRef.current && rolesModalRef.current.openBulk(selectedUsers),
     [selectedUsers],
   );
   const openBulkGroupsModal = useCallback(
-    () => groupsModalRef.current?.openBulk(selectedUsers),
+    () =>
+      groupsModalRef.current && groupsModalRef.current.openBulk(selectedUsers),
     [selectedUsers],
   );
 
@@ -222,7 +267,7 @@ function Users() {
       </div>
 
       {selectedUsers.length > 0 && (
-        <BulkActionsBar
+        <UserBulkActionsBar
           count={selectedUsers.length}
           onAssignRoles={openBulkRolesModal}
           onAssignGroups={openBulkGroupsModal}
@@ -231,15 +276,27 @@ function Users() {
       )}
 
       <div className={s.filters}>
-        <input
-          type='text'
-          placeholder='Search users... (Press Enter)'
-          className={s.searchInput}
-          value={inputValue}
-          onChange={handleSearchChange}
-          onKeyDown={handleKeyDown}
-          onBlur={handleSearchSubmit}
-        />
+        <div className={s.searchWrapper}>
+          <span className={s.searchIcon}>🔍</span>
+          <input
+            type='text'
+            placeholder='Search users...'
+            className={s.searchInput}
+            value={inputValue}
+            onChange={handleSearchChange}
+            onKeyDown={handleKeyDown}
+          />
+          {inputValue && (
+            <button
+              className={s.searchClear}
+              onClick={handleClearSearch}
+              type='button'
+              title='Clear search'
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <select
           className={s.filterSelect}
           value={roleFilter}
@@ -273,6 +330,18 @@ function Users() {
           <option value='active'>Active</option>
           <option value='inactive'>Inactive</option>
         </select>
+        <div className={s.filterActions}>
+          {hasActiveFilters && (
+            <button
+              className={s.clearBtn}
+              onClick={handleClearAllFilters}
+              type='button'
+              title='Reset all filters'
+            >
+              ✕ Clear Filters
+            </button>
+          )}
+        </div>
       </div>
 
       <div className={s.tableContainer}>
@@ -444,9 +513,9 @@ function Users() {
       )}
 
       {/* Modals - self-contained with ref-based API */}
-      <RolesModal ref={rolesModalRef} />
-      <GroupsModal ref={groupsModalRef} />
-      <PermissionsModal ref={permissionsModalRef} />
+      <UserRolesModal ref={rolesModalRef} />
+      <UserGroupsModal ref={groupsModalRef} />
+      <UserPermissionsModal ref={permissionsModalRef} />
     </div>
   );
 }

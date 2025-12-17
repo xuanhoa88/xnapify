@@ -10,7 +10,7 @@ import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
 import App from './components/App';
 import { WebSocketProvider } from './contexts/ws';
-import { createFetch } from './createFetch';
+import { createFetch } from './fetch';
 import {
   DEFAULT_LOCALE,
   configureStore,

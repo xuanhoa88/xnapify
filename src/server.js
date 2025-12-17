@@ -28,7 +28,7 @@ import {
   setRuntimeVariable,
   getI18nInstance,
 } from './redux';
-import { createFetch } from './createFetch';
+import { createFetch } from './fetch';
 import App from './components/App';
 import Html from './components/Html';
 import { createWebSocketServer } from './ws/server';
@@ -444,10 +444,12 @@ async function main(app, staticPath) {
 
       // Create fetch instance for this SSR request
       const fetch = createFetch(nodeFetch, {
-        baseUrl: getBaseUrl({ host: config.host, port: config.port }),
-        headers: {
-          Cookie: req.headers.cookie || '',
-          'User-Agent': req.headers['user-agent'] || 'RSK',
+        defaults: {
+          baseURL: getBaseUrl({ host: config.host, port: config.port }),
+          headers: {
+            Cookie: req.headers.cookie || '',
+            'User-Agent': req.headers['user-agent'] || 'RSK',
+          },
         },
       });
 

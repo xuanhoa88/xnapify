@@ -6,9 +6,9 @@
  */
 
 import PropTypes from 'prop-types';
-import s from './BulkActionsBar.css';
+import s from './UserBulkActionsBar.css';
 
-function BulkActionsBar({ count, onAssignRoles, onAssignGroups, onClear }) {
+function UserBulkActionsBar({ count, onAssignRoles, onAssignGroups, onClear }) {
   return (
     <div className={s.bulkActions}>
       <span className={s.bulkInfo}>{count} user(s) selected</span>
@@ -25,11 +25,11 @@ function BulkActionsBar({ count, onAssignRoles, onAssignGroups, onClear }) {
   );
 }
 
-BulkActionsBar.propTypes = {
+UserBulkActionsBar.propTypes = {
   count: PropTypes.number.isRequired,
   onAssignRoles: PropTypes.func.isRequired,
   onAssignGroups: PropTypes.func.isRequired,
   onClear: PropTypes.func.isRequired,
 };
 
-export default BulkActionsBar;
+export default UserBulkActionsBar;

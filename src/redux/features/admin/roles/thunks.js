@@ -120,7 +120,7 @@ export function createRole(roleData) {
     try {
       const { data } = await fetch('/api/admin/roles', {
         method: 'POST',
-        body: JSON.stringify(roleData),
+        body: roleData,
       });
 
       dispatch(createRoleSuccess(data.role));
@@ -148,7 +148,7 @@ export function updateRole(roleId, roleData) {
     try {
       const { data } = await fetch(`/api/admin/roles/${roleId}`, {
         method: 'PUT',
-        body: JSON.stringify(roleData),
+        body: roleData,
       });
 
       dispatch(updateRoleSuccess(data.role));

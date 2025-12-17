@@ -53,7 +53,7 @@ export function login({ email, password, rememberMe = false }) {
     try {
       const { data } = await fetch('/api/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password, rememberMe }),
+        body: { email, password, rememberMe },
       });
 
       dispatch(loginSuccess(data.user));
@@ -89,11 +89,11 @@ export function register({ email, password, displayName }) {
     try {
       const { data } = await fetch('/api/register', {
         method: 'POST',
-        body: JSON.stringify({
+        body: {
           email,
           password,
           display_name: displayName,
-        }),
+        },
       });
 
       dispatch(registerSuccess(data.user));
@@ -169,7 +169,7 @@ export function resetPassword({ email }) {
     try {
       const { data } = await fetch('/api/users/request-reset-password', {
         method: 'POST',
-        body: JSON.stringify({ email }),
+        body: { email },
       });
 
       dispatch(resetPasswordSuccess());
@@ -200,7 +200,7 @@ export function resetPasswordConfirmation({ token, password }) {
     try {
       const { data } = await fetch('/api/users/reset-password-confirmation', {
         method: 'POST',
-        body: JSON.stringify({ token, password }),
+        body: { token, password },
       });
 
       dispatch(resetPasswordConfirmationSuccess());
@@ -230,7 +230,7 @@ export function emailVerification({ token }) {
     try {
       const { data } = await fetch('/api/users/email-verification', {
         method: 'POST',
-        body: JSON.stringify({ token }),
+        body: { token },
       });
 
       dispatch(emailVerificationSuccess());
@@ -255,7 +255,7 @@ export function updateCurrentUser(userData) {
     try {
       const { data } = await fetch('/api/profile', {
         method: 'PUT',
-        body: JSON.stringify(userData),
+        body: userData,
       });
 
       dispatch(updateUser(data.profile));
@@ -294,7 +294,7 @@ export function uploadUserAvatar(file) {
         // Link avatar to user profile (validates file exists)
         const linkResponse = await fetch('/api/profile/avatar', {
           method: 'PUT',
-          body: JSON.stringify({ fileName: uploadedFile.data.fileName }),
+          body: { fileName: uploadedFile.data.fileName },
         });
 
         if (linkResponse.data) {

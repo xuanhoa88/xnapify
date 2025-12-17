@@ -99,11 +99,96 @@
 }
 
 .groupDescription {
-  margin: 0 0 var(--spacing-5) 0;
+  margin: 0 0 var(--spacing-4) 0;
   color: var(--color-text-secondary);
   line-height: 1.6;
   font-size: var(--font-size-sm);
   min-height: 2.4em;
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+.headerBadges {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: wrap;
+}
+
+.roleCountBadge {
+  font-size: var(--font-size-xs);
+  color: #7c3aed;
+  background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+/* Roles Section */
+.rolesSection {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-3);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  min-height: 40px;
+}
+
+.sectionLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+  flex-shrink: 0;
+  padding-top: 2px;
+}
+
+.roles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.roleBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-3);
+  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
+  color: #5b21b6;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  transition: var(--transition-base);
+}
+
+.roleBadge:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.roleBadgeMore {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.noRoles {
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-xs);
+  font-style: italic;
 }
 
 .members {
