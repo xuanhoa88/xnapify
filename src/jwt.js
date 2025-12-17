@@ -362,7 +362,7 @@ export function refreshTokenPair(refreshToken, secret, options = {}) {
 
   // Extract user payload (remove JWT-specific claims)
   // eslint-disable-next-line no-unused-vars
-  const { iat, exp, jti, type, ...userPayload } = decoded;
+  const { iat, exp, jti, type, aud, iss, ...userPayload } = decoded;
 
   // Generate new token pair
   const newAccessToken = generateTypedToken(

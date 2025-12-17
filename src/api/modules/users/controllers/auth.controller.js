@@ -216,6 +216,23 @@ export async function refreshToken(req, res) {
 
     return http.sendSuccess(res, { message: 'Token refreshed successfully' });
   } catch (error) {
+    // Handle specific token errors
+    if (error.name === 'TokenExpiredError') {
+      return http.sendUnauthorized(res, 'Refresh token has expired');
+    }
+
+    if (error.name === 'InvalidTokenFormatError') {
+      return http.sendUnauthorized(res, 'Invalid refresh token format');
+    }
+
+    if (error.name === 'InvalidTokenTypeError') {
+      return http.sendUnauthorized(res, 'Invalid token type');
+    }
+
+    if (error.name === 'InvalidTokenStringError') {
+      return http.sendUnauthorized(res, 'Invalid refresh token');
+    }
+
     return http.sendServerError(res, 'Failed to refresh token');
   }
 }

@@ -338,3 +338,28 @@ export function uploadUserAvatar(file) {
     }
   };
 }
+
+/**
+ * Change user password
+ *
+ * Changes the password for the currently authenticated user
+ *
+ * @param {Object} data - Password change data
+ * @param {string} data.currentPassword - Current password
+ * @param {string} data.newPassword - New password
+ * @returns {Function} Redux thunk action
+ */
+export function changePassword({ currentPassword, newPassword }) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch('/api/profile/password', {
+        method: 'PUT',
+        body: { currentPassword, newPassword },
+      });
+
+      return { success: true, message: data.message };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}

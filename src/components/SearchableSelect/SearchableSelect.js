@@ -42,7 +42,7 @@ const SearchableSelect = ({
       if (!isOpen) {
         setSearchTerm('');
         // Focus search input slightly after open
-        setTimeout(() => inputRef.current?.focus(), 50);
+        setTimeout(() => inputRef.current && inputRef.current.focus(), 50);
       }
     }
   };
@@ -119,11 +119,6 @@ SearchableSelect.propTypes = {
   placeholder: PropTypes.string,
   className: PropTypes.string,
   disabled: PropTypes.bool,
-};
-
-SearchableSelect.defaultProps = {
-  placeholder: 'Select...',
-  disabled: false,
 };
 
 export default SearchableSelect;

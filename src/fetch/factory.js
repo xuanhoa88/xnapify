@@ -226,6 +226,11 @@ export function createFetch(fetch, globalOptions = {}) {
         : timeoutSignal;
     }
 
+    context.options.mode = context.options.baseURL ? 'cors' : 'same-origin';
+    context.options.credentials = context.options.baseURL
+      ? 'include'
+      : 'same-origin';
+
     try {
       context.response = await fetch(context.request, context.options);
     } catch (error) {
@@ -244,21 +249,18 @@ export function createFetch(fetch, globalOptions = {}) {
 
     if (hasBody) {
       const responseType =
-        (context.options.parseResponse
-          ? 'json'
-          : context.options.responseType) ||
+        context.options.responseType ||
         detectResponseType(context.response.headers.get('content-type') || '');
 
       switch (responseType) {
         case 'json': {
-          const data = await context.response.text();
-          if (data) {
-            const parse =
-              typeof context.options.parseResponse === 'function'
-                ? context.options.parseResponse
-                : JSON.parse;
+          if (typeof context.options.payloadParser === 'function') {
+            const data = await context.response.text();
             // eslint-disable-next-line no-underscore-dangle
-            context.response._data = parse(data);
+            context.response._data = context.options.payloadParser(data);
+          } else {
+            // eslint-disable-next-line no-underscore-dangle
+            context.response._data = await context.response.json();
           }
           break;
         }
