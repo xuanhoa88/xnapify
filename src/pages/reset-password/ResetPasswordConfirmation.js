@@ -12,7 +12,7 @@ import { useDispatch } from 'react-redux';
 import { resetPasswordConfirmation } from '../../redux';
 import s from './ResetPassword.css';
 
-function ResetPasswordConfirmation({ title, token }) {
+function ResetPasswordConfirmation({ token }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [password, setPassword] = useState('');
@@ -61,7 +61,7 @@ function ResetPasswordConfirmation({ title, token }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('resetPasswordConfirmation.title')}</h1>
 
         {error && <div className={s.error}>{error}</div>}
 
@@ -132,7 +132,6 @@ function ResetPasswordConfirmation({ title, token }) {
 }
 
 ResetPasswordConfirmation.propTypes = {
-  title: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
 };
 

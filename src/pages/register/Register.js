@@ -6,14 +6,13 @@
  */
 
 import { useCallback, useState } from 'react';
-import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
 import { useHistory, useQuery } from '../../contexts/history';
 import s from './Register.css';
 
-function Register({ title }) {
+function Register() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -80,7 +79,7 @@ function Register({ title }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('navigation.register')}</h1>
 
         {error && <div className={s.error}> {error}</div>}
 
@@ -162,9 +161,5 @@ function Register({ title }) {
     </div>
   );
 }
-
-Register.propTypes = {
-  title: PropTypes.string.isRequired,
-};
 
 export default Register;

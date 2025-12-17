@@ -230,8 +230,8 @@ async function discoverModules(app, db) {
  * @returns {Function} Rate limiting middleware
  */
 const createRateLimiter = (options = {}) => {
-  const windowMs = options.isProduction ? 15 * 60 * 1000 : 1 * 60 * 1000; // 15 minutes
-  const maxRequests = options.isProduction ? 50 : 100;
+  const windowMs = __DEV__ ? 1 * 60 * 1000 : 15 * 60 * 1000; // 15 minutes
+  const maxRequests = __DEV__ ? 100 : 50;
 
   return rateLimit({
     windowMs,
@@ -522,7 +522,7 @@ function createCompressionMiddleware(options) {
       // Use compression filter function
       return compression.filter(req, res);
     },
-    level: options.isProduction ? 6 : 1, // Higher compression in production
+    level: __DEV__ ? 1 : 6, // Higher compression in production
   });
 }
 
@@ -532,15 +532,16 @@ function createCompressionMiddleware(options) {
  * @param {Object} options - API configuration
  * @returns {Function} Logging middleware
  */
-function createLoggingMiddleware(options) {
-  const format = options.isProduction
+// eslint-disable-next-line no-unused-vars
+function createLoggingMiddleware(_options) {
+  const format = __DEV__
     ? 'combined' // Apache combined log format for production
     : 'dev'; // Colored output for development
 
   return morgan(format, {
     skip: req =>
       // Skip logging for health checks in production
-      options.isProduction && req.url === '/health',
+      __DEV__ && req.url === '/health',
   });
 }
 

@@ -60,21 +60,28 @@ export default function authRoutes(deps, userMiddlewares, app) {
   router.get('/me', requireAuth, authController.me);
 
   /**
-   * @route   POST /request-reset-password
+   * @route   POST /refresh-token
+   * @desc    Refresh authentication tokens using refresh token cookie
+   * @access  Public (uses refresh token from cookie)
+   */
+  router.post('/refresh-token', authController.refreshToken);
+
+  /**
+   * @route   POST /reset-password/request
    * @desc    Request password reset email
    * @access  Public
    * @body    { email }
    */
-  router.post('/request-reset-password', authController.forgotPassword);
+  router.post('/reset-password/request', authController.requestResetPassword);
 
   /**
-   * @route   POST /reset-password-confirmation
+   * @route   POST /password-reset/confirmation
    * @desc    Reset password with token
    * @access  Public
    * @body    { token, password }
    */
   router.post(
-    '/reset-password-confirmation',
+    '/password-reset/confirmation',
     authController.resetPasswordConfirmation,
   );
 

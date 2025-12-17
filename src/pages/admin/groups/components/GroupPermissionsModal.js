@@ -113,7 +113,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
       >
         <div className={s.modalHeader}>
           <h3 className={s.modalTitle}>
-            Permissions for &quot;{group?.name}&quot;
+            Permissions for &quot;{group && group.name}&quot;
           </h3>
           <button className={s.modalClose} onClick={handleClose} type='button'>
             ×

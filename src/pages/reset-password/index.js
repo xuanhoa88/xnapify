@@ -33,7 +33,7 @@ const route = {
           title,
           component: (
             <Layout>
-              <RequestResetPassword title={title} />
+              <RequestResetPassword />
             </Layout>
           ),
         };
@@ -58,7 +58,7 @@ const route = {
           title,
           component: (
             <Layout>
-              <ResetPasswordConfirmation title={title} token={token} />
+              <ResetPasswordConfirmation token={token} />
             </Layout>
           ),
         };

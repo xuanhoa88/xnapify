@@ -43,7 +43,6 @@ const nodeEnv = process.env.NODE_ENV || 'development';
 const config = Object.freeze({
   // Node Environment
   nodeEnv,
-  isProduction: nodeEnv === 'production',
 
   // Server Configuration
   port: parseInt(process.env.RSK_PORT, 10) || 3000,
@@ -75,7 +74,7 @@ let cachedRouter = null;
 
 process.on('unhandledRejection', reason => {
   console.error('❌ Unhandled Rejection:', reason);
-  if (!config.isProduction) process.exit(1);
+  if (!__DEV__) process.exit(1);
 });
 
 process.on('uncaughtException', err => {
@@ -157,11 +156,19 @@ async function createReduxStore(req, { fetch, history }, locale) {
 
   // Try to restore authenticated user from cookies via /api/me
   // The fetch instance forwards cookies from the SSR request,
-  // so if user has valid auth cookies, they'll be authenticated
+  // so if user has valid auth cookies, they'll be authenticated.
+  //
+  // Important: SSR auth is opportunistic - if it fails, the client will retry.
+  // This handles cases like transient network errors or token refresh issues.
+  // The client has retry logic and can recover the session if cookies are valid.
   try {
     await store.dispatch(me());
-  } catch {
-    // No authenticated user or invalid token - continue as guest
+  } catch (error) {
+    // SSR auth failed - log for debugging but continue as guest
+    // Client-side will attempt recovery if cookies exist
+    if (__DEV__) {
+      console.log('⚠️ SSR auth skipped:', error.message || 'Unknown error');
+    }
   }
 
   // Set runtime variables
@@ -271,9 +278,7 @@ function setupApiProxy(app) {
         if (!res.headersSent) {
           res.status(502).json({
             error: 'Bad Gateway',
-            message: config.isProduction
-              ? 'Upstream server not responding'
-              : err.message,
+            message: __DEV__ ? 'Upstream server not responding' : err.message,
           });
         } else {
           next(err);
@@ -302,7 +307,7 @@ export function startServer(app, port = config.port, host = config.host) {
       const wsServer = createWebSocketServer(
         {
           path: config.wsPath,
-          enableLogging: !config.isProduction,
+          enableLogging: !__DEV__,
           onAuthentication: async token => {
             if (!token) {
               const error = new Error('Token required');
@@ -410,7 +415,7 @@ async function main(app, staticPath) {
           path: '/',
           maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
           httpOnly: true,
-          secure: config.isProduction,
+          secure: !__DEV__,
           sameSite: 'lax',
         },
         url: `/${LOCALE_COOKIE_NAME}/{language}`,
@@ -421,7 +426,7 @@ async function main(app, staticPath) {
   // Static files
   app.use(
     express.static(staticPath || path.resolve('public'), {
-      maxAge: config.isProduction ? '1y' : 0,
+      maxAge: __DEV__ ? 0 : '1y',
       etag: true,
       lastModified: true,
       index: false,

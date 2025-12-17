@@ -21,6 +21,7 @@ const route = {
  * Redirects authenticated users to home page
  */
 function action(context) {
+  // Get title for SSR page metadata
   const title = context.i18n.t('navigation.login', 'Log In');
 
   // Get state from Redux store
@@ -35,7 +36,7 @@ function action(context) {
     title,
     component: (
       <Layout>
-        <Login title={title} />
+        <Login />
       </Layout>
     ),
   };

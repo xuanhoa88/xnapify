@@ -276,12 +276,12 @@ export async function emailVerification(req, res) {
 /**
  * Request password reset
  *
- * @route   POST /api/users/request-reset-password
+ * @route   POST /api/users/reset-password/request
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function forgotPassword(req, res) {
+export async function requestResetPassword(req, res) {
   const http = req.app.get('http');
   try {
     const { email } = req.body;
@@ -313,7 +313,7 @@ export async function forgotPassword(req, res) {
 /**
  * Confirm reset password with token
  *
- * @route   POST /api/users/reset-password-confirmation
+ * @route   POST /api/users/password-reset/confirmation
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

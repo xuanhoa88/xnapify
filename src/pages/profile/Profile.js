@@ -6,7 +6,6 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import {
@@ -17,7 +16,7 @@ import {
 } from '../../redux';
 import s from './Profile.css';
 
-function Profile({ title }) {
+function Profile() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const user = useSelector(getCurrentUser);
@@ -115,7 +114,7 @@ function Profile({ title }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('profile.title', 'Profile')}</h1>
 
         <div className={s.avatarContainer}>
           <div
@@ -277,9 +276,5 @@ function Profile({ title }) {
     </div>
   );
 }
-
-Profile.propTypes = {
-  title: PropTypes.string.isRequired,
-};
 
 export default Profile;

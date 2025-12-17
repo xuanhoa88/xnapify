@@ -12,7 +12,7 @@ import { useDispatch } from 'react-redux';
 import { emailVerification } from '../../redux';
 import s from './EmailVerification.css';
 
-function EmailVerification({ title, token: initialToken }) {
+function EmailVerification({ token: initialToken }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [token, setToken] = useState(initialToken || '');
@@ -52,7 +52,7 @@ function EmailVerification({ title, token: initialToken }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('emailVerification.title')}</h1>
 
         {loading && (
           <div className={s.info}>
@@ -124,7 +124,6 @@ function EmailVerification({ title, token: initialToken }) {
 }
 
 EmailVerification.propTypes = {
-  title: PropTypes.string.isRequired,
   token: PropTypes.string.isRequired,
 };
 

@@ -6,7 +6,6 @@
  */
 
 import { useCallback, useState } from 'react';
-import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
@@ -46,7 +45,7 @@ const DEMO_USERS = [
   },
 ];
 
-function Login({ title }) {
+function Login() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -92,7 +91,7 @@ function Login({ title }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('navigation.login', 'Log In')}</h1>
         {error && <div className={s.error}>{error}</div>}
 
         <form method='post' onSubmit={handleSubmit}>
@@ -183,8 +182,6 @@ function Login({ title }) {
   );
 }
 
-Login.propTypes = {
-  title: PropTypes.string.isRequired,
-};
+Login.propTypes = {};
 
 export default Login;

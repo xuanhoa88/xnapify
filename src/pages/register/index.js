@@ -33,7 +33,7 @@ const route = {
           title,
           component: (
             <Layout>
-              <Register title={title} />
+              <Register />
             </Layout>
           ),
         };
@@ -42,7 +42,10 @@ const route = {
     {
       path: '/:token/email-verification',
       action: context => {
-        const title = 'Email Verification'; // Localized string should be used in real app
+        const title = context.i18n.t(
+          'emailVerification.title',
+          'Email Verification',
+        ); // Localized string should be used in real app
         const state = context.store.getState();
 
         // Redirect authenticated users to home
@@ -56,7 +59,7 @@ const route = {
           title,
           component: (
             <Layout>
-              <EmailVerification title={title} token={token} />
+              <EmailVerification token={token} />
             </Layout>
           ),
         };

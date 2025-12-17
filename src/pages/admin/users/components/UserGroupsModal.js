@@ -118,7 +118,7 @@ const UserGroupsModal = forwardRef((props, ref) => {
 
   const title = isBulk
     ? `Assign Groups to ${bulkUserIds.length} Users`
-    : `Manage Groups for "${user?.display_name || user?.email}"`;
+    : `Manage Groups for "${user && (user.display_name || user.email)}`;
 
   const description = isBulk
     ? 'Select groups to assign to the selected users.'

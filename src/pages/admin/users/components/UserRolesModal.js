@@ -120,7 +120,7 @@ const UserRolesModal = forwardRef((props, ref) => {
 
   const title = isBulk
     ? `Assign Roles to ${bulkUserIds.length} Users`
-    : `Manage Roles for "${user?.display_name || user?.email}"`;
+    : `Manage Roles for "${user && (user.display_name || user.email)}"`;
 
   const description = isBulk
     ? 'Select roles to assign to the selected users.'

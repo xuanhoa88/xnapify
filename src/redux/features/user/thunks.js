@@ -154,6 +154,35 @@ export function me() {
 }
 
 /**
+ * Refresh session tokens
+ *
+ * Explicitly requests new access/refresh tokens from the server.
+ * Called when access token is near expiration or after encountering auth errors.
+ * This is a lightweight operation that only refreshes tokens without fetching user data.
+ *
+ * @returns {Function} Redux thunk action
+ */
+export function refreshSession() {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch('/api/refresh-token', { method: 'POST' });
+
+      // If the refresh endpoint returns user data, update the store
+      if (data && data.user) {
+        dispatch(fetchUserSuccess(data.user));
+        return { success: true, user: data.user };
+      }
+
+      return { success: true };
+    } catch (error) {
+      // Don't dispatch logout here - let the caller decide
+      // This allows for retry logic before giving up
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
  * Reset password
  *
  * Sends password reset email to user
@@ -167,7 +196,7 @@ export function resetPassword({ email }) {
     dispatch(resetPasswordStart());
 
     try {
-      const { data } = await fetch('/api/users/request-reset-password', {
+      const { data } = await fetch('/api/users/reset-password/request', {
         method: 'POST',
         body: { email },
       });
@@ -198,7 +227,7 @@ export function resetPasswordConfirmation({ token, password }) {
     dispatch(resetPasswordConfirmationStart());
 
     try {
-      const { data } = await fetch('/api/users/reset-password-confirmation', {
+      const { data } = await fetch('/api/users/password-reset/confirmation', {
         method: 'POST',
         body: { token, password },
       });

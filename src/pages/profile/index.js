@@ -31,7 +31,7 @@ function action(context) {
     title,
     component: (
       <Layout>
-        <Profile title={title} />
+        <Profile />
       </Layout>
     ),
   };

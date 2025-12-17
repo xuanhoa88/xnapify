@@ -6,13 +6,12 @@
  */
 
 import { useCallback, useState } from 'react';
-import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { resetPassword } from '../../redux';
 import s from './ResetPassword.css';
 
-function ResetPassword({ title }) {
+function ResetPassword() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
@@ -44,7 +43,7 @@ function ResetPassword({ title }) {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{title}</h1>
+        <h1>{t('resetPassword.title')}</h1>
 
         {error && <div className={s.error}>{error}</div>}
 
@@ -90,9 +89,5 @@ function ResetPassword({ title }) {
     </div>
   );
 }
-
-ResetPassword.propTypes = {
-  title: PropTypes.string.isRequired,
-};
 
 export default ResetPassword;

@@ -91,7 +91,7 @@ function Html({
   image = null,
   url = null,
   type = 'website',
-  locale = null,
+  locale = 'en-US',
   styles = [],
   styleLinks = [],
   scripts = [],

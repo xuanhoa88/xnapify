@@ -1,11 +1,4 @@
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-import { serialize } from 'cookie';
+import { createPath } from 'history';
 import {
   setLocaleStart,
   setLocaleSuccess,
@@ -13,36 +6,38 @@ import {
   setLocaleFallback,
   updateAvailableLocales,
 } from './slice';
-import {
-  DEFAULT_LOCALE,
-  LOCALE_COOKIE_MAX_AGE,
-  LOCALE_COOKIE_NAME,
-} from './config';
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from './config';
 
 // =============================================================================
 // THUNKS
 // =============================================================================
 
 /**
- * Persist locale to cookie via express-request-language URL
- * @param {string} locale - Locale code
- * @returns {Object}
+ * Persist locale to cookie via express-request-language URL endpoint
+ * This calls the server endpoint which sets the httpOnly cookie properly
+ * @param {Object} params - Parameters object
+ * @param {string} params.locale - Locale code
+ * @param {Function} params.fetch - Fetch function
+ * @param {Object} params.history - History object
+ * @returns {Promise<Object>}
  */
-function persistLocaleCookie(locale) {
+async function persistLocaleCookie({ locale, fetch, history }) {
   // Skip on server-side
   if (typeof window === 'undefined') {
     return { success: true, skipped: true };
   }
 
   try {
-    document.cookie = serialize(LOCALE_COOKIE_NAME, locale, {
-      path: '/',
-      secure: true,
-      maxAge: LOCALE_COOKIE_MAX_AGE,
-    });
+    // Call express-request-language URL endpoint to set cookie server-side
+    // The URL pattern is: /${LOCALE_COOKIE_NAME}/{language}
+    await fetch(`/${LOCALE_COOKIE_NAME}/${locale}`);
+
+    // Re-navigate to current route to update context.i18n.t translations
+    // This triggers route action re-execution with new language
+    history.replace(createPath(history.location));
+
     return { success: true };
   } catch (error) {
-    console.error('Failed to persist locale cookie:', error);
     return { success: false, error: error.message };
   }
 }
@@ -62,7 +57,7 @@ function persistLocaleCookie(locale) {
  * @returns {Function} Redux thunk action
  */
 export function setLocale(locale) {
-  return async (dispatch, getState, { i18n }) => {
+  return async (dispatch, getState, { i18n, fetch, history }) => {
     const { intl } = getState();
     try {
       // Check if locale is available
@@ -111,8 +106,9 @@ export function setLocale(locale) {
       // Success - update Redux state with locale
       dispatch(setLocaleSuccess({ locale }));
 
-      // Persist locale (browser only)
-      persistLocaleCookie(locale);
+      // Persist locale (browser only) - fire and forget
+      // Don't await to avoid blocking the UI
+      persistLocaleCookie({ locale, fetch, history });
 
       return { success: true, data: locale };
     } catch (error) {

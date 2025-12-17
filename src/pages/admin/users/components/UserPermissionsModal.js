@@ -124,7 +124,8 @@ const UserPermissionsModal = forwardRef((props, ref) => {
       >
         <div className={s.modalHeader}>
           <h3 className={s.modalTitle}>
-            Permissions for &quot;{user?.display_name || user?.email}&quot;
+            Permissions for &quot;{user && (user.display_name || user.email)}
+            &quot;
           </h3>
           <button className={s.modalClose} onClick={handleClose} type='button'>
             ×

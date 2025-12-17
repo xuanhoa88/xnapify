@@ -14,9 +14,9 @@ import { createFetch } from './fetch';
 import {
   DEFAULT_LOCALE,
   configureStore,
-  setLocale,
   getI18nInstance,
-  me,
+  refreshSession,
+  logout,
   isAuthenticated,
 } from './redux';
 import { createWebSocketClient, EventType, MessageType } from './ws/client';
@@ -52,11 +52,17 @@ const context = {
   fetch,
   i18n,
   history,
-  get locale() {
-    const { intl } = store.getState();
-    return (intl && intl.locale) || DEFAULT_LOCALE;
-  },
+  locale:
+    (preloadedReduxState &&
+      preloadedReduxState.intl &&
+      preloadedReduxState.intl.locale) ||
+    DEFAULT_LOCALE,
 };
+
+// Synchronize i18n language with preloaded Redux state immediately
+if (context.locale && i18n.language !== context.locale) {
+  i18n.changeLanguage(context.locale);
+}
 
 // =============================================================================
 // STATE
@@ -415,25 +421,6 @@ function cleanup() {
 }
 
 async function initializeApp() {
-  // Set locale
-  if (context.locale && i18n.language !== context.locale) {
-    await store.dispatch(setLocale(context.locale));
-  }
-
-  // Client-side session restoration:
-  // If SSR failed to authenticate (e.g., transient error), try to restore session
-  // This handles cases where cookies exist but SSR couldn't verify them
-  if (!isAuthenticated(store.getState())) {
-    try {
-      await store.dispatch(me());
-      if (__DEV__ && isAuthenticated(store.getState())) {
-        console.log('✅ Session restored from cookies');
-      }
-    } catch {
-      // No valid session - user will remain as guest
-    }
-  }
-
   // Initialize React DOM client
   await initReactDOMClient();
 
@@ -498,21 +485,22 @@ async function initializeApp() {
 
   // Session restoration on tab visibility change:
   // When user returns to tab, check if session is still valid
-  // The refresh token middleware will handle token refresh automatically
+  // Just refreshes tokens - fresh user data will be fetched on next navigation
   visibilityChangeHandler = async () => {
-    if (
-      document.visibilityState === 'visible' &&
-      isAuthenticated(store.getState())
-    ) {
-      try {
-        // Trigger a lightweight session check - the refresh middleware will
-        // automatically refresh expired tokens if refresh token is valid
-        await store.dispatch(me());
-      } catch {
-        // Session is no longer valid - force logout state update
-        // This happens when both access and refresh tokens have expired
+    // Only check when tab becomes visible and user was authenticated
+    if (document.visibilityState !== 'visible') return;
+    if (!isAuthenticated(store.getState())) return;
+
+    try {
+      // Refresh tokens silently - middleware handles the actual refresh
+      const refreshResult = await store.dispatch(refreshSession());
+      if (!refreshResult.success) {
+        // Refresh explicitly failed - session is truly expired
+        store.dispatch(logout());
         if (__DEV__) console.log('⚠️ Session expired while away');
       }
+    } catch {
+      // Network error - don't logout, user may still have valid session
     }
   };
   document.addEventListener('visibilitychange', visibilityChangeHandler);
