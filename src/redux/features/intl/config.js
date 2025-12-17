@@ -64,8 +64,7 @@ const i18nConfig = {
     bindI18n: 'languageChanged loaded', // Re-render on language change
     bindI18nStore: 'added removed', // Re-render on store changes
   },
-  debug:
-    typeof process !== 'undefined' && process.env.RSK_I18N_DEBUG === 'true',
+  debug: process.env.RSK_I18N_DEBUG === 'true',
 };
 
 /**

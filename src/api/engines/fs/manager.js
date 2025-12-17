@@ -7,6 +7,7 @@
 
 import { LocalFilesystemProvider } from './providers/local';
 import { MemoryFilesystemProvider } from './providers/memory';
+import { SelfHostFilesystemProvider } from './providers/selfhost';
 
 /**
  * Filesystem Manager
@@ -39,6 +40,14 @@ export class FilesystemManager {
       'memory',
       new MemoryFilesystemProvider(this.config.memory || {}),
     );
+
+    // Self-host filesystem provider (when configured)
+    if (this.config.selfhost && this.config.selfhost.baseUrl) {
+      this.addProvider(
+        'selfhost',
+        new SelfHostFilesystemProvider(this.config.selfhost),
+      );
+    }
   }
 
   /**
@@ -157,7 +166,7 @@ export class FilesystemManager {
   }
 
   /**
-   * List files using specified or default provider
+   * List files from provider
    */
   async list(directory = '', options = {}) {
     const provider = this.getProvider(options.provider);

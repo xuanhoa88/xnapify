@@ -153,6 +153,7 @@
     "postcss-selector-matches": "3.0.1",
     "postcss-selector-not": "3.0.1",
     "prettier": "3.3.3",
+    "process": "0.11.10",
     "raw-loader": "4.0.2",
     "react-refresh": "0.18.0",
     "react-test-renderer": "18.3.1",

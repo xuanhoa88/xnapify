@@ -21,6 +21,7 @@ import {
   getRoles,
 } from '../../../redux';
 import { useHistory } from '../../../contexts/history';
+import SearchableSelect from '../../../components/SearchableSelect/SearchableSelect';
 import UserBulkActionsBar from './components/UserBulkActionsBar';
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
@@ -169,18 +170,35 @@ function Users() {
     setCurrentPage(1);
   }, []);
 
+  // Helper to format options for SearchableSelect
+  const roleOptions = useMemo(
+    () => [
+      { value: '', label: 'All Roles' },
+      ...roles.map(r => ({ value: r.name, label: r.name })),
+    ],
+    [roles],
+  );
+
+  const groupOptions = useMemo(
+    () => [
+      { value: '', label: 'All Groups' },
+      ...groups.map(g => ({ value: g.name, label: g.name })),
+    ],
+    [groups],
+  );
+
   const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
 
   const handleKeyDown = useCallback(
     e => e.key === 'Enter' && handleSearchSubmit(),
     [handleSearchSubmit],
   );
-  const handleRoleFilterChange = useCallback(e => {
-    setRoleFilter(e.target.value);
+  const handleRoleFilterChange = useCallback(value => {
+    setRoleFilter(value);
     setCurrentPage(1);
   }, []);
-  const handleGroupFilterChange = useCallback(e => {
-    setGroupFilter(e.target.value);
+  const handleGroupFilterChange = useCallback(value => {
+    setGroupFilter(value);
     setCurrentPage(1);
   }, []);
   const handleStatusFilterChange = useCallback(e => {
@@ -297,30 +315,22 @@ function Users() {
             </button>
           )}
         </div>
-        <select
-          className={s.filterSelect}
-          value={roleFilter}
-          onChange={handleRoleFilterChange}
-        >
-          <option value=''>All Roles</option>
-          {roles.map(role => (
-            <option key={role.id} value={role.name}>
-              {role.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className={s.filterSelect}
-          value={groupFilter}
-          onChange={handleGroupFilterChange}
-        >
-          <option value=''>All Groups</option>
-          {groups.map(group => (
-            <option key={group.id} value={group.name}>
-              {group.name}
-            </option>
-          ))}
-        </select>
+        <div className={s.filterSearchableSelect}>
+          <SearchableSelect
+            options={roleOptions}
+            value={roleFilter}
+            onChange={handleRoleFilterChange}
+            placeholder='All Roles'
+          />
+        </div>
+        <div className={s.filterSearchableSelect}>
+          <SearchableSelect
+            options={groupOptions}
+            value={groupFilter}
+            onChange={handleGroupFilterChange}
+            placeholder='All Groups'
+          />
+        </div>
         <select
           className={s.filterSelect}
           value={statusFilter}

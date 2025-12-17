@@ -114,7 +114,7 @@ function Profile() {
   return (
     <div className={s.root}>
       <div className={s.container}>
-        <h1>{t('profile.title', 'Profile')}</h1>
+        <h1>{t('navigation.profile', 'Profile')}</h1>
 
         <div className={s.avatarContainer}>
           <div

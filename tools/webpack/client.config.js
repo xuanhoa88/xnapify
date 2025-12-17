@@ -159,9 +159,14 @@ export default merge(baseConfig, {
   },
 
   plugins: [
+    // Polyfill process for browser
+    new webpack.ProvidePlugin({
+      process: require.resolve('process/browser'),
+    }),
+
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
-    createDefinePluginConfig({ isClient: true }),
+    createDefinePluginConfig(),
 
     // Loadable Components Plugin - generates stats file for SSR code splitting
     // https://loadable-components.com/docs/api-loadable-server/

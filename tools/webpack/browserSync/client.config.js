@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { logInfo, logWarn, logError, logDebug } from '../../lib/logger';
+
 // Configuration
-const CONFIG = {
+const CONFIG = Object.freeze({
   DEBUG: false,
   SHUTDOWN_UI_DELAY: 100,
   REDIRECT_DELAY: 500,
@@ -16,27 +18,7 @@ const CONFIG = {
   RECONNECT_WAIT: 2000,
   INIT_RETRY_INTERVAL: 100, // Retry interval if hotClient not ready yet
   INIT_MAX_RETRIES: 50, // Max retries (5 seconds total)
-};
-
-/**
- * Logger utility for consistent logging with debug support
- */
-const logger = {
-  log: (...args) => {
-    console.log('[BrowserSync]', ...args);
-  },
-  debug: (...args) => {
-    if (CONFIG.DEBUG) {
-      console.debug('[BrowserSync Debug]', ...args);
-    }
-  },
-  warn: (...args) => {
-    console.warn('[BrowserSync]', ...args);
-  },
-  error: (...args) => {
-    console.error('[BrowserSync]', ...args);
-  },
-};
+});
 
 // State tracking
 let lastMessageTime = Date.now();
@@ -82,7 +64,7 @@ function showShutdownUI() {
         if (attempts < maxAttempts) {
           setTimeout(attemptShow, CONFIG.BODY_CHECK_INTERVAL);
         } else {
-          logger.warn('Timeout waiting for document.body');
+          logWarn('[BrowserSync] Timeout waiting for document.body');
           resolve();
         }
         return;
@@ -117,10 +99,10 @@ function showShutdownUI() {
         `;
 
         document.body.innerHTML = shutdownHTML;
-        logger.debug('Shutdown UI displayed');
+        logInfo('[BrowserSync] Shutdown UI displayed');
         resolve();
       } catch (err) {
-        logger.error('Failed to show shutdown UI:', err);
+        logError('[BrowserSync] Failed to show shutdown UI:', err);
         resolve();
       }
     };
@@ -135,21 +117,21 @@ function showShutdownUI() {
  */
 function attemptClose() {
   try {
-    logger.debug('Attempting to close tab...');
+    logInfo('[BrowserSync] Attempting to close tab...');
     // Standard close
     window.close();
   } catch (err) {
-    logger.debug('Standard close failed:', err);
+    logError('[BrowserSync] Standard close failed:', err);
   }
 
   // Schedule a check to see if we're still here
   setTimeout(() => {
-    logger.debug('Window still open, trying alternative method');
+    logInfo('[BrowserSync] Window still open, trying alternative method');
     try {
       const tab = window.open('', '_self');
       if (tab && typeof tab.close === 'function') tab.close();
     } catch (err) {
-      logger.debug('Alternative close failed:', err);
+      logError('[BrowserSync] Alternative close failed:', err);
     }
   }, 100);
 
@@ -164,34 +146,39 @@ function waitForReconnect() {
   const MAX_POLLS = 300; // 10 minutes max
   let pollCount = 0;
 
-  logger.log('Waiting for server to restart...');
+  logInfo('[BrowserSync] Waiting for server to restart...');
 
-  const checkServer = async () => {
+  const checkServer = () => {
     pollCount++;
 
     if (pollCount > MAX_POLLS) {
-      logger.warn('Server did not restart within timeout');
+      logWarn('[BrowserSync] Server did not restart within timeout');
       return;
     }
 
-    try {
-      // Try to fetch the page to check if server is back
-      const response = await fetch(window.location.href, {
-        method: 'HEAD',
-        cache: 'no-store',
-      });
+    const xhr = new XMLHttpRequest();
+    xhr.open('HEAD', window.location.href);
+    xhr.setRequestHeader('Cache-Control', 'no-store');
 
-      if (response.ok) {
-        logger.log('Server is back online, reloading...');
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 400) {
+        logInfo('[BrowserSync] Server is back online, reloading...');
         window.location.reload();
-        return;
+      } else {
+        setTimeout(checkServer, POLL_INTERVAL);
       }
-    } catch (err) {
-      // Server not ready yet, continue polling
-      logger.debug(`Poll ${pollCount}: Server not ready`);
-    }
+    };
 
-    setTimeout(checkServer, POLL_INTERVAL);
+    xhr.onerror = () => {
+      logDebug(`[BrowserSync] Poll ${pollCount}: Server not ready`);
+      setTimeout(checkServer, POLL_INTERVAL);
+    };
+
+    try {
+      xhr.send();
+    } catch (err) {
+      setTimeout(checkServer, POLL_INTERVAL);
+    }
   };
 
   // Start polling after a short delay
@@ -205,7 +192,7 @@ async function handleShutdown() {
   if (isShuttingDown) return;
   isShuttingDown = true;
 
-  logger.log('Server shutdown detected');
+  logInfo('[BrowserSync] Server shutdown detected');
   cleanup();
 
   // Try to close the tab first
@@ -222,10 +209,10 @@ async function handleShutdown() {
  */
 function reloadPage() {
   try {
-    logger.log('Reloading page...');
+    logInfo('[BrowserSync] Reloading page...');
     window.location.reload();
   } catch (err) {
-    logger.error('Page reload failed:', err);
+    logError('[BrowserSync] Page reload failed:', err);
   }
 }
 
@@ -239,15 +226,15 @@ function handleMessage(data) {
 
   // Validate message structure
   if (!isValidMessage(data)) {
-    logger.debug('Invalid or non-browser_sync message, ignoring');
+    logDebug('[BrowserSync] Invalid or non-browser_sync message, ignoring');
     return;
   }
 
-  logger.log('Received:', data.type);
+  logInfo('[BrowserSync] Received:', data.type);
 
   switch (data.type) {
     case 'browser_sync_server_restarting':
-      logger.log('Server restarting...');
+      logInfo('[BrowserSync] Server restarting...');
       break;
 
     case 'browser_sync_server_ready':
@@ -258,12 +245,12 @@ function handleMessage(data) {
       ) {
         reloadPage();
       } else {
-        logger.log('Server ready');
+        logInfo('[BrowserSync] Server ready');
       }
       break;
 
     case 'browser_sync_server_shutdown':
-      logger.log('Server shutdown detected');
+      logInfo('[BrowserSync] Server shutdown detected');
       handleShutdown();
       break;
 
@@ -272,7 +259,7 @@ function handleMessage(data) {
       break;
 
     default:
-      logger.debug('Unhandled message type:', data.type);
+      logDebug('[BrowserSync] Unhandled message type:', data.type);
   }
 }
 
@@ -282,13 +269,13 @@ function handleMessage(data) {
 function handleConnectionLoss() {
   if (isShuttingDown) return;
 
-  logger.warn('HMR connection lost - checking if temporary...');
+  logWarn('[BrowserSync] HMR connection lost - checking if temporary...');
 
   let reconnected = false;
 
   setTimeout(() => {
     if (!reconnected && !isShuttingDown) {
-      logger.log('Server connection not restored, closing tab...');
+      logInfo('[BrowserSync] Server connection not restored, closing tab...');
       handleShutdown();
     }
   }, CONFIG.RECONNECT_WAIT);
@@ -299,7 +286,7 @@ function handleConnectionLoss() {
     const readyState = hotClient.getReadyState();
     if (readyState === EventSource.OPEN) {
       reconnected = true;
-      logger.log('✅ Connection restored');
+      logInfo('[BrowserSync] Connection restored');
     }
   };
 
@@ -326,8 +313,8 @@ function startHeartbeatMonitor() {
     const timeSinceLastMessage = Date.now() - lastMessageTime;
 
     if (timeSinceLastMessage > CONFIG.HEARTBEAT_TIMEOUT) {
-      logger.warn(
-        `No messages for ${timeSinceLastMessage}ms - connection lost`,
+      logWarn(
+        `[BrowserSync] No messages for ${timeSinceLastMessage}ms - connection lost`,
       );
       clearInterval(heartbeatInterval);
       handleConnectionLoss();
@@ -348,12 +335,12 @@ function cleanup() {
     try {
       unsub();
     } catch (err) {
-      logger.error('Error during unsubscribe:', err);
+      logError('[BrowserSync] Error during unsubscribe:', err);
     }
   });
   unsubscribers = [];
 
-  logger.debug('Cleanup completed');
+  logInfo('[BrowserSync] Cleanup completed');
 }
 
 /**
@@ -372,46 +359,50 @@ function initialize() {
       try {
         hotClient = require('../hotClient');
       } catch (err) {
-        logger.debug('Could not require hotClient yet:', err);
+        logDebug('[BrowserSync] Could not require hotClient yet:', err);
       }
     }
 
     if (!hotClient) {
       retries++;
       if (retries < CONFIG.INIT_MAX_RETRIES) {
-        logger.debug(
-          `HMR client not ready yet, retrying... (${retries}/${CONFIG.INIT_MAX_RETRIES})`,
+        logDebug(
+          `[BrowserSync] HMR client not ready yet, retrying... (${retries}/${CONFIG.INIT_MAX_RETRIES})`,
         );
         setTimeout(attemptInit, CONFIG.INIT_RETRY_INTERVAL);
         return;
       } else {
-        logger.error('HMR client not available after max retries');
+        logError('[BrowserSync] HMR client not available after max retries');
         return false;
       }
     }
 
     if (typeof hotClient.subscribe !== 'function') {
-      logger.error('HMR client does not support subscribe method');
+      logError('[BrowserSync] HMR client does not support subscribe method');
       return false;
     }
 
     try {
       // Subscribe to messages
       const unsubMessage = hotClient.subscribe(data => {
-        logger.debug('HMR message received:', data);
+        logDebug('[BrowserSync] HMR message received:', data);
         handleMessage(data);
       });
       unsubscribers.push(unsubMessage);
 
       // Subscribe to connection open
       const unsubOpen = hotClient.onOpen(() => {
-        logger.log('✅ HMR connected');
+        logInfo('[BrowserSync] HMR connected');
         lastMessageTime = Date.now();
 
         // Notify server that a client has connected (to cancel pending browser open)
-        fetch('/~/__bs_connected', { method: 'POST' }).catch(() => {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/~/__bs_connected');
+          xhr.send();
+        } catch (err) {
           // Ignore errors - server may not have this endpoint
-        });
+        }
       });
       unsubscribers.push(unsubOpen);
 
@@ -420,12 +411,12 @@ function initialize() {
         const readyState = hotClient.getReadyState();
 
         if (readyState === EventSource.CONNECTING) {
-          logger.warn('🔄 HMR reconnecting...');
+          logWarn('[BrowserSync] HMR reconnecting...');
         } else if (readyState === EventSource.CLOSED) {
-          logger.error('❌ HMR connection closed');
+          logError('[BrowserSync] HMR connection closed');
           handleConnectionLoss();
         } else {
-          logger.debug('HMR error event:', error);
+          logDebug('[BrowserSync] HMR error event:', error);
         }
       });
       unsubscribers.push(unsubError);
@@ -433,10 +424,10 @@ function initialize() {
       // Start heartbeat monitoring
       startHeartbeatMonitor();
 
-      logger.log('✅ Successfully subscribed to HMR events');
+      logInfo('[BrowserSync] Successfully subscribed to HMR events');
       return true;
     } catch (err) {
-      logger.error('Failed to subscribe to HMR events:', err);
+      logError('[BrowserSync] Failed to subscribe to HMR events:', err);
       return false;
     }
   };

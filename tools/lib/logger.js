@@ -19,22 +19,27 @@ const LOG_LEVELS = Object.freeze({
  * Priority: CLI flags > Environment variables > Default (info)
  */
 function determineLogLevel() {
+  // Safe check for process
   // Check CLI flags first
-  if (process.argv.includes('--silent')) return 'silent';
-  if (process.argv.includes('--verbose')) return 'verbose';
-  if (process.argv.includes('--debug')) return 'debug';
-
-  // Check environment variables
-  const envLevel = process.env.LOG_LEVEL
-    ? process.env.LOG_LEVEL.toLowerCase()
-    : undefined;
-  if (envLevel && LOG_LEVELS[envLevel] != null) {
-    return envLevel;
+  if (process.argv) {
+    if (process.argv.includes('--silent')) return 'silent';
+    if (process.argv.includes('--verbose')) return 'verbose';
+    if (process.argv.includes('--debug')) return 'debug';
   }
 
-  // Legacy environment variables
-  if (process.env.SILENT === 'true') return 'silent';
-  if (process.env.VERBOSE === 'true') return 'verbose';
+  // Check environment variables
+  if (process.env) {
+    const envLevel = process.env.LOG_LEVEL
+      ? process.env.LOG_LEVEL.toLowerCase()
+      : undefined;
+    if (envLevel && LOG_LEVELS[envLevel] != null) {
+      return envLevel;
+    }
+
+    // Legacy environment variables
+    if (process.env.SILENT === 'true') return 'silent';
+    if (process.env.VERBOSE === 'true') return 'verbose';
+  }
 
   return 'info';
 }

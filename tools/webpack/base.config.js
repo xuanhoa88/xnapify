@@ -175,15 +175,11 @@ export const createCSSRule = ({ isClient, extractLoader }) => {
  * Create webpack.DefinePlugin instance
  * Defines global constants that can be configured at compile time
  *
- * @param {Object} options - Configuration options
- * @param {boolean} options.isClient - True for client bundle, false for server
- * @param {Object} options.extraDefinitions - Additional definitions to merge (optional)
+ * @param {Object} extraDefinitions - Additional definitions to merge (optional)
  * @returns {webpack.DefinePlugin} DefinePlugin instance
  */
-export const createDefinePluginConfig = ({ isClient, ...extraDefinitions }) =>
+export const createDefinePluginConfig = extraDefinitions =>
   new webpack.DefinePlugin({
-    // Browser flag - used to conditionally execute code based on environment
-    'process.env.BROWSER': !!isClient,
     // Development flag - used for dev-only code (logging, debugging, etc.)
     __DEV__: !!isDebug,
     // Merge any additional definitions (e.g., RSK_ env vars for server)

@@ -127,7 +127,6 @@ export default merge(createBaseConfig(), {
     // Define free variables
     // https://webpack.js.org/plugins/define-plugin/
     createDefinePluginConfig({
-      isClient: false, // Server bundle runs in Node.js
       // Inject RSK_ prefixed environment variables
       ...createDotenvDefinitions({ prefix: 'RSK_', verbose }),
     }),

@@ -1,0 +1,125 @@
+@import '../../components/variables.css';
+
+.container {
+  position: relative;
+  min-width: 180px;
+  font-size: var(--font-size-sm);
+}
+
+.control {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-3) var(--spacing-4);
+  height: 42px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: var(--transition-base);
+  user-select: none;
+}
+
+.control:hover {
+  border-color: var(--color-text-secondary);
+}
+
+.disabled .control {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: var(--color-background-secondary);
+}
+
+.value {
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-right: var(--spacing-2);
+}
+
+.placeholder {
+  color: var(--color-text-secondary);
+}
+
+.arrow {
+  font-size: 0.8em;
+  color: var(--color-text-secondary);
+}
+
+.menu {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  animation: fadeIn 0.1s ease-out;
+}
+
+.searchContainer {
+  padding: var(--spacing-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.searchInput {
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+}
+
+.optionsList {
+  max-height: 200px;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  padding: var(--spacing-2) var(--spacing-4);
+  cursor: pointer;
+  transition: background-color 0.1s;
+  color: var(--color-text-primary);
+}
+
+.option:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.selected {
+  background-color: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-weight: var(--font-weight-medium);
+}
+
+.noOptions {
+  padding: var(--spacing-3);
+  color: var(--color-text-secondary);
+  text-align: center;
+  font-style: italic;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

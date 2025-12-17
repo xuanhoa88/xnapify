@@ -66,6 +66,8 @@
 }
 
 /* Search Bar */
+
+/* Search Bar */
 .searchWrapper {
   position: relative;
   display: flex;
@@ -80,11 +82,13 @@
   font-size: var(--font-size-sm);
   pointer-events: none;
   opacity: 0.6;
+  z-index: 1; /* Ensure icon stays on top */
 }
 
 .searchInput {
   width: 100%;
-  padding: var(--spacing-3) var(--spacing-4);
+  height: 42px; /* Fixed height to match SearchableSelect usually */
+  padding: var(--spacing-2) var(--spacing-4);
   padding-left: calc(var(--spacing-3) + 24px);
   padding-right: calc(var(--spacing-3) + 28px);
   border: 1px solid var(--color-border);
@@ -120,6 +124,7 @@
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: var(--transition-base);
+  z-index: 2;
 }
 
 .searchClear:hover {
@@ -131,6 +136,7 @@
 .filterActions {
   display: flex;
   gap: var(--spacing-2);
+  align-items: center;
 }
 
 .clearBtn {
@@ -138,6 +144,7 @@
   align-items: center;
   gap: var(--spacing-2);
   padding: var(--spacing-3) var(--spacing-4);
+  height: 42px;
   background: transparent;
   color: var(--color-text-secondary);
   border: 1px solid var(--color-border);
@@ -155,8 +162,13 @@
   border-color: #fecaca;
 }
 
+.filterSearchableSelect {
+  min-width: 180px;
+}
+
 .filterSelect {
-  padding: var(--spacing-3) var(--spacing-4);
+  padding: var(--spacing-2) var(--spacing-4);
+  height: 42px; /* Match height */
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
