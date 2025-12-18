@@ -34,7 +34,8 @@ async function persistLocaleCookie({ locale, fetch, history }) {
 
     // Re-navigate to current route to update context.i18n.t translations
     // This triggers route action re-execution with new language
-    history.replace(createPath(history.location));
+    // Pass preserveScroll flag to prevent router from resetting scroll position
+    history.replace(createPath(history.location), { preserveScroll: true });
 
     return { success: true };
   } catch (error) {

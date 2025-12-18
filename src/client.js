@@ -159,6 +159,11 @@ function saveScrollPosition() {
 }
 
 function restoreScrollPosition(location) {
+  // Skip scroll restoration if preserveScroll flag is set (e.g., during locale switch)
+  if (location.state && location.state.preserveScroll) {
+    return;
+  }
+
   if (location.hash) {
     const el = document.querySelector(location.hash);
     if (el) {
