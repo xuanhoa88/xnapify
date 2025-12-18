@@ -70,7 +70,10 @@ const config = {
 
     // Allow unused vars for React (new JSX runtime doesn't require React import)
     // https://eslint.org/docs/rules/no-unused-vars
-    'no-unused-vars': ['error'],
+    'no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+    ],
 
     // Allow importing devDependencies (common in starter kits)
     'import/no-extraneous-dependencies': 'off',

@@ -238,14 +238,14 @@
   transition: var(--transition-base);
 }
 
-.pageBtn:hover:not(:disabled) {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
-}
-
 .pageBtn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
 }
 
 .pageNumbers {

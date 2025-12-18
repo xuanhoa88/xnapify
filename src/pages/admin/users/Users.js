@@ -39,6 +39,17 @@ const getInitials = displayName => {
   return displayName.substring(0, 2).toUpperCase();
 };
 
+const getRoleClass = role => {
+  const roleClasses = {
+    admin: s.roleAdmin,
+    moderator: s.roleModerator,
+    user: s.roleUser,
+  };
+  return typeof role === 'string'
+    ? roleClasses[role.toLowerCase()]
+    : s.roleUser;
+};
+
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
@@ -413,20 +424,12 @@ function Users() {
                 <td>
                   {user.roles && user.roles.length > 0 ? (
                     user.roles.map(role => (
-                      <span
-                        key={role}
-                        className={clsx(
-                          s.roleUser,
-                          s[
-                            `role${role.charAt(0).toUpperCase() + role.slice(1)}`
-                          ],
-                        )}
-                      >
+                      <span key={role} className={getRoleClass(role)}>
                         {role}
                       </span>
                     ))
                   ) : (
-                    <span className={s.roleUser}>User</span>
+                    <span className={getRoleClass('user')}>User</span>
                   )}
                 </td>
                 <td>

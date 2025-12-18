@@ -61,11 +61,16 @@ function UserActionsDropdown({
         <div
           className={s.actionDropdownMenu}
           onClick={e => e.stopPropagation()}
+          onKeyDown={e => e.stopPropagation()}
+          role='menu'
+          aria-label='User actions'
+          tabIndex={-1}
         >
           <button
             className={s.dropdownItem}
             onClick={() => handleAction(onManageRoles)}
             type='button'
+            role='menuitem'
           >
             🏷️ Manage Roles
           </button>
@@ -73,6 +78,7 @@ function UserActionsDropdown({
             className={s.dropdownItem}
             onClick={() => handleAction(onManageGroups)}
             type='button'
+            role='menuitem'
           >
             👥 Manage Groups
           </button>
@@ -81,6 +87,7 @@ function UserActionsDropdown({
             className={s.dropdownItem}
             onClick={() => handleAction(onViewPermissions)}
             type='button'
+            role='menuitem'
           >
             🔐 View Permissions
           </button>

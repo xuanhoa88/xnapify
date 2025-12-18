@@ -7,7 +7,7 @@
 
 import PropTypes from 'prop-types';
 import { featuresData } from './data';
-import s from './Features.css';
+import s from './FeatureDetails.css';
 
 function FeatureDetails({ featureId }) {
   const feature = featuresData.find(f => f.id === featureId);

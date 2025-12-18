@@ -63,11 +63,16 @@ function GroupActionsDropdown({
         <div
           className={s.actionDropdownMenu}
           onClick={e => e.stopPropagation()}
+          onKeyDown={e => e.stopPropagation()}
+          role='menu'
+          aria-label='Group actions'
+          tabIndex={-1}
         >
           <button
             className={s.dropdownItem}
             onClick={() => handleAction(onViewMembers)}
             type='button'
+            role='menuitem'
           >
             👥 View Members
           </button>
@@ -75,6 +80,7 @@ function GroupActionsDropdown({
             className={s.dropdownItem}
             onClick={() => handleAction(onManageRoles)}
             type='button'
+            role='menuitem'
           >
             🏷️ Manage Roles
           </button>
@@ -82,6 +88,7 @@ function GroupActionsDropdown({
             className={s.dropdownItem}
             onClick={() => handleAction(onViewPermissions)}
             type='button'
+            role='menuitem'
           >
             🔐 View Permissions
           </button>
@@ -90,6 +97,7 @@ function GroupActionsDropdown({
             className={s.dropdownItem}
             onClick={() => handleAction(onEdit)}
             type='button'
+            role='menuitem'
           >
             ✏️ Edit Group
           </button>
@@ -97,6 +105,7 @@ function GroupActionsDropdown({
             className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
             onClick={() => handleAction(onDelete)}
             type='button'
+            role='menuitem'
           >
             🗑️ Delete Group
           </button>

@@ -15,8 +15,9 @@ import {
 } from 'react';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
+import { Modal } from '../../../../components/Modal';
 import { fetchRoles, assignRolesToGroup, fetchGroups } from '../../../../redux';
-import s from './Modal.css';
+import s from './GroupRolesModal.css';
 
 /**
  * GroupRolesModal - Self-contained modal for managing group roles
@@ -236,176 +237,151 @@ const GroupRolesModal = forwardRef((props, ref) => {
     return pages;
   };
 
-  // Don't render if not open
-  if (!isOpen) return null;
-
-  const title = `Manage Roles for "${(group && group.name) || 'Group'}"`;
-
   return (
-    <div className={s.modalOverlay} onClick={handleClose} role='presentation'>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <div
-        className={s.modal}
-        role='dialog'
-        aria-modal='true'
-        onMouseDown={e => e.stopPropagation()}
-      >
-        <div className={s.modalHeader}>
-          <h3 className={s.modalTitle}>{title}</h3>
-          <button className={s.modalClose} onClick={handleClose} type='button'>
-            ×
-          </button>
-        </div>
-        <div className={s.modalBody}>
-          {error && <div className={s.modalError}>{error}</div>}
-          <p className={s.modalDescription}>
-            Select roles to assign to this group. All members of the group will
-            inherit these roles.
-          </p>
+    <Modal isOpen={isOpen} onClose={handleClose}>
+      <Modal.Header onClose={handleClose}>
+        Manage Roles for &quot;{(group && group.name) || 'Group'}&quot;
+      </Modal.Header>
+      <Modal.Body error={error}>
+        <Modal.Description>
+          Select roles to assign to this group. All members of the group will
+          inherit these roles.
+        </Modal.Description>
 
-          {/* Search Input */}
-          <div className={s.searchWrapper}>
-            <span className={s.searchIcon}>🔍</span>
-            <input
-              type='text'
-              className={s.searchInput}
-              placeholder='Search roles...'
-              value={searchInput}
-              onChange={handleSearchChange}
-            />
-            {searchInput && (
-              <button
-                className={s.searchClear}
-                onClick={handleClearSearch}
-                type='button'
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          <div className={s.checkboxList}>
-            {rolesLoading ? (
-              <div className={s.noItems}>Loading roles...</div>
-            ) : roles.length === 0 ? (
-              <div className={s.noItems}>
-                {searchTerm
-                  ? 'No roles match your search'
-                  : 'No roles available'}
-              </div>
-            ) : (
-              roles.map(role => (
-                <div
-                  key={role.id}
-                  className={clsx(s.checkboxListItem, {
-                    [s.selected]: selections.includes(role.name),
-                  })}
-                  onClick={() => toggleSelection(role.name)}
-                  role='checkbox'
-                  aria-checked={selections.includes(role.name)}
-                  tabIndex={0}
-                  onKeyDown={e => {
-                    if (e.key === ' ' || e.key === 'Enter') {
-                      e.preventDefault();
-                      toggleSelection(role.name);
-                    }
-                  }}
-                >
-                  <input
-                    type='checkbox'
-                    className={s.checkbox}
-                    checked={selections.includes(role.name)}
-                    onChange={() => {}}
-                    tabIndex={-1}
-                  />
-                  <div className={s.checkboxContent}>
-                    <span className={s.checkboxListLabel}>{role.name}</span>
-                    {role.description && (
-                      <span className={s.checkboxListDesc}>
-                        {role.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Pagination */}
-          {(totalPages > 1 || totalItems > 0) && (
-            <div className={s.pagination}>
-              <span className={s.paginationInfo}>
-                {totalItems} total · Page {currentPage} of {totalPages}
-              </span>
-              {totalPages > 1 && (
-                <>
-                  <button
-                    className={s.pageBtn}
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1 || rolesLoading}
-                    type='button'
-                  >
-                    ‹ Prev
-                  </button>
-                  <div className={s.pageNumbers}>
-                    {getPageNumbers().map((page, idx) =>
-                      page === '...' ? (
-                        <span key={`ellipsis-${idx}`} className={s.ellipsis}>
-                          ...
-                        </span>
-                      ) : (
-                        <button
-                          key={page}
-                          className={clsx(s.pageNumber, {
-                            [s.activePage]: currentPage === page,
-                          })}
-                          onClick={() => handlePageClick(page)}
-                          disabled={rolesLoading}
-                          type='button'
-                        >
-                          {page}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                  <button
-                    className={s.pageBtn}
-                    onClick={handleNextPage}
-                    disabled={currentPage >= totalPages || rolesLoading}
-                    type='button'
-                  >
-                    Next ›
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Search Input */}
+        <div className={s.searchWrapper}>
+          <span className={s.searchIcon}>🔍</span>
+          <input
+            type='text'
+            className={s.searchInput}
+            placeholder='Search roles...'
+            value={searchInput}
+            onChange={handleSearchChange}
+          />
+          {searchInput && (
+            <button
+              className={s.searchClear}
+              onClick={handleClearSearch}
+              type='button'
+            >
+              ×
+            </button>
           )}
         </div>
-        <div className={s.modalFooter}>
-          <span className={s.selectionCount}>
-            {selections.length} role{selections.length !== 1 ? 's' : ''}{' '}
-            selected
-          </span>
-          <div className={s.modalActions}>
-            <button
-              className={clsx(s.modalBtn, s.modalBtnSecondary)}
-              onClick={handleClose}
-              type='button'
-            >
-              Cancel
-            </button>
-            <button
-              className={clsx(s.modalBtn, s.modalBtnPrimary)}
-              onClick={handleSave}
-              disabled={loading}
-              type='button'
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+
+        <div className={s.checkboxList}>
+          {rolesLoading ? (
+            <div className={s.noItems}>Loading roles...</div>
+          ) : roles.length === 0 ? (
+            <div className={s.noItems}>
+              {searchTerm ? 'No roles match your search' : 'No roles available'}
+            </div>
+          ) : (
+            roles.map(role => (
+              <div
+                key={role.id}
+                className={clsx(s.checkboxListItem, {
+                  [s.selected]: selections.includes(role.name),
+                })}
+                onClick={() => toggleSelection(role.name)}
+                role='checkbox'
+                aria-checked={selections.includes(role.name)}
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    toggleSelection(role.name);
+                  }
+                }}
+              >
+                <input
+                  type='checkbox'
+                  className={s.checkbox}
+                  checked={selections.includes(role.name)}
+                  onChange={() => {}}
+                  tabIndex={-1}
+                />
+                <div className={s.checkboxContent}>
+                  <span className={s.checkboxListLabel}>{role.name}</span>
+                  {role.description && (
+                    <span className={s.checkboxListDesc}>
+                      {role.description}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Pagination */}
+        {(totalPages > 1 || totalItems > 0) && (
+          <div className={s.pagination}>
+            <span className={s.paginationInfo}>
+              {totalItems} total · Page {currentPage} of {totalPages}
+            </span>
+            {totalPages > 1 && (
+              <>
+                <button
+                  className={s.pageBtn}
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1 || rolesLoading}
+                  type='button'
+                >
+                  ‹ Prev
+                </button>
+                <div className={s.pageNumbers}>
+                  {getPageNumbers().map((page, idx) =>
+                    page === '...' ? (
+                      <span key={`ellipsis-${idx}`} className={s.ellipsis}>
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        className={clsx(s.pageNumber, {
+                          [s.activePage]: currentPage === page,
+                        })}
+                        onClick={() => handlePageClick(page)}
+                        disabled={rolesLoading}
+                        type='button'
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
+                </div>
+                <button
+                  className={s.pageBtn}
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages || rolesLoading}
+                  type='button'
+                >
+                  Next ›
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Modal.SelectionCount
+          count={selections.length}
+          singular='role'
+          plural='roles'
+        />
+        <Modal.Actions>
+          <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
+          <Modal.Button
+            variant='primary'
+            onClick={handleSave}
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </Modal.Button>
+        </Modal.Actions>
+      </Modal.Footer>
+    </Modal>
   );
 });
 

@@ -15,8 +15,9 @@ import {
 } from 'react';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
+import { Modal } from '../../../../components/Modal';
 import { assignGroupsToUser, fetchUsers, fetchGroups } from '../../../../redux';
-import s from './Modal.css';
+import s from './UserGroupsModal.css';
 
 /**
  * UserGroupsModal - Self-contained modal for managing user groups
@@ -257,179 +258,156 @@ const UserGroupsModal = forwardRef((props, ref) => {
     return pages;
   };
 
-  // Don't render if not open
-  if (!isOpen) return null;
-
-  const title = isBulk
-    ? `Assign Groups to ${bulkUserIds.length} Users`
-    : `Manage Groups for "${user && (user.display_name || user.email)}"`;
-
   const description = isBulk
     ? 'Select groups to assign to the selected users.'
     : 'Select groups for this user. The user will inherit roles from these groups.';
 
   return (
-    <div className={s.modalOverlay} onClick={handleClose} role='presentation'>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
-      <div
-        className={s.modal}
-        role='dialog'
-        aria-modal='true'
-        onMouseDown={e => e.stopPropagation()}
-      >
-        <div className={s.modalHeader}>
-          <h3 className={s.modalTitle}>{title}</h3>
-          <button className={s.modalClose} onClick={handleClose} type='button'>
-            ×
-          </button>
-        </div>
-        <div className={s.modalBody}>
-          {error && <div className={s.modalError}>{error}</div>}
-          <p className={s.modalDescription}>{description}</p>
+    <Modal isOpen={isOpen} onClose={handleClose}>
+      <Modal.Header onClose={handleClose}>
+        {isBulk
+          ? `Assign Groups to ${bulkUserIds.length} Users`
+          : `Manage Groups for "${user && (user.display_name || user.email)}"`}
+      </Modal.Header>
+      <Modal.Body error={error}>
+        <Modal.Description>{description}</Modal.Description>
 
-          {/* Search Input */}
-          <div className={s.searchWrapper}>
-            <span className={s.searchIcon}>🔍</span>
-            <input
-              type='text'
-              className={s.searchInput}
-              placeholder='Search groups...'
-              value={searchInput}
-              onChange={handleSearchChange}
-            />
-            {searchInput && (
-              <button
-                className={s.searchClear}
-                onClick={handleClearSearch}
-                type='button'
-              >
-                ×
-              </button>
-            )}
-          </div>
-
-          <div className={s.checkboxList}>
-            {groupsLoading ? (
-              <div className={s.noItems}>Loading groups...</div>
-            ) : groups.length === 0 ? (
-              <div className={s.noItems}>
-                {searchTerm
-                  ? 'No groups match your search'
-                  : 'No groups available'}
-              </div>
-            ) : (
-              groups.map(group => (
-                <div
-                  key={group.id}
-                  className={clsx(s.checkboxListItem, {
-                    [s.selected]: selections.includes(group.id),
-                  })}
-                  onClick={() => toggleSelection(group.id)}
-                  role='checkbox'
-                  aria-checked={selections.includes(group.id)}
-                  tabIndex={0}
-                  onKeyDown={e => {
-                    if (e.key === ' ' || e.key === 'Enter') {
-                      e.preventDefault();
-                      toggleSelection(group.id);
-                    }
-                  }}
-                >
-                  <input
-                    type='checkbox'
-                    className={s.checkbox}
-                    checked={selections.includes(group.id)}
-                    onChange={() => {}}
-                    tabIndex={-1}
-                  />
-                  <div className={s.checkboxContent}>
-                    <span className={s.checkboxListLabel}>{group.name}</span>
-                    {group.description && (
-                      <span className={s.checkboxListDesc}>
-                        {group.description}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          {/* Pagination */}
-          {(totalPages > 1 || totalItems > 0) && (
-            <div className={s.pagination}>
-              <span className={s.paginationInfo}>
-                {totalItems} total · Page {currentPage} of {totalPages}
-              </span>
-              {totalPages > 1 && (
-                <>
-                  <button
-                    className={s.pageBtn}
-                    onClick={handlePrevPage}
-                    disabled={currentPage === 1 || groupsLoading}
-                    type='button'
-                  >
-                    ‹ Prev
-                  </button>
-                  <div className={s.pageNumbers}>
-                    {getPageNumbers().map((page, idx) =>
-                      page === '...' ? (
-                        <span key={`ellipsis-${idx}`} className={s.ellipsis}>
-                          ...
-                        </span>
-                      ) : (
-                        <button
-                          key={page}
-                          className={clsx(s.pageNumber, {
-                            [s.activePage]: currentPage === page,
-                          })}
-                          onClick={() => handlePageClick(page)}
-                          disabled={groupsLoading}
-                          type='button'
-                        >
-                          {page}
-                        </button>
-                      ),
-                    )}
-                  </div>
-                  <button
-                    className={s.pageBtn}
-                    onClick={handleNextPage}
-                    disabled={currentPage >= totalPages || groupsLoading}
-                    type='button'
-                  >
-                    Next ›
-                  </button>
-                </>
-              )}
-            </div>
+        {/* Search Input */}
+        <div className={s.searchWrapper}>
+          <span className={s.searchIcon}>🔍</span>
+          <input
+            type='text'
+            className={s.searchInput}
+            placeholder='Search groups...'
+            value={searchInput}
+            onChange={handleSearchChange}
+          />
+          {searchInput && (
+            <button
+              className={s.searchClear}
+              onClick={handleClearSearch}
+              type='button'
+            >
+              ×
+            </button>
           )}
         </div>
-        <div className={s.modalFooter}>
-          <span className={s.selectionCount}>
-            {selections.length} group{selections.length !== 1 ? 's' : ''}{' '}
-            selected
-          </span>
-          <div className={s.modalActions}>
-            <button
-              className={clsx(s.modalBtn, s.modalBtnSecondary)}
-              onClick={handleClose}
-              type='button'
-            >
-              Cancel
-            </button>
-            <button
-              className={clsx(s.modalBtn, s.modalBtnPrimary)}
-              onClick={handleSave}
-              disabled={loading}
-              type='button'
-            >
-              {loading ? 'Saving...' : 'Save'}
-            </button>
-          </div>
+
+        <div className={s.checkboxList}>
+          {groupsLoading ? (
+            <div className={s.noItems}>Loading groups...</div>
+          ) : groups.length === 0 ? (
+            <div className={s.noItems}>
+              {searchTerm
+                ? 'No groups match your search'
+                : 'No groups available'}
+            </div>
+          ) : (
+            groups.map(group => (
+              <div
+                key={group.id}
+                className={clsx(s.checkboxListItem, {
+                  [s.selected]: selections.includes(group.id),
+                })}
+                onClick={() => toggleSelection(group.id)}
+                role='checkbox'
+                aria-checked={selections.includes(group.id)}
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
+                    toggleSelection(group.id);
+                  }
+                }}
+              >
+                <input
+                  type='checkbox'
+                  className={s.checkbox}
+                  checked={selections.includes(group.id)}
+                  onChange={() => {}}
+                  tabIndex={-1}
+                />
+                <div className={s.checkboxContent}>
+                  <span className={s.checkboxListLabel}>{group.name}</span>
+                  {group.description && (
+                    <span className={s.checkboxListDesc}>
+                      {group.description}
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </div>
-      </div>
-    </div>
+
+        {/* Pagination */}
+        {(totalPages > 1 || totalItems > 0) && (
+          <div className={s.pagination}>
+            <span className={s.paginationInfo}>
+              {totalItems} total · Page {currentPage} of {totalPages}
+            </span>
+            {totalPages > 1 && (
+              <>
+                <button
+                  className={s.pageBtn}
+                  onClick={handlePrevPage}
+                  disabled={currentPage === 1 || groupsLoading}
+                  type='button'
+                >
+                  ‹ Prev
+                </button>
+                <div className={s.pageNumbers}>
+                  {getPageNumbers().map((page, idx) =>
+                    page === '...' ? (
+                      <span key={`ellipsis-${idx}`} className={s.ellipsis}>
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        className={clsx(s.pageNumber, {
+                          [s.activePage]: currentPage === page,
+                        })}
+                        onClick={() => handlePageClick(page)}
+                        disabled={groupsLoading}
+                        type='button'
+                      >
+                        {page}
+                      </button>
+                    ),
+                  )}
+                </div>
+                <button
+                  className={s.pageBtn}
+                  onClick={handleNextPage}
+                  disabled={currentPage >= totalPages || groupsLoading}
+                  type='button'
+                >
+                  Next ›
+                </button>
+              </>
+            )}
+          </div>
+        )}
+      </Modal.Body>
+      <Modal.Footer>
+        <Modal.SelectionCount
+          count={selections.length}
+          singular='group'
+          plural='groups'
+        />
+        <Modal.Actions>
+          <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
+          <Modal.Button
+            variant='primary'
+            onClick={handleSave}
+            disabled={loading}
+          >
+            {loading ? 'Saving...' : 'Save'}
+          </Modal.Button>
+        </Modal.Actions>
+      </Modal.Footer>
+    </Modal>
   );
 });
 

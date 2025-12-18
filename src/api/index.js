@@ -5,8 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import express, { Router } from 'express';
-import path from 'path';
+import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
@@ -506,10 +505,10 @@ function createCorsMiddleware(options = {}) {
 /**
  * Create compression middleware
  *
- * @param {Object} options - API configuration
+ * @param {Object} _options - API configuration
  * @returns {Function} Compression middleware
  */
-function createCompressionMiddleware(options) {
+function createCompressionMiddleware(_options) {
   return compression({
     filter: (req, res) => {
       // Don't compress responses if the request includes a cache-control: no-transform directive
@@ -529,10 +528,9 @@ function createCompressionMiddleware(options) {
 /**
  * Create logging middleware (Morgan)
  *
- * @param {Object} options - API configuration
+ * @param {Object} _options - API configuration
  * @returns {Function} Logging middleware
  */
-// eslint-disable-next-line no-unused-vars
 function createLoggingMiddleware(_options) {
   const format = __DEV__
     ? 'combined' // Apache combined log format for production

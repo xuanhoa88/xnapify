@@ -338,7 +338,6 @@ export default async function main() {
     // Execute cleaning operations
     const results = [];
 
-    // eslint-disable-next-line no-restricted-syntax, no-unused-vars
     for (const target of activeTargets) {
       const targetStart = Date.now();
 
