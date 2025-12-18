@@ -74,14 +74,14 @@ export async function createGroup(req, res) {
 export async function getGroups(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10, search = '' } = req.query;
+    const { page = 1, limit = 10, search = '', role = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
 
     // Get groups
     const result = await groupService.getGroups(
-      { page, limit, search },
+      { page, limit, search, role },
       models,
     );
 

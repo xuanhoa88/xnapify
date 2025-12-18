@@ -7,19 +7,28 @@
 
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import clsx from 'clsx';
 import { useHistory } from '../../../contexts/history';
 import {
   fetchGroups,
   getGroups,
   getGroupsLoading,
   getGroupsError,
+  getGroupsPagination,
   deleteGroup,
   fetchRoles,
 } from '../../../redux';
+import {
+  SearchableSelect,
+  useSearchableSelect,
+} from '../../../components/SearchableSelect';
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
 import s from './Groups.css';
+
+// Pagination items per page
+const ITEMS_PER_PAGE = 10;
 
 // Helper to get user initials from display name or email
 function getInitials(name) {
@@ -37,6 +46,13 @@ function Groups() {
   const groups = useSelector(getGroups);
   const loading = useSelector(getGroupsLoading);
   const error = useSelector(getGroupsError);
+  const pagination = useSelector(getGroupsPagination);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Filter state
+  const [roleFilter, setRoleFilter] = useState('');
 
   // Ref for GroupRolesModal
   const rolesModalRef = useRef();
@@ -47,11 +63,32 @@ function Groups() {
   // State for managing which dropdown is open
   const [activeDropdownId, setActiveDropdownId] = useState(null);
 
+  // Use hook for role filter with caching
+  const {
+    options: roleOptions,
+    loading: rolesLoading,
+    loadingMore: rolesLoadingMore,
+    hasMore: rolesHasMore,
+    handleSearch: handleRoleSearch,
+    handleLoadMore: handleRoleLoadMore,
+  } = useSearchableSelect({
+    fetchFn: params => dispatch(fetchRoles(params)),
+    dataKey: 'roles',
+    mapOption: r => ({ value: r.name, label: r.name }),
+    includeAllOption: true,
+    allOptionLabel: 'All Roles',
+  });
+
   useEffect(() => {
-    // Fetch groups and roles on component mount
-    dispatch(fetchGroups({ page: 1 }));
-    dispatch(fetchRoles({ limit: 100 }));
-  }, [dispatch]);
+    // Fetch groups on component mount or page/filter change
+    dispatch(
+      fetchGroups({
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        role: roleFilter,
+      }),
+    );
+  }, [dispatch, currentPage, roleFilter]);
 
   const handleAddGroup = useCallback(() => {
     history.push('/admin/groups/create');
@@ -103,6 +140,66 @@ function Groups() {
     setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
 
+  const handleRoleFilterChange = useCallback(value => {
+    setRoleFilter(value);
+    setCurrentPage(1);
+  }, []);
+
+  const handleClearFilters = useCallback(() => {
+    setRoleFilter('');
+    setCurrentPage(1);
+  }, []);
+
+  const hasActiveFilters = Boolean(roleFilter);
+
+  // Pagination handlers
+  const handlePrevPage = useCallback(() => {
+    if (currentPage > 1) {
+      setCurrentPage(prev => prev - 1);
+    }
+  }, [currentPage]);
+
+  const handleNextPage = useCallback(() => {
+    const totalPages = (pagination && pagination.pages) || 1;
+    if (currentPage < totalPages) {
+      setCurrentPage(prev => prev + 1);
+    }
+  }, [currentPage, pagination]);
+
+  const handlePageClick = useCallback(page => {
+    setCurrentPage(page);
+  }, []);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = useCallback(() => {
+    const totalPages = (pagination && pagination.pages) || 1;
+    const pages = [];
+    const maxVisible = 5;
+
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  }, [currentPage, pagination]);
+
   if (loading && groups.length === 0) {
     return (
       <div className={s.root}>
@@ -147,6 +244,33 @@ function Groups() {
           </svg>
           Add Group
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className={s.filters}>
+        <div className={s.filterItem}>
+          <SearchableSelect
+            options={roleOptions}
+            value={roleFilter}
+            onChange={handleRoleFilterChange}
+            onSearch={handleRoleSearch}
+            onLoadMore={handleRoleLoadMore}
+            hasMore={rolesHasMore}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
+            placeholder='Filter by role...'
+            searchPlaceholder='Search roles...'
+          />
+        </div>
+        {hasActiveFilters && (
+          <button
+            className={s.clearFiltersBtn}
+            onClick={handleClearFilters}
+            type='button'
+          >
+            Clear Filters
+          </button>
+        )}
       </div>
 
       {groups.length === 0 ? (
@@ -243,6 +367,56 @@ function Groups() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {pagination && (pagination.pages > 1 || pagination.total > 0) && (
+        <div className={s.pagination}>
+          <span className={s.paginationInfo}>
+            {pagination.total} total · Page {currentPage} of {pagination.pages}
+          </span>
+          {pagination.pages > 1 && (
+            <>
+              <button
+                className={s.pageBtn}
+                onClick={handlePrevPage}
+                disabled={currentPage === 1 || loading}
+                type='button'
+              >
+                ‹ Prev
+              </button>
+              <div className={s.pageNumbers}>
+                {getPageNumbers().map((page, idx) =>
+                  page === '...' ? (
+                    <span key={`ellipsis-${idx}`} className={s.ellipsis}>
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      className={clsx(s.pageNumber, {
+                        [s.activePage]: currentPage === page,
+                      })}
+                      onClick={() => handlePageClick(page)}
+                      disabled={loading}
+                      type='button'
+                    >
+                      {page}
+                    </button>
+                  ),
+                )}
+              </div>
+              <button
+                className={s.pageBtn}
+                onClick={handleNextPage}
+                disabled={currentPage >= pagination.pages || loading}
+                type='button'
+              >
+                Next ›
+              </button>
+            </>
+          )}
         </div>
       )}
 

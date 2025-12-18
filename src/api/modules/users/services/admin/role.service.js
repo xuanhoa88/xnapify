@@ -96,6 +96,7 @@ export async function getRoles(options, models) {
         through: { attributes: [] },
       },
     ],
+    distinct: true, // Fix count inflation from associations
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['name', 'ASC']],

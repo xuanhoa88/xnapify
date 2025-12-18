@@ -20,7 +20,7 @@ import {
   clearPermissions,
   getUserPermissions,
   getUserPermissionsLoading,
-  getRoles,
+  fetchRoles,
 } from '../../../../redux';
 import s from './Modal.css';
 
@@ -28,6 +28,7 @@ import s from './Modal.css';
  * UserPermissionsModal - Self-contained modal for viewing user permissions
  *
  * Displays all permissions inherited from the user's assigned roles and groups.
+ * Uses local state for roles to avoid conflicts with the Roles admin page.
  *
  * Usage:
  *   const permissionsModalRef = useRef();
@@ -38,11 +39,30 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   const dispatch = useDispatch();
   const permissions = useSelector(getUserPermissions);
   const loading = useSelector(getUserPermissionsLoading);
-  const allRoles = useSelector(getRoles);
+
+  // Local state for roles (independent from Redux to avoid conflicts)
+  const [localRoles, setLocalRoles] = useState([]);
+  const [rolesLoaded, setRolesLoaded] = useState(false);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
+
+  // Fetch roles into local state when modal opens
+  useEffect(() => {
+    if (isOpen && !rolesLoaded) {
+      const loadRoles = async () => {
+        const result = await dispatch(fetchRoles({ limit: 1000 }));
+        if (result.success && result.data) {
+          if (Array.isArray(result.data.roles)) {
+            setLocalRoles(result.data.roles);
+          }
+        }
+        setRolesLoaded(true);
+      };
+      loadRoles();
+    }
+  }, [dispatch, isOpen, rolesLoaded]);
 
   // Fetch permissions when user changes
   useEffect(() => {
@@ -67,8 +87,8 @@ const UserPermissionsModal = forwardRef((props, ref) => {
 
     userRoles.forEach(userRole => {
       const roleName = typeof userRole === 'string' ? userRole : userRole.name;
-      // Find full role data with permissions
-      const fullRole = allRoles.find(
+      // Find full role data with permissions from local state
+      const fullRole = localRoles.find(
         r => r.name === roleName || r.id === userRole.id,
       );
 
@@ -86,7 +106,16 @@ const UserPermissionsModal = forwardRef((props, ref) => {
     });
 
     return details;
-  }, [user, allRoles]);
+  }, [user, localRoles]);
+
+  // Reset state helper
+  const resetState = useCallback(() => {
+    setIsOpen(false);
+    setUser(null);
+    setLocalRoles([]);
+    setRolesLoaded(false);
+    dispatch(clearPermissions());
+  }, [dispatch]);
 
   // Expose methods via ref
   useImperativeHandle(
@@ -96,31 +125,26 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         setUser(targetUser);
         setIsOpen(true);
       },
-      close: () => {
-        setIsOpen(false);
-        setUser(null);
-        dispatch(clearPermissions());
-      },
+      close: resetState,
     }),
-    [dispatch],
+    [resetState],
   );
 
   const handleClose = useCallback(() => {
-    setIsOpen(false);
-    setUser(null);
-    dispatch(clearPermissions());
-  }, [dispatch]);
+    resetState();
+  }, [resetState]);
 
   // Don't render if not open
   if (!isOpen) return null;
 
   return (
     <div className={s.modalOverlay} onClick={handleClose} role='presentation'>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         className={s.modal}
-        onClick={e => e.stopPropagation()}
         role='dialog'
         aria-modal='true'
+        onMouseDown={e => e.stopPropagation()}
       >
         <div className={s.modalHeader}>
           <h3 className={s.modalTitle}>
@@ -137,7 +161,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
             and groups.
           </p>
 
-          {loading ? (
+          {loading || !rolesLoaded ? (
             <p>Loading permissions...</p>
           ) : (
             <>

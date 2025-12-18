@@ -11,16 +11,18 @@ import {
   useImperativeHandle,
   forwardRef,
   useMemo,
+  useEffect,
 } from 'react';
-import { useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { getRoles } from '../../../../redux';
+import { fetchRoles } from '../../../../redux';
 import s from './Modal.css';
 
 /**
  * GroupPermissionsModal - Self-contained modal for viewing group permissions
  *
  * Displays all permissions inherited from the group's assigned roles.
+ * Uses local state for roles to avoid conflicts with the Roles admin page.
  *
  * Usage:
  *   const permissionsModalRef = useRef();
@@ -28,11 +30,32 @@ import s from './Modal.css';
  *   permissionsModalRef.current.close();          // Close modal
  */
 const GroupPermissionsModal = forwardRef((props, ref) => {
-  const allRoles = useSelector(getRoles);
+  const dispatch = useDispatch();
+
+  // Local state for roles (independent from Redux to avoid conflicts)
+  const [localRoles, setLocalRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [group, setGroup] = useState(null);
+
+  // Fetch roles into local state when modal opens
+  useEffect(() => {
+    if (isOpen && localRoles.length === 0 && !rolesLoading) {
+      const loadRoles = async () => {
+        setRolesLoading(true);
+        const result = await dispatch(fetchRoles({ limit: 1000 }));
+        if (result.success && result.data) {
+          if (Array.isArray(result.data.roles)) {
+            setLocalRoles(result.data.roles);
+          }
+        }
+        setRolesLoading(false);
+      };
+      loadRoles();
+    }
+  }, [dispatch, isOpen, localRoles.length, rolesLoading]);
 
   // Calculate permissions from group's roles
   const { permissions, roleDetails } = useMemo(() => {
@@ -45,8 +68,8 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
 
     // Get permissions from each role
     group.roles.forEach(groupRole => {
-      // Find full role data with permissions
-      const fullRole = allRoles.find(
+      // Find full role data with permissions from local state
+      const fullRole = localRoles.find(
         r => r.id === groupRole.id || r.name === groupRole.name,
       );
 
@@ -77,7 +100,15 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
       permissions: Array.from(permSet).sort(),
       roleDetails: details,
     };
-  }, [group, allRoles]);
+  }, [group, localRoles]);
+
+  // Reset state helper
+  const resetState = useCallback(() => {
+    setIsOpen(false);
+    setGroup(null);
+    setLocalRoles([]);
+    setRolesLoading(false);
+  }, []);
 
   // Expose methods via ref
   useImperativeHandle(
@@ -87,29 +118,26 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
         setGroup(targetGroup);
         setIsOpen(true);
       },
-      close: () => {
-        setIsOpen(false);
-        setGroup(null);
-      },
+      close: resetState,
     }),
-    [],
+    [resetState],
   );
 
   const handleClose = useCallback(() => {
-    setIsOpen(false);
-    setGroup(null);
-  }, []);
+    resetState();
+  }, [resetState]);
 
   // Don't render if not open
   if (!isOpen) return null;
 
   return (
     <div className={s.modalOverlay} onClick={handleClose} role='presentation'>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <div
         className={s.modal}
-        onClick={e => e.stopPropagation()}
         role='dialog'
         aria-modal='true'
+        onMouseDown={e => e.stopPropagation()}
       >
         <div className={s.modalHeader}>
           <h3 className={s.modalTitle}>
@@ -125,43 +153,49 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
             roles.
           </p>
 
-          {/* Role breakdown */}
-          {roleDetails.length > 0 && (
-            <div className={s.roleBreakdown}>
-              <h4 className={s.sectionTitle}>Assigned Roles</h4>
-              <div className={s.rolesList}>
-                {roleDetails.map(role => (
-                  <div key={role.name} className={s.roleItem}>
-                    <span className={s.roleName}>{role.name}</span>
-                    <span className={s.rolePermCount}>
-                      {role.permissions.length} permission
-                      {role.permissions.length !== 1 ? 's' : ''}
-                    </span>
+          {rolesLoading ? (
+            <p>Loading permissions...</p>
+          ) : (
+            <>
+              {/* Role breakdown */}
+              {roleDetails.length > 0 && (
+                <div className={s.roleBreakdown}>
+                  <h4 className={s.sectionTitle}>Assigned Roles</h4>
+                  <div className={s.rolesList}>
+                    {roleDetails.map(role => (
+                      <div key={role.name} className={s.roleItem}>
+                        <span className={s.roleName}>{role.name}</span>
+                        <span className={s.rolePermCount}>
+                          {role.permissions.length} permission
+                          {role.permissions.length !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            </div>
-          )}
+                </div>
+              )}
 
-          {/* All permissions */}
-          <div className={s.permissionsSection}>
-            <h4 className={s.sectionTitle}>
-              Effective Permissions ({permissions.length})
-            </h4>
-            {permissions.length > 0 ? (
-              <div className={s.permissionsList}>
-                {permissions.map(perm => (
-                  <span key={perm} className={s.permissionBadge}>
-                    {perm}
-                  </span>
-                ))}
+              {/* All permissions */}
+              <div className={s.permissionsSection}>
+                <h4 className={s.sectionTitle}>
+                  Effective Permissions ({permissions.length})
+                </h4>
+                {permissions.length > 0 ? (
+                  <div className={s.permissionsList}>
+                    {permissions.map(perm => (
+                      <span key={perm} className={s.permissionBadge}>
+                        {perm}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className={s.noPermissions}>
+                    No permissions. Assign roles to grant permissions.
+                  </p>
+                )}
               </div>
-            ) : (
-              <p className={s.noPermissions}>
-                No permissions. Assign roles to grant permissions.
-              </p>
-            )}
-          </div>
+            </>
+          )}
         </div>
         <div className={s.modalFooter}>
           <button

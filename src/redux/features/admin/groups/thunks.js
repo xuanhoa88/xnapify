@@ -52,6 +52,7 @@ export function fetchGroups(options = {}) {
         search = '',
         category = '',
         type = '',
+        role = '',
       } = options;
 
       const params = new URLSearchParams({
@@ -62,6 +63,7 @@ export function fetchGroups(options = {}) {
       if (search) params.append('search', search);
       if (category) params.append('category', category);
       if (type) params.append('type', type);
+      if (role) params.append('role', role);
 
       const { data } = await fetch(
         `/api/admin/groups/list?${params.toString()}`,

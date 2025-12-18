@@ -100,6 +100,7 @@ export async function createGroup(groupData, models) {
  * @param {string} options.search - Search term
  * @param {string} options.category - Filter by category
  * @param {string} options.type - Filter by type
+ * @param {string} options.role - Filter by role name
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Groups with pagination
  */
@@ -110,6 +111,7 @@ export async function getGroups(options, models) {
     search = '',
     category = '',
     type = '',
+    role = '',
   } = options;
   const offset = (page - 1) * limit;
   const { Group, Role, User } = models;
@@ -134,15 +136,22 @@ export async function getGroups(options, models) {
     whereCondition.type = type;
   }
 
+  // Build role include with optional filter
+  const roleInclude = {
+    model: Role,
+    as: 'roles',
+    through: { attributes: [] },
+    required: !!role, // Required if filtering by role
+  };
+
+  if (role) {
+    roleInclude.where = { name: role };
+  }
+
   const { count, rows: groups } = await Group.findAndCountAll({
     where: whereCondition,
     include: [
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-        required: false,
-      },
+      roleInclude,
       {
         model: User,
         as: 'users',
@@ -150,6 +159,7 @@ export async function getGroups(options, models) {
         required: false,
       },
     ],
+    distinct: true, // Fix count inflation from associations
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['name', 'ASC']],

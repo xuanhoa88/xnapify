@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
@@ -16,12 +16,13 @@ import {
   getUsersLoading,
   getUsersError,
   fetchGroups,
-  getGroups,
   fetchRoles,
-  getRoles,
 } from '../../../redux';
 import { useHistory } from '../../../contexts/history';
-import SearchableSelect from '../../../components/SearchableSelect/SearchableSelect';
+import {
+  SearchableSelect,
+  useSearchableSelect,
+} from '../../../components/SearchableSelect';
 import UserBulkActionsBar from './components/UserBulkActionsBar';
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
@@ -55,8 +56,37 @@ function Users() {
   const pagination = useSelector(getUsersPagination);
   const loading = useSelector(getUsersLoading);
   const error = useSelector(getUsersError);
-  const groups = useSelector(getGroups);
-  const roles = useSelector(getRoles);
+
+  // Use hooks for filter dropdowns with caching
+  const {
+    options: roleOptions,
+    loading: rolesLoading,
+    loadingMore: rolesLoadingMore,
+    hasMore: rolesHasMore,
+    handleSearch: handleRoleSearch,
+    handleLoadMore: handleRoleLoadMore,
+  } = useSearchableSelect({
+    fetchFn: params => dispatch(fetchRoles(params)),
+    dataKey: 'roles',
+    mapOption: r => ({ value: r.name, label: r.name }),
+    includeAllOption: true,
+    allOptionLabel: 'All Roles',
+  });
+
+  const {
+    options: groupOptions,
+    loading: groupsLoading,
+    loadingMore: groupsLoadingMore,
+    hasMore: groupsHasMore,
+    handleSearch: handleGroupSearch,
+    handleLoadMore: handleGroupLoadMore,
+  } = useSearchableSelect({
+    fetchFn: params => dispatch(fetchGroups(params)),
+    dataKey: 'groups',
+    mapOption: g => ({ value: g.name, label: g.name }),
+    includeAllOption: true,
+    allOptionLabel: 'All Groups',
+  });
 
   // Filter state
   const [search, setSearch] = useState('');
@@ -74,11 +104,6 @@ function Users() {
   const rolesModalRef = useRef();
   const groupsModalRef = useRef();
   const permissionsModalRef = useRef();
-
-  useEffect(() => {
-    dispatch(fetchGroups());
-    dispatch(fetchRoles());
-  }, [dispatch]);
 
   useEffect(() => {
     dispatch(
@@ -120,34 +145,27 @@ function Users() {
   // Filter handlers
   const debounceTimer = useRef(null);
 
-  const handleSearchChange = useCallback(
-    e => {
-      const { value } = e.target;
-      setInputValue(value);
+  const handleSearchChange = useCallback(e => {
+    const { value } = e.target;
+    setInputValue(value);
 
-      // Debounced search - auto-search after 500ms
-      if (debounceTimer.current) {
-        clearTimeout(debounceTimer.current);
-      }
-      debounceTimer.current = setTimeout(() => {
-        if (value !== search) {
-          setSearch(value);
-          setCurrentPage(1);
-        }
-      }, 500);
-    },
-    [search],
-  );
+    // Debounced search - auto-search after 500ms
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = setTimeout(() => {
+      setSearch(value);
+      setCurrentPage(1);
+    }, 500);
+  }, []);
 
   const handleSearchSubmit = useCallback(() => {
     if (debounceTimer.current) {
       clearTimeout(debounceTimer.current);
     }
-    if (inputValue !== search) {
-      setSearch(inputValue);
-      setCurrentPage(1);
-    }
-  }, [inputValue, search]);
+    setSearch(inputValue);
+    setCurrentPage(1);
+  }, [inputValue]);
 
   const handleClearAllFilters = useCallback(() => {
     if (debounceTimer.current) {
@@ -169,23 +187,6 @@ function Users() {
     setSearch('');
     setCurrentPage(1);
   }, []);
-
-  // Helper to format options for SearchableSelect
-  const roleOptions = useMemo(
-    () => [
-      { value: '', label: 'All Roles' },
-      ...roles.map(r => ({ value: r.name, label: r.name })),
-    ],
-    [roles],
-  );
-
-  const groupOptions = useMemo(
-    () => [
-      { value: '', label: 'All Groups' },
-      ...groups.map(g => ({ value: g.name, label: g.name })),
-    ],
-    [groups],
-  );
 
   const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
 
@@ -320,7 +321,13 @@ function Users() {
             options={roleOptions}
             value={roleFilter}
             onChange={handleRoleFilterChange}
+            onSearch={handleRoleSearch}
+            onLoadMore={handleRoleLoadMore}
+            hasMore={rolesHasMore}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
             placeholder='All Roles'
+            searchPlaceholder='Search roles...'
           />
         </div>
         <div className={s.filterSearchableSelect}>
@@ -328,7 +335,13 @@ function Users() {
             options={groupOptions}
             value={groupFilter}
             onChange={handleGroupFilterChange}
+            onSearch={handleGroupSearch}
+            onLoadMore={handleGroupLoadMore}
+            hasMore={groupsHasMore}
+            loading={groupsLoading}
+            loadingMore={groupsLoadingMore}
             placeholder='All Groups'
+            searchPlaceholder='Search groups...'
           />
         </div>
         <select
