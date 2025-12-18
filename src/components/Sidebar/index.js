@@ -17,8 +17,8 @@ import {
   isAdmin,
   logout,
 } from '../../redux';
-import { useHistory, Link } from '../../contexts/history';
-import { useWebSocket } from '../../contexts/ws';
+import { useHistory, Link } from '../../components/History';
+import { useWebSocket } from '../../components/WebSocket';
 import s from './Sidebar.css';
 
 function Sidebar() {

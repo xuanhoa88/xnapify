@@ -5,12 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
-import { useHistory } from '../../../contexts/history';
+import { useHistory } from '../../../components/History';
 import { fetchRoles, deleteRole, getRolesPagination } from '../../../redux';
+import Modal from '../../../components/Modal';
 import s from './Roles.css';
+
+// Pagination items per page
+const ITEMS_PER_PAGE = 10;
 
 // Map role names to icons for visual consistency
 const ROLE_ICONS = Object.freeze({
@@ -22,14 +27,12 @@ const ROLE_ICONS = Object.freeze({
   viewer: '👀',
 });
 
-// Pagination items per page
-const ITEMS_PER_PAGE = 10;
-
 const getRoleIcon = roleName => {
   return ROLE_ICONS[roleName.toLowerCase()] || '📋';
 };
 
 function Roles() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const { roles, loading, error } = useSelector(state => state.admin.roles);
@@ -38,9 +41,20 @@ function Roles() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Search state
+  const [search, setSearch] = useState('');
+  const [inputValue, setInputValue] = useState('');
+  const debounceTimer = useRef(null);
+
+  // Delete confirmation modal state
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [roleToDelete, setRoleToDelete] = useState(null);
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
-    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE }));
-  }, [dispatch, currentPage]);
+    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
+  }, [dispatch, currentPage, search]);
 
   const handleAddRole = useCallback(() => {
     history.push('/admin/roles/create');
@@ -53,21 +67,80 @@ function Roles() {
     [history],
   );
 
-  const handleDelete = useCallback(
-    async (roleId, roleName) => {
-      if (!confirm(`Are you sure you want to delete the role "${roleName}"?`)) {
-        return;
-      }
+  // Open delete confirmation modal
+  const handleDeleteClick = useCallback((roleId, roleName) => {
+    setRoleToDelete({ id: roleId, name: roleName });
+    setDeleteError('');
+    setDeleteModalOpen(true);
+  }, []);
 
-      const result = await dispatch(deleteRole(roleId));
-      if (!result.success) {
-        alert(`Failed to delete role: ${result.error}`);
-      } else {
-        // Refresh the list
-        dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE }));
+  // Close delete modal
+  const handleDeleteModalClose = useCallback(() => {
+    setDeleteModalOpen(false);
+    setRoleToDelete(null);
+    setDeleteError('');
+  }, []);
+
+  // Confirm delete
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!roleToDelete) return;
+
+    setDeleting(true);
+    setDeleteError('');
+
+    const result = await dispatch(deleteRole(roleToDelete.id));
+
+    setDeleting(false);
+
+    if (!result.success) {
+      setDeleteError(
+        result.error || t('roles.deleteError', 'Failed to delete role'),
+      );
+    } else {
+      setDeleteModalOpen(false);
+      setRoleToDelete(null);
+      // Refresh the list
+      dispatch(
+        fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }),
+      );
+    }
+  }, [dispatch, roleToDelete, currentPage, search, t]);
+
+  // Search handlers
+  const handleSearchChange = useCallback(e => {
+    const { value } = e.target;
+    setInputValue(value);
+
+    // Debounced search - auto-search after 500ms
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = setTimeout(() => {
+      setSearch(value);
+      setCurrentPage(1);
+    }, 500);
+  }, []);
+
+  const handleClearSearch = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setInputValue('');
+    setSearch('');
+    setCurrentPage(1);
+  }, []);
+
+  const handleSearchKeyDown = useCallback(
+    e => {
+      if (e.key === 'Enter') {
+        if (debounceTimer.current) {
+          clearTimeout(debounceTimer.current);
+        }
+        setSearch(inputValue);
+        setCurrentPage(1);
       }
     },
-    [dispatch, currentPage],
+    [inputValue],
   );
 
   // Pagination handlers
@@ -122,9 +195,11 @@ function Roles() {
     return (
       <div className={s.root}>
         <div className={s.header}>
-          <h1 className={s.title}>Role Management</h1>
+          <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
         </div>
-        <div className={s.loading}>Loading roles...</div>
+        <div className={s.loading}>
+          {t('roles.loading', 'Loading roles...')}
+        </div>
       </div>
     );
   }
@@ -133,17 +208,26 @@ function Roles() {
     return (
       <div className={s.root}>
         <div className={s.header}>
-          <h1 className={s.title}>Role Management</h1>
+          <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
         </div>
         <div className={s.error}>
-          <p>Error loading roles: {error}</p>
+          <p>
+            {t('roles.errorLoading', 'Error loading roles')}: {error}
+          </p>
           <button
+            type='button'
             className={s.addButton}
             onClick={() =>
-              dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE }))
+              dispatch(
+                fetchRoles({
+                  page: currentPage,
+                  limit: ITEMS_PER_PAGE,
+                  search,
+                }),
+              )
             }
           >
-            Retry
+            {t('common.retry', 'Retry')}
           </button>
         </div>
       </div>
@@ -153,8 +237,8 @@ function Roles() {
   return (
     <div className={s.root}>
       <div className={s.header}>
-        <h1 className={s.title}>Role Management</h1>
-        <button className={s.addButton} onClick={handleAddRole}>
+        <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
+        <button type='button' className={s.addButton} onClick={handleAddRole}>
           <svg
             width='16'
             height='16'
@@ -170,13 +254,38 @@ function Roles() {
               strokeLinejoin='round'
             />
           </svg>
-          Add Role
+          {t('roles.addRole', 'Add Role')}
         </button>
+      </div>
+
+      {/* Search/Filter Section */}
+      <div className={s.filters}>
+        <div className={s.searchWrapper}>
+          <span className={s.searchIcon}>🔍</span>
+          <input
+            type='text'
+            placeholder={t('roles.searchPlaceholder', 'Search roles...')}
+            className={s.searchInput}
+            value={inputValue}
+            onChange={handleSearchChange}
+            onKeyDown={handleSearchKeyDown}
+          />
+          {inputValue && (
+            <button
+              className={s.searchClear}
+              onClick={handleClearSearch}
+              type='button'
+              title={t('common.clearSearch', 'Clear search')}
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {roles.length === 0 ? (
         <div className={s.empty}>
-          <p>No roles found.</p>
+          <p>{t('roles.noRolesFound', 'No roles found.')}</p>
         </div>
       ) : (
         <div className={s.grid}>
@@ -187,15 +296,20 @@ function Roles() {
                 <h3 className={s.roleName}>{role.name}</h3>
               </div>
               <p className={s.roleDescription}>
-                {role.description || 'No description available'}
+                {role.description ||
+                  t('roles.noDescription', 'No description available')}
               </p>
               <div className={s.roleStats}>
                 <div className={s.stat}>
-                  <span className={s.statLabel}>Users:</span>
+                  <span className={s.statLabel}>
+                    {t('roles.users', 'Users')}:
+                  </span>
                   <span className={s.statValue}>{role.usersCount || 0}</span>
                 </div>
                 <div className={s.stat}>
-                  <span className={s.statLabel}>Permissions:</span>
+                  <span className={s.statLabel}>
+                    {t('roles.permissions', 'Permissions')}:
+                  </span>
                   <span className={s.statValue}>
                     {role.permissionsCount || 0}
                   </span>
@@ -203,16 +317,18 @@ function Roles() {
               </div>
               <div className={s.roleActions}>
                 <button
+                  type='button'
                   className={s.editBtn}
                   onClick={() => handleEditRole(role.id)}
                 >
-                  Edit
+                  {t('common.edit', 'Edit')}
                 </button>
                 <button
+                  type='button'
                   className={s.deleteBtn}
-                  onClick={() => handleDelete(role.id, role.name)}
+                  onClick={() => handleDeleteClick(role.id, role.name)}
                 >
-                  Delete
+                  {t('common.delete', 'Delete')}
                 </button>
               </div>
             </div>
@@ -224,7 +340,9 @@ function Roles() {
       {pagination && (pagination.pages > 1 || pagination.total > 0) && (
         <div className={s.pagination}>
           <span className={s.paginationInfo}>
-            {pagination.total} total · Page {currentPage} of {pagination.pages}
+            {pagination.total} {t('common.total', 'total')} ·{' '}
+            {t('common.page', 'Page')} {currentPage} {t('common.of', 'of')}{' '}
+            {pagination.pages}
           </span>
           {pagination.pages > 1 && (
             <>
@@ -234,7 +352,7 @@ function Roles() {
                 disabled={currentPage === 1 || loading}
                 type='button'
               >
-                ‹ Prev
+                ‹ {t('common.prev', 'Prev')}
               </button>
               <div className={s.pageNumbers}>
                 {getPageNumbers().map((page, idx) =>
@@ -263,12 +381,44 @@ function Roles() {
                 disabled={currentPage >= pagination.pages || loading}
                 type='button'
               >
-                Next ›
+                {t('common.next', 'Next')} ›
               </button>
             </>
           )}
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={deleteModalOpen} onClose={handleDeleteModalClose}>
+        <Modal.Header onClose={handleDeleteModalClose}>
+          {t('roles.deleteTitle', 'Delete Role')}
+        </Modal.Header>
+        <Modal.Body error={deleteError}>
+          <p>
+            {t(
+              'roles.deleteConfirmation',
+              'Are you sure you want to delete the role "{{roleName}}"?',
+              { roleName: roleToDelete?.name },
+            )}
+          </p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Modal.Actions>
+            <Modal.Button onClick={handleDeleteModalClose} disabled={deleting}>
+              {t('common.cancel', 'Cancel')}
+            </Modal.Button>
+            <Modal.Button
+              variant='primary'
+              onClick={handleDeleteConfirm}
+              disabled={deleting}
+            >
+              {deleting
+                ? t('common.deleting', 'Deleting...')
+                : t('common.delete', 'Delete')}
+            </Modal.Button>
+          </Modal.Actions>
+        </Modal.Footer>
+      </Modal>
     </div>
   );
 }

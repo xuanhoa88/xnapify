@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import clsx from 'clsx';
-import { Link } from '../../contexts/history';
+import { Link } from '../../components/History';
 import s from './Footer.css';
 import { useTranslation } from 'react-i18next';
 

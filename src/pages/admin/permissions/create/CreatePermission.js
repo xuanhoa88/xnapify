@@ -7,7 +7,7 @@
 
 import { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
-import { useHistory } from '../../../../contexts/history';
+import { useHistory } from '../../../../components/History';
 import { createPermission } from '../../../../redux';
 import s from './CreatePermission.css';
 

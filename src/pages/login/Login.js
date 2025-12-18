@@ -9,8 +9,8 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
-import { useHistory, useQuery } from '../../contexts/history';
-import { useWebSocket } from '../../contexts/ws';
+import { useHistory, useQuery } from '../../components/History';
+import { useWebSocket } from '../../components/WebSocket';
 import s from './Login.css';
 
 // Demo users for quick access

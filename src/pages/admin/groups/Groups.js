@@ -8,7 +8,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
-import { useHistory } from '../../../contexts/history';
+import { useHistory } from '../../../components/History';
 import {
   fetchGroups,
   getGroups,

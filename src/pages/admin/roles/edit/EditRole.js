@@ -5,24 +5,29 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../contexts/history';
+import { useDispatch } from 'react-redux';
+import { useHistory } from '../../../../components/History';
+import { updateRole, fetchRoleById, fetchPermissions } from '../../../../redux';
 import {
-  updateRole,
-  fetchRoleById,
-  fetchPermissions,
-  getPermissions,
-  getPermissionsLoading,
-} from '../../../../redux';
+  useInfiniteScroll,
+  useDebounce,
+} from '../../../../components/InfiniteScroll';
 import s from './EditRole.css';
 
 function EditRole({ roleId }) {
   const dispatch = useDispatch();
   const history = useHistory();
-  const permissions = useSelector(getPermissions);
-  const permissionsLoading = useSelector(getPermissionsLoading);
+
+  // Permissions state for infinite loading
+  const [permissions, setPermissions] = useState([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsLoadingMore, setPermissionsLoadingMore] = useState(false);
+  const [permissionsHasMore, setPermissionsHasMore] = useState(false);
+  const [permissionsPage, setPermissionsPage] = useState(1);
+  const permissionsLimit = 20;
+  const permissionsContainerRef = useRef(null);
 
   const [role, setRole] = useState(null);
   const [formData, setFormData] = useState({
@@ -34,6 +39,69 @@ function EditRole({ roleId }) {
   const [loading, setLoading] = useState(false);
   const [fetchingRole, setFetchingRole] = useState(true);
   const [permissionSearch, setPermissionSearch] = useState('');
+
+  // Fetch permissions with pagination
+  const loadPermissions = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) {
+        setPermissionsLoading(true);
+      } else {
+        setPermissionsLoadingMore(true);
+      }
+
+      try {
+        const result = await dispatch(
+          fetchPermissions({ page, limit: permissionsLimit, search }),
+        );
+        if (result.success && result.data) {
+          const newPermissions = result.data.permissions || [];
+          const { pagination } = result.data;
+
+          if (reset) {
+            setPermissions(newPermissions);
+          } else {
+            setPermissions(prev => [...prev, ...newPermissions]);
+          }
+
+          setPermissionsHasMore(
+            pagination && pagination.page < pagination.pages,
+          );
+          setPermissionsPage(page);
+        }
+      } finally {
+        setPermissionsLoading(false);
+        setPermissionsLoadingMore(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Debounced permission search using RxJS (also handles initial load on mount)
+  useDebounce(permissionSearch, 300, debouncedSearch => {
+    loadPermissions(1, debouncedSearch, true);
+  });
+
+  // Load more permissions handler
+  const handleLoadMorePermissions = useCallback(() => {
+    if (!permissionsLoadingMore && permissionsHasMore) {
+      loadPermissions(permissionsPage + 1, permissionSearch, false);
+    }
+  }, [
+    permissionsLoadingMore,
+    permissionsHasMore,
+    permissionsPage,
+    permissionSearch,
+    loadPermissions,
+  ]);
+
+  // RxJS-based infinite scroll for permissions
+  useInfiniteScroll({
+    containerRef: permissionsContainerRef,
+    onLoadMore: handleLoadMorePermissions,
+    hasMore: permissionsHasMore,
+    loading: permissionsLoadingMore,
+    threshold: 50,
+  });
 
   // Fetch role data on mount
   useEffect(() => {
@@ -52,10 +120,6 @@ function EditRole({ roleId }) {
       loadRole();
     }
   }, [dispatch, roleId]);
-
-  useEffect(() => {
-    dispatch(fetchPermissions({ limit: 100 }));
-  }, [dispatch]);
 
   // Update form data when role is loaded
   useEffect(() => {
@@ -116,34 +180,10 @@ function EditRole({ roleId }) {
     [dispatch, formData, history, role],
   );
 
-  // Filter permissions based on search
-  const filteredPermissions = useMemo(
-    () =>
-      permissions.filter(
-        permission =>
-          permission.name
-            .toLowerCase()
-            .includes(permissionSearch.toLowerCase()) ||
-          (permission.description &&
-            permission.description
-              .toLowerCase()
-              .includes(permissionSearch.toLowerCase())) ||
-          (permission.resource &&
-            permission.resource
-              .toLowerCase()
-              .includes(permissionSearch.toLowerCase())) ||
-          (permission.action &&
-            permission.action
-              .toLowerCase()
-              .includes(permissionSearch.toLowerCase())),
-      ),
-    [permissions, permissionSearch],
-  );
-
   // Group permissions by resource for better organization
   const groupedPermissions = useMemo(() => {
     const grouped = {};
-    filteredPermissions.forEach(permission => {
+    permissions.forEach(permission => {
       const resource = permission.resource || 'Other';
       if (!grouped[resource]) {
         grouped[resource] = [];
@@ -151,7 +191,7 @@ function EditRole({ roleId }) {
       grouped[resource].push(permission);
     });
     return grouped;
-  }, [filteredPermissions]);
+  }, [permissions]);
 
   if (fetchingRole) {
     return (
@@ -254,43 +294,51 @@ function EditRole({ roleId }) {
               {permissionsLoading ? (
                 <div className={s.itemsLoading}>Loading permissions...</div>
               ) : (
-                <div className={s.permissionsContainer}>
+                <div
+                  ref={permissionsContainerRef}
+                  className={s.permissionsContainer}
+                >
                   {Object.keys(groupedPermissions).length > 0 ? (
-                    Object.entries(groupedPermissions).map(
-                      ([resource, perms]) => (
-                        <div key={resource} className={s.permissionGroup}>
-                          <h4 className={s.resourceTitle}>{resource}</h4>
-                          <div className={s.checkboxGroup}>
-                            {perms.map(permission => (
-                              <label
-                                key={permission.id}
-                                className={s.checkboxItem}
-                              >
-                                <input
-                                  type='checkbox'
-                                  name='permissions'
-                                  value={permission.id}
-                                  checked={formData.permissions.includes(
-                                    permission.id,
-                                  )}
-                                  onChange={handlePermissionChange}
-                                />
-                                <span>
-                                  <span className={s.permissionName}>
-                                    {permission.action || permission.name}
-                                  </span>
-                                  {permission.description && (
-                                    <span className={s.itemDescription}>
-                                      {permission.description}
+                    <>
+                      {Object.entries(groupedPermissions).map(
+                        ([resource, perms]) => (
+                          <div key={resource} className={s.permissionGroup}>
+                            <h4 className={s.resourceTitle}>{resource}</h4>
+                            <div className={s.checkboxGroup}>
+                              {perms.map(permission => (
+                                <label
+                                  key={permission.id}
+                                  className={s.checkboxItem}
+                                >
+                                  <input
+                                    type='checkbox'
+                                    name='permissions'
+                                    value={permission.id}
+                                    checked={formData.permissions.includes(
+                                      permission.id,
+                                    )}
+                                    onChange={handlePermissionChange}
+                                  />
+                                  <span>
+                                    <span className={s.permissionName}>
+                                      {permission.action || permission.name}
                                     </span>
-                                  )}
-                                </span>
-                              </label>
-                            ))}
+                                    {permission.description && (
+                                      <span className={s.itemDescription}>
+                                        {permission.description}
+                                      </span>
+                                    )}
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      ),
-                    )
+                        ),
+                      )}
+                      {permissionsLoadingMore && (
+                        <div className={s.loadingMore}>Loading more...</div>
+                      )}
+                    </>
                   ) : (
                     <div className={s.noItemsFound}>No permissions found</div>
                   )}

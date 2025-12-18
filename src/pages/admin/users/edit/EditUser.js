@@ -5,31 +5,44 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../contexts/history';
+import { useDispatch } from 'react-redux';
+import { useHistory } from '../../../../components/History';
 import {
   updateUser,
   fetchUserById,
   fetchRoles,
-  getRoles,
-  getRolesLoading,
   fetchGroups,
-  getGroups,
-  getGroupsLoading,
   generatePassword,
 } from '../../../../redux';
+import {
+  useInfiniteScroll,
+  useDebounce,
+} from '../../../../components/InfiniteScroll';
 import s from './EditUser.css';
 
 function EditUser({ userId }) {
   const dispatch = useDispatch();
   const history = useHistory();
 
-  const roles = useSelector(getRoles);
-  const rolesLoading = useSelector(getRolesLoading);
-  const groups = useSelector(getGroups);
-  const groupsLoading = useSelector(getGroupsLoading);
+  // Roles state for infinite loading
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
+  const [rolesHasMore, setRolesHasMore] = useState(false);
+  const [rolesPage, setRolesPage] = useState(1);
+  const rolesLimit = 10;
+  const rolesContainerRef = useRef(null);
+
+  // Groups state for infinite loading
+  const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
+  const [groupsHasMore, setGroupsHasMore] = useState(false);
+  const [groupsPage, setGroupsPage] = useState(1);
+  const groupsLimit = 10;
+  const groupsContainerRef = useRef(null);
 
   const [formData, setFormData] = useState({
     display_name: '',
@@ -49,6 +62,116 @@ function EditUser({ userId }) {
   const [showPassword, setShowPassword] = useState(false);
   const [generatingPassword, setGeneratingPassword] = useState(false);
 
+  // Fetch roles with pagination
+  const loadRoles = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) {
+        setRolesLoading(true);
+      } else {
+        setRolesLoadingMore(true);
+      }
+
+      try {
+        const result = await dispatch(
+          fetchRoles({ page, limit: rolesLimit, search }),
+        );
+        if (result.success && result.data) {
+          const newRoles = result.data.roles || [];
+          const { pagination } = result.data;
+
+          if (reset) {
+            setRoles(newRoles);
+          } else {
+            setRoles(prev => [...prev, ...newRoles]);
+          }
+
+          setRolesHasMore(pagination && pagination.page < pagination.pages);
+          setRolesPage(page);
+        }
+      } finally {
+        setRolesLoading(false);
+        setRolesLoadingMore(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Debounced role search using RxJS (also handles initial load on mount)
+  useDebounce(roleSearch, 300, debouncedSearch => {
+    loadRoles(1, debouncedSearch, true);
+  });
+
+  // Load more roles handler
+  const handleLoadMoreRoles = useCallback(() => {
+    if (!rolesLoadingMore && rolesHasMore) {
+      loadRoles(rolesPage + 1, roleSearch, false);
+    }
+  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
+
+  // RxJS-based infinite scroll for roles
+  useInfiniteScroll({
+    containerRef: rolesContainerRef,
+    onLoadMore: handleLoadMoreRoles,
+    hasMore: rolesHasMore,
+    loading: rolesLoadingMore,
+    threshold: 50,
+  });
+
+  // Fetch groups with pagination
+  const loadGroups = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) {
+        setGroupsLoading(true);
+      } else {
+        setGroupsLoadingMore(true);
+      }
+
+      try {
+        const result = await dispatch(
+          fetchGroups({ page, limit: groupsLimit, search }),
+        );
+        if (result.success && result.data) {
+          const newGroups = result.data.groups || [];
+          const { pagination } = result.data;
+
+          if (reset) {
+            setGroups(newGroups);
+          } else {
+            setGroups(prev => [...prev, ...newGroups]);
+          }
+
+          setGroupsHasMore(pagination && pagination.page < pagination.pages);
+          setGroupsPage(page);
+        }
+      } finally {
+        setGroupsLoading(false);
+        setGroupsLoadingMore(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Debounced group search using RxJS (also handles initial load on mount)
+  useDebounce(groupSearch, 300, debouncedSearch => {
+    loadGroups(1, debouncedSearch, true);
+  });
+
+  // Load more groups handler
+  const handleLoadMoreGroups = useCallback(() => {
+    if (!groupsLoadingMore && groupsHasMore) {
+      loadGroups(groupsPage + 1, groupSearch, false);
+    }
+  }, [groupsLoadingMore, groupsHasMore, groupsPage, groupSearch, loadGroups]);
+
+  // RxJS-based infinite scroll for groups
+  useInfiniteScroll({
+    containerRef: groupsContainerRef,
+    onLoadMore: handleLoadMoreGroups,
+    hasMore: groupsHasMore,
+    loading: groupsLoadingMore,
+    threshold: 50,
+  });
+
   // Fetch user data on mount
   useEffect(() => {
     async function loadUser() {
@@ -67,15 +190,9 @@ function EditUser({ userId }) {
     }
   }, [dispatch, userId]);
 
-  useEffect(() => {
-    dispatch(fetchRoles());
-    dispatch(fetchGroups());
-  }, [dispatch]);
-
   // Update form data when user is loaded
   useEffect(() => {
     if (user) {
-      console.log(user);
       setFormData({
         display_name: user.display_name || '',
         first_name: user.first_name || '',
@@ -169,33 +286,6 @@ function EditUser({ userId }) {
     },
     [formData, newPassword, dispatch, user, history],
   );
-
-  // Filter roles based on search
-  const filteredRoles = useMemo(
-    () =>
-      roles.filter(
-        role =>
-          role.name.toLowerCase().includes(roleSearch.toLowerCase()) ||
-          (role.description &&
-            role.description.toLowerCase().includes(roleSearch.toLowerCase())),
-      ),
-    [roles, roleSearch],
-  );
-
-  // Filter groups based on search
-  const filteredGroups = useMemo(
-    () =>
-      groups.filter(
-        group =>
-          group.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
-          (group.description &&
-            group.description
-              .toLowerCase()
-              .includes(groupSearch.toLowerCase())),
-      ),
-    [groups, groupSearch],
-  );
-
   if (fetchingUser) {
     return (
       <div className={s.root}>
@@ -359,27 +449,32 @@ function EditUser({ userId }) {
               {rolesLoading ? (
                 <div className={s.itemsLoading}>Loading roles...</div>
               ) : (
-                <div className={s.checkboxGroup}>
-                  {filteredRoles.length > 0 ? (
-                    filteredRoles.map(role => (
-                      <label key={role.name} className={s.checkboxItem}>
-                        <input
-                          type='checkbox'
-                          name='roles'
-                          value={role.name}
-                          checked={formData.roles.includes(role.name)}
-                          onChange={handleRoleChange}
-                        />
-                        <span>
-                          {role.name}
-                          {role.description && (
-                            <span className={s.itemDescription}>
-                              {role.description}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    ))
+                <div ref={rolesContainerRef} className={s.checkboxGroup}>
+                  {roles.length > 0 ? (
+                    <>
+                      {roles.map(role => (
+                        <label key={role.name} className={s.checkboxItem}>
+                          <input
+                            type='checkbox'
+                            name='roles'
+                            value={role.name}
+                            checked={formData.roles.includes(role.name)}
+                            onChange={handleRoleChange}
+                          />
+                          <span>
+                            {role.name}
+                            {role.description && (
+                              <span className={s.itemDescription}>
+                                {role.description}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                      {rolesLoadingMore && (
+                        <div className={s.loadingMore}>Loading more...</div>
+                      )}
+                    </>
                   ) : (
                     <div className={s.noItemsFound}>No roles found</div>
                   )}
@@ -401,27 +496,32 @@ function EditUser({ userId }) {
               {groupsLoading ? (
                 <div className={s.itemsLoading}>Loading groups...</div>
               ) : (
-                <div className={s.checkboxGroup}>
-                  {filteredGroups.length > 0 ? (
-                    filteredGroups.map(group => (
-                      <label key={group.id} className={s.checkboxItem}>
-                        <input
-                          type='checkbox'
-                          name='groups'
-                          value={group.id}
-                          checked={formData.groups.includes(group.id)}
-                          onChange={handleGroupChange}
-                        />
-                        <span>
-                          {group.name}
-                          {group.description && (
-                            <span className={s.itemDescription}>
-                              {group.description}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    ))
+                <div ref={groupsContainerRef} className={s.checkboxGroup}>
+                  {groups.length > 0 ? (
+                    <>
+                      {groups.map(group => (
+                        <label key={group.id} className={s.checkboxItem}>
+                          <input
+                            type='checkbox'
+                            name='groups'
+                            value={group.id}
+                            checked={formData.groups.includes(group.id)}
+                            onChange={handleGroupChange}
+                          />
+                          <span>
+                            {group.name}
+                            {group.description && (
+                              <span className={s.itemDescription}>
+                                {group.description}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      ))}
+                      {groupsLoadingMore && (
+                        <div className={s.loadingMore}>Loading more...</div>
+                      )}
+                    </>
                   ) : (
                     <div className={s.noItemsFound}>No groups found</div>
                   )}

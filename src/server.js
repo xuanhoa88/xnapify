@@ -28,10 +28,10 @@ import {
   setRuntimeVariable,
   getI18nInstance,
 } from './redux';
-import { createFetch } from './fetch';
+import { createFetch } from './shared/fetch';
 import App from './components/App';
 import Html from './components/Html';
-import { createWebSocketServer } from './ws/server';
+import { createWebSocketServer } from './shared/ws/server';
 import { configureJwt } from './jwt';
 
 // =============================================================================

@@ -21,14 +21,13 @@ import {
   clearPermissions,
   getUserPermissions,
   getUserPermissionsLoading,
-  fetchRoles,
 } from '../../../../redux';
 
 /**
  * UserPermissionsModal - Self-contained modal for viewing user permissions
  *
  * Displays all permissions inherited from the user's assigned roles and groups.
- * Uses local state for roles to avoid conflicts with the Roles admin page.
+ * Uses the dedicated /api/admin/users/:id/permissions endpoint.
  *
  * Usage:
  *   const permissionsModalRef = useRef();
@@ -40,29 +39,9 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   const permissions = useSelector(getUserPermissions);
   const loading = useSelector(getUserPermissionsLoading);
 
-  // Local state for roles (independent from Redux to avoid conflicts)
-  const [localRoles, setLocalRoles] = useState([]);
-  const [rolesLoaded, setRolesLoaded] = useState(false);
-
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [user, setUser] = useState(null);
-
-  // Fetch roles into local state when modal opens
-  useEffect(() => {
-    if (isOpen && !rolesLoaded) {
-      const loadRoles = async () => {
-        const result = await dispatch(fetchRoles({ limit: 1000 }));
-        if (result.success && result.data) {
-          if (Array.isArray(result.data.roles)) {
-            setLocalRoles(result.data.roles);
-          }
-        }
-        setRolesLoaded(true);
-      };
-      loadRoles();
-    }
-  }, [dispatch, isOpen, rolesLoaded]);
 
   // Fetch permissions when user changes
   useEffect(() => {
@@ -76,44 +55,26 @@ const UserPermissionsModal = forwardRef((props, ref) => {
     };
   }, [dispatch, isOpen, user]);
 
-  // Calculate role details from user's roles
+  // Calculate role details from user's roles (already available in user object)
   const roleDetails = useMemo(() => {
     if (!user || !user.roles) {
       return [];
     }
 
-    const details = [];
     const userRoles = Array.isArray(user.roles) ? user.roles : [];
 
-    userRoles.forEach(userRole => {
-      const roleName = typeof userRole === 'string' ? userRole : userRole.name;
-      // Find full role data with permissions from local state
-      const fullRole = localRoles.find(
-        r => r.name === roleName || r.id === userRole.id,
-      );
-
-      if (fullRole && fullRole.permissions) {
-        details.push({
-          name: fullRole.name,
-          permissions: fullRole.permissions.map(p => p.name || p),
-        });
-      } else {
-        details.push({
-          name: roleName || 'Unknown',
-          permissions: [],
-        });
-      }
-    });
-
-    return details;
-  }, [user, localRoles]);
+    return userRoles.map(role => ({
+      id: role.id,
+      name: typeof role === 'string' ? role : role.name,
+      // Use permissions count from role object if available
+      permissionCount: role.permissions ? role.permissions.length : 0,
+    }));
+  }, [user]);
 
   // Reset state helper
   const resetState = useCallback(() => {
     setIsOpen(false);
     setUser(null);
-    setLocalRoles([]);
-    setRolesLoaded(false);
     dispatch(clearPermissions());
   }, [dispatch]);
 
@@ -145,7 +106,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
           and groups.
         </Modal.Description>
 
-        {loading || !rolesLoaded ? (
+        {loading ? (
           <p>Loading permissions...</p>
         ) : (
           <>
@@ -155,12 +116,14 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                 <h4 className={s.sectionTitle}>Assigned Roles</h4>
                 <div className={s.rolesList}>
                   {roleDetails.map(role => (
-                    <div key={role.name} className={s.roleItem}>
+                    <div key={role.id || role.name} className={s.roleItem}>
                       <span className={s.roleName}>{role.name}</span>
-                      <span className={s.rolePermCount}>
-                        {role.permissions.length} permission
-                        {role.permissions.length !== 1 ? 's' : ''}
-                      </span>
+                      {role.permissionCount > 0 && (
+                        <span className={s.rolePermCount}>
+                          {role.permissionCount} permission
+                          {role.permissionCount !== 1 ? 's' : ''}
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>

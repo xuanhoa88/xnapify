@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
-import { useHistory } from '../../../../contexts/history';
+import { useHistory } from '../../../../components/History';
 import { fetchGroupMembers } from '../../../../redux';
 import s from './GroupMembers.css';
 

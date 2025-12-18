@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
-import { useHistory } from '../../../../contexts/history';
+import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
 import s from './EditPermission.css';
 

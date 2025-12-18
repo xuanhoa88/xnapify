@@ -282,6 +282,64 @@ export async function removeGroupFromUser(req, res) {
 // ========================================================================
 
 /**
+ * Get group's effective permissions
+ *
+ * @route   GET /api/admin/groups/:id/permissions
+ * @access  Admin (requires 'groups:read' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getGroupPermissions(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Get group permissions
+    const result = await rbacService.getGroupPermissions(id, models);
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    if (error.name === 'GroupNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+
+    return http.sendServerError(res, 'Failed to get group permissions');
+  }
+}
+
+/**
+ * Get group's roles
+ *
+ * @route   GET /api/admin/groups/:id/roles
+ * @access  Admin (requires 'groups:read' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getGroupRoles(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Get group roles
+    const result = await rbacService.getGroupRoles(id, models);
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    if (error.name === 'GroupNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+
+    return http.sendServerError(res, 'Failed to get group roles');
+  }
+}
+
+/**
  * Assign roles to a group
  *
  * @route   PUT /api/admin/groups/:id/roles

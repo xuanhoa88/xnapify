@@ -10,19 +10,18 @@ import {
   useCallback,
   useImperativeHandle,
   forwardRef,
-  useMemo,
   useEffect,
 } from 'react';
 import { useDispatch } from 'react-redux';
 import { Modal } from '../../../../components/Modal';
-import { fetchRoles } from '../../../../redux';
+import { fetchGroupPermissions } from '../../../../redux';
 import s from './GroupPermissionsModal.css';
 
 /**
  * GroupPermissionsModal - Self-contained modal for viewing group permissions
  *
  * Displays all permissions inherited from the group's assigned roles.
- * Uses local state for roles to avoid conflicts with the Roles admin page.
+ * Uses the dedicated /api/admin/groups/:id/permissions endpoint.
  *
  * Usage:
  *   const permissionsModalRef = useRef();
@@ -32,82 +31,38 @@ import s from './GroupPermissionsModal.css';
 const GroupPermissionsModal = forwardRef((props, ref) => {
   const dispatch = useDispatch();
 
-  // Local state for roles (independent from Redux to avoid conflicts)
-  const [localRoles, setLocalRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(false);
+  // Loading and data state
+  const [loading, setLoading] = useState(false);
+  const [permissions, setPermissions] = useState([]);
+  const [roleDetails, setRoleDetails] = useState([]);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [group, setGroup] = useState(null);
 
-  // Fetch roles into local state when modal opens
+  // Fetch permissions when modal opens
   useEffect(() => {
-    if (isOpen && localRoles.length === 0 && !rolesLoading) {
-      const loadRoles = async () => {
-        setRolesLoading(true);
-        const result = await dispatch(fetchRoles({ limit: 1000 }));
-        if (result.success && result.data) {
-          if (Array.isArray(result.data.roles)) {
-            setLocalRoles(result.data.roles);
-          }
+    if (isOpen && group) {
+      const loadPermissions = async () => {
+        setLoading(true);
+        const result = await dispatch(fetchGroupPermissions(group.id));
+        if (result.success) {
+          setPermissions(result.permissions);
+          setRoleDetails(result.roleDetails);
         }
-        setRolesLoading(false);
+        setLoading(false);
       };
-      loadRoles();
+      loadPermissions();
     }
-  }, [dispatch, isOpen, localRoles.length, rolesLoading]);
-
-  // Calculate permissions from group's roles
-  const { permissions, roleDetails } = useMemo(() => {
-    if (!group || !group.roles) {
-      return { permissions: [], roleDetails: [] };
-    }
-
-    const permSet = new Set();
-    const details = [];
-
-    // Get permissions from each role
-    group.roles.forEach(groupRole => {
-      // Find full role data with permissions from local state
-      const fullRole = localRoles.find(
-        r => r.id === groupRole.id || r.name === groupRole.name,
-      );
-
-      if (fullRole && fullRole.permissions) {
-        const rolePerms = fullRole.permissions.map(p => p.name || p);
-        rolePerms.forEach(p => permSet.add(p));
-        details.push({
-          name: fullRole.name,
-          permissions: rolePerms,
-        });
-      } else if (groupRole.permissions) {
-        // Fallback if role already has permissions attached
-        const rolePerms = groupRole.permissions.map(p => p.name || p);
-        rolePerms.forEach(p => permSet.add(p));
-        details.push({
-          name: groupRole.name,
-          permissions: rolePerms,
-        });
-      } else {
-        details.push({
-          name: groupRole.name || groupRole,
-          permissions: [],
-        });
-      }
-    });
-
-    return {
-      permissions: Array.from(permSet).sort(),
-      roleDetails: details,
-    };
-  }, [group, localRoles]);
+  }, [dispatch, isOpen, group]);
 
   // Reset state helper
   const resetState = useCallback(() => {
     setIsOpen(false);
     setGroup(null);
-    setLocalRoles([]);
-    setRolesLoading(false);
+    setPermissions([]);
+    setRoleDetails([]);
+    setLoading(false);
   }, []);
 
   // Expose methods via ref
@@ -137,7 +92,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
           These permissions are inherited from the group&apos;s assigned roles.
         </Modal.Description>
 
-        {rolesLoading ? (
+        {loading ? (
           <p>Loading permissions...</p>
         ) : (
           <>
@@ -147,7 +102,7 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
                 <h4 className={s.sectionTitle}>Assigned Roles</h4>
                 <div className={s.rolesList}>
                   {roleDetails.map(role => (
-                    <div key={role.name} className={s.roleItem}>
+                    <div key={role.id || role.name} className={s.roleItem}>
                       <span className={s.roleName}>{role.name}</span>
                       <span className={s.rolePermCount}>
                         {role.permissions.length} permission

@@ -6,7 +6,7 @@
  */
 
 import { getRuntimeVariable, setAdminPanel, setPageHeader } from '../redux';
-import IsomorphicRouter from '../router';
+import IsomorphicRouter from '../shared/router';
 
 /**
  * Automatically discover and load all routes from page folders.

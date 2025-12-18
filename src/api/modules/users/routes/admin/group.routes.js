@@ -61,6 +61,17 @@ export default function groupRoutes(deps, userMiddlewares) {
   );
 
   /**
+   * @route   GET /:id/roles
+   * @desc    Get group's roles
+   * @access  Admin (requires 'groups:read' permission)
+   */
+  router.get(
+    '/:id/roles',
+    requirePermission('groups:read'),
+    rbacController.getGroupRoles,
+  );
+
+  /**
    * @route   PUT /:id/roles
    * @desc    Assign roles to group
    * @access  Admin (requires 'groups:write' permission)
@@ -92,6 +103,17 @@ export default function groupRoutes(deps, userMiddlewares) {
     '/:id/roles/:role_id',
     requirePermission('groups:write'),
     rbacController.removeRoleFromGroup,
+  );
+
+  /**
+   * @route   GET /:id/permissions
+   * @desc    Get group's effective permissions (from all assigned roles)
+   * @access  Admin (requires 'groups:read' permission)
+   */
+  router.get(
+    '/:id/permissions',
+    requirePermission('groups:read'),
+    rbacController.getGroupPermissions,
   );
 
   /**

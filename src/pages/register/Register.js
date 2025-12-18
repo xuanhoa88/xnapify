@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
-import { useHistory, useQuery } from '../../contexts/history';
+import { useHistory, useQuery } from '../../components/History';
 import s from './Register.css';
 
 function Register() {

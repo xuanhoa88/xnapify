@@ -18,7 +18,7 @@ import {
   fetchGroups,
   fetchRoles,
 } from '../../../redux';
-import { useHistory } from '../../../contexts/history';
+import { useHistory } from '../../../components/History';
 import {
   SearchableSelect,
   useSearchableSelect,

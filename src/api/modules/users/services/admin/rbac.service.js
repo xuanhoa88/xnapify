@@ -569,6 +569,113 @@ export async function getUserRBACProfile(user_id, models) {
   };
 }
 
+/**
+ * Get group's effective permissions (from roles)
+ *
+ * @param {string} group_id - Group ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Object containing permissions and roleDetails
+ */
+export async function getGroupPermissions(group_id, models) {
+  const { Group, Role, Permission } = models;
+
+  const group = await Group.findByPk(group_id, {
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  const permissions = new Set();
+  const roleDetails = [];
+
+  // Get permissions from each role
+  group.roles.forEach(role => {
+    const rolePerms = role.permissions.map(p => p.name);
+    rolePerms.forEach(p => permissions.add(p));
+    roleDetails.push({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      permissions: rolePerms,
+    });
+  });
+
+  return {
+    permissions: Array.from(permissions).sort(),
+    roleDetails,
+  };
+}
+
+/**
+ * Get group's roles with permissions
+ *
+ * @param {string} group_id - Group ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Group with roles
+ */
+export async function getGroupRoles(group_id, models) {
+  const { Group, Role, Permission } = models;
+
+  const group = await Group.findByPk(group_id, {
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            through: { attributes: [] },
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!group) {
+    const error = new Error('Group not found');
+    error.name = 'GroupNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  return {
+    group: {
+      id: group.id,
+      name: group.name,
+      description: group.description,
+    },
+    roles: group.roles.map(role => ({
+      id: role.id,
+      name: role.name,
+      description: role.description,
+      permissions: role.permissions.map(p => ({
+        id: p.id,
+        name: p.name,
+      })),
+    })),
+  };
+}
+
 // ========================================================================
 // GROUP-ROLE ASSIGNMENT SERVICES
 // ========================================================================

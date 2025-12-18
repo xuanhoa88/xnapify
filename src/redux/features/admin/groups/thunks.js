@@ -256,3 +256,60 @@ export function assignRolesToGroup(groupId, roleNames) {
     }
   };
 }
+
+/**
+ * Fetch group permissions
+ *
+ * Gets all effective permissions for a group from its assigned roles.
+ *
+ * @param {string} groupId - Group ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchGroupPermissions(groupId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/groups/${groupId}/permissions`);
+
+      return {
+        success: true,
+        permissions: data.permissions || [],
+        roleDetails: data.roleDetails || [],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        permissions: [],
+        roleDetails: [],
+        error: error.message,
+      };
+    }
+  };
+}
+
+/**
+ * Fetch group's roles
+ *
+ * Gets all roles assigned to a group with their permissions.
+ *
+ * @param {string} groupId - Group ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchGroupRoles(groupId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/groups/${groupId}/roles`);
+
+      return {
+        success: true,
+        group: data.group,
+        roles: data.roles || [],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        roles: [],
+        error: error.message,
+      };
+    }
+  };
+}

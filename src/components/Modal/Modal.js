@@ -159,11 +159,12 @@ const Modal = ({ isOpen, onClose, children }) => {
 
   return (
     <div className={s.modalOverlay} onClick={onClose} role='presentation'>
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
         className={s.modal}
         role='dialog'
         aria-modal='true'
+        onClick={e => e.stopPropagation()}
         onMouseDown={e => e.stopPropagation()}
       >
         {children}

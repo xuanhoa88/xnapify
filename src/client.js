@@ -9,8 +9,8 @@ import 'whatwg-fetch';
 import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
 import App from './components/App';
-import { WebSocketProvider } from './contexts/ws';
-import { createFetch } from './fetch';
+import { WebSocketProvider } from './components/WebSocket';
+import { createFetch } from './shared/fetch';
 import {
   DEFAULT_LOCALE,
   configureStore,
@@ -19,7 +19,11 @@ import {
   logout,
   isAuthenticated,
 } from './redux';
-import { createWebSocketClient, EventType, MessageType } from './ws/client';
+import {
+  createWebSocketClient,
+  EventType,
+  MessageType,
+} from './shared/ws/client';
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION

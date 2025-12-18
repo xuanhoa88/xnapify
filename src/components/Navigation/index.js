@@ -9,7 +9,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { Link, useHistory } from '../../contexts/history';
+import { Link, useHistory } from '../../components/History';
 import {
   isAuthenticated,
   isAdmin,
@@ -17,7 +17,7 @@ import {
   logout,
 } from '../../redux';
 import s from './Navigation.css';
-import { useWebSocket } from '../../contexts/ws';
+import { useWebSocket } from '../../components/WebSocket';
 
 function Navigation() {
   const { t } = useTranslation();

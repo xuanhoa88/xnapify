@@ -340,3 +340,29 @@ export function clearPermissions() {
     dispatch(clearUserPermissions());
   };
 }
+
+/**
+ * Fetch user's roles
+ *
+ * @param {string} userId - User ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchUserRoles(userId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/roles`);
+
+      return {
+        success: true,
+        user: data.user,
+        roles: data.roles || [],
+      };
+    } catch (error) {
+      return {
+        success: false,
+        roles: [],
+        error: error.message,
+      };
+    }
+  };
+}

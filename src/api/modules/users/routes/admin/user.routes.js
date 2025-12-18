@@ -109,6 +109,18 @@ export default function userRoutes(deps, userMiddlewares) {
   // ========================================================================
 
   /**
+   * @route   GET /:id/roles
+   * @desc    Get user's roles
+   * @access  Admin (requires 'users:read' permission) or Self
+   * @param   {string} id - User ID
+   */
+  router.get(
+    '/:id/roles',
+    requireAnyPermission(['users:read', 'users:manage']),
+    rbacController.getUserRoles,
+  );
+
+  /**
    * @route   PUT /:id/roles
    * @desc    Assign roles to a user
    * @access  Admin (requires 'users:manage' permission)
