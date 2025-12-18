@@ -17,10 +17,29 @@ const route = {
 
 /**
  * Route action
+ * Supports locale-specific content
  */
-async function action() {
-  // Load markdown file (only English version exists)
-  const data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
+async function action({ locale }) {
+  // Load locale-specific markdown file using static imports to avoid webpack warnings
+  let data;
+
+  // Use static imports with switch statement instead of dynamic template literals
+  switch (locale) {
+    case 'vi-VN':
+      try {
+        data = await import(
+          /* webpackChunkName: "privacy" */ './privacy.vi-VN.md'
+        );
+      } catch (e) {
+        // Fallback to default if locale file doesn't exist
+        data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
+      }
+      break;
+    default:
+      // Default to English or base markdown file
+      data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
+      break;
+  }
 
   return {
     title: data.attributes.title,

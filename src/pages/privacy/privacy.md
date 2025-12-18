@@ -2,44 +2,80 @@
 title: Privacy Policy
 ---
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aenean consequat tortor
-fermentum mi fermentum dignissim. Nullam vel ipsum ut ligula elementum lobortis.
-Maecenas aliquam, massa laoreet lacinia pretium, nisi urna venenatis tortor, nec
-imperdiet tellus libero efficitur metus. Fusce semper posuere ligula, et
-facilisis metus bibendum interdum. Mauris at mauris sit amet sem pharetra
-commodo a eu leo. Nam at est non risus cursus maximus. Nam feugiat augue libero,
-id consectetur tortor bibendum non. Quisque nec fringilla lorem. Nullam
-efficitur vulputate mauris, nec maximus leo dignissim id.
+This Privacy Policy describes how React Starter Kit ("we", "us", or "our") handles information
+when you use our application.
 
-In hac habitasse platea dictumst. Duis sagittis dui ac ex suscipit maximus.
-Morbi pellentesque venenatis felis sed convallis. Nulla varius, nibh vitae
-placerat tempus, mauris sem elementum ipsum, eget sollicitudin nisl est vel
-purus. Fusce malesuada odio velit, non cursus leo fermentum id. Cras pharetra
-sodales fringilla. Etiam quis est a dolor egestas pellentesque. Maecenas non
-scelerisque purus, congue cursus arcu. Donec vel dapibus mi. Mauris maximus
-posuere placerat. Sed et libero eu nibh tristique mollis a eget lectus. Donec
-interdum augue sollicitudin vehicula hendrerit. Vivamus justo orci, molestie ac
-sollicitudin ac, lobortis at tellus. Etiam rhoncus ullamcorper risus eu tempor.
-Sed porttitor, neque ac efficitur gravida, arcu lacus pharetra dui, in consequat
-elit tellus auctor nulla. Donec placerat elementum diam, vitae imperdiet lectus
-luctus at.
+## Information We Collect
 
-Nullam eu feugiat mi. Quisque nec tristique nisl, dignissim dictum leo. Nam non
-quam nisi. Donec rutrum turpis ac diam blandit, id pulvinar mauris suscipit.
-Pellentesque tincidunt libero ultricies risus iaculis, sit amet consequat velit
-blandit. Fusce quis varius nulla. Nullam nisi nisi, suscipit ut magna quis,
-feugiat porta nibh. Sed id enim lectus. Suspendisse elementum justo sapien, sit
-amet consequat orci accumsan et. Aliquam ornare ullamcorper sem sed finibus.
-Nullam ac lacus pulvinar, egestas felis ut, accumsan est.
+### Account Information
 
-Pellentesque sagittis vehicula sem quis luctus. Proin sodales magna in lorem
-hendrerit aliquam. Integer eu varius orci. Vestibulum ante ipsum primis in
-faucibus orci luctus et ultrices posuere cubilia Curae; Vestibulum ante ipsum
-primis in faucibus orci luctus et ultrices posuere cubilia Curae; Ut at mauris
-nibh. Suspendisse maximus ac eros at vestibulum.
+When you create an account, we collect:
 
-Interdum et malesuada fames ac ante ipsum primis in faucibus. Quisque egestas
-tortor et dui consequat faucibus. Nunc vitae odio ornare, venenatis ligula a,
-vulputate nisl. Aenean congue varius ex, sit amet bibendum odio posuere at.
-Nulla facilisi. In finibus, nulla vitae tincidunt ornare, sapien nulla fermentum
-mauris, sed consectetur tortor arcu eget arcu. Vestibulum vel quam enim.
+- Email address
+- Username
+- Password (stored securely using bcrypt hashing)
+
+### Authentication Data
+
+We use JSON Web Tokens (JWT) for authentication, which includes:
+
+- Access tokens (short-lived, stored in memory)
+- Refresh tokens (stored in HTTP-only cookies)
+
+### Usage Data
+
+We may collect information about how you use the application, including:
+
+- Pages visited
+- Features used
+- Browser type and version
+- Device information
+
+## How We Use Your Information
+
+We use the information we collect to:
+
+- Provide and maintain the application
+- Authenticate your identity
+- Improve our services
+- Communicate with you about updates or issues
+
+## Data Security
+
+We implement appropriate security measures to protect your personal information:
+
+- Passwords are hashed using bcrypt
+- JWT tokens are used for secure authentication
+- HTTP-only cookies prevent XSS attacks on refresh tokens
+- Role-based access control (RBAC) restricts unauthorized access
+
+## Cookies
+
+We use cookies for:
+
+- **Authentication**: Storing refresh tokens securely
+- **Language Preference**: Remembering your preferred language
+
+## Your Rights
+
+You have the right to:
+
+- Access your personal data
+- Update your account information
+- Delete your account
+- Request a copy of your data
+
+## Third-Party Services
+
+This application may integrate with third-party services. Please review their privacy policies
+for information about how they handle your data.
+
+## Changes to This Policy
+
+We may update this Privacy Policy from time to time. We will notify you of any changes by
+posting the new Privacy Policy on this page and updating the "Last updated" date.
+
+## Contact Us
+
+If you have any questions about this Privacy Policy, please contact us through the
+application's support channels.

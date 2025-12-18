@@ -51,6 +51,10 @@ function Groups() {
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Search state
+  const [search, setSearch] = useState('');
+  const [inputValue, setInputValue] = useState('');
+
   // Filter state
   const [roleFilter, setRoleFilter] = useState('');
 
@@ -62,6 +66,9 @@ function Groups() {
 
   // Ref for DeleteGroupModal
   const deleteModalRef = useRef();
+
+  // Debounce timer ref
+  const debounceTimer = useRef(null);
 
   // State for managing which dropdown is open
   const [activeDropdownId, setActiveDropdownId] = useState(null);
@@ -83,15 +90,16 @@ function Groups() {
   });
 
   useEffect(() => {
-    // Fetch groups on component mount or page/filter change
+    // Fetch groups on component mount or page/filter/search change
     dispatch(
       fetchGroups({
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         role: roleFilter,
+        search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter]);
+  }, [dispatch, currentPage, roleFilter, search]);
 
   // Refresh groups list callback
   const refreshGroups = useCallback(() => {
@@ -100,9 +108,10 @@ function Groups() {
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         role: roleFilter,
+        search,
       }),
     );
-  }, [dispatch, currentPage, roleFilter]);
+  }, [dispatch, currentPage, roleFilter, search]);
 
   const handleAddGroup = useCallback(() => {
     history.push('/admin/groups/create');
@@ -141,17 +150,59 @@ function Groups() {
     setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
 
+  // Search handlers
+  const handleSearchChange = useCallback(e => {
+    const { value } = e.target;
+    setInputValue(value);
+
+    // Debounced search - auto-search after 500ms
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    debounceTimer.current = setTimeout(() => {
+      setSearch(value);
+      setCurrentPage(1);
+    }, 500);
+  }, []);
+
+  const handleSearchSubmit = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setSearch(inputValue);
+    setCurrentPage(1);
+  }, [inputValue]);
+
+  const handleClearSearch = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setInputValue('');
+    setSearch('');
+    setCurrentPage(1);
+  }, []);
+
+  const handleKeyDown = useCallback(
+    e => e.key === 'Enter' && handleSearchSubmit(),
+    [handleSearchSubmit],
+  );
+
   const handleRoleFilterChange = useCallback(value => {
     setRoleFilter(value);
     setCurrentPage(1);
   }, []);
 
   const handleClearFilters = useCallback(() => {
+    if (debounceTimer.current) {
+      clearTimeout(debounceTimer.current);
+    }
+    setInputValue('');
+    setSearch('');
     setRoleFilter('');
     setCurrentPage(1);
   }, []);
 
-  const hasActiveFilters = Boolean(roleFilter);
+  const hasActiveFilters = Boolean(search || roleFilter);
 
   // Pagination handlers
   const handlePrevPage = useCallback(() => {
@@ -249,6 +300,27 @@ function Groups() {
 
       {/* Filters */}
       <div className={s.filters}>
+        <div className={s.searchWrapper}>
+          <span className={s.searchIcon}>🔍</span>
+          <input
+            type='text'
+            placeholder='Search groups...'
+            className={s.searchInput}
+            value={inputValue}
+            onChange={handleSearchChange}
+            onKeyDown={handleKeyDown}
+          />
+          {inputValue && (
+            <button
+              className={s.searchClear}
+              onClick={handleClearSearch}
+              type='button'
+              title='Clear search'
+            >
+              ✕
+            </button>
+          )}
+        </div>
         <div className={s.filterItem}>
           <SearchableSelect
             options={roleOptions}

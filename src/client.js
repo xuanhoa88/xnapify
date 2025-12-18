@@ -338,6 +338,12 @@ async function handleRouteChange(location, action) {
       new URLSearchParams(history.location.search),
     );
 
+    // Sync locale from Redux state to context
+    // This ensures locale changes are reflected in route actions (e.g., loading locale-specific content)
+    const currentState = store.getState();
+    context.locale =
+      (currentState.intl && currentState.intl.locale) || context.locale;
+
     const router = await getRouter();
     const route = await router.resolve(context);
     if (!route) {
