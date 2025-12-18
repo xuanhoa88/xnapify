@@ -161,3 +161,57 @@ export function updateRole(roleId, roleData) {
     }
   };
 }
+
+/**
+ * Fetch users assigned to a role
+ *
+ * @param {string} roleId - Role ID
+ * @param {Object} options - Pagination options
+ * @returns {Function} Redux thunk action
+ */
+export function fetchRoleUsers(roleId, options = {}) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { page = 1, limit = 10 } = options;
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+
+      const { data } = await fetch(
+        `/api/admin/roles/${roleId}/users?${params.toString()}`,
+      );
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Fetch groups assigned to a role
+ *
+ * @param {string} roleId - Role ID
+ * @param {Object} options - Pagination options
+ * @returns {Function} Redux thunk action
+ */
+export function fetchRoleGroups(roleId, options = {}) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { page = 1, limit = 10 } = options;
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+      });
+
+      const { data } = await fetch(
+        `/api/admin/roles/${roleId}/groups?${params.toString()}`,
+      );
+
+      return { success: true, data };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}

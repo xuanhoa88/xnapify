@@ -7,23 +7,28 @@
 
 import { useEffect } from 'react';
 import PropTypes from 'prop-types';
-import s from './UserActionsDropdown.css';
+import { useTranslation } from 'react-i18next';
+import s from './RoleActionsDropdown.css';
 
 /**
- * UserActionsDropdown - Dropdown menu for user actions
+ * RoleActionsDropdown - Dropdown menu for role actions
  *
  * To ensure only one dropdown is open at a time, pass `isOpen` and `onToggle` from parent.
- * Parent should manage activeDropdownId state and pass `isOpen={activeDropdownId === user.id}`
+ * Parent should manage activeDropdownId state and pass `isOpen={activeDropdownId === role.id}`
  * and `onToggle={(id) => setActiveDropdownId(prev => prev === id ? null : id)}`
  */
-function UserActionsDropdown({
-  user,
+function RoleActionsDropdown({
+  role,
   isOpen,
   onToggle,
-  onManageRoles,
-  onManageGroups,
+  onViewUsers,
+  onViewGroups,
   onViewPermissions,
+  onEdit,
+  onDelete,
 }) {
+  const { t } = useTranslation();
+
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = () => {
@@ -39,11 +44,11 @@ function UserActionsDropdown({
 
   const handleToggle = e => {
     e.stopPropagation();
-    onToggle(user.id);
+    onToggle(role.id);
   };
 
   const handleAction = action => {
-    action(user);
+    action(role);
     onToggle(null);
   };
 
@@ -51,7 +56,7 @@ function UserActionsDropdown({
     <div className={s.actionDropdown}>
       <button
         className={s.actionDropdownBtn}
-        title='More actions'
+        title={t('common.moreActions', 'More actions')}
         onClick={handleToggle}
         type='button'
       >
@@ -63,33 +68,49 @@ function UserActionsDropdown({
           onClick={e => e.stopPropagation()}
           onKeyDown={e => e.stopPropagation()}
           role='menu'
-          aria-label='User actions'
+          aria-label={t('roles.actions', 'Role actions')}
           tabIndex={-1}
         >
           <button
             className={s.dropdownItem}
-            onClick={() => handleAction(onManageGroups)}
+            onClick={() => handleAction(onViewUsers)}
             type='button'
             role='menuitem'
           >
-            👥 Manage Groups
+            👥 {t('roles.viewUsers', 'View Users')}
           </button>
           <button
             className={s.dropdownItem}
-            onClick={() => handleAction(onManageRoles)}
+            onClick={() => handleAction(onViewGroups)}
             type='button'
             role='menuitem'
           >
-            🎭 Manage Roles
+            👨‍👩‍👧‍👦 {t('roles.viewGroups', 'View Groups')}
           </button>
-          <div className={s.dropdownDivider} />
           <button
             className={s.dropdownItem}
             onClick={() => handleAction(onViewPermissions)}
             type='button'
             role='menuitem'
           >
-            🔐 View Permissions
+            🔐 {t('roles.viewPermissions', 'View Permissions')}
+          </button>
+          <div className={s.dropdownDivider} />
+          <button
+            className={s.dropdownItem}
+            onClick={() => handleAction(onEdit)}
+            type='button'
+            role='menuitem'
+          >
+            ✏️ {t('roles.editRole', 'Edit Role')}
+          </button>
+          <button
+            className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
+            onClick={() => handleAction(onDelete)}
+            type='button'
+            role='menuitem'
+          >
+            🗑️ {t('roles.deleteRole', 'Delete Role')}
           </button>
         </div>
       )}
@@ -97,13 +118,15 @@ function UserActionsDropdown({
   );
 }
 
-UserActionsDropdown.propTypes = {
-  user: PropTypes.object.isRequired,
+RoleActionsDropdown.propTypes = {
+  role: PropTypes.object.isRequired,
   isOpen: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
-  onManageRoles: PropTypes.func.isRequired,
-  onManageGroups: PropTypes.func.isRequired,
+  onViewUsers: PropTypes.func.isRequired,
+  onViewGroups: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,
+  onEdit: PropTypes.func.isRequired,
+  onDelete: PropTypes.func.isRequired,
 };
 
-export default UserActionsDropdown;
+export default RoleActionsDropdown;

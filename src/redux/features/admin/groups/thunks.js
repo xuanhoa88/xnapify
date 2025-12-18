@@ -195,13 +195,13 @@ export function deleteGroup(groupId) {
 }
 
 /**
- * Fetch group members
+ * Fetch group users
  *
  * @param {string} groupId - Group ID
  * @param {Object} options - Pagination options
  * @returns {Function} Redux thunk action
  */
-export function fetchGroupMembers(groupId, options = {}) {
+export function fetchGroupUsers(groupId, options = {}) {
   return async (dispatch, getState, { fetch }) => {
     try {
       const { page = 1, limit = 10 } = options;
@@ -211,7 +211,7 @@ export function fetchGroupMembers(groupId, options = {}) {
       });
 
       const { data } = await fetch(
-        `/api/admin/groups/${groupId}/members?${params.toString()}`,
+        `/api/admin/groups/${groupId}/users?${params.toString()}`,
       );
 
       return { success: true, data };

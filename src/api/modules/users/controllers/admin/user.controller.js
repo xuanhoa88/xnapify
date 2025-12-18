@@ -7,7 +7,7 @@
 
 import * as userAdminService from '../../services/admin/user.service';
 import { generatePassword } from '../../utils/password';
-import { DEFAULT_ROLE } from '../../constants/roles';
+import { DEFAULT_ROLE } from '../../constants/rbac';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)

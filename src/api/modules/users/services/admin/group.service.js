@@ -5,12 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  ADMIN_ROLE,
-  STAFF_ROLE,
-  MODERATOR_ROLE,
-  DEFAULT_ROLE,
-} from '../../constants/roles';
+import { DEFAULT_ROLE, SYSTEM_GROUPS } from '../../constants/rbac';
 
 // ========================================================================
 // GROUP MANAGEMENT SERVICES
@@ -165,10 +160,10 @@ export async function getGroups(options, models) {
     order: [['name', 'ASC']],
   });
 
-  // Add member count to each group
+  // Add user count to each group
   const groupsWithCount = groups.map(group => ({
     ...group.toJSON(),
-    memberCount: group.users ? group.users.length : 0,
+    userCount: group.users ? group.users.length : 0,
     roleCount: group.roles ? group.roles.length : 0,
   }));
 
@@ -324,10 +319,9 @@ export async function deleteGroup(group_id, models) {
   }
 
   // Prevent deletion of system groups
-  const systemGroups = [ADMIN_ROLE, STAFF_ROLE];
-  if (systemGroups.includes(group.name)) {
+  if (SYSTEM_GROUPS.includes(group.name)) {
     const error = new Error('Cannot delete system groups');
-    error.name = 'CannotDeleteSystemGroupError';
+    error.name = 'SystemGroupDeletionError';
     error.status = 400;
     throw error;
   }
@@ -337,14 +331,14 @@ export async function deleteGroup(group_id, models) {
 }
 
 /**
- * Get group members with pagination
+ * Get group users with pagination
  *
  * @param {string} group_id - Group ID
  * @param {Object} options - Query options
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Group members with pagination
+ * @returns {Promise<Object>} Group users with pagination
  */
-export async function getGroupMembers(group_id, options, models) {
+export async function getUsersWithGroup(group_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
   const { Group, User, UserProfile } = models;
@@ -379,7 +373,7 @@ export async function getGroupMembers(group_id, options, models) {
 
   return {
     group: { id: group.id, name: group.name },
-    members: users,
+    users,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -503,64 +497,4 @@ export async function getGroupStats(models) {
       return acc;
     }, {}),
   };
-}
-
-/**
- * Create default groups
- *
- * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Created groups
- */
-export async function createDefaultGroups(models) {
-  const defaultGroups = [
-    {
-      name: ADMIN_ROLE,
-      description: 'System administrators with full access',
-      category: 'system',
-      type: 'admin',
-    },
-    {
-      name: STAFF_ROLE,
-      description: 'Staff members with elevated privileges',
-      category: 'organization',
-      type: 'staff',
-    },
-    {
-      name: 'developers',
-      description: 'Development team members',
-      category: 'department',
-      type: 'team',
-    },
-    {
-      name: MODERATOR_ROLE,
-      description: 'Content moderators',
-      category: 'content',
-      type: 'moderation',
-    },
-    {
-      name: 'users',
-      description: 'Regular users',
-      category: 'general',
-      type: 'user',
-    },
-  ];
-
-  const createdGroups = [];
-
-  for (const groupData of defaultGroups) {
-    try {
-      const existing = await models.Group.findOne({
-        where: { name: groupData.name },
-      });
-
-      if (!existing) {
-        const group = await createGroup(groupData, models);
-        createdGroups.push(group);
-      }
-    } catch (error) {
-      console.warn(`Failed to create group ${groupData.name}:`, error.message);
-    }
-  }
-
-  return createdGroups;
 }

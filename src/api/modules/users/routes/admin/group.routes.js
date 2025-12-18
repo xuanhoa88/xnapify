@@ -50,14 +50,14 @@ export default function groupRoutes(deps, userMiddlewares) {
   );
 
   /**
-   * @route   GET /:id/members
-   * @desc    Get group members
+   * @route   GET /:id/users
+   * @desc    Get group users
    * @access  Admin (requires 'groups:read' permission)
    */
   router.get(
-    '/:id/members',
+    '/:id/users',
     requirePermission('groups:read'),
-    groupController.getGroupMembers,
+    groupController.getGroupUsers,
   );
 
   /**

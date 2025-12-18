@@ -186,28 +186,28 @@ export async function up({ context }) {
     // Moderator role - read all, delete comments/posts
     {
       id: uuidv4(),
-      role_id: demoRoleIds.moderator,
+      role_id: demoRoleIds.mod,
       permission_id: demoPermissionIds.postsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.moderator,
+      role_id: demoRoleIds.mod,
       permission_id: demoPermissionIds.postsDelete,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.moderator,
+      role_id: demoRoleIds.mod,
       permission_id: demoPermissionIds.commentsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.moderator,
+      role_id: demoRoleIds.mod,
       permission_id: demoPermissionIds.commentsDelete,
       created_at: now,
       updated_at: now,

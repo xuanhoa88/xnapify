@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ROLE } from '../../constants/roles';
+import { DEFAULT_ROLE } from '../../constants/rbac';
 import * as groupService from '../../services/admin/group.service';
 
 // ========================================================================
@@ -195,14 +195,14 @@ export async function deleteGroup(req, res) {
 }
 
 /**
- * Get group members
+ * Get group users
  *
- * @route   GET /api/admin/groups/:id/members
+ * @route   GET /api/admin/groups/:id/users
  * @access  Admin (requires 'groups:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function getGroupMembers(req, res) {
+export async function getGroupUsers(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
@@ -212,7 +212,7 @@ export async function getGroupMembers(req, res) {
     // Get models from app context
     const models = req.app.get('models');
 
-    const data = await groupService.getGroupMembers(
+    const data = await groupService.getUsersWithGroup(
       id,
       { page, limit, offset },
       models,
@@ -220,6 +220,6 @@ export async function getGroupMembers(req, res) {
 
     return http.sendSuccess(res, data);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get group members');
+    return http.sendServerError(res, 'Failed to get group users');
   }
 }

@@ -10,7 +10,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
   fetchUsers,
-  deleteUser,
   getUsers,
   getUsersPagination,
   getUsersLoading,
@@ -28,6 +27,7 @@ import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
+import DeleteUserModal from './components/DeleteUserModal';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -42,7 +42,7 @@ const getInitials = displayName => {
 const getRoleClass = role => {
   const roleClasses = {
     admin: s.roleAdmin,
-    moderator: s.roleModerator,
+    mod: s.roleModerator,
     user: s.roleUser,
   };
   return typeof role === 'string'
@@ -115,6 +115,7 @@ function Users() {
   const rolesModalRef = useRef();
   const groupsModalRef = useRef();
   const permissionsModalRef = useRef();
+  const deleteModalRef = useRef();
 
   useEffect(() => {
     dispatch(
@@ -140,18 +141,10 @@ function Users() {
     );
   }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
 
-  const handleDelete = useCallback(
-    async (userId, userEmail) => {
-      if (!confirm(`Are you sure you want to delete user "${userEmail}"?`)) {
-        return;
-      }
-      const result = await dispatch(deleteUser(userId));
-      if (!result.success) {
-        alert(`Failed to delete user: ${result.error}`);
-      }
-    },
-    [dispatch],
-  );
+  const handleDelete = useCallback(user => {
+    // Open the delete modal for this user
+    deleteModalRef.current && deleteModalRef.current.open(user);
+  }, []);
 
   // Filter handlers
   const debounceTimer = useRef(null);
@@ -467,7 +460,7 @@ function Users() {
                     <button
                       className={s.actionBtn}
                       title='Delete'
-                      onClick={() => handleDelete(user.id, user.email)}
+                      onClick={() => handleDelete(user)}
                     >
                       🗑️
                     </button>
@@ -542,6 +535,7 @@ function Users() {
       <UserRolesModal ref={rolesModalRef} />
       <UserGroupsModal ref={groupsModalRef} />
       <UserPermissionsModal ref={permissionsModalRef} />
+      <DeleteUserModal ref={deleteModalRef} onSuccess={refreshUsers} />
     </div>
   );
 }

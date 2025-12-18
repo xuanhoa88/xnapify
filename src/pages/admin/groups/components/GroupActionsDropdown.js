@@ -20,7 +20,7 @@ function GroupActionsDropdown({
   group,
   isOpen,
   onToggle,
-  onViewMembers,
+  onViewUsers,
   onManageRoles,
   onViewPermissions,
   onEdit,
@@ -70,11 +70,11 @@ function GroupActionsDropdown({
         >
           <button
             className={s.dropdownItem}
-            onClick={() => handleAction(onViewMembers)}
+            onClick={() => handleAction(onViewUsers)}
             type='button'
             role='menuitem'
           >
-            👥 View Members
+            👥 View Users
           </button>
           <button
             className={s.dropdownItem}
@@ -82,7 +82,7 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🏷️ Manage Roles
+            🎭 Manage Roles
           </button>
           <button
             className={s.dropdownItem}
@@ -119,7 +119,7 @@ GroupActionsDropdown.propTypes = {
   group: PropTypes.object.isRequired,
   isOpen: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
-  onViewMembers: PropTypes.func.isRequired,
+  onViewUsers: PropTypes.func.isRequired,
   onManageRoles: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,
   onEdit: PropTypes.func.isRequired,

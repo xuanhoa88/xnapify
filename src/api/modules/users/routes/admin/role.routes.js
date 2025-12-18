@@ -26,17 +26,6 @@ export default function roleRoutes(deps, userMiddlewares) {
   const router = deps.Router();
 
   /**
-   * @route   POST /initialize
-   * @desc    Initialize roles, permissions and groups
-   * @access  Admin (requires 'system:admin' permission)
-   */
-  router.post(
-    '/initialize',
-    requirePermission('system:admin'),
-    roleController.initializeDefaults,
-  );
-
-  /**
    * @route   GET /list
    * @desc    Get all roles with pagination
    * @access  Admin (requires 'roles:read' permission)
@@ -87,6 +76,36 @@ export default function roleRoutes(deps, userMiddlewares) {
     '/:id',
     requirePermission('roles:delete'),
     roleController.deleteRole,
+  );
+
+  // ========================================================================
+  // ROLE USERS & GROUPS ROUTES
+  // ========================================================================
+
+  /**
+   * @route   GET /:id/users
+   * @desc    Get users assigned to a role
+   * @access  Admin (requires 'roles:read' permission)
+   * @param   {string} id - Role ID
+   * @query   { page, limit }
+   */
+  router.get(
+    '/:id/users',
+    requirePermission('roles:read'),
+    roleController.getRoleUsers,
+  );
+
+  /**
+   * @route   GET /:id/groups
+   * @desc    Get groups assigned to a role
+   * @access  Admin (requires 'roles:read' permission)
+   * @param   {string} id - Role ID
+   * @query   { page, limit }
+   */
+  router.get(
+    '/:id/groups',
+    requirePermission('roles:read'),
+    roleController.getRoleGroups,
   );
 
   // ========================================================================

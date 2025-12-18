@@ -15,7 +15,6 @@ import {
   getGroupsLoading,
   getGroupsError,
   getGroupsPagination,
-  deleteGroup,
   fetchRoles,
 } from '../../../redux';
 import {
@@ -25,6 +24,7 @@ import {
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
+import DeleteGroupModal from './components/DeleteGroupModal';
 import s from './Groups.css';
 
 // Pagination items per page
@@ -60,6 +60,9 @@ function Groups() {
   // Ref for GroupPermissionsModal
   const permissionsModalRef = useRef();
 
+  // Ref for DeleteGroupModal
+  const deleteModalRef = useRef();
+
   // State for managing which dropdown is open
   const [activeDropdownId, setActiveDropdownId] = useState(null);
 
@@ -90,6 +93,17 @@ function Groups() {
     );
   }, [dispatch, currentPage, roleFilter]);
 
+  // Refresh groups list callback
+  const refreshGroups = useCallback(() => {
+    dispatch(
+      fetchGroups({
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
+        role: roleFilter,
+      }),
+    );
+  }, [dispatch, currentPage, roleFilter]);
+
   const handleAddGroup = useCallback(() => {
     history.push('/admin/groups/create');
   }, [history]);
@@ -101,9 +115,9 @@ function Groups() {
     [history],
   );
 
-  const handleViewMembers = useCallback(
+  const handleViewUsers = useCallback(
     group => {
-      history.push(`/admin/groups/${group.id}/members`);
+      history.push(`/admin/groups/${group.id}/users`);
     },
     [history],
   );
@@ -118,23 +132,10 @@ function Groups() {
     permissionsModalRef.current && permissionsModalRef.current.open(group);
   }, []);
 
-  const handleDeleteGroup = useCallback(
-    async group => {
-      const confirmed = window.confirm(
-        `Are you sure you want to delete the group "${group.name}"? This action cannot be undone.`,
-      );
-      if (confirmed) {
-        const result = await dispatch(deleteGroup(group.id));
-        if (result.success) {
-          // Refresh the groups list
-          dispatch(fetchGroups({ page: 1 }));
-        } else {
-          window.alert(`Failed to delete group: ${result.error}`);
-        }
-      }
-    },
-    [dispatch],
-  );
+  const handleDeleteGroup = useCallback(group => {
+    // Open the delete modal for this group
+    deleteModalRef.current && deleteModalRef.current.open(group);
+  }, []);
 
   const handleToggleDropdown = useCallback(id => {
     setActiveDropdownId(prev => (prev === id ? null : id));
@@ -278,14 +279,14 @@ function Groups() {
       ) : (
         <div className={s.grid}>
           {groups.map(group => {
-            const memberCount = group.memberCount || 0;
+            const userCount = group.userCount || 0;
             const roleCount = group.roleCount || 0;
             const users = group.users || [];
             const roles = group.roles || [];
 
             // Show up to 3 user avatars
             const visibleUsers = users.slice(0, 3);
-            const remainingUserCount = memberCount - visibleUsers.length;
+            const remainingUserCount = userCount - visibleUsers.length;
 
             // Show up to 3 role badges
             const visibleRoles = roles.slice(0, 3);
@@ -297,8 +298,8 @@ function Groups() {
                   <h3 className={s.groupName}>{group.name}</h3>
                   <div className={s.headerRight}>
                     <div className={s.headerBadges}>
-                      <span className={s.memberCount}>
-                        {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                      <span className={s.userCount}>
+                        {userCount} {userCount === 1 ? 'user' : 'users'}
                       </span>
                       <span className={s.roleCountBadge}>
                         {roleCount} {roleCount === 1 ? 'role' : 'roles'}
@@ -308,7 +309,7 @@ function Groups() {
                       group={group}
                       isOpen={activeDropdownId === group.id}
                       onToggle={handleToggleDropdown}
-                      onViewMembers={handleViewMembers}
+                      onViewUsers={handleViewUsers}
                       onManageRoles={handleManageRoles}
                       onViewPermissions={handleViewPermissions}
                       onEdit={handleEditGroup}
@@ -343,8 +344,8 @@ function Groups() {
                   </div>
                 </div>
 
-                {/* Members Section */}
-                <div className={s.members}>
+                {/* Users Section */}
+                <div className={s.users}>
                   {visibleUsers.length > 0 ? (
                     <>
                       {visibleUsers.map(user => (
@@ -361,7 +362,7 @@ function Groups() {
                       )}
                     </>
                   ) : (
-                    <span className={s.noMembers}>No members yet</span>
+                    <span className={s.noUsers}>No users yet</span>
                   )}
                 </div>
               </div>
@@ -425,6 +426,9 @@ function Groups() {
 
       {/* Group Permissions Modal */}
       <GroupPermissionsModal ref={permissionsModalRef} />
+
+      {/* Delete Confirmation Modal */}
+      <DeleteGroupModal ref={deleteModalRef} onSuccess={refreshGroups} />
     </div>
   );
 }

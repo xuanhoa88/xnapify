@@ -12,6 +12,32 @@ import * as rbacService from '../../services/admin/rbac.service';
 // ========================================================================
 
 /**
+ * Initialize roles, permissions and groups
+ *
+ * @route   POST /api/admin/roles/initialize
+ * @access  Admin (requires 'system:admin' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function initializeDefaults(req, res) {
+  const http = req.app.get('http');
+  try {
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Initialize RBAC
+    const result = await rbacService.initializeDefault(models);
+
+    return http.sendSuccess(res, {
+      message: 'RBAC system initialized successfully',
+      ...result,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to initialize RBAC system');
+  }
+}
+
+/**
  * Assign roles to a user
  *
  * @route   PUT /api/users/:id/roles

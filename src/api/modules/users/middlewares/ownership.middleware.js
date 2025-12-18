@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAdmin } from '../constants/roles';
+import { isAdmin } from '../constants/rbac';
 
 // ========================================================================
 // RESOURCE OWNERSHIP AND ADMIN-BYPASS MIDDLEWARE
@@ -101,7 +101,7 @@ export function requireOwnership(
  * router.put('/posts/:id', requireFlexibleOwnership({
  *   resourceModel: 'Post',
  *   ownerField: 'authorId',
- *   bypassRoles: ['admin', 'moderator'],
+ *   bypassRoles: ['admin', 'mod'],
  *   bypassPermissions: ['posts:manage:all']
  * }), controller.updatePost);
  */

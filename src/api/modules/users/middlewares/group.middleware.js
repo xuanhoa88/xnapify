@@ -85,7 +85,7 @@ export function requireGroup(groupName) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/admin/panel', requireAnyGroup(['admins', 'moderators']), controller.getAdminPanel);
+ * router.get('/admin/panel', requireAnyGroup(['administrators', 'moderators']), controller.getAdminPanel);
  */
 export function requireAnyGroup(groupNames) {
   return async (req, res, next) => {

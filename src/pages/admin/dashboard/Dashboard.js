@@ -6,6 +6,7 @@
  */
 
 import { useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
@@ -39,6 +40,7 @@ const formatRelativeTime = dateString => {
 };
 
 function Dashboard() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const stats = useSelector(getDashboardStats);
   const loading = useSelector(getDashboardLoading);
@@ -119,7 +121,9 @@ function Dashboard() {
               ✅
             </span>
           </div>
-          <div className={s.cardValue}>{stats.systemStatus || 'Unknown'}</div>
+          <div className={s.cardValue}>
+            {stats.systemStatus || t('common.unknown', 'Unknown')}
+          </div>
           <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
         </div>
 
@@ -155,7 +159,7 @@ function Dashboard() {
                           <div>
                             <div className={s.userName}>
                               {(activity.user && activity.user.displayName) ||
-                                'Unknown'}
+                                t('common.unknown', 'Unknown')}
                             </div>
                             <div className={s.userEmail}>
                               {(activity.user && activity.user.email) || 'N/A'}

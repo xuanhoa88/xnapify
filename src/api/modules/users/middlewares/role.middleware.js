@@ -5,12 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  ADMIN_ROLE,
-  SYSTEM_ROLES,
-  MODERATOR_ROLE,
-  STAFF_ROLE,
-} from '../constants/roles';
+import { ADMIN_ROLE, SYSTEM_ROLES, MODERATOR_ROLE } from '../constants/rbac';
 
 import {
   getCachedUserRBAC,
@@ -116,7 +111,7 @@ async function getUserRolesWithCache(req) {
  * Requires user to be authenticated and have a specific role.
  * Must be used after authenticate middleware.
  *
- * @param {string} requiredRole - Required role (e.g., 'admin', 'moderator')
+ * @param {string} requiredRole - Required role (e.g., 'admin', 'mod')
  * @returns {Function} Express middleware function
  *
  * @example
@@ -172,7 +167,7 @@ export function requireRole(requiredRole) {
  * @returns {Function} Express middleware function
  *
  * @example
- * router.get('/moderation', requireAnyRole(['admin', 'moderator']), controller.moderate);
+ * router.get('/moderation', requireAnyRole(['admin', 'mod']), controller.moderate);
  */
 export function requireAnyRole(allowedRoles) {
   return async (req, res, next) => {
@@ -252,39 +247,18 @@ export function requireModerator(req, res, next) {
 }
 
 /**
- * Staff authorization middleware
- *
- * Requires user to be authenticated and have staff-level access.
- * Includes admin, moderator, and staff roles.
- *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
- *
- * @example
- * router.get('/staff/dashboard', requireStaff, controller.staffDashboard);
- */
-export function requireStaff(req, res, next) {
-  return requireAnyRole(
-    SYSTEM_ROLES.filter(r =>
-      [ADMIN_ROLE, MODERATOR_ROLE, STAFF_ROLE].includes(r),
-    ),
-  )(req, res, next);
-}
-
-/**
  * Role hierarchy middleware
  *
  * Checks if user's role meets the minimum required level in a hierarchy.
- * Useful for systems with role hierarchies (e.g., user < staff < moderator < admin).
+ * Useful for systems with role hierarchies (e.g., user < mod < admin).
  *
  * @param {string} minimumRole - Minimum required role
  * @param {string[]} roleHierarchy - Array of roles in ascending order of privilege
  * @returns {Function} Express middleware function
  *
  * @example
- * const hierarchy = ['user', 'staff', 'moderator', 'admin'];
- * router.get('/management', requireRoleLevel('staff', hierarchy), controller.manage);
+ * const hierarchy = ['user', 'mod', 'admin'];
+ * router.get('/management', requireRoleLevel('mod', hierarchy), controller.manage);
  */
 export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
   return async (req, res, next) => {
@@ -362,7 +336,7 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
  * @returns {Function} Express middleware function
  *
  * @example
- * const dynamicRole = (req) => req.params.type === 'sensitive' ? 'admin' : 'staff';
+ * const dynamicRole = (req) => req.params.type === 'sensitive' ? 'admin' : 'mod';
  * router.get('/data/:type', requireDynamicRole(dynamicRole), controller.getData);
  */
 export function requireDynamicRole(getRoleRequirement) {

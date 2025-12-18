@@ -40,7 +40,7 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       group_id: demoGroupIds.support,
-      role_id: demoRoleIds.moderator,
+      role_id: demoRoleIds.mod,
       created_at: now,
       updated_at: now,
     },

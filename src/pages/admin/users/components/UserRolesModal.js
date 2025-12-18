@@ -221,7 +221,7 @@ const UserRolesModal = forwardRef((props, ref) => {
         }
       }
       // Refresh users list
-      dispatch(fetchUsers({}));
+      dispatch(fetchUsers({ page: 1 }));
       handleClose();
     } catch (err) {
       setError(err.message || 'An error occurred');

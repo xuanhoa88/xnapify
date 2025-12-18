@@ -8,12 +8,9 @@
 import {
   SYSTEM_ROLES,
   ADMIN_ROLE,
-  STAFF_ROLE,
   MODERATOR_ROLE,
   DEFAULT_ROLE,
-} from '../../constants/roles';
-import { createDefaultPermissions } from './permission.service';
-import { createDefaultGroups } from './group.service';
+} from '../../constants/rbac';
 import { assignPermissionsToRole } from './rbac.service';
 
 // ========================================================================
@@ -73,7 +70,7 @@ export async function createRole(roleData, models) {
 export async function getRoles(options, models) {
   const { page = 1, limit = 10, search = '' } = options;
   const offset = (page - 1) * limit;
-  const { Role, Permission, User } = models;
+  const { Role, Permission, User, Group } = models;
 
   const { sequelize } = Role;
   const { Op } = sequelize.Sequelize;
@@ -105,8 +102,18 @@ export async function getRoles(options, models) {
   // Fetch counts for each role
   const rolesWithCounts = await Promise.all(
     roles.map(async role => {
-      const [usersCount, permissionsCount] = await Promise.all([
+      const [usersCount, groupsCount, permissionsCount] = await Promise.all([
         User.count({
+          include: [
+            {
+              model: Role,
+              as: 'roles',
+              where: { id: role.id },
+              required: true,
+            },
+          ],
+        }),
+        Group.count({
           include: [
             {
               model: Role,
@@ -131,6 +138,7 @@ export async function getRoles(options, models) {
       return {
         ...role.toJSON(),
         usersCount,
+        groupsCount,
         permissionsCount,
       };
     }),
@@ -244,8 +252,7 @@ export async function deleteRole(role_id, models) {
   }
 
   // Prevent deletion of system roles
-  const systemRoles = SYSTEM_ROLES;
-  if (systemRoles.includes(role.name)) {
+  if (SYSTEM_ROLES.includes(role.name)) {
     const error = new Error('Cannot delete system roles');
     error.name = 'SystemRoleDeletionError';
     error.status = 400;
@@ -309,106 +316,71 @@ export async function getUsersWithRole(role_id, options, models) {
   };
 }
 
-// ========================================================================
-// RBAC SYSTEM INITIALIZATION
-// ========================================================================
-
 /**
- * Initialize default roles
+ * Get groups with specific role
  *
+ * @param {string} role_id - Role ID
+ * @param {Object} options - Query options
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Setup result
+ * @returns {Promise<Object>} Groups with pagination
  */
-export async function initializeDefaultRoles(models) {
-  const { Permission } = models;
+export async function getGroupsWithRole(role_id, options, models) {
+  const { page = 1, limit = 10 } = options;
+  const offset = (page - 1) * limit;
+  const { Role, Group, User } = models;
 
-  const { sequelize } = Permission;
-  const { Op } = sequelize.Sequelize;
+  const role = await Role.findByPk(role_id);
+  if (!role) {
+    const error = new Error('Role not found');
+    error.name = 'RoleNotFoundError';
+    error.status = 404;
+    throw error;
+  }
 
-  // Create default permissions
-  const permissions = await createDefaultPermissions(models);
-
-  // Create default roles
-  const adminRole = await createRole(
-    {
-      name: ADMIN_ROLE,
-      description: 'System Administrator - Full access',
-    },
-    models,
-  );
-
-  const userRole = await createRole(
-    {
-      name: DEFAULT_ROLE,
-      description: 'Regular User - Basic access',
-    },
-    models,
-  );
-
-  const moderatorRole = await createRole(
-    {
-      name: MODERATOR_ROLE,
-      description: 'Content Moderator - Limited admin access',
-    },
-    models,
-  );
-
-  // Create default groups
-  const groups = await createDefaultGroups(models);
-
-  // Assign all permissions to admin role
-  const allPermissions = await Permission.findAll();
-  await adminRole.setPermissions(allPermissions);
-
-  // Assign basic permissions to user role
-  const basicPermissions = await Permission.findAll({
-    where: {
-      name: {
-        [Op.in]: ['users:read', 'posts:read', 'comments:read', 'files:read'],
+  const { count, rows: groups } = await Group.findAndCountAll({
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        where: { id: role_id },
+        through: { attributes: [] },
       },
-    },
+    ],
+    attributes: ['id', 'name', 'description', 'created_at'],
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    order: [['name', 'ASC']],
   });
-  await userRole.setPermissions(basicPermissions);
 
-  // Assign moderation permissions to moderator role
-  const moderationPermissions = await Permission.findAll({
-    where: {
-      name: {
-        [Op.in]: [
-          'users:read',
-          'posts:read',
-          'posts:write',
-          'comments:read',
-          'comments:write',
-          'comments:moderate',
-          'files:read',
+  // Fetch user counts for each group
+  const groupsWithCounts = await Promise.all(
+    groups.map(async group => {
+      const userCount = await User.count({
+        include: [
+          {
+            model: Group,
+            as: 'groups',
+            where: { id: group.id },
+            required: true,
+          },
         ],
-      },
-    },
-  });
-  await moderatorRole.setPermissions(moderationPermissions);
+      });
 
-  // Assign roles to groups
-  const adminGroup = groups.find(g => g.name === ADMIN_ROLE);
-  const staffGroup = groups.find(g => g.name === STAFF_ROLE);
-  const moderatorGroup = groups.find(g => g.name === MODERATOR_ROLE);
-
-  if (adminGroup) {
-    await adminGroup.addRole(adminRole);
-  }
-
-  if (staffGroup) {
-    await staffGroup.addRoles([moderatorRole, userRole]);
-  }
-
-  if (moderatorGroup) {
-    await moderatorGroup.addRole(moderatorRole);
-  }
+      return {
+        ...group.toJSON(),
+        userCount,
+      };
+    }),
+  );
 
   return {
-    permissions: permissions.length,
-    roles: 3,
-    groups: groups.length,
-    message: 'Default RBAC setup completed successfully',
+    role: { id: role.id, name: role.name },
+    groups: groupsWithCounts,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: count,
+      pages: Math.ceil(count / limit),
+    },
   };
 }

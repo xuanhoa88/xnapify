@@ -54,7 +54,8 @@ export default function createGroupModel({ connection, DataTypes }) {
       type: {
         type: DataTypes.STRING(50),
         allowNull: true,
-        comment: 'Group type (e.g., admin, staff, team, user)',
+        comment:
+          'Group type (e.g., security, organizational, functional, default)',
       },
 
       is_active: {

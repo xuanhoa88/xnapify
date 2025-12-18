@@ -49,17 +49,6 @@ export default function permissionRoutes(deps, userMiddlewares) {
   );
 
   /**
-   * @route   POST /initialize
-   * @desc    Initialize default permissions
-   * @access  Admin (requires 'system:admin' permission)
-   */
-  router.post(
-    '/initialize',
-    requirePermission('system:admin'),
-    permissionController.initializeDefaults,
-  );
-
-  /**
    * @route   GET /:id
    * @desc    Get permission by ID
    * @access  Admin (requires 'permissions:read' permission)

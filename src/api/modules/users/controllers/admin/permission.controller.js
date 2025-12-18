@@ -185,30 +185,3 @@ export async function getPermissionsByResource(req, res) {
     return http.sendServerError(res, 'Failed to get permissions by resource');
   }
 }
-
-/**
- * Initialize default permissions
- *
- * @route   POST /api/admin/permissions/initialize
- * @access  Admin (requires 'system:admin' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function initializeDefaults(req, res) {
-  const http = req.app.get('http');
-  try {
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Create default permissions
-    const permissions =
-      await permissionService.createDefaultPermissions(models);
-
-    return http.sendSuccess(res, {
-      message: `Created ${permissions.length} default permissions`,
-      permissions,
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to initialize permissions');
-  }
-}

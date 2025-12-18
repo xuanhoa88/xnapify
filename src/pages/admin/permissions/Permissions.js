@@ -5,16 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useMemo } from 'react';
+import { useEffect, useCallback, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../components/History';
 import {
   fetchPermissions,
-  deletePermission,
   getPermissions,
   getPermissionsLoading,
   getPermissionsError,
 } from '../../../redux';
+import DeletePermissionModal from './components/DeletePermissionModal';
 import s from './Permissions.css';
 
 function Permissions() {
@@ -28,23 +28,18 @@ function Permissions() {
     dispatch(fetchPermissions({ page: 1 }));
   }, [dispatch]);
 
-  const handleDelete = useCallback(
-    async (permissionId, permissionName) => {
-      if (
-        !confirm(
-          `Are you sure you want to delete the permission "${permissionName}"?`,
-        )
-      ) {
-        return;
-      }
+  // Refresh permissions list callback
+  const refreshPermissions = useCallback(() => {
+    dispatch(fetchPermissions({ page: 1 }));
+  }, [dispatch]);
 
-      const result = await dispatch(deletePermission(permissionId));
-      if (!result.success) {
-        alert(`Failed to delete permission: ${result.error}`);
-      }
-    },
-    [dispatch],
-  );
+  // Modal ref
+  const deleteModalRef = useRef();
+
+  const handleDelete = useCallback(permission => {
+    // Open the delete modal for this permission
+    deleteModalRef.current && deleteModalRef.current.open(permission);
+  }, []);
 
   const handleAdd = useCallback(() => {
     history.push('/admin/permissions/create');
@@ -145,9 +140,7 @@ function Permissions() {
                     <button
                       className={s.deleteBtn}
                       title='Delete'
-                      onClick={() =>
-                        handleDelete(permission.id, permission.name)
-                      }
+                      onClick={() => handleDelete(permission)}
                     >
                       🗑️
                     </button>
@@ -171,6 +164,12 @@ function Permissions() {
           <p>No permissions found.</p>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeletePermissionModal
+        ref={deleteModalRef}
+        onSuccess={refreshPermissions}
+      />
     </div>
   );
 }

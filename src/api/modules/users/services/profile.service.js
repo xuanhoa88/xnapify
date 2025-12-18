@@ -7,7 +7,7 @@
 
 import path from 'path';
 import { verifyPassword } from '../utils/password';
-import { DEFAULT_ROLE } from '../constants/roles';
+import { DEFAULT_ROLE } from '../constants/rbac';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES

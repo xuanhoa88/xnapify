@@ -11,7 +11,7 @@ import { v4 as uuidv4 } from 'uuid';
 export const demoRoleIds = {
   admin: uuidv4(),
   user: uuidv4(),
-  moderator: uuidv4(),
+  mod: uuidv4(),
   editor: uuidv4(),
   viewer: uuidv4(),
 };
@@ -42,8 +42,8 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoRoleIds.moderator,
-      name: 'moderator',
+      id: demoRoleIds.mod,
+      name: 'mod',
       description: 'Content moderator with moderation permissions',
       is_active: true,
       created_at: now,
@@ -78,6 +78,6 @@ export async function down({ context }) {
 
   // Remove all seeded roles by name
   await queryInterface.bulkDelete('roles', {
-    name: ['admin', 'user', 'moderator', 'editor', 'viewer'],
+    name: ['admin', 'user', 'mod', 'editor', 'viewer'],
   });
 }

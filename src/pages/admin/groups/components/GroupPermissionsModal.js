@@ -12,6 +12,7 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { Modal } from '../../../../components/Modal';
 import { fetchGroupPermissions } from '../../../../redux';
@@ -29,6 +30,7 @@ import s from './GroupPermissionsModal.css';
  *   permissionsModalRef.current.close();          // Close modal
  */
 const GroupPermissionsModal = forwardRef((props, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Loading and data state
@@ -85,7 +87,8 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Permissions for &quot;{group && group.name}&quot;
+        Permissions for &quot;
+        {(group && group.name) || t('common.unknown', 'Unknown')}&quot;
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>

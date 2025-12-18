@@ -13,6 +13,7 @@ import {
   useEffect,
   useMemo,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { Modal } from '../../../../components/Modal';
 import s from './UserPermissionsModal.css';
@@ -35,6 +36,7 @@ import {
  *   permissionsModalRef.current.close();         // Close modal
  */
 const UserPermissionsModal = forwardRef((props, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const permissions = useSelector(getUserPermissions);
   const loading = useSelector(getUserPermissionsLoading);
@@ -98,7 +100,10 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Permissions for &quot;{user && (user.display_name || user.email)}&quot;
+        Permissions for &quot;
+        {(user && (user.display_name || user.email)) ||
+          t('common.unknown', 'Unknown')}
+        &quot;
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>

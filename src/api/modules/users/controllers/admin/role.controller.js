@@ -170,32 +170,66 @@ export async function deleteRole(req, res) {
   }
 }
 
-// ========================================================================
-// RBAC SYSTEM CONTROLLERS
-// ========================================================================
-
 /**
- * Initialize roles, permissions and groups
+ * Get users assigned to a role
  *
- * @route   POST /api/admin/roles/initialize
- * @access  Admin (requires 'system:admin' permission)
+ * @route   GET /api/admin/roles/:id/users
+ * @access  Admin (requires 'roles:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function initializeDefaults(req, res) {
+export async function getRoleUsers(req, res) {
   const http = req.app.get('http');
   try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
     // Get models from app context
     const models = req.app.get('models');
 
-    // Initialize RBAC
-    const result = await roleService.initializeDefaultRoles(models);
+    const result = await roleService.getUsersWithRole(
+      id,
+      { page, limit },
+      models,
+    );
 
-    return http.sendSuccess(res, {
-      message: 'RBAC system initialized successfully',
-      ...result,
-    });
+    return http.sendSuccess(res, result);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to initialize RBAC system');
+    if (error.name === 'RoleNotFoundError') {
+      return http.sendError(res, error.message, 404);
+    }
+    return http.sendServerError(res, 'Failed to get role users');
+  }
+}
+
+/**
+ * Get groups assigned to a role
+ *
+ * @route   GET /api/admin/roles/:id/groups
+ * @access  Admin (requires 'roles:read' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getRoleGroups(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const { page = 1, limit = 10 } = req.query;
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    const result = await roleService.getGroupsWithRole(
+      id,
+      { page, limit },
+      models,
+    );
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    if (error.name === 'RoleNotFoundError') {
+      return http.sendError(res, error.message, 404);
+    }
+    return http.sendServerError(res, 'Failed to get role groups');
   }
 }

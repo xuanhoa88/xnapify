@@ -11,7 +11,7 @@ import {
   createTimedResetToken,
   validateResetToken,
 } from '../utils/password';
-import { DEFAULT_ROLE, isAdmin } from '../constants/roles';
+import { DEFAULT_ROLE, isAdmin } from '../constants/rbac';
 
 // ========================================================================
 // AUTHENTICATION SERVICES

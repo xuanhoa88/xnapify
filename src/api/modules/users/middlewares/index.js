@@ -11,7 +11,6 @@ export {
   requireAnyRole,
   requireAdmin,
   requireModerator,
-  requireStaff,
   requireRoleLevel,
   requireDynamicRole,
 } from './role.middleware';

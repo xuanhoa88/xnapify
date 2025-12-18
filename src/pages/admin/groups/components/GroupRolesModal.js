@@ -13,6 +13,7 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { Modal } from '../../../../components/Modal';
@@ -35,6 +36,7 @@ import s from './GroupRolesModal.css';
 const ITEMS_PER_PAGE = 10;
 
 const GroupRolesModal = forwardRef((props, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Local roles state - fetched independently when modal opens
@@ -240,11 +242,12 @@ const GroupRolesModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Manage Roles for &quot;{(group && group.name) || 'Group'}&quot;
+        Manage Roles for &quot;
+        {(group && group.name) || t('common.unknown', 'Unknown')}&quot;
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Select roles to assign to this group. All members of the group will
+          Select roles to assign to this group. All users of the group will
           inherit these roles.
         </Modal.Description>
 

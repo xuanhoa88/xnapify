@@ -24,7 +24,7 @@ export async function up({ context, Sequelize }) {
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true,
-      comment: 'Role name (e.g., admin, user, moderator)',
+      comment: 'Role name (e.g., admin, user, mod)',
     },
     description: {
       type: DataTypes.STRING(255),

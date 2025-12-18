@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ROLE } from '../constants/roles';
+import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
 import { validatePassword } from '../utils/validation';
 

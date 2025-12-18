@@ -10,8 +10,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useHistory } from '../../../components/History';
-import { fetchRoles, deleteRole, getRolesPagination } from '../../../redux';
-import Modal from '../../../components/Modal';
+import { fetchRoles, getRolesPagination } from '../../../redux';
+import RoleActionsDropdown from './components/RoleActionsDropdown';
+import RolePermissionsModal from './components/RolePermissionsModal';
+import DeleteRoleModal from './components/DeleteRoleModal';
 import s from './Roles.css';
 
 // Pagination items per page
@@ -20,7 +22,7 @@ const ITEMS_PER_PAGE = 10;
 // Map role names to icons for visual consistency
 const ROLE_ICONS = Object.freeze({
   admin: '👑',
-  moderator: '🎭',
+  mod: '🎭',
   user: '👤',
   guest: '👁️',
   editor: '✏️',
@@ -46,13 +48,21 @@ function Roles() {
   const [inputValue, setInputValue] = useState('');
   const debounceTimer = useRef(null);
 
-  // Delete confirmation modal state
-  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [roleToDelete, setRoleToDelete] = useState(null);
-  const [deleteError, setDeleteError] = useState('');
-  const [deleting, setDeleting] = useState(false);
+  // Delete modal ref
+  const deleteModalRef = useRef();
+
+  // Permissions modal ref
+  const permissionsModalRef = useRef();
+
+  // Dropdown state
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
 
   useEffect(() => {
+    dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
+  }, [dispatch, currentPage, search]);
+
+  // Refresh roles list callback
+  const refreshRoles = useCallback(() => {
     dispatch(fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }));
   }, [dispatch, currentPage, search]);
 
@@ -61,50 +71,39 @@ function Roles() {
   }, [history]);
 
   const handleEditRole = useCallback(
-    roleId => {
-      history.push(`/admin/roles/${roleId}/edit`);
+    role => {
+      history.push(`/admin/roles/${role.id}/edit`);
     },
     [history],
   );
 
+  // Dropdown action handlers
+  const handleViewUsers = useCallback(
+    role => {
+      history.push(`/admin/roles/${role.id}/users`);
+    },
+    [history],
+  );
+
+  const handleViewGroups = useCallback(
+    role => {
+      history.push(`/admin/roles/${role.id}/groups`);
+    },
+    [history],
+  );
+
+  const handleViewPermissions = useCallback(role => {
+    permissionsModalRef.current && permissionsModalRef.current.open(role);
+  }, []);
+
+  const handleToggleDropdown = useCallback(id => {
+    setActiveDropdownId(prev => (prev === id ? null : id));
+  }, []);
+
   // Open delete confirmation modal
-  const handleDeleteClick = useCallback((roleId, roleName) => {
-    setRoleToDelete({ id: roleId, name: roleName });
-    setDeleteError('');
-    setDeleteModalOpen(true);
+  const handleDeleteClick = useCallback(role => {
+    deleteModalRef.current && deleteModalRef.current.open(role);
   }, []);
-
-  // Close delete modal
-  const handleDeleteModalClose = useCallback(() => {
-    setDeleteModalOpen(false);
-    setRoleToDelete(null);
-    setDeleteError('');
-  }, []);
-
-  // Confirm delete
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!roleToDelete) return;
-
-    setDeleting(true);
-    setDeleteError('');
-
-    const result = await dispatch(deleteRole(roleToDelete.id));
-
-    setDeleting(false);
-
-    if (!result.success) {
-      setDeleteError(
-        result.error || t('roles.deleteError', 'Failed to delete role'),
-      );
-    } else {
-      setDeleteModalOpen(false);
-      setRoleToDelete(null);
-      // Refresh the list
-      dispatch(
-        fetchRoles({ page: currentPage, limit: ITEMS_PER_PAGE, search }),
-      );
-    }
-  }, [dispatch, roleToDelete, currentPage, search, t]);
 
   // Search handlers
   const handleSearchChange = useCallback(e => {
@@ -294,6 +293,16 @@ function Roles() {
               <div className={s.roleHeader}>
                 <div className={s.roleIcon}>{getRoleIcon(role.name)}</div>
                 <h3 className={s.roleName}>{role.name}</h3>
+                <RoleActionsDropdown
+                  role={role}
+                  isOpen={activeDropdownId === role.id}
+                  onToggle={handleToggleDropdown}
+                  onViewUsers={handleViewUsers}
+                  onViewGroups={handleViewGroups}
+                  onViewPermissions={handleViewPermissions}
+                  onEdit={handleEditRole}
+                  onDelete={handleDeleteClick}
+                />
               </div>
               <p className={s.roleDescription}>
                 {role.description ||
@@ -308,28 +317,18 @@ function Roles() {
                 </div>
                 <div className={s.stat}>
                   <span className={s.statLabel}>
+                    {t('roles.groups', 'Groups')}:
+                  </span>
+                  <span className={s.statValue}>{role.groupsCount || 0}</span>
+                </div>
+                <div className={s.stat}>
+                  <span className={s.statLabel}>
                     {t('roles.permissions', 'Permissions')}:
                   </span>
                   <span className={s.statValue}>
                     {role.permissionsCount || 0}
                   </span>
                 </div>
-              </div>
-              <div className={s.roleActions}>
-                <button
-                  type='button'
-                  className={s.editBtn}
-                  onClick={() => handleEditRole(role.id)}
-                >
-                  {t('common.edit', 'Edit')}
-                </button>
-                <button
-                  type='button'
-                  className={s.deleteBtn}
-                  onClick={() => handleDeleteClick(role.id, role.name)}
-                >
-                  {t('common.delete', 'Delete')}
-                </button>
               </div>
             </div>
           ))}
@@ -388,37 +387,11 @@ function Roles() {
         </div>
       )}
 
+      {/* Permissions Modal */}
+      <RolePermissionsModal ref={permissionsModalRef} />
+
       {/* Delete Confirmation Modal */}
-      <Modal isOpen={deleteModalOpen} onClose={handleDeleteModalClose}>
-        <Modal.Header onClose={handleDeleteModalClose}>
-          {t('roles.deleteTitle', 'Delete Role')}
-        </Modal.Header>
-        <Modal.Body error={deleteError}>
-          <p>
-            {t(
-              'roles.deleteConfirmation',
-              'Are you sure you want to delete the role "{{roleName}}"?',
-              { roleName: roleToDelete?.name },
-            )}
-          </p>
-        </Modal.Body>
-        <Modal.Footer>
-          <Modal.Actions>
-            <Modal.Button onClick={handleDeleteModalClose} disabled={deleting}>
-              {t('common.cancel', 'Cancel')}
-            </Modal.Button>
-            <Modal.Button
-              variant='primary'
-              onClick={handleDeleteConfirm}
-              disabled={deleting}
-            >
-              {deleting
-                ? t('common.deleting', 'Deleting...')
-                : t('common.delete', 'Delete')}
-            </Modal.Button>
-          </Modal.Actions>
-        </Modal.Footer>
-      </Modal>
+      <DeleteRoleModal ref={deleteModalRef} onSuccess={refreshRoles} />
     </div>
   );
 }
