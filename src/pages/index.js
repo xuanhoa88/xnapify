@@ -6,28 +6,28 @@
  */
 
 import { getRuntimeVariable, setAdminPanel, setPageHeader } from '../redux';
-import IsomorphicRouter from '../shared/router';
+import IsomorphicNavigator from '../shared/navigator';
 
 /**
- * Automatically discover and load all routes from page folders.
+ * Automatically discover and load all pages from page folders.
  *
  * This uses webpack's require.context to dynamically import all index.js files
  * from subdirectories. Each page folder should contain an index.js that exports:
  * [route, action] where:
- * - route: Route configuration object (path, priority, devOnly, etc.)
- * - action: Route action function
+ * - page: Page configuration object (path, priority, devOnly, etc.)
+ * - action: Page action function
  *
  * Page modules can export either:
- * 1. A static array: [routeConfig, action]
- * 2. A sync function: () => [routeConfig, action]
- * 3. An async function: async () => [routeConfig, action]
+ * 1. A static array: [route, action]
+ * 2. A sync function: () => [route, action]
+ * 3. An async function: async () => [route, action]
  *
  * Benefits:
- * - No manual route registration needed
+ * - No manual page registration needed
  * - Easy to add new pages (just create a folder with index.js)
- * - Routes are automatically sorted by priority
- * - Development-only routes are filtered in production
- * - All route logic is in one file per page
+ * - Pages are automatically sorted by priority
+ * - Development-only pages are filtered in production
+ * - All page logic is in one file per page
  * - Supports both sync and async page module initialization
  *
  * @example
@@ -48,7 +48,6 @@ import IsomorphicRouter from '../shared/router';
  * @example
  * // pages/dashboard/index.js - Async initialization
  * export default async () => {
- *   const config = await fetchRouteConfig();
  *   return [
  *     {
  *       path: '/dashboard',
@@ -65,136 +64,178 @@ import IsomorphicRouter from '../shared/router';
  */
 
 /**
- * Default priority for routes that don't specify a priority value.
- * Routes are sorted by priority (higher priority routes are matched first).
+ * @typedef {Object} PageRoute
+ * @property {string} path - Route path (required)
+ * @property {number} [priority] - Route priority (higher = matched first)
+ * @property {boolean} [devOnly] - Only load in development mode
  */
-const DEFAULT_ROUTE_PRIORITY = 50;
 
 /**
- * Build routes array from discovered page modules
- * Now supports async page module functions
- *
- * @param {__WebpackModuleApi.RequireContext} pagesContext - Webpack require.context
- * @returns {Promise<Array<object>>} Sorted array of route objects
+ * @typedef {Function} PageAction
+ * @param {Object} context - Navigation context
+ * @returns {Promise<Object>} Page result
  */
-async function buildRoutes(pagesContext) {
-  const routePromises = pagesContext.keys().map(async pagePath => {
+
+/**
+ * Default priority for pages that don't specify a priority value.
+ * Pages are sorted by priority (higher priority pages are matched first).
+ */
+const DEFAULT_PAGE_PRIORITY = 50;
+
+/**
+ * Regular expression to extract folder name from webpack require.context path
+ * Matches: './folder_name/index.js' and captures 'folder_name'
+ */
+const PAGE_PATH_REGEX = /^\.\/([^/]+)\//;
+
+/**
+ * Build pages array from discovered page modules
+ * Supports async page module functions and provides comprehensive error handling
+ *
+ * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context
+ * @returns {Promise<Array<Object>>} Sorted array of page objects
+ */
+async function buildPages(ctx) {
+  const pageKeys = ctx.keys();
+
+  if (__DEV__) {
+    console.log(`[Navigator] Discovered ${pageKeys.length} page module(s)`);
+  }
+
+  const pagePromises = pageKeys.map(async resolvedPath => {
     // Extract folder name from path (e.g., './home/index.js' -> 'home')
-    const match = pagePath.match(/^\.\/([^/]+)\//);
-    if (!match) {
-      console.error(`[Routes] Invalid page path format: ${pagePath}`);
+    const matchedPath = resolvedPath.match(PAGE_PATH_REGEX);
+    if (!matchedPath) {
+      console.error(`[Navigator] Invalid page format: ${resolvedPath}`);
       return null;
     }
-    const folderName = match[1];
+    const folderName = matchedPath[1];
 
     try {
       // Load page module
-      const pageModule = pagesContext(pagePath).default;
-
-      // Initialize route config and action
-      let routeConfig, routeAction;
+      let factory = ctx(resolvedPath).default;
 
       // Handle dynamic exports (functions)
-      if (typeof pageModule === 'function') {
-        // Call function and await result (works for both sync and async)
-        const result = await pageModule(buildRoutes);
-        [routeConfig, routeAction] = result;
+      if (typeof factory === 'function') {
+        factory = await factory(buildPages);
       }
-      // Handle static exports
-      else if (Array.isArray(pageModule)) {
-        [routeConfig, routeAction] = pageModule;
-      }
-      // Handle default exports
-      else {
+
+      // Invalid export format
+      if (!Array.isArray(factory)) {
         console.error(
-          `[Routes] Invalid page module in ${folderName}/index.js. Must be an array or function.`,
+          `[Navigator] Invalid page module in ${folderName}/index.js. Must export an array [route, action] or a function returning [route, action].`,
         );
         return null;
+      }
+
+      // Extract route and action from resolved factory
+      let [route, action] = factory;
+
+      // Resolve route if it's a function
+      if (typeof route === 'function') {
+        route = await route(buildPages);
       }
 
       // Validate route configuration
-      if (!routeConfig) {
+      if (!route || typeof route !== 'object') {
         console.error(
-          `[Routes] Invalid route configuration in ${folderName}/index.js. Route must be an object or function returning an object.`,
-        );
-        return null;
-      }
-
-      // Call routeConfig function with buildRoutes to get the actual config
-      if (typeof routeConfig === 'function') {
-        routeConfig = await routeConfig(buildRoutes);
-      }
-
-      // Validate action function
-      // If action is not a function, set it to a default action that calls next()
-      if (typeof routeAction !== 'function') {
-        console.warn(
-          `[Routes] No action function provided for ${folderName}. Using default pass-through action.`,
-        );
-      }
-
-      // Skip development-only routes in production
-      if (routeConfig.devOnly && !__DEV__) {
-        console.log(
-          `[Routes] Skipping dev-only route in ${folderName} (production mode)`,
+          `[Navigator] Invalid route configuration in ${folderName}/index.js. Route must be an object.`,
         );
         return null;
       }
 
       // Validate that route has a path property (empty string '' is valid)
-      if (!Object.prototype.hasOwnProperty.call(routeConfig, 'path')) {
+      if (!Object.prototype.hasOwnProperty.call(route, 'path')) {
         console.error(
-          `[Routes] Route in ${folderName}/index.js must have a 'path' property.`,
+          `[Navigator] Route in ${folderName}/index.js must have a 'path' property.`,
         );
         return null;
       }
 
-      // Extract priority before building route
-      const priority = Object.prototype.hasOwnProperty.call(
-        routeConfig,
-        'priority',
-      )
-        ? routeConfig.priority
-        : DEFAULT_ROUTE_PRIORITY;
+      // Skip development-only routes in production
+      if (route.devOnly && !__DEV__) {
+        if (__DEV__) {
+          console.log(
+            `[Navigator] Skipping dev-only route '${route.path}' in ${folderName} (production mode)`,
+          );
+        }
+        return null;
+      }
 
-      // Build complete route object
-      const route = {
-        ...routeConfig,
-        action: routeAction,
-        _folderName: folderName, // Add folder name for debugging
-      };
-
-      // Remove custom properties that shouldn't be passed to router
-      delete route.priority;
-      delete route.devOnly;
-
-      if (__DEV__) {
-        console.log(
-          `[Routes] Loaded route: ${routeConfig.path} (priority: ${priority}, folder: ${folderName})`,
+      // Validate and normalize action function
+      if (typeof action !== 'function') {
+        console.warn(
+          `[Navigator] No action function provided for ${folderName}. Using default pass-through action.`,
         );
       }
 
-      return { route, priority };
+      // Extract priority before building page
+      const priority = Object.prototype.hasOwnProperty.call(route, 'priority')
+        ? route.priority
+        : DEFAULT_PAGE_PRIORITY;
+
+      // Validate priority is a number
+      if (typeof priority !== 'number' || isNaN(priority)) {
+        console.warn(
+          `[Navigator] Invalid page priority value in ${folderName}. Using default priority ${DEFAULT_PAGE_PRIORITY}.`,
+        );
+      }
+
+      // Remove custom properties that shouldn't be passed to navigator
+      delete route.priority;
+      delete route.devOnly;
+
+      // Build complete page object
+      const config = {
+        ...route,
+        action,
+        _folderName: folderName, // Add folder name for debugging
+      };
+
+      if (__DEV__) {
+        console.log(
+          `[Navigator] ✓ Page loaded: ${config.path || '(no path)'} (priority: ${priority}, folder: ${folderName})`,
+        );
+      }
+
+      return { config, priority };
     } catch (error) {
       console.error(
-        `[Routes] Error loading page module ${folderName}/index.js:`,
+        `[Navigator] Error loading page module ${folderName}/index.js:`,
         error,
       );
       return null;
     }
   });
 
-  // Wait for all route promises to resolve in parallel
-  const resolvedRoutes = await Promise.all(routePromises);
+  // Wait for all page promises to resolve in parallel
+  const resolvedPages = await Promise.all(pagePromises);
 
-  // Filter out null values (failed/skipped routes)
-  const validRoutes = resolvedRoutes.filter(item => item !== null);
+  // Filter out null values (failed/skipped pages)
+  const validPages = resolvedPages.filter(item => item != null);
 
-  // Sort routes by priority (higher priority first)
-  validRoutes.sort((a, b) => b.priority - a.priority);
+  // Log summary of failed pages in development
+  if (__DEV__) {
+    const failedCount = resolvedPages.length - validPages.length;
+    if (failedCount > 0) {
+      console.warn(
+        `[Navigator] ⚠ ${failedCount} page(s) failed to load or were skipped`,
+      );
+    }
+    console.log(`[Navigator] Successfully loaded ${validPages.length} page(s)`);
+  }
 
-  // Extract route objects (without priority metadata)
-  return validRoutes.map(item => item.route);
+  // Sort pages by priority (higher priority first)
+  validPages.sort((a, b) => {
+    const priorityA =
+      typeof a.priority === 'number' ? a.priority : DEFAULT_PAGE_PRIORITY;
+    const priorityB =
+      typeof b.priority === 'number' ? b.priority : DEFAULT_PAGE_PRIORITY;
+    return priorityB - priorityA;
+  });
+
+  // Extract page objects (without priority metadata)
+  return validPages.map(item => item.config);
 }
 
 /**
@@ -204,30 +245,41 @@ async function buildRoutes(pagesContext) {
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
 /**
- * Create and configure the router with async route loading
+ * Create and configure the navigator with async page loading
  *
- * @returns {Promise<IsomorphicRouter>} Configured router instance
+ * @returns {Promise<IsomorphicNavigator>} Configured navigator instance
  */
-export default async function createRouter() {
-  // Build routes asynchronously (supports async page modules)
-  const routes = await buildRoutes(pagesContext);
+export default async function createNavigator() {
+  if (__DEV__) {
+    console.log('[Navigator] Initializing...');
+  }
 
-  // Create router with loaded routes
-  const router = new IsomorphicRouter({
-    // Disable auto-delegation for root route since we need to post-process child results
+  // Build pages asynchronously (supports async page modules)
+  const children = await buildPages(pagesContext);
+
+  // Create navigator with loaded pages
+  const navigator = new IsomorphicNavigator({
+    // Disable auto-delegation for root page since we need to post-process child results
     autoDelegate: false,
 
-    // Add action to execute child route and wrap with metadata
+    // Add action to execute child page and wrap with metadata
     async action(context) {
-      // Reset UI state for non-admin, non-home routes
+      // Reset UI state for non-admin, non-home pages
+      // Note: These are fire-and-forget Redux dispatches
+      // If side effects need to complete before navigation, consider awaiting them
       context.store.dispatch(setAdminPanel(false));
       context.store.dispatch(setPageHeader(false));
 
-      // Execute child route
-      const route = await context.next();
+      // Execute child page
+      const page = await context.next();
 
-      // Handle case where no route matches
-      if (!route) {
+      // Handle case where no page matches
+      if (!page) {
+        if (__DEV__) {
+          console.warn(
+            `[Navigator] No page matched for path: ${context.pathname}`,
+          );
+        }
         return null;
       }
 
@@ -242,20 +294,19 @@ export default async function createRouter() {
 
       // Apply default metadata
       return {
-        ...route,
-        title: (route.title && `${route.title} - ${appName}`) || appName,
-        description: route.description || appDescription,
+        ...page,
+        title: page.title ? `${page.title} - ${appName}` : appName,
+        description: page.description || appDescription,
       };
     },
 
-    // Add routes from page modules
-    children: routes,
+    // Add pages from page modules
+    children,
   });
 
   if (__DEV__) {
-    console.log('[Routes] Router created successfully');
-    router.printRoutes();
+    console.log('[Navigator] ✓ Created successfully');
   }
 
-  return router;
+  return navigator;
 }

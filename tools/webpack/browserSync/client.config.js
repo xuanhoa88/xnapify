@@ -18,6 +18,8 @@ const CONFIG = Object.freeze({
   RECONNECT_WAIT: 2000,
   INIT_RETRY_INTERVAL: 100, // Retry interval if hotClient not ready yet
   INIT_MAX_RETRIES: 50, // Max retries (5 seconds total)
+  SCROLL_STORAGE_KEY: '__bs_scroll_position',
+  SCROLL_RESTORE_DELAY: 100, // Delay before restoring scroll position
 });
 
 // State tracking
@@ -163,7 +165,7 @@ function waitForReconnect() {
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 400) {
         logInfo('[BrowserSync] Server is back online, reloading...');
-        window.location.reload();
+        reloadPage();
       } else {
         setTimeout(checkServer, POLL_INTERVAL);
       }
@@ -205,12 +207,68 @@ async function handleShutdown() {
 }
 
 /**
- * Reload the page with error handling
+ * Save current scroll position to sessionStorage
+ */
+function saveScrollPosition() {
+  try {
+    const scrollData = {
+      x: window.scrollX,
+      y: window.scrollY,
+      path: window.location.pathname + window.location.search,
+    };
+    sessionStorage.setItem(
+      CONFIG.SCROLL_STORAGE_KEY,
+      JSON.stringify(scrollData),
+    );
+    logDebug('[BrowserSync] Saved scroll position:', scrollData);
+  } catch (err) {
+    logWarn('[BrowserSync] Failed to save scroll position:', err);
+  }
+}
+
+/**
+ * Restore scroll position from sessionStorage if path matches
+ */
+function restoreScrollPosition() {
+  try {
+    const stored = sessionStorage.getItem(CONFIG.SCROLL_STORAGE_KEY);
+    if (!stored) return;
+
+    const scrollData = JSON.parse(stored);
+    const currentPath = window.location.pathname + window.location.search;
+
+    // Only restore if we're on the same path
+    if (scrollData.path === currentPath) {
+      // Use requestAnimationFrame to ensure DOM is rendered
+      setTimeout(() => {
+        window.scrollTo(scrollData.x, scrollData.y);
+        logDebug('[BrowserSync] Restored scroll position:', scrollData);
+      }, CONFIG.SCROLL_RESTORE_DELAY);
+    }
+
+    // Clean up after restoring
+    sessionStorage.removeItem(CONFIG.SCROLL_STORAGE_KEY);
+  } catch (err) {
+    logWarn('[BrowserSync] Failed to restore scroll position:', err);
+    sessionStorage.removeItem(CONFIG.SCROLL_STORAGE_KEY);
+  }
+}
+
+/**
+ * Reload the page with error handling, preserving current location and scroll
  */
 function reloadPage() {
   try {
-    logInfo('[BrowserSync] Reloading page...');
-    window.location.reload();
+    // Save scroll position before reload
+    saveScrollPosition();
+
+    // Get current full path
+    const currentPath =
+      window.location.pathname + window.location.search + window.location.hash;
+    logInfo('[BrowserSync] Reloading page at:', currentPath);
+
+    // Navigate to the current path to force reload
+    window.location.href = currentPath;
   } catch (err) {
     logError('[BrowserSync] Page reload failed:', err);
   }
@@ -434,6 +492,13 @@ function initialize() {
 
   // Start initialization
   attemptInit();
+
+  // Restore scroll position if saved from previous reload
+  if (document.readyState === 'complete') {
+    restoreScrollPosition();
+  } else {
+    window.addEventListener('load', restoreScrollPosition, { once: true });
+  }
 }
 
 // Initialize on script load

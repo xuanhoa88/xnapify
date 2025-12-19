@@ -77,8 +77,8 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Body error={error}>
         <Modal.Description>
           Are you sure you want to delete the user &quot;
-          {user?.display_name || user?.email}&quot;? This action cannot be
-          undone.
+          {user && (user.display_name || user.email)}&quot;? This action cannot
+          be undone.
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>

@@ -169,8 +169,8 @@ export function createFetch(fetch, globalOptions = {}) {
     }
 
     if (typeof context.request === 'string') {
-      if (context.options.baseURL) {
-        context.request = withBase(context.request, context.options.baseURL);
+      if (context.options.baseUrl) {
+        context.request = withBase(context.request, context.options.baseUrl);
       }
 
       if (context.options.query) {
@@ -226,8 +226,8 @@ export function createFetch(fetch, globalOptions = {}) {
         : timeoutSignal;
     }
 
-    context.options.mode = context.options.baseURL ? 'cors' : 'same-origin';
-    context.options.credentials = context.options.baseURL
+    context.options.mode = context.options.baseUrl ? 'cors' : 'same-origin';
+    context.options.credentials = context.options.baseUrl
       ? 'include'
       : 'same-origin';
 

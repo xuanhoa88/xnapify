@@ -66,7 +66,7 @@ const config = Object.freeze({
 });
 
 const i18n = getI18nInstance();
-let cachedRouter = null;
+let cachedNavigator = null;
 
 // =============================================================================
 // ERROR HANDLERS
@@ -132,12 +132,12 @@ function getBaseUrl({ host, port }) {
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
-async function getRouter() {
-  if (!cachedRouter) {
-    cachedRouter = await import('./pages').then(m => m.default());
-    if (__DEV__) console.log('✅ Router initialized');
+async function getNavigator() {
+  if (!cachedNavigator) {
+    cachedNavigator = await import('./pages').then(m => m.default());
+    if (__DEV__) console.log('✅ Navigator initialized');
   }
-  return cachedRouter;
+  return cachedNavigator;
 }
 
 function getInnerHTML(element) {
@@ -239,15 +239,15 @@ async function renderPageToHtml({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-function createPageMetadata(route, req) {
+function createPageMetadata(page, req) {
   const protocol = req.protocol || 'http';
   const host = req.get('host') || 'localhost';
   return {
-    title: route.title || config.appName,
-    description: route.description || config.appDescription,
-    image: route.image || null,
+    title: page.title || config.appName,
+    description: page.description || config.appDescription,
+    image: page.image || null,
     url: `${protocol}://${host}${req.path}`,
-    type: route.type || 'website',
+    type: page.type || 'website',
   };
 }
 
@@ -379,8 +379,8 @@ async function main(app, staticPath) {
   // Expose i18n to API routes
   app.set('i18n', i18n);
 
-  // Initialize SSR router
-  const router = await getRouter();
+  // Initialize SSR navigator
+  const navigator = await getNavigator();
 
   // Express configuration
   app.set('trust proxy', config.trustProxy);
@@ -450,7 +450,7 @@ async function main(app, staticPath) {
       // Create fetch instance for this SSR request
       const fetch = createFetch(nodeFetch, {
         defaults: {
-          baseURL: getBaseUrl({ host: config.host, port: config.port }),
+          baseUrl: getBaseUrl({ host: config.host, port: config.port }),
           headers: {
             Cookie: req.headers.cookie || '',
             'User-Agent': req.headers['user-agent'] || 'RSK',
@@ -479,27 +479,27 @@ async function main(app, staticPath) {
         new URLSearchParams(history.location.search),
       );
 
-      const route = await router.resolve(context);
-      if (!route) {
-        const err = new Error(`Route ${req.path} not found`);
+      const page = await navigator.resolve(context);
+      if (!page) {
+        const err = new Error(`Page ${req.path} not found`);
         err.status = 404;
         throw err;
       }
 
-      if (route.redirect) {
-        return res.redirect(route.status || 302, route.redirect);
+      if (page.redirect) {
+        return res.redirect(page.status || 302, page.redirect);
       }
 
-      if (!route.component) {
-        const err = new Error(`Route ${req.path} has no component`);
+      if (!page.component) {
+        const err = new Error(`Page ${req.path} has no component`);
         err.status = 500;
         throw err;
       }
 
       const html = await renderPageToHtml({
         context,
-        component: route.component,
-        metadata: createPageMetadata(route, req),
+        component: page.component,
+        metadata: createPageMetadata(page, req),
       });
 
       const renderTime = Date.now() - startTime;
@@ -508,7 +508,7 @@ async function main(app, staticPath) {
       }
 
       res.setHeader('X-Render-Time', `${renderTime}ms`);
-      res.status(route.status || 200).send(html);
+      res.status(page.status || 200).send(html);
     } catch (err) {
       next(err);
     }
@@ -551,7 +551,7 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    cachedRouter = null;
+    cachedNavigator = null;
   });
   main.hot = module.hot;
 } else {

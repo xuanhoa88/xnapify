@@ -8,18 +8,18 @@
 import Layout from '../../components/Layout';
 import { isAuthenticated, setAdminPanel } from '../../redux';
 
-// Lazy load children routes context
+// Lazy load children pages context
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
 /**
- * Admin route factory - async to allow pre-building children
- * This ensures children are populated BEFORE the router evaluates them
+ * Admin page factory - async to allow pre-building children
+ * This ensures children are populated BEFORE the navigator evaluates them
  */
-const route = async buildRoutes => {
-  // Build children routes
-  const children = await buildRoutes(pagesContext);
+const route = async buildPages => {
+  // Build children pages
+  const children = await buildPages(pagesContext);
 
-  // Return admin route configuration
+  // Return admin page configuration
   return {
     path: '/admin',
     autoDelegate: false,
@@ -45,7 +45,7 @@ async function action(context) {
     (childResult && childResult.title) ||
     context.i18n.t('navigation.admin', 'Admin Panel');
 
-  // Return admin route action
+  // Return admin page action
   return {
     title,
     component: <Layout>{childResult && childResult.component}</Layout>,

@@ -5,44 +5,40 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
-import { Observable } from 'rxjs/Observable';
-import { Subject } from 'rxjs/Subject';
-import 'rxjs/add/observable/fromEvent';
-import 'rxjs/add/operator/debounceTime';
-import 'rxjs/add/operator/filter';
-import 'rxjs/add/operator/takeUntil';
+import { useEffect, useRef, useCallback, useState } from 'react';
+
+/* -------------------------------------------------------------------------- */
+/*                               useInfiniteScroll                             */
+/* -------------------------------------------------------------------------- */
 
 /**
- * useInfiniteScroll - Custom hook for infinite scroll using RxJS
+ * @typedef {Object} UseInfiniteScrollOptions
+ * @property {import('react').RefObject<HTMLElement>} containerRef
+ *   Ref to the scrollable container element.
+ * @property {Function} onLoadMore
+ *   Callback fired when the user scrolls near the bottom.
+ * @property {boolean} hasMore
+ *   Whether there is more data available to load.
+ * @property {boolean} loading
+ *   Whether a load operation is currently in progress.
+ * @property {number} [threshold=100]
+ *   Distance in pixels from the bottom at which loading is triggered.
+ * @property {number} [debounce=150]
+ *   Debounce delay in milliseconds for scroll handling.
+ * @property {boolean} [checkOnMount=true]
+ *   Whether to check if load is needed on mount.
+ */
+
+/**
+ * React hook for implementing infinite scrolling without RxJS.
  *
- * SSR-compatible hook that listens to scroll events on a container
- * and triggers a callback when the user scrolls near the bottom.
+ * - Native scroll listener
+ * - Debounced execution
+ * - SSR / Worker safe
+ * - Prevents stale closures
+ * - Compatible with Node 16+
  *
- * @param {Object} options - Configuration options
- * @param {React.RefObject} options.containerRef - Ref to the scrollable container
- * @param {Function} options.onLoadMore - Callback to trigger when near bottom
- * @param {boolean} options.hasMore - Whether there's more data to load
- * @param {boolean} options.loading - Whether data is currently loading
- * @param {number} options.threshold - Pixels from bottom to trigger (default: 100)
- * @param {number} options.debounce - Debounce time in ms (default: 150)
- *
- * @example
- * const containerRef = useRef(null);
- *
- * useInfiniteScroll({
- *   containerRef,
- *   onLoadMore: handleLoadMore,
- *   hasMore,
- *   loading: loadingMore,
- *   threshold: 50,
- * });
- *
- * return (
- *   <div ref={containerRef} style={{ overflow: 'auto', maxHeight: 300 }}>
- *     {items.map(item => <Item key={item.id} {...item} />)}
- *   </div>
- * );
+ * @param {UseInfiniteScrollOptions} options
  */
 export function useInfiniteScroll({
   containerRef,
@@ -51,15 +47,16 @@ export function useInfiniteScroll({
   loading,
   threshold = 100,
   debounce = 150,
+  checkOnMount = true,
 }) {
-  const destroy$ = useRef(null);
-
-  // Store latest values in refs to avoid stale closures
   const hasMoreRef = useRef(hasMore);
   const loadingRef = useRef(loading);
   const onLoadMoreRef = useRef(onLoadMore);
+  const timeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  // Update refs when values change
+  /* ----------------------------- Keep refs fresh ---------------------------- */
+
   useEffect(() => {
     hasMoreRef.current = hasMore;
   }, [hasMore]);
@@ -72,114 +69,175 @@ export function useInfiniteScroll({
     onLoadMoreRef.current = onLoadMore;
   }, [onLoadMore]);
 
+  /* -------------------------- Check scroll position ------------------------- */
+
+  const checkScroll = useCallback(() => {
+    if (!isMountedRef.current) return;
+
+    if (!containerRef || !containerRef.current) return;
+    const container = containerRef.current;
+
+    if (!hasMoreRef.current || loadingRef.current) return;
+
+    const { scrollTop } = container;
+    const { scrollHeight } = container;
+    const { clientHeight } = container;
+
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+
+    if (distanceFromBottom <= threshold) {
+      try {
+        if (onLoadMoreRef.current) {
+          onLoadMoreRef.current();
+        }
+      } catch (error) {
+        console.error('Error in onLoadMore callback:', error);
+      }
+    }
+  }, [containerRef, threshold]);
+
+  /* --------------------------- Initial check on mount -------------------------- */
+
   useEffect(() => {
-    // SSR guard - only run on client
-    if (typeof window === 'undefined') return undefined;
+    if (checkOnMount && typeof window !== 'undefined') {
+      // Small delay to ensure initial render is complete
+      const timer = setTimeout(checkScroll, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [checkOnMount, checkScroll]);
+
+  /* ------------------------------ Scroll logic ------------------------------ */
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    // SSR / non-DOM guard
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    if (!containerRef || !containerRef.current) {
+      return undefined;
+    }
 
     const container = containerRef.current;
-    if (!container) return undefined;
 
-    // Create a subject to manage cleanup
-    destroy$.current = new Subject();
+    if (typeof container.addEventListener !== 'function') {
+      return undefined;
+    }
 
-    // Create scroll observable (RxJS v5 uses method chaining)
-    const scroll$ = Observable.fromEvent(container, 'scroll')
-      .takeUntil(destroy$.current)
-      .debounceTime(debounce)
-      .filter(() => {
-        // Check if we should load more
-        if (!hasMoreRef.current || loadingRef.current) {
-          return false;
-        }
-
-        // Calculate if we're near the bottom
-        const { scrollTop, scrollHeight, clientHeight } = container;
-        const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-
-        return distanceFromBottom <= threshold;
-      });
-
-    // Subscribe to scroll events
-    const subscription = scroll$.subscribe(() => {
-      if (onLoadMoreRef.current) {
-        onLoadMoreRef.current();
+    /**
+     * Scroll event handler (debounced).
+     */
+    function handleScroll() {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
       }
-    });
 
-    return () => {
-      // Cleanup
-      if (destroy$.current) {
-        destroy$.current.next();
-        destroy$.current.complete();
+      timeoutRef.current = setTimeout(() => {
+        checkScroll();
+      }, debounce);
+    }
+
+    // Passive listener improves scroll performance
+    container.addEventListener('scroll', handleScroll, { passive: true });
+
+    return function cleanup() {
+      isMountedRef.current = false;
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
       }
-      subscription.unsubscribe();
+      container.removeEventListener('scroll', handleScroll);
     };
-  }, [containerRef, threshold, debounce]);
+  }, [containerRef, debounce, checkScroll]);
 }
 
+/* -------------------------------------------------------------------------- */
+/*                                  useDebounce                                */
+/* -------------------------------------------------------------------------- */
+
 /**
- * useDebounce - Custom hook for debouncing a value using RxJS
+ * React hook that debounces a value and invokes a callback.
  *
- * SSR-compatible hook that debounces value changes.
+ * - Native timers only
+ * - Works in browser, Node, and workers
+ * - Avoids stale callback references
  *
- * @param {*} value - The value to debounce
- * @param {number} delay - Debounce delay in ms (default: 300)
- * @param {Function} callback - Callback to trigger with debounced value
- *
- * @example
- * const [search, setSearch] = useState('');
- *
- * useDebounce(search, 300, (debouncedSearch) => {
- *   loadData(1, debouncedSearch, true);
- * });
+ * @template T
+ * @param {T} value
+ *   Value to debounce.
+ * @param {number} [delay=300]
+ *   Debounce delay in milliseconds.
+ * @param {Function} [callback]
+ *   Optional callback invoked with the debounced value.
+ * @returns {T} The debounced value
  */
 export function useDebounce(value, delay = 300, callback) {
-  const subject$ = useRef(null);
-  const destroy$ = useRef(null);
+  const [debouncedValue, setDebouncedValue] = useState(value);
   const callbackRef = useRef(callback);
+  const timeoutRef = useRef(null);
+  const isMountedRef = useRef(true);
 
-  // Update callback ref
+  /* ----------------------------- Keep callback fresh ----------------------------- */
+
   useEffect(() => {
     callbackRef.current = callback;
   }, [callback]);
 
-  // Initialize subject
   useEffect(() => {
-    // SSR guard
-    if (typeof window === 'undefined') return undefined;
-
-    subject$.current = new Subject();
-    destroy$.current = new Subject();
-
-    // RxJS v5 uses method chaining
-    const subscription = subject$.current
-      .takeUntil(destroy$.current)
-      .debounceTime(delay)
-      .subscribe(debouncedValue => {
-        if (callbackRef.current) {
-          callbackRef.current(debouncedValue);
-        }
-      });
-
+    isMountedRef.current = true;
     return () => {
-      if (destroy$.current) {
-        destroy$.current.next();
-        destroy$.current.complete();
-      }
-      subscription.unsubscribe();
+      isMountedRef.current = false;
     };
-  }, [delay]);
+  }, []);
 
-  // Push value changes to subject
+  /* ------------------------------ Debounce logic ------------------------------ */
+
   useEffect(() => {
-    if (subject$.current) {
-      subject$.current.next(value);
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
     }
-  }, [value]);
+
+    timeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current) return;
+
+      setDebouncedValue(value);
+
+      if (callbackRef.current) {
+        try {
+          callbackRef.current(value);
+        } catch (error) {
+          console.error('Error in useDebounce callback:', error);
+        }
+      }
+    }, delay);
+
+    return function cleanup() {
+      if (timeoutRef.current !== null) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
 }
 
+/* -------------------------------------------------------------------------- */
+/*                               useStableCallback                             */
+/* -------------------------------------------------------------------------- */
+
 /**
- * Creates a memoized callback that won't cause infinite loops
+ * Returns a memoized callback whose identity never changes
+ * but always calls the latest version of the provided function.
+ *
+ * Useful for:
+ * - Event handlers
+ * - Subscriptions
+ * - Effects with stable dependencies
+ *
+ * @param {Function} callback
+ * @returns {Function}
  */
 export function useStableCallback(callback) {
   const callbackRef = useRef(callback);
@@ -188,11 +246,12 @@ export function useStableCallback(callback) {
     callbackRef.current = callback;
   }, [callback]);
 
-  return useCallback(
-    (...args) =>
-      typeof callbackRef.current === 'function' && callbackRef.current(...args),
-    [],
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useCallback(function (...args) {
+    if (callbackRef.current) {
+      return callbackRef.current.apply(undefined, args);
+    }
+  }, []);
 }
 
 export default useInfiniteScroll;

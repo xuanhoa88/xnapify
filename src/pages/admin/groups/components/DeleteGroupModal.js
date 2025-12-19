@@ -76,8 +76,8 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Header onClose={handleClose}>Delete Group</Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete the group &quot;{group?.name}&quot;?
-          This action cannot be undone.
+          Are you sure you want to delete the group &quot;{group && group.name}
+          &quot;? This action cannot be undone.
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>

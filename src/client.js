@@ -74,7 +74,7 @@ if (context.locale && i18n.language !== context.locale) {
 
 let currentLocation = history.location;
 let unsubscribeNavigation = null;
-let cachedRouter = null;
+let cachedNavigator = null;
 let wsClient = null;
 let isNavigating = false;
 let navigationAbortController = null;
@@ -194,15 +194,15 @@ function buildWebSocketUrl(path = '/ws') {
 }
 
 // =============================================================================
-// ROUTER
+// NAVIGATOR
 // =============================================================================
 
-async function getRouter() {
-  if (!cachedRouter) {
-    cachedRouter = await import('./pages').then(m => m.default());
-    if (__DEV__) console.log('✅ Router initialized');
+async function getNavigator() {
+  if (!cachedNavigator) {
+    cachedNavigator = await import('./pages').then(m => m.default());
+    if (__DEV__) console.log('✅ Navigator initialized');
   }
-  return cachedRouter;
+  return cachedNavigator;
 }
 
 // =============================================================================
@@ -306,7 +306,7 @@ function handleNavigationError(error, isInitial, location) {
   });
 }
 
-async function handleRouteChange(location, action) {
+async function handlePageChange(location, action) {
   const isInitial = !action;
 
   // Abort previous navigation
@@ -339,34 +339,34 @@ async function handleRouteChange(location, action) {
     );
 
     // Sync locale from Redux state to context
-    // This ensures locale changes are reflected in route actions (e.g., loading locale-specific content)
+    // This ensures locale changes are reflected in page actions (e.g., loading locale-specific content)
     const currentState = store.getState();
     context.locale =
       (currentState.intl && currentState.intl.locale) || context.locale;
 
-    const router = await getRouter();
-    const route = await router.resolve(context);
-    if (!route) {
-      const err = new Error(`Route ${location.pathname} not found`);
+    const navigator = await getNavigator();
+    const page = await navigator.resolve(context);
+    if (!page) {
+      const err = new Error(`Page ${location.pathname} not found`);
       err.status = 404;
       throw err;
     }
 
     if (signal.aborted || currentLocation.key !== location.key) return;
 
-    if (route.redirect) {
-      window.location.href = route.redirect;
+    if (page.redirect) {
+      window.location.href = page.redirect;
       return;
     }
 
     store.dispatch({
       type: 'NAVIGATION_SUCCESS',
-      payload: { route, location, action },
+      payload: { page, location, action },
     });
 
     const appElement = (
       <WebSocketProvider client={wsClient}>
-        <App context={context}>{route.component}</App>
+        <App context={context}>{page.component}</App>
       </WebSocketProvider>
     );
     const container = document.getElementById('app');
@@ -378,10 +378,10 @@ async function handleRouteChange(location, action) {
 
     renderApp(appElement, container, isInitial);
 
-    if (route.title || route.description) {
+    if (page.title || page.description) {
       updatePageMetadata({
-        title: route.title,
-        description: route.description,
+        title: page.title,
+        description: page.description,
         url: window.location.href,
       });
     }
@@ -493,10 +493,10 @@ async function initializeApp() {
   if (__DEV__) console.log('🚀 App initialized');
 
   // Handle initial page load first
-  await handleRouteChange(currentLocation);
+  await handlePageChange(currentLocation);
 
   // Subscribe to navigation AFTER initial render to avoid duplicate triggers
-  unsubscribeNavigation = history.listen(handleRouteChange);
+  unsubscribeNavigation = history.listen(handlePageChange);
 
   // Session restoration on tab visibility change:
   // When user returns to tab, check if session is still valid
@@ -561,13 +561,13 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    cachedRouter = null;
+    cachedNavigator = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
     schedule(
       () => {
         if (currentLocation.pathname === loc.pathname) {
-          handleRouteChange(loc, 'HMR_UPDATE');
+          handlePageChange(loc, 'HMR_UPDATE');
         }
       },
       { timeout: 1000 },

@@ -83,7 +83,7 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
           {t(
             'roles.deleteConfirmation',
             'Are you sure you want to delete the role "{{roleName}}"?',
-            { roleName: role?.name },
+            { roleName: role && role.name },
           )}
         </Modal.Description>
       </Modal.Body>
