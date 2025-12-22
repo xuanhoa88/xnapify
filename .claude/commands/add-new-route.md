@@ -1,82 +1,37 @@
-Add a new route to the React Starter Kit application following these steps:
+Add a new page/route to the application.
 
-## 1. Create Route Directory and Files
-
-Create a new directory under `src/routes/` with the following structure:
+## Structure
 
 ```
-src/routes/my-route/
-├── index.js          # Route definition and data fetching
-├── MyRoute.js        # React component
-├── MyRoute.css       # CSS Modules styles
-└── MyRoute.test.js   # Jest tests (optional)
+src/pages/{page-name}/
+├── index.js          # Route definition + action
+├── {PageName}.js     # Page component
+├── {PageName}.css    # CSS Modules styles
+└── {PageName}.test.js # Tests (optional)
 ```
 
-## 2. Route Definition (index.js)
+## 1. Create Page Component
 
 ```javascript
-import React from 'react';
-import Layout from '../../components/Layout';
-import MyRoute from './MyRoute';
+// src/pages/my-page/MyPage.js
+import s from './MyPage.css';
 
-export default {
-  path: '/my-route',
-  title: 'My Route Title',
-  description: 'SEO description for this route',
-
-  async action({ fetch, params, query }) {
-    // Fetch data if needed
-    const data = await fetch('/api/my-data');
-
-    return {
-      title: 'My Route Title',
-      description: 'SEO description',
-      component: (
-        <Layout>
-          <MyRoute data={data} />
-        </Layout>
-      ),
-    };
-  },
-};
-```
-
-## 3. React Component (MyRoute.js)
-
-```javascript
-import React, { useEffect } from 'react';
-import PropTypes from 'prop-types';
-import { useAppContext } from '../../hooks/useAppContext';
-import s from './MyRoute.css';
-
-function MyRoute({ data }) {
-  const { insertCss } = useAppContext();
-
-  useEffect(() => {
-    const removeCss = insertCss(s);
-    return () => removeCss();
-  }, [insertCss]);
-
+function MyPage() {
   return (
     <div className={s.container}>
-      <h1 className={s.title}>My Route</h1>
-      <p>{data?.message}</p>
+      <h1 className={s.title}>My Page</h1>
+      <p>Page content here</p>
     </div>
   );
 }
 
-MyRoute.propTypes = {
-  data: PropTypes.shape({
-    message: PropTypes.string,
-  }),
-};
-
-export default MyRoute;
+export default MyPage;
 ```
 
-## 4. CSS Modules (MyRoute.css)
+## 2. Create Styles
 
 ```css
+/* src/pages/my-page/MyPage.css */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -90,119 +45,129 @@ export default MyRoute;
 }
 ```
 
-## 5. Register Route in Router
-
-Add the route to `src/router.js`:
+## 3. Create Route Definition
 
 ```javascript
-import myRoute from './routes/my-route';
+// src/pages/my-page/index.js
+import Layout from '../../components/Layout';
+import MyPage from './MyPage';
 
-const routes = {
-  path: '/',
-  children: [
-    // ... existing routes
-    myRoute,
-  ],
+/**
+ * Route configuration
+ */
+const route = {
+  path: '/my-page',
 };
+
+/**
+ * Route action
+ */
+function action(context) {
+  const title = context.i18n.t('myPage.title', 'My Page');
+
+  return {
+    title,
+    component: (
+      <Layout>
+        <MyPage />
+      </Layout>
+    ),
+  };
+}
+
+export default [route, action];
 ```
 
-## 6. Add Navigation Link (Optional)
-
-Update `src/components/Navigation/Navigation.js`:
+## 4. Add Navigation Link
 
 ```javascript
-<Link className={s.link} to='/my-route'>
-  My Route
-</Link>
+import { Link } from '../../components/History';
+
+<Link to='/my-page'>My Page</Link>;
 ```
 
-## 7. Test the Route
-
-```bash
-npm start
-# Navigate to http://localhost:3000/my-route
-```
-
-## Advanced Features
-
-### Dynamic Routes with Parameters
+## Dynamic Routes
 
 ```javascript
-export default {
+// src/pages/users/:id/index.js
+const route = {
   path: '/users/:id',
-
-  async action({ fetch, params }) {
-    const user = await fetch(`/api/users/${params.id}`);
-
-    return {
-      title: `User: ${user.name}`,
-      component: <UserProfile user={user} />,
-    };
-  },
 };
+
+function action(context) {
+  const userId = context.params.id;
+
+  return {
+    title: `User ${userId}`,
+    component: (
+      <Layout>
+        <UserProfile userId={userId} />
+      </Layout>
+    ),
+  };
+}
+
+export default [route, action];
 ```
 
-### Protected Routes (Authentication)
+## Protected Routes
 
 ```javascript
-import { useSelector } from 'react-redux';
+// src/pages/dashboard/index.js
+import { isAuthenticated } from '../../redux';
 
-export default {
-  path: '/dashboard',
+const route = { path: '/dashboard' };
 
-  async action({ fetch, store }) {
-    const { user } = store.getState();
+function action(context) {
+  const state = context.store.getState();
 
-    if (!user) {
-      return { redirect: '/login' };
-    }
+  // Redirect if not authenticated
+  if (!isAuthenticated(state)) {
+    return { redirect: '/login' };
+  }
 
-    const data = await fetch('/api/dashboard');
+  return {
+    title: 'Dashboard',
+    component: (
+      <Layout>
+        <Dashboard />
+      </Layout>
+    ),
+  };
+}
 
-    return {
-      title: 'Dashboard',
-      component: <Dashboard data={data} />,
-    };
-  },
-};
+export default [route, action];
 ```
 
-### Code Splitting (Lazy Loading)
+## Parent Routes with Children
 
 ```javascript
-export default {
-  path: '/heavy-page',
+// src/pages/admin/index.js
+const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
-  async action() {
-    const HeavyPage = await import('./HeavyPage');
-
-    return {
-      title: 'Heavy Page',
-      component: <HeavyPage.default />,
-    };
-  },
+const route = async buildPages => {
+  const children = await buildPages(pagesContext);
+  return {
+    path: '/admin',
+    autoDelegate: false,
+    children,
+  };
 };
-```
 
-## Testing
+async function action(context) {
+  // Auth check
+  if (!isAuthenticated(context.store.getState())) {
+    return { redirect: '/login' };
+  }
 
-Create `MyRoute.test.js`:
+  // Delegate to children
+  const childResult = await context.next();
 
-```javascript
-import React from 'react';
-import { render } from '@testing-library/react';
-import MyRoute from './MyRoute';
+  return {
+    title: childResult?.title || 'Admin',
+    component: <Layout>{childResult?.component}</Layout>,
+  };
+}
 
-describe('MyRoute', () => {
-  it('renders without crashing', () => {
-    const { getByText } = render(<MyRoute />);
-    expect(getByText('My Route')).toBeInTheDocument();
-  });
-});
-```
-
-Run tests:
-
-```bash
-npm test
+export default [route, action];
 ```

@@ -179,12 +179,12 @@ Html.propTypes = {
   image: PropTypes.string,
   url: PropTypes.string,
   type: PropTypes.string,
+  locale: PropTypes.string,
   styles: PropTypes.arrayOf(
     PropTypes.shape({
       cssText: PropTypes.string.isRequired,
     }),
   ),
-  locale: PropTypes.string,
   styleLinks: PropTypes.arrayOf(PropTypes.string),
   scripts: PropTypes.arrayOf(PropTypes.string),
   loadableState: PropTypes.shape({

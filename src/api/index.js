@@ -12,20 +12,20 @@ import compression from 'compression';
 import morgan from 'morgan';
 import { fs, http, auth, db } from './engines';
 
-/**
- * Parse environment variable as comma-separated array with fallback
- * @param {string|undefined} envValue - Environment variable value
- * @param {Array} defaultValue - Default array if envValue is empty
- * @returns {Array}
- */
-function parseEnvArray(envValue, defaultValue = []) {
-  return typeof envValue === 'string'
-    ? envValue
-        .split(',')
-        .map(item => item.trim())
-        .filter(Boolean)
-    : defaultValue;
-}
+// Module-scoped Symbol for allowing provider writes (shared across all guards)
+// Using Symbol.for() ensures the same Symbol is used even across HMR reloads
+const ALLOW_PROVIDER_WRITES = Symbol.for('rsk.allowProviderWrites');
+
+// Core app providers - these are registered at startup and protected from modification
+const APP_PROVIDERS = new Set([
+  'jwt', // JWT utilities
+  'ws', // WebSocket server instance
+  'db', // Database ORM instance
+  'fs', // Filesystem utilities
+  'http', // HTTP utilities
+  'auth', // Authentication engine
+  'models', // Database models
+]);
 
 /**
  * Load and validate a factory function from a webpack module
@@ -168,7 +168,7 @@ async function discoverModules(app, db) {
       let successCount = 0;
 
       // Create app guard once for all modules (optimization)
-      const guardedApp = createAppGuard(app);
+      const guardedApp = createProviderGuard(app);
 
       // Process all module factories in parallel (supports both sync and async)
       await Promise.all(
@@ -225,41 +225,49 @@ async function discoverModules(app, db) {
 /**
  * Create rate limiting middleware
  *
- * @param {Object} options - API configuration
+ * @param {Object} config - API configuration
+ * @param {Object} [config.rateLimit] - Rate limit overrides
+ * @param {string[]} [config.rateLimitSkipPaths] - Paths to skip rate limiting
  * @returns {Function} Rate limiting middleware
  */
-const createRateLimiter = (options = {}) => {
-  const windowMs = __DEV__ ? 1 * 60 * 1000 : 15 * 60 * 1000; // 15 minutes
+const createRateLimiterMiddleware = (config = {}) => {
+  // Development: 1 minute window, 100 requests (lenient for testing)
+  // Production: 15 minute window, 50 requests (stricter for security)
+  const windowMs = __DEV__ ? 1 * 60 * 1000 : 15 * 60 * 1000;
   const maxRequests = __DEV__ ? 100 : 50;
+
+  // Paths to skip rate limiting (static assets, browser defaults)
+  const defaultSkipPaths = [
+    '/rsk.ico',
+    '/rsk_192x192.png',
+    '/site.webmanifest',
+  ];
+  const skipPaths = config.rateLimitSkipPaths || defaultSkipPaths;
 
   return rateLimit({
     windowMs,
     max: maxRequests,
 
-    // Standardized headers (recommended)
-    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-    legacyHeaders: false, // Disable `X-RateLimit-*` headers
+    // Use standardized RateLimit-* headers (RFC 6585)
+    standardHeaders: true,
+    legacyHeaders: false,
 
-    // Skip rate limiting for certain requests
-    // Skip health checks, metrics, static assets
-    skip: req =>
-      ['/health', '/metrics', '/favicon.ico'].some(path =>
-        req.path.startsWith(path),
-      ),
+    // Skip rate limiting for health checks, metrics, and static assets
+    skip: req => skipPaths.some(path => req.path.startsWith(path)),
 
-    // Custom error handler
-    handler: (req, res, next, options) => {
-      res.status(options.statusCode).json({
+    // Custom error response
+    handler: (req, res, _next, rateLimitInfo) => {
+      res.status(rateLimitInfo.statusCode).json({
         success: false,
         error: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(options.windowMs / 60000) + ' minutes',
-        limit: options.max,
+        retryAfter: Math.ceil(rateLimitInfo.windowMs / 60000) + ' minutes',
+        limit: rateLimitInfo.max,
         current: req.rateLimit.used,
       });
     },
 
-    // Allow safe overrides (but protect critical settings)
-    ...options.rateLimit,
+    // Allow overrides from config
+    ...config.rateLimit,
   });
 };
 
@@ -296,117 +304,92 @@ function createHealthCheckHandler(options = {}) {
 }
 
 /**
- * Setup app dependencies in Express app settings
+ * Register core app providers in Express app settings.
+ * These providers are protected from modification by createProviderGuard.
  *
  * @param {Object} app - Express app
  */
-function setupAppDependencies(app) {
-  // Freeze complex objects to prevent modification
+function registerAppProviders(app) {
+  // Register database provider
   app.set('db', db);
 
-  // Note: fs module is already read-only, but we freeze it for consistency
+  // Register filesystem provider (already read-only)
   app.set('fs', fs);
 
-  // HTTP utilities for request/response handling
+  // Register HTTP utilities provider
   app.set('http', http);
 
-  // Authentication utilities for JWT, cookies, sessions, etc.
+  // Register authentication provider
   app.set('auth', auth);
 }
 
 /**
- * Guard Express app settings to prevent modification of protected keys.
- * HMR-friendly version that allows re-initialization during hot reload.
+ * Guard Express app providers to prevent modification after initialization.
+ * HMR-friendly: use withProtectedWrites() to temporarily allow writes.
  *
  * @param {import('express').Express} app
  * @returns {Proxy} Guarded app
  */
-function createAppGuard(app) {
-  // Logs a warning when protected app settings are accessed or modified
+function createProviderGuard(app) {
+  // Check if provider is registered and writes are not allowed
+  const isBlocked = key =>
+    APP_PROVIDERS.has(key) && !app[ALLOW_PROVIDER_WRITES];
+
+  // Log blocked provider modification attempts
   const warnBlocked = (action, key) => {
     console.warn(
-      `⚠️ Attempted to ${action} protected dependency: "${key}"\n` +
-        new Error().stack.split('\n').slice(2).join('\n'),
+      `⚠️ Blocked ${action} on app provider "${key}"\n` +
+        new Error().stack.split('\n').slice(2, 6).join('\n'),
     );
   };
 
-  // Critical application dependencies that should not be modified at runtime
-  // These are protected by the app guard to maintain application integrity
-  const protectedKeys = new Set([
-    'jwt', // JWT utilities
-    'ws', // WebSocket server instance
-    'db', // Database ORM instance
-    'fs', // Filesystem utilities
-    'http', // HTTP utilities
-    'auth', // Authentication engine
-    'models', // Database models
-  ]);
+  // Wrap a method to guard provider modifications
+  const guardMethod = (method, action) =>
+    function (key, ...args) {
+      if (isBlocked(key)) {
+        warnBlocked(action, key);
+        return this;
+      }
+      return method.call(app, key, ...args);
+    };
 
-  // Flag to allow temporary writes during setup/HMR
-  // eslint-disable-next-line no-underscore-dangle
-  if (!app.__allowProtectedWrites) {
-    // eslint-disable-next-line no-underscore-dangle
-    app.__allowProtectedWrites = false;
-  }
+  // Cache settings proxy to avoid recreation on each access
+  let settingsProxy = null;
 
   return new Proxy(app, {
     get(target, prop, receiver) {
-      const original = Reflect.get(target, prop, receiver);
+      const value = Reflect.get(target, prop, receiver);
 
-      // ----- PROTECT app.set() -----
-      if (prop === 'set') {
-        return function (key, value) {
-          // Allow writes when flag is set (during setup/HMR)
-          // eslint-disable-next-line no-underscore-dangle
-          if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
-            warnBlocked('modify', key);
-            return target;
-          }
-
-          return original.call(target, key, value);
-        };
+      // Guard app.set(), app.enable(), app.disable()
+      if (prop === 'set' || prop === 'enable' || prop === 'disable') {
+        return guardMethod(value, prop);
       }
 
-      // ----- PROTECT app.enable()/disable() -----
-      if (prop === 'enable' || prop === 'disable') {
-        return function (key) {
-          // eslint-disable-next-line no-underscore-dangle
-          if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
-            warnBlocked(`${prop}`, key);
-            return target;
-          }
-          return original.call(target, key);
-        };
-      }
-
-      // ----- PROTECT app.settings[key] deletion -----
+      // Guard direct access to app.settings
       if (prop === 'settings') {
-        return new Proxy(original, {
-          deleteProperty(obj, key) {
-            // eslint-disable-next-line no-underscore-dangle
-            if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
-              warnBlocked('delete', key);
-              return false;
-            }
-            return Reflect.deleteProperty(obj, key);
-          },
-          set(obj, key, value) {
-            // eslint-disable-next-line no-underscore-dangle
-            if (protectedKeys.has(key) && !target.__allowProtectedWrites) {
-              warnBlocked('overwrite', key);
-              return false;
-            }
-            return Reflect.set(obj, key, value);
-          },
-        });
+        if (!settingsProxy) {
+          settingsProxy = new Proxy(value, {
+            set: (obj, key, val) => {
+              if (isBlocked(key)) {
+                warnBlocked('set', key);
+                return true; // Return true to avoid strict mode error
+              }
+              return Reflect.set(obj, key, val);
+            },
+            deleteProperty: (obj, key) => {
+              if (isBlocked(key)) {
+                warnBlocked('delete', key);
+                return true; // Return true to avoid strict mode error
+              }
+              return Reflect.deleteProperty(obj, key);
+            },
+          });
+        }
+        return settingsProxy;
       }
 
-      // Return functions bound correctly
-      if (typeof original === 'function') {
-        return original.bind(target);
-      }
-
-      return original;
+      // Bind functions to preserve context
+      return typeof value === 'function' ? value.bind(target) : value;
     },
   });
 }
@@ -418,6 +401,16 @@ function createAppGuard(app) {
  * @returns {Function} CORS middleware
  */
 function createCorsMiddleware(options = {}) {
+  // Parse environment variable as comma-separated array with fallback
+  const parseEnvArray = (envValue, defaultValue = []) => {
+    return typeof envValue === 'string'
+      ? envValue
+          .split(',')
+          .map(item => item.trim())
+          .filter(Boolean)
+      : defaultValue;
+  };
+
   return function corsWithReq(req, res, next) {
     cors({
       origin(origin, callback) {
@@ -556,7 +549,7 @@ function createLoggingMiddleware(_options) {
 export default async function main(app, config = {}) {
   try {
     // Setup app dependencies for dependency injection
-    setupAppDependencies(app);
+    registerAppProviders(app);
 
     // Initialize database migrations
     await db.runMigrations(null, db.connection);
@@ -565,15 +558,15 @@ export default async function main(app, config = {}) {
     await db.runSeeds(null, db.connection);
 
     // Create rate limiter middleware
-    const rateLimiter = createRateLimiter(config);
+    const rateLimiter = createRateLimiterMiddleware(config);
 
     // Apply global middleware (order matters!)
     app.use(createLoggingMiddleware(config)); // Log all requests first
     app.use(createCorsMiddleware(config)); // CORS handling
     app.use(createCompressionMiddleware(config)); // Response compression
 
-    // Setup health check endpoint (before API routes)
-    app.get('/health', rateLimiter, createHealthCheckHandler(config));
+    // Health check endpoint (unrestricted for orchestration systems)
+    app.get('/health', createHealthCheckHandler(config));
 
     // Discover and initialize modules
     const { apiModels, apiRoutes } = await discoverModules(app, db);

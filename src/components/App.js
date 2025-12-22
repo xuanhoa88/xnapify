@@ -23,18 +23,24 @@ export default function App({ context, children }) {
   );
 }
 
-const ContextType = {
-  // Redux store
-  store: PropTypes.object.isRequired,
+const ContextTypes = {
   // Universal HTTP client
   fetch: PropTypes.func.isRequired,
+  // Redux store
+  store: PropTypes.object.isRequired,
   // History instance
   history: PropTypes.object.isRequired,
+  // I18next instance
+  i18n: PropTypes.object.isRequired,
+  // Current locale
+  locale: PropTypes.string.isRequired,
+  // Current pathname
   pathname: PropTypes.string.isRequired,
+  // Query parameters
   query: PropTypes.object,
 };
 
 App.propTypes = {
-  context: PropTypes.shape(ContextType).isRequired,
+  context: PropTypes.shape(ContextTypes).isRequired,
   children: PropTypes.node.isRequired,
 };

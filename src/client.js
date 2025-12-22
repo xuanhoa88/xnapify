@@ -45,11 +45,7 @@ const fetch = createFetch(window.fetch);
 const { redux: preloadedReduxState = {} } = window.__PRELOADED_STATE__ || {};
 // eslint-disable-next-line no-underscore-dangle
 delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
-const store = configureStore(preloadedReduxState, {
-  fetch,
-  history,
-  i18n,
-});
+const store = configureStore(preloadedReduxState, { fetch, history, i18n });
 
 const context = {
   store,

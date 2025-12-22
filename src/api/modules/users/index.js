@@ -71,7 +71,7 @@ export default async function userModule(deps, app) {
   );
 
   // Register global middlewares in app settings for reuse by other modules
-  app.set('userMiddlewares', userMiddlewares);
+  app.set('user.middlewares', userMiddlewares);
 
   // Create single router instance for user routes
   const router = Router();

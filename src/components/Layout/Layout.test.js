@@ -43,6 +43,17 @@ const initialState = {
   },
 };
 
+// Mock history object for HistoryProvider
+const mockHistory = {
+  location: { pathname: '/', search: '', hash: '', state: null, key: 'test' },
+  push: jest.fn(),
+  replace: jest.fn(),
+  go: jest.fn(),
+  back: jest.fn(),
+  forward: jest.fn(),
+  listen: jest.fn(() => jest.fn()), // Returns unsubscribe function
+};
+
 // =============================================================================
 // TESTS
 // =============================================================================
@@ -59,6 +70,8 @@ describe('Layout', () => {
             store,
             fetch,
             i18n,
+            locale: store.getState().intl.locale,
+            history: mockHistory,
             pathname: '/',
             query: {},
           }}
