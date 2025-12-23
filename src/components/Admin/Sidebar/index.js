@@ -1,0 +1,209 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { useCallback, useState, useEffect } from 'react';
+import clsx from 'clsx';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
+import {
+  closeAdminSidebar,
+  isAdminSidebarOpen,
+  isAuthenticated,
+  logout,
+  getCurrentUser,
+} from '../../../redux';
+import { useHistory, Link } from '../../History';
+import { useWebSocket } from '../../WebSocket';
+import Icon from '../../Icon';
+import s from './Sidebar.css';
+
+function AdminSidebar() {
+  const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const history = useHistory();
+  const ws = useWebSocket();
+
+  const sidebarOpen = useSelector(isAdminSidebarOpen);
+  const isAuth = useSelector(isAuthenticated);
+  const user = useSelector(getCurrentUser);
+
+  const [currentPath, setCurrentPath] = useState('');
+
+  useEffect(() => {
+    setCurrentPath(history.location.pathname);
+    const unsubscribe = history.listen(location => {
+      setCurrentPath(location.pathname);
+    });
+    return unsubscribe;
+  }, [history]);
+
+  const handleCloseSidebar = useCallback(() => {
+    dispatch(closeAdminSidebar());
+  }, [dispatch]);
+
+  const handleLogout = useCallback(async () => {
+    await dispatch(logout());
+    handleCloseSidebar();
+    if (ws) {
+      ws.logout();
+    }
+  }, [dispatch, handleCloseSidebar, ws]);
+
+  const isActive = useCallback(
+    (path, exact = false) => {
+      if (!currentPath) return false;
+      if (exact) return currentPath === path;
+      return currentPath.startsWith(path);
+    },
+    [currentPath],
+  );
+
+  // Navigation menu items with SVG icon names
+  const menuItems = [
+    {
+      section: t('navigation.main', 'Main'),
+      items: [
+        {
+          path: '/admin',
+          label: t('navigation.dashboard', 'Dashboard'),
+          icon: 'dashboard',
+          exact: true,
+        },
+      ],
+    },
+    {
+      section: t('navigation.management', 'Management'),
+      items: [
+        {
+          path: '/admin/users',
+          label: t('navigation.users', 'Users'),
+          icon: 'users',
+        },
+        {
+          path: '/admin/groups',
+          label: t('navigation.groups', 'Groups'),
+          icon: 'folder',
+        },
+        {
+          path: '/admin/roles',
+          label: t('navigation.roles', 'Roles'),
+          icon: 'shield',
+        },
+        {
+          path: '/admin/permissions',
+          label: t('navigation.permissions', 'Permissions'),
+          icon: 'key',
+        },
+      ],
+    },
+  ];
+
+  return (
+    <>
+      <aside className={clsx(s.sidebar, { [s.open]: sidebarOpen })}>
+        {/* Sidebar Header */}
+        <div className={s.sidebarHeader}>
+          <div className={s.brand}>
+            <span className={s.brandLogo}>⚡</span>
+            <span className={s.brandName}>RSK</span>
+          </div>
+          <button
+            className={s.closeBtn}
+            onClick={handleCloseSidebar}
+            aria-label='Close menu'
+          >
+            <Icon name='close' size={20} />
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className={s.nav}>
+          {menuItems.map(section => (
+            <div key={section.section} className={s.section}>
+              <h3 className={s.sectionTitle}>{section.section}</h3>
+              <ul className={s.menuList}>
+                {section.items.map(item => (
+                  <li key={item.path}>
+                    <Link
+                      to={item.path}
+                      className={clsx(s.menuLink, {
+                        [s.active]: isActive(item.path, item.exact),
+                      })}
+                      onClick={handleCloseSidebar}
+                    >
+                      <Icon name={item.icon} size={18} className={s.menuIcon} />
+                      <span className={s.menuLabel}>{item.label}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+
+          {/* Divider */}
+          <div className={s.divider} />
+
+          {/* Quick Links */}
+          <div className={s.section}>
+            <h3 className={s.sectionTitle}>
+              {t('navigation.quick', 'Quick Links')}
+            </h3>
+            <ul className={s.menuList}>
+              <li>
+                <Link
+                  to='/'
+                  className={s.menuLink}
+                  onClick={handleCloseSidebar}
+                >
+                  <Icon name='arrowUp' size={18} className={s.menuIcon} />
+                  <span className={s.menuLabel}>
+                    {t('navigation.backToSite', 'Back to Site')}
+                  </span>
+                </Link>
+              </li>
+            </ul>
+          </div>
+        </nav>
+
+        {/* User Footer */}
+        {isAuth && user && (
+          <div className={s.footer}>
+            <div className={s.userInfo}>
+              <div className={s.userAvatar}>
+                {user.displayName?.charAt(0) || 'A'}
+              </div>
+              <div className={s.userDetails}>
+                <span className={s.userName}>
+                  {user.displayName || 'Admin'}
+                </span>
+                <span className={s.userRole}>{user.email}</span>
+              </div>
+            </div>
+            <button
+              className={s.logoutBtn}
+              onClick={handleLogout}
+              aria-label={t('navigation.logout', 'Logout')}
+            >
+              <Icon name='logout' size={18} />
+            </button>
+          </div>
+        )}
+      </aside>
+
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div
+          className={s.overlay}
+          onClick={handleCloseSidebar}
+          role='presentation'
+        />
+      )}
+    </>
+  );
+}
+
+export default AdminSidebar;

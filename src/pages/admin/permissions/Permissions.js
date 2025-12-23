@@ -15,6 +15,7 @@ import {
   getPermissionsError,
 } from '../../../redux';
 import DeletePermissionModal from './components/DeletePermissionModal';
+import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Permissions.css';
 
 function Permissions() {
@@ -70,10 +71,12 @@ function Permissions() {
   if (loading) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>Permission Management</h1>
-        </div>
-        <div className={s.loading}>Loading permissions...</div>
+        <PageHeader
+          icon={<Icon name='key' size={24} />}
+          title='Permission Management'
+          subtitle='Configure granular access controls'
+        />
+        <Loader variant='cards' message='Loading permissions...' />
       </div>
     );
   }
@@ -81,9 +84,11 @@ function Permissions() {
   if (error) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>Permission Management</h1>
-        </div>
+        <PageHeader
+          icon={<Icon name='key' size={24} />}
+          title='Permission Management'
+          subtitle='Configure granular access controls'
+        />
         <div className={s.error}>
           <p>Error loading permissions: {error}</p>
           <button
@@ -99,8 +104,11 @@ function Permissions() {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h1 className={s.title}>Permission Management</h1>
+      <PageHeader
+        icon={<Icon name='key' size={24} />}
+        title='Permission Management'
+        subtitle='Configure granular access controls'
+      >
         <button className={s.addButton} onClick={handleAdd}>
           <svg
             width='16'
@@ -119,7 +127,7 @@ function Permissions() {
           </svg>
           Add Permission
         </button>
-      </div>
+      </PageHeader>
 
       {categories.map(category => (
         <div key={category} className={s.categorySection}>
@@ -135,14 +143,14 @@ function Permissions() {
                       title='Edit'
                       onClick={() => handleEdit(permission.id)}
                     >
-                      ✏️
+                      <Icon name='edit' size={16} />
                     </button>
                     <button
                       className={s.deleteBtn}
                       title='Delete'
                       onClick={() => handleDelete(permission)}
                     >
-                      🗑️
+                      <Icon name='trash' size={16} />
                     </button>
                   </div>
                 </div>
@@ -160,9 +168,13 @@ function Permissions() {
       ))}
 
       {permissions.length === 0 && (
-        <div className={s.empty}>
-          <p>No permissions found.</p>
-        </div>
+        <Empty
+          icon='key'
+          title='No permissions found'
+          description='Create granular permissions to control access to resources.'
+          actionLabel='Add Permission'
+          onAction={handleAdd}
+        />
       )}
 
       {/* Delete Confirmation Modal */}

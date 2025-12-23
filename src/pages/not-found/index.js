@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
 import NotFound from './NotFound';
 
 /**
  * Route configuration
+ * Catch-all route with lowest priority for 404 pages
  */
 const route = {
   path: '/*path',
@@ -18,16 +18,12 @@ const route = {
 
 /**
  * Route action (404)
+ * Renders not-found page standalone without header/footer
  */
 function action() {
-  const title = 'Page Not Found';
   return {
-    title,
-    component: (
-      <Layout>
-        <NotFound title={title} />
-      </Layout>
-    ),
+    title: 'Page Not Found',
+    component: <NotFound />,
     status: 404,
   };
 }

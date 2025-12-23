@@ -5,102 +5,221 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import "../../components/variables.css";
+@import '../../components/variables.css';
 
-/* Centered root for error pages */
+/* =============================================================================
+   ROOT - Full page takeover
+   ============================================================================= */
+
 .root {
-  padding: var(--spacing-12) var(--spacing-6);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: var(--color-background);
-  min-height: 60vh;
+  z-index: 9999;
+  font-family: var(--font-family-base);
   display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
-/* Decorative gradient overlay */
-.root::before {
-  content: "";
+/* =============================================================================
+   HERO SECTION
+   ============================================================================= */
+
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: var(--spacing-16) var(--spacing-6);
+  text-align: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hero::before {
+  content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
   background: radial-gradient(
-    circle at 20% 50%,
-    rgb(102 126 234 / 10%) 0%,
-    transparent 50%
-  ),
+      circle at 30% 50%,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 50%
+    ),
     radial-gradient(
-    circle at 80% 80%,
-    rgb(118 75 162 / 10%) 0%,
-    transparent 50%
-  );
+      circle at 70% 80%,
+      rgb(255 255 255 / 8%) 0%,
+      transparent 50%
+    );
   pointer-events: none;
-  z-index: 0;
 }
 
-/* Card container */
-.container {
-  max-width: var(--max-content-width);
-  margin: 0 auto;
-  padding: var(--spacing-12);
-  background: var(--color-background);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-lg);
-  border: 1px solid var(--color-border);
-  width: 100%;
-  text-align: center;
+.heroCode {
+  font-size: 8rem;
+  font-weight: var(--font-weight-bold);
+  color: rgb(255 255 255 / 25%);
+  line-height: 1;
+  margin-bottom: var(--spacing-4);
+  letter-spacing: -0.05em;
+  position: relative;
+  z-index: 1;
+  text-shadow: 0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.heroTitle {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin: 0 0 var(--spacing-4);
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   position: relative;
   z-index: 1;
 }
 
-.title {
-  font-size: var(--font-size-5xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  margin: 0 0 var(--spacing-4);
-}
-
-.message {
+.heroSubtitle {
   font-size: var(--font-size-xl);
-  color: var(--color-text-secondary);
-  margin: 0 0 var(--spacing-8);
+  color: rgb(255 255 255 / 90%);
+  margin: 0;
+  line-height: 1.6;
+  max-width: 500px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 1;
 }
 
-.link {
-  display: inline-block;
-  padding: var(--spacing-3) var(--spacing-6);
-  background: var(--color-primary);
-  color: white;
+/* =============================================================================
+   CONTENT SECTION
+   ============================================================================= */
+
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12) var(--spacing-6);
+}
+
+.container {
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* =============================================================================
+   BUTTONS
+   ============================================================================= */
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4) var(--spacing-8);
+  font-size: var(--font-size-base);
   font-weight: var(--font-weight-semibold);
   border-radius: var(--radius-lg);
   text-decoration: none;
-  transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-base);
+  min-width: 160px;
+  cursor: pointer;
+  border: none;
 }
 
-.link:hover {
-  background: var(--color-primary-hover);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
-  text-decoration: none;
+.btnPrimary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgb(102 126 234 / 30%);
 }
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgb(102 126 234 / 40%);
+}
+
+.btnSecondary {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+}
+
+.btnSecondary:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-text-tertiary);
+  transform: translateY(-2px);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
 
 @media (max-width: 768px) {
-  .root {
+  .hero {
+    padding: var(--spacing-10) var(--spacing-4);
+  }
+
+  .heroCode {
+    font-size: 5rem;
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-2xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-base);
+  }
+
+  .content {
     padding: var(--spacing-8) var(--spacing-4);
   }
 
-  .container {
-    padding: var(--spacing-8);
+  .actions {
+    flex-direction: column;
   }
 
-  .title {
-    font-size: var(--font-size-4xl);
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+  }
+}
+
+/* Small Mobile (375px) */
+@media (max-width: 375px) {
+  .hero {
+    padding: var(--spacing-8) var(--spacing-3);
   }
 
-  .message {
-    font-size: var(--font-size-lg);
+  .heroCode {
+    font-size: 4rem;
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .content {
+    padding: var(--spacing-6) var(--spacing-3);
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    height: 44px;
+    font-size: var(--font-size-sm);
   }
 }

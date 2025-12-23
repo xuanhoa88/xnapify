@@ -8,8 +8,6 @@
 import Roles from './Roles';
 import CreateRole from './create/CreateRole';
 import EditRole from './edit/EditRole';
-import RoleUsers from './users/RoleUsers';
-import RoleGroups from './groups/RoleGroups';
 
 /**
  * Route configuration with child routes
@@ -36,20 +34,6 @@ const route = {
       action: context => ({
         title: 'Edit Role - Admin',
         component: <EditRole roleId={context.params.roleId} />,
-      }),
-    },
-    {
-      path: '/:roleId/users',
-      action: context => ({
-        title: 'Role Users - Admin',
-        component: <RoleUsers roleId={context.params.roleId} />,
-      }),
-    },
-    {
-      path: '/:roleId/groups',
-      action: context => ({
-        title: 'Role Groups - Admin',
-        component: <RoleGroups roleId={context.params.roleId} />,
       }),
     },
   ],

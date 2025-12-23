@@ -7,11 +7,10 @@
 
 // Public API - Actions
 export {
-  toggleSidebar,
-  openSidebar,
-  closeSidebar,
+  toggleAdminSidebar,
+  openAdminSidebar,
+  closeAdminSidebar,
   setAdminPanel,
-  setPageHeader,
 } from './slice';
 
 // Public API - Selectors

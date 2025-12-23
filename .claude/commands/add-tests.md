@@ -35,7 +35,7 @@ const initialState = {
   runtime: {
     initialNow: Date.now(),
     appName: 'React Starter Kit',
-    appDescription: 'Boilerplate',
+    appDescription: 'Boilerplate for React.js web applications',
   },
   intl: {
     locale: DEFAULT_LOCALE,

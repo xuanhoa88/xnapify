@@ -6,45 +6,88 @@
  */
 
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
+import { Link } from '../../components/History';
 import { featuresData } from './data';
 import s from './FeatureDetails.css';
 
 function FeatureDetails({ featureId }) {
+  const { t } = useTranslation();
   const feature = featuresData.find(f => f.id === featureId);
 
   if (!feature) {
     return (
-      <div className={s.notFound}>
-        <h1 className={s.notFoundTitle}>404 - Feature Not Found</h1>
-        <p>The feature &apos;{featureId}&apos; does not exist.</p>
-        <a href='/features' className={s.backLink}>
-          ← Back to Features
-        </a>
+      <div className={s.root}>
+        <section className={s.heroError}>
+          <div className={s.heroContent}>
+            <h1 className={s.heroTitle}>
+              {t('features.notFound.title', '404 - Feature Not Found')}
+            </h1>
+            <p className={s.heroSubtitle}>
+              {t(
+                'features.notFound.message',
+                'The feature "{{featureId}}" does not exist.',
+                { featureId },
+              )}
+            </p>
+            <Link to='/features' className={s.btnPrimary}>
+              {t('features.backToFeatures', '← Back to Features')}
+            </Link>
+          </div>
+        </section>
       </div>
     );
   }
 
   return (
-    <div className={s.detailContainer}>
-      <div className={s.backLinkContainer}>
-        <a href='/features' className={s.backLink}>
-          ← Back to all features
-        </a>
-      </div>
-      <div className={s.detailIcon}>{feature.icon}</div>
-      <h1 className={s.detailTitle}>{feature.name}</h1>
-      <div className={s.detailTags}>
-        {feature.tags.map(tag => (
-          <span key={tag} className={s.detailTag}>
-            {tag}
-          </span>
-        ))}
-      </div>
-      <p className={s.description}>{feature.description}</p>
-      <div className={s.detailsBox}>
-        <h3>Details</h3>
-        <p>{feature.details}</p>
-      </div>
+    <div className={s.root}>
+      {/* Hero Section */}
+      <section className={s.hero}>
+        <div className={s.heroContent}>
+          <Link to='/features' className={s.backLink}>
+            {t('features.backToFeatures', '← Back to Features')}
+          </Link>
+          <div className={s.heroIcon}>{feature.icon}</div>
+          <h1 className={s.heroTitle}>{feature.name}</h1>
+          <div className={s.heroTags}>
+            {feature.tags.map(tag => (
+              <span key={tag} className={s.heroTag}>
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Content Section */}
+      <section className={s.content}>
+        <div className={s.container}>
+          <div className={s.description}>
+            <h2 className={s.sectionTitle}>
+              {t('features.overview', 'Overview')}
+            </h2>
+            <p className={s.descText}>{feature.description}</p>
+          </div>
+
+          <div className={s.details}>
+            <h2 className={s.sectionTitle}>
+              {t('features.details', 'Details')}
+            </h2>
+            <div className={s.detailsBox}>
+              <p>{feature.details}</p>
+            </div>
+          </div>
+
+          <div className={s.actions}>
+            <Link to='/features' className={s.btnSecondary}>
+              {t('features.viewAllFeatures', 'View All Features')}
+            </Link>
+            <Link to='/' className={s.btnPrimary}>
+              {t('features.backToHome', 'Back to Home')}
+            </Link>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -14,6 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
+import { PageHeader, Icon, Loader } from '../../../../components/Admin';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
@@ -179,14 +180,17 @@ function EditGroup({ groupId }) {
   if (fetchingGroup) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit Group</h2>
+        <PageHeader
+          icon={<Icon name='folder' size={24} />}
+          title='Edit Group'
+          subtitle='Modify group details'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Groups
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
-          <div className={s.loading}>Loading group data...</div>
+          <Loader variant='spinner' message='Loading group data...' />
         </div>
       </div>
     );
@@ -195,12 +199,15 @@ function EditGroup({ groupId }) {
   if (!group) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit Group</h2>
+        <PageHeader
+          icon={<Icon name='folder' size={24} />}
+          title='Edit Group'
+          subtitle='Modify group details'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Groups
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load group data</div>
           <div className={s.formActions}>
@@ -219,12 +226,15 @@ function EditGroup({ groupId }) {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h2 className={s.title}>Edit Group</h2>
+      <PageHeader
+        icon={<Icon name='folder' size={24} />}
+        title='Edit Group'
+        subtitle='Modify group details'
+      >
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Groups
         </button>
-      </div>
+      </PageHeader>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
@@ -270,7 +280,7 @@ function EditGroup({ groupId }) {
                   value={formData.category}
                   onChange={handleChange}
                   className={s.formInput}
-                  placeholder='e.g., Department, Team, Project'
+                  placeholder='e.g., System, Organization, Department'
                 />
               </div>
               <div className={s.formGroup}>
@@ -282,7 +292,7 @@ function EditGroup({ groupId }) {
                   value={formData.type}
                   onChange={handleChange}
                   className={s.formInput}
-                  placeholder='e.g., Internal, External'
+                  placeholder='e.g., Security, Organizational, Functional, Default'
                 />
               </div>
             </div>

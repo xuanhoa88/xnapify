@@ -14,6 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
+import { PageHeader, Icon, Loader } from '../../../../components/Admin';
 import s from './EditRole.css';
 
 function EditRole({ roleId }) {
@@ -196,14 +197,17 @@ function EditRole({ roleId }) {
   if (fetchingRole) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit Role</h2>
+        <PageHeader
+          icon={<Icon name='shield' size={24} />}
+          title='Edit Role'
+          subtitle='Modify role permissions'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Roles
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
-          <div className={s.loading}>Loading role data...</div>
+          <Loader variant='spinner' message='Loading role data...' />
         </div>
       </div>
     );
@@ -212,12 +216,15 @@ function EditRole({ roleId }) {
   if (!role) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit Role</h2>
+        <PageHeader
+          icon={<Icon name='shield' size={24} />}
+          title='Edit Role'
+          subtitle='Modify role permissions'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Roles
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load role data</div>
           <div className={s.formActions}>
@@ -236,12 +243,15 @@ function EditRole({ roleId }) {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h2 className={s.title}>Edit Role</h2>
+      <PageHeader
+        icon={<Icon name='shield' size={24} />}
+        title='Edit Role'
+        subtitle='Modify role permissions'
+      >
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Roles
         </button>
-      </div>
+      </PageHeader>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

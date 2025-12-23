@@ -13,25 +13,6 @@
   min-height: 100%;
 }
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-6);
-  background: var(--color-background);
-  padding: var(--spacing-6);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
-.title {
-  margin: 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-}
-
 .addButton {
   display: flex;
   align-items: center;
@@ -78,18 +59,25 @@
 .searchIcon {
   position: absolute;
   left: var(--spacing-3);
-  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
-  opacity: 0.6;
   z-index: 1;
+  color: var(--color-text-secondary);
+  transition: var(--transition-base);
+}
+
+.searchWrapper:focus-within .searchIcon {
+  color: var(--color-primary);
 }
 
 .searchInput {
   width: 100%;
-  height: 42px;
-  padding: var(--spacing-2) var(--spacing-4);
-  padding-left: calc(var(--spacing-3) + 24px);
-  padding-right: calc(var(--spacing-3) + 28px);
+  height: 40px;
+  padding: 0 var(--spacing-4);
+  padding-left: calc(var(--spacing-3) + 28px);
+  padding-right: calc(var(--spacing-3) + 32px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -97,29 +85,34 @@
   transition: var(--transition-base);
 }
 
+.searchInput:hover {
+  border-color: var(--color-border-hover);
+}
+
 .searchInput:focus {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
 .searchInput::placeholder {
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
 }
 
 .searchClear {
   position: absolute;
-  right: var(--spacing-2);
+  right: var(--spacing-3);
   display: flex;
   align-items: center;
   justify-content: center;
   width: 20px;
   height: 20px;
   padding: 0;
-  background: var(--color-background-secondary);
+  background: var(--color-background-tertiary);
   border: none;
   border-radius: var(--radius-full);
-  font-size: 10px;
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   cursor: pointer;
   transition: var(--transition-base);
@@ -127,8 +120,9 @@
 }
 
 .searchClear:hover {
-  background: var(--color-text-secondary);
+  background: var(--color-error);
   color: white;
+  transform: scale(1.1);
 }
 
 .grid {
@@ -138,52 +132,64 @@
 }
 
 .roleCard {
-  background: var(--color-background-secondary);
+  background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-6);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-5);
   transition: var(--transition-base);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  display: flex;
+  flex-direction: column;
 }
 
 .roleCard:hover {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
+  border-color: var(--color-primary);
 }
 
 .roleHeader {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  margin-bottom: var(--spacing-4);
+  margin-bottom: var(--spacing-2);
 }
 
 .roleIcon {
-  font-size: 2rem;
-  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
 }
 
 .roleName {
   margin: 0;
   flex: 1;
-  font-size: var(--font-size-xl);
+  font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
-  color: var(--color-text);
+  color: var(--color-text-primary);
+  line-height: 1.4;
 }
 
 .roleDescription {
-  margin: 0 0 var(--spacing-5) 0;
+  margin: 0 0 var(--spacing-3) 0;
   color: var(--color-text-secondary);
-  line-height: 1.6;
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
 }
 
 .roleStats {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-2);
-  margin-bottom: var(--spacing-5);
-  padding: var(--spacing-4);
-  background: var(--color-background);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-background-secondary);
   border-radius: var(--radius-md);
+}
+
+.roleStats:hover {
+  background: var(--color-background-tertiary);
 }
 
 .stat {
@@ -193,57 +199,155 @@
 }
 
 .statLabel {
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
 }
 
 .statValue {
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-}
-
-/* Loading state */
-.loading {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
 }
 
 /* Error state */
 .error {
   padding: var(--spacing-8);
   text-align: center;
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .error p {
-  color: #dc3545;
-  margin-bottom: var(--spacing-4);
+  color: #dc2626;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
-/* Empty state */
-.empty {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
-}
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
 
 @media (max-width: 768px) {
   .root {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
   }
 
-  .header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: var(--spacing-4);
+  /* Add button compact */
+  .addButton {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    gap: var(--spacing-1);
   }
 
+  /* Filters compact */
+  .filters {
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .searchWrapper {
+    min-width: unset;
+  }
+
+  .searchInput {
+    height: 36px;
+    font-size: var(--font-size-xs);
+  }
+
+  /* Grid single column */
   .grid {
     grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  /* Role card compact */
+  .roleCard {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .roleCard:hover {
+    transform: none;
+  }
+
+  .roleHeader {
+    margin-bottom: var(--spacing-2);
+  }
+
+  .roleName {
+    font-size: var(--font-size-base);
+  }
+
+  .roleDescription {
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.5;
+  }
+
+  .roleStats {
+    padding: var(--spacing-2) var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+    gap: var(--spacing-2);
+  }
+
+  .statLabel {
+    font-size: 10px;
+  }
+
+  .statValue {
+    font-size: var(--font-size-xs);
+  }
+
+  /* Pagination compact */
+  .pagination {
+    flex-wrap: wrap;
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-top: var(--spacing-4);
+  }
+
+  .paginationInfo {
+    font-size: var(--font-size-xs);
+    width: 100%;
+    text-align: center;
+    margin-right: 0;
+    margin-bottom: var(--spacing-2);
+  }
+
+  .pageBtn {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .pageNumber {
+    min-width: 30px;
+    height: 30px;
+    font-size: var(--font-size-xs);
+  }
+
+  .error {
+    padding: var(--spacing-6);
+    font-size: var(--font-size-sm);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .roleCard {
+    padding: var(--spacing-3);
+  }
+
+  .roleName {
+    font-size: var(--font-size-sm);
   }
 }
 
@@ -252,7 +356,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--spacing-3);
   margin-top: var(--spacing-6);
   padding: var(--spacing-4) var(--spacing-6);
   background: var(--color-background);
@@ -265,27 +369,33 @@
   font-size: var(--font-size-sm);
   color: var(--color-text-secondary);
   margin-right: auto;
+  font-weight: var(--font-weight-medium);
 }
 
 .pageBtn {
-  padding: var(--spacing-2) var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
 }
 
 .pageBtn:disabled {
-  opacity: 0.5;
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
 .pageBtn:hover:not(:disabled) {
-  background: var(--color-background-secondary);
+  background: var(--color-primary);
   border-color: var(--color-primary);
+  color: white;
 }
 
 .pageNumbers {
@@ -295,14 +405,15 @@
 }
 
 .pageNumber {
-  min-width: 36px;
-  height: 36px;
+  min-width: 40px;
+  height: 40px;
   padding: 0 var(--spacing-2);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   background: var(--color-background);
   color: var(--color-text-primary);
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   cursor: pointer;
   transition: var(--transition-base);
   display: flex;
@@ -310,7 +421,7 @@
   justify-content: center;
 }
 
-.pageNumber:hover:not(:disabled) {
+.pageNumber:hover:not(:disabled, .activePage) {
   background: var(--color-background-secondary);
   border-color: var(--color-primary);
 }
@@ -319,9 +430,11 @@
   background: var(--color-primary);
   color: white;
   border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgb(59 130 246 / 30%);
 }
 
 .ellipsis {
   color: var(--color-text-secondary);
   padding: 0 var(--spacing-1);
+  font-weight: var(--font-weight-medium);
 }

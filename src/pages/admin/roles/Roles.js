@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -13,24 +13,28 @@ import { useHistory } from '../../../components/History';
 import { fetchRoles, getRolesPagination } from '../../../redux';
 import RoleActionsDropdown from './components/RoleActionsDropdown';
 import RolePermissionsModal from './components/RolePermissionsModal';
+import RoleUsersModal from './components/RoleUsersModal';
+import RoleGroupsModal from './components/RoleGroupsModal';
 import DeleteRoleModal from './components/DeleteRoleModal';
+import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Roles.css';
 
 // Pagination items per page
 const ITEMS_PER_PAGE = 10;
 
-// Map role names to icons for visual consistency
+// Map role names to icon names for visual consistency
 const ROLE_ICONS = Object.freeze({
-  admin: '👑',
-  mod: '🎭',
-  user: '👤',
-  guest: '👁️',
-  editor: '✏️',
-  viewer: '👀',
+  admin: 'crown',
+  mod: 'shield',
+  user: 'user',
+  guest: 'eye',
+  editor: 'edit',
+  viewer: 'eye',
 });
 
 const getRoleIcon = roleName => {
-  return ROLE_ICONS[roleName.toLowerCase()] || '📋';
+  const iconName = ROLE_ICONS[roleName.toLowerCase()] || 'clipboard';
+  return <Icon name={iconName} size={24} />;
 };
 
 function Roles() {
@@ -53,6 +57,12 @@ function Roles() {
 
   // Permissions modal ref
   const permissionsModalRef = useRef();
+
+  // Users modal ref
+  const usersModalRef = useRef();
+
+  // Groups modal ref
+  const groupsModalRef = useRef();
 
   // Dropdown state
   const [activeDropdownId, setActiveDropdownId] = useState(null);
@@ -78,19 +88,13 @@ function Roles() {
   );
 
   // Dropdown action handlers
-  const handleViewUsers = useCallback(
-    role => {
-      history.push(`/admin/roles/${role.id}/users`);
-    },
-    [history],
-  );
+  const handleViewUsers = useCallback(role => {
+    usersModalRef.current && usersModalRef.current.open(role);
+  }, []);
 
-  const handleViewGroups = useCallback(
-    role => {
-      history.push(`/admin/roles/${role.id}/groups`);
-    },
-    [history],
-  );
+  const handleViewGroups = useCallback(role => {
+    groupsModalRef.current && groupsModalRef.current.open(role);
+  }, []);
 
   const handleViewPermissions = useCallback(role => {
     permissionsModalRef.current && permissionsModalRef.current.open(role);
@@ -160,8 +164,8 @@ function Roles() {
     setCurrentPage(page);
   }, []);
 
-  // Generate page numbers for pagination
-  const getPageNumbers = useCallback(() => {
+  // Generate page numbers for pagination (memoized)
+  const pageNumbers = useMemo(() => {
     const totalPages = (pagination && pagination.pages) || 1;
     const pages = [];
     const maxVisible = 5;
@@ -193,12 +197,15 @@ function Roles() {
   if (loading && roles.length === 0) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
-        </div>
-        <div className={s.loading}>
-          {t('roles.loading', 'Loading roles...')}
-        </div>
+        <PageHeader
+          icon={<Icon name='shield' size={24} />}
+          title={t('roles.title', 'Role Management')}
+          subtitle='Define access levels and permissions'
+        />
+        <Loader
+          variant='cards'
+          message={t('roles.loading', 'Loading roles...')}
+        />
       </div>
     );
   }
@@ -206,9 +213,11 @@ function Roles() {
   if (error) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
-        </div>
+        <PageHeader
+          icon={<Icon name='shield' size={24} />}
+          title={t('roles.title', 'Role Management')}
+          subtitle='Define access levels and permissions'
+        />
         <div className={s.error}>
           <p>
             {t('roles.errorLoading', 'Error loading roles')}: {error}
@@ -235,8 +244,11 @@ function Roles() {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h1 className={s.title}>{t('roles.title', 'Role Management')}</h1>
+      <PageHeader
+        icon={<Icon name='shield' size={24} />}
+        title={t('roles.title', 'Role Management')}
+        subtitle='Define access levels and permissions'
+      >
         <button type='button' className={s.addButton} onClick={handleAddRole}>
           <svg
             width='16'
@@ -255,12 +267,14 @@ function Roles() {
           </svg>
           {t('roles.addRole', 'Add Role')}
         </button>
-      </div>
+      </PageHeader>
 
       {/* Search/Filter Section */}
       <div className={s.filters}>
         <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>🔍</span>
+          <span className={s.searchIcon}>
+            <Icon name='search' size={16} />
+          </span>
           <input
             type='text'
             placeholder={t('roles.searchPlaceholder', 'Search roles...')}
@@ -283,9 +297,16 @@ function Roles() {
       </div>
 
       {roles.length === 0 ? (
-        <div className={s.empty}>
-          <p>{t('roles.noRolesFound', 'No roles found.')}</p>
-        </div>
+        <Empty
+          icon='shield'
+          title={t('roles.noRolesFound', 'No roles found')}
+          description={t(
+            'roles.noRolesDescription',
+            'Create a new role to define access levels and permissions.',
+          )}
+          actionLabel={t('roles.addRole', 'Add Role')}
+          onAction={handleAddRole}
+        />
       ) : (
         <div className={s.grid}>
           {roles.map(role => (
@@ -354,7 +375,7 @@ function Roles() {
                 ‹ {t('common.prev', 'Prev')}
               </button>
               <div className={s.pageNumbers}>
-                {getPageNumbers().map((page, idx) =>
+                {pageNumbers.map((page, idx) =>
                   page === '...' ? (
                     <span key={`ellipsis-${idx}`} className={s.ellipsis}>
                       ...
@@ -389,6 +410,12 @@ function Roles() {
 
       {/* Permissions Modal */}
       <RolePermissionsModal ref={permissionsModalRef} />
+
+      {/* Users Modal */}
+      <RoleUsersModal ref={usersModalRef} />
+
+      {/* Groups Modal */}
+      <RoleGroupsModal ref={groupsModalRef} />
 
       {/* Delete Confirmation Modal */}
       <DeleteRoleModal ref={deleteModalRef} onSuccess={refreshRoles} />

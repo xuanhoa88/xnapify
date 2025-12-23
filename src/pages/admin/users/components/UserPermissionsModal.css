@@ -73,3 +73,45 @@
   font-style: italic;
   font-size: var(--font-size-sm);
 }
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .sectionTitle {
+    font-size: var(--font-size-xs);
+  }
+
+  .roleItem {
+    padding: var(--spacing-1) var(--spacing-2);
+  }
+
+  .roleName {
+    font-size: var(--font-size-xs);
+  }
+
+  .rolePermCount {
+    font-size: 10px;
+  }
+
+  .permissionBadge {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: 10px;
+  }
+
+  .noPermissions {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 375px) {
+  .roleBreakdown {
+    margin-bottom: var(--spacing-3);
+    padding-bottom: var(--spacing-3);
+  }
+
+  .permissionsList {
+    gap: var(--spacing-1);
+  }
+}

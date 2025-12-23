@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { Icon } from '../../../../components/Admin';
 import s from './UserActionsDropdown.css';
 
 /**
@@ -37,15 +38,21 @@ function UserActionsDropdown({
     }
   }, [isOpen, onToggle]);
 
-  const handleToggle = e => {
-    e.stopPropagation();
-    onToggle(user.id);
-  };
+  const handleToggle = useCallback(
+    e => {
+      e.stopPropagation();
+      onToggle(user.id);
+    },
+    [user.id, onToggle],
+  );
 
-  const handleAction = action => {
-    action(user);
-    onToggle(null);
-  };
+  const handleAction = useCallback(
+    action => {
+      action(user);
+      onToggle(null);
+    },
+    [user, onToggle],
+  );
 
   return (
     <div className={s.actionDropdown}>
@@ -72,7 +79,7 @@ function UserActionsDropdown({
             type='button'
             role='menuitem'
           >
-            👥 Manage Groups
+            <Icon name='folder' size={16} /> Manage Groups
           </button>
           <button
             className={s.dropdownItem}
@@ -80,7 +87,7 @@ function UserActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🎭 Manage Roles
+            <Icon name='shield' size={16} /> Manage Roles
           </button>
           <div className={s.dropdownDivider} />
           <button
@@ -89,7 +96,7 @@ function UserActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🔐 View Permissions
+            <Icon name='key' size={16} /> View Permissions
           </button>
         </div>
       )}

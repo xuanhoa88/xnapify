@@ -37,9 +37,8 @@ const initialState = {
   },
   user: null,
   ui: {
-    sidebarOpen: false,
+    adminSidebarOpen: false,
     isAdminPanel: false,
-    showPageHeader: false,
   },
 };
 

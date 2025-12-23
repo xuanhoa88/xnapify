@@ -16,6 +16,7 @@ import {
   getDashboardError,
   getDashboardRecentActivities,
 } from '../../../redux';
+import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Dashboard.css';
 
 /**
@@ -54,7 +55,7 @@ function Dashboard() {
   const renderContent = () => {
     // Loading state
     if (loading) {
-      return <div className={s.loading}>Loading dashboard...</div>;
+      return <Loader variant='cards' message='Loading dashboard...' />;
     }
 
     // Error state
@@ -78,8 +79,8 @@ function Dashboard() {
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>Total Users</h3>
-            <span className={s.cardIcon} role='img' aria-label='Users'>
-              👥
+            <span className={s.cardIcon}>
+              <Icon name='users' size={24} />
             </span>
           </div>
           <div className={s.cardValue}>{stats.totalUsers || 0}</div>
@@ -91,8 +92,8 @@ function Dashboard() {
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>Total Roles</h3>
-            <span className={s.cardIcon} role='img' aria-label='Roles'>
-              🎭
+            <span className={s.cardIcon}>
+              <Icon name='shield' size={24} />
             </span>
           </div>
           <div className={s.cardValue}>{stats.totalRoles || 0}</div>
@@ -105,7 +106,7 @@ function Dashboard() {
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>Total Groups</h3>
             <span className={s.cardIcon} role='img' aria-label='Groups'>
-              👨‍👩‍👧‍👦
+              <Icon name='folder' size={24} />
             </span>
           </div>
           <div className={s.cardValue}>{stats.totalGroups || 0}</div>
@@ -117,8 +118,8 @@ function Dashboard() {
         <div className={s.card}>
           <div className={s.cardHeader}>
             <h3 className={s.cardTitle}>System Status</h3>
-            <span className={s.cardIcon} role='img' aria-label='Status'>
-              ✅
+            <span className={s.cardIcon}>
+              <Icon name='check-circle' size={24} />
             </span>
           </div>
           <div className={s.cardValue}>
@@ -186,9 +187,11 @@ function Dashboard() {
                 </tbody>
               </table>
             ) : (
-              <div className={s.empty}>
-                <p>No recent activity found.</p>
-              </div>
+              <Empty
+                icon='activity'
+                title='No recent activity'
+                description='Activity will appear here as users interact with the system.'
+              />
             )}
           </div>
         </div>
@@ -196,7 +199,16 @@ function Dashboard() {
     );
   };
 
-  return <div className={s.root}>{renderContent()}</div>;
+  return (
+    <div className={s.root}>
+      <PageHeader
+        icon={<Icon name='dashboard' size={24} />}
+        title='Dashboard'
+        subtitle='Overview of your system activity'
+      />
+      {renderContent()}
+    </div>
+  );
 }
 
 export default Dashboard;

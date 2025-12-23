@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import { useHistory } from '../../../components/History';
@@ -24,21 +24,23 @@ import {
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
+import GroupUsersModal from './components/GroupUsersModal';
 import DeleteGroupModal from './components/DeleteGroupModal';
+import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Groups.css';
 
 // Pagination items per page
 const ITEMS_PER_PAGE = 10;
 
 // Helper to get user initials from display name or email
-function getInitials(name) {
+const getInitials = name => {
   if (!name) return '??';
   const parts = name.trim().split(' ');
   if (parts.length >= 2) {
     return (parts[0][0] + parts[1][0]).toUpperCase();
   }
   return name.substring(0, 2).toUpperCase();
-}
+};
 
 function Groups() {
   const dispatch = useDispatch();
@@ -64,6 +66,9 @@ function Groups() {
   // Ref for GroupPermissionsModal
   const permissionsModalRef = useRef();
 
+  // Ref for GroupUsersModal
+  const usersModalRef = useRef();
+
   // Ref for DeleteGroupModal
   const deleteModalRef = useRef();
 
@@ -79,10 +84,10 @@ function Groups() {
     loading: rolesLoading,
     loadingMore: rolesLoadingMore,
     hasMore: rolesHasMore,
-    handleSearch: handleRoleSearch,
-    handleLoadMore: handleRoleLoadMore,
+    onSearch: handleRoleSearch,
+    onLoadMore: handleRoleLoadMore,
   } = useSearchableSelect({
-    fetchFn: params => dispatch(fetchRoles(params)),
+    fetch: params => dispatch(fetchRoles(params)),
     dataKey: 'roles',
     mapOption: r => ({ value: r.name, label: r.name }),
     includeAllOption: true,
@@ -124,12 +129,10 @@ function Groups() {
     [history],
   );
 
-  const handleViewUsers = useCallback(
-    group => {
-      history.push(`/admin/groups/${group.id}/users`);
-    },
-    [history],
-  );
+  const handleViewUsers = useCallback(group => {
+    // Open the users modal for this group
+    usersModalRef.current && usersModalRef.current.open(group);
+  }, []);
 
   const handleManageRoles = useCallback(group => {
     // Open the roles modal for this group
@@ -222,8 +225,8 @@ function Groups() {
     setCurrentPage(page);
   }, []);
 
-  // Generate page numbers for pagination
-  const getPageNumbers = useCallback(() => {
+  // Generate page numbers for pagination (memoized)
+  const pageNumbers = useMemo(() => {
     const totalPages = (pagination && pagination.pages) || 1;
     const pages = [];
     const maxVisible = 5;
@@ -255,10 +258,12 @@ function Groups() {
   if (loading && groups.length === 0) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>Group Management</h1>
-        </div>
-        <div className={s.loading}>Loading groups...</div>
+        <PageHeader
+          icon={<Icon name='folder' size={24} />}
+          title='Group Management'
+          subtitle='Organize users into groups for easier access control'
+        />
+        <Loader variant='cards' message='Loading groups...' />
       </div>
     );
   }
@@ -266,9 +271,11 @@ function Groups() {
   if (error) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>Group Management</h1>
-        </div>
+        <PageHeader
+          icon={<Icon name='folder' size={24} />}
+          title='Group Management'
+          subtitle='Organize users into groups for easier access control'
+        />
         <div className={s.error}>Error loading groups: {error}</div>
       </div>
     );
@@ -276,8 +283,11 @@ function Groups() {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h1 className={s.title}>Group Management</h1>
+      <PageHeader
+        icon={<Icon name='folder' size={24} />}
+        title='Group Management'
+        subtitle='Organize users into groups for easier access control'
+      >
         <button className={s.addButton} onClick={handleAddGroup}>
           <svg
             width='16'
@@ -296,12 +306,14 @@ function Groups() {
           </svg>
           Add Group
         </button>
-      </div>
+      </PageHeader>
 
       {/* Filters */}
       <div className={s.filters}>
         <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>🔍</span>
+          <span className={s.searchIcon}>
+            <Icon name='search' size={16} />
+          </span>
           <input
             type='text'
             placeholder='Search groups...'
@@ -340,14 +352,21 @@ function Groups() {
             className={s.clearFiltersBtn}
             onClick={handleClearFilters}
             type='button'
+            title='Reset all filters'
           >
-            Clear Filters
+            ✕ Clear Filters
           </button>
         )}
       </div>
 
       {groups.length === 0 ? (
-        <div className={s.empty}>No groups found</div>
+        <Empty
+          icon='folder'
+          title='No groups found'
+          description='Create a new group to organize users and assign roles.'
+          actionLabel='Add Group'
+          onAction={handleAddGroup}
+        />
       ) : (
         <div className={s.grid}>
           {groups.map(group => {
@@ -460,7 +479,7 @@ function Groups() {
                 ‹ Prev
               </button>
               <div className={s.pageNumbers}>
-                {getPageNumbers().map((page, idx) =>
+                {pageNumbers.map((page, idx) =>
                   page === '...' ? (
                     <span key={`ellipsis-${idx}`} className={s.ellipsis}>
                       ...
@@ -498,6 +517,9 @@ function Groups() {
 
       {/* Group Permissions Modal */}
       <GroupPermissionsModal ref={permissionsModalRef} />
+
+      {/* Group Users Modal */}
+      <GroupUsersModal ref={usersModalRef} />
 
       {/* Delete Confirmation Modal */}
       <DeleteGroupModal ref={deleteModalRef} onSuccess={refreshGroups} />

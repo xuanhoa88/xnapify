@@ -28,6 +28,7 @@ import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
 import DeleteUserModal from './components/DeleteUserModal';
+import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -74,10 +75,10 @@ function Users() {
     loading: rolesLoading,
     loadingMore: rolesLoadingMore,
     hasMore: rolesHasMore,
-    handleSearch: handleRoleSearch,
-    handleLoadMore: handleRoleLoadMore,
+    onSearch: handleRoleSearch,
+    onLoadMore: handleRoleLoadMore,
   } = useSearchableSelect({
-    fetchFn: params => dispatch(fetchRoles(params)),
+    fetch: params => dispatch(fetchRoles(params)),
     dataKey: 'roles',
     mapOption: r => ({ value: r.name, label: r.name }),
     includeAllOption: true,
@@ -89,10 +90,10 @@ function Users() {
     loading: groupsLoading,
     loadingMore: groupsLoadingMore,
     hasMore: groupsHasMore,
-    handleSearch: handleGroupSearch,
-    handleLoadMore: handleGroupLoadMore,
+    onSearch: handleGroupSearch,
+    onLoadMore: handleGroupLoadMore,
   } = useSearchableSelect({
-    fetchFn: params => dispatch(fetchGroups(params)),
+    fetch: params => dispatch(fetchGroups(params)),
     dataKey: 'groups',
     mapOption: g => ({ value: g.name, label: g.name }),
     includeAllOption: true,
@@ -206,8 +207,8 @@ function Users() {
     setGroupFilter(value);
     setCurrentPage(1);
   }, []);
-  const handleStatusFilterChange = useCallback(e => {
-    setStatusFilter(e.target.value);
+  const handleStatusFilterChange = useCallback(value => {
+    setStatusFilter(value);
     setCurrentPage(1);
   }, []);
 
@@ -253,10 +254,12 @@ function Users() {
   if (loading && users.length === 0) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>User Management</h1>
-        </div>
-        <div className={s.loading}>Loading users...</div>
+        <PageHeader
+          icon={<Icon name='users' size={24} />}
+          title='User Management'
+          subtitle='Manage users, roles, and permissions'
+        />
+        <Loader variant='skeleton' message='Loading users...' />
       </div>
     );
   }
@@ -264,9 +267,11 @@ function Users() {
   if (error) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h1 className={s.title}>User Management</h1>
-        </div>
+        <PageHeader
+          icon={<Icon name='users' size={24} />}
+          title='User Management'
+          subtitle='Manage users, roles, and permissions'
+        />
         <div className={s.error}>
           <p>Error loading users: {error}</p>
           <button className={s.addButton} onClick={refreshUsers}>
@@ -279,15 +284,18 @@ function Users() {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h2 className={s.title}>User Management</h2>
+      <PageHeader
+        icon={<Icon name='users' size={24} />}
+        title='User Management'
+        subtitle='Manage users, roles, and permissions'
+      >
         <button
           className={s.addButton}
           onClick={() => history.push('/admin/users/create')}
         >
           Add User
         </button>
-      </div>
+      </PageHeader>
 
       {selectedUsers.length > 0 && (
         <UserBulkActionsBar
@@ -300,7 +308,9 @@ function Users() {
 
       <div className={s.filters}>
         <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>🔍</span>
+          <span className={s.searchIcon}>
+            <Icon name='search' size={16} />
+          </span>
           <input
             type='text'
             placeholder='Search users...'
@@ -348,19 +358,22 @@ function Users() {
             searchPlaceholder='Search groups...'
           />
         </div>
-        <select
-          className={s.filterSelect}
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={[
+            { value: '', label: 'All Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+          ]}
           value={statusFilter}
           onChange={handleStatusFilterChange}
-        >
-          <option value=''>All Status</option>
-          <option value='active'>Active</option>
-          <option value='inactive'>Inactive</option>
-        </select>
+          placeholder='All Status'
+          showSearch={false}
+        />
         <div className={s.filterActions}>
           {hasActiveFilters && (
             <button
-              className={s.clearBtn}
+              className={s.clearFiltersBtn}
               onClick={handleClearAllFilters}
               type='button'
               title='Reset all filters'
@@ -455,14 +468,14 @@ function Users() {
                         history.push(`/admin/users/${user.id}/edit`)
                       }
                     >
-                      ✏️
+                      <Icon name='edit' size={16} />
                     </button>
                     <button
                       className={s.actionBtn}
                       title='Delete'
                       onClick={() => handleDelete(user)}
                     >
-                      🗑️
+                      <Icon name='trash' size={16} />
                     </button>
                     <UserActionsDropdown
                       user={user}
@@ -483,9 +496,13 @@ function Users() {
       </div>
 
       {users.length === 0 && (
-        <div className={s.empty}>
-          <p>No users found.</p>
-        </div>
+        <Empty
+          icon='users'
+          title='No users found'
+          description='Try adjusting your search or filter criteria, or add a new user to get started.'
+          actionLabel='Add User'
+          onAction={() => history.push('/admin/users/create')}
+        />
       )}
 
       {pagination && pagination.pages > 1 && (

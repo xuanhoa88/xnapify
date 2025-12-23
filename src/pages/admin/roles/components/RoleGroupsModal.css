@@ -1,0 +1,321 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../components/variables.css';
+
+/* Search Input */
+.searchWrapper {
+  position: relative;
+  margin-bottom: var(--spacing-4);
+}
+
+.searchWrapper .searchIcon {
+  position: absolute;
+  left: var(--spacing-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  color: var(--color-text-secondary);
+}
+
+.searchWrapper .searchInput {
+  width: 100%;
+  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-8);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+  transition: var(--transition-base);
+}
+
+.searchWrapper .searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
+}
+
+.searchWrapper .searchInput::placeholder {
+  color: var(--color-text-secondary);
+}
+
+.searchClear {
+  position: absolute;
+  right: var(--spacing-3);
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--color-background-tertiary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+  z-index: 2;
+}
+
+.searchClear:hover {
+  background: var(--color-error);
+  color: white;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Group List */
+.groupsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.groupItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-base);
+}
+
+.groupItem:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
+}
+
+.groupIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+  flex-shrink: 0;
+}
+
+.groupInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.groupName {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.groupDesc {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.groupMeta {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.userCount {
+  display: inline-flex;
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: var(--color-background-secondary);
+  color: var(--color-text-secondary);
+}
+
+.noGroups {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-4);
+  text-align: center;
+}
+
+/* Pagination */
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-2);
+  margin-top: var(--spacing-4);
+  padding-top: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.pageBtn {
+  padding: var(--spacing-2) var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
+}
+
+.pageNumbers {
+  display: flex;
+  gap: var(--spacing-1);
+  align-items: center;
+}
+
+.pageNumber {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: var(--transition-base);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pageNumber:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
+}
+
+.pageNumber.activePage {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.ellipsis {
+  color: var(--color-text-secondary);
+  padding: 0 var(--spacing-1);
+}
+
+.paginationInfo {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-right: auto;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .searchWrapper {
+    margin-bottom: var(--spacing-3);
+  }
+
+  .searchWrapper .searchIcon {
+    left: var(--spacing-3);
+  }
+
+  .searchWrapper .searchInput {
+    padding: var(--spacing-2) var(--spacing-6) var(--spacing-2) var(--spacing-8);
+    font-size: var(--font-size-xs);
+  }
+
+  .searchClear {
+    right: var(--spacing-1);
+    font-size: 1rem;
+    padding: var(--spacing-1);
+  }
+
+  .groupItem {
+    padding: var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+
+  .groupIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .groupName {
+    font-size: var(--font-size-xs);
+  }
+
+  .groupDesc {
+    font-size: 10px;
+  }
+
+  .userCount {
+    font-size: 10px;
+    padding: 2px var(--spacing-1);
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: var(--spacing-1);
+  }
+
+  .pageBtn {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .pageNumber {
+    min-width: 28px;
+    height: 28px;
+    font-size: var(--font-size-xs);
+  }
+
+  .paginationInfo {
+    width: 100%;
+    text-align: center;
+    margin-bottom: var(--spacing-2);
+  }
+}
+
+@media (max-width: 375px) {
+  .groupItem {
+    flex-wrap: wrap;
+    padding: var(--spacing-2);
+  }
+
+  .groupIcon {
+    width: 32px;
+    height: 32px;
+  }
+
+  .groupMeta {
+    width: 100%;
+    margin-top: var(--spacing-1);
+    padding-left: 44px;
+  }
+
+  .pageNumbers {
+    display: none;
+  }
+}

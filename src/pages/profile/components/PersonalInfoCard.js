@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
-import { UserIcon, CheckIcon } from './Icons';
+import Icon from '../../../components/Icon';
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
@@ -26,7 +26,7 @@ function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
     <div className={s.card}>
       <div className={s.cardHeader}>
         <div className={s.cardIcon}>
-          <UserIcon />
+          <Icon name='user' size={22} />
         </div>
         <div>
           <h2 className={s.cardTitle}>
@@ -40,7 +40,7 @@ function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
 
       {message.text && (
         <div className={message.type === 'error' ? s.error : s.success}>
-          {message.type === 'success' && <CheckIcon />}
+          {message.type === 'success' && <Icon name='check' size={16} />}
           {message.text}
         </div>
       )}

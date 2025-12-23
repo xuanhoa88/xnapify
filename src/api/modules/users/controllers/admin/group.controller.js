@@ -206,7 +206,7 @@ export async function getGroupUsers(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, search = '' } = req.query;
     const offset = (page - 1) * limit;
 
     // Get models from app context
@@ -214,7 +214,7 @@ export async function getGroupUsers(req, res) {
 
     const data = await groupService.getUsersWithGroup(
       id,
-      { page, limit, offset },
+      { page, limit, offset, search },
       models,
     );
 

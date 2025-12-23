@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
 import Register from './Register';
 import EmailVerification from './EmailVerification';
 
 /**
  * Route configuration
+ * Renders register pages standalone without header/footer
  */
 const route = {
   path: '/register',
@@ -31,11 +31,7 @@ const route = {
 
         return {
           title,
-          component: (
-            <Layout>
-              <Register />
-            </Layout>
-          ),
+          component: <Register />,
         };
       },
     },
@@ -45,7 +41,7 @@ const route = {
         const title = context.i18n.t(
           'emailVerification.title',
           'Email Verification',
-        ); // Localized string should be used in real app
+        );
         const state = context.store.getState();
 
         // Redirect authenticated users to home
@@ -57,11 +53,7 @@ const route = {
 
         return {
           title,
-          component: (
-            <Layout>
-              <EmailVerification token={token} />
-            </Layout>
-          ),
+          component: <EmailVerification token={token} />,
         };
       },
     },

@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { Icon } from '../../../../components/Admin';
 import s from './GroupActionsDropdown.css';
 
 /**
@@ -39,15 +40,21 @@ function GroupActionsDropdown({
     }
   }, [isOpen, onToggle]);
 
-  const handleToggle = e => {
-    e.stopPropagation();
-    onToggle(group.id);
-  };
+  const handleToggle = useCallback(
+    e => {
+      e.stopPropagation();
+      onToggle(group.id);
+    },
+    [group.id, onToggle],
+  );
 
-  const handleAction = action => {
-    action(group);
-    onToggle(null);
-  };
+  const handleAction = useCallback(
+    action => {
+      action(group);
+      onToggle(null);
+    },
+    [group, onToggle],
+  );
 
   return (
     <div className={s.actionDropdown}>
@@ -74,7 +81,7 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            👥 View Users
+            <Icon name='users' size={16} /> View Users
           </button>
           <button
             className={s.dropdownItem}
@@ -82,7 +89,7 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🎭 Manage Roles
+            <Icon name='shield' size={16} /> Manage Roles
           </button>
           <button
             className={s.dropdownItem}
@@ -90,7 +97,7 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🔐 View Permissions
+            <Icon name='key' size={16} /> View Permissions
           </button>
           <div className={s.dropdownDivider} />
           <button
@@ -99,7 +106,8 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            ✏️ Edit Group
+            <Icon name='edit' size={16} />
+            Edit Group
           </button>
           <button
             className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
@@ -107,7 +115,8 @@ function GroupActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🗑️ Delete Group
+            <Icon name='trash' size={16} />
+            Delete Group
           </button>
         </div>
       )}

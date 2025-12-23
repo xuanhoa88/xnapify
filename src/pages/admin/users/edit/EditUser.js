@@ -20,6 +20,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
+import { PageHeader, Icon, Loader } from '../../../../components/Admin';
 import s from './EditUser.css';
 
 function EditUser({ userId }) {
@@ -289,14 +290,17 @@ function EditUser({ userId }) {
   if (fetchingUser) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit User</h2>
+        <PageHeader
+          icon={<Icon name='users' size={24} />}
+          title='Edit User'
+          subtitle='Modify user account details'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Users
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
-          <div className={s.loading}>Loading user data...</div>
+          <Loader variant='spinner' message='Loading user data...' />
         </div>
       </div>
     );
@@ -305,12 +309,15 @@ function EditUser({ userId }) {
   if (!user) {
     return (
       <div className={s.root}>
-        <div className={s.header}>
-          <h2 className={s.title}>Edit User</h2>
+        <PageHeader
+          icon={<Icon name='users' size={24} />}
+          title='Edit User'
+          subtitle='Modify user account details'
+        >
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Users
           </button>
-        </div>
+        </PageHeader>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load user data</div>
           <div className={s.formActions}>
@@ -329,12 +336,15 @@ function EditUser({ userId }) {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h2 className={s.title}>Edit User</h2>
+      <PageHeader
+        icon={<Icon name='users' size={24} />}
+        title='Edit User'
+        subtitle='Modify user account details'
+      >
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Users
         </button>
-      </div>
+      </PageHeader>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
@@ -371,7 +381,11 @@ function EditUser({ userId }) {
                     onClick={() => setShowPassword(!showPassword)}
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? (
+                      <Icon name='eyeOff' size={18} />
+                    ) : (
+                      <Icon name='eye' size={18} />
+                    )}
                   </button>
                 )}
               </div>
@@ -381,9 +395,13 @@ function EditUser({ userId }) {
                 disabled={generatingPassword}
                 className={s.generatePasswordBtn}
               >
-                {generatingPassword
-                  ? 'Generating...'
-                  : '🔐 Generate New Password'}
+                {generatingPassword ? (
+                  'Generating...'
+                ) : (
+                  <>
+                    <Icon name='key' size={16} /> Generate New Password
+                  </>
+                )}
               </button>
             </div>
           </div>

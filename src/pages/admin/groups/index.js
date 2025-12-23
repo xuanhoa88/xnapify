@@ -8,7 +8,6 @@
 import Groups from './Groups';
 import CreateGroup from './create/CreateGroup';
 import EditGroup from './edit/EditGroup';
-import GroupUsers from './users/GroupUsers';
 
 /**
  * Route configuration with child routes
@@ -35,13 +34,6 @@ const route = {
       action: context => ({
         title: 'Edit Group - Admin',
         component: <EditGroup groupId={context.params.groupId} />,
-      }),
-    },
-    {
-      path: '/:groupId/users',
-      action: context => ({
-        title: 'Group Users - Admin',
-        component: <GroupUsers groupId={context.params.groupId} />,
       }),
     },
   ],

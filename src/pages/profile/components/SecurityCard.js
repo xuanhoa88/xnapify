@@ -8,7 +8,7 @@
 import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
-import { LockIcon, EyeIcon, EyeOffIcon, CheckIcon } from './Icons';
+import Icon from '../../../components/Icon';
 import s from './SecurityCard.css';
 
 function SecurityCard({ onChangePassword, loading, message }) {
@@ -60,7 +60,7 @@ function SecurityCard({ onChangePassword, loading, message }) {
     <div className={s.card}>
       <div className={s.cardHeader}>
         <div className={s.cardIcon}>
-          <LockIcon />
+          <Icon name='lock' size={22} />
         </div>
         <div>
           <h2 className={s.cardTitle}>{t('profile.security', 'Security')}</h2>
@@ -72,7 +72,7 @@ function SecurityCard({ onChangePassword, loading, message }) {
 
       {message.text && (
         <div className={message.type === 'error' ? s.error : s.success}>
-          {message.type === 'success' && <CheckIcon />}
+          {message.type === 'success' && <Icon name='check' size={16} />}
           {message.text}
         </div>
       )}
@@ -101,7 +101,11 @@ function SecurityCard({ onChangePassword, loading, message }) {
                 showPasswords.current ? 'Hide password' : 'Show password'
               }
             >
-              {showPasswords.current ? <EyeOffIcon /> : <EyeIcon />}
+              {showPasswords.current ? (
+                <Icon name='eyeOff' size={20} />
+              ) : (
+                <Icon name='eye' size={20} />
+              )}
             </button>
           </div>
         </div>
@@ -128,7 +132,11 @@ function SecurityCard({ onChangePassword, loading, message }) {
               onClick={() => togglePasswordVisibility('new')}
               aria-label={showPasswords.new ? 'Hide password' : 'Show password'}
             >
-              {showPasswords.new ? <EyeOffIcon /> : <EyeIcon />}
+              {showPasswords.new ? (
+                <Icon name='eyeOff' size={20} />
+              ) : (
+                <Icon name='eye' size={20} />
+              )}
             </button>
           </div>
         </div>
@@ -157,7 +165,11 @@ function SecurityCard({ onChangePassword, loading, message }) {
                 showPasswords.confirm ? 'Hide password' : 'Show password'
               }
             >
-              {showPasswords.confirm ? <EyeOffIcon /> : <EyeIcon />}
+              {showPasswords.confirm ? (
+                <Icon name='eyeOff' size={20} />
+              ) : (
+                <Icon name='eye' size={20} />
+              )}
             </button>
           </div>
         </div>

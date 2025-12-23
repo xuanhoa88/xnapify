@@ -90,9 +90,6 @@
     "groups": "Nhóm",
     "permissions": "Quyền"
   },
-  "header": {
-    "brand": "React Starter Kit"
-  },
   "navigation": {
     "about": "Giới thiệu",
     "contact": "Liên hệ",
@@ -104,16 +101,45 @@
     "admin": "Quản trị",
     "privacy": "Bảo mật",
     "notFound": "Không tìm thấy",
+    "error": "Lỗi",
     "backToSite": "Quay lại trang web",
     "users": "Người dùng",
     "roles": "Vai trò",
     "groups": "Nhóm",
-    "permissions": "Quyền",
-    "separator": {
-      "or": "hoặc"
-    }
+    "permissions": "Quyền"
+  },
+  "header": {
+    "brand": "React Starter Kit"
   },
   "footer": {
     "copyright": "© {{year}} React Starter Kit. Mọi quyền được bảo lưu."
+  },
+  "contact": {
+    "lead": "Chúng tôi rất vui được nghe từ bạn! Nếu bạn có câu hỏi, góp ý hoặc chỉ muốn nói chuyện, hãy liên hệ với chúng tôi.",
+    "getInTouch": "Liên hệ với chúng tôi",
+    "sendMessage": "Gửi tin nhắn",
+    "connectWithUs": "Kết nối với chúng tôi",
+    "officeHours": "Giờ hành chính",
+    "email": "Email:",
+    "phone": "Số điện thoại:",
+    "address": "Địa chỉ:",
+    "form": {
+      "name": "Tên",
+      "namePlaceholder": "Tên của bạn",
+      "email": "Email",
+      "emailPlaceholder": "your.email@example.com",
+      "subject": "Tiêu đề",
+      "subjectPlaceholder": "Về điều gì?",
+      "message": "Tin nhắn",
+      "messagePlaceholder": "Tin nhắn của bạn...",
+      "submit": "Gửi",
+      "sending": "Đang gửi..."
+    },
+    "hours": {
+      "monday_friday": "Thứ Hai - Thứ Sáu:",
+      "saturday": "Thứ Bảy:",
+      "sunday": "Thứ Tám:",
+      "closed": "Đóng cửa"
+    }
   }
 }

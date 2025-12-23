@@ -9,6 +9,7 @@
 
 .actionDropdown {
   position: relative;
+  isolation: isolate;
 }
 
 .actionDropdownBtn {
@@ -16,39 +17,56 @@
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.1rem;
   transition: var(--transition-base);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  position: relative;
+  z-index: 1;
 }
 
 .actionDropdownBtn:hover {
-  background: var(--color-background-tertiary);
+  background: var(--color-background-secondary);
   border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.actionDropdownBtn:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgb(59 130 246 / 20%);
 }
 
 .actionDropdownMenu {
   position: absolute;
   right: 0;
-  top: calc(100% + 4px);
-  min-width: 180px;
+  top: calc(100% + 6px);
+  min-width: 200px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-xl);
-  z-index: 1000;
-  overflow: visible;
-  animation: dropdownFadeIn 0.15s ease-out;
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 10px 40px rgb(0 0 0 / 12%),
+    0 4px 12px rgb(0 0 0 / 8%);
+  z-index: 9999;
+  overflow: hidden;
+  animation: dropdownFadeIn 0.2s ease-out;
+  padding: var(--spacing-1) 0;
 }
 
 @keyframes dropdownFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-5px);
+    transform: translateY(-8px) scale(0.96);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -61,18 +79,87 @@
   background: transparent;
   border: none;
   font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
   cursor: pointer;
   text-align: left;
   transition: var(--transition-base);
+  margin: 0;
 }
 
 .dropdownItem:hover {
   background: var(--color-background-secondary);
 }
 
+.dropdownItem:active {
+  background: var(--color-background-tertiary);
+}
+
+/* Icon styling within dropdown items */
+.dropdownItem svg {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  transition: var(--transition-base);
+}
+
+.dropdownItem:hover svg {
+  color: var(--color-primary);
+}
+
 .dropdownDivider {
   height: 1px;
   background: var(--color-border);
-  margin: var(--spacing-1) 0;
+  margin: var(--spacing-2) var(--spacing-2);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  /* Trigger button - maintain touch target but keep compact */
+  .actionDropdownBtn {
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
+  }
+
+  /* Dropdown menu - compact with upward positioning for bottom items */
+  .actionDropdownMenu {
+    min-width: 180px;
+    max-width: calc(100vw - var(--spacing-6));
+    border-radius: var(--radius-md);
+  }
+
+  /* Compact dropdown items - touch-friendly but not bulky */
+  .dropdownItem {
+    padding: var(--spacing-3);
+    font-size: var(--font-size-sm);
+    gap: var(--spacing-2);
+    min-height: 44px;
+  }
+
+  .dropdownDivider {
+    margin: var(--spacing-1) var(--spacing-2);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .actionDropdownBtn {
+    width: 36px;
+    height: 36px;
+    padding: var(--spacing-1);
+    font-size: 0.9rem;
+  }
+
+  .actionDropdownMenu {
+    min-width: 160px;
+  }
+
+  .dropdownItem {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    min-height: 40px;
+  }
 }

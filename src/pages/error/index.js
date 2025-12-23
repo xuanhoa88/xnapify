@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
 import ErrorPage from './ErrorPage';
 
 /**
@@ -18,17 +17,12 @@ const route = {
 
 /**
  * Route action (Development only)
+ * Renders error page standalone without header/footer
  */
 function action() {
-  const title = 'Error';
-
   return {
-    title,
-    component: (
-      <Layout>
-        <ErrorPage />
-      </Layout>
-    ),
+    title: 'Error',
+    component: <ErrorPage />,
   };
 }
 

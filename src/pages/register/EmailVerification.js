@@ -10,8 +10,13 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { emailVerification } from '../../redux';
+import { Link } from '../../components/History';
 import s from './EmailVerification.css';
 
+/**
+ * Email Verification Page Component
+ * Standalone full-page verification without header/footer
+ */
 function EmailVerification({ token: initialToken }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -51,46 +56,70 @@ function EmailVerification({ token: initialToken }) {
 
   return (
     <div className={s.root}>
-      <div className={s.container}>
-        <h1>{t('emailVerification.title')}</h1>
-
-        {loading && (
-          <div className={s.info}>
-            <p>{t('emailVerification.verifying')}</p>
-          </div>
-        )}
-
-        {error && !loading && (
-          <div className={s.error}>
-            <strong>{t('emailVerification.error')}</strong> {error}
-          </div>
-        )}
-
-        {success && !loading && (
-          <div className={s.success}>
-            <Trans
-              t={t}
-              i18nKey='emailVerification.success'
-              // eslint-disable-next-line react/jsx-key
-              components={[<strong />]}
+      {/* Hero Section */}
+      <div className={s.hero}>
+        <div className={s.heroContent}>
+          <Link to='/' className={s.brand}>
+            <img
+              src='/rsk_38x38.png'
+              srcSet='/rsk_72x72.png 2x'
+              width='48'
+              height='48'
+              alt='RSK'
             />
-            <div className={s.formGroup}>
-              <a href='/login' className={s.button}>
-                {t('emailVerification.goToLogin')}
-              </a>
-            </div>
-          </div>
-        )}
+            <span className={s.brandText}>React Starter Kit</span>
+          </Link>
+          <div className={s.heroIcon}>✉️</div>
+          <h1 className={s.heroTitle}>
+            {t('emailVerification.title', 'Email Verification')}
+          </h1>
+        </div>
+      </div>
 
-        {!success && !loading && (
-          <form method='post' onSubmit={handleSubmit}>
-            <p className={s.description}>
-              {t('emailVerification.description')}
-            </p>
-            {!initialToken && (
-              <div className={s.formGroup}>
-                <label className={s.label} htmlFor='token'>
-                  {t('emailVerification.token')}
+      {/* Content Section */}
+      <div className={s.formSection}>
+        <div className={s.formContainer}>
+          {loading && (
+            <div className={s.info}>
+              <p>
+                {t('emailVerification.verifying', 'Verifying your email...')}
+              </p>
+            </div>
+          )}
+
+          {error && !loading && (
+            <div className={s.error}>
+              <strong>{t('emailVerification.error', 'Error:')}</strong> {error}
+            </div>
+          )}
+
+          {success && !loading && (
+            <div className={s.successBox}>
+              <div className={s.successIcon}>✓</div>
+              <Trans
+                t={t}
+                i18nKey='emailVerification.success'
+                components={[<strong key='0' />]}
+              />
+              <Link to='/login' className={s.submitButton}>
+                {t('emailVerification.goToLogin', 'Go to Login')}
+              </Link>
+            </div>
+          )}
+
+          {!success && !loading && (
+            <form method='post' onSubmit={handleSubmit}>
+              <p className={s.description}>
+                {t(
+                  'emailVerification.description',
+                  'Click the button below to verify your email address.',
+                )}
+              </p>
+              {!initialToken && (
+                <div className={s.formGroup}>
+                  <label className={s.label} htmlFor='token'>
+                    {t('emailVerification.token', 'Verification Token')}
+                  </label>
                   <input
                     className={s.input}
                     id='token'
@@ -99,24 +128,30 @@ function EmailVerification({ token: initialToken }) {
                     value={token}
                     onChange={e => setToken(e.target.value)}
                     required
-                    placeholder={t('emailVerification.tokenPlaceholder')}
+                    placeholder={t(
+                      'emailVerification.tokenPlaceholder',
+                      'Enter your verification token',
+                    )}
                   />
-                </label>
-              </div>
-            )}
-            <div className={s.formGroup}>
-              <button className={s.button} type='submit' disabled={loading}>
+                </div>
+              )}
+              <button
+                className={s.submitButton}
+                type='submit'
+                disabled={loading}
+              >
                 {loading
-                  ? t('emailVerification.loading')
-                  : t('emailVerification.submit')}
+                  ? t('emailVerification.loading', 'Verifying...')
+                  : t('emailVerification.submit', 'Verify Email')}
               </button>
-            </div>
-          </form>
-        )}
-        <div className={s.formGroup}>
-          <a href='/login' className={s.buttonLink}>
-            {t('emailVerification.backToLogin')}
-          </a>
+            </form>
+          )}
+
+          <div className={s.backLink}>
+            <Link to='/login' className={s.link}>
+              {t('emailVerification.backToLogin', '← Back to Login')}
+            </Link>
+          </div>
         </div>
       </div>
     </div>

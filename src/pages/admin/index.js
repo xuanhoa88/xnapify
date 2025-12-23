@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
+import AdminLayout from '../../components/Admin';
 import { isAuthenticated, setAdminPanel } from '../../redux';
 
 // Lazy load children pages context
@@ -48,7 +48,9 @@ async function action(context) {
   // Return admin page action
   return {
     title,
-    component: <Layout>{childResult && childResult.component}</Layout>,
+    component: (
+      <AdminLayout>{childResult && childResult.component}</AdminLayout>
+    ),
   };
 }
 

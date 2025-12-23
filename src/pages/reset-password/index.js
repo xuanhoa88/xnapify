@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
 import RequestResetPassword from './RequestResetPassword';
 import ResetPasswordConfirmation from './ResetPasswordConfirmation';
 
 /**
  * Route configuration with child routes
+ * Renders reset password pages standalone without header/footer
  */
 const route = {
   path: '/reset-password',
@@ -31,11 +31,7 @@ const route = {
 
         return {
           title,
-          component: (
-            <Layout>
-              <RequestResetPassword />
-            </Layout>
-          ),
+          component: <RequestResetPassword />,
         };
       },
     },
@@ -56,11 +52,7 @@ const route = {
 
         return {
           title,
-          component: (
-            <Layout>
-              <ResetPasswordConfirmation token={token} />
-            </Layout>
-          ),
+          component: <ResetPasswordConfirmation token={token} />,
         };
       },
     },

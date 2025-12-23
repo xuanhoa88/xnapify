@@ -12,10 +12,12 @@ import {
   forwardRef,
   useEffect,
   useRef,
+  useMemo,
 } from 'react';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { Modal } from '../../../../components/Modal';
+import { Icon } from '../../../../components/Admin';
 import { assignGroupsToUser, fetchUsers, fetchGroups } from '../../../../redux';
 import s from './UserGroupsModal.css';
 
@@ -229,8 +231,8 @@ const UserGroupsModal = forwardRef((props, ref) => {
     }
   }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose]);
 
-  // Generate page numbers for pagination
-  const getPageNumbers = () => {
+  // Generate page numbers for pagination (memoized)
+  const pageNumbers = useMemo(() => {
     const pages = [];
     const maxVisible = 5;
 
@@ -256,7 +258,7 @@ const UserGroupsModal = forwardRef((props, ref) => {
       }
     }
     return pages;
-  };
+  }, [currentPage, totalPages]);
 
   const description = isBulk
     ? 'Select groups to assign to the selected users.'
@@ -274,7 +276,9 @@ const UserGroupsModal = forwardRef((props, ref) => {
 
         {/* Search Input */}
         <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>🔍</span>
+          <span className={s.searchIcon}>
+            <Icon name='search' size={16} />
+          </span>
           <input
             type='text'
             className={s.searchInput}
@@ -288,7 +292,7 @@ const UserGroupsModal = forwardRef((props, ref) => {
               onClick={handleClearSearch}
               type='button'
             >
-              ×
+              <Icon name='close' size={10} />
             </button>
           )}
         </div>
@@ -357,7 +361,7 @@ const UserGroupsModal = forwardRef((props, ref) => {
                   ‹ Prev
                 </button>
                 <div className={s.pageNumbers}>
-                  {getPageNumbers().map((page, idx) =>
+                  {pageNumbers.map((page, idx) =>
                     page === '...' ? (
                       <span key={`ellipsis-${idx}`} className={s.ellipsis}>
                         ...

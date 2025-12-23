@@ -18,6 +18,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
+import { PageHeader, Icon } from '../../../../components/Admin';
 import s from './CreateUser.css';
 
 function CreateUser() {
@@ -253,12 +254,15 @@ function CreateUser() {
 
   return (
     <div className={s.root}>
-      <div className={s.header}>
-        <h2 className={s.title}>Create New User</h2>
+      <PageHeader
+        icon={<Icon name='users' size={24} />}
+        title='Create New User'
+        subtitle='Add a new user account'
+      >
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Users
         </button>
-      </div>
+      </PageHeader>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
@@ -301,7 +305,11 @@ function CreateUser() {
                     onClick={() => setShowPassword(!showPassword)}
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? '🙈' : '👁️'}
+                    {showPassword ? (
+                      <Icon name='eyeOff' size={18} />
+                    ) : (
+                      <Icon name='eye' size={18} />
+                    )}
                   </button>
                 </div>
               </div>
@@ -325,9 +333,13 @@ function CreateUser() {
               disabled={generatingPassword}
               className={s.generatePasswordBtn}
             >
-              {generatingPassword
-                ? 'Generating...'
-                : '🔐 Generate Secure Password'}
+              {generatingPassword ? (
+                'Generating...'
+              ) : (
+                <>
+                  <Icon name='key' size={16} /> Generate Secure Password
+                </>
+              )}
             </button>
           </div>
 

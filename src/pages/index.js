@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getRuntimeVariable, setAdminPanel, setPageHeader } from '../redux';
+import { getRuntimeVariable, setAdminPanel } from '../redux';
 import IsomorphicNavigator from '../shared/navigator';
 
 /**
@@ -268,7 +268,6 @@ export default async function createNavigator() {
       // Note: These are fire-and-forget Redux dispatches
       // If side effects need to complete before navigation, consider awaiting them
       context.store.dispatch(setAdminPanel(false));
-      context.store.dispatch(setPageHeader(false));
 
       // Execute child page
       const page = await context.next();

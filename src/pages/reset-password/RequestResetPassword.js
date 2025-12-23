@@ -9,9 +9,14 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { resetPassword } from '../../redux';
+import { Link } from '../../components/History';
 import s from './ResetPassword.css';
 
-function ResetPassword() {
+/**
+ * Request Reset Password Page Component
+ * Standalone full-page form without header/footer
+ */
+function RequestResetPassword() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [email, setEmail] = useState('');
@@ -32,7 +37,7 @@ function ResetPassword() {
 
       if (result.success) {
         setSuccess(true);
-        setEmail(''); // Clear email on success
+        setEmail('');
       } else {
         setError(result.error);
       }
@@ -42,52 +47,88 @@ function ResetPassword() {
 
   return (
     <div className={s.root}>
-      <div className={s.container}>
-        <h1>{t('resetPassword.title')}</h1>
-
-        {error && <div className={s.error}>{error}</div>}
-
-        {success && (
-          <div className={s.success}>
-            <Trans
-              t={t}
-              i18nKey='resetPassword.success'
-              // eslint-disable-next-line react/jsx-key
-              components={[<strong />]}
+      {/* Hero Section */}
+      <div className={s.hero}>
+        <div className={s.heroContent}>
+          <Link to='/' className={s.brand}>
+            <img
+              src='/rsk_38x38.png'
+              srcSet='/rsk_72x72.png 2x'
+              width='48'
+              height='48'
+              alt='RSK'
             />
-          </div>
-        )}
+            <span className={s.brandText}>React Starter Kit</span>
+          </Link>
+          <div className={s.heroIcon}>🔑</div>
+          <h1 className={s.heroTitle}>
+            {t('resetPassword.title', 'Reset Password')}
+          </h1>
+          <p className={s.heroSubtitle}>
+            {t(
+              'resetPassword.subtitle',
+              "Enter your email and we'll send you a reset link",
+            )}
+          </p>
+        </div>
+      </div>
 
-        <form method='post' onSubmit={handleSubmit}>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='email'>
-              {t('resetPassword.email')}
-              <input
-                className={s.input}
-                id='email'
-                type='email'
-                name='email'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                required
-                autoFocus // eslint-disable-line jsx-a11y/no-autofocus
+      {/* Form Section */}
+      <div className={s.formSection}>
+        <div className={s.formContainer}>
+          {error && <div className={s.error}>{error}</div>}
+
+          {success ? (
+            <div className={s.successBox}>
+              <div className={s.successIcon}>✓</div>
+              <Trans
+                t={t}
+                i18nKey='resetPassword.success'
+                components={[<strong key='0' />]}
               />
-            </label>
+            </div>
+          ) : (
+            <form method='post' onSubmit={handleSubmit}>
+              <div className={s.formGroup}>
+                <label className={s.label} htmlFor='email'>
+                  {t('resetPassword.email', 'Email Address')}
+                </label>
+                <input
+                  className={s.input}
+                  id='email'
+                  type='email'
+                  name='email'
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  placeholder={t(
+                    'resetPassword.emailPlaceholder',
+                    'your.email@example.com',
+                  )}
+                  required
+                  autoFocus // eslint-disable-line jsx-a11y/no-autofocus
+                />
+              </div>
+              <button
+                className={s.submitButton}
+                type='submit'
+                disabled={loading}
+              >
+                {loading
+                  ? t('resetPassword.loading', 'Sending...')
+                  : t('resetPassword.submit', 'Send Reset Link')}
+              </button>
+            </form>
+          )}
+
+          <div className={s.backLink}>
+            <Link to='/login' className={s.link}>
+              {t('resetPassword.backToLogin', '← Back to Login')}
+            </Link>
           </div>
-          <div className={s.formGroup}>
-            <button className={s.button} type='submit' disabled={loading}>
-              {loading ? t('resetPassword.loading') : t('resetPassword.submit')}
-            </button>
-          </div>
-        </form>
-        <div className={s.formGroup}>
-          <a href='/login' className={s.buttonLink}>
-            {t('resetPassword.backToLogin')}
-          </a>
         </div>
       </div>
     </div>
   );
 }
 
-export default ResetPassword;
+export default RequestResetPassword;

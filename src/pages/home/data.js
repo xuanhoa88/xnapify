@@ -1,7 +1,10 @@
 /**
- * Features data matching the "Why Choose React Starter Kit?" section
- * This data is used for both the homepage and the /features routes
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
  */
+
 export const featuresData = [
   {
     id: 'lightning-fast',

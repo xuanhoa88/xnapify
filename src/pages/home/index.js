@@ -6,7 +6,6 @@
  */
 
 import Layout from '../../components/Layout';
-import { setPageHeader } from '../../redux';
 import Home from './Home';
 import Features from './Features';
 import FeatureDetails from './FeatureDetails';
@@ -18,10 +17,7 @@ const route = {
   children: [
     {
       path: '/',
-      async action({ fetch, store }) {
-        // Show page header on home page
-        store.dispatch(setPageHeader(true));
-
+      async action({ fetch }) {
         // Render the home page
         const title = 'Home';
 

@@ -5,11 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import "../../components/variables.css";
+@import '../../components/variables.css';
 
-/* Error page wrapper - overrides global styles */
+/* =============================================================================
+   ROOT - Full page takeover
+   ============================================================================= */
+
 .root {
-  /* Override global html/body styles */
   position: fixed;
   top: 0;
   left: 0;
@@ -18,60 +20,229 @@
   background: var(--color-background);
   z-index: 9999;
   font-family: var(--font-family-base);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
 }
 
-/* Override global styles for error page */
-.root :global(html),
-.root :global(body) {
+/* =============================================================================
+   HERO SECTION
+   ============================================================================= */
+
+.hero {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  padding: var(--spacing-16) var(--spacing-6);
+  text-align: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 30% 50%,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      rgb(255 255 255 / 8%) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+}
+
+.heroIcon {
+  font-size: 4rem;
+  margin-bottom: var(--spacing-4);
+  position: relative;
+  z-index: 1;
+}
+
+.heroTitle {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin: 0 0 var(--spacing-4);
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+  position: relative;
+  z-index: 1;
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-xl);
+  color: rgb(255 255 255 / 90%);
   margin: 0;
-  padding: 0;
+  line-height: 1.6;
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* =============================================================================
+   CONTENT SECTION
+   ============================================================================= */
+
+.content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12) var(--spacing-6);
 }
 
 .container {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  padding: var(--spacing-8);
-  text-align: center;
+  max-width: 800px;
+  width: 100%;
 }
 
-.title {
-  color: var(--color-text-primary);
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-4xl);
-  margin: 0 0 var(--spacing-4);
-  line-height: var(--line-height-tight);
-}
-
-.details {
+.stackTrace {
   text-align: left;
   white-space: pre-wrap;
-  margin: var(--spacing-6) 0;
+  word-break: break-word;
+  margin: 0 0 var(--spacing-8);
   padding: var(--spacing-6);
-  background: var(--color-background);
+  background: var(--color-background-secondary);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
   color: var(--color-text-secondary);
   font-family: var(--font-family-mono);
   font-size: var(--font-size-sm);
-  max-width: 800px;
-  overflow-x: auto;
+  max-height: 400px;
+  overflow: auto;
   box-shadow: var(--shadow-sm);
 }
 
+.actions {
+  display: flex;
+  gap: var(--spacing-4);
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+/* =============================================================================
+   BUTTONS
+   ============================================================================= */
+
+.btnPrimary,
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-4) var(--spacing-8);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-semibold);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  transition: all var(--transition-base);
+  min-width: 160px;
+  cursor: pointer;
+  border: none;
+}
+
+.btnPrimary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 12px rgb(102 126 234 / 30%);
+}
+
+.btnPrimary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgb(102 126 234 / 40%);
+}
+
+.btnSecondary {
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  border: 2px solid var(--color-border);
+}
+
+.btnSecondary:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-text-tertiary);
+  transform: translateY(-2px);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
 @media (max-width: 768px) {
-  .container {
-    padding: var(--spacing-6) var(--spacing-4);
+  .hero {
+    padding: var(--spacing-10) var(--spacing-4);
   }
 
-  .title {
-    font-size: var(--font-size-3xl);
+  .heroIcon {
+    font-size: 3rem;
   }
 
-  .details {
+  .heroTitle {
+    font-size: var(--font-size-2xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-base);
+  }
+
+  .content {
+    padding: var(--spacing-8) var(--spacing-4);
+  }
+
+  .stackTrace {
     padding: var(--spacing-4);
     font-size: var(--font-size-xs);
+    max-height: 300px;
+  }
+
+  .actions {
+    flex-direction: column;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    width: 100%;
+  }
+}
+
+/* Small Mobile (375px) */
+@media (max-width: 375px) {
+  .hero {
+    padding: var(--spacing-8) var(--spacing-3);
+  }
+
+  .heroIcon {
+    font-size: 2.5rem;
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .content {
+    padding: var(--spacing-6) var(--spacing-3);
+  }
+
+  .stackTrace {
+    padding: var(--spacing-3);
+    font-size: 10px;
+    max-height: 200px;
+  }
+
+  .btnPrimary,
+  .btnSecondary {
+    height: 44px;
+    font-size: var(--font-size-sm);
   }
 }

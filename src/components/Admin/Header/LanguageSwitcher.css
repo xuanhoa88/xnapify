@@ -1,0 +1,149 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../admin.css';
+
+/* =============================================================================
+   LANGUAGE SWITCHER WRAPPER
+   ============================================================================= */
+
+.wrapper {
+  position: relative;
+}
+
+/* =============================================================================
+   TRIGGER BUTTON
+   ============================================================================= */
+
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-2);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: rgb(255 255 255 / 70%);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  font-family: inherit;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.trigger:hover {
+  background: rgb(255 255 255 / 10%);
+  color: white;
+}
+
+.globeIcon {
+  font-size: 14px;
+  line-height: 1;
+}
+
+.code {
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0.5px;
+}
+
+.chevron {
+  transition: transform var(--transition-fast);
+  color: rgb(255 255 255 / 50%);
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+/* =============================================================================
+   DROPDOWN MENU
+   ============================================================================= */
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: rgb(20 25 35);
+  border: 1px solid rgb(255 255 255 / 12%);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 40%);
+  z-index: 1000;
+  animation: dropdownSlide 0.15s ease-out;
+  overflow: hidden;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =============================================================================
+   OPTION ITEMS
+   ============================================================================= */
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: var(--spacing-2) var(--spacing-3);
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: var(--font-size-sm);
+  color: rgb(255 255 255 / 70%);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-align: left;
+}
+
+.option:hover {
+  background: rgb(255 255 255 / 8%);
+  color: white;
+}
+
+.optionActive {
+  color: white;
+  background: rgb(255 255 255 / 5%);
+}
+
+.optionName {
+  flex: 1;
+}
+
+.checkmark {
+  color: var(--color-success);
+  font-size: var(--font-size-xs);
+  margin-left: var(--spacing-2);
+}
+
+/* =============================================================================
+   MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .trigger {
+    padding: var(--spacing-1);
+  }
+
+  .code {
+    display: none;
+  }
+
+  .dropdown {
+    min-width: 140px;
+    right: -40px;
+  }
+}

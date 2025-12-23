@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import Icon from '../Icon';
 import s from './SearchableSelect.css';
 
 /**
@@ -93,11 +94,15 @@ function SearchableSelect({
 
   // For local search mode, filter options client-side
   // For async search mode, options are already filtered by parent
-  const filteredOptions = onSearch
-    ? options
-    : options.filter(opt =>
-        opt.label.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+  const filteredOptions = useMemo(
+    () =>
+      onSearch
+        ? options
+        : options.filter(opt =>
+            opt.label.toLowerCase().includes(searchTerm.toLowerCase()),
+          ),
+    [onSearch, options, searchTerm],
+  );
 
   const handleClickOutside = useCallback(event => {
     if (containerRef.current && !containerRef.current.contains(event.target)) {
@@ -135,7 +140,7 @@ function SearchableSelect({
     }
   }, [onLoadMore, hasMore, loadingMore]);
 
-  const handleToggle = () => {
+  const handleToggle = useCallback(() => {
     if (!disabled) {
       setIsOpen(!isOpen);
       if (!isOpen) {
@@ -148,7 +153,7 @@ function SearchableSelect({
         setTimeout(() => inputRef.current && inputRef.current.focus(), 50);
       }
     }
-  };
+  }, [disabled, isOpen, onSearch]);
 
   const handleSearchChange = useCallback(
     e => {
@@ -168,20 +173,23 @@ function SearchableSelect({
     [onSearch, debounceMs],
   );
 
-  const handleSelect = optionValue => {
-    if (multiple) {
-      // Toggle selection for multi-select
-      const newValues = isSelected(optionValue)
-        ? selectedValues.filter(v => v !== optionValue)
-        : [...selectedValues, optionValue];
-      onChange(newValues);
-      // Don't close menu in multi-select mode
-    } else {
-      onChange(optionValue);
-      setIsOpen(false);
-      setSearchTerm('');
-    }
-  };
+  const handleSelect = useCallback(
+    optionValue => {
+      if (multiple) {
+        // Toggle selection for multi-select
+        const newValues = isSelected(optionValue)
+          ? selectedValues.filter(v => v !== optionValue)
+          : [...selectedValues, optionValue];
+        onChange(newValues);
+        // Don't close menu in multi-select mode
+      } else {
+        onChange(optionValue);
+        setIsOpen(false);
+        setSearchTerm('');
+      }
+    },
+    [multiple, isSelected, selectedValues, onChange],
+  );
 
   // Clear all selections (for multi-select)
   const handleClearAll = useCallback(
@@ -194,7 +202,10 @@ function SearchableSelect({
 
   return (
     <div
-      className={clsx(s.container, className, { [s.disabled]: disabled })}
+      className={clsx(s.container, className, {
+        [s.disabled]: disabled,
+        [s.open]: isOpen,
+      })}
       ref={containerRef}
     >
       <div
@@ -202,6 +213,9 @@ function SearchableSelect({
         onClick={handleToggle}
         role='button'
         tabIndex={0}
+        aria-label={displayText || placeholder}
+        aria-haspopup='listbox'
+        aria-expanded={isOpen}
         onKeyDown={e => {
           if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
@@ -220,10 +234,10 @@ function SearchableSelect({
               onClick={handleClearAll}
               title='Clear all'
             >
-              ×
+              <Icon name='close' size={12} />
             </button>
           )}
-          <span className={s.arrow}>{isOpen ? '▲' : '▼'}</span>
+          <span className={s.arrow} />
         </div>
       </div>
 
@@ -240,7 +254,9 @@ function SearchableSelect({
                 placeholder={searchPlaceholder}
                 onClick={e => e.stopPropagation()}
               />
-              {loading && <span className={s.loadingIndicator}>...</span>}
+              {loading && (
+                <Icon name='loader' size={16} className={s.loadingIndicator} />
+              )}
             </div>
           )}
           <ul
@@ -274,7 +290,11 @@ function SearchableSelect({
                     >
                       {multiple && (
                         <span className={s.checkbox}>
-                          {optSelected ? '☑' : '☐'}
+                          {optSelected ? (
+                            <Icon name='check-circle' size={16} />
+                          ) : (
+                            <Icon name='circle' size={16} />
+                          )}
                         </span>
                       )}
                       <span className={s.optionLabel}>{option.label}</span>

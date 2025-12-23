@@ -1,19 +1,12 @@
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- * Babel configuration for React Starter Kit
- *
- * This configuration supports:
- * - Modern JavaScript features (ESNext)
- * - React with automatic runtime
- * - Code splitting with @loadable/component
- * - Development/Production optimizations
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
 
 /**
- * React Starter Kit – Babel configuration
+ * Babel configuration
  * Supports:
  *  - Modern JS (ESNext)
  *  - React (automatic runtime)

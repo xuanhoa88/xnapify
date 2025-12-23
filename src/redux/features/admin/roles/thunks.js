@@ -172,11 +172,15 @@ export function updateRole(roleId, roleData) {
 export function fetchRoleUsers(roleId, options = {}) {
   return async (dispatch, getState, { fetch }) => {
     try {
-      const { page = 1, limit = 10 } = options;
+      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
       });
+
+      if (search) {
+        params.append('search', search);
+      }
 
       const { data } = await fetch(
         `/api/admin/roles/${roleId}/users?${params.toString()}`,
@@ -199,11 +203,15 @@ export function fetchRoleUsers(roleId, options = {}) {
 export function fetchRoleGroups(roleId, options = {}) {
   return async (dispatch, getState, { fetch }) => {
     try {
-      const { page = 1, limit = 10 } = options;
+      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
       });
+
+      if (search) {
+        params.append('search', search);
+      }
 
       const { data } = await fetch(
         `/api/admin/roles/${roleId}/groups?${params.toString()}`,

@@ -5,12 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  SYSTEM_ROLES,
-  ADMIN_ROLE,
-  MODERATOR_ROLE,
-  DEFAULT_ROLE,
-} from '../../constants/rbac';
+import { SYSTEM_ROLES } from '../../constants/rbac';
 import { assignPermissionsToRole } from './rbac.service';
 
 // ========================================================================
@@ -272,9 +267,12 @@ export async function deleteRole(role_id, models) {
  * @returns {Promise<Object>} Users with pagination
  */
 export async function getUsersWithRole(role_id, options, models) {
-  const { page = 1, limit = 10 } = options;
+  const { page = 1, limit = 10, search = '' } = options;
   const offset = (page - 1) * limit;
   const { Role, User, UserProfile } = models;
+
+  const { sequelize } = Role;
+  const { Op } = sequelize.Sequelize;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -284,7 +282,14 @@ export async function getUsersWithRole(role_id, options, models) {
     throw error;
   }
 
+  // Build where clause for search
+  const whereClause = {};
+  if (search) {
+    whereClause[Op.or] = [{ email: { [Op.like]: `%${search}%` } }];
+  }
+
   const { count, rows: users } = await User.findAndCountAll({
+    where: whereClause,
     include: [
       {
         model: Role,
@@ -302,6 +307,7 @@ export async function getUsersWithRole(role_id, options, models) {
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
+    subQuery: false,
   });
 
   return {
@@ -325,9 +331,12 @@ export async function getUsersWithRole(role_id, options, models) {
  * @returns {Promise<Object>} Groups with pagination
  */
 export async function getGroupsWithRole(role_id, options, models) {
-  const { page = 1, limit = 10 } = options;
+  const { page = 1, limit = 10, search = '' } = options;
   const offset = (page - 1) * limit;
   const { Role, Group, User } = models;
+
+  const { sequelize } = Role;
+  const { Op } = sequelize.Sequelize;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -337,7 +346,17 @@ export async function getGroupsWithRole(role_id, options, models) {
     throw error;
   }
 
+  // Build where clause for search
+  const whereClause = {};
+  if (search) {
+    whereClause[Op.or] = [
+      { name: { [Op.like]: `%${search}%` } },
+      { description: { [Op.like]: `%${search}%` } },
+    ];
+  }
+
   const { count, rows: groups } = await Group.findAndCountAll({
+    where: whereClause,
     include: [
       {
         model: Role,
@@ -350,6 +369,7 @@ export async function getGroupsWithRole(role_id, options, models) {
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['name', 'ASC']],
+    subQuery: false,
   });
 
   // Fetch user counts for each group

@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Layout from '../../components/Layout';
 import { isAuthenticated } from '../../redux';
 import Login from './Login';
 
@@ -19,6 +18,7 @@ const route = {
 /**
  * Route action
  * Redirects authenticated users to home page
+ * Renders login page standalone without header/footer
  */
 function action(context) {
   // Get title for SSR page metadata
@@ -34,11 +34,7 @@ function action(context) {
 
   return {
     title,
-    component: (
-      <Layout>
-        <Login />
-      </Layout>
-    ),
+    component: <Login />,
   };
 }
 

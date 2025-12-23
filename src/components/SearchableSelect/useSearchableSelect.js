@@ -14,7 +14,7 @@ import { useState, useRef, useCallback, useMemo } from 'react';
  * Centralizes the fetch logic so parent components don't need to implement caching.
  *
  * @param {Object} options - Configuration options
- * @param {Function} options.fetchFn - Async function to fetch data: (params) => Promise<{ data, pagination }>
+ * @param {Function} options.fetch - Async function to fetch data: (params) => Promise<{ data, pagination }>
  * @param {string} options.dataKey - Key in response containing the array (e.g., 'roles', 'groups')
  * @param {Function} options.mapOption - Function to map item to { value, label } format
  * @param {number} options.limit - Items per page (default: 20)
@@ -26,13 +26,13 @@ import { useState, useRef, useCallback, useMemo } from 'react';
  * @returns {boolean} result.loading - Loading state for initial search
  * @returns {boolean} result.loadingMore - Loading state for infinite scroll
  * @returns {boolean} result.hasMore - Whether more items can be loaded
- * @returns {Function} result.handleSearch - Search handler for SearchableSelect onSearch prop
- * @returns {Function} result.handleLoadMore - Load more handler for SearchableSelect onLoadMore prop
+ * @returns {Function} result.onSearch - Search handler for SearchableSelect onSearch prop
+ * @returns {Function} result.onLoadMore - Load more handler for SearchableSelect onLoadMore prop
  * @returns {Function} result.clearCache - Manually clear the cache
  *
  * @example
- * const { options, loading, hasMore, handleSearch, handleLoadMore } = useSearchableSelect({
- *   fetchFn: (params) => dispatch(fetchRoles(params)),
+ * const { options, loading, hasMore, onSearch, onLoadMore } = useSearchableSelect({
+ *   fetch: (params) => dispatch(fetchRoles(params)),
  *   dataKey: 'roles',
  *   mapOption: (role) => ({ value: role.name, label: role.name }),
  *   includeAllOption: true,
@@ -41,8 +41,8 @@ import { useState, useRef, useCallback, useMemo } from 'react';
  *
  * <SearchableSelect
  *   options={options}
- *   onSearch={handleSearch}
- *   onLoadMore={handleLoadMore}
+ *   onSearch={onSearch}
+ *   onLoadMore={onLoadMore}
  *   loading={loading}
  *   loadingMore={loadingMore}
  *   hasMore={hasMore}
@@ -50,7 +50,7 @@ import { useState, useRef, useCallback, useMemo } from 'react';
  * />
  */
 function useSearchableSelect({
-  fetchFn,
+  fetch,
   dataKey,
   mapOption,
   limit = 20,
@@ -93,7 +93,7 @@ function useSearchableSelect({
 
       setLoading(true);
       try {
-        const result = await fetchFn({ page: 1, limit, search: term });
+        const result = await fetch({ page: 1, limit, search: term });
         if (result.success && result.data) {
           const data = result.data[dataKey];
           if (Array.isArray(data)) {
@@ -112,7 +112,7 @@ function useSearchableSelect({
         setLoading(false);
       }
     },
-    [fetchFn, dataKey, limit],
+    [fetch, dataKey, limit],
   );
 
   // Handle loading more (infinite scroll)
@@ -120,7 +120,7 @@ function useSearchableSelect({
     const nextPage = page + 1;
     setLoadingMore(true);
     try {
-      const result = await fetchFn({
+      const result = await fetch({
         page: nextPage,
         limit,
         search: searchTerm.current,
@@ -137,7 +137,7 @@ function useSearchableSelect({
     } finally {
       setLoadingMore(false);
     }
-  }, [fetchFn, dataKey, limit, page]);
+  }, [fetch, dataKey, limit, page]);
 
   // Clear cache manually if needed
   const clearCache = useCallback(() => {
@@ -149,8 +149,8 @@ function useSearchableSelect({
     loading,
     loadingMore,
     hasMore,
-    handleSearch,
-    handleLoadMore,
+    onSearch: handleSearch,
+    onLoadMore: handleLoadMore,
     clearCache,
   };
 }

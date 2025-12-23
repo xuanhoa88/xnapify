@@ -8,7 +8,7 @@
 import { useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
-import { CameraIcon } from './Icons';
+import Icon from '../../../components/Icon';
 import s from './ProfileHeader.css';
 
 function ProfileHeader({
@@ -60,7 +60,7 @@ function ProfileHeader({
             <div className={s.avatar}>{avatarInitial}</div>
           )}
           <div className={s.avatarOverlay}>
-            <CameraIcon />
+            <Icon name='camera' size={24} />
           </div>
         </div>
         <input

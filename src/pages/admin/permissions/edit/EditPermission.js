@@ -10,6 +10,7 @@ import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
+import { PageHeader, Icon } from '../../../../components/Admin';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
@@ -76,6 +77,15 @@ export default function EditPermission({ permissionId }) {
   if (loading) {
     return (
       <div className={s.root}>
+        <PageHeader
+          icon={<Icon name='key' size={24} />}
+          title='Edit Permission'
+          subtitle='Modify permission rule'
+        >
+          <button type='button' className={s.backBtn} onClick={handleCancel}>
+            ← Back to Permissions
+          </button>
+        </PageHeader>
         <div className={s.container}>Loading permission...</div>
       </div>
     );
@@ -83,11 +93,18 @@ export default function EditPermission({ permissionId }) {
 
   return (
     <div className={s.root}>
+      <PageHeader
+        icon={<Icon name='key' size={24} />}
+        title='Edit Permission'
+        subtitle='Modify permission rule'
+      >
+        <button type='button' className={s.backBtn} onClick={handleCancel}>
+          ← Back to Permissions
+        </button>
+      </PageHeader>
+
       <div className={s.container}>
-        <h1 className={s.title}>Edit Permission</h1>
-
         {error && <div className={s.error}>{error}</div>}
-
         <form onSubmit={handleSubmit} className={s.form}>
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='name'>

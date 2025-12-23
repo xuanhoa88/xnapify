@@ -6,10 +6,15 @@
 /* Card styles */
 .card {
   background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
   border: 1px solid var(--color-border);
   padding: var(--spacing-6);
+  transition: var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
 }
 
 .cardHeader {
@@ -33,7 +38,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: var(--shadow-sm);
+  box-shadow: 0 2px 8px rgb(59 130 246 / 25%);
+  flex-shrink: 0;
 }
 
 .cardIcon svg {
@@ -47,6 +53,7 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-primary);
   margin: 0;
+  line-height: 1.3;
 }
 
 .cardDescription {
@@ -62,9 +69,9 @@
 
 .label {
   display: block;
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   margin-bottom: var(--spacing-2);
 }
 
@@ -72,7 +79,8 @@
   display: block;
   box-sizing: border-box;
   width: 100%;
-  padding: var(--spacing-3);
+  height: 44px;
+  padding: 0 var(--spacing-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: 0;
@@ -87,9 +95,13 @@
   color: var(--color-text-tertiary);
 }
 
+.input:hover {
+  border-color: var(--color-border-hover);
+}
+
 .input:focus {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
 .input:disabled {
@@ -115,9 +127,13 @@
   min-height: 80px;
 }
 
+.textarea:hover {
+  border-color: var(--color-text-secondary);
+}
+
 .textarea:focus {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-focus);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
 .textarea::placeholder {
@@ -131,6 +147,7 @@
 
 .col {
   flex: 1;
+  min-width: 0;
 }
 
 /* Button styles */
@@ -141,14 +158,15 @@
   gap: var(--spacing-2);
   box-sizing: border-box;
   width: 100%;
-  padding: var(--spacing-3) var(--spacing-5);
+  height: 44px;
+  padding: 0 var(--spacing-6);
   border: none;
   border-radius: var(--radius-md);
   outline: 0;
   background: var(--color-primary);
   color: white;
   font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
+  font-weight: var(--font-weight-semibold);
   font-family: var(--font-family-base);
   text-align: center;
   cursor: pointer;
@@ -159,7 +177,7 @@
 .button:hover {
   background: var(--color-primary-dark);
   transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  box-shadow: 0 4px 12px rgb(59 130 246 / 30%);
 }
 
 .button:active {
@@ -183,6 +201,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  border: 1px solid #bbf7d0;
 }
 
 .error {
@@ -195,6 +214,7 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  border: 1px solid #fecaca;
 }
 
 /* Loading spinner */
@@ -213,9 +233,108 @@
   }
 }
 
-/* Responsive */
+/* =============================================================================
+   RESPONSIVE DESIGN - TABLET
+   ============================================================================= */
 @media (max-width: 768px) {
   .row {
     flex-direction: column;
+    gap: 0;
+  }
+
+  .card {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .card:hover {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  }
+
+  .cardHeader {
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-3);
+  }
+
+  .cardIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cardIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-base);
+  }
+
+  .cardDescription {
+    font-size: var(--font-size-xs);
+  }
+
+  .input,
+  .textarea {
+    padding: var(--spacing-3) var(--spacing-4);
+    font-size: var(--font-size-sm);
+  }
+
+  .button {
+    padding: 0 var(--spacing-4);
+    font-size: var(--font-size-sm);
+  }
+
+  .button:hover {
+    transform: none;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - SMALL MOBILE
+   ============================================================================= */
+@media (max-width: 375px) {
+  .card {
+    padding: var(--spacing-3);
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  .cardIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cardIcon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .label {
+    font-size: 10px;
+  }
+
+  .input,
+  .textarea {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .button {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+  }
+
+  .success,
+  .error {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
   }
 }

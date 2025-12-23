@@ -339,9 +339,12 @@ export async function deleteGroup(group_id, models) {
  * @returns {Promise<Object>} Group users with pagination
  */
 export async function getUsersWithGroup(group_id, options, models) {
-  const { page = 1, limit = 10 } = options;
+  const { page = 1, limit = 10, search = '' } = options;
   const offset = (page - 1) * limit;
   const { Group, User, UserProfile } = models;
+
+  const { sequelize } = Group;
+  const { Op } = sequelize.Sequelize;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -351,7 +354,14 @@ export async function getUsersWithGroup(group_id, options, models) {
     throw error;
   }
 
+  // Build where clause for search
+  const whereClause = {};
+  if (search) {
+    whereClause[Op.or] = [{ email: { [Op.like]: `%${search}%` } }];
+  }
+
   const { count, rows: users } = await User.findAndCountAll({
+    where: whereClause,
     include: [
       {
         model: Group,
@@ -369,6 +379,7 @@ export async function getUsersWithGroup(group_id, options, models) {
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
+    subQuery: false,
   });
 
   return {

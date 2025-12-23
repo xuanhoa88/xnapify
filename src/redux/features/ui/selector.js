@@ -11,7 +11,7 @@
  * @param {Object} state - Redux state
  * @returns {boolean} True if sidebar is open
  */
-export const isSidebarOpen = state => state.ui.sidebarOpen;
+export const isAdminSidebarOpen = state => state.ui.adminSidebarOpen;
 
 /**
  * Check if current page is admin panel
@@ -20,11 +20,3 @@ export const isSidebarOpen = state => state.ui.sidebarOpen;
  * @returns {boolean} True if in admin panel
  */
 export const isAdminPanel = state => state.ui.isAdminPanel;
-
-/**
- * Check if should show page header
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if page header should be shown
- */
-export const shouldShowPageHeader = state => state.ui.showPageHeader;

@@ -57,7 +57,10 @@
 }
 
 .cardIcon {
-  font-size: var(--font-size-2xl);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
 }
 
 .cardValue {
@@ -105,8 +108,6 @@
   color: var(--color-text-secondary);
   background: var(--color-background-secondary);
   font-size: var(--font-size-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
 }
 
 .table tbody tr:hover {
@@ -167,18 +168,6 @@
   color: #92400e;
 }
 
-/* Loading state */
-.loading {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
 /* Error state */
 .error {
   padding: var(--spacing-8);
@@ -190,70 +179,146 @@
 }
 
 .error p {
-  color: #dc3545;
-  margin-bottom: var(--spacing-4);
+  color: #dc2626;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: var(--font-size-base);
-}
-
-/* Empty state */
-.empty {
-  padding: var(--spacing-8);
-  text-align: center;
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 /* Retry button */
 .retryButton {
-  padding: var(--spacing-3) var(--spacing-6);
-  background: var(--gradient-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  height: 44px;
+  padding: 0 var(--spacing-6);
+  background: var(--color-primary);
   color: white;
   border: none;
   border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
   cursor: pointer;
   transition: var(--transition-base);
 }
 
 .retryButton:hover {
-  opacity: 0.9;
+  background: var(--color-primary-dark);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgb(59 130 246 / 30%);
 }
 
 .retryButton:active {
   transform: translateY(0);
 }
 
+.retryButton svg {
+  width: 16px;
+  height: 16px;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .root {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
   }
 
   .dashboardGrid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-4);
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-3);
   }
 
   .card {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
+    overflow: hidden;
+  }
+
+  .cardHeader {
+    margin-bottom: var(--spacing-2);
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-xs);
+  }
+
+  .cardIcon {
+    flex-shrink: 0;
+  }
+
+  .cardIcon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cardValue {
+    font-size: var(--font-size-lg);
+    margin-bottom: var(--spacing-1);
+  }
+
+  .cardTrend {
+    font-size: var(--font-size-xs);
   }
 
   .fullWidthCard {
-    padding: var(--spacing-4);
+    padding: var(--spacing-3);
   }
 
   .table {
-    font-size: var(--font-size-sm);
+    font-size: var(--font-size-xs);
   }
 
   .table th,
   .table td {
-    padding: var(--spacing-3) var(--spacing-4);
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: var(--font-size-xs);
+  }
+
+  .userName {
+    font-size: var(--font-size-sm);
+  }
+
+  .userEmail {
+    font-size: var(--font-size-xs);
+  }
+
+  .badge {
+    padding: 2px 8px;
+  }
+
+  .retryButton {
+    width: 100%;
+    padding: var(--spacing-3) var(--spacing-5);
+    font-size: var(--font-size-base);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .dashboardGrid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-2);
+  }
+
+  .card {
+    padding: var(--spacing-3);
   }
 
   .cardValue {
-    font-size: var(--font-size-2xl);
+    font-size: var(--font-size-xl);
+  }
+
+  .retryButton {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
   }
 }

@@ -182,14 +182,14 @@ export async function getRoleUsers(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
 
     const result = await roleService.getUsersWithRole(
       id,
-      { page, limit },
+      { page, limit, search },
       models,
     );
 
@@ -214,14 +214,14 @@ export async function getRoleGroups(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10 } = req.query;
+    const { page = 1, limit = 10, search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
 
     const result = await roleService.getGroupsWithRole(
       id,
-      { page, limit },
+      { page, limit, search },
       models,
     );
 

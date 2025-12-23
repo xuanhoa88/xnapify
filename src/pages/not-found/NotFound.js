@@ -5,28 +5,50 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { Link } from '../../components/History';
 import s from './NotFound.css';
 
-function NotFound({ title = 'Page Not Found' }) {
+/**
+ * Not Found (404) Page Component
+ * Standalone full-page display without header/footer
+ */
+function NotFound() {
+  const { t } = useTranslation();
+
   return (
     <div className={s.root}>
-      <div className={s.container}>
-        <h1 className={s.title}>{title}</h1>
-        <p className={s.message}>
-          Sorry, the page you were trying to view does not exist.
+      {/* Hero Section */}
+      <div className={s.hero}>
+        <div className={s.heroCode}>404</div>
+        <h1 className={s.heroTitle}>{t('notFound.title', 'Page Not Found')}</h1>
+        <p className={s.heroSubtitle}>
+          {t(
+            'notFound.message',
+            'Sorry, the page you were trying to view does not exist.',
+          )}
         </p>
-        <Link className={s.link} to='/'>
-          Go Home
-        </Link>
+      </div>
+
+      {/* Actions Section */}
+      <div className={s.content}>
+        <div className={s.container}>
+          <div className={s.actions}>
+            <Link to='/' className={s.btnPrimary}>
+              {t('notFound.backToHome', 'Back to Home')}
+            </Link>
+            <button
+              type='button'
+              className={s.btnSecondary}
+              onClick={() => window.history.back()}
+            >
+              {t('notFound.goBack', 'Go Back')}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-NotFound.propTypes = {
-  title: PropTypes.string,
-};
 
 export default NotFound;

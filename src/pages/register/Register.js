@@ -9,9 +9,13 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
-import { useHistory, useQuery } from '../../components/History';
+import { Link, useHistory, useQuery } from '../../components/History';
 import s from './Register.css';
 
+/**
+ * Register Page Component
+ * Standalone full-page registration without header/footer
+ */
 function Register() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -33,17 +37,26 @@ function Register() {
 
       // Validation
       if (!displayName.trim()) {
-        setError('Display name is required');
+        setError(
+          t('register.errors.displayNameRequired', 'Display name is required'),
+        );
         return;
       }
 
       if (password.length < 6) {
-        setError('Password must be at least 6 characters long');
+        setError(
+          t(
+            'register.errors.passwordLength',
+            'Password must be at least 6 characters long',
+          ),
+        );
         return;
       }
 
       if (password !== confirmPassword) {
-        setError('Passwords do not match');
+        setError(
+          t('register.errors.passwordMismatch', 'Passwords do not match'),
+        );
         return;
       }
 
@@ -73,20 +86,48 @@ function Register() {
       dispatch,
       history,
       returnTo,
+      t,
     ],
   );
 
   return (
     <div className={s.root}>
-      <div className={s.container}>
-        <h1>{t('navigation.register')}</h1>
+      {/* Hero Section (Left) */}
+      <div className={s.hero}>
+        <div className={s.heroContent}>
+          <Link to='/' className={s.brand}>
+            <img
+              src='/rsk_38x38.png'
+              srcSet='/rsk_72x72.png 2x'
+              width='48'
+              height='48'
+              alt='RSK'
+            />
+            <span className={s.brandText}>React Starter Kit</span>
+          </Link>
+          <h1 className={s.heroTitle}>
+            {t('register.welcome', 'Create Account')}
+          </h1>
+          <p className={s.heroSubtitle}>
+            {t('register.heroSubtitle', 'Join us and start your journey')}
+          </p>
+        </div>
+      </div>
 
-        {error && <div className={s.error}> {error}</div>}
+      {/* Form Section (Right) */}
+      <div className={s.formSection}>
+        <div className={s.formContainer}>
+          <h2 className={s.formTitle}>
+            {t('navigation.register', 'Register')}
+          </h2>
 
-        <form method='post' onSubmit={handleSubmit}>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='displayName'>
-              {t('register.displayName')}
+          {error && <div className={s.error}>{error}</div>}
+
+          <form method='post' onSubmit={handleSubmit}>
+            <div className={s.formGroup}>
+              <label className={s.label} htmlFor='displayName'>
+                {t('register.displayName')}
+              </label>
               <input
                 className={s.input}
                 id='displayName'
@@ -94,14 +135,16 @@ function Register() {
                 name='displayName'
                 value={displayName}
                 onChange={e => setDisplayName(e.target.value)}
+                placeholder={t('register.displayNamePlaceholder', 'Your name')}
                 required
                 autoFocus // eslint-disable-line jsx-a11y/no-autofocus
               />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='email'>
-              {t('register.email')}
+            </div>
+
+            <div className={s.formGroup}>
+              <label className={s.label} htmlFor='email'>
+                {t('register.email')}
+              </label>
               <input
                 className={s.input}
                 id='email'
@@ -109,13 +152,18 @@ function Register() {
                 name='email'
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                placeholder={t(
+                  'register.emailPlaceholder',
+                  'your.email@example.com',
+                )}
                 required
               />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='password'>
-              {t('register.password')}
+            </div>
+
+            <div className={s.formGroup}>
+              <label className={s.label} htmlFor='password'>
+                {t('register.password')}
+              </label>
               <input
                 className={s.input}
                 id='password'
@@ -123,14 +171,16 @@ function Register() {
                 name='password'
                 value={password}
                 onChange={e => setPassword(e.target.value)}
+                placeholder='••••••••'
                 required
                 minLength='6'
               />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='confirmPassword'>
-              {t('register.confirmPassword')}
+            </div>
+
+            <div className={s.formGroup}>
+              <label className={s.label} htmlFor='confirmPassword'>
+                {t('register.confirmPassword')}
+              </label>
               <input
                 className={s.input}
                 id='confirmPassword'
@@ -138,24 +188,25 @@ function Register() {
                 name='confirmPassword'
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
+                placeholder='••••••••'
                 required
                 minLength='6'
               />
-            </label>
-          </div>
-          <div className={s.formGroup}>
-            <button className={s.button} type='submit' disabled={loading}>
+            </div>
+
+            <button className={s.submitButton} type='submit' disabled={loading}>
               {loading ? t('register.loading') : t('register.submit')}
             </button>
+          </form>
+
+          <div className={s.loginLink}>
+            <Trans
+              t={t}
+              i18nKey='register.alreadyHaveAccount'
+              // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
+              components={[<Link to='/login' className={s.link} />]}
+            />
           </div>
-        </form>
-        <div className={s.linkWrapper}>
-          <Trans
-            t={t}
-            i18nKey='register.alreadyHaveAccount'
-            // eslint-disable-next-line react/jsx-key, jsx-a11y/anchor-has-content
-            components={[<a href='/login' className={s.buttonLink} />]}
-          />
         </div>
       </div>
     </div>

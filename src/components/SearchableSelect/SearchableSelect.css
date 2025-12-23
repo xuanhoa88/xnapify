@@ -10,8 +10,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-3) var(--spacing-4);
-  height: 42px;
+  padding: 0 var(--spacing-3);
+  height: 40px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -21,8 +21,7 @@
 }
 
 .control:hover {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
+  border-color: var(--color-border-hover);
 }
 
 .control:focus {
@@ -59,7 +58,7 @@
 .controlRight {
   display: flex;
   align-items: center;
-  gap: var(--spacing-1);
+  gap: var(--spacing-2);
   flex-shrink: 0;
 }
 
@@ -86,13 +85,33 @@
 }
 
 .arrow {
-  font-size: 0.65em;
-  color: var(--color-text-secondary);
-  transition: transform 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  pointer-events: none;
 }
 
-.control:hover .arrow {
-  color: var(--color-primary);
+/* CSS chevron arrow - matches native select */
+.arrow::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-right: 1.5px solid #666;
+  border-bottom: 1.5px solid #666;
+  transform: rotate(45deg);
+  margin-top: -3px;
+}
+
+.open .arrow::before {
+  transform: rotate(-135deg);
+  margin-top: 3px;
+}
+
+.control:hover .arrow::before {
+  border-color: #444;
 }
 
 /* Dropdown Menu */
@@ -147,8 +166,17 @@
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-primary);
-  font-size: var(--font-size-xs);
-  animation: pulse 1s ease-in-out infinite;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
 }
 
 /* Options List */
@@ -271,5 +299,87 @@
 
   50% {
     opacity: 0.5;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .container {
+    min-width: unset;
+    font-size: var(--font-size-xs);
+  }
+
+  .control {
+    padding: 0 var(--spacing-2);
+    height: 36px;
+  }
+
+  .value {
+    font-size: var(--font-size-xs);
+  }
+
+  .clearBtn {
+    width: 16px;
+    height: 16px;
+    font-size: 12px;
+  }
+
+  .arrow {
+    width: 14px;
+    height: 14px;
+  }
+
+  .arrow::before {
+    width: 5px;
+    height: 5px;
+  }
+
+  /* Dropdown menu - constrain width */
+  .menu {
+    max-height: 50vh;
+  }
+
+  .searchContainer {
+    padding: var(--spacing-2);
+  }
+
+  .searchInput {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .optionsList {
+    max-height: 200px;
+  }
+
+  .option {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+
+  .checkbox {
+    font-size: 1em;
+  }
+
+  .noOptions,
+  .loadingMore,
+  .loadMoreHint {
+    padding: var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .control {
+    height: 34px;
+    padding: var(--spacing-2);
+  }
+
+  .optionsList {
+    max-height: 180px;
   }
 }

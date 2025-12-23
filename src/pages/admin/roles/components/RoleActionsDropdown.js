@@ -5,9 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import { Icon } from '../../../../components/Admin';
 import s from './RoleActionsDropdown.css';
 
 /**
@@ -42,15 +43,21 @@ function RoleActionsDropdown({
     }
   }, [isOpen, onToggle]);
 
-  const handleToggle = e => {
-    e.stopPropagation();
-    onToggle(role.id);
-  };
+  const handleToggle = useCallback(
+    e => {
+      e.stopPropagation();
+      onToggle(role.id);
+    },
+    [role.id, onToggle],
+  );
 
-  const handleAction = action => {
-    action(role);
-    onToggle(null);
-  };
+  const handleAction = useCallback(
+    action => {
+      action(role);
+      onToggle(null);
+    },
+    [role, onToggle],
+  );
 
   return (
     <div className={s.actionDropdown}>
@@ -77,7 +84,8 @@ function RoleActionsDropdown({
             type='button'
             role='menuitem'
           >
-            👥 {t('roles.viewUsers', 'View Users')}
+            <Icon name='users' size={16} />
+            {t('roles.viewUsers', 'View Users')}
           </button>
           <button
             className={s.dropdownItem}
@@ -85,7 +93,8 @@ function RoleActionsDropdown({
             type='button'
             role='menuitem'
           >
-            👨‍👩‍👧‍👦 {t('roles.viewGroups', 'View Groups')}
+            <Icon name='folder' size={16} />
+            {t('roles.viewGroups', 'View Groups')}
           </button>
           <button
             className={s.dropdownItem}
@@ -93,7 +102,8 @@ function RoleActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🔐 {t('roles.viewPermissions', 'View Permissions')}
+            <Icon name='key' size={16} />
+            {t('roles.viewPermissions', 'View Permissions')}
           </button>
           <div className={s.dropdownDivider} />
           <button
@@ -102,7 +112,8 @@ function RoleActionsDropdown({
             type='button'
             role='menuitem'
           >
-            ✏️ {t('roles.editRole', 'Edit Role')}
+            <Icon name='edit' size={16} />
+            {t('roles.editRole', 'Edit Role')}
           </button>
           <button
             className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
@@ -110,7 +121,8 @@ function RoleActionsDropdown({
             type='button'
             role='menuitem'
           >
-            🗑️ {t('roles.deleteRole', 'Delete Role')}
+            <Icon name='trash' size={16} />
+            {t('roles.deleteRole', 'Delete Role')}
           </button>
         </div>
       )}

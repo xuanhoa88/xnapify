@@ -204,11 +204,15 @@ export function deleteGroup(groupId) {
 export function fetchGroupUsers(groupId, options = {}) {
   return async (dispatch, getState, { fetch }) => {
     try {
-      const { page = 1, limit = 10 } = options;
+      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
       });
+
+      if (search) {
+        params.append('search', search);
+      }
 
       const { data } = await fetch(
         `/api/admin/groups/${groupId}/users?${params.toString()}`,

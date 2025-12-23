@@ -5,14 +5,34 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import PropTypes from 'prop-types';
 import Layout from '../../components/Layout';
-import Page from '../../components/Page';
+import s from './Privacy.css';
 
 /**
  * Route configuration
  */
 const route = {
   path: '/privacy',
+};
+
+/**
+ * Privacy Page Component
+ */
+function PrivacyPage({ title, html }) {
+  return (
+    <div className={s.root}>
+      <div className={s.container}>
+        <h1>{title}</h1>
+        <div dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+    </div>
+  );
+}
+
+PrivacyPage.propTypes = {
+  title: PropTypes.string.isRequired,
+  html: PropTypes.string.isRequired,
 };
 
 /**
@@ -45,7 +65,7 @@ async function action({ locale }) {
     title: data.attributes.title,
     component: (
       <Layout>
-        <Page title={data.attributes.title} html={data.html} />
+        <PrivacyPage title={data.attributes.title} html={data.html} />
       </Layout>
     ),
   };

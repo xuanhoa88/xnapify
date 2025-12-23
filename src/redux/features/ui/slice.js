@@ -8,9 +8,8 @@
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
-  sidebarOpen: false,
+  adminSidebarOpen: false,
   isAdminPanel: false,
-  showPageHeader: false,
 };
 
 /**
@@ -22,30 +21,26 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
-    toggleSidebar: state => {
-      state.sidebarOpen = !state.sidebarOpen;
+    toggleAdminSidebar: state => {
+      state.adminSidebarOpen = !state.adminSidebarOpen;
     },
-    openSidebar: state => {
-      state.sidebarOpen = true;
+    openAdminSidebar: state => {
+      state.adminSidebarOpen = true;
     },
-    closeSidebar: state => {
-      state.sidebarOpen = false;
+    closeAdminSidebar: state => {
+      state.adminSidebarOpen = false;
     },
     setAdminPanel: (state, action) => {
       state.isAdminPanel = action.payload;
-    },
-    setPageHeader: (state, action) => {
-      state.showPageHeader = action.payload;
     },
   },
 });
 
 export const {
-  toggleSidebar,
-  openSidebar,
-  closeSidebar,
+  toggleAdminSidebar,
+  openAdminSidebar,
+  closeAdminSidebar,
   setAdminPanel,
-  setPageHeader,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

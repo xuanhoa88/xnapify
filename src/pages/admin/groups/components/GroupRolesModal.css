@@ -80,8 +80,11 @@
   left: var(--spacing-3);
   top: 50%;
   transform: translateY(-50%);
-  font-size: var(--font-size-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   pointer-events: none;
+  color: var(--color-text-secondary);
 }
 
 .searchWrapper .searchInput {
@@ -106,20 +109,30 @@
 
 .searchClear {
   position: absolute;
-  right: var(--spacing-2);
+  right: var(--spacing-3);
   top: 50%;
   transform: translateY(-50%);
-  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--color-background-tertiary);
   border: none;
-  font-size: 1.2rem;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
   color: var(--color-text-secondary);
   cursor: pointer;
-  padding: var(--spacing-1);
-  line-height: 1;
+  transition: var(--transition-base);
+  z-index: 2;
 }
 
 .searchClear:hover {
-  color: var(--color-text-primary);
+  background: var(--color-error);
+  color: white;
+  transform: translateY(-50%) scale(1.1);
 }
 
 /* Pagination */
@@ -196,4 +209,79 @@
   font-size: var(--font-size-xs);
   color: var(--color-text-secondary);
   margin-right: auto;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .checkboxListItem {
+    padding: var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+
+  .checkboxListLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .checkboxListDesc {
+    font-size: 10px;
+  }
+
+  .checkbox {
+    width: 16px;
+    height: 16px;
+  }
+
+  .searchWrapper {
+    margin-bottom: var(--spacing-3);
+  }
+
+  .searchWrapper .searchIcon {
+    left: var(--spacing-3);
+  }
+
+  .searchWrapper .searchInput {
+    padding: var(--spacing-2) var(--spacing-6) var(--spacing-2) var(--spacing-8);
+    font-size: var(--font-size-xs);
+  }
+
+  .searchClear {
+    right: var(--spacing-1);
+    font-size: 1rem;
+    padding: var(--spacing-1);
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+    gap: var(--spacing-1);
+  }
+
+  .pageBtn {
+    padding: var(--spacing-1) var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .pageNumber {
+    min-width: 28px;
+    height: 28px;
+    font-size: var(--font-size-xs);
+  }
+
+  .paginationInfo {
+    width: 100%;
+    text-align: center;
+    margin-bottom: var(--spacing-2);
+  }
+}
+
+@media (max-width: 375px) {
+  .checkboxListItem {
+    padding: var(--spacing-1) var(--spacing-2);
+  }
+
+  .pageNumbers {
+    display: none;
+  }
 }
