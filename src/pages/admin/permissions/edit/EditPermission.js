@@ -72,6 +72,12 @@ export default function EditPermission({ permissionId }) {
     history.push('/admin/permissions');
   }, [history]);
 
+  // Auto-generate permission name preview
+  const generatedName =
+    formData.resource && formData.action
+      ? `${formData.resource}:${formData.action}`
+      : '-';
+
   if (loading) {
     return (
       <div className={s.root}>
@@ -84,7 +90,9 @@ export default function EditPermission({ permissionId }) {
             ← Back to Permissions
           </button>
         </PageHeader>
-        <div className={s.container}>Loading permission...</div>
+        <div className={s.formContainer}>
+          <div className={s.loading}>Loading permission...</div>
+        </div>
       </div>
     );
   }
@@ -101,65 +109,65 @@ export default function EditPermission({ permissionId }) {
         </button>
       </PageHeader>
 
-      <div className={s.container}>
-        {error && <div className={s.error}>{error}</div>}
+      <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='resource'>
-              Resource *
-            </label>
-            <input
-              id='resource'
-              name='resource'
-              type='text'
-              className={s.input}
-              value={formData.resource}
-              onChange={handleChange}
-              placeholder='e.g. users'
-              required
-            />
-          </div>
+          {error && <div className={s.formError}>{error}</div>}
 
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='action'>
-              Action *
-            </label>
-            <input
-              id='action'
-              name='action'
-              type='text'
-              className={s.input}
-              value={formData.action}
-              onChange={handleChange}
-              placeholder='e.g. read'
-              required
-            />
-          </div>
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Permission Information</h3>
 
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='description'>
-              Description
-            </label>
-            <textarea
-              id='description'
-              name='description'
-              className={`${s.input} ${s.textarea}`}
-              value={formData.description}
-              onChange={handleChange}
-              placeholder='Describe what this permission allows...'
-            />
-          </div>
+            <div className={s.formRow}>
+              <div className={s.formGroup}>
+                <label htmlFor='resource'>Resource *</label>
+                <input
+                  id='resource'
+                  name='resource'
+                  type='text'
+                  className={s.formInput}
+                  value={formData.resource}
+                  onChange={handleChange}
+                  placeholder='e.g. users, posts, comments'
+                  required
+                />
+              </div>
+              <div className={s.formGroup}>
+                <label htmlFor='action'>Action *</label>
+                <input
+                  id='action'
+                  name='action'
+                  type='text'
+                  className={s.formInput}
+                  value={formData.action}
+                  onChange={handleChange}
+                  placeholder='e.g. read, write, delete'
+                  required
+                />
+              </div>
+            </div>
 
-          <div className={s.formGroup}>
-            <span className={s.label}>Permission Name (auto-generated)</span>
-            <div className={s.previewName}>
-              {formData.resource && formData.action
-                ? `${formData.resource}:${formData.action}`
-                : '-'}
+            <div className={s.formGroup}>
+              <label htmlFor='description'>Description</label>
+              <textarea
+                id='description'
+                name='description'
+                className={s.formTextarea}
+                value={formData.description}
+                onChange={handleChange}
+                placeholder='Describe what this permission allows...'
+                rows={3}
+              />
             </div>
           </div>
 
-          <div className={s.actions}>
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Generated Name</h3>
+            <div className={s.previewName}>{generatedName}</div>
+            <p className={s.previewHint}>
+              Permission name is auto-generated from resource and action
+            </p>
+          </div>
+
+          <div className={s.formActions}>
             <button
               type='button'
               className={s.cancelBtn}
