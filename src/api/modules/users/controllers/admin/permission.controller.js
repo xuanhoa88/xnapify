@@ -22,17 +22,19 @@ import * as permissionService from '../../services/admin/permission.service';
 export async function createPermission(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, resource, action, description } = req.body;
+    const { resource, action, description } = req.body;
 
     // Validate input
     const errors = {};
-    if (!name) errors.name = 'PERMISSION_NAME_REQUIRED';
     if (!resource) errors.resource = 'RESOURCE_REQUIRED';
     if (!action) errors.action = 'ACTION_REQUIRED';
 
     if (Object.keys(errors).length > 0) {
       return http.sendValidationError(res, errors);
     }
+
+    // Auto-generate permission name from resource and action
+    const name = `${resource}:${action}`;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -115,8 +117,11 @@ export async function updatePermission(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { name, resource, action, description } = req.body;
+    const { resource, action, description } = req.body;
     const models = req.app.get('models');
+
+    // Auto-generate permission name from resource and action
+    const name = resource && action ? `${resource}:${action}` : undefined;
 
     const updatedPermission = await permissionService.updatePermission(
       id,

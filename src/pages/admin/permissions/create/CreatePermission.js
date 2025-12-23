@@ -16,7 +16,6 @@ export default function CreatePermission() {
   const dispatch = useDispatch();
   const history = useHistory();
   const [formData, setFormData] = useState({
-    name: '',
     resource: '',
     action: '',
     description: '',
@@ -51,6 +50,12 @@ export default function CreatePermission() {
     history.push('/admin/permissions');
   }, [history]);
 
+  // Auto-generate permission name preview
+  const generatedName =
+    formData.resource && formData.action
+      ? `${formData.resource}:${formData.action}`
+      : '-';
+
   return (
     <div className={s.root}>
       <PageHeader
@@ -66,22 +71,6 @@ export default function CreatePermission() {
       <div className={s.container}>
         {error && <div className={s.error}>{error}</div>}
         <form onSubmit={handleSubmit} className={s.form}>
-          <div className={s.formGroup}>
-            <label className={s.label} htmlFor='name'>
-              Permission Name *
-            </label>
-            <input
-              id='name'
-              name='name'
-              type='text'
-              className={s.input}
-              value={formData.name}
-              onChange={handleChange}
-              placeholder='e.g. users:read'
-              required
-            />
-          </div>
-
           <div className={s.formGroup}>
             <label className={s.label} htmlFor='resource'>
               Resource *
@@ -126,6 +115,11 @@ export default function CreatePermission() {
               onChange={handleChange}
               placeholder='Describe what this permission allows...'
             />
+          </div>
+
+          <div className={s.formGroup}>
+            <span className={s.label}>Permission Name (auto-generated)</span>
+            <div className={s.previewName}>{generatedName}</div>
           </div>
 
           <div className={s.actions}>

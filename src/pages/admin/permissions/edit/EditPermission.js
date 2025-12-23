@@ -17,7 +17,6 @@ export default function EditPermission({ permissionId }) {
   const dispatch = useDispatch();
   const history = useHistory();
   const [formData, setFormData] = useState({
-    name: '',
     resource: '',
     action: '',
     description: '',
@@ -32,7 +31,6 @@ export default function EditPermission({ permissionId }) {
       const result = await dispatch(fetchPermissionById(permissionId));
       if (result.success) {
         setFormData({
-          name: result.data.permission.name,
           resource: result.data.permission.resource,
           action: result.data.permission.action,
           description: result.data.permission.description || '',
@@ -107,22 +105,6 @@ export default function EditPermission({ permissionId }) {
         {error && <div className={s.error}>{error}</div>}
         <form onSubmit={handleSubmit} className={s.form}>
           <div className={s.formGroup}>
-            <label className={s.label} htmlFor='name'>
-              Permission Name *
-            </label>
-            <input
-              id='name'
-              name='name'
-              type='text'
-              className={s.input}
-              value={formData.name}
-              onChange={handleChange}
-              placeholder='e.g. users:read'
-              required
-            />
-          </div>
-
-          <div className={s.formGroup}>
             <label className={s.label} htmlFor='resource'>
               Resource *
             </label>
@@ -166,6 +148,15 @@ export default function EditPermission({ permissionId }) {
               onChange={handleChange}
               placeholder='Describe what this permission allows...'
             />
+          </div>
+
+          <div className={s.formGroup}>
+            <span className={s.label}>Permission Name (auto-generated)</span>
+            <div className={s.previewName}>
+              {formData.resource && formData.action
+                ? `${formData.resource}:${formData.action}`
+                : '-'}
+            </div>
           </div>
 
           <div className={s.actions}>

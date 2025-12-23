@@ -13,7 +13,7 @@
  * Create a new permission
  *
  * @param {Object} permissionData - Permission data
- * @param {string} permissionData.name - Permission name (e.g., 'users:read')
+ * @param {string} permissionData.name - Auto-generated from resource:action
  * @param {string} permissionData.resource - Resource type (e.g., 'users')
  * @param {string} permissionData.action - Action type (e.g., 'read')
  * @param {string} permissionData.description - Permission description
@@ -136,20 +136,31 @@ export async function updatePermission(permission_id, updateData, models) {
     throw error;
   }
 
-  // Check if name is being changed and if it already exists
-  if (updateData.name && updateData.name !== permission.name) {
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Check if resource:action combination is being changed and if it already exists
+  const newResource = updateData.resource || permission.resource;
+  const newAction = updateData.action || permission.action;
+  const newName = `${newResource}:${newAction}`;
+
+  if (newName !== permission.name) {
     const existingPermission = await Permission.findOne({
-      where: { name: updateData.name },
+      where: {
+        [Op.and]: [{ resource: newResource }, { action: newAction }],
+        id: { [Op.ne]: permission_id },
+      },
     });
     if (existingPermission) {
-      const error = new Error(`Permission '${updateData.name}' already exists`);
+      const error = new Error(`Permission '${newName}' already exists`);
       error.name = 'PermissionAlreadyExistsError';
       error.status = 400;
       throw error;
     }
   }
 
-  await permission.update(updateData);
+  // Ensure name is always synced with resource:action
+  await permission.update({ ...updateData, name: newName });
   return permission;
 }
 
