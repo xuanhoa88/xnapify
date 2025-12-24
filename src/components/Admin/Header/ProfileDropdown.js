@@ -144,7 +144,7 @@ function ProfileDropdown() {
             onClick={handleClose}
             role='menuitem'
           >
-            <Icon name='homeWithInner' size={16} />
+            <Icon name='arrowUp' size={16} />
             {t('navigation.backToSite', 'Back to Site')}
           </Link>
 

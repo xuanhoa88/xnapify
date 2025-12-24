@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
+import Icon from '../../../Icon';
 import s from './ScrollToTop.css';
 
 /**
@@ -67,13 +68,7 @@ function ScrollToTop() {
       aria-label='Scroll to top'
       type='button'
     >
-      <svg
-        className={s.icon}
-        viewBox='0 0 24 24'
-        xmlns='http://www.w3.org/2000/svg'
-      >
-        <path d='M12 19V5M5 12l7-7 7 7' />
-      </svg>
+      <Icon name='arrowUp' size={24} className={s.icon} />
     </button>
   );
 }

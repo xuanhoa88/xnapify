@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
+import Icon from '../../components/Icon';
 import s from './Feedback.css';
 
 /**
@@ -24,19 +25,7 @@ function Feedback() {
           target='_blank'
           rel='noopener noreferrer'
         >
-          <svg
-            className={s.icon}
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <circle cx='12' cy='12' r='10' />
-            <path d='M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3' />
-            <line x1='12' y1='17' x2='12.01' y2='17' />
-          </svg>
+          <Icon name='help-circle' size={20} className={s.icon} />
           {t('home.feedback.askQuestion', 'Ask a question')}
         </a>
         <span className={s.spacer}>|</span>
@@ -46,17 +35,7 @@ function Feedback() {
           target='_blank'
           rel='noopener noreferrer'
         >
-          <svg
-            className={s.icon}
-            viewBox='0 0 24 24'
-            fill='none'
-            stroke='currentColor'
-            strokeWidth='2'
-            strokeLinecap='round'
-            strokeLinejoin='round'
-          >
-            <path d='M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3zM7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3' />
-          </svg>
+          <Icon name='thumbs-up' size={20} className={s.icon} />
           {t('home.feedback.reportIssue', 'Report an issue')}
         </a>
       </div>
