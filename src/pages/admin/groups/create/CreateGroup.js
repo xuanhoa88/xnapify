@@ -13,7 +13,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon } from '../../../../components/Admin';
+import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
 import s from './CreateGroup.css';
 
 function CreateGroup() {
@@ -39,6 +39,7 @@ function CreateGroup() {
   const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
@@ -114,6 +115,10 @@ function CreateGroup() {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/groups');
   }, [history]);
 
@@ -275,6 +280,10 @@ function CreateGroup() {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

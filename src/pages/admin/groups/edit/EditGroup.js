@@ -14,7 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, Loader } from '../../../../components/Admin';
+import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
@@ -42,6 +42,7 @@ function EditGroup({ groupId }) {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetchingGroup, setFetchingGroup] = useState(true);
+  const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
@@ -117,6 +118,10 @@ function EditGroup({ groupId }) {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/groups');
   }, [history]);
 
@@ -358,6 +363,10 @@ function EditGroup({ groupId }) {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

@@ -18,7 +18,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon } from '../../../../components/Admin';
+import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
 import s from './CreateUser.css';
 
 function CreateUser() {
@@ -60,6 +60,7 @@ function CreateUser() {
   const [groupSearch, setGroupSearch] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [generatingPassword, setGeneratingPassword] = useState(false);
+  const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
@@ -200,6 +201,10 @@ function CreateUser() {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/users');
   }, [history]);
 
@@ -263,7 +268,6 @@ function CreateUser() {
           ← Back to Users
         </button>
       </Page.Header>
-
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
           {error && <div className={s.formError}>{error}</div>}
@@ -512,6 +516,10 @@ function CreateUser() {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

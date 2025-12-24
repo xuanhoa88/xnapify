@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { createPermission } from '../../../../redux';
-import { Page, Icon } from '../../../../components/Admin';
+import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {
@@ -23,6 +23,7 @@ export default function CreatePermission() {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const confirmBackModalRef = useRef(null);
 
   const handleSubmit = useCallback(
     async e => {
@@ -51,6 +52,10 @@ export default function CreatePermission() {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/permissions');
   }, [history]);
 
@@ -165,6 +170,10 @@ export default function CreatePermission() {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

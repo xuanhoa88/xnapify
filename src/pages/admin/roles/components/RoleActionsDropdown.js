@@ -5,11 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { Icon } from '../../../../components/Admin';
-import s from './RoleActionsDropdown.css';
+import { Icon, Table } from '../../../../components/Admin';
+
+const { ActionsDropdown } = Table;
 
 /**
  * RoleActionsDropdown - Dropdown menu for role actions
@@ -30,103 +31,50 @@ function RoleActionsDropdown({
 }) {
   const { t } = useTranslation();
 
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (isOpen) {
-        onToggle(null);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [isOpen, onToggle]);
-
-  const handleToggle = useCallback(
-    e => {
-      e.stopPropagation();
-      onToggle(role.id);
-    },
-    [role.id, onToggle],
-  );
-
-  const handleAction = useCallback(
-    action => {
-      action(role);
-      onToggle(null);
-    },
-    [role, onToggle],
-  );
+  const handleToggle = useCallback(() => {
+    onToggle(isOpen ? null : role.id);
+  }, [isOpen, role.id, onToggle]);
 
   return (
-    <div className={s.actionDropdown}>
-      <button
-        className={s.actionDropdownBtn}
-        title={t('common.moreActions', 'More actions')}
-        onClick={handleToggle}
-        type='button'
-      >
-        ⋮
-      </button>
-      {isOpen && (
-        <div
-          className={s.actionDropdownMenu}
-          onClick={e => e.stopPropagation()}
-          onKeyDown={e => e.stopPropagation()}
-          role='menu'
-          aria-label={t('roles.actions', 'Role actions')}
-          tabIndex={-1}
+    <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
+      <ActionsDropdown.Trigger title={t('common.moreActions', 'More actions')}>
+        <Icon name='more-vertical' size={18} />
+      </ActionsDropdown.Trigger>
+      <ActionsDropdown.Menu>
+        <ActionsDropdown.Item
+          onClick={() => onViewUsers(role)}
+          icon={<Icon name='users' size={16} />}
         >
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onViewUsers)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='users' size={16} />
-            {t('roles.viewUsers', 'View Users')}
-          </button>
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onViewGroups)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='folder' size={16} />
-            {t('roles.viewGroups', 'View Groups')}
-          </button>
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onViewPermissions)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='key' size={16} />
-            {t('roles.viewPermissions', 'View Permissions')}
-          </button>
-          <div className={s.dropdownDivider} />
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onEdit)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='edit' size={16} />
-            {t('roles.editRole', 'Edit Role')}
-          </button>
-          <button
-            className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
-            onClick={() => handleAction(onDelete)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='trash' size={16} />
-            {t('roles.deleteRole', 'Delete Role')}
-          </button>
-        </div>
-      )}
-    </div>
+          {t('roles.viewUsers', 'View Users')}
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onViewGroups(role)}
+          icon={<Icon name='folder' size={16} />}
+        >
+          {t('roles.viewGroups', 'View Groups')}
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onViewPermissions(role)}
+          icon={<Icon name='key' size={16} />}
+        >
+          {t('roles.viewPermissions', 'View Permissions')}
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Divider />
+        <ActionsDropdown.Item
+          onClick={() => onEdit(role)}
+          icon={<Icon name='edit' size={16} />}
+        >
+          {t('roles.editRole', 'Edit Role')}
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onDelete(role)}
+          icon={<Icon name='trash' size={16} />}
+          variant='danger'
+        >
+          {t('roles.deleteRole', 'Delete Role')}
+        </ActionsDropdown.Item>
+      </ActionsDropdown.Menu>
+    </ActionsDropdown>
   );
 }
 

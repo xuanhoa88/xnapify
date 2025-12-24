@@ -5,19 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../../../components/variables.css';
+@import '../../admin.css';
 
-.actionDropdown {
+/* Root container */
+.dropdown {
   position: relative;
   isolation: isolate;
 }
 
-.actionDropdownBtn {
-  padding: var(--spacing-2);
-  background: transparent;
-  border: 1px solid transparent;
+.dropdown.open {
+  z-index: 9999;
+}
+
+/* Trigger button */
+.trigger {
+  padding: 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
   cursor: pointer;
-  font-size: 1.1rem;
   transition: var(--transition-base);
   border-radius: var(--radius-md);
   color: var(--color-text-secondary);
@@ -28,22 +33,23 @@
   height: 36px;
   position: relative;
   z-index: 1;
+  line-height: 1;
 }
 
-.actionDropdownBtn:hover {
+.trigger:hover {
   background: var(--color-background-secondary);
-  border-color: var(--color-border);
+  border-color: var(--color-primary);
   color: var(--color-text-primary);
 }
 
-.actionDropdownBtn:focus {
+.trigger:focus {
   outline: none;
   box-shadow: 0 0 0 2px rgb(59 130 246 / 20%);
 }
 
-.actionDropdownMenu {
+/* Menu container */
+.menu {
   position: absolute;
-  right: 0;
   top: calc(100% + 6px);
   min-width: 200px;
   background: var(--color-background);
@@ -58,6 +64,14 @@
   padding: var(--spacing-1) 0;
 }
 
+.menu.right {
+  right: 0;
+}
+
+.menu.left {
+  left: 0;
+}
+
 @keyframes dropdownFadeIn {
   from {
     opacity: 0;
@@ -70,7 +84,8 @@
   }
 }
 
-.dropdownItem {
+/* Menu item */
+.item {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
@@ -87,42 +102,64 @@
   margin: 0;
 }
 
-.dropdownItem:hover {
+.item:hover {
   background: var(--color-background-secondary);
 }
 
-.dropdownItem:active {
+.item:active {
   background: var(--color-background-tertiary);
 }
 
-/* Icon styling within dropdown items */
-.dropdownItem svg {
+.item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Item icon */
+.itemIcon {
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
   color: var(--color-text-secondary);
   transition: var(--transition-base);
 }
 
-.dropdownItemDanger {
-  color: var(--color-error);
-}
-
-.dropdownItemDanger svg {
-  color: var(--color-error);
-}
-
-.dropdownItem:hover svg {
+.item:hover .itemIcon {
   color: var(--color-primary);
 }
 
-.dropdownItemDanger:hover {
-  background: #fef2f2;
+/* Warning variant */
+.item.warning {
+  color: var(--color-warning);
 }
 
-.dropdownItemDanger:hover svg {
-  color: #dc2626;
+.item.warning .itemIcon {
+  color: var(--color-warning);
 }
 
-.dropdownDivider {
+.item.warning:hover {
+  background: rgb(245 158 11 / 10%);
+}
+
+/* Danger variant */
+.item.danger {
+  color: var(--color-error);
+}
+
+.item.danger .itemIcon {
+  color: var(--color-error);
+}
+
+.item.danger:hover {
+  background: rgb(239 68 68 / 10%);
+}
+
+.item.danger:hover .itemIcon {
+  color: var(--color-error);
+}
+
+/* Divider */
+.divider {
   height: 1px;
   background: var(--color-border);
   margin: var(--spacing-2) var(--spacing-2);
@@ -133,47 +170,44 @@
    ============================================================================= */
 
 @media (max-width: 768px) {
-  /* Trigger button - maintain touch target but keep compact */
-  .actionDropdownBtn {
+  .trigger {
     width: 40px;
     height: 40px;
     font-size: 1rem;
   }
 
-  /* Dropdown menu - compact with upward positioning for bottom items */
-  .actionDropdownMenu {
+  .menu {
     min-width: 180px;
     max-width: calc(100vw - var(--spacing-6));
     border-radius: var(--radius-md);
   }
 
-  /* Compact dropdown items - touch-friendly but not bulky */
-  .dropdownItem {
+  .item {
     padding: var(--spacing-3);
     font-size: var(--font-size-sm);
     gap: var(--spacing-2);
     min-height: 44px;
   }
 
-  .dropdownDivider {
+  .divider {
     margin: var(--spacing-1) var(--spacing-2);
   }
 }
 
 /* Extra small mobile */
 @media (max-width: 375px) {
-  .actionDropdownBtn {
+  .trigger {
     width: 36px;
     height: 36px;
     padding: var(--spacing-1);
     font-size: 0.9rem;
   }
 
-  .actionDropdownMenu {
+  .menu {
     min-width: 160px;
   }
 
-  .dropdownItem {
+  .item {
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-xs);
     min-height: 40px;

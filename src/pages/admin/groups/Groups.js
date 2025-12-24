@@ -5,10 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useEffect, useCallback, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
 import { useHistory } from '../../../components/History';
 import {
   fetchGroups,
@@ -17,17 +16,23 @@ import {
   getGroupsError,
   getGroupsPagination,
   fetchRoles,
+  deleteGroup,
 } from '../../../redux';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
-import { Page, Icon, Loader, Table } from '../../../components/Admin';
+import {
+  Page,
+  Icon,
+  Loader,
+  Table,
+  ConfirmModal,
+} from '../../../components/Admin';
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
 import GroupUsersModal from './components/GroupUsersModal';
-import DeleteGroupModal from './components/DeleteGroupModal';
 import s from './Groups.css';
 
 // Pagination items per page
@@ -151,6 +156,13 @@ function Groups() {
     deleteModalRef.current && deleteModalRef.current.open(group);
   }, []);
 
+  const handleDeleteGroupAction = useCallback(
+    item => dispatch(deleteGroup(item.id)),
+    [dispatch],
+  );
+
+  const getGroupName = useCallback(item => item.name, []);
+
   const handleToggleDropdown = useCallback(id => {
     setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
@@ -208,54 +220,6 @@ function Groups() {
   }, []);
 
   const hasActiveFilters = Boolean(search || roleFilter);
-
-  // Pagination handlers
-  const handlePrevPage = useCallback(() => {
-    if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
-    }
-  }, [currentPage]);
-
-  const handleNextPage = useCallback(() => {
-    const totalPages = (pagination && pagination.pages) || 1;
-    if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
-    }
-  }, [currentPage, pagination]);
-
-  const handlePageClick = useCallback(page => {
-    setCurrentPage(page);
-  }, []);
-
-  // Generate page numbers for pagination (memoized)
-  const pageNumbers = useMemo(() => {
-    const totalPages = (pagination && pagination.pages) || 1;
-    const pages = [];
-    const maxVisible = 5;
-
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) {
-        pages.push(i);
-      }
-    } else {
-      if (currentPage <= 3) {
-        for (let i = 1; i <= 4; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      } else if (currentPage >= totalPages - 2) {
-        pages.push(1);
-        pages.push('...');
-        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-      } else {
-        pages.push(1);
-        pages.push('...');
-        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-        pages.push('...');
-        pages.push(totalPages);
-      }
-    }
-    return pages;
-  }, [currentPage, pagination]);
 
   if (loading && groups.length === 0) {
     return (
@@ -469,53 +433,14 @@ function Groups() {
       )}
 
       {/* Pagination */}
-      {pagination && (pagination.pages > 1 || pagination.total > 0) && (
-        <div className={s.pagination}>
-          <span className={s.paginationInfo}>
-            {pagination.total} total · Page {currentPage} of {pagination.pages}
-          </span>
-          {pagination.pages > 1 && (
-            <>
-              <button
-                className={s.pageBtn}
-                onClick={handlePrevPage}
-                disabled={currentPage === 1 || loading}
-                type='button'
-              >
-                ‹ Prev
-              </button>
-              <div className={s.pageNumbers}>
-                {pageNumbers.map((page, idx) =>
-                  page === '...' ? (
-                    <span key={`ellipsis-${idx}`} className={s.ellipsis}>
-                      ...
-                    </span>
-                  ) : (
-                    <button
-                      key={page}
-                      className={clsx(s.pageNumber, {
-                        [s.activePage]: currentPage === page,
-                      })}
-                      onClick={() => handlePageClick(page)}
-                      disabled={loading}
-                      type='button'
-                    >
-                      {page}
-                    </button>
-                  ),
-                )}
-              </div>
-              <button
-                className={s.pageBtn}
-                onClick={handleNextPage}
-                disabled={currentPage >= pagination.pages || loading}
-                type='button'
-              >
-                Next ›
-              </button>
-            </>
-          )}
-        </div>
+      {pagination && pagination.pages > 1 && (
+        <Table.Pagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          onPageChange={setCurrentPage}
+          loading={loading}
+        />
       )}
 
       {/* Group Roles Modal */}
@@ -528,7 +453,13 @@ function Groups() {
       <GroupUsersModal ref={usersModalRef} />
 
       {/* Delete Confirmation Modal */}
-      <DeleteGroupModal ref={deleteModalRef} onSuccess={refreshGroups} />
+      <ConfirmModal.Delete
+        ref={deleteModalRef}
+        title='Delete Group'
+        getItemName={getGroupName}
+        onDelete={handleDeleteGroupAction}
+        onSuccess={refreshGroups}
+      />
     </div>
   );
 }

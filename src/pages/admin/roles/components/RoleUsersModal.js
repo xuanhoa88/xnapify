@@ -12,13 +12,12 @@ import {
   forwardRef,
   useEffect,
   useRef,
-  useMemo,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { Modal } from '../../../../components/Modal';
-import { Icon } from '../../../../components/Admin';
+import { Icon, Table } from '../../../../components/Admin';
 import { fetchRoleUsers } from '../../../../redux';
 import s from './RoleUsersModal.css';
 
@@ -95,19 +94,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
     }
   }, [isOpen, role, currentPage, loadUsers]);
 
-  // Pagination handlers
-  const handlePrevPage = useCallback(() => {
-    if (currentPage > 1) setCurrentPage(prev => prev - 1);
-  }, [currentPage]);
-
-  const handleNextPage = useCallback(() => {
-    if (currentPage < totalPages) setCurrentPage(prev => prev + 1);
-  }, [currentPage, totalPages]);
-
-  const handlePageClick = useCallback(page => {
-    setCurrentPage(page);
-  }, []);
-
   // Search handlers
   const handleSearchChange = useCallback(e => {
     const { value } = e.target;
@@ -167,30 +153,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
   const handleClose = useCallback(() => {
     resetState();
   }, [resetState]);
-
-  // Generate page numbers (memoized)
-  const pageNumbers = useMemo(() => {
-    const pages = [];
-    const maxVisible = 5;
-    if (totalPages <= maxVisible) {
-      for (let i = 1; i <= totalPages; i++) pages.push(i);
-    } else if (currentPage <= 3) {
-      for (let i = 1; i <= 4; i++) pages.push(i);
-      pages.push('...');
-      pages.push(totalPages);
-    } else if (currentPage >= totalPages - 2) {
-      pages.push(1);
-      pages.push('...');
-      for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
-    } else {
-      pages.push(1);
-      pages.push('...');
-      for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
-      pages.push('...');
-      pages.push(totalPages);
-    }
-    return pages;
-  }, [currentPage, totalPages]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
@@ -272,53 +234,14 @@ const RoleUsersModal = forwardRef((props, ref) => {
         </div>
 
         {/* Pagination */}
-        {(totalPages > 1 || totalItems > 0) && (
-          <div className={s.pagination}>
-            <span className={s.paginationInfo}>
-              {totalItems} total · Page {currentPage} of {totalPages}
-            </span>
-            {totalPages > 1 && (
-              <>
-                <button
-                  className={s.pageBtn}
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1 || usersLoading}
-                  type='button'
-                >
-                  ‹ Prev
-                </button>
-                <div className={s.pageNumbers}>
-                  {pageNumbers.map((page, idx) =>
-                    page === '...' ? (
-                      <span key={`ellipsis-${idx}`} className={s.ellipsis}>
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={page}
-                        className={clsx(s.pageNumber, {
-                          [s.activePage]: currentPage === page,
-                        })}
-                        onClick={() => handlePageClick(page)}
-                        disabled={usersLoading}
-                        type='button'
-                      >
-                        {page}
-                      </button>
-                    ),
-                  )}
-                </div>
-                <button
-                  className={s.pageBtn}
-                  onClick={handleNextPage}
-                  disabled={currentPage >= totalPages || usersLoading}
-                  type='button'
-                >
-                  Next ›
-                </button>
-              </>
-            )}
-          </div>
+        {totalPages > 1 && (
+          <Table.Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            onPageChange={setCurrentPage}
+            loading={usersLoading}
+          />
         )}
       </Modal.Body>
       <Modal.Footer>

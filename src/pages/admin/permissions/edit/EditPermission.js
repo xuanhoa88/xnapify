@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
-import { Page, Icon } from '../../../../components/Admin';
+import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
@@ -25,6 +25,7 @@ export default function EditPermission({ permissionId }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const confirmBackModalRef = useRef(null);
 
   useEffect(() => {
     async function loadPermission() {
@@ -74,6 +75,10 @@ export default function EditPermission({ permissionId }) {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/permissions');
   }, [history]);
 
@@ -207,6 +212,10 @@ export default function EditPermission({ permissionId }) {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

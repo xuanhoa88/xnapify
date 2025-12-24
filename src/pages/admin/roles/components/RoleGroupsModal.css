@@ -155,82 +155,6 @@
   text-align: center;
 }
 
-/* Pagination */
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-2);
-  margin-top: var(--spacing-4);
-  padding-top: var(--spacing-4);
-  border-top: 1px solid var(--color-border);
-}
-
-.pageBtn {
-  padding: var(--spacing-2) var(--spacing-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.pageBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.pageBtn:hover:not(:disabled) {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
-}
-
-.pageNumbers {
-  display: flex;
-  gap: var(--spacing-1);
-  align-items: center;
-}
-
-.pageNumber {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 var(--spacing-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  cursor: pointer;
-  transition: var(--transition-base);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pageNumber:hover:not(:disabled) {
-  background: var(--color-background-secondary);
-  border-color: var(--color-primary);
-}
-
-.pageNumber.activePage {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.ellipsis {
-  color: var(--color-text-secondary);
-  padding: 0 var(--spacing-1);
-}
-
-.paginationInfo {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  margin-right: auto;
-}
-
 /* Responsive */
 @media (max-width: 768px) {
   .searchWrapper {
@@ -274,28 +198,6 @@
     font-size: 10px;
     padding: 2px var(--spacing-1);
   }
-
-  .pagination {
-    flex-wrap: wrap;
-    gap: var(--spacing-1);
-  }
-
-  .pageBtn {
-    padding: var(--spacing-1) var(--spacing-2);
-    font-size: var(--font-size-xs);
-  }
-
-  .pageNumber {
-    min-width: 28px;
-    height: 28px;
-    font-size: var(--font-size-xs);
-  }
-
-  .paginationInfo {
-    width: 100%;
-    text-align: center;
-    margin-bottom: var(--spacing-2);
-  }
 }
 
 @media (max-width: 375px) {
@@ -313,9 +215,5 @@
     width: 100%;
     margin-top: var(--spacing-1);
     padding-left: 44px;
-  }
-
-  .pageNumbers {
-    display: none;
   }
 }

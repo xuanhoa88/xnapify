@@ -14,7 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, Loader } from '../../../../components/Admin';
+import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
 import s from './EditRole.css';
 
 function EditRole({ roleId }) {
@@ -40,6 +40,7 @@ function EditRole({ roleId }) {
   const [loading, setLoading] = useState(false);
   const [fetchingRole, setFetchingRole] = useState(true);
   const [permissionSearch, setPermissionSearch] = useState('');
+  const confirmBackModalRef = useRef(null);
 
   // Fetch permissions with pagination
   const loadPermissions = useCallback(
@@ -155,6 +156,10 @@ function EditRole({ roleId }) {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/roles');
   }, [history]);
 
@@ -371,6 +376,10 @@ function EditRole({ roleId }) {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

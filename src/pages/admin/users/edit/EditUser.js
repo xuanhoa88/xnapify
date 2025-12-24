@@ -20,7 +20,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, Loader } from '../../../../components/Admin';
+import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
 import s from './EditUser.css';
 
 function EditUser({ userId }) {
@@ -62,6 +62,7 @@ function EditUser({ userId }) {
   const [newPassword, setNewPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [generatingPassword, setGeneratingPassword] = useState(false);
+  const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
@@ -238,6 +239,10 @@ function EditUser({ userId }) {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/users');
   }, [history]);
 
@@ -575,6 +580,10 @@ function EditUser({ userId }) {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

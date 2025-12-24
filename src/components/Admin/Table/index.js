@@ -7,3 +7,5 @@
 
 export { default as Error } from './Error';
 export { default as Empty } from './Empty';
+export { default as Pagination } from './Pagination';
+export { default as ActionsDropdown } from './ActionsDropdown';

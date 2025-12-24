@@ -8,6 +8,7 @@
 export { default } from './Layout';
 export { default as Icon } from '../Icon';
 export { default as Loader } from './Loader';
+export { default as ConfirmModal } from './ConfirmModal';
 
 export * as Table from './Table';
 export * as Page from './Page';

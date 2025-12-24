@@ -13,7 +13,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon } from '../../../../components/Admin';
+import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
 import s from './CreateRole.css';
 
 function CreateRole() {
@@ -37,6 +37,7 @@ function CreateRole() {
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const [permissionSearch, setPermissionSearch] = useState('');
+  const confirmBackModalRef = useRef(null);
 
   // Fetch permissions with pagination
   const loadPermissions = useCallback(
@@ -120,6 +121,10 @@ function CreateRole() {
   }, []);
 
   const handleCancel = useCallback(() => {
+    confirmBackModalRef.current?.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
     history.push('/admin/roles');
   }, [history]);
 
@@ -289,6 +294,10 @@ function CreateRole() {
           </div>
         </form>
       </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
     </div>
   );
 }

@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Icon } from '../../../../components/Admin';
-import s from './GroupActionsDropdown.css';
+import { Icon, Table } from '../../../../components/Admin';
+
+const { ActionsDropdown } = Table;
 
 /**
  * GroupActionsDropdown - Dropdown menu for group actions
@@ -27,100 +28,50 @@ function GroupActionsDropdown({
   onEdit,
   onDelete,
 }) {
-  // Close on outside click
-  useEffect(() => {
-    const handleClickOutside = () => {
-      if (isOpen) {
-        onToggle(null);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('click', handleClickOutside);
-      return () => document.removeEventListener('click', handleClickOutside);
-    }
-  }, [isOpen, onToggle]);
-
-  const handleToggle = useCallback(
-    e => {
-      e.stopPropagation();
-      onToggle(group.id);
-    },
-    [group.id, onToggle],
-  );
-
-  const handleAction = useCallback(
-    action => {
-      action(group);
-      onToggle(null);
-    },
-    [group, onToggle],
-  );
+  const handleToggle = useCallback(() => {
+    onToggle(isOpen ? null : group.id);
+  }, [isOpen, group.id, onToggle]);
 
   return (
-    <div className={s.actionDropdown}>
-      <button
-        className={s.actionDropdownBtn}
-        title='More actions'
-        onClick={handleToggle}
-        type='button'
-      >
-        ⋮
-      </button>
-      {isOpen && (
-        <div
-          className={s.actionDropdownMenu}
-          onClick={e => e.stopPropagation()}
-          onKeyDown={e => e.stopPropagation()}
-          role='menu'
-          aria-label='Group actions'
-          tabIndex={-1}
+    <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
+      <ActionsDropdown.Trigger title='More actions'>
+        <Icon name='more-vertical' size={18} />
+      </ActionsDropdown.Trigger>
+      <ActionsDropdown.Menu>
+        <ActionsDropdown.Item
+          onClick={() => onViewUsers(group)}
+          icon={<Icon name='users' size={16} />}
         >
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onViewUsers)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='users' size={16} /> View Users
-          </button>
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onManageRoles)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='shield' size={16} /> Manage Roles
-          </button>
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onViewPermissions)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='key' size={16} /> View Permissions
-          </button>
-          <div className={s.dropdownDivider} />
-          <button
-            className={s.dropdownItem}
-            onClick={() => handleAction(onEdit)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='edit' size={16} />
-            Edit Group
-          </button>
-          <button
-            className={`${s.dropdownItem} ${s.dropdownItemDanger}`}
-            onClick={() => handleAction(onDelete)}
-            type='button'
-            role='menuitem'
-          >
-            <Icon name='trash' size={16} />
-            Delete Group
-          </button>
-        </div>
-      )}
-    </div>
+          View Users
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onManageRoles(group)}
+          icon={<Icon name='shield' size={16} />}
+        >
+          Manage Roles
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onViewPermissions(group)}
+          icon={<Icon name='key' size={16} />}
+        >
+          View Permissions
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Divider />
+        <ActionsDropdown.Item
+          onClick={() => onEdit(group)}
+          icon={<Icon name='edit' size={16} />}
+        >
+          Edit Group
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Item
+          onClick={() => onDelete(group)}
+          icon={<Icon name='trash' size={16} />}
+          variant='danger'
+        >
+          Delete Group
+        </ActionsDropdown.Item>
+      </ActionsDropdown.Menu>
+    </ActionsDropdown>
   );
 }
 

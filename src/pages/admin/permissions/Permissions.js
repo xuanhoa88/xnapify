@@ -15,13 +15,19 @@ import {
   getPermissions,
   getPermissionsLoading,
   getPermissionsError,
+  deletePermission,
 } from '../../../redux';
-import { Page, Icon, Loader, Table } from '../../../components/Admin';
+import {
+  Page,
+  Icon,
+  Loader,
+  Table,
+  ConfirmModal,
+} from '../../../components/Admin';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
-import DeletePermissionModal from './components/DeletePermissionModal';
 import PermissionCard from './components/PermissionCard';
 import s from './Permissions.css';
 
@@ -98,6 +104,16 @@ function Permissions() {
   const handleDelete = useCallback(permission => {
     deleteModalRef.current && deleteModalRef.current.open(permission);
   }, []);
+
+  const handleDeletePermission = useCallback(
+    item => dispatch(deletePermission(item.id)),
+    [dispatch],
+  );
+
+  const getPermissionName = useCallback(
+    item => `${item.resource}:${item.action}`,
+    [],
+  );
 
   const handleAdd = useCallback(() => {
     history.push('/admin/permissions/create');
@@ -275,8 +291,11 @@ function Permissions() {
       )}
 
       {/* Delete Confirmation Modal */}
-      <DeletePermissionModal
+      <ConfirmModal.Delete
         ref={deleteModalRef}
+        title='Delete Permission'
+        getItemName={getPermissionName}
+        onDelete={handleDeletePermission}
         onSuccess={refreshPermissions}
       />
     </div>

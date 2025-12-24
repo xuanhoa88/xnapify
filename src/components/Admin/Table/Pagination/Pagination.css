@@ -1,0 +1,172 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../admin.css';
+
+/* =============================================================================
+   PAGINATION - Container
+   ============================================================================= */
+
+.root {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4) 0;
+  margin-top: var(--spacing-6);
+  flex-wrap: wrap;
+}
+
+/* =============================================================================
+   INFO TEXT
+   ============================================================================= */
+
+.info {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+}
+
+/* =============================================================================
+   NAVIGATION BUTTONS (Prev/Next)
+   ============================================================================= */
+
+.navBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-2) var(--spacing-3);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  min-width: 80px;
+}
+
+.navBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.navBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.navBtn:hover:not(:disabled) {
+  background: var(--color-background-secondary);
+  border-color: var(--color-border-hover);
+}
+
+/* =============================================================================
+   PAGE NUMBERS
+   ============================================================================= */
+
+.pageNumbers {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1);
+}
+
+.pageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  padding: var(--spacing-1) var(--spacing-2);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: all var(--transition-base);
+}
+
+.pageBtn.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
+.pageBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
+.pageBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.pageBtn:hover:not(:disabled, .active) {
+  background: var(--color-background-secondary);
+  border-color: var(--color-border-hover);
+}
+
+.ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  height: 36px;
+  color: var(--color-text-tertiary);
+  font-size: var(--font-size-sm);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) 0;
+  }
+
+  .info {
+    width: 100%;
+    text-align: center;
+    order: -1;
+  }
+
+  .navBtn {
+    min-width: 70px;
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .pageBtn {
+    min-width: 32px;
+    height: 32px;
+    font-size: var(--font-size-xs);
+  }
+
+  .ellipsis {
+    min-width: 24px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pageNumbers {
+    display: none;
+  }
+
+  .navBtn {
+    flex: 1;
+    max-width: 120px;
+  }
+}

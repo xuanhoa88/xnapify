@@ -315,85 +315,6 @@
   transform: scale(1.1);
 }
 
-.pagination {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: var(--spacing-3);
-  padding: var(--spacing-4) var(--spacing-6);
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
-.pageBtn {
-  padding: var(--spacing-2) var(--spacing-4);
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  color: var(--color-text-primary);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.pageBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pageBtn:hover:not(:disabled) {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-}
-
-.pageNumbers {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-1);
-}
-
-.pageNumber {
-  min-width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-background);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  padding: 0 var(--spacing-2);
-}
-
-.pageNumber:hover:not(.activePage, :disabled) {
-  border-color: var(--color-primary);
-  background: var(--color-background-secondary);
-}
-
-.activePage {
-  background: var(--color-primary);
-  color: white;
-  border-color: var(--color-primary);
-  box-shadow: 0 2px 8px rgb(59 130 246 / 30%);
-}
-
-.ellipsis {
-  color: var(--color-text-secondary);
-  padding: 0 var(--spacing-1);
-  font-weight: var(--font-weight-medium);
-}
-
 .checkboxCol {
   width: 40px;
   text-align: center;
@@ -511,30 +432,6 @@
     padding: 1px 6px;
     font-size: 10px;
   }
-
-  /* Pagination compact */
-  .pagination {
-    padding: var(--spacing-3);
-    gap: var(--spacing-2);
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
-  .pageBtn {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
-  }
-
-  .pageNumbers {
-    gap: 2px;
-  }
-
-  .pageNumber {
-    min-width: 1.75rem;
-    height: 1.75rem;
-    font-size: var(--font-size-xs);
-    padding: 0 var(--spacing-1);
-  }
 }
 
 /* Extra small mobile */
@@ -550,13 +447,5 @@
 
   .table {
     min-width: 600px;
-  }
-
-  .pagination {
-    padding: var(--spacing-2);
-  }
-
-  .pageBtn {
-    padding: var(--spacing-1) var(--spacing-2);
   }
 }

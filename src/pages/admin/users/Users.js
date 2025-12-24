@@ -8,7 +8,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
 import {
   fetchUsers,
   getUsers,
@@ -17,19 +16,25 @@ import {
   getUsersError,
   fetchGroups,
   fetchRoles,
+  deleteUser,
 } from '../../../redux';
 import { useHistory } from '../../../components/History';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
-import { Page, Icon, Loader, Table } from '../../../components/Admin';
+import {
+  Page,
+  Icon,
+  Loader,
+  Table,
+  ConfirmModal,
+} from '../../../components/Admin';
 import UserBulkActionsBar from './components/UserBulkActionsBar';
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
-import DeleteUserModal from './components/DeleteUserModal';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -150,6 +155,16 @@ function Users() {
     // Open the delete modal for this user
     deleteModalRef.current && deleteModalRef.current.open(user);
   }, []);
+
+  const handleDeleteUser = useCallback(
+    item => dispatch(deleteUser(item.id)),
+    [dispatch],
+  );
+
+  const getUserDisplayName = useCallback(
+    item => item.display_name || item.email,
+    [],
+  );
 
   // Filter handlers
   const debounceTimer = useRef(null);
@@ -511,53 +526,25 @@ function Users() {
       )}
 
       {pagination && pagination.pages > 1 && (
-        <div className={s.pagination}>
-          <button
-            className={s.pageBtn}
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage(currentPage - 1)}
-          >
-            Previous
-          </button>
-          <div className={s.pageNumbers}>
-            {Array.from({ length: pagination.pages }, (_, i) => i + 1)
-              .filter(
-                i =>
-                  i === 1 ||
-                  i === pagination.pages ||
-                  Math.abs(i - currentPage) <= 1,
-              )
-              .map((i, idx, arr) => (
-                <span key={i}>
-                  {idx > 0 && arr[idx - 1] < i - 1 && (
-                    <span className={s.ellipsis}>...</span>
-                  )}
-                  <button
-                    className={clsx(s.pageNumber, {
-                      [s.activePage]: currentPage === i,
-                    })}
-                    onClick={() => setCurrentPage(i)}
-                  >
-                    {i}
-                  </button>
-                </span>
-              ))}
-          </div>
-          <button
-            className={s.pageBtn}
-            disabled={currentPage >= pagination.pages}
-            onClick={() => setCurrentPage(currentPage + 1)}
-          >
-            Next
-          </button>
-        </div>
+        <Table.Pagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Modals - self-contained with ref-based API */}
       <UserRolesModal ref={rolesModalRef} />
       <UserGroupsModal ref={groupsModalRef} />
       <UserPermissionsModal ref={permissionsModalRef} />
-      <DeleteUserModal ref={deleteModalRef} onSuccess={refreshUsers} />
+      <ConfirmModal.Delete
+        ref={deleteModalRef}
+        title='Delete User'
+        getItemName={getUserDisplayName}
+        onDelete={handleDeleteUser}
+        onSuccess={refreshUsers}
+      />
     </div>
   );
 }
