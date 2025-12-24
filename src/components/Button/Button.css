@@ -1,0 +1,207 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ==========================================================================
+   Button Component Styles
+   ========================================================================== */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-3) var(--spacing-5);
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  text-decoration: none;
+  border: none;
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+  user-select: none;
+}
+
+.button:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* ==========================================================================
+   Button Variants
+   ========================================================================== */
+
+/* Primary Button */
+.primary {
+  background: var(--gradient-primary);
+  color: #fff;
+}
+
+.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.primary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Secondary Button */
+.secondary {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: var(--color-background-secondary);
+  border-color: var(--color-border-hover);
+}
+
+/* Outline Button */
+.outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+}
+
+.outline:hover:not(:disabled) {
+  background-color: var(--color-primary-bg);
+}
+
+/* Ghost Button */
+.ghost {
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: none;
+}
+
+.ghost:hover:not(:disabled) {
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+/* Danger Button */
+.danger {
+  background-color: var(--color-error);
+  color: #fff;
+}
+
+.danger:hover:not(:disabled) {
+  background-color: #dc2626; /* Red 600 */
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Success Button */
+.success {
+  background-color: var(--color-success);
+  color: #fff;
+}
+
+.success:hover:not(:disabled) {
+  background-color: #059669; /* Green 600 */
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.success:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ==========================================================================
+   Button Sizes
+   ========================================================================== */
+
+/* Small Button */
+.small {
+  padding: var(--spacing-2) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  border-radius: var(--radius-md);
+}
+
+/* Medium Button (default) */
+.medium {
+  padding: var(--spacing-3) var(--spacing-5);
+  font-size: var(--font-size-sm);
+}
+
+/* Large Button */
+.large {
+  padding: var(--spacing-4) var(--spacing-6);
+  font-size: var(--font-size-base);
+  border-radius: var(--radius-xl);
+}
+
+/* ==========================================================================
+   Button States
+   ========================================================================== */
+
+/* Full Width Button */
+.fullWidth {
+  width: 100%;
+}
+
+/* Loading State */
+.loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+
+.loadingSpinner {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 2px solid transparent;
+  border-top-color: currentcolor;
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+/* Adjust spinner color for different variants */
+.primary .loadingSpinner,
+.danger .loadingSpinner,
+.success .loadingSpinner {
+  border-top-color: #fff;
+}
+
+.secondary .loadingSpinner,
+.outline .loadingSpinner,
+.ghost .loadingSpinner {
+  border-top-color: var(--color-text-primary);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Icon Only Button */
+.iconOnly {
+  padding: var(--spacing-3);
+}
+
+.iconOnly.small {
+  padding: var(--spacing-2);
+}
+
+.iconOnly.large {
+  padding: var(--spacing-4);
+}
