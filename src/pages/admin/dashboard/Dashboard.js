@@ -16,7 +16,7 @@ import {
   getDashboardError,
   getDashboardRecentActivities,
 } from '../../../redux';
-import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
+import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import s from './Dashboard.css';
 
 /**
@@ -61,15 +61,11 @@ function Dashboard() {
     // Error state
     if (error) {
       return (
-        <div className={s.error}>
-          <p>Error loading dashboard: {error}</p>
-          <button
-            className={s.retryButton}
-            onClick={() => dispatch(fetchDashboard())}
-          >
-            Retry
-          </button>
-        </div>
+        <Table.Error
+          title={t('dashboard.errorLoading', 'Error loading dashboard')}
+          error={error}
+          onRetry={() => dispatch(fetchDashboard())}
+        />
       );
     }
 
@@ -187,7 +183,7 @@ function Dashboard() {
                 </tbody>
               </table>
             ) : (
-              <Empty
+              <Table.Empty
                 icon='activity'
                 title='No recent activity'
                 description='Activity will appear here as users interact with the system.'
@@ -201,7 +197,7 @@ function Dashboard() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='dashboard' size={24} />}
         title='Dashboard'
         subtitle='Overview of your system activity'

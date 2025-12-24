@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
@@ -22,13 +23,13 @@ import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
+import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import UserBulkActionsBar from './components/UserBulkActionsBar';
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
 import DeleteUserModal from './components/DeleteUserModal';
-import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Users.css';
 
 const getInitials = displayName => {
@@ -44,10 +45,12 @@ const getRoleClass = role => {
   const roleClasses = {
     admin: s.roleAdmin,
     mod: s.roleModerator,
+    moderator: s.roleModerator,
+    editor: s.roleUser,
     user: s.roleUser,
   };
   return typeof role === 'string'
-    ? roleClasses[role.toLowerCase()]
+    ? roleClasses[role.toLowerCase()] || s.roleUser
     : s.roleUser;
 };
 
@@ -62,6 +65,7 @@ const formatDate = dateString => {
 };
 
 function Users() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const users = useSelector(getUsers);
@@ -254,7 +258,7 @@ function Users() {
   if (loading && users.length === 0) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='users' size={24} />}
           title='User Management'
           subtitle='Manage users, roles, and permissions'
@@ -267,24 +271,23 @@ function Users() {
   if (error) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='users' size={24} />}
           title='User Management'
           subtitle='Manage users, roles, and permissions'
         />
-        <div className={s.error}>
-          <p>Error loading users: {error}</p>
-          <button className={s.addButton} onClick={refreshUsers}>
-            Retry
-          </button>
-        </div>
+        <Table.Error
+          title={t('users.errorLoading', 'Error loading users')}
+          error={error}
+          onRetry={refreshUsers}
+        />
       </div>
     );
   }
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='users' size={24} />}
         title='User Management'
         subtitle='Manage users, roles, and permissions'
@@ -295,7 +298,7 @@ function Users() {
         >
           Add User
         </button>
-      </PageHeader>
+      </Page.Header>
 
       {selectedUsers.length > 0 && (
         <UserBulkActionsBar
@@ -428,15 +431,17 @@ function Users() {
                 </td>
                 <td>{user.email}</td>
                 <td>
-                  {user.roles && user.roles.length > 0 ? (
-                    user.roles.map(role => (
-                      <span key={role} className={getRoleClass(role)}>
-                        {role}
-                      </span>
-                    ))
-                  ) : (
-                    <span className={getRoleClass('user')}>User</span>
-                  )}
+                  <div className={s.rolesCell}>
+                    {user.roles && user.roles.length > 0 ? (
+                      user.roles.map(role => (
+                        <span key={role} className={getRoleClass(role)}>
+                          {role}
+                        </span>
+                      ))
+                    ) : (
+                      <span className={getRoleClass('user')}>User</span>
+                    )}
+                  </div>
                 </td>
                 <td>
                   {user.groups && user.groups.length > 0 ? (
@@ -496,7 +501,7 @@ function Users() {
       </div>
 
       {users.length === 0 && (
-        <Empty
+        <Table.Empty
           icon='users'
           title='No users found'
           description='Try adjusting your search or filter criteria, or add a new user to get started.'

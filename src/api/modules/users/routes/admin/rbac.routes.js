@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from '../../constants/rbac';
 import * as rbacController from '../../controllers/admin/rbac.controller';
 
 /**
@@ -31,7 +32,7 @@ export default function roleRoutes(deps, userMiddlewares) {
    */
   router.post(
     '/initialize',
-    requirePermission('*:*'),
+    requirePermission(`${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`),
     rbacController.initializeDefaults,
   );
 

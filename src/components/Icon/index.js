@@ -108,6 +108,11 @@ const iconPaths = {
   loader:
     'M12 2V6M12 18V22M4.93 4.93L7.76 7.76M16.24 16.24L19.07 19.07M2 12H6M18 12H22M4.93 19.07L7.76 16.24M16.24 7.76L19.07 4.93',
   activity: 'M22 12H18L15 21L9 3L6 12H2',
+  'alert-circle': [
+    'M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z',
+    'M12 8V12',
+    'M12 16H12.01',
+  ],
 };
 
 // Bell icon has multiple paths with different stroke properties
@@ -236,6 +241,7 @@ Icon.propTypes = {
     'circle',
     'loader',
     'activity',
+    'alert-circle',
   ]).isRequired,
   size: PropTypes.number,
   className: PropTypes.string,

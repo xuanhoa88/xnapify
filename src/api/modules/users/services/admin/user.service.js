@@ -6,7 +6,7 @@
  */
 
 import { DEFAULT_ROLE } from '../../constants/rbac';
-import { invalidateUserCache } from '../../utils/rbac-cache';
+import * as rbacCache from '../../utils/rbac/cache';
 
 /**
  * Create a new user
@@ -386,7 +386,7 @@ export async function updateUserById(user_id, userData, models) {
   }
 
   // Invalidate RBAC cache (roles/groups may have changed)
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   // Reload user with updated data
   await user.reload({
@@ -441,7 +441,7 @@ export async function deleteUserById(user_id, models) {
   await user.destroy();
 
   // Invalidate RBAC cache
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return true;
 }
@@ -469,7 +469,7 @@ export async function updateUserStatus(user_id, is_active, models) {
   await user.update({ is_active });
 
   // Invalidate RBAC cache (status affects access)
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -508,7 +508,7 @@ export async function updateUserLockStatus(user_id, is_locked, reason, models) {
   await user.update(updates);
 
   // Invalidate RBAC cache (lock status affects access)
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -522,8 +522,8 @@ export async function updateUserLockStatus(user_id, is_locked, reason, models) {
 export async function getUserStats(models) {
   const { User, UserLogin } = models;
 
-  const { sequelize } = models;
-  const { Op } = sequelize.Sequelize;
+  const { sequelize } = User;
+  const { Op, fn, col } = sequelize.Sequelize;
 
   // Get user counts
   const totalUsers = await User.count();
@@ -534,10 +534,7 @@ export async function getUserStats(models) {
 
   // Get role distribution
   const roleStats = await User.findAll({
-    attributes: [
-      'role',
-      [models.Sequelize.fn('COUNT', models.Sequelize.col('role')), 'count'],
-    ],
+    attributes: ['role', [fn('COUNT', col('role')), 'count']],
     group: ['role'],
     raw: true,
   });

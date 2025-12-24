@@ -16,3 +16,6 @@ export * as fs from './fs';
 
 // Authentication utilities
 export * as auth from './auth';
+
+// Cache engine
+export * as cache from './cache';

@@ -245,8 +245,8 @@ export function assignRolesToGroup(groupId, roleNames) {
   return async (dispatch, getState, { fetch }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}/roles`, {
-        method: 'POST',
-        body: { roles: roleNames },
+        method: 'PUT',
+        body: { role_names: roleNames },
       });
 
       // Update the group in state with new roles

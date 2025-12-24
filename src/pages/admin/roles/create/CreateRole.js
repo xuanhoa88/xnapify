@@ -13,7 +13,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { PageHeader, Icon } from '../../../../components/Admin';
+import { Page, Icon } from '../../../../components/Admin';
 import s from './CreateRole.css';
 
 function CreateRole() {
@@ -161,7 +161,7 @@ function CreateRole() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='shield' size={24} />}
         title='Create New Role'
         subtitle='Define a new access level'
@@ -169,7 +169,7 @@ function CreateRole() {
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Roles
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

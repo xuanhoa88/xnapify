@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
-import { PageHeader, Icon } from '../../../../components/Admin';
+import { Page, Icon } from '../../../../components/Admin';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
@@ -86,7 +86,7 @@ export default function EditPermission({ permissionId }) {
   if (loading) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='key' size={24} />}
           title='Edit Permission'
           subtitle='Modify permission rule'
@@ -94,7 +94,7 @@ export default function EditPermission({ permissionId }) {
           <button type='button' className={s.backBtn} onClick={handleCancel}>
             ← Back to Permissions
           </button>
-        </PageHeader>
+        </Page.Header>
         <div className={s.formContainer}>
           <div className={s.loading}>Loading permission...</div>
         </div>
@@ -104,7 +104,7 @@ export default function EditPermission({ permissionId }) {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='key' size={24} />}
         title='Edit Permission'
         subtitle='Modify permission rule'
@@ -112,7 +112,7 @@ export default function EditPermission({ permissionId }) {
         <button type='button' className={s.backBtn} onClick={handleCancel}>
           ← Back to Permissions
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

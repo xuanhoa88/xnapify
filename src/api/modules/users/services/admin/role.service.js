@@ -6,7 +6,8 @@
  */
 
 import { SYSTEM_ROLES } from '../../constants/rbac';
-import { assignPermissionsToRole } from './rbac.service';
+import { manageRolePermissions } from './rbac.service';
+import * as rbacCache from '../../utils/rbac/cache';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES
@@ -43,7 +44,7 @@ export async function createRole(roleData, models) {
 
   // Assign permissions if provided
   if (Array.isArray(permissions)) {
-    await assignPermissionsToRole(role.id, permissions, models);
+    await manageRolePermissions(role.name, permissions, models, 'replace');
 
     // Reload with permissions
     role.reload();
@@ -219,7 +220,7 @@ export async function updateRole(role_id, updateData, models) {
 
   // Update permissions if provided
   if (Array.isArray(permissions)) {
-    await assignPermissionsToRole(role_id, permissions, models);
+    await manageRolePermissions(role.name, permissions, models, 'replace');
 
     // Reload with permissions
     role.reload();
@@ -236,7 +237,7 @@ export async function updateRole(role_id, updateData, models) {
  * @returns {Promise<boolean>} Success status
  */
 export async function deleteRole(role_id, models) {
-  const { Role } = models;
+  const { Role, User } = models;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -254,7 +255,19 @@ export async function deleteRole(role_id, models) {
     throw error;
   }
 
+  // Get all users with this role before deletion for cache invalidation
+  const usersWithRole = await User.findAll({
+    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
+    attributes: ['id'],
+  });
+
   await role.destroy();
+
+  // Invalidate RBAC cache for affected users
+  if (usersWithRole.length > 0) {
+    rbacCache.invalidateUsers(usersWithRole.map(u => u.id));
+  }
+
   return true;
 }
 
@@ -402,5 +415,99 @@ export async function getGroupsWithRole(role_id, options, models) {
       total: count,
       pages: Math.ceil(count / limit),
     },
+  };
+}
+
+/**
+ * Get role statistics
+ *
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Role statistics
+ */
+export async function getRoleStats(models) {
+  const { Role, Permission, User, Group } = models;
+
+  const { sequelize } = Role;
+  const { fn, col } = sequelize.Sequelize;
+
+  // Get total roles
+  const totalRoles = await Role.count();
+  const activeRoles = await Role.count({ where: { is_active: true } });
+  const inactiveRoles = await Role.count({ where: { is_active: false } });
+
+  // Get roles with most users
+  const rolesWithUsers = await Role.findAll({
+    attributes: ['id', 'name', [fn('COUNT', col('users.id')), 'userCount']],
+    include: [
+      {
+        model: User,
+        as: 'users',
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['Role.id', 'Role.name'],
+    order: [[fn('COUNT', col('users.id')), 'DESC']],
+    limit: 5,
+    subQuery: false,
+  });
+
+  // Get roles with most permissions
+  const rolesWithPermissions = await Role.findAll({
+    attributes: [
+      'id',
+      'name',
+      [fn('COUNT', col('permissions.id')), 'permissionCount'],
+    ],
+    include: [
+      {
+        model: Permission,
+        as: 'permissions',
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['Role.id', 'Role.name'],
+    order: [[fn('COUNT', col('permissions.id')), 'DESC']],
+    limit: 5,
+    subQuery: false,
+  });
+
+  // Get roles with most groups
+  const rolesWithGroups = await Role.findAll({
+    attributes: ['id', 'name', [fn('COUNT', col('groups.id')), 'groupCount']],
+    include: [
+      {
+        model: Group,
+        as: 'groups',
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['Role.id', 'Role.name'],
+    order: [[fn('COUNT', col('groups.id')), 'DESC']],
+    limit: 5,
+    subQuery: false,
+  });
+
+  return {
+    total: totalRoles,
+    active: activeRoles,
+    inactive: inactiveRoles,
+    topByUsers: rolesWithUsers.map(r => ({
+      id: r.id,
+      name: r.name,
+      count: parseInt(r.get('userCount')) || 0,
+    })),
+    topByPermissions: rolesWithPermissions.map(r => ({
+      id: r.id,
+      name: r.name,
+      count: parseInt(r.get('permissionCount')) || 0,
+    })),
+    topByGroups: rolesWithGroups.map(r => ({
+      id: r.id,
+      name: r.name,
+      count: parseInt(r.get('groupCount')) || 0,
+    })),
   };
 }

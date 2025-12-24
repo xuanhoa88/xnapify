@@ -351,23 +351,6 @@
   font-style: italic;
 }
 
-/* Error state */
-.error {
-  padding: var(--spacing-8);
-  text-align: center;
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-}
-
-.error p {
-  color: #dc2626;
-  margin: 0 0 var(--spacing-4) 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-}
-
 /* =============================================================================
    RESPONSIVE DESIGN - MOBILE
    ============================================================================= */
@@ -534,11 +517,6 @@
     min-width: 30px;
     height: 30px;
     font-size: var(--font-size-xs);
-  }
-
-  .error {
-    padding: var(--spacing-6);
-    font-size: var(--font-size-sm);
   }
 }
 

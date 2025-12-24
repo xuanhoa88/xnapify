@@ -5,11 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  getCachedUserRBAC,
-  setCachedUserRBAC,
-  collectUserRBACData,
-} from '../utils/rbac-cache';
+import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from '../constants/rbac';
+import * as rbacCache from '../utils/rbac/cache';
+import { collectUserRBACData } from '../utils/rbac/collector';
 
 // ========================================================================
 // PERMISSION-BASED AUTHORIZATION MIDDLEWARES
@@ -23,21 +21,21 @@ import {
  */
 async function getUserPermissionsWithCache(req) {
   const userId = req.user.id;
+  const { app } = req;
 
   // Check cache first
-  const cached = getCachedUserRBAC(userId);
+  const cached = rbacCache.getUser(userId, app);
   if (cached) {
     // Attach cached data to request
     req.user = {
       ...req.user,
-      roles: cached.roles,
-      permissions: cached.permissions,
+      ...cached,
     };
     return cached.permissions;
   }
 
   // Get models from app context
-  const models = req.app.get('models');
+  const models = app.get('models');
   if (!models) {
     throw new Error('Database models not available');
   }
@@ -56,7 +54,9 @@ async function getUserPermissionsWithCache(req) {
           {
             model: Permission,
             as: 'permissions',
-            attributes: ['resource', 'action', 'is_active'],
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
             through: { attributes: [] },
           },
         ],
@@ -64,6 +64,8 @@ async function getUserPermissionsWithCache(req) {
       {
         model: Group,
         as: 'groups',
+        attributes: ['name'],
+        required: false,
         through: { attributes: [] },
         include: [
           {
@@ -75,7 +77,9 @@ async function getUserPermissionsWithCache(req) {
               {
                 model: Permission,
                 as: 'permissions',
-                attributes: ['resource', 'action', 'is_active'],
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
                 through: { attributes: [] },
               },
             ],
@@ -91,16 +95,79 @@ async function getUserPermissionsWithCache(req) {
 
   // Collect and cache RBAC data
   const rbacData = collectUserRBACData(user);
-  setCachedUserRBAC(userId, rbacData);
+  rbacCache.setUser(userId, rbacData, app);
 
   // Attach to request
   req.user = {
     ...req.user,
-    roles: rbacData.roles,
-    permissions: rbacData.permissions,
+    ...rbacData,
   };
 
   return rbacData.permissions;
+}
+
+/**
+ * Helper: Check if user has a specific permission (with wildcard support)
+ *
+ * Supports wildcard matching:
+ * - '*:*' matches all permissions
+ * - 'users:*' matches all actions on users resource
+ * - '*:read' matches read action on all resources
+ *
+ * @param {string[]} userPermissions - Array of user's permissions
+ * @param {string} requiredPermission - Required permission (e.g., 'users:read')
+ * @returns {boolean} True if user has the permission
+ */
+function hasPermission(userPermissions, requiredPermission) {
+  // Invalid user permissions
+  if (!Array.isArray(userPermissions)) {
+    return false;
+  }
+
+  // Direct match
+  if (userPermissions.includes(requiredPermission)) {
+    return true;
+  }
+
+  // Parse required permission
+  const [requiredResource, requiredAction] =
+    typeof requiredPermission === 'string' ? requiredPermission.split(':') : [];
+
+  // Invalid required permission format
+  if (!requiredResource || !requiredAction) {
+    return false;
+  }
+
+  // Check wildcard permissions
+  return userPermissions.some(userPerm => {
+    const [resource, action] =
+      typeof userPerm === 'string' ? userPerm.split(':') : [];
+
+    // Invalid user permission format
+    if (!resource || !action) {
+      return false;
+    }
+
+    // Super admin: *:* matches everything
+    if (
+      resource === DEFAULT_RESOURCES.ALL &&
+      action === DEFAULT_ACTIONS.MANAGE
+    ) {
+      return true;
+    }
+
+    // Resource wildcard: users:* matches users:read, users:write, etc.
+    if (resource === requiredResource && action === DEFAULT_ACTIONS.MANAGE) {
+      return true;
+    }
+
+    // Action wildcard: *:read matches users:read, groups:read, etc.
+    if (resource === DEFAULT_RESOURCES.ALL && action === requiredAction) {
+      return true;
+    }
+
+    return false;
+  });
 }
 
 /**
@@ -117,41 +184,28 @@ async function getUserPermissionsWithCache(req) {
  */
 export function requirePermission(permission) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const userPermissions = await getUserPermissionsWithCache(req);
 
-      if (!userPermissions.includes(permission)) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required permission: ${permission}`,
-        });
+      if (!hasPermission(userPermissions, permission)) {
+        return http.sendForbidden(
+          res,
+          `Access denied. Required permission: ${permission}`,
+        );
       }
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Permission check failed',
-      });
+      return http.sendServerError(res, 'Permission check failed');
     }
   };
 }
@@ -169,46 +223,33 @@ export function requirePermission(permission) {
  */
 export function requirePermissions(permissions) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const userPermissions = await getUserPermissionsWithCache(req);
 
-      // Check if user has all required permissions
+      // Check if user has all required permissions (with wildcard support)
       const missingPermissions = permissions.filter(
-        perm => !userPermissions.includes(perm),
+        perm => !hasPermission(userPermissions, perm),
       );
 
       if (missingPermissions.length > 0) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Missing permissions: ${missingPermissions.join(', ')}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Missing permissions: ${missingPermissions.join(', ')}`,
+        );
       }
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Permissions check failed',
-      });
+      return http.sendServerError(res, 'Permissions check failed');
     }
   };
 }
@@ -226,46 +267,33 @@ export function requirePermissions(permissions) {
  */
 export function requireAnyPermission(permissions) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const userPermissions = await getUserPermissionsWithCache(req);
 
-      // Check if user has any of the required permissions
-      const hasAnyPermission = permissions.some(perm =>
-        userPermissions.includes(perm),
+      // Check if user has any of the required permissions (with wildcard support)
+      const hasAnyPerm = permissions.some(perm =>
+        hasPermission(userPermissions, perm),
       );
 
-      if (!hasAnyPermission) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required any of: ${permissions.join(', ')}`,
-        });
+      if (!hasAnyPerm) {
+        return http.sendForbidden(
+          res,
+          `Access denied. Required any of: ${permissions.join(', ')}`,
+        );
       }
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Permission check failed',
-      });
+      return http.sendServerError(res, 'Permission check failed');
     }
   };
 }

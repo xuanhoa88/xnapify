@@ -15,13 +15,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { Modal } from '../../../../components/Modal';
-import { fetchRoleById } from '../../../../redux';
+import { fetchRolePermissions } from '../../../../redux';
 import s from './RolePermissionsModal.css';
 
 /**
  * RolePermissionsModal - Self-contained modal for viewing role permissions
  *
  * Displays all permissions assigned to the role.
+ * Uses the dedicated /api/admin/roles/:id/permissions endpoint.
  *
  * Usage:
  *   const permissionsModalRef = useRef();
@@ -45,9 +46,9 @@ const RolePermissionsModal = forwardRef((props, ref) => {
     if (isOpen && role) {
       const loadPermissions = async () => {
         setLoading(true);
-        const result = await dispatch(fetchRoleById(role.id));
-        if (result.success && result.role) {
-          setPermissions(result.role.permissions || []);
+        const result = await dispatch(fetchRolePermissions(role.id));
+        if (result.success) {
+          setPermissions(result.permissions || []);
         }
         setLoading(false);
       };

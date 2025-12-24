@@ -64,13 +64,6 @@ export default function userRoutes(deps, userMiddlewares) {
   );
 
   /**
-   * @route   GET /stats
-   * @desc    Get user statistics
-   * @access  Admin only
-   */
-  router.get('/stats', requireAdmin, userController.getUserStats);
-
-  /**
    * @route   GET /:id
    * @desc    Get specific user by ID
    * @access  Admin only

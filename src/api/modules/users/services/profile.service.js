@@ -7,7 +7,6 @@
 
 import path from 'path';
 import { verifyPassword } from '../utils/password';
-import { DEFAULT_ROLE } from '../constants/rbac';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -353,14 +352,14 @@ export async function changeUserPassword(
 }
 
 /**
- * Get user activity log
+ * Get user activities
  *
  * @param {string} user_id - User ID
  * @param {Object} options - Query options
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Activity log with pagination
  */
-export async function getUserActivity(user_id, options, models) {
+export async function getUserActivities(user_id, options, models) {
   const { page = 1, limit = 10 } = options;
   const offset = (page - 1) * limit;
   const { UserLogin } = models;
@@ -491,87 +490,4 @@ export async function deleteUserAccount(user_id, password, { models }) {
   await user.destroy();
 
   return true;
-}
-
-/**
- * Export user data (GDPR compliance)
- *
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} User data export
- */
-export async function exportUserData(user_id, models) {
-  const { User, UserProfile, UserLogin, Role, Group } = models;
-
-  const user = await User.findByPk(user_id, {
-    include: [
-      { model: UserProfile, as: 'profile' },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Get login history
-  const loginHistory = UserLogin
-    ? await UserLogin.findAll({
-        where: { user_id },
-        attributes: ['ip_address', 'user_agent', 'login_at', 'success'],
-        order: [['login_at', 'DESC']],
-      })
-    : [];
-
-  return {
-    exportedAt: new Date().toISOString(),
-    user: {
-      id: user.id,
-      email: user.email,
-      email_confirmed: user.email_confirmed,
-      is_active: user.is_active,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      roles:
-        Array.isArray(user.roles) && user.roles.length > 0
-          ? user.roles.map(r => r.name)
-          : [DEFAULT_ROLE],
-      groups: user.groups || [],
-    },
-    profile: user.profile
-      ? {
-          display_name: user.profile.display_name,
-          first_name: user.profile.first_name,
-          last_name: user.profile.last_name,
-          bio: user.profile.bio,
-          location: user.profile.location,
-          website: user.profile.website,
-          picture: user.profile.picture,
-          preferences: user.profile.preferences,
-        }
-      : null,
-    loginHistory,
-  };
 }

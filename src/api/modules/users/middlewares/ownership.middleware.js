@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAdmin } from '../constants/rbac';
+import { isAdmin } from '../utils/rbac/collector';
 
 // ========================================================================
 // RESOURCE OWNERSHIP AND ADMIN-BYPASS MIDDLEWARE
@@ -16,7 +16,7 @@ import { isAdmin } from '../constants/rbac';
  *
  * Requires user to own the resource or have admin permissions.
  *
- * @param {string} resource_idParam - Parameter name for resource ID (default: 'id')
+ * @param {string} resource_id - Parameter name for resource ID (default: 'id')
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID (default: 'user_id')
  * @returns {Function} Express middleware function
@@ -25,16 +25,15 @@ import { isAdmin } from '../constants/rbac';
  * router.put('/posts/:id', requireOwnership('id', 'Post', 'authorId'), controller.updatePost);
  */
 export function requireOwnership(
-  resource_idParam = 'id',
+  resource_id = 'id',
   resourceModel,
   ownerField = 'user_id',
 ) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -42,20 +41,13 @@ export function requireOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
+        return http.sendServerError(res, `Model ${resourceModel} not found`);
       }
 
-      const resource_id = req.params[resource_idParam];
-      const resource = await Model.findByPk(resource_id);
+      const resource = await Model.findByPk(req.params[resource_id]);
 
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
+        return http.sendNotFound(res, 'Resource not found');
       }
 
       // Check if user owns the resource
@@ -65,20 +57,17 @@ export function requireOwnership(
       const isAdminActive = isAdmin(req.user);
 
       if (!isOwner && !isAdminActive) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You can only access your own resources.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. You can only access your own resources.',
+        );
       }
 
       // Attach resource to request for use in controller
       req.resource = resource;
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Ownership check failed',
-      });
+      return http.sendServerError(res, 'Ownership check failed');
     }
   };
 }
@@ -89,7 +78,7 @@ export function requireOwnership(
  * Supports multiple ownership patterns and admin bypass options.
  *
  * @param {Object} options - Configuration options
- * @param {string} options.resource_idParam - Parameter name for resource ID
+ * @param {string} options.resource_id - Parameter name for resource ID
  * @param {string} options.resourceModel - Model name for the resource
  * @param {string|Function} options.ownerField - Field name or function to determine ownership
  * @param {boolean} options.adminBypass - Whether admins can bypass ownership (default: true)
@@ -107,7 +96,7 @@ export function requireOwnership(
  */
 export function requireFlexibleOwnership(options) {
   const {
-    resource_idParam = 'id',
+    resource_id = 'id',
     resourceModel,
     ownerField = 'user_id',
     adminBypass = true,
@@ -116,11 +105,10 @@ export function requireFlexibleOwnership(options) {
   } = options;
 
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -128,20 +116,13 @@ export function requireFlexibleOwnership(options) {
       const Model = models[resourceModel];
 
       if (!Model) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
+        return http.sendServerError(res, `Model ${resourceModel} not found`);
       }
 
-      const resource_id = req.params[resource_idParam];
-      const resource = await Model.findByPk(resource_id);
+      const resource = await Model.findByPk(req.params[resource_id]);
 
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
+        return http.sendNotFound(res, 'Resource not found');
       }
 
       // Determine ownership
@@ -180,10 +161,10 @@ export function requireFlexibleOwnership(options) {
       }
 
       if (!isOwner && !canBypass) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You can only access your own resources.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. You can only access your own resources.',
+        );
       }
 
       // Attach resource and ownership info to request
@@ -193,10 +174,7 @@ export function requireFlexibleOwnership(options) {
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Ownership check failed',
-      });
+      return http.sendServerError(res, 'Ownership check failed');
     }
   };
 }
@@ -206,7 +184,7 @@ export function requireFlexibleOwnership(options) {
  *
  * Allows access if user is owner OR has shared access to the resource.
  *
- * @param {string} resource_idParam - Parameter name for resource ID
+ * @param {string} resource_id - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {string} sharedModel - Model name for shared access records
@@ -217,18 +195,17 @@ export function requireFlexibleOwnership(options) {
  * router.get('/documents/:id', requireSharedOwnership('id', 'Document', 'ownerId', 'DocumentShare', 'user_id'), controller.getDocument);
  */
 export function requireSharedOwnership(
-  resource_idParam = 'id',
+  resource_id = 'id',
   resourceModel,
   ownerField = 'user_id',
   sharedModel,
   sharedUserField = 'user_id',
 ) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -237,27 +214,20 @@ export function requireSharedOwnership(
       const SharedModel = models[sharedModel];
 
       if (!Model) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
+        return http.sendServerError(res, `Model ${resourceModel} not found`);
       }
 
       if (!SharedModel) {
-        return res.status(500).json({
-          success: false,
-          error: `Shared model ${sharedModel} not found`,
-        });
+        return http.sendServerError(
+          res,
+          `Shared model ${sharedModel} not found`,
+        );
       }
 
-      const resource_id = req.params[resource_idParam];
-      const resource = await Model.findByPk(resource_id);
+      const resource = await Model.findByPk(req.params[resource_id]);
 
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
+        return http.sendNotFound(res, 'Resource not found');
       }
 
       // Check if user owns the resource
@@ -268,7 +238,7 @@ export function requireSharedOwnership(
         // Check if user has shared access
         const sharedAccess = await SharedModel.findOne({
           where: {
-            resource_id: resource_id,
+            resource_id: req.params[resource_id],
             [sharedUserField]: req.user.id,
           },
         });
@@ -276,10 +246,10 @@ export function requireSharedOwnership(
       }
 
       if (!isOwner && !hasSharedAccess) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You do not have access to this resource.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. You do not have access to this resource.',
+        );
       }
 
       // Attach resource and access info to request
@@ -289,10 +259,7 @@ export function requireSharedOwnership(
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Shared ownership check failed',
-      });
+      return http.sendServerError(res, 'Shared ownership check failed');
     }
   };
 }
@@ -302,7 +269,7 @@ export function requireSharedOwnership(
  *
  * Allows access based on hierarchical relationships (e.g., team lead can access team member resources).
  *
- * @param {string} resource_idParam - Parameter name for resource ID
+ * @param {string} resource_id - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {Function} hierarchyCheck - Function to check hierarchical relationship
@@ -313,17 +280,16 @@ export function requireSharedOwnership(
  * router.get('/reports/:id', requireHierarchicalOwnership('id', 'Report', 'authorId', isManager), controller.getReport);
  */
 export function requireHierarchicalOwnership(
-  resource_idParam = 'id',
+  resource_id = 'id',
   resourceModel,
   ownerField = 'user_id',
   hierarchyCheck,
 ) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -331,20 +297,13 @@ export function requireHierarchicalOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
+        return http.sendServerError(res, `Model ${resourceModel} not found`);
       }
 
-      const resource_id = req.params[resource_idParam];
-      const resource = await Model.findByPk(resource_id);
+      const resource = await Model.findByPk(req.params[resource_id]);
 
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
+        return http.sendNotFound(res, 'Resource not found');
       }
 
       // Check if user owns the resource
@@ -361,11 +320,10 @@ export function requireHierarchicalOwnership(
       }
 
       if (!isOwner && !hasHierarchicalAccess) {
-        return res.status(403).json({
-          success: false,
-          error:
-            'Access denied. You do not have hierarchical access to this resource.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. You do not have hierarchical access to this resource.',
+        );
       }
 
       // Attach resource and access info to request
@@ -375,10 +333,7 @@ export function requireHierarchicalOwnership(
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Hierarchical ownership check failed',
-      });
+      return http.sendServerError(res, 'Hierarchical ownership check failed');
     }
   };
 }
@@ -388,7 +343,7 @@ export function requireHierarchicalOwnership(
  *
  * Allows ownership changes based on time constraints (e.g., can only edit within 1 hour of creation).
  *
- * @param {string} resource_idParam - Parameter name for resource ID
+ * @param {string} resource_id - Parameter name for resource ID
  * @param {string} resourceModel - Model name for the resource
  * @param {string} ownerField - Field name that contains the owner ID
  * @param {number} timeLimit - Time limit in milliseconds
@@ -400,18 +355,17 @@ export function requireHierarchicalOwnership(
  * router.put('/comments/:id', requireTimeBasedOwnership('id', 'Comment', 'authorId', oneHour), controller.updateComment);
  */
 export function requireTimeBasedOwnership(
-  resource_idParam = 'id',
+  resource_id = 'id',
   resourceModel,
   ownerField = 'user_id',
   timeLimit,
   timeField = 'created_at',
 ) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -419,30 +373,23 @@ export function requireTimeBasedOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
+        return http.sendServerError(res, `Model ${resourceModel} not found`);
       }
 
-      const resource_id = req.params[resource_idParam];
-      const resource = await Model.findByPk(resource_id);
+      const resource = await Model.findByPk(req.params[resource_id]);
 
       if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
+        return http.sendNotFound(res, 'Resource not found');
       }
 
       // Check if user owns the resource
       const isOwner = resource[ownerField] === req.user.id;
 
       if (!isOwner) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. You can only access your own resources.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. You can only access your own resources.',
+        );
       }
 
       // Check time constraint
@@ -451,10 +398,10 @@ export function requireTimeBasedOwnership(
       const timeDifference = currentTime - resourceTime;
 
       if (timeDifference > timeLimit) {
-        return res.status(403).json({
-          success: false,
-          error: 'Access denied. Time limit for modification has expired.',
-        });
+        return http.sendForbidden(
+          res,
+          'Access denied. Time limit for modification has expired.',
+        );
       }
 
       // Attach resource and timing info to request
@@ -464,10 +411,7 @@ export function requireTimeBasedOwnership(
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Time-based ownership check failed',
-      });
+      return http.sendServerError(res, 'Time-based ownership check failed');
     }
   };
 }

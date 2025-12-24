@@ -7,21 +7,14 @@
 
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
-import s from './PageHeader.css';
+import s from './Header.css';
 
 /**
- * PageHeader Component
+ * Header Component
  *
  * A reusable page header with icon, title, subtitle, and actions
  */
-function PageHeader({
-  icon,
-  title,
-  subtitle,
-  children,
-  className,
-  breadcrumb,
-}) {
+function Header({ icon, title, subtitle, children, className, breadcrumb }) {
   return (
     <header className={clsx(s.header, className)}>
       <div className={s.headerContent}>
@@ -42,7 +35,7 @@ function PageHeader({
   );
 }
 
-PageHeader.propTypes = {
+Header.propTypes = {
   icon: PropTypes.node,
   title: PropTypes.string.isRequired,
   subtitle: PropTypes.string,
@@ -51,4 +44,4 @@ PageHeader.propTypes = {
   breadcrumb: PropTypes.string,
 };
 
-export default PageHeader;
+export default Header;

@@ -18,7 +18,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { PageHeader, Icon } from '../../../../components/Admin';
+import { Page, Icon } from '../../../../components/Admin';
 import s from './CreateUser.css';
 
 function CreateUser() {
@@ -254,7 +254,7 @@ function CreateUser() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='users' size={24} />}
         title='Create New User'
         subtitle='Add a new user account'
@@ -262,7 +262,7 @@ function CreateUser() {
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Users
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

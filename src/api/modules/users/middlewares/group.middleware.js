@@ -22,20 +22,16 @@
  */
 export function requireGroup(groupName) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const models = req.app.get('models');
       if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
+        return http.sendServerError(res, 'Database models not available');
       }
       const { User, Group } = models;
 
@@ -44,34 +40,29 @@ export function requireGroup(groupName) {
           {
             model: Group,
             as: 'groups',
+            attributes: ['name'],
             through: { attributes: [] },
           },
         ],
       });
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+        return http.sendUnauthorized(res, 'User not found');
       }
 
       // Check if user is in the required group
       const isInGroup = user.groups.some(group => group.name === groupName);
 
       if (!isInGroup) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required group: ${groupName}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Required group: ${groupName}`,
+        );
       }
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Group check failed',
-      });
+      return http.sendServerError(res, 'Group check failed');
     }
   };
 }
@@ -89,20 +80,16 @@ export function requireGroup(groupName) {
  */
 export function requireAnyGroup(groupNames) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const models = req.app.get('models');
       if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
+        return http.sendServerError(res, 'Database models not available');
       }
       const { User, Group } = models;
 
@@ -111,16 +98,14 @@ export function requireAnyGroup(groupNames) {
           {
             model: Group,
             as: 'groups',
+            attributes: ['name'],
             through: { attributes: [] },
           },
         ],
       });
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+        return http.sendUnauthorized(res, 'User not found');
       }
 
       // Check if user is in any of the required groups
@@ -129,18 +114,15 @@ export function requireAnyGroup(groupNames) {
       );
 
       if (!isInAnyGroup) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required any group: ${groupNames.join(', ')}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Required any group: ${groupNames.join(', ')}`,
+        );
       }
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Groups check failed',
-      });
+      return http.sendServerError(res, 'Groups check failed');
     }
   };
 }
@@ -158,20 +140,16 @@ export function requireAnyGroup(groupNames) {
  */
 export function requireAllGroups(groupNames) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const models = req.app.get('models');
       if (!models) {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
+        return http.sendServerError(res, 'Database models not available');
       }
       const { User, Group } = models;
 
@@ -180,16 +158,14 @@ export function requireAllGroups(groupNames) {
           {
             model: Group,
             as: 'groups',
+            attributes: ['name'],
             through: { attributes: [] },
           },
         ],
       });
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+        return http.sendUnauthorized(res, 'User not found');
       }
 
       // Get user's group names
@@ -201,18 +177,15 @@ export function requireAllGroups(groupNames) {
       );
 
       if (missingGroups.length > 0) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Missing groups: ${missingGroups.join(', ')}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Missing groups: ${missingGroups.join(', ')}`,
+        );
       }
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Groups check failed',
-      });
+      return http.sendServerError(res, 'Groups check failed');
     }
   };
 }
@@ -232,15 +205,17 @@ export function requireAllGroups(groupNames) {
  */
 export function requireGroupLevel(minimumGroup, groupHierarchy) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const models = req.app.get('models');
+      if (!models) {
+        return http.sendServerError(res, 'Database models not available');
+      }
       const { User, Group } = models;
 
       const user = await User.findByPk(req.user.id, {
@@ -248,25 +223,20 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
           {
             model: Group,
             as: 'groups',
+            attributes: ['name'],
             through: { attributes: [] },
           },
         ],
       });
 
       if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+        return http.sendUnauthorized(res, 'User not found');
       }
 
       // Get minimum required level
       const minimumLevel = groupHierarchy.indexOf(minimumGroup);
       if (minimumLevel === -1) {
-        return res.status(500).json({
-          success: false,
-          error: 'Invalid minimum group configuration',
-        });
+        return http.sendServerError(res, 'Invalid minimum group configuration');
       }
 
       // Check if user has any group at or above the minimum level
@@ -279,228 +249,15 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
       );
 
       if (!hasRequiredLevel) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Minimum group level required: ${minimumGroup}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Minimum group level required: ${minimumGroup}`,
+        );
       }
 
       next();
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Group level check failed',
-      });
+      return http.sendServerError(res, 'Group level check failed');
     }
   };
-}
-
-/**
- * Department-based authorization middleware
- *
- * Requires user to belong to a specific department (group category).
- *
- * @param {string} department - Required department name
- * @returns {Function} Express middleware function
- *
- * @example
- * router.get('/engineering/tools', requireDepartment('engineering'), controller.getTools);
- */
-export function requireDepartment(department) {
-  return async (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
-    }
-
-    try {
-      const models = req.app.get('models');
-      const { User, Group } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Group,
-            as: 'groups',
-            through: { attributes: [] },
-            where: {
-              category: department, // Assuming groups have a category field
-            },
-            required: false,
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Check if user belongs to any group in the department
-      if (user.groups.length === 0) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required department: ${department}`,
-        });
-      }
-
-      next();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Department check failed',
-      });
-    }
-  };
-}
-
-/**
- * Team-based authorization middleware
- *
- * Requires user to be in the same team as the resource being accessed.
- *
- * @param {string} resource_idParam - Parameter name for resource ID
- * @param {string} resourceModel - Model name for the resource
- * @param {string} teamField - Field name that contains the team ID
- * @returns {Function} Express middleware function
- *
- * @example
- * router.get('/projects/:id', requireSameTeam('id', 'Project', 'teamId'), controller.getProject);
- */
-export function requireSameTeam(
-  resource_idParam = 'id',
-  resourceModel,
-  teamField = 'teamId',
-) {
-  return async (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
-    }
-
-    try {
-      const models = req.app.get('models');
-      const { User, Group } = models;
-      const ResourceModel = models[resourceModel];
-
-      if (!ResourceModel) {
-        return res.status(500).json({
-          success: false,
-          error: `Model ${resourceModel} not found`,
-        });
-      }
-
-      // Get user's teams
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Group,
-            as: 'groups',
-            through: { attributes: [] },
-            where: {
-              type: 'team', // Assuming groups have a type field to distinguish teams
-            },
-            required: false,
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Get resource
-      const resource_id = req.params[resource_idParam];
-      const resource = await ResourceModel.findByPk(resource_id);
-
-      if (!resource) {
-        return res.status(404).json({
-          success: false,
-          error: 'Resource not found',
-        });
-      }
-
-      // Check if user is in the same team as the resource
-      const userTeamIds = user.groups.map(group => group.id);
-      const resourceTeamId = resource[teamField];
-
-      if (!userTeamIds.includes(resourceTeamId)) {
-        return res.status(403).json({
-          success: false,
-          error:
-            'Access denied. You must be in the same team to access this resource.',
-        });
-      }
-
-      // Attach resource to request for use in controller
-      req.resource = resource;
-      next();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Team authorization failed',
-      });
-    }
-  };
-}
-
-/**
- * Group membership caching middleware
- *
- * Caches user group memberships for the duration of the request.
- *
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware function
- */
-export function cacheUserGroups(req, res, next) {
-  if (!req.user) {
-    return next();
-  }
-
-  // Skip if groups already cached
-  if (req.user.groups) {
-    return next();
-  }
-
-  const models = req.app.get('models');
-  if (!models) {
-    return next();
-  }
-
-  const { User, Group } = models;
-
-  User.findByPk(req.user.id, {
-    include: [
-      {
-        model: Group,
-        as: 'groups',
-        through: { attributes: [] },
-      },
-    ],
-  })
-    .then(user => {
-      if (user) {
-        // Cache groups in request
-        req.user.groups = user.groups.map(group => ({
-          id: group.id,
-          name: group.name,
-          category: group.category,
-          type: group.type,
-        }));
-      }
-      next();
-    })
-    .catch(() => {
-      next(); // Continue without caching
-    });
 }

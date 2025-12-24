@@ -11,7 +11,8 @@ import {
   createTimedResetToken,
   validateResetToken,
 } from '../utils/password';
-import { DEFAULT_ROLE, isAdmin } from '../constants/rbac';
+import { DEFAULT_ROLE } from '../constants/rbac';
+import { collectUserRBACData, isAdmin } from '../utils/rbac/collector';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
@@ -41,11 +42,15 @@ export async function getCurrentUser(userId, models) {
       {
         model: Role,
         as: 'roles',
-        through: { attributes: [] }, // Exclude junction table attributes
+        attributes: ['name'],
+        through: { attributes: [] },
         include: [
           {
             model: Permission,
             as: 'permissions',
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
             through: { attributes: [] },
           },
         ],
@@ -53,16 +58,22 @@ export async function getCurrentUser(userId, models) {
       {
         model: Group,
         as: 'groups',
+        attributes: ['name'],
+        required: false,
         through: { attributes: [] },
         include: [
           {
             model: Role,
             as: 'roles',
+            attributes: ['name'],
             through: { attributes: [] },
             include: [
               {
                 model: Permission,
                 as: 'permissions',
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
                 through: { attributes: [] },
               },
             ],
@@ -79,45 +90,8 @@ export async function getCurrentUser(userId, models) {
     throw error;
   }
 
-  // Collect all permissions from direct roles and group roles
-  const permissionsSet = new Set();
-  const rolesSet = new Set();
-
-  // Add permissions from direct user roles
-  if (user.roles) {
-    for (const role of user.roles) {
-      rolesSet.add(role.name);
-      if (role.permissions) {
-        for (const perm of role.permissions) {
-          if (perm.is_active !== false) {
-            permissionsSet.add(`${perm.resource}:${perm.action}`);
-          }
-        }
-      }
-    }
-  }
-
-  // Add permissions from group roles
-  if (user.groups) {
-    for (const group of user.groups) {
-      if (group.roles) {
-        for (const role of group.roles) {
-          rolesSet.add(role.name);
-          if (role.permissions) {
-            for (const perm of role.permissions) {
-              if (perm.is_active !== false) {
-                permissionsSet.add(`${perm.resource}:${perm.action}`);
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // RBAC logic: Determine roles, permissions, and is_admin
-  const allRoles = Array.from(rolesSet);
-  const allPermissions = Array.from(permissionsSet);
+  // Use shared RBAC data collector
+  const rbacData = collectUserRBACData(user);
 
   // Return formatted user object
   return {
@@ -134,16 +108,10 @@ export async function getCurrentUser(userId, models) {
     bio: (user.profile && user.profile.bio) || null,
     location: (user.profile && user.profile.location) || null,
     website: (user.profile && user.profile.website) || null,
-    is_admin: isAdmin({ roles: allRoles }),
-    roles: allRoles,
-    permissions: allPermissions,
-    groups: user.groups
-      ? user.groups.map(group => ({
-          id: group.id,
-          name: group.name,
-          description: group.description,
-        }))
-      : [],
+    is_admin: isAdmin({ roles: rbacData.roles }),
+    roles: rbacData.roles,
+    permissions: rbacData.permissions,
+    groups: rbacData.groups,
   };
 }
 

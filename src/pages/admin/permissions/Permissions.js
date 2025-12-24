@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../components/History';
 import {
@@ -15,16 +16,17 @@ import {
   getPermissionsLoading,
   getPermissionsError,
 } from '../../../redux';
-import DeletePermissionModal from './components/DeletePermissionModal';
-import PermissionCard from './components/PermissionCard';
-import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
+import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
+import DeletePermissionModal from './components/DeletePermissionModal';
+import PermissionCard from './components/PermissionCard';
 import s from './Permissions.css';
 
 function Permissions() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const permissions = useSelector(getPermissions);
@@ -142,7 +144,7 @@ function Permissions() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='key' size={24} />}
         title='Permission Management'
         subtitle='Configure granular access controls'
@@ -165,7 +167,7 @@ function Permissions() {
           </svg>
           Add Permission
         </button>
-      </PageHeader>
+      </Page.Header>
 
       {/* Search/Filter Section */}
       <div className={s.filters}>
@@ -237,14 +239,13 @@ function Permissions() {
       {loading ? (
         <Loader variant='cards' message='Loading permissions...' />
       ) : error ? (
-        <div className={s.error}>
-          <p>Error loading permissions: {error}</p>
-          <button className={s.addButton} onClick={refreshPermissions}>
-            Retry
-          </button>
-        </div>
+        <Table.Error
+          title={t('permissions.errorLoading', 'Error loading permissions')}
+          error={error}
+          onRetry={refreshPermissions}
+        />
       ) : permissions.length === 0 ? (
-        <Empty
+        <Table.Empty
           icon='key'
           title={search ? 'No matches found' : 'No permissions found'}
           description={

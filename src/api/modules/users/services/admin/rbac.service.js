@@ -17,12 +17,8 @@ import {
   DEFAULT_RESOURCES,
   SYSTEM_PERMISSIONS,
 } from '../../constants/rbac';
-import {
-  invalidateUserCache,
-  invalidateUsersCache,
-  getCachedUserRBAC,
-  setCachedUserRBAC,
-} from '../../utils/rbac-cache';
+import * as rbacCache from '../../utils/rbac/cache';
+import { collectUserRBACData } from '../../utils/rbac/collector';
 
 /**
  * Create default groups
@@ -70,8 +66,8 @@ export async function createDefaultGroups(models) {
 }
 
 /**
- * Create default permissions for common resources
- * Uses bulk operations instead of queries in loops
+ * Create default system permissions
+ * Uses bulk operations for efficiency
  *
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Created/existing permissions
@@ -79,14 +75,12 @@ export async function createDefaultGroups(models) {
 export async function createDefaultPermissions(models) {
   const { Permission } = models;
 
-  // Fetch all existing permissions in one query
+  // Fetch all existing permissions
   const existingPerms = await Permission.findAll({
-    where: {
-      resource: SYSTEM_PERMISSIONS.map(p => p.resource),
-    },
+    attributes: ['id', 'resource', 'action'],
   });
 
-  // Build a Set of existing resource:action keys
+  // Build Set of existing resource:action keys
   const existingKeys = new Set(
     existingPerms.map(p => `${p.resource}:${p.action}`),
   );
@@ -94,16 +88,23 @@ export async function createDefaultPermissions(models) {
   // Filter out permissions that already exist
   const newPerms = SYSTEM_PERMISSIONS.filter(
     p => !existingKeys.has(`${p.resource}:${p.action}`),
-  ).map(metadata => ({
-    ...metadata,
+  ).map(p => ({
+    resource: p.resource,
+    action: p.action,
+    description: p.description,
     is_active: true,
   }));
 
   // Bulk create new permissions
-  const createdPerms =
-    newPerms.length > 0 ? await Permission.bulkCreate(newPerms) : [];
+  if (newPerms.length > 0) {
+    await Permission.bulkCreate(newPerms);
+  }
 
-  return [...existingPerms, ...createdPerms];
+  // Return system permissions only (filtered from all)
+  const systemKeys = new Set(
+    SYSTEM_PERMISSIONS.map(p => `${p.resource}:${p.action}`),
+  );
+  return existingPerms.filter(p => systemKeys.has(`${p.resource}:${p.action}`));
 }
 
 /**
@@ -287,7 +288,7 @@ export async function assignRolesToUser(user_id, role_names, models) {
   }
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   // Reload user with roles
   await user.reload({
@@ -342,7 +343,7 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
   }
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   // Reload user with groups
   await user.reload({
@@ -387,7 +388,7 @@ export async function addRoleToUser(user_id, role_id, models) {
   await user.addRole(role);
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -422,7 +423,7 @@ export async function removeRoleFromUser(user_id, role_id, models) {
   await user.removeRole(role);
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -457,7 +458,7 @@ export async function addGroupToUser(user_id, group_id, models) {
   await user.addGroup(group);
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -492,7 +493,7 @@ export async function removeGroupFromUser(user_id, group_id, models) {
   await user.removeGroup(group);
 
   // Invalidate RBAC cache for this user
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return user;
 }
@@ -512,7 +513,7 @@ export async function getUserPermissions(user_id, models, options = {}) {
 
   // Check cache first (unless force refresh requested)
   if (!forceRefresh) {
-    const cached = getCachedUserRBAC(user_id);
+    const cached = rbacCache.getUser(user_id);
     if (cached) {
       return cached.permissions;
     }
@@ -526,11 +527,15 @@ export async function getUserPermissions(user_id, models, options = {}) {
       {
         model: Role,
         as: 'roles',
+        attributes: ['name'],
         through: { attributes: [] },
         include: [
           {
             model: Permission,
             as: 'permissions',
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
             through: { attributes: [] },
           },
         ],
@@ -538,16 +543,22 @@ export async function getUserPermissions(user_id, models, options = {}) {
       {
         model: Group,
         as: 'groups',
+        attributes: ['name'],
+        required: false,
         through: { attributes: [] },
         include: [
           {
             model: Role,
             as: 'roles',
+            attributes: ['name'],
             through: { attributes: [] },
             include: [
               {
                 model: Permission,
                 as: 'permissions',
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
                 through: { attributes: [] },
               },
             ],
@@ -564,44 +575,15 @@ export async function getUserPermissions(user_id, models, options = {}) {
     throw error;
   }
 
-  // Collect permissions and roles
-  const permissions = new Set();
-  const roles = new Set();
-  const groups = [];
+  // Use shared RBAC data collector
+  const rbacData = collectUserRBACData(user);
 
-  // Add from direct roles
-  user.roles.forEach(role => {
-    roles.add(role.name);
-    role.permissions.forEach(permission => {
-      if (permission.is_active !== false) {
-        permissions.add(`${permission.resource}:${permission.action}`);
-      }
-    });
-  });
+  // Cache the result (with wildcards for authorization)
+  rbacCache.setUser(user_id, rbacData);
 
-  // Add from group roles
-  user.groups.forEach(group => {
-    groups.push({ id: group.id, name: group.name });
-    group.roles.forEach(role => {
-      roles.add(role.name);
-      role.permissions.forEach(permission => {
-        if (permission.is_active !== false) {
-          permissions.add(`${permission.resource}:${permission.action}`);
-        }
-      });
-    });
-  });
-
-  const permissionList = Array.from(permissions).sort();
-
-  // Cache the result
-  setCachedUserRBAC(user_id, {
-    roles: Array.from(roles),
-    permissions: permissionList,
-    groups,
-  });
-
-  return permissionList;
+  // Filter out wildcard permissions for API response
+  const wildcardPerm = `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`;
+  return rbacData.permissions.filter(p => p !== wildcardPerm);
 }
 
 /**
@@ -619,72 +601,40 @@ export async function getUserPermissions(user_id, models, options = {}) {
  * @returns {Promise<boolean>} True if user has permission
  */
 export async function userHasPermission(user_id, permissionName, models) {
-  const permissions = await getUserPermissions(user_id, models);
-  return matchesPermission(permissions, permissionName);
-}
+  try {
+    const userPermissions = await getUserPermissions(user_id, models);
 
-/**
- * Helper function to check if a permission matches with wildcard support
- *
- * @param {string[]} userPermissions - Array of user's permissions
- * @param {string} permissionName - Permission to check
- * @returns {boolean} True if matches
- */
-function matchesPermission(userPermissions, permissionName) {
-  // Super admin check
-  if (userPermissions.includes('*:*')) {
-    return true;
-  }
+    // Super admin check
+    if (
+      userPermissions.includes(
+        `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
+      )
+    ) {
+      return true;
+    }
 
-  // Exact match
-  if (userPermissions.includes(permissionName)) {
-    return true;
-  }
+    // Exact match
+    if (userPermissions.includes(permissionName)) {
+      return true;
+    }
 
-  // Parse the requested permission
-  const [resource, action] = permissionName.split(':');
+    // Parse the requested permission
+    const [resource, action] = permissionName.split(':');
 
-  // Resource-only check (e.g., 'users' matches any 'users:*')
-  if (!action) {
-    return userPermissions.some(perm => perm.startsWith(`${resource}:`));
-  }
+    // Resource-only check (e.g., 'users' matches any 'users:*')
+    if (!action) {
+      return userPermissions.some(perm => perm.startsWith(`${resource}:`));
+    }
 
-  // Wildcard action check (e.g., 'users:*' matches 'users:read')
-  if (userPermissions.includes(`${resource}:*`)) {
-    return true;
+    // Wildcard action check (e.g., 'users:*' matches 'users:read')
+    if (userPermissions.includes(`${resource}:*`)) {
+      return true;
+    }
+  } catch (error) {
+    console.error('Error checking user permission:', error);
   }
 
   return false;
-}
-
-/**
- * Check if user has any of the specified permissions
- *
- * @param {string} user_id - User ID
- * @param {string[]} permissionNames - Array of permission names
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if user has any permission
- */
-export async function userHasAnyPermission(user_id, permissionNames, models) {
-  const permissions = await getUserPermissions(user_id, models);
-  return permissionNames.some(permName =>
-    matchesPermission(permissions, permName),
-  );
-}
-
-/**
- * Check if user has all specified permissions
- *
- * @param {string} user_id - User ID
- * @param {string[]} permissionNames - Array of permission names
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if user has all permissions
- */
-export async function userHasAllPermissions(user_id, permissionNames, models) {
-  const permissions = await getUserPermissions(user_id, models);
-  return permissionNames.every(permName =>
-    matchesPermission(permissions, permName),
-  );
 }
 
 /**
@@ -764,122 +714,6 @@ export async function getUserGroups(user_id, models) {
 }
 
 /**
- * Check if user has specific role
- *
- * @param {string} user_id - User ID
- * @param {string} roleName - Role name
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if user has role
- */
-export async function userHasRole(user_id, roleName, models) {
-  const roles = await getUserRoles(user_id, models);
-  return roles.some(role => role.name === roleName);
-}
-
-/**
- * Check if user is in specific group
- *
- * @param {string} user_id - User ID
- * @param {string} groupName - Group name
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if user is in group
- */
-export async function userInGroup(user_id, groupName, models) {
-  const groups = await getUserGroups(user_id, models);
-  return groups.some(group => group.name === groupName);
-}
-
-/**
- * Get user's complete RBAC profile
- *
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Complete RBAC profile
- */
-export async function getUserRBACProfile(user_id, models) {
-  const { User, Role, Permission, Group, UserProfile } = models;
-
-  const user = await User.findByPk(user_id, {
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-        attributes: ['first_name', 'last_name', 'display_name'],
-      },
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Get effective permissions
-  const permissions = await getUserPermissions(user_id, models);
-
-  return {
-    user: {
-      id: user.id,
-      email: user.email,
-      display_name: (user.profile && user.profile.display_name) || null,
-      is_active: user.is_active,
-    },
-    roles: user.roles.map(role => ({
-      id: role.id,
-      name: role.name,
-      description: role.description,
-      permissions: role.permissions.map(p => `${p.resource}:${p.action}`),
-    })),
-    groups: user.groups.map(group => ({
-      id: group.id,
-      name: group.name,
-      description: group.description,
-      category: group.category,
-      type: group.type,
-      roles: group.roles.map(role => ({
-        id: role.id,
-        name: role.name,
-        permissions: role.permissions.map(p => `${p.resource}:${p.action}`),
-      })),
-    })),
-    effectivePermissions: permissions,
-  };
-}
-
-/**
  * Get group's effective permissions (from roles)
  *
  * @param {string} group_id - Group ID
@@ -916,9 +750,10 @@ export async function getGroupPermissions(group_id, models) {
   const permissions = new Set();
   const roleDetails = [];
 
-  // Get permissions from each role
+  // Get permissions from each role (filtering out wildcards)
   group.roles.forEach(role => {
-    const rolePerms = role.permissions.map(p => `${p.resource}:${p.action}`);
+    const filteredPerms = filterWildcardPermissions(role.permissions);
+    const rolePerms = filteredPerms.map(p => `${p.resource}:${p.action}`);
     rolePerms.forEach(p => permissions.add(p));
     roleDetails.push({
       id: role.id,
@@ -999,7 +834,7 @@ export async function getGroupRoles(group_id, models) {
  * @returns {Promise<Object>} Group with updated roles
  */
 export async function assignRolesToGroup(group_id, role_names, models) {
-  const { Group, Role } = models;
+  const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -1031,14 +866,14 @@ export async function assignRolesToGroup(group_id, role_names, models) {
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+    include: [{ model: User, as: 'users', attributes: ['id'] }],
   });
   if (
     groupWithUsers &&
     groupWithUsers.users &&
     groupWithUsers.users.length > 0
   ) {
-    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
+    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
   }
 
   // Return group with roles
@@ -1062,7 +897,7 @@ export async function assignRolesToGroup(group_id, role_names, models) {
  * @returns {Promise<Object>} Updated group
  */
 export async function addRoleToGroup(group_id, role_id, models) {
-  const { Group, Role } = models;
+  const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -1084,14 +919,14 @@ export async function addRoleToGroup(group_id, role_id, models) {
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+    include: [{ model: User, as: 'users', attributes: ['id'] }],
   });
   if (
     groupWithUsers &&
     groupWithUsers.users &&
     groupWithUsers.users.length > 0
   ) {
-    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
+    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
   }
 
   return group;
@@ -1106,7 +941,7 @@ export async function addRoleToGroup(group_id, role_id, models) {
  * @returns {Promise<Object>} Updated group
  */
 export async function removeRoleFromGroup(group_id, role_id, models) {
-  const { Group, Role } = models;
+  const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -1128,14 +963,14 @@ export async function removeRoleFromGroup(group_id, role_id, models) {
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: models.User, as: 'users', attributes: ['id'] }],
+    include: [{ model: User, as: 'users', attributes: ['id'] }],
   });
   if (
     groupWithUsers &&
     groupWithUsers.users &&
     groupWithUsers.users.length > 0
   ) {
-    invalidateUsersCache(groupWithUsers.users.map(u => u.id));
+    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
   }
 
   return group;
@@ -1175,7 +1010,7 @@ export async function addUserToGroup(group_id, user_id, models) {
   await group.addUser(user);
 
   // Invalidate RBAC cache for this user (they now inherit group's roles)
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return group;
 }
@@ -1210,7 +1045,7 @@ export async function removeUserFromGroup(group_id, user_id, models) {
   await group.removeUser(user);
 
   // Invalidate RBAC cache for this user (they no longer inherit group's roles)
-  invalidateUserCache(user_id);
+  rbacCache.invalidateUser(user_id);
 
   return group;
 }
@@ -1220,50 +1055,59 @@ export async function removeUserFromGroup(group_id, user_id, models) {
 // ========================================================================
 
 /**
- * Assign permissions to a role
+ * Check if a permission is a wildcard (super admin) permission
+ * @param {Object} permission - Permission object with resource and action
+ * @returns {boolean} True if wildcard permission
+ */
+function isWildcardPermission(permission) {
+  return (
+    permission.resource === DEFAULT_RESOURCES.ALL ||
+    permission.action === DEFAULT_ACTIONS.MANAGE
+  );
+}
+
+/**
+ * Filter out wildcard permissions from an array
+ * @param {Object[]} permissions - Array of permission objects
+ * @returns {Object[]} Filtered permissions without wildcards
+ */
+function filterWildcardPermissions(permissions) {
+  return permissions.filter(p => !isWildcardPermission(p));
+}
+
+/**
+ * Manage permissions for a role (add/remove/replace)
  *
- * @param {string} role_id - Role ID
- * @param {string[]} permission_ids - Array of permission IDs
+ * @param {string} role_name - Role name
+ * @param {string[]} permission_names - Array of permission names (format: "resource:action")
  * @param {Object} models - Database models
+ * @param {string} action - Action to perform: 'add', 'remove', or 'replace' (default)
  * @returns {Promise<Object>} Role with updated permissions
  */
-export async function assignPermissionsToRole(role_id, permission_ids, models) {
-  const { Role, Permission } = models;
+export async function manageRolePermissions(
+  role_name,
+  permission_names,
+  models,
+  action,
+) {
+  const { Role, Permission, User } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
 
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
+  // Validate action
+  const validActions = ['add', 'remove', 'replace'];
+  const normalizedAction = (action || 'replace').toLowerCase();
+  if (!validActions.includes(normalizedAction)) {
+    const error = new Error(
+      `Invalid action: '${action}'. Must be 'add', 'remove', or 'replace'`,
+    );
+    error.name = 'ValidationError';
+    error.status = 400;
     throw error;
   }
 
-  // Verify all permissions exist
-  const permissions = await Permission.findAll({
-    where: { id: permission_ids },
-  });
-
-  if (permissions.length !== permission_ids.length) {
-    const error = new Error('One or more permissions not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Set permissions for role (replaces existing)
-  await role.setPermissions(permissions);
-
-  // Invalidate cache for all users with this role
-  const usersWithRole = await models.User.findAll({
-    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
-    attributes: ['id'],
-  });
-  if (usersWithRole.length > 0) {
-    invalidateUsersCache(usersWithRole.map(u => u.id));
-  }
-
-  // Return role with permissions
-  return await Role.findByPk(role_id, {
+  const role = await Role.findOne({
+    where: { name: role_name },
     include: [
       {
         model: Permission,
@@ -1272,88 +1116,104 @@ export async function assignPermissionsToRole(role_id, permission_ids, models) {
       },
     ],
   });
-}
-
-/**
- * Add permission to role
- *
- * @param {string} role_id - Role ID
- * @param {string} permission_id - Permission ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated role
- */
-export async function addPermissionToRole(role_id, permission_id, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id);
   if (!role) {
-    const error = new Error('Role not found');
+    const error = new Error(`Role '${role_name}' not found`);
     error.name = 'RoleNotFoundError';
     error.status = 404;
     throw error;
   }
 
-  const permission = await Permission.findByPk(permission_id);
-  if (!permission) {
-    const error = new Error('Permission not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
+  // Parse permission names into resource:action pairs
+  const permissionConditions = permission_names
+    .map(name => {
+      const [resource, a] = name.split(':');
+      if (!resource || !a) return null;
+      return { resource, action: a };
+    })
+    .filter(Boolean);
+
+  // Skip if no valid permissions
+  if (permissionConditions.length === 0 && normalizedAction !== 'replace') {
+    return role;
   }
 
-  await role.addPermission(permission);
+  // Find requested permissions (excluding wildcards)
+  const requestedPermissions =
+    permissionConditions.length > 0
+      ? await Permission.findAll({
+          where: {
+            [Op.and]: [
+              { resource: { [Op.ne]: DEFAULT_RESOURCES.ALL } },
+              { action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE } },
+              {
+                [Op.or]: permissionConditions.map(
+                  ({ resource, action: a }) => ({
+                    resource,
+                    action: a,
+                  }),
+                ),
+              },
+            ],
+          },
+        })
+      : [];
+
+  // Get existing wildcard permissions that should be preserved
+  const existingWildcards = role.permissions.filter(
+    p =>
+      p.resource === DEFAULT_RESOURCES.ALL ||
+      p.action === DEFAULT_ACTIONS.MANAGE,
+  );
+
+  // Apply action
+  switch (normalizedAction) {
+    case 'add': {
+      // Add new permissions to existing
+      await role.addPermissions(requestedPermissions);
+      break;
+    }
+    case 'remove': {
+      // Remove specified permissions (but never wildcards via API)
+      // Wildcards are already filtered out from requestedPermissions
+      await role.removePermissions(requestedPermissions);
+      break;
+    }
+    case 'replace':
+    default: {
+      // Replace regular permissions but preserve any existing wildcards
+      // This prevents accidentally removing super admin access
+      const newPermissions = [...requestedPermissions, ...existingWildcards];
+      await role.setPermissions(newPermissions);
+      break;
+    }
+  }
 
   // Invalidate cache for all users with this role
-  const usersWithRole = await models.User.findAll({
-    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
+  const usersWithRole = await User.findAll({
+    include: [{ model: Role, as: 'roles', where: { id: role.id } }],
     attributes: ['id'],
   });
   if (usersWithRole.length > 0) {
-    invalidateUsersCache(usersWithRole.map(u => u.id));
+    rbacCache.invalidateUsers(usersWithRole.map(u => u.id));
   }
 
-  return role;
-}
-
-/**
- * Remove permission from role
- *
- * @param {string} role_id - Role ID
- * @param {string} permission_id - Permission ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated role
- */
-export async function removePermissionFromRole(role_id, permission_id, models) {
-  const { Role, Permission } = models;
-
-  const role = await Role.findByPk(role_id);
-  if (!role) {
-    const error = new Error('Role not found');
-    error.name = 'RoleNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const permission = await Permission.findByPk(permission_id);
-  if (!permission) {
-    const error = new Error('Permission not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await role.removePermission(permission);
-
-  // Invalidate cache for all users with this role
-  const usersWithRole = await models.User.findAll({
-    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
-    attributes: ['id'],
+  // Return role with permissions (excluding wildcards)
+  const updatedRole = await Role.findByPk(role.id, {
+    include: [
+      {
+        model: Permission,
+        as: 'permissions',
+        where: {
+          resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+          action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+        },
+        required: false,
+        through: { attributes: [] },
+      },
+    ],
   });
-  if (usersWithRole.length > 0) {
-    invalidateUsersCache(usersWithRole.map(u => u.id));
-  }
 
-  return role;
+  return updatedRole;
 }
 
 /**
@@ -1365,12 +1225,19 @@ export async function removePermissionFromRole(role_id, permission_id, models) {
  */
 export async function getRolePermissions(role_id, models) {
   const { Role, Permission } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
 
   const role = await Role.findByPk(role_id, {
     include: [
       {
         model: Permission,
         as: 'permissions',
+        where: {
+          resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+          action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+        },
+        required: false,
         through: { attributes: [] },
       },
     ],
@@ -1383,21 +1250,5 @@ export async function getRolePermissions(role_id, models) {
     throw error;
   }
 
-  return role.permissions;
-}
-
-/**
- * Check if role has permission
- *
- * @param {string} role_id - Role ID
- * @param {string} permissionName - Permission name
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if role has permission
- */
-export async function roleHasPermission(role_id, permissionName, models) {
-  const permissions = await getRolePermissions(role_id, models);
-  return permissions.some(
-    permission =>
-      `${permission.resource}:${permission.action}` === permissionName,
-  );
+  return role.permissions || [];
 }

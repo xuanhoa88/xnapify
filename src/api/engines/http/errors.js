@@ -259,7 +259,7 @@ export class ExternalServiceError extends InternalServerError {
 /**
  * Error factory functions
  */
-export const createError = {
+export const createError = Object.freeze({
   badRequest: (message, code) => new BadRequestError(message, code),
   unauthorized: (message, code) => new UnauthorizedError(message, code),
   forbidden: (message, code) => new ForbiddenError(message, code),
@@ -282,7 +282,7 @@ export const createError = {
   businessLogic: (message, code) => new BusinessLogicError(message, code),
   externalService: (service, message, code) =>
     new ExternalServiceError(service, message, code),
-};
+});
 
 /**
  * Error handler middleware
@@ -384,7 +384,7 @@ export function errorHandler(err, req, res, next) {
 
   // Default to internal server error
   const serverError = new InternalServerError();
-  res.status(serverError.statusCode).json({
+  return res.status(serverError.statusCode).json({
     success: false,
     error: serverError.message,
     code: serverError.code,

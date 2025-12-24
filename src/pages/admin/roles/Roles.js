@@ -11,12 +11,12 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useHistory } from '../../../components/History';
 import { fetchRoles, getRolesPagination } from '../../../redux';
+import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import RoleActionsDropdown from './components/RoleActionsDropdown';
 import RolePermissionsModal from './components/RolePermissionsModal';
 import RoleUsersModal from './components/RoleUsersModal';
 import RoleGroupsModal from './components/RoleGroupsModal';
 import DeleteRoleModal from './components/DeleteRoleModal';
-import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Roles.css';
 
 // Pagination items per page
@@ -197,7 +197,7 @@ function Roles() {
   if (loading && roles.length === 0) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='shield' size={24} />}
           title={t('roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
@@ -213,38 +213,32 @@ function Roles() {
   if (error) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='shield' size={24} />}
           title={t('roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
         />
-        <div className={s.error}>
-          <p>
-            {t('roles.errorLoading', 'Error loading roles')}: {error}
-          </p>
-          <button
-            type='button'
-            className={s.addButton}
-            onClick={() =>
-              dispatch(
-                fetchRoles({
-                  page: currentPage,
-                  limit: ITEMS_PER_PAGE,
-                  search,
-                }),
-              )
-            }
-          >
-            {t('common.retry', 'Retry')}
-          </button>
-        </div>
+        <Table.Error
+          title={t('roles.errorLoading', 'Error loading roles')}
+          error={error}
+          retryLabel={t('common.retry', 'Retry')}
+          onRetry={() =>
+            dispatch(
+              fetchRoles({
+                page: currentPage,
+                limit: ITEMS_PER_PAGE,
+                search,
+              }),
+            )
+          }
+        />
       </div>
     );
   }
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='shield' size={24} />}
         title={t('roles.title', 'Role Management')}
         subtitle='Define access levels and permissions'
@@ -267,7 +261,7 @@ function Roles() {
           </svg>
           {t('roles.addRole', 'Add Role')}
         </button>
-      </PageHeader>
+      </Page.Header>
 
       {/* Search/Filter Section */}
       <div className={s.filters}>
@@ -297,7 +291,7 @@ function Roles() {
       </div>
 
       {roles.length === 0 ? (
-        <Empty
+        <Table.Empty
           icon='shield'
           title={t('roles.noRolesFound', 'No roles found')}
           description={t(

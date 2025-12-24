@@ -191,26 +191,3 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
     description: 'Delete permissions',
   },
 ]);
-
-// ------------------------------------------------------------------------
-// HELPER FUNCTIONS
-// ------------------------------------------------------------------------
-
-/**
- * Check if a user object is an admin (RBAC compatible)
- * Accepts user object with `role`, `roles`, or `is_admin` fields.
- *
- * @param {object} user - User object
- * @returns {boolean} True if user is an admin
- */
-export function isAdmin(user) {
-  if (!user) return false;
-  if (user.is_admin === true) return true;
-  if (Array.isArray(user.roles)) {
-    // Handle both string array and object array with 'name' property
-    return user.roles.some(
-      r => (typeof r === 'string' ? r : r && r.name) === ADMIN_ROLE,
-    );
-  }
-  return false;
-}

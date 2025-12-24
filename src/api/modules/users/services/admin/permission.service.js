@@ -9,7 +9,11 @@
 // PERMISSION MANAGEMENT SERVICES
 // ========================================================================
 
-import { SYSTEM_PERMISSIONS } from '../../constants/rbac';
+import {
+  DEFAULT_ACTIONS,
+  DEFAULT_RESOURCES,
+  SYSTEM_PERMISSIONS,
+} from '../../constants/rbac';
 
 /**
  * Create a new permission
@@ -74,18 +78,39 @@ export async function getPermissions(options, models) {
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
-  const whereCondition = {};
+  const whereCondition = {
+    // Exclude wildcard resource from admin listings
+    resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+  };
 
-  if (search) {
+  // Skip search if it's just the wildcard character
+  if (search && search !== DEFAULT_RESOURCES.ALL) {
     whereCondition[Op.or] = [
-      { resource: { [Op.like]: `%${search}%` } },
-      { action: { [Op.like]: `%${search}%` } },
+      {
+        resource: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_RESOURCES.ALL },
+            { [Op.like]: `%${search}%` },
+          ],
+        },
+      },
+      {
+        action: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+            { [Op.like]: `%${search}%` },
+          ],
+        },
+      },
       { description: { [Op.like]: `%${search}%` } },
     ];
   }
 
   if (resource) {
-    whereCondition.resource = resource;
+    // Combine with wildcard exclusion
+    whereCondition.resource = {
+      [Op.and]: [{ [Op.ne]: DEFAULT_RESOURCES.ALL }, { [Op.eq]: resource }],
+    };
   }
 
   if (status === 'active') {
@@ -133,10 +158,17 @@ export async function getPermissionResources(options, models) {
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
-  // Build where condition for search
-  const whereCondition = {};
+  // Build where condition for search (always exclude wildcard resource)
+  const whereCondition = {
+    resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+  };
   if (search) {
-    whereCondition.resource = { [Op.like]: `%${search}%` };
+    whereCondition.resource = {
+      [Op.and]: [
+        { [Op.ne]: DEFAULT_RESOURCES.ALL },
+        { [Op.like]: `%${search}%` },
+      ],
+    };
   }
 
   // Get total count of unique resources first
@@ -355,4 +387,110 @@ export async function bulkCreatePermissions(permissionsData, models) {
   }
 
   return createdPermissions;
+}
+
+/**
+ * Get permission statistics
+ *
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Permission statistics
+ */
+export async function getPermissionStats(models) {
+  const { Permission, Role } = models;
+
+  const { sequelize } = Permission;
+  const { Op, fn, col } = sequelize.Sequelize;
+
+  // Get total permissions (excluding wildcards)
+  const totalPermissions = await Permission.count({
+    where: {
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+  });
+
+  const activePermissions = await Permission.count({
+    where: {
+      is_active: true,
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+  });
+
+  const inactivePermissions = await Permission.count({
+    where: {
+      is_active: false,
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+  });
+
+  // Get permissions by resource
+  const byResource = await Permission.findAll({
+    attributes: ['resource', [fn('COUNT', col('resource')), 'count']],
+    where: {
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+    group: ['resource'],
+    order: [['resource', 'ASC']],
+    raw: true,
+  });
+
+  // Get permissions by action
+  const byAction = await Permission.findAll({
+    attributes: ['action', [fn('COUNT', col('action')), 'count']],
+    where: {
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+    group: ['action'],
+    order: [['action', 'ASC']],
+    raw: true,
+  });
+
+  // Get permissions used by most roles
+  const topByRoles = await Permission.findAll({
+    attributes: [
+      'id',
+      'resource',
+      'action',
+      [fn('COUNT', col('roles.id')), 'roleCount'],
+    ],
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    where: {
+      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+    },
+    group: ['Permission.id', 'Permission.resource', 'Permission.action'],
+    order: [[fn('COUNT', col('roles.id')), 'DESC']],
+    limit: 10,
+    subQuery: false,
+  });
+
+  return {
+    total: totalPermissions,
+    active: activePermissions,
+    inactive: inactivePermissions,
+    byResource: byResource.reduce((acc, stat) => {
+      acc[stat.resource] = parseInt(stat.count);
+      return acc;
+    }, {}),
+    byAction: byAction.reduce((acc, stat) => {
+      acc[stat.action] = parseInt(stat.count);
+      return acc;
+    }, {}),
+    topByRoles: topByRoles.map(p => ({
+      id: p.id,
+      name: `${p.resource}:${p.action}`,
+      count: parseInt(p.get('roleCount')) || 0,
+    })),
+  };
 }

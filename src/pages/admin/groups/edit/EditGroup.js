@@ -14,7 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { PageHeader, Icon, Loader } from '../../../../components/Admin';
+import { Page, Icon, Loader } from '../../../../components/Admin';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
@@ -180,7 +180,7 @@ function EditGroup({ groupId }) {
   if (fetchingGroup) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='folder' size={24} />}
           title='Edit Group'
           subtitle='Modify group details'
@@ -188,7 +188,7 @@ function EditGroup({ groupId }) {
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Groups
           </button>
-        </PageHeader>
+        </Page.Header>
         <div className={s.formContainer}>
           <Loader variant='spinner' message='Loading group data...' />
         </div>
@@ -199,7 +199,7 @@ function EditGroup({ groupId }) {
   if (!group) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='folder' size={24} />}
           title='Edit Group'
           subtitle='Modify group details'
@@ -207,7 +207,7 @@ function EditGroup({ groupId }) {
           <button type='button' onClick={handleCancel} className={s.backBtn}>
             ← Back to Groups
           </button>
-        </PageHeader>
+        </Page.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load group data</div>
           <div className={s.formActions}>
@@ -226,7 +226,7 @@ function EditGroup({ groupId }) {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='folder' size={24} />}
         title='Edit Group'
         subtitle='Modify group details'
@@ -234,7 +234,7 @@ function EditGroup({ groupId }) {
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Groups
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

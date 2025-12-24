@@ -76,7 +76,7 @@ export function getFilters(req, allowedFilters = []) {
  */
 export function getSearch(req) {
   const query = req.query.search || req.query.q || '';
-  return query;
+  return query.trim();
 }
 
 /**
@@ -85,13 +85,7 @@ export function getSearch(req) {
  * @returns {string} Client IP address
  */
 export function getClientIP(req) {
-  return (
-    req.ip ||
-    req.connection.remoteAddress ||
-    req.socket.remoteAddress ||
-    (req.connection.socket && req.connection.socket.remoteAddress) ||
-    '0.0.0.0'
-  );
+  return req.ip || (req.socket && req.socket.remoteAddress) || '0.0.0.0';
 }
 
 /**

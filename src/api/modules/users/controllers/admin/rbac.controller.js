@@ -6,6 +6,7 @@
  */
 
 import * as rbacService from '../../services/admin/rbac.service';
+import * as roleService from '../../services/admin/role.service';
 
 // ========================================================================
 // RBAC CONTROLLERS
@@ -484,106 +485,82 @@ export async function removeRoleFromGroup(req, res) {
 // ========================================================================
 
 /**
- * Assign permissions to a role
+ * Get role's permissions
  *
- * @route   PUT /api/admin/roles/:id/permissions
- * @access  Admin (requires 'roles:write' permission)
+ * @route   GET /api/admin/roles/:id/permissions
+ * @access  Admin (requires 'roles:read' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function assignPermissionsToRole(req, res) {
+export async function getRolePermissions(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { permission_ids } = req.body;
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Get role permissions
+    const permissions = await rbacService.getRolePermissions(id, models);
+
+    return http.sendSuccess(res, { permissions });
+  } catch (error) {
+    if (error.name === 'RoleNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+
+    return http.sendServerError(res, 'Failed to get role permissions');
+  }
+}
+
+/**
+ * Manage role permissions (add/remove/replace)
+ *
+ * @route   PUT /api/admin/roles/:id/permissions
+ * @access  Admin (requires 'roles:write' permission)
+ * @body    { action: 'add'|'remove'|'replace', permissions: ["resource:action", ...] }
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function manageRolePermissions(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const { action, permissions } = req.body;
 
     // Validate input
-    if (!Array.isArray(permission_ids)) {
+    if (!Array.isArray(permissions)) {
       return http.sendValidationError(res, {
-        permission_ids: 'Permission IDs must be an array',
+        permissions:
+          'Permissions must be an array of "resource:action" strings',
       });
     }
 
     const models = req.app.get('models');
 
-    const role = await rbacService.assignPermissionsToRole(
-      id,
-      permission_ids,
+    const role = await roleService.getRoleById(id, models);
+    const updatedRole = await rbacService.manageRolePermissions(
+      role.name,
+      permissions,
       models,
+      action,
     );
 
-    return http.sendSuccess(res, { role });
+    return http.sendSuccess(res, { role: updatedRole });
   } catch (error) {
     if (error.name === 'RoleNotFoundError') {
       return http.sendNotFound(res, error.message);
+    }
+    if (error.name === 'ValidationError') {
+      return http.sendValidationError(res, {
+        action: error.message,
+      });
     }
     if (error.name === 'PermissionNotFoundError') {
       return http.sendValidationError(res, {
-        permission_ids: error.message,
+        permissions: error.message,
       });
     }
-    return http.sendServerError(res, 'Failed to assign permissions to role');
-  }
-}
-
-/**
- * Add a single permission to a role
- *
- * @route   POST /api/admin/roles/:id/permissions/:permission_id
- * @access  Admin (requires 'roles:write' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function addPermissionToRole(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id, permission_id } = req.params;
-
-    const models = req.app.get('models');
-
-    await rbacService.addPermissionToRole(id, permission_id, models);
-
-    return http.sendSuccess(res, {
-      message: 'Permission added to role successfully',
-    });
-  } catch (error) {
-    if (error.name === 'RoleNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-    if (error.name === 'PermissionNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-    return http.sendServerError(res, 'Failed to add permission to role');
-  }
-}
-
-/**
- * Remove a permission from a role
- *
- * @route   DELETE /api/admin/roles/:id/permissions/:permission_id
- * @access  Admin (requires 'roles:write' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function removePermissionFromRole(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id, permission_id } = req.params;
-
-    const models = req.app.get('models');
-
-    await rbacService.removePermissionFromRole(id, permission_id, models);
-
-    return http.sendSuccess(res, {
-      message: 'Permission removed from role successfully',
-    });
-  } catch (error) {
-    if (error.name === 'RoleNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-    if (error.name === 'PermissionNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-    return http.sendServerError(res, 'Failed to remove permission from role');
+    return http.sendServerError(res, 'Failed to manage role permissions');
   }
 }

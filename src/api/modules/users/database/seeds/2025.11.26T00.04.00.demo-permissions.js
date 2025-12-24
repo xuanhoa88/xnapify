@@ -6,6 +6,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { DEFAULT_RESOURCES, DEFAULT_ACTIONS } from '../../constants/rbac';
 
 // Store permission IDs for use in other seeds
 export const demoPermissionIds = {
@@ -44,8 +45,8 @@ export async function up({ context }) {
     // Super admin - full access
     {
       id: demoPermissionIds.superAdmin,
-      resource: '*',
-      action: '*',
+      resource: DEFAULT_RESOURCES.ALL,
+      action: DEFAULT_ACTIONS.MANAGE,
       description: 'Super admin - full system access',
       is_active: true,
       created_at: now,
@@ -214,7 +215,7 @@ export async function down({ context, Sequelize }) {
   // Remove all seeded permissions by resource+action combinations
   await queryInterface.bulkDelete('permissions', {
     [Op.or]: [
-      { resource: '*', action: '*' },
+      { resource: DEFAULT_RESOURCES.ALL, action: DEFAULT_ACTIONS.MANAGE },
       // Users CRUD
       { resource: 'users', action: 'create' },
       { resource: 'users', action: 'read' },

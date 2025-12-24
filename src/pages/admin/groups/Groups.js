@@ -6,6 +6,7 @@
  */
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import { useHistory } from '../../../components/History';
@@ -21,12 +22,12 @@ import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
+import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
 import GroupUsersModal from './components/GroupUsersModal';
 import DeleteGroupModal from './components/DeleteGroupModal';
-import { PageHeader, Icon, Loader, Empty } from '../../../components/Admin';
 import s from './Groups.css';
 
 // Pagination items per page
@@ -43,6 +44,7 @@ const getInitials = name => {
 };
 
 function Groups() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const groups = useSelector(getGroups);
@@ -258,7 +260,7 @@ function Groups() {
   if (loading && groups.length === 0) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='folder' size={24} />}
           title='Group Management'
           subtitle='Organize users into groups for easier access control'
@@ -271,19 +273,23 @@ function Groups() {
   if (error) {
     return (
       <div className={s.root}>
-        <PageHeader
+        <Page.Header
           icon={<Icon name='folder' size={24} />}
           title='Group Management'
           subtitle='Organize users into groups for easier access control'
         />
-        <div className={s.error}>Error loading groups: {error}</div>
+        <Table.Error
+          title={t('groups.errorLoading', 'Error loading groups')}
+          error={error}
+          onRetry={refreshGroups}
+        />
       </div>
     );
   }
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='folder' size={24} />}
         title='Group Management'
         subtitle='Organize users into groups for easier access control'
@@ -306,7 +312,7 @@ function Groups() {
           </svg>
           Add Group
         </button>
-      </PageHeader>
+      </Page.Header>
 
       {/* Filters */}
       <div className={s.filters}>
@@ -360,7 +366,7 @@ function Groups() {
       </div>
 
       {groups.length === 0 ? (
-        <Empty
+        <Table.Empty
           icon='folder'
           title='No groups found'
           description='Create a new group to organize users and assign roles.'

@@ -429,29 +429,6 @@ export async function updateUserLockStatus(req, res) {
 }
 
 /**
- * Get user statistics
- *
- * @route   GET /api/users/stats
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getUserStats(req, res) {
-  const http = req.app.get('http');
-  try {
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Get user statistics
-    const stats = await userAdminService.getUserStats(models);
-
-    return http.sendSuccess(res, { stats });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get user statistics');
-  }
-}
-
-/**
  * Generate a random secure password
  *
  * @route   GET /api/admin/users/generate-password

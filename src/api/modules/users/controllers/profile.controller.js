@@ -317,14 +317,14 @@ export async function changePassword(req, res) {
 }
 
 /**
- * Get user activity log
+ * Get user activities
  *
- * @route   GET /api/profile/activity
+ * @route   GET /api/profile/activities
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function getActivity(req, res) {
+export async function getUserActivities(req, res) {
   const http = req.app.get('http');
   try {
     const { page = 1, limit = 10 } = req.query;
@@ -333,7 +333,7 @@ export async function getActivity(req, res) {
     const models = req.app.get('models');
 
     // Get user activity
-    const result = await profileService.getUserActivity(
+    const result = await profileService.getUserActivities(
       req.user.id,
       { page, limit },
       models,

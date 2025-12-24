@@ -223,3 +223,21 @@ export function fetchRoleGroups(roleId, options = {}) {
     }
   };
 }
+
+/**
+ * Fetch permissions assigned to a role
+ *
+ * @param {string} roleId - Role ID
+ * @returns {Function} Redux thunk action
+ */
+export function fetchRolePermissions(roleId) {
+  return async (dispatch, getState, { fetch }) => {
+    try {
+      const { data } = await fetch(`/api/admin/roles/${roleId}/permissions`);
+
+      return { success: true, permissions: data.permissions || [] };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+}

@@ -10,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import { fs, http, auth, db } from './engines';
+import { fs, http, auth, db, cache } from './engines';
 
 // Module-scoped Symbol for allowing provider writes (shared across all guards)
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
@@ -24,6 +24,7 @@ const APP_PROVIDERS = new Set([
   'fs', // Filesystem utilities
   'http', // HTTP utilities
   'auth', // Authentication engine
+  'cache', // Cache engine
   'models', // Database models
 ]);
 
@@ -321,6 +322,9 @@ function registerAppProviders(app) {
 
   // Register authentication provider
   app.set('auth', auth);
+
+  // Register cache provider
+  app.set('cache', cache);
 }
 
 /**

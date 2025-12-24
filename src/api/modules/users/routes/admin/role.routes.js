@@ -117,38 +117,28 @@ export default function roleRoutes(deps, userMiddlewares) {
   // ========================================================================
 
   /**
+   * @route   GET /:id/permissions
+   * @desc    Get permissions assigned to a role
+   * @access  Admin (requires 'roles:read' permission)
+   * @param   {string} id - Role ID
+   */
+  router.get(
+    '/:id/permissions',
+    requirePermission('roles:read'),
+    rbacController.getRolePermissions,
+  );
+
+  /**
    * @route   PUT /:id/permissions
-   * @desc    Assign permissions to a role
+   * @desc    Manage role permissions (add/remove/replace)
    * @access  Admin (requires 'roles:update' permission)
    * @param   {string} id - Role ID
-   * @body    { permission_ids }
+   * @body    { action: 'add'|'remove'|'replace', permissions: ["resource:action", ...] }
    */
   router.put(
     '/:id/permissions',
     requirePermission('roles:update'),
-    rbacController.assignPermissionsToRole,
-  );
-
-  /**
-   * @route   POST /:id/permissions/:permission_id
-   * @desc    Add a single permission to a role
-   * @access  Admin (requires 'roles:update' permission)
-   */
-  router.post(
-    '/:id/permissions/:permission_id',
-    requirePermission('roles:update'),
-    rbacController.addPermissionToRole,
-  );
-
-  /**
-   * @route   DELETE /:id/permissions/:permission_id
-   * @desc    Remove a permission from a role
-   * @access  Admin (requires 'roles:update' permission)
-   */
-  router.delete(
-    '/:id/permissions/:permission_id',
-    requirePermission('roles:update'),
-    rbacController.removePermissionFromRole,
+    rbacController.manageRolePermissions,
   );
 
   return router;

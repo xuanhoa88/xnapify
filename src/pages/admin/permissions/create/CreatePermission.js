@@ -9,7 +9,7 @@ import { useState, useCallback } from 'react';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { createPermission } from '../../../../redux';
-import { PageHeader, Icon } from '../../../../components/Admin';
+import { Page, Icon } from '../../../../components/Admin';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {
@@ -62,7 +62,7 @@ export default function CreatePermission() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='key' size={24} />}
         title='Create New Permission'
         subtitle='Define a new access control rule'
@@ -70,7 +70,7 @@ export default function CreatePermission() {
         <button type='button' className={s.backBtn} onClick={handleCancel}>
           ← Back to Permissions
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

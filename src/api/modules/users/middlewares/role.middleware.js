@@ -6,12 +6,8 @@
  */
 
 import { ADMIN_ROLE, SYSTEM_ROLES, MODERATOR_ROLE } from '../constants/rbac';
-
-import {
-  getCachedUserRBAC,
-  setCachedUserRBAC,
-  collectUserRBACData,
-} from '../utils/rbac-cache';
+import * as rbacCache from '../utils/rbac/cache';
+import { collectUserRBACData } from '../utils/rbac/collector';
 
 // ========================================================================
 // ROLE-BASED ACCESS CONTROL (RBAC) MIDDLEWARE
@@ -25,21 +21,21 @@ import {
  */
 async function getUserRolesWithCache(req) {
   const userId = req.user.id;
+  const { app } = req;
 
   // Check cache first
-  const cached = getCachedUserRBAC(userId);
+  const cached = rbacCache.getUser(userId, app);
   if (cached) {
     // Attach cached data to request
     req.user = {
       ...req.user,
-      roles: cached.roles,
-      permissions: cached.permissions,
+      ...cached,
     };
     return cached.roles;
   }
 
   // Get models from app context
-  const models = req.app.get('models');
+  const models = app.get('models');
   if (!models) {
     throw new Error('Database models not available');
   }
@@ -58,7 +54,9 @@ async function getUserRolesWithCache(req) {
           {
             model: Permission,
             as: 'permissions',
-            attributes: ['resource', 'action', 'is_active'],
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
             through: { attributes: [] },
           },
         ],
@@ -66,6 +64,8 @@ async function getUserRolesWithCache(req) {
       {
         model: Group,
         as: 'groups',
+        attributes: ['name'],
+        required: false,
         through: { attributes: [] },
         include: [
           {
@@ -77,7 +77,9 @@ async function getUserRolesWithCache(req) {
               {
                 model: Permission,
                 as: 'permissions',
-                attributes: ['resource', 'action', 'is_active'],
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
                 through: { attributes: [] },
               },
             ],
@@ -93,13 +95,12 @@ async function getUserRolesWithCache(req) {
 
   // Collect and cache RBAC data
   const rbacData = collectUserRBACData(user);
-  setCachedUserRBAC(userId, rbacData);
+  rbacCache.setUser(userId, rbacData, app);
 
   // Attach to request
   req.user = {
     ...req.user,
-    roles: rbacData.roles,
-    permissions: rbacData.permissions,
+    ...rbacData,
   };
 
   return rbacData.roles;
@@ -119,41 +120,28 @@ async function getUserRolesWithCache(req) {
  */
 export function requireRole(requiredRole) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
       const userRoles = await getUserRolesWithCache(req);
 
       if (!userRoles.includes(requiredRole)) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required role: ${requiredRole}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Required role: ${requiredRole}`,
+        );
       }
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Role authorization failed',
-      });
+      return http.sendServerError(res, 'Role authorization failed');
     }
   };
 }
@@ -171,11 +159,10 @@ export function requireRole(requiredRole) {
  */
 export function requireAnyRole(allowedRoles) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -183,30 +170,18 @@ export function requireAnyRole(allowedRoles) {
       const hasRole = userRoles.some(role => allowedRoles.includes(role));
 
       if (!hasRole) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required roles: ${allowedRoles.join(', ')}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Required roles: ${allowedRoles.join(', ')}`,
+        );
       }
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Role authorization failed',
-      });
+      return http.sendServerError(res, 'Role authorization failed');
     }
   };
 }
@@ -262,11 +237,10 @@ export function requireModerator(req, res, next) {
  */
 export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
+      return http.sendUnauthorized(res, 'Authentication required');
     }
 
     try {
@@ -281,47 +255,29 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
 
       // Check if user has any valid role
       if (highestUserRoleLevel === -1) {
-        return res.status(403).json({
-          success: false,
-          error: 'Invalid user role',
-        });
+        return http.sendForbidden(res, 'Invalid user role');
       }
 
       if (minimumRoleLevel === -1) {
-        return res.status(500).json({
-          success: false,
-          error: 'Invalid minimum role configuration',
-        });
+        return http.sendServerError(res, 'Invalid minimum role configuration');
       }
 
       // Check if user's highest role level meets minimum requirement
       if (highestUserRoleLevel < minimumRoleLevel) {
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Minimum role required: ${minimumRole}`,
-        });
+        return http.sendForbidden(
+          res,
+          `Access denied. Minimum role required: ${minimumRole}`,
+        );
       }
 
       req.user.roleLevel = highestUserRoleLevel;
 
       next();
     } catch (error) {
-      if (error.message === 'User not found') {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
+      if (error.name === 'UserNotFoundError') {
+        return http.sendUnauthorized(res, 'User not found');
       }
-      if (error.message === 'Database models not available') {
-        return res.status(500).json({
-          success: false,
-          error: 'Database models not available',
-        });
-      }
-      return res.status(500).json({
-        success: false,
-        error: 'Role level authorization failed',
-      });
+      return http.sendServerError(res, 'Role level authorization failed');
     }
   };
 }
@@ -341,6 +297,8 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
  */
 export function requireDynamicRole(getRoleRequirement) {
   return async (req, res, next) => {
+    const http = req.app.get('http');
+
     try {
       const requiredRole = getRoleRequirement(req);
 
@@ -350,10 +308,7 @@ export function requireDynamicRole(getRoleRequirement) {
         return requireRole(requiredRole)(req, res, next);
       }
     } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Dynamic role authorization failed',
-      });
+      return http.sendServerError(res, 'Dynamic role authorization failed');
     }
   };
 }

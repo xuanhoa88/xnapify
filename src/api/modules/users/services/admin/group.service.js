@@ -404,15 +404,10 @@ export async function getGroupCategories(models) {
   const { Group } = models;
 
   const { sequelize } = Group;
-  const { Op } = sequelize.Sequelize;
+  const { Op, fn, col } = sequelize.Sequelize;
 
   const categories = await Group.findAll({
-    attributes: [
-      [
-        models.Sequelize.fn('DISTINCT', models.Sequelize.col('category')),
-        'category',
-      ],
-    ],
+    attributes: [[fn('DISTINCT', col('category')), 'category']],
     where: {
       category: {
         [Op.ne]: null,
@@ -435,12 +430,10 @@ export async function getGroupTypes(models) {
   const { Group } = models;
 
   const { sequelize } = Group;
-  const { Op } = sequelize.Sequelize;
+  const { Op, fn, col } = sequelize.Sequelize;
 
   const types = await Group.findAll({
-    attributes: [
-      [models.Sequelize.fn('DISTINCT', models.Sequelize.col('type')), 'type'],
-    ],
+    attributes: [[fn('DISTINCT', col('type')), 'type']],
     where: {
       type: {
         [Op.ne]: null,
@@ -463,15 +456,12 @@ export async function getGroupStats(models) {
   const { Group } = models;
 
   const { sequelize } = Group;
-  const { Op } = sequelize.Sequelize;
+  const { Op, fn, col } = sequelize.Sequelize;
 
   const totalGroups = await Group.count();
 
   const categoryStats = await Group.findAll({
-    attributes: [
-      'category',
-      [models.Sequelize.fn('COUNT', models.Sequelize.col('category')), 'count'],
-    ],
+    attributes: ['category', [fn('COUNT', col('category')), 'count']],
     where: {
       category: {
         [Op.ne]: null,
@@ -483,10 +473,7 @@ export async function getGroupStats(models) {
   });
 
   const typeStats = await Group.findAll({
-    attributes: [
-      'type',
-      [models.Sequelize.fn('COUNT', models.Sequelize.col('type')), 'count'],
-    ],
+    attributes: ['type', [fn('COUNT', col('type')), 'count']],
     where: {
       type: {
         [Op.ne]: null,

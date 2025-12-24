@@ -13,7 +13,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { PageHeader, Icon } from '../../../../components/Admin';
+import { Page, Icon } from '../../../../components/Admin';
 import s from './CreateGroup.css';
 
 function CreateGroup() {
@@ -142,7 +142,7 @@ function CreateGroup() {
 
   return (
     <div className={s.root}>
-      <PageHeader
+      <Page.Header
         icon={<Icon name='folder' size={24} />}
         title='Create New Group'
         subtitle='Organize users into a new group'
@@ -150,7 +150,7 @@ function CreateGroup() {
         <button type='button' onClick={handleCancel} className={s.backBtn}>
           ← Back to Groups
         </button>
-      </PageHeader>
+      </Page.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
