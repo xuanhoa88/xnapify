@@ -36,10 +36,14 @@ export default function roleRoutes(deps, userMiddlewares) {
   /**
    * @route   POST /
    * @desc    Create a new role
-   * @access  Admin (requires 'roles:write' permission)
+   * @access  Admin (requires 'roles:create' permission)
    * @body    { name, description }
    */
-  router.post('/', requirePermission('roles:write'), roleController.createRole);
+  router.post(
+    '/',
+    requirePermission('roles:create'),
+    roleController.createRole,
+  );
 
   /**
    * @route   GET /:id
@@ -56,13 +60,13 @@ export default function roleRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id
    * @desc    Update role by ID
-   * @access  Admin (requires 'roles:write' permission)
+   * @access  Admin (requires 'roles:update' permission)
    * @param   {string} id - Role ID
    * @body    { name?, description? }
    */
   router.put(
     '/:id',
-    requirePermission('roles:write'),
+    requirePermission('roles:update'),
     roleController.updateRole,
   );
 
@@ -115,35 +119,35 @@ export default function roleRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id/permissions
    * @desc    Assign permissions to a role
-   * @access  Admin (requires 'roles:write' permission)
+   * @access  Admin (requires 'roles:update' permission)
    * @param   {string} id - Role ID
    * @body    { permission_ids }
    */
   router.put(
     '/:id/permissions',
-    requirePermission('roles:write'),
+    requirePermission('roles:update'),
     rbacController.assignPermissionsToRole,
   );
 
   /**
    * @route   POST /:id/permissions/:permission_id
    * @desc    Add a single permission to a role
-   * @access  Admin (requires 'roles:write' permission)
+   * @access  Admin (requires 'roles:update' permission)
    */
   router.post(
     '/:id/permissions/:permission_id',
-    requirePermission('roles:write'),
+    requirePermission('roles:update'),
     rbacController.addPermissionToRole,
   );
 
   /**
    * @route   DELETE /:id/permissions/:permission_id
    * @desc    Remove a permission from a role
-   * @access  Admin (requires 'roles:write' permission)
+   * @access  Admin (requires 'roles:update' permission)
    */
   router.delete(
     '/:id/permissions/:permission_id',
-    requirePermission('roles:write'),
+    requirePermission('roles:update'),
     rbacController.removePermissionFromRole,
   );
 

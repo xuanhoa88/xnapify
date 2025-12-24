@@ -174,7 +174,7 @@ function AdminSidebar() {
           <div className={s.footer}>
             <div className={s.userInfo}>
               <div className={s.userAvatar}>
-                {user.displayName?.charAt(0) || 'A'}
+                {(user.displayName && user.displayName.charAt(0)) || 'A'}
               </div>
               <div className={s.userDetails}>
                 <span className={s.userName}>

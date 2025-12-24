@@ -40,12 +40,12 @@ export default function groupRoutes(deps, userMiddlewares) {
   /**
    * @route   POST /
    * @desc    Create a new group
-   * @access  Admin (requires 'groups:write' permission)
+   * @access  Admin (requires 'groups:create' permission)
    * @body    { name, description, category, type }
    */
   router.post(
     '/',
-    requirePermission('groups:write'),
+    requirePermission('groups:create'),
     groupController.createGroup,
   );
 
@@ -74,34 +74,34 @@ export default function groupRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id/roles
    * @desc    Assign roles to group
-   * @access  Admin (requires 'groups:write' permission)
+   * @access  Admin (requires 'groups:update' permission)
    * @body    { role_names: [] }
    */
   router.put(
     '/:id/roles',
-    requirePermission('groups:write'),
+    requirePermission('groups:update'),
     rbacController.assignRolesToGroup,
   );
 
   /**
    * @route   POST /:id/roles/:role_id
    * @desc    Add a single role to group
-   * @access  Admin (requires 'groups:write' permission)
+   * @access  Admin (requires 'groups:update' permission)
    */
   router.post(
     '/:id/roles/:role_id',
-    requirePermission('groups:write'),
+    requirePermission('groups:update'),
     rbacController.addRoleToGroup,
   );
 
   /**
    * @route   DELETE /:id/roles/:role_id
    * @desc    Remove a role from group
-   * @access  Admin (requires 'groups:write' permission)
+   * @access  Admin (requires 'groups:update' permission)
    */
   router.delete(
     '/:id/roles/:role_id',
-    requirePermission('groups:write'),
+    requirePermission('groups:update'),
     rbacController.removeRoleFromGroup,
   );
 
@@ -130,12 +130,12 @@ export default function groupRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id
    * @desc    Update group by ID
-   * @access  Admin (requires 'groups:write' permission)
+   * @access  Admin (requires 'groups:update' permission)
    * @body    { name, description, category, type }
    */
   router.put(
     '/:id',
-    requirePermission('groups:write'),
+    requirePermission('groups:update'),
     groupController.updateGroupById,
   );
 

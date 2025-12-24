@@ -20,12 +20,6 @@ export async function up({ context, Sequelize }) {
       allowNull: false,
       comment: 'Unique permission identifier',
     },
-    name: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-      unique: true,
-      comment: 'Permission name (e.g., users:read, posts:write)',
-    },
     resource: {
       type: DataTypes.STRING(50),
       allowNull: false,
@@ -60,7 +54,6 @@ export async function up({ context, Sequelize }) {
   });
 
   // Add indexes for better query performance
-  await queryInterface.addIndex('permissions', ['name'], { unique: true });
   await queryInterface.addIndex('permissions', ['resource']);
   await queryInterface.addIndex('permissions', ['action']);
   await queryInterface.addIndex('permissions', ['resource', 'action'], {

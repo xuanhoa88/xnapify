@@ -58,7 +58,7 @@ async function getUserRolesWithCache(req) {
           {
             model: Permission,
             as: 'permissions',
-            attributes: ['name'],
+            attributes: ['resource', 'action', 'is_active'],
             through: { attributes: [] },
           },
         ],
@@ -77,7 +77,7 @@ async function getUserRolesWithCache(req) {
               {
                 model: Permission,
                 as: 'permissions',
-                attributes: ['name'],
+                attributes: ['resource', 'action', 'is_active'],
                 through: { attributes: [] },
               },
             ],

@@ -64,6 +64,135 @@ export const ADMIN_GROUP = 'administrators';
 export const SYSTEM_GROUPS = Object.freeze([DEFAULT_GROUP, ADMIN_GROUP]);
 
 // ------------------------------------------------------------------------
+// PERMISSIONS
+// Permissions define granular access rights following the resource:action pattern.
+// A permission consists of a resource (what) and an action (how).
+// ------------------------------------------------------------------------
+
+/**
+ * Standard RBAC actions (CRUD + wildcard)
+ */
+export const DEFAULT_ACTIONS = Object.freeze({
+  MANAGE: '*', // Wildcard: full control (all actions)
+  CREATE: 'create',
+  READ: 'read',
+  UPDATE: 'update',
+  DELETE: 'delete',
+});
+
+/**
+ * System resources
+ */
+export const DEFAULT_RESOURCES = Object.freeze({
+  ALL: '*', // Wildcard: all resources (super admin)
+  USERS: 'users',
+  ROLES: 'roles',
+  GROUPS: 'groups',
+  PERMISSIONS: 'permissions',
+});
+
+/**
+ * System permissions that cannot be deleted.
+ * Format: { resource, action, description }
+ */
+export const SYSTEM_PERMISSIONS = Object.freeze([
+  // Super admin - full access to all resources and actions
+  {
+    resource: DEFAULT_RESOURCES.ALL,
+    action: DEFAULT_ACTIONS.MANAGE,
+    description: 'Super admin - full system access',
+  },
+
+  // User management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.USERS,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create users',
+  },
+  {
+    resource: DEFAULT_RESOURCES.USERS,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View users',
+  },
+  {
+    resource: DEFAULT_RESOURCES.USERS,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Update users',
+  },
+  {
+    resource: DEFAULT_RESOURCES.USERS,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete users',
+  },
+
+  // Role management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.ROLES,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create roles',
+  },
+  {
+    resource: DEFAULT_RESOURCES.ROLES,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View roles',
+  },
+  {
+    resource: DEFAULT_RESOURCES.ROLES,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Update roles',
+  },
+  {
+    resource: DEFAULT_RESOURCES.ROLES,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete roles',
+  },
+
+  // Group management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.GROUPS,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create groups',
+  },
+  {
+    resource: DEFAULT_RESOURCES.GROUPS,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View groups',
+  },
+  {
+    resource: DEFAULT_RESOURCES.GROUPS,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Update groups',
+  },
+  {
+    resource: DEFAULT_RESOURCES.GROUPS,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete groups',
+  },
+
+  // Permission management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.PERMISSIONS,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create permissions',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PERMISSIONS,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View permissions',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PERMISSIONS,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Update permissions',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PERMISSIONS,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete permissions',
+  },
+]);
+
+// ------------------------------------------------------------------------
 // HELPER FUNCTIONS
 // ------------------------------------------------------------------------
 
@@ -81,40 +210,6 @@ export function isAdmin(user) {
     // Handle both string array and object array with 'name' property
     return user.roles.some(
       r => (typeof r === 'string' ? r : r && r.name) === ADMIN_ROLE,
-    );
-  }
-  return false;
-}
-
-/**
- * Check if a user has a specific role
- *
- * @param {object} user - User object
- * @param {string} roleName - Role name to check
- * @returns {boolean} True if user has the role
- */
-export function hasRole(user, roleName) {
-  if (!user) return false;
-  if (Array.isArray(user.roles)) {
-    return user.roles.some(
-      r => (typeof r === 'string' ? r : r && r.name) === roleName,
-    );
-  }
-  return false;
-}
-
-/**
- * Check if a user belongs to a specific group
- *
- * @param {object} user - User object
- * @param {string} groupName - Group name to check
- * @returns {boolean} True if user belongs to the group
- */
-export function inGroup(user, groupName) {
-  if (!user) return false;
-  if (Array.isArray(user.groups)) {
-    return user.groups.some(
-      g => (typeof g === 'string' ? g : g && g.name) === groupName,
     );
   }
   return false;

@@ -9,11 +9,12 @@
 // PERMISSION MANAGEMENT SERVICES
 // ========================================================================
 
+import { SYSTEM_PERMISSIONS } from '../../constants/rbac';
+
 /**
  * Create a new permission
  *
  * @param {Object} permissionData - Permission data
- * @param {string} permissionData.name - Auto-generated from resource:action
  * @param {string} permissionData.resource - Resource type (e.g., 'users')
  * @param {string} permissionData.action - Action type (e.g., 'read')
  * @param {string} permissionData.description - Permission description
@@ -22,22 +23,26 @@
  */
 export async function createPermission(permissionData, models) {
   const { Permission } = models;
-  const { name, resource, action, description } = permissionData;
+  const { resource, action, description, is_active } = permissionData;
 
   // Check if permission already exists
-  const existingPermission = await Permission.findOne({ where: { name } });
+  const existingPermission = await Permission.findOne({
+    where: { resource, action },
+  });
   if (existingPermission) {
-    const error = new Error(`Permission '${name}' already exists`);
+    const error = new Error(
+      `Permission '${resource}:${action}' already exists`,
+    );
     error.name = 'PermissionAlreadyExistsError';
     error.status = 400;
     throw error;
   }
 
   const permission = await Permission.create({
-    name,
     resource,
     action,
     description,
+    is_active: is_active !== undefined ? is_active : true,
   });
 
   return permission;
@@ -51,14 +56,21 @@ export async function createPermission(permissionData, models) {
  * @param {number} options.limit - Items per page
  * @param {string} options.search - Search term
  * @param {string} options.resource - Filter by resource
+ * @param {string} options.status - Filter by status: 'active' | 'inactive' | ''
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Permissions with pagination
  */
 export async function getPermissions(options, models) {
-  const { page = 1, limit = 10, search = '', resource = '' } = options;
+  const {
+    page = 1,
+    limit = 10,
+    search = '',
+    resource = '',
+    status = '',
+  } = options;
   const offset = (page - 1) * limit;
-  const { Permission } = models;
 
+  const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
@@ -66,13 +78,20 @@ export async function getPermissions(options, models) {
 
   if (search) {
     whereCondition[Op.or] = [
-      { name: { [Op.like]: `%${search}%` } },
+      { resource: { [Op.like]: `%${search}%` } },
+      { action: { [Op.like]: `%${search}%` } },
       { description: { [Op.like]: `%${search}%` } },
     ];
   }
 
   if (resource) {
     whereCondition.resource = resource;
+  }
+
+  if (status === 'active') {
+    whereCondition.is_active = true;
+  } else if (status === 'inactive') {
+    whereCondition.is_active = false;
   }
 
   const { count, rows: permissions } = await Permission.findAndCountAll({
@@ -87,6 +106,102 @@ export async function getPermissions(options, models) {
 
   return {
     permissions,
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: count,
+      pages: Math.ceil(count / limit),
+    },
+  };
+}
+
+/**
+ * Get unique resources for filter dropdown
+ *
+ * @param {Object} options - Query parameters
+ * @param {string} options.search - Search term
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Object with resources array and pagination
+ */
+export async function getPermissionResources(options, models) {
+  const { search = '', page = 1, limit = 10 } = options;
+  const offset = (page - 1) * limit;
+
+  const { Permission } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Build where condition for search
+  const whereCondition = {};
+  if (search) {
+    whereCondition.resource = { [Op.like]: `%${search}%` };
+  }
+
+  // Get total count of unique resources first
+  const countResult = await Permission.count({
+    where: whereCondition,
+    distinct: true,
+    col: 'resource',
+  });
+
+  // Get paginated resources using GROUP BY
+  const rows = await Permission.findAll({
+    attributes: ['resource'],
+    where: whereCondition,
+    group: ['resource'],
+    order: [['resource', 'ASC']],
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    raw: true,
+  });
+
+  return {
+    resources: rows.map(r => r.resource),
+    pagination: {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total: countResult,
+      pages: Math.ceil(countResult / limit),
+    },
+  };
+}
+
+/**
+ * Get permissions by resource name
+ *
+ * @param {string} resource - Resource name
+ * @param {Object} options - Query parameters
+ * @param {string} options.search - Search term for action
+ * @param {number} options.page - Page number
+ * @param {number} options.limit - Items per page
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Object with permissions array and pagination
+ */
+export async function getPermissionsByResource(resource, options, models) {
+  const { search = '', page = 1, limit = 10 } = options;
+  const offset = (page - 1) * limit;
+
+  const { Permission } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Build where condition
+  const whereCondition = { resource };
+  if (search) {
+    whereCondition.action = { [Op.like]: `%${search}%` };
+  }
+
+  const { count, rows } = await Permission.findAndCountAll({
+    where: whereCondition,
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    order: [['action', 'ASC']],
+  });
+
+  return {
+    permissions: rows,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -143,8 +258,9 @@ export async function updatePermission(permission_id, updateData, models) {
   const newResource = updateData.resource || permission.resource;
   const newAction = updateData.action || permission.action;
   const newName = `${newResource}:${newAction}`;
+  const currentName = `${permission.resource}:${permission.action}`;
 
-  if (newName !== permission.name) {
+  if (newName !== currentName) {
     const existingPermission = await Permission.findOne({
       where: {
         [Op.and]: [{ resource: newResource }, { action: newAction }],
@@ -159,8 +275,17 @@ export async function updatePermission(permission_id, updateData, models) {
     }
   }
 
-  // Ensure name is always synced with resource:action
-  await permission.update({ ...updateData, name: newName });
+  // Update only resource, action, description, is_active
+  const updateFields = {};
+  if (updateData.resource !== undefined)
+    updateFields.resource = updateData.resource;
+  if (updateData.action !== undefined) updateFields.action = updateData.action;
+  if (updateData.description !== undefined)
+    updateFields.description = updateData.description;
+  if (updateData.is_active !== undefined)
+    updateFields.is_active = updateData.is_active;
+
+  await permission.update(updateFields);
   return permission;
 }
 
@@ -183,15 +308,13 @@ export async function deletePermission(permission_id, models) {
   }
 
   // Prevent deletion of system permissions
-  const systemPermissions = [
-    'system:admin',
-    'users:read',
-    'users:write',
-    'roles:read',
-    'roles:write',
-  ];
-
-  if (systemPermissions.includes(permission.name)) {
+  if (
+    SYSTEM_PERMISSIONS.some(
+      perm =>
+        perm.resource === permission.resource &&
+        perm.action === permission.action,
+    )
+  ) {
     const error = new Error('Cannot delete system permissions');
     error.name = 'PermissionSystemError';
     error.status = 400;
@@ -200,47 +323,6 @@ export async function deletePermission(permission_id, models) {
 
   await permission.destroy();
   return permission;
-}
-
-/**
- * Get permissions by resource
- *
- * @param {string} resource - Resource name
- * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Array of permissions
- */
-export async function getPermissionsByResource(resource, models) {
-  const { Permission } = models;
-
-  const permissions = await Permission.findAll({
-    where: { resource },
-    order: [['action', 'ASC']],
-  });
-
-  return permissions;
-}
-
-/**
- * Get all unique resources
- *
- * @param {Object} models - Database models
- * @returns {Promise<string[]>} Array of resource names
- */
-export async function getResources(models) {
-  const { Permission } = models;
-
-  const resources = await Permission.findAll({
-    attributes: [
-      [
-        models.Sequelize.fn('DISTINCT', models.Sequelize.col('resource')),
-        'resource',
-      ],
-    ],
-    order: [['resource', 'ASC']],
-    raw: true,
-  });
-
-  return resources.map(r => r.resource);
 }
 
 /**
@@ -257,7 +339,7 @@ export async function bulkCreatePermissions(permissionsData, models) {
   for (const permData of permissionsData) {
     try {
       const existing = await Permission.findOne({
-        where: { name: permData.name },
+        where: { resource: permData.resource, action: permData.action },
       });
 
       if (!existing) {
@@ -266,102 +348,11 @@ export async function bulkCreatePermissions(permissionsData, models) {
       }
     } catch (error) {
       console.warn(
-        `Failed to create permission ${permData.name}:`,
+        `Failed to create permission ${permData.resource}:${permData.action}:`,
         error.message,
       );
     }
   }
 
   return createdPermissions;
-}
-
-/**
- * Get roles that have specific permission
- *
- * @param {string} permission_id - Permission ID
- * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Array of roles
- */
-export async function getRolesWithPermission(permission_id, models) {
-  const { Permission, Role } = models;
-
-  const permission = await Permission.findByPk(permission_id, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-      },
-    ],
-  });
-
-  if (!permission) {
-    const error = new Error('Permission not found');
-    error.name = 'PermissionNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  return permission.roles;
-}
-
-/**
- * Check if permission exists
- *
- * @param {string} permissionName - Permission name
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if permission exists
- */
-export async function permissionExists(permissionName, models) {
-  const { Permission } = models;
-
-  const permission = await Permission.findOne({
-    where: { name: permissionName },
-  });
-
-  return !!permission;
-}
-
-/**
- * Get permission statistics
- *
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Permission statistics
- */
-export async function getPermissionStats(models) {
-  const { Permission } = models;
-
-  const totalPermissions = await Permission.count();
-
-  const resourceStats = await Permission.findAll({
-    attributes: [
-      'resource',
-      [models.Sequelize.fn('COUNT', models.Sequelize.col('resource')), 'count'],
-    ],
-    group: ['resource'],
-    order: [['resource', 'ASC']],
-    raw: true,
-  });
-
-  const actionStats = await Permission.findAll({
-    attributes: [
-      'action',
-      [models.Sequelize.fn('COUNT', models.Sequelize.col('action')), 'count'],
-    ],
-    group: ['action'],
-    order: [['action', 'ASC']],
-    raw: true,
-  });
-
-  return {
-    total: totalPermissions,
-    byResource: resourceStats.reduce((acc, stat) => {
-      acc[stat.resource] = parseInt(stat.count);
-      return acc;
-    }, {}),
-    byAction: actionStats.reduce((acc, stat) => {
-      acc[stat.action] = parseInt(stat.count);
-      return acc;
-    }, {}),
-  };
 }

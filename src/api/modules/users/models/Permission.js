@@ -12,10 +12,8 @@
  * Defines permissions in the system.
  * Permissions are granular actions that can be assigned to roles.
  *
- * Examples:
- * - resource: 'users', action: 'read', name: 'users:read'
- * - resource: 'users', action: 'write', name: 'users:write'
- * - resource: 'posts', action: 'delete', name: 'posts:delete'
+ * Permission format: resource + action (e.g., 'users' + 'read')
+ * Display format: `${resource}:${action}` (e.g., 'users:read')
  *
  * @param {Object} connection - Sequelize connection instance
  * @param {Object} DataTypes - Sequelize data types
@@ -30,13 +28,6 @@ export default function createPermissionModel({ connection, DataTypes }) {
         defaultValue: DataTypes.UUIDV1,
         primaryKey: true,
         comment: 'Unique permission identifier',
-      },
-
-      name: {
-        type: DataTypes.STRING(100),
-        allowNull: false,
-        unique: true,
-        comment: 'Permission name (e.g., users:read, posts:write)',
       },
 
       resource: {

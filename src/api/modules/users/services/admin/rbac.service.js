@@ -9,373 +9,238 @@ import {
   ADMIN_ROLE,
   MODERATOR_ROLE,
   DEFAULT_ROLE,
+  SYSTEM_ROLES,
   ADMIN_GROUP,
   DEFAULT_GROUP,
+  SYSTEM_GROUPS,
+  DEFAULT_ACTIONS,
+  DEFAULT_RESOURCES,
+  SYSTEM_PERMISSIONS,
 } from '../../constants/rbac';
 import {
   invalidateUserCache,
   invalidateUsersCache,
+  getCachedUserRBAC,
+  setCachedUserRBAC,
 } from '../../utils/rbac-cache';
 
 /**
  * Create default groups
+ * Uses bulk operations instead of queries in loops
  *
  * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Created groups
+ * @returns {Promise<Object[]>} Created/existing groups
  */
 export async function createDefaultGroups(models) {
   const { Group } = models;
 
-  const defaultGroups = [
-    // Administrator group - Full system access
-    {
-      name: ADMIN_GROUP,
+  const groupMetadata = {
+    [ADMIN_GROUP]: {
       description: 'System administrators with full access to all resources',
       category: 'system',
       type: 'security',
     },
-
-    // Default user group - Basic access
-    {
-      name: DEFAULT_GROUP,
+    [DEFAULT_GROUP]: {
       description: 'Standard users with basic access permissions',
       category: 'standard',
       type: 'default',
     },
-  ];
+  };
 
-  const createdGroups = [];
+  // Fetch all existing groups in one query
+  const existingGroups = await Group.findAll({
+    where: { name: SYSTEM_GROUPS },
+  });
+  const existingNames = new Set(existingGroups.map(g => g.name));
 
-  for (const groupData of defaultGroups) {
-    try {
-      // Check if group already exists
-      const existing = await Group.findOne({
-        where: { name: groupData.name },
-      });
+  // Filter out groups that already exist
+  const newGroups = SYSTEM_GROUPS.filter(name => !existingNames.has(name)).map(
+    name => ({
+      name,
+      ...groupMetadata[name],
+      is_active: true,
+    }),
+  );
 
-      if (!existing) {
-        const group = await Group.create({
-          ...groupData,
-          is_active: true,
-        });
-        createdGroups.push(group);
-      } else {
-        createdGroups.push(existing);
-      }
-    } catch (error) {
-      // Continue with other groups if one fails
-      console.warn(`Failed to create group ${groupData.name}:`, error.message);
-    }
-  }
+  // Bulk create new groups
+  const createdGroups =
+    newGroups.length > 0 ? await Group.bulkCreate(newGroups) : [];
 
-  return createdGroups;
+  return [...existingGroups, ...createdGroups];
 }
 
 /**
  * Create default permissions for common resources
+ * Uses bulk operations instead of queries in loops
  *
  * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Created permissions
+ * @returns {Promise<Object[]>} Created/existing permissions
  */
 export async function createDefaultPermissions(models) {
   const { Permission } = models;
 
-  const defaultPermissions = [
-    // User Management
-    {
-      name: 'users:create',
-      resource: 'users',
-      action: 'create',
-      description: 'Create new users',
+  // Fetch all existing permissions in one query
+  const existingPerms = await Permission.findAll({
+    where: {
+      resource: SYSTEM_PERMISSIONS.map(p => p.resource),
     },
-    {
-      name: 'users:read',
-      resource: 'users',
-      action: 'read',
-      description: 'View users',
-    },
-    {
-      name: 'users:update',
-      resource: 'users',
-      action: 'update',
-      description: 'Update existing users',
-    },
-    {
-      name: 'users:delete',
-      resource: 'users',
-      action: 'delete',
-      description: 'Delete users',
-    },
-    {
-      name: 'users:manage',
-      resource: 'users',
-      action: 'manage',
-      description: 'Full user management (includes all user actions)',
-    },
+  });
 
-    // Role Management
-    {
-      name: 'roles:create',
-      resource: 'roles',
-      action: 'create',
-      description: 'Create new roles',
-    },
-    {
-      name: 'roles:read',
-      resource: 'roles',
-      action: 'read',
-      description: 'View roles',
-    },
-    {
-      name: 'roles:update',
-      resource: 'roles',
-      action: 'update',
-      description: 'Update existing roles',
-    },
-    {
-      name: 'roles:delete',
-      resource: 'roles',
-      action: 'delete',
-      description: 'Delete roles',
-    },
-    {
-      name: 'roles:manage',
-      resource: 'roles',
-      action: 'manage',
-      description: 'Full role management (includes all role actions)',
-    },
+  // Build a Set of existing resource:action keys
+  const existingKeys = new Set(
+    existingPerms.map(p => `${p.resource}:${p.action}`),
+  );
 
-    // Permission Management
-    {
-      name: 'permissions:create',
-      resource: 'permissions',
-      action: 'create',
-      description: 'Create new permissions',
-    },
-    {
-      name: 'permissions:read',
-      resource: 'permissions',
-      action: 'read',
-      description: 'View permissions',
-    },
-    {
-      name: 'permissions:update',
-      resource: 'permissions',
-      action: 'update',
-      description: 'Update existing permissions',
-    },
-    {
-      name: 'permissions:delete',
-      resource: 'permissions',
-      action: 'delete',
-      description: 'Delete permissions',
-    },
-    {
-      name: 'permissions:manage',
-      resource: 'permissions',
-      action: 'manage',
-      description:
-        'Full permission management (includes all permission actions)',
-    },
+  // Filter out permissions that already exist
+  const newPerms = SYSTEM_PERMISSIONS.filter(
+    p => !existingKeys.has(`${p.resource}:${p.action}`),
+  ).map(metadata => ({
+    ...metadata,
+    is_active: true,
+  }));
 
-    // Group Management
-    {
-      name: 'groups:create',
-      resource: 'groups',
-      action: 'create',
-      description: 'Create new groups',
-    },
-    {
-      name: 'groups:read',
-      resource: 'groups',
-      action: 'read',
-      description: 'View groups',
-    },
-    {
-      name: 'groups:update',
-      resource: 'groups',
-      action: 'update',
-      description: 'Update existing groups',
-    },
-    {
-      name: 'groups:delete',
-      resource: 'groups',
-      action: 'delete',
-      description: 'Delete groups',
-    },
-    {
-      name: 'groups:manage',
-      resource: 'groups',
-      action: 'manage',
-      description: 'Full group management (includes all group actions)',
-    },
+  // Bulk create new permissions
+  const createdPerms =
+    newPerms.length > 0 ? await Permission.bulkCreate(newPerms) : [];
 
-    // System Administration
-    {
-      name: 'system:admin',
-      resource: 'system',
-      action: 'admin',
-      description: 'Full system administration',
-    },
-    {
-      name: 'system:settings',
-      resource: 'system',
-      action: 'settings',
-      description: 'Manage system settings',
-    },
-  ];
-
-  const createdPermissions = [];
-
-  for (const permData of defaultPermissions) {
-    try {
-      // Check if permission already exists
-      const existing = await Permission.findOne({
-        where: { name: permData.name },
-      });
-
-      if (!existing) {
-        const permission = await Permission.create(permData);
-        createdPermissions.push(permission);
-      }
-    } catch (error) {
-      // Continue with other permissions if one fails
-      console.warn(
-        `Failed to create permission ${permData.name}:`,
-        error.message,
-      );
-    }
-  }
-
-  return createdPermissions;
+  return [...existingPerms, ...createdPerms];
 }
 
 /**
  * Create default roles for the RBAC system
+ * Uses bulk operations instead of queries in loops
  *
  * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Created roles
+ * @returns {Promise<Object[]>} Created/existing roles
  */
 export async function createDefaultRoles(models) {
   const { Role } = models;
 
-  const defaultRoles = [
-    {
-      name: ADMIN_ROLE,
+  const roleMetadata = {
+    [ADMIN_ROLE]: {
       description: 'Administrator - Full system access to all resources',
     },
-    {
-      name: DEFAULT_ROLE,
+    [DEFAULT_ROLE]: {
       description: 'User - Basic read access to own resources',
     },
-    {
-      name: MODERATOR_ROLE,
+    [MODERATOR_ROLE]: {
       description: 'Moderator - Content moderation and review permissions',
     },
-  ];
+  };
 
-  const createdRoles = [];
+  // Fetch all existing roles in one query
+  const existingRoles = await Role.findAll({
+    where: { name: SYSTEM_ROLES },
+  });
+  const existingNames = new Set(existingRoles.map(r => r.name));
 
-  for (const roleData of defaultRoles) {
-    try {
-      // Check if role already exists
-      const existing = await Role.findOne({
-        where: { name: roleData.name },
-      });
+  // Filter out roles that already exist
+  const newRoles = SYSTEM_ROLES.filter(name => !existingNames.has(name)).map(
+    name => ({
+      name,
+      ...roleMetadata[name],
+      is_active: true,
+    }),
+  );
 
-      if (!existing) {
-        const role = await Role.create({
-          ...roleData,
-          is_active: true,
-        });
-        createdRoles.push(role);
-      } else {
-        createdRoles.push(existing);
-      }
-    } catch (error) {
-      // Continue with other roles if one fails
-      console.warn(`Failed to create role ${roleData.name}:`, error.message);
-    }
-  }
+  // Bulk create new roles
+  const createdRoles =
+    newRoles.length > 0 ? await Role.bulkCreate(newRoles) : [];
 
-  return createdRoles;
+  return [...existingRoles, ...createdRoles];
 }
 
 /**
- * Initialize default roles
+ * Initialize default RBAC configuration
+ *
+ * Creates default permissions, roles, and groups, then assigns:
+ * - Admin role: All permissions
+ * - User role: Read-only permissions
+ * - Moderator role: Read + user/group update permissions
  *
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Setup result
+ * @returns {Promise<Object>} Setup result with counts and message
  */
 export async function initializeDefault(models) {
   const { Permission } = models;
-
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
-  // Create default permissions
-  const permissions = await createDefaultPermissions(models);
+  try {
+    // Step 1: Create default resources
+    const permissions = await createDefaultPermissions(models);
+    const roles = await createDefaultRoles(models);
+    const groups = await createDefaultGroups(models);
 
-  // Create default roles
-  const roles = await createDefaultRoles(models);
+    // Step 2: Get role references
+    const adminRole = roles.find(r => r.name === ADMIN_ROLE);
+    const userRole = roles.find(r => r.name === DEFAULT_ROLE);
+    const moderatorRole = roles.find(r => r.name === MODERATOR_ROLE);
 
-  // Get role references
-  const adminRole = roles.find(r => r.name === ADMIN_ROLE);
-  const userRole = roles.find(r => r.name === DEFAULT_ROLE);
-  const moderatorRole = roles.find(r => r.name === MODERATOR_ROLE);
-
-  // Create default groups
-  const groups = await createDefaultGroups(models);
-
-  // Assign all permissions to admin role
-  const allPermissions = await Permission.findAll();
-  await adminRole.setPermissions(allPermissions);
-
-  // Assign basic read permissions to user role
-  const basicPermissions = await Permission.findAll({
-    where: {
-      action: 'read',
-    },
-  });
-  await userRole.setPermissions(basicPermissions);
-
-  // Assign moderation permissions to moderator role
-  // Moderators can read all, and manage users/groups (but not roles/permissions)
-  const moderationPermissions = await Permission.findAll({
-    where: {
-      [Op.or]: [
-        { action: 'read' },
-        {
-          resource: 'users',
-          action: { [Op.in]: ['create', 'update'] },
+    // Step 3: Assign permissions to roles
+    if (adminRole) {
+      // Admin gets super admin permission (*:*) for full access
+      const superAdminPermission = await Permission.findOne({
+        where: {
+          resource: DEFAULT_RESOURCES.ALL,
+          action: DEFAULT_ACTIONS.MANAGE,
         },
-        {
-          resource: 'groups',
-          action: { [Op.in]: ['create', 'update'] },
+      });
+      if (superAdminPermission) {
+        await adminRole.setPermissions([superAdminPermission]);
+      }
+    }
+
+    if (userRole) {
+      // User gets read-only permissions
+      const readPermissions = await Permission.findAll({
+        where: { action: DEFAULT_ACTIONS.READ },
+      });
+      await userRole.setPermissions(readPermissions);
+    }
+
+    if (moderatorRole) {
+      // Moderator gets read + update on users/groups
+      const modPermissions = await Permission.findAll({
+        where: {
+          [Op.or]: [
+            { action: DEFAULT_ACTIONS.READ },
+            {
+              resource: DEFAULT_RESOURCES.USERS,
+              action: DEFAULT_ACTIONS.UPDATE,
+            },
+            {
+              resource: DEFAULT_RESOURCES.GROUPS,
+              action: DEFAULT_ACTIONS.UPDATE,
+            },
+          ],
         },
-      ],
-    },
-  });
-  await moderatorRole.setPermissions(moderationPermissions);
+      });
+      await moderatorRole.setPermissions(modPermissions);
+    }
 
-  // Assign roles to groups
-  const adminGroup = groups.find(g => g.name === ADMIN_GROUP);
-  const usersGroup = groups.find(g => g.name === DEFAULT_GROUP);
+    // Step 4: Assign roles to groups
+    const adminGroup = groups.find(g => g.name === ADMIN_GROUP);
+    const usersGroup = groups.find(g => g.name === DEFAULT_GROUP);
 
-  if (adminGroup) {
-    await adminGroup.addRole(adminRole);
+    if (adminGroup && adminRole) {
+      await adminGroup.addRole(adminRole);
+    }
+
+    if (usersGroup && userRole) {
+      await usersGroup.addRole(userRole);
+    }
+
+    return {
+      permissions: permissions.length,
+      roles: roles.length,
+      groups: groups.length,
+      message: 'Default RBAC setup completed successfully',
+    };
+  } catch (error) {
+    console.error('[initializeDefault] Failed:', error.message);
+    throw error;
   }
-
-  if (usersGroup) {
-    await usersGroup.addRole(userRole);
-  }
-
-  return {
-    permissions: permissions.length,
-    roles: roles.length,
-    groups: groups.length,
-    message: 'Default RBAC setup completed successfully',
-  };
 }
 
 // ========================================================================
@@ -634,12 +499,26 @@ export async function removeGroupFromUser(user_id, group_id, models) {
 
 /**
  * Get user's effective permissions (from roles and groups)
+ * Uses in-memory cache for performance (5-minute TTL)
  *
  * @param {string} user_id - User ID
  * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Array of permissions
+ * @param {Object} [options] - Options
+ * @param {boolean} [options.forceRefresh=false] - Force fetch from database
+ * @returns {Promise<string[]>} Array of permission strings (e.g., 'users:read')
  */
-export async function getUserPermissions(user_id, models) {
+export async function getUserPermissions(user_id, models, options = {}) {
+  const { forceRefresh = false } = options;
+
+  // Check cache first (unless force refresh requested)
+  if (!forceRefresh) {
+    const cached = getCachedUserRBAC(user_id);
+    if (cached) {
+      return cached.permissions;
+    }
+  }
+
+  // Fetch from database
   const { User, Role, Permission, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -685,38 +564,97 @@ export async function getUserPermissions(user_id, models) {
     throw error;
   }
 
+  // Collect permissions and roles
   const permissions = new Set();
+  const roles = new Set();
+  const groups = [];
 
-  // Add permissions from direct roles
+  // Add from direct roles
   user.roles.forEach(role => {
+    roles.add(role.name);
     role.permissions.forEach(permission => {
-      permissions.add(permission.name);
+      if (permission.is_active !== false) {
+        permissions.add(`${permission.resource}:${permission.action}`);
+      }
     });
   });
 
-  // Add permissions from group roles
+  // Add from group roles
   user.groups.forEach(group => {
+    groups.push({ id: group.id, name: group.name });
     group.roles.forEach(role => {
+      roles.add(role.name);
       role.permissions.forEach(permission => {
-        permissions.add(permission.name);
+        if (permission.is_active !== false) {
+          permissions.add(`${permission.resource}:${permission.action}`);
+        }
       });
     });
   });
 
-  return Array.from(permissions).sort();
+  const permissionList = Array.from(permissions).sort();
+
+  // Cache the result
+  setCachedUserRBAC(user_id, {
+    roles: Array.from(roles),
+    permissions: permissionList,
+    groups,
+  });
+
+  return permissionList;
 }
 
 /**
  * Check if user has specific permission
  *
+ * Supports flexible permission matching:
+ * - Exact match: 'users:read' matches 'users:read'
+ * - Wildcard action: 'users:*' matches 'users:read', 'users:update', etc.
+ * - Super admin: '*:*' matches any permission
+ * - Resource-only: checking 'users' matches any 'users:*' permission
+ *
  * @param {string} user_id - User ID
- * @param {string} permissionName - Permission name
+ * @param {string} permissionName - Permission name (e.g., 'users', 'users:read')
  * @param {Object} models - Database models
  * @returns {Promise<boolean>} True if user has permission
  */
 export async function userHasPermission(user_id, permissionName, models) {
   const permissions = await getUserPermissions(user_id, models);
-  return permissions.includes(permissionName);
+  return matchesPermission(permissions, permissionName);
+}
+
+/**
+ * Helper function to check if a permission matches with wildcard support
+ *
+ * @param {string[]} userPermissions - Array of user's permissions
+ * @param {string} permissionName - Permission to check
+ * @returns {boolean} True if matches
+ */
+function matchesPermission(userPermissions, permissionName) {
+  // Super admin check
+  if (userPermissions.includes('*:*')) {
+    return true;
+  }
+
+  // Exact match
+  if (userPermissions.includes(permissionName)) {
+    return true;
+  }
+
+  // Parse the requested permission
+  const [resource, action] = permissionName.split(':');
+
+  // Resource-only check (e.g., 'users' matches any 'users:*')
+  if (!action) {
+    return userPermissions.some(perm => perm.startsWith(`${resource}:`));
+  }
+
+  // Wildcard action check (e.g., 'users:*' matches 'users:read')
+  if (userPermissions.includes(`${resource}:*`)) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -729,7 +667,9 @@ export async function userHasPermission(user_id, permissionName, models) {
  */
 export async function userHasAnyPermission(user_id, permissionNames, models) {
   const permissions = await getUserPermissions(user_id, models);
-  return permissionNames.some(permission => permissions.includes(permission));
+  return permissionNames.some(permName =>
+    matchesPermission(permissions, permName),
+  );
 }
 
 /**
@@ -742,7 +682,9 @@ export async function userHasAnyPermission(user_id, permissionNames, models) {
  */
 export async function userHasAllPermissions(user_id, permissionNames, models) {
   const permissions = await getUserPermissions(user_id, models);
-  return permissionNames.every(permission => permissions.includes(permission));
+  return permissionNames.every(permName =>
+    matchesPermission(permissions, permName),
+  );
 }
 
 /**
@@ -919,7 +861,7 @@ export async function getUserRBACProfile(user_id, models) {
       id: role.id,
       name: role.name,
       description: role.description,
-      permissions: role.permissions.map(p => p.name),
+      permissions: role.permissions.map(p => `${p.resource}:${p.action}`),
     })),
     groups: user.groups.map(group => ({
       id: group.id,
@@ -930,7 +872,7 @@ export async function getUserRBACProfile(user_id, models) {
       roles: group.roles.map(role => ({
         id: role.id,
         name: role.name,
-        permissions: role.permissions.map(p => p.name),
+        permissions: role.permissions.map(p => `${p.resource}:${p.action}`),
       })),
     })),
     effectivePermissions: permissions,
@@ -976,7 +918,7 @@ export async function getGroupPermissions(group_id, models) {
 
   // Get permissions from each role
   group.roles.forEach(role => {
-    const rolePerms = role.permissions.map(p => p.name);
+    const rolePerms = role.permissions.map(p => `${p.resource}:${p.action}`);
     rolePerms.forEach(p => permissions.add(p));
     roleDetails.push({
       id: role.id,
@@ -1038,7 +980,7 @@ export async function getGroupRoles(group_id, models) {
       description: role.description,
       permissions: role.permissions.map(p => ({
         id: p.id,
-        name: p.name,
+        name: `${p.resource}:${p.action}`,
       })),
     })),
   };
@@ -1454,5 +1396,8 @@ export async function getRolePermissions(role_id, models) {
  */
 export async function roleHasPermission(role_id, permissionName, models) {
   const permissions = await getRolePermissions(role_id, models);
-  return permissions.some(permission => permission.name === permissionName);
+  return permissions.some(
+    permission =>
+      `${permission.resource}:${permission.action}` === permissionName,
+  );
 }

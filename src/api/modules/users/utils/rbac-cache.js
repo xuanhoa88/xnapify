@@ -156,7 +156,12 @@ export function collectUserRBACData(user) {
     user.roles.forEach(role => {
       rolesSet.add(role.name);
       if (role.permissions) {
-        role.permissions.forEach(perm => permissionsSet.add(perm.name));
+        role.permissions.forEach(perm => {
+          // Only include active permissions
+          if (perm.is_active !== false) {
+            permissionsSet.add(`${perm.resource}:${perm.action}`);
+          }
+        });
       }
     });
   }
@@ -174,7 +179,12 @@ export function collectUserRBACData(user) {
         group.roles.forEach(role => {
           rolesSet.add(role.name);
           if (role.permissions) {
-            role.permissions.forEach(perm => permissionsSet.add(perm.name));
+            role.permissions.forEach(perm => {
+              // Only include active permissions
+              if (perm.is_active !== false) {
+                permissionsSet.add(`${perm.resource}:${perm.action}`);
+              }
+            });
           }
         });
       }

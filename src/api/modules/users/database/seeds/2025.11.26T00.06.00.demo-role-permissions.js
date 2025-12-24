@@ -14,247 +14,88 @@ import { demoPermissionIds } from './2025.11.26T00.04.00.demo-permissions';
  */
 export async function up({ context }) {
   const { queryInterface } = context;
-
   const now = new Date();
 
   const rolePermissions = [
-    // Admin role - all permissions
+    // Admin role - super admin permission (*:*)
     {
       id: uuidv4(),
       role_id: demoRoleIds.admin,
+      permission_id: demoPermissionIds.superAdmin,
+      created_at: now,
+      updated_at: now,
+    },
+
+    // User role - read-only permissions
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.user,
       permission_id: demoPermissionIds.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.usersWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.usersDelete,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.postsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.postsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.postsDelete,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.commentsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.commentsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.commentsDelete,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.settingsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.settingsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
+      role_id: demoRoleIds.user,
       permission_id: demoPermissionIds.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.rolesWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.permissionsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.permissionsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
+      role_id: demoRoleIds.user,
       permission_id: demoPermissionIds.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.groupsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.usersManage,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.systemAdmin,
+      role_id: demoRoleIds.user,
+      permission_id: demoPermissionIds.permissionsRead,
       created_at: now,
       updated_at: now,
     },
 
-    // User role - basic read/write permissions
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.postsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.postsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.commentsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.commentsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-
-    // Moderator role - read all, delete comments/posts
+    // Moderator role - read all + update users/groups
     {
       id: uuidv4(),
       role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.postsRead,
+      permission_id: demoPermissionIds.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.postsDelete,
+      permission_id: demoPermissionIds.usersUpdate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.commentsRead,
+      permission_id: demoPermissionIds.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.commentsDelete,
-      created_at: now,
-      updated_at: now,
-    },
-
-    // Editor role - read/write posts and comments
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.postsRead,
+      permission_id: demoPermissionIds.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.postsWrite,
+      role_id: demoRoleIds.mod,
+      permission_id: demoPermissionIds.groupsUpdate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.commentsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.commentsWrite,
-      created_at: now,
-      updated_at: now,
-    },
-
-    // Viewer role - read-only access
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.postsRead,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.commentsRead,
+      role_id: demoRoleIds.mod,
+      permission_id: demoPermissionIds.permissionsRead,
       created_at: now,
       updated_at: now,
     },

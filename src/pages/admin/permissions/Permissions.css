@@ -34,6 +34,133 @@
   box-shadow: var(--shadow-md);
 }
 
+/* Filters Section - matches Users.css */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+  background: var(--color-background);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  align-items: center;
+}
+
+/* Search Bar - matches Users.css */
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-width: 200px;
+}
+
+/* Filter dropdowns */
+.filterSearchableSelect {
+  min-width: 140px;
+}
+
+/* Filter Actions */
+.filterActions {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--color-text-secondary);
+  transition: var(--transition-base);
+}
+
+.searchWrapper:focus-within .searchIcon {
+  color: var(--color-primary);
+}
+
+.searchInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--spacing-4);
+  padding-left: calc(var(--spacing-3) + 28px);
+  padding-right: calc(var(--spacing-3) + 32px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+  transition: var(--transition-base);
+}
+
+.searchInput:hover {
+  border-color: var(--color-border-hover);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.searchClear {
+  position: absolute;
+  right: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--color-background-tertiary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+  z-index: 2;
+}
+
+.searchClear:hover {
+  background: var(--color-error);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* Clear Filters Button - matches Users.css */
+.clearFiltersBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: 0 var(--spacing-3);
+  height: 40px;
+  background: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+  white-space: nowrap;
+}
+
+.clearFiltersBtn:hover {
+  background: #fee2e2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
 .categorySection {
   margin-bottom: var(--spacing-8);
 }
@@ -53,98 +180,25 @@
   gap: var(--spacing-4);
 }
 
-.permissionCard {
-  background: var(--color-background-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-5);
-  transition: var(--transition-base);
-}
-
-.permissionCard:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
-}
-
-.permissionHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: var(--spacing-3);
-}
-
-.permissionName {
-  margin: 0;
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-semibold);
-  color: var(--color-text);
-  font-family: monospace;
-  background: var(--color-background);
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-sm);
-}
-
-.permissionActions {
-  display: flex;
-  gap: var(--spacing-2);
-}
-
-.editBtn,
-.deleteBtn {
-  padding: var(--spacing-1);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 1rem;
-  transition: var(--transition-base);
-  border-radius: var(--radius-sm);
-}
-
-.editBtn:hover,
-.deleteBtn:hover {
-  background: var(--color-background);
-  transform: scale(1.1);
-}
-
-.permissionDescription {
-  margin: 0 0 var(--spacing-4) 0;
-  color: var(--color-text-secondary);
-  line-height: 1.6;
-  font-size: var(--font-size-sm);
-}
-
-.permissionMeta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-2);
-}
-
-.metaLabel {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-weight: var(--font-weight-medium);
-}
-
-.metaValue {
-  font-size: var(--font-size-sm);
-  color: var(--color-text);
-  font-weight: var(--font-weight-medium);
-}
-
 /* Error state */
 .error {
   padding: var(--spacing-8);
   text-align: center;
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .error p {
-  color: #dc3545;
-  margin-bottom: var(--spacing-4);
+  color: #dc2626;
+  margin: 0 0 var(--spacing-4) 0;
   font-size: var(--font-size-base);
+  font-weight: var(--font-weight-medium);
 }
 
 /* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
+   RESPONSIVE DESIGN - TABLET & MOBILE
    ============================================================================= */
 
 @media (max-width: 768px) {
@@ -157,6 +211,42 @@
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-xs);
     gap: var(--spacing-1);
+  }
+
+  /* Filters - improved mobile layout */
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .searchWrapper {
+    grid-column: 1 / -1; /* Full width */
+    min-width: unset;
+  }
+
+  .searchInput {
+    height: 36px;
+    font-size: var(--font-size-xs);
+  }
+
+  .filterSearchableSelect {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .filterActions {
+    grid-column: 1 / -1;
+    display: flex;
+  }
+
+  .clearFiltersBtn {
+    width: 100%;
+    height: 36px;
+    justify-content: center;
+    font-size: var(--font-size-xs);
   }
 
   /* Category section compact */
@@ -176,44 +266,6 @@
     gap: var(--spacing-3);
   }
 
-  /* Permission card compact */
-  .permissionCard {
-    padding: var(--spacing-3);
-  }
-
-  .permissionHeader {
-    margin-bottom: var(--spacing-2);
-  }
-
-  .permissionName {
-    font-size: var(--font-size-xs);
-    padding: 2px var(--spacing-1);
-  }
-
-  .permissionDescription {
-    font-size: var(--font-size-xs);
-    margin-bottom: var(--spacing-3);
-  }
-
-  .permissionMeta {
-    gap: var(--spacing-1);
-  }
-
-  .metaLabel {
-    font-size: 10px;
-  }
-
-  .metaValue {
-    font-size: var(--font-size-xs);
-  }
-
-  .editBtn,
-  .deleteBtn {
-    font-size: 0.9rem;
-    padding: 2px;
-  }
-
-  /* Error state */
   .error {
     padding: var(--spacing-6);
     font-size: var(--font-size-sm);
@@ -226,8 +278,9 @@
     padding: var(--spacing-2);
   }
 
-  .permissionCard {
+  .filters {
     padding: var(--spacing-2);
+    gap: var(--spacing-2);
   }
 
   .categoryTitle {

@@ -27,20 +27,43 @@ export default function permissionRoutes(deps, userMiddlewares) {
   /**
    * @route   POST /
    * @desc    Create a new permission
-   * @access  Admin (requires 'permissions:write' permission)
+   * @access  Admin (requires 'permissions:create' permission)
    * @body    { name, resource, action, description }
    */
   router.post(
     '/',
-    requirePermission('permissions:write'),
+    requirePermission('permissions:create'),
     permissionController.createPermission,
+  );
+
+  /**
+   * @route   GET /resources
+   * @desc    Get unique resources for filter dropdown
+   * @access  Admin (requires 'permissions:read' permission)
+   */
+  router.get(
+    '/resources',
+    requirePermission('permissions:read'),
+    permissionController.getPermissionResources,
+  );
+
+  /**
+   * @route   GET /resources/:resource
+   * @desc    Get permissions by resource with pagination
+   * @access  Admin (requires 'permissions:read' permission)
+   * @query   { page, limit, search }
+   */
+  router.get(
+    '/resources/:resource',
+    requirePermission('permissions:read'),
+    permissionController.getPermissionsByResource,
   );
 
   /**
    * @route   GET /
    * @desc    Get all permissions with pagination
    * @access  Admin (requires 'permissions:read' permission)
-   * @query   { page, limit, search, resource }
+   * @query   { page, limit, search, resource, status }
    */
   router.get(
     '/',
@@ -62,11 +85,11 @@ export default function permissionRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id
    * @desc    Update permission by ID
-   * @access  Admin (requires 'permissions:write' permission)
+   * @access  Admin (requires 'permissions:update' permission)
    */
   router.put(
     '/:id',
-    requirePermission('permissions:write'),
+    requirePermission('permissions:update'),
     permissionController.updatePermission,
   );
 

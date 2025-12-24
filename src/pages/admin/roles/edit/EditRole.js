@@ -331,7 +331,7 @@ function EditRole({ roleId }) {
                                   />
                                   <span>
                                     <span className={s.permissionName}>
-                                      {permission.action || permission.name}
+                                      {permission.action}
                                     </span>
                                     {permission.description && (
                                       <span className={s.itemDescription}>

@@ -15,7 +15,7 @@ import * as rbacService from '../../services/admin/rbac.service';
  * Initialize roles, permissions and groups
  *
  * @route   POST /api/admin/roles/initialize
- * @access  Admin (requires 'system:admin' permission)
+ * @access  Admin (requires '*:*' permission - super admin)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -217,7 +217,7 @@ export async function getUserPermissions(req, res) {
 /**
  * Check if user has specific permission
  *
- * @route   GET /api/users/:id/permissions/:permission
+ * @route   GET /api/users/:id/permissions/:resource/:action?
  * @access  Admin (requires 'users:read' permission) or Self
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -225,7 +225,13 @@ export async function getUserPermissions(req, res) {
 export async function checkUserPermission(req, res) {
   const http = req.app.get('http');
   try {
-    const { id, permission } = req.params;
+    const { id, resource, action } = req.params;
+
+    // Build permission name based on provided params
+    let permissionName = resource;
+    if (action) {
+      permissionName += `:${action}`;
+    }
 
     // Get models from app context
     const models = req.app.get('models');
@@ -233,13 +239,15 @@ export async function checkUserPermission(req, res) {
     // Check permission
     const hasPermission = await rbacService.userHasPermission(
       id,
-      permission,
+      permissionName,
       models,
     );
 
     return http.sendSuccess(res, {
       user_id: id,
-      permission,
+      permission: permissionName,
+      resource,
+      action: action || null,
       hasPermission,
     });
   } catch (error) {

@@ -77,7 +77,8 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Body error={error}>
         <Modal.Description>
           Are you sure you want to delete the permission &quot;
-          {permission && permission.name}&quot;? This action cannot be undone.
+          {permission && `${permission.resource}:${permission.action}`}
+          &quot;? This action cannot be undone.
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>

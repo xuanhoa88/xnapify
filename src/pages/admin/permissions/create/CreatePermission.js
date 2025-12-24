@@ -19,6 +19,7 @@ export default function CreatePermission() {
     resource: '',
     action: '',
     description: '',
+    is_active: true,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -42,8 +43,11 @@ export default function CreatePermission() {
   );
 
   const handleChange = useCallback(e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
   }, []);
 
   const handleCancel = useCallback(() => {
@@ -115,6 +119,26 @@ export default function CreatePermission() {
                 placeholder='Describe what this permission allows...'
                 rows={3}
               />
+            </div>
+          </div>
+
+          <div className={s.formSection}>
+            <h3 className={s.sectionTitle}>Status</h3>
+
+            <div className={s.checkboxGroup}>
+              <label className={s.checkboxLabel}>
+                <input
+                  type='checkbox'
+                  name='is_active'
+                  checked={formData.is_active}
+                  onChange={handleChange}
+                />
+                <span>Active</span>
+              </label>
+              <p className={s.checkboxHint}>
+                Inactive permissions will not be enforced in authorization
+                checks
+              </p>
             </div>
           </div>
 

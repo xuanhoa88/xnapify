@@ -153,6 +153,32 @@
   color: var(--color-text-tertiary);
 }
 
+.checkboxGroup {
+  margin-bottom: var(--spacing-4);
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+}
+
+.checkboxLabel input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.checkboxHint {
+  margin: var(--spacing-2) 0 0 27px;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
 .formError {
   padding: var(--spacing-4);
   background: #fee2e2;

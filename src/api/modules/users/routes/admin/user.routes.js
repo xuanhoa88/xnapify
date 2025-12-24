@@ -159,14 +159,15 @@ export default function userRoutes(deps, userMiddlewares) {
   );
 
   /**
-   * @route   GET /:id/permissions/:permission
+   * @route   GET /:id/permissions/:resource/:action?
    * @desc    Check if user has specific permission
    * @access  Admin (requires 'users:read' permission) or Self
    * @param   {string} id - User ID
-   * @param   {string} permission - Permission name
+   * @param   {string} resource - Permission resource (e.g., 'users')
+   * @param   {string} [action] - Permission action (e.g., 'read') - optional
    */
   router.get(
-    '/:id/permissions/:permission',
+    '/:id/permissions/:resource/:action?',
     requireAnyPermission(['users:read', 'users:manage']),
     rbacController.checkUserPermission,
   );

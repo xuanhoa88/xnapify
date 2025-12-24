@@ -9,25 +9,28 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Store permission IDs for use in other seeds
 export const demoPermissionIds = {
+  // Super admin
+  superAdmin: uuidv4(),
+  // Users CRUD
+  usersCreate: uuidv4(),
   usersRead: uuidv4(),
-  usersWrite: uuidv4(),
+  usersUpdate: uuidv4(),
   usersDelete: uuidv4(),
-  usersManage: uuidv4(),
-  postsRead: uuidv4(),
-  postsWrite: uuidv4(),
-  postsDelete: uuidv4(),
-  commentsRead: uuidv4(),
-  commentsWrite: uuidv4(),
-  commentsDelete: uuidv4(),
-  settingsRead: uuidv4(),
-  settingsWrite: uuidv4(),
+  // Roles CRUD
+  rolesCreate: uuidv4(),
   rolesRead: uuidv4(),
-  rolesWrite: uuidv4(),
-  permissionsRead: uuidv4(),
-  permissionsWrite: uuidv4(),
+  rolesUpdate: uuidv4(),
+  rolesDelete: uuidv4(),
+  // Groups CRUD
+  groupsCreate: uuidv4(),
   groupsRead: uuidv4(),
-  groupsWrite: uuidv4(),
-  systemAdmin: uuidv4(),
+  groupsUpdate: uuidv4(),
+  groupsDelete: uuidv4(),
+  // Permissions CRUD
+  permissionsCreate: uuidv4(),
+  permissionsRead: uuidv4(),
+  permissionsUpdate: uuidv4(),
+  permissionsDelete: uuidv4(),
 };
 
 /**
@@ -35,34 +38,49 @@ export const demoPermissionIds = {
  */
 export async function up({ context }) {
   const { queryInterface } = context;
-
   const now = new Date();
 
   const permissions = [
-    // User permissions
+    // Super admin - full access
     {
-      id: demoPermissionIds.usersRead,
-      name: 'users:read',
+      id: demoPermissionIds.superAdmin,
+      resource: '*',
+      action: '*',
+      description: 'Super admin - full system access',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    // Users CRUD
+    {
+      id: demoPermissionIds.usersCreate,
       resource: 'users',
-      action: 'read',
-      description: 'View user information',
+      action: 'create',
+      description: 'Create users',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
     {
-      id: demoPermissionIds.usersWrite,
-      name: 'users:write',
+      id: demoPermissionIds.usersRead,
       resource: 'users',
-      action: 'write',
-      description: 'Create and update users',
+      action: 'read',
+      description: 'View users',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.usersUpdate,
+      resource: 'users',
+      action: 'update',
+      description: 'Update users',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
     {
       id: demoPermissionIds.usersDelete,
-      name: 'users:delete',
       resource: 'users',
       action: 'delete',
       description: 'Delete users',
@@ -70,93 +88,18 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
-    // Post permissions
+    // Roles CRUD
     {
-      id: demoPermissionIds.postsRead,
-      name: 'posts:read',
-      resource: 'posts',
-      action: 'read',
-      description: 'View posts',
+      id: demoPermissionIds.rolesCreate,
+      resource: 'roles',
+      action: 'create',
+      description: 'Create roles',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
-    {
-      id: demoPermissionIds.postsWrite,
-      name: 'posts:write',
-      resource: 'posts',
-      action: 'write',
-      description: 'Create and update posts',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: demoPermissionIds.postsDelete,
-      name: 'posts:delete',
-      resource: 'posts',
-      action: 'delete',
-      description: 'Delete posts',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    // Comment permissions
-    {
-      id: demoPermissionIds.commentsRead,
-      name: 'comments:read',
-      resource: 'comments',
-      action: 'read',
-      description: 'View comments',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: demoPermissionIds.commentsWrite,
-      name: 'comments:write',
-      resource: 'comments',
-      action: 'write',
-      description: 'Create and update comments',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: demoPermissionIds.commentsDelete,
-      name: 'comments:delete',
-      resource: 'comments',
-      action: 'delete',
-      description: 'Delete comments',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    // Settings permissions
-    {
-      id: demoPermissionIds.settingsRead,
-      name: 'settings:read',
-      resource: 'settings',
-      action: 'read',
-      description: 'View system settings',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: demoPermissionIds.settingsWrite,
-      name: 'settings:write',
-      resource: 'settings',
-      action: 'write',
-      description: 'Modify system settings',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    // RBAC - Role permissions
     {
       id: demoPermissionIds.rolesRead,
-      name: 'roles:read',
       resource: 'roles',
       action: 'read',
       description: 'View roles',
@@ -165,40 +108,35 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoPermissionIds.rolesWrite,
-      name: 'roles:write',
+      id: demoPermissionIds.rolesUpdate,
       resource: 'roles',
-      action: 'write',
-      description: 'Create and update roles',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    // RBAC - Permission permissions
-    {
-      id: demoPermissionIds.permissionsRead,
-      name: 'permissions:read',
-      resource: 'permissions',
-      action: 'read',
-      description: 'View permissions',
+      action: 'update',
+      description: 'Update roles',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
     {
-      id: demoPermissionIds.permissionsWrite,
-      name: 'permissions:write',
-      resource: 'permissions',
-      action: 'write',
-      description: 'Create and update permissions',
+      id: demoPermissionIds.rolesDelete,
+      resource: 'roles',
+      action: 'delete',
+      description: 'Delete roles',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
-    // RBAC - Group permissions
+    // Groups CRUD
+    {
+      id: demoPermissionIds.groupsCreate,
+      resource: 'groups',
+      action: 'create',
+      description: 'Create groups',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
     {
       id: demoPermissionIds.groupsRead,
-      name: 'groups:read',
       resource: 'groups',
       action: 'read',
       description: 'View groups',
@@ -207,33 +145,56 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoPermissionIds.groupsWrite,
-      name: 'groups:write',
+      id: demoPermissionIds.groupsUpdate,
       resource: 'groups',
-      action: 'write',
-      description: 'Create and update groups',
+      action: 'update',
+      description: 'Update groups',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
-    // RBAC - User management
     {
-      id: demoPermissionIds.usersManage,
-      name: 'users:manage',
-      resource: 'users',
-      action: 'manage',
-      description: 'Manage user roles and groups',
+      id: demoPermissionIds.groupsDelete,
+      resource: 'groups',
+      action: 'delete',
+      description: 'Delete groups',
       is_active: true,
       created_at: now,
       updated_at: now,
     },
-    // System administration
+    // Permissions CRUD
     {
-      id: demoPermissionIds.systemAdmin,
-      name: 'system:admin',
-      resource: 'system',
-      action: 'admin',
-      description: 'System administration',
+      id: demoPermissionIds.permissionsCreate,
+      resource: 'permissions',
+      action: 'create',
+      description: 'Create permissions',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.permissionsRead,
+      resource: 'permissions',
+      action: 'read',
+      description: 'View permissions',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.permissionsUpdate,
+      resource: 'permissions',
+      action: 'update',
+      description: 'Update permissions',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.permissionsDelete,
+      resource: 'permissions',
+      action: 'delete',
+      description: 'Delete permissions',
       is_active: true,
       created_at: now,
       updated_at: now,
@@ -246,31 +207,34 @@ export async function up({ context }) {
 /**
  * Revert the seed
  */
-export async function down({ context }) {
+export async function down({ context, Sequelize }) {
   const { queryInterface } = context;
+  const { Op } = Sequelize;
 
-  // Remove all seeded permissions by name
+  // Remove all seeded permissions by resource+action combinations
   await queryInterface.bulkDelete('permissions', {
-    name: [
-      'users:read',
-      'users:write',
-      'users:delete',
-      'users:manage',
-      'posts:read',
-      'posts:write',
-      'posts:delete',
-      'comments:read',
-      'comments:write',
-      'comments:delete',
-      'settings:read',
-      'settings:write',
-      'roles:read',
-      'roles:write',
-      'permissions:read',
-      'permissions:write',
-      'groups:read',
-      'groups:write',
-      'system:admin',
+    [Op.or]: [
+      { resource: '*', action: '*' },
+      // Users CRUD
+      { resource: 'users', action: 'create' },
+      { resource: 'users', action: 'read' },
+      { resource: 'users', action: 'update' },
+      { resource: 'users', action: 'delete' },
+      // Roles CRUD
+      { resource: 'roles', action: 'create' },
+      { resource: 'roles', action: 'read' },
+      { resource: 'roles', action: 'update' },
+      { resource: 'roles', action: 'delete' },
+      // Groups CRUD
+      { resource: 'groups', action: 'create' },
+      { resource: 'groups', action: 'read' },
+      { resource: 'groups', action: 'update' },
+      { resource: 'groups', action: 'delete' },
+      // Permissions CRUD
+      { resource: 'permissions', action: 'create' },
+      { resource: 'permissions', action: 'read' },
+      { resource: 'permissions', action: 'update' },
+      { resource: 'permissions', action: 'delete' },
     ],
   });
 }

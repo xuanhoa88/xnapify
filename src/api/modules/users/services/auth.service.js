@@ -89,7 +89,9 @@ export async function getCurrentUser(userId, models) {
       rolesSet.add(role.name);
       if (role.permissions) {
         for (const perm of role.permissions) {
-          permissionsSet.add(perm.name);
+          if (perm.is_active !== false) {
+            permissionsSet.add(`${perm.resource}:${perm.action}`);
+          }
         }
       }
     }
@@ -103,7 +105,9 @@ export async function getCurrentUser(userId, models) {
           rolesSet.add(role.name);
           if (role.permissions) {
             for (const perm of role.permissions) {
-              permissionsSet.add(perm.name);
+              if (perm.is_active !== false) {
+                permissionsSet.add(`${perm.resource}:${perm.action}`);
+              }
             }
           }
         }

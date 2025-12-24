@@ -22,7 +22,7 @@ import * as permissionService from '../../services/admin/permission.service';
 export async function createPermission(req, res) {
   const http = req.app.get('http');
   try {
-    const { resource, action, description } = req.body;
+    const { resource, action, description, is_active } = req.body;
 
     // Validate input
     const errors = {};
@@ -33,15 +33,12 @@ export async function createPermission(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Auto-generate permission name from resource and action
-    const name = `${resource}:${action}`;
-
     // Get models from app context
     const models = req.app.get('models');
 
     // Create permission
     const permission = await permissionService.createPermission(
-      { name, resource, action, description },
+      { resource, action, description, is_active },
       models,
     );
 
@@ -66,20 +63,76 @@ export async function createPermission(req, res) {
 export async function getPermissions(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10, search = '', resource = '' } = req.query;
+    const {
+      page = 1,
+      limit = 10,
+      search = '',
+      resource = '',
+      status = '',
+    } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
 
     // Get permissions
     const result = await permissionService.getPermissions(
-      { page, limit, search, resource },
+      { page, limit, search, resource, status },
       models,
     );
 
     return http.sendSuccess(res, result);
   } catch (error) {
     return http.sendServerError(res, 'Failed to get permissions');
+  }
+}
+
+/**
+ * Get unique resources for filter dropdown
+ *
+ * @route   GET /api/admin/permissions/resources
+ * @access  Admin (requires 'permissions:read' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getPermissionResources(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { search, page = 1, limit = 10 } = req.query;
+    const models = req.app.get('models');
+    const result = await permissionService.getPermissionResources(
+      { search, page, limit },
+      models,
+    );
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to get resources');
+  }
+}
+
+/**
+ * Get permissions by resource name
+ *
+ * @route   GET /api/admin/permissions/resources/:resource
+ * @access  Admin (requires 'permissions:read' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function getPermissionsByResource(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { resource } = req.params;
+    const { search, page = 1, limit = 10 } = req.query;
+    const models = req.app.get('models');
+    const result = await permissionService.getPermissionsByResource(
+      resource,
+      { search, page, limit },
+      models,
+    );
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to get permissions by resource');
   }
 }
 
@@ -117,15 +170,12 @@ export async function updatePermission(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { resource, action, description } = req.body;
+    const { resource, action, description, is_active } = req.body;
     const models = req.app.get('models');
-
-    // Auto-generate permission name from resource and action
-    const name = resource && action ? `${resource}:${action}` : undefined;
 
     const updatedPermission = await permissionService.updatePermission(
       id,
-      { name, resource, action, description },
+      { resource, action, description, is_active },
       models,
     );
 
@@ -163,30 +213,5 @@ export async function deletePermission(req, res) {
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete permission');
-  }
-}
-
-/**
- * Get permissions by resource
- *
- * @route   GET /api/admin/permissions/resource/:resource
- * @access  Admin (requires 'permissions:read' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getPermissionsByResource(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { resource } = req.params;
-    const models = req.app.get('models');
-
-    const permissions = await permissionService.getPermissionsByResource(
-      resource,
-      models,
-    );
-
-    return http.sendSuccess(res, { permissions, resource });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get permissions by resource');
   }
 }

@@ -27,11 +27,11 @@ export default function roleRoutes(deps, userMiddlewares) {
   /**
    * @route   POST /initialize
    * @desc    Initialize roles, permissions and groups
-   * @access  Admin (requires 'system:admin' permission)
+   * @access  Admin (requires '*:*' permission - super admin)
    */
   router.post(
     '/initialize',
-    requirePermission('system:admin'),
+    requirePermission('*:*'),
     rbacController.initializeDefaults,
   );
 

@@ -56,7 +56,7 @@ async function getUserPermissionsWithCache(req) {
           {
             model: Permission,
             as: 'permissions',
-            attributes: ['name'],
+            attributes: ['resource', 'action', 'is_active'],
             through: { attributes: [] },
           },
         ],
@@ -75,7 +75,7 @@ async function getUserPermissionsWithCache(req) {
               {
                 model: Permission,
                 as: 'permissions',
-                attributes: ['name'],
+                attributes: ['resource', 'action', 'is_active'],
                 through: { attributes: [] },
               },
             ],
@@ -265,159 +265,6 @@ export function requireAnyPermission(permissions) {
       return res.status(500).json({
         success: false,
         error: 'Permission check failed',
-      });
-    }
-  };
-}
-
-/**
- * Resource-specific permission middleware
- *
- * Checks permissions with resource context (e.g., 'posts:read:own' vs 'posts:read:all').
- *
- * @param {string} resource - Resource type (e.g., 'posts', 'users')
- * @param {string} action - Action type (e.g., 'read', 'write', 'delete')
- * @param {string} scope - Permission scope ('own', 'all', 'team') - optional
- * @returns {Function} Express middleware function
- *
- * @example
- * router.get('/posts', requireResourcePermission('posts', 'read'), controller.getPosts);
- * router.put('/posts/:id', requireResourcePermission('posts', 'write', 'own'), controller.updatePost);
- */
-export function requireResourcePermission(resource, action, scope = null) {
-  return async (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        error: 'Authentication required',
-      });
-    }
-
-    try {
-      const models = req.app.get('models');
-      const { User, Role, Permission } = models;
-
-      const user = await User.findByPk(req.user.id, {
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                through: { attributes: [] },
-                where: {
-                  resource: resource,
-                  action: action,
-                },
-                required: false,
-              },
-            ],
-          },
-        ],
-      });
-
-      if (!user) {
-        return res.status(401).json({
-          success: false,
-          error: 'User not found',
-        });
-      }
-
-      // Build permission patterns to check
-      const permissionPatterns = [
-        `${resource}:${action}`, // Basic permission
-      ];
-
-      if (scope) {
-        permissionPatterns.push(`${resource}:${action}:${scope}`); // Scoped permission
-      }
-
-      // Check if user has any matching permission
-      const hasPermission = user.roles.some(role =>
-        role.permissions.some(
-          perm =>
-            permissionPatterns.includes(perm.name) ||
-            perm.name === `${resource}:*` || // Wildcard action
-            perm.name === '*:*', // Super admin permission
-        ),
-      );
-
-      if (!hasPermission) {
-        const requiredPermission = scope
-          ? `${resource}:${action}:${scope}`
-          : `${resource}:${action}`;
-
-        return res.status(403).json({
-          success: false,
-          error: `Access denied. Required permission: ${requiredPermission}`,
-        });
-      }
-
-      // Attach permission context to request
-      req.permissionContext = {
-        resource,
-        action,
-        scope,
-      };
-
-      next();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Resource permission check failed',
-      });
-    }
-  };
-}
-
-/**
- * Conditional permission middleware
- *
- * Applies different permission requirements based on request conditions.
- *
- * @param {Function} getPermissionRequirement - Function that returns permission requirement
- * @returns {Function} Express middleware function
- *
- * @example
- * const getPermission = (req) => req.body.public ? 'posts:create:public' : 'posts:create:private';
- * router.post('/posts', requireConditionalPermission(getPermission), controller.createPost);
- */
-export function requireConditionalPermission(getPermissionRequirement) {
-  return async (req, res, next) => {
-    try {
-      const permissionRequirement = getPermissionRequirement(req);
-
-      if (Array.isArray(permissionRequirement)) {
-        // Multiple permissions required
-        if (permissionRequirement.every(p => typeof p === 'string')) {
-          // All permissions required
-          return requirePermissions(permissionRequirement)(req, res, next);
-        }
-        // Any permission required
-        return requireAnyPermission(permissionRequirement)(req, res, next);
-      }
-      if (typeof permissionRequirement === 'string') {
-        // Single permission required
-        return requirePermission(permissionRequirement)(req, res, next);
-      }
-      if (permissionRequirement && typeof permissionRequirement === 'object') {
-        // Resource permission required
-        const { resource, action, scope } = permissionRequirement;
-        return requireResourcePermission(resource, action, scope)(
-          req,
-          res,
-          next,
-        );
-      }
-      // No permission required
-      return next();
-    } catch (error) {
-      return res.status(500).json({
-        success: false,
-        error: 'Conditional permission check failed',
       });
     }
   };

@@ -6,6 +6,7 @@
  */
 
 import { DEFAULT_ROLE } from '../../constants/rbac';
+import { invalidateUserCache } from '../../utils/rbac-cache';
 
 /**
  * Create a new user
@@ -384,6 +385,9 @@ export async function updateUserById(user_id, userData, models) {
     }
   }
 
+  // Invalidate RBAC cache (roles/groups may have changed)
+  invalidateUserCache(user_id);
+
   // Reload user with updated data
   await user.reload({
     include: [
@@ -436,6 +440,9 @@ export async function deleteUserById(user_id, models) {
   // Delete user (cascade will handle related records)
   await user.destroy();
 
+  // Invalidate RBAC cache
+  invalidateUserCache(user_id);
+
   return true;
 }
 
@@ -460,6 +467,9 @@ export async function updateUserStatus(user_id, is_active, models) {
   }
 
   await user.update({ is_active });
+
+  // Invalidate RBAC cache (status affects access)
+  invalidateUserCache(user_id);
 
   return user;
 }
@@ -496,6 +506,9 @@ export async function updateUserLockStatus(user_id, is_locked, reason, models) {
   }
 
   await user.update(updates);
+
+  // Invalidate RBAC cache (lock status affects access)
+  invalidateUserCache(user_id);
 
   return user;
 }
