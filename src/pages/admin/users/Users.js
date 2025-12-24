@@ -422,7 +422,7 @@ function Users() {
               <th>Groups</th>
               <th>Status</th>
               <th>Joined</th>
-              <th>Actions</th>
+              <th />
             </tr>
           </thead>
           <tbody>

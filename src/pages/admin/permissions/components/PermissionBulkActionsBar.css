@@ -1,0 +1,126 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../components/variables.css';
+
+.bulkActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-4) var(--spacing-5);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: var(--radius-lg);
+  color: white;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bulkInfo {
+  font-weight: var(--font-weight-medium);
+  font-size: var(--font-size-sm);
+}
+
+.bulkBtn {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: rgb(255 255 255 / 20%);
+  color: white;
+  border: 1px solid rgb(255 255 255 / 30%);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.bulkBtn:hover {
+  background: rgb(255 255 255 / 30%);
+}
+
+.bulkBtnDanger {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: rgb(239 68 68 / 80%);
+  color: white;
+  border: 1px solid rgb(239 68 68 / 100%);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.bulkBtnDanger:hover {
+  background: rgb(239 68 68 / 100%);
+}
+
+.bulkClear {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: rgb(255 255 255 / 80%);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+}
+
+.bulkClear:hover {
+  color: white;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .bulkActions {
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .bulkInfo {
+    font-size: var(--font-size-xs);
+    width: auto;
+  }
+
+  .bulkBtn,
+  .bulkBtnDanger {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    flex: 1;
+    text-align: center;
+  }
+
+  .bulkClear {
+    font-size: var(--font-size-xs);
+    margin-left: 0;
+    padding: var(--spacing-2);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .bulkActions {
+    padding: var(--spacing-2);
+  }
+
+  .bulkBtn,
+  .bulkBtnDanger {
+    padding: var(--spacing-1) var(--spacing-2);
+  }
+}

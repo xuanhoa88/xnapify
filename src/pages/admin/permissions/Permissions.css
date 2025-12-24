@@ -56,12 +56,10 @@
   min-width: 200px;
 }
 
-/* Filter dropdowns */
 .filterSearchableSelect {
   min-width: 140px;
 }
 
-/* Filter Actions */
 .filterActions {
   display: flex;
   gap: var(--spacing-2);
@@ -137,7 +135,6 @@
   transform: scale(1.1);
 }
 
-/* Clear Filters Button - matches Users.css */
 .clearFiltersBtn {
   display: inline-flex;
   align-items: center;
@@ -161,27 +158,146 @@
   border-color: #fecaca;
 }
 
-.categorySection {
-  margin-bottom: var(--spacing-8);
+/* Table Container - matches Users.css */
+.tableContainer {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
 }
 
-.categoryTitle {
-  margin: 0 0 var(--spacing-5) 0;
-  font-size: var(--font-size-2xl);
-  font-weight: var(--font-weight-bold);
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.table th {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--color-background-tertiary);
+}
+
+/* Checkbox Column */
+.checkboxCol {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+/* Resource Badge */
+.resourceBadge {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
   color: var(--color-primary);
-  padding-bottom: var(--spacing-3);
-  border-bottom: 2px solid var(--color-border);
+  background: rgb(59 130 246 / 10%);
+  border-radius: var(--radius-md);
 }
 
-.permissionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--spacing-4);
+.resourceEmpty {
+  display: block;
+  width: 100%;
+}
+
+/* Action Code */
+.actionCode {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-2);
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  color: var(--color-text);
+  background: var(--color-background-tertiary);
+  border-radius: var(--radius-sm);
+}
+
+/* Description */
+.descriptionCell {
+  max-width: 300px;
+  color: var(--color-text-secondary);
+}
+
+.noDescription {
+  color: var(--color-text-tertiary);
+}
+
+/* Status Badges - matches Users.css */
+.statusActive {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-success);
+  background: rgb(34 197 94 / 10%);
+  border-radius: var(--radius-full);
+}
+
+.statusInactive {
+  display: inline-block;
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-tertiary);
+  background: var(--color-background-tertiary);
+  border-radius: var(--radius-full);
+}
+
+/* Actions - matches Users.css */
+.actions {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+.actionBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.actionBtn:hover {
+  background: var(--color-background-tertiary);
+  color: var(--color-primary);
 }
 
 /* =============================================================================
-   RESPONSIVE DESIGN - TABLET & MOBILE
+   RESPONSIVE DESIGN
    ============================================================================= */
 
 @media (max-width: 768px) {
@@ -189,14 +305,12 @@
     padding: var(--spacing-3);
   }
 
-  /* Add button compact */
   .addButton {
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-xs);
     gap: var(--spacing-1);
   }
 
-  /* Filters - improved mobile layout */
   .filters {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -206,7 +320,7 @@
   }
 
   .searchWrapper {
-    grid-column: 1 / -1; /* Full width */
+    grid-column: 1 / -1;
     min-width: unset;
   }
 
@@ -232,25 +346,16 @@
     font-size: var(--font-size-xs);
   }
 
-  /* Category section compact */
-  .categorySection {
-    margin-bottom: var(--spacing-5);
+  .table th,
+  .table td {
+    padding: var(--spacing-2) var(--spacing-3);
   }
 
-  .categoryTitle {
-    font-size: var(--font-size-lg);
-    margin-bottom: var(--spacing-3);
-    padding-bottom: var(--spacing-2);
-  }
-
-  /* Permission grid single column */
-  .permissionGrid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-3);
+  .descriptionCell {
+    max-width: 150px;
   }
 }
 
-/* Extra small mobile */
 @media (max-width: 375px) {
   .root {
     padding: var(--spacing-2);
@@ -259,9 +364,5 @@
   .filters {
     padding: var(--spacing-2);
     gap: var(--spacing-2);
-  }
-
-  .categoryTitle {
-    font-size: var(--font-size-base);
   }
 }
