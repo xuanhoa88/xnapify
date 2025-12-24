@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 // eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant] and s[size]
 import s from './Button.css';
@@ -31,18 +32,6 @@ function Button({
   as: Component = 'button',
   ...props
 }) {
-  const classNames = [
-    s.button,
-    s[variant],
-    s[size],
-    fullWidth && s.fullWidth,
-    loading && s.loading,
-    iconOnly && s.iconOnly,
-    className,
-  ]
-    .filter(Boolean)
-    .join(' ');
-
   // Use button-specific props only for button elements
   const buttonProps =
     Component === 'button'
@@ -53,7 +42,19 @@ function Button({
       : {};
 
   return (
-    <Component className={classNames} {...buttonProps} {...props}>
+    <Component
+      className={clsx(
+        s.button,
+        s[variant],
+        s[size],
+        { [s.fullWidth]: fullWidth },
+        { [s.loading]: loading },
+        { [s.iconOnly]: iconOnly },
+        className,
+      )}
+      {...buttonProps}
+      {...props}
+    >
       {loading && <span className={s.loadingSpinner} />}
       {children}
     </Component>

@@ -1,0 +1,196 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ==========================================================================
+   Card Component Styles
+   ========================================================================== */
+
+.card {
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+/* ==========================================================================
+   Card Variants
+   ========================================================================== */
+
+/* Default Card */
+.default {
+  box-shadow: var(--shadow-sm);
+}
+
+/* Elevated Card */
+.elevated {
+  border: none;
+  box-shadow: var(--shadow-lg);
+}
+
+.elevated:hover {
+  box-shadow: var(--shadow-xl);
+  transform: translateY(-2px);
+}
+
+/* Outlined Card */
+.outlined {
+  box-shadow: none;
+}
+
+.outlined:hover {
+  border-color: var(--color-border-hover);
+}
+
+/* Ghost Card (no border/shadow) */
+.ghost {
+  border: none;
+  box-shadow: none;
+  background-color: transparent;
+}
+
+/* Gradient Card */
+.gradient {
+  border: none;
+  background: var(--gradient-primary);
+  color: #fff;
+}
+
+/* ==========================================================================
+   Card States
+   ========================================================================== */
+
+/* Interactive Card */
+.interactive {
+  cursor: pointer;
+}
+
+.interactive:hover {
+  border-color: var(--color-primary);
+}
+
+.interactive:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Selected State */
+.selected {
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+/* ==========================================================================
+   Card Sub-components (base styles must come before padding overrides)
+   ========================================================================== */
+
+/* Card Header */
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-4);
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardHeaderContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.cardHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+}
+
+/* Card Body */
+.cardBody {
+  padding: var(--spacing-4);
+}
+
+/* Card Footer */
+.cardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.cardFooterLeft {
+  justify-content: flex-start;
+}
+
+.cardFooterCenter {
+  justify-content: center;
+}
+
+.cardFooterSpaceBetween {
+  justify-content: space-between;
+}
+
+/* Card Image */
+.cardImage {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.cardImageTop {
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.cardImageBottom {
+  border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+}
+
+/* ==========================================================================
+   Card Padding (overrides - must come after base sub-component styles)
+   ========================================================================== */
+
+.paddingNone {
+  /* No padding on card itself */
+}
+
+.paddingSmall .cardBody,
+.paddingSmall .cardHeader,
+.paddingSmall .cardFooter {
+  padding: var(--spacing-3);
+}
+
+.paddingMedium .cardBody,
+.paddingMedium .cardHeader,
+.paddingMedium .cardFooter {
+  padding: var(--spacing-4);
+}
+
+.paddingLarge .cardBody,
+.paddingLarge .cardHeader,
+.paddingLarge .cardFooter {
+  padding: var(--spacing-6);
+}
+
+/* ==========================================================================
+   Gradient variant adjustments
+   ========================================================================== */
+
+.gradient .cardHeader {
+  border-bottom-color: rgb(255 255 255 / 20%);
+}
+
+.gradient .cardFooter {
+  border-top-color: rgb(255 255 255 / 20%);
+}
+
+.gradient .cardHeaderContent {
+  color: #fff;
+}
