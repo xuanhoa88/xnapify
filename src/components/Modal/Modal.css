@@ -142,6 +142,7 @@
 .modalActions {
   display: flex;
   gap: var(--spacing-3);
+  margin-left: auto;
 }
 
 .selectionCount {
