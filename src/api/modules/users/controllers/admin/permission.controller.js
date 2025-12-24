@@ -63,50 +63,20 @@ export async function createPermission(req, res) {
 export async function getPermissions(req, res) {
   const http = req.app.get('http');
   try {
-    const {
-      page = 1,
-      limit = 10,
-      search = '',
-      resource = '',
-      status = '',
-    } = req.query;
+    const { page = 1, limit = 10, search = '', status = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
 
     // Get permissions
     const result = await permissionService.getPermissions(
-      { page, limit, search, resource, status },
+      { page, limit, search, status },
       models,
     );
 
     return http.sendSuccess(res, result);
   } catch (error) {
     return http.sendServerError(res, 'Failed to get permissions');
-  }
-}
-
-/**
- * Get unique resources for filter dropdown
- *
- * @route   GET /api/admin/permissions/resources
- * @access  Admin (requires 'permissions:read' permission)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getPermissionResources(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { search, page = 1, limit = 10 } = req.query;
-    const models = req.app.get('models');
-    const result = await permissionService.getPermissionResources(
-      { search, page, limit },
-      models,
-    );
-
-    return http.sendSuccess(res, result);
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get resources');
   }
 }
 

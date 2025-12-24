@@ -121,7 +121,7 @@ function CreateRole() {
   }, []);
 
   const handleCancel = useCallback(() => {
-    confirmBackModalRef.current?.open();
+    confirmBackModalRef.current && confirmBackModalRef.current.open();
   }, []);
 
   const handleConfirmBack = useCallback(() => {
@@ -219,7 +219,7 @@ function CreateRole() {
             <div className={s.formGroup}>
               <input
                 type='text'
-                placeholder='Search permissions...'
+                placeholder='Search e.g. users, users:read, :create'
                 value={permissionSearch}
                 onChange={e => setPermissionSearch(e.target.value)}
                 className={s.searchInput}

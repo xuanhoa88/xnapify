@@ -33,7 +33,6 @@ import {
  * @param {number} options.page - Page number
  * @param {number} options.limit - Items per page
  * @param {string} options.search - Search term
- * @param {string} options.resource - Filter by resource
  * @param {string} options.status - Filter by status: 'active' | 'inactive' | ''
  * @returns {Function} Redux thunk action
  */
@@ -42,19 +41,12 @@ export function fetchPermissions(options = {}) {
     dispatch(fetchPermissionsStart());
 
     try {
-      const {
-        page = 1,
-        limit = 100,
-        search = '',
-        resource = '',
-        status = '',
-      } = options || {};
+      const { page = 1, limit = 100, search = '', status = '' } = options || {};
 
       const params = new URLSearchParams();
       if (page) params.append('page', page);
       if (limit) params.append('limit', limit);
       if (search) params.append('search', search);
-      if (resource) params.append('resource', resource);
       if (status) params.append('status', status);
 
       const { data } = await fetch(
@@ -67,37 +59,6 @@ export function fetchPermissions(options = {}) {
     } catch (error) {
       dispatch(fetchPermissionsError(error.message));
 
-      return { success: false, error: error.message };
-    }
-  };
-}
-
-/**
- * Fetch unique resources for filter dropdown
- *
- * @param {Object} params - Query parameters
- * @param {string} params.search - Search term
- * @param {number} params.page - Page number
- * @param {number} params.limit - Items per page
- * @returns {Function} Redux thunk action
- */
-export function fetchPermissionResources({
-  search = '',
-  page = 1,
-  limit = 10,
-} = {}) {
-  return async (dispatch, getState, { fetch }) => {
-    try {
-      const params = new URLSearchParams();
-      params.append('page', page);
-      params.append('limit', limit);
-      if (search) params.append('search', search);
-
-      const { data } = await fetch(
-        `/api/admin/permissions/resources?${params.toString()}`,
-      );
-      return { success: true, data };
-    } catch (error) {
       return { success: false, error: error.message };
     }
   };

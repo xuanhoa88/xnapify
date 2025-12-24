@@ -37,17 +37,6 @@ export default function permissionRoutes(deps, userMiddlewares) {
   );
 
   /**
-   * @route   GET /resources
-   * @desc    Get unique resources for filter dropdown
-   * @access  Admin (requires 'permissions:read' permission)
-   */
-  router.get(
-    '/resources',
-    requirePermission('permissions:read'),
-    permissionController.getPermissionResources,
-  );
-
-  /**
    * @route   GET /resources/:resource
    * @desc    Get permissions by resource with pagination
    * @access  Admin (requires 'permissions:read' permission)

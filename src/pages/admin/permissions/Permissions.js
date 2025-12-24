@@ -11,10 +11,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../components/History';
 import {
   fetchPermissions,
-  fetchPermissionResources,
   getPermissions,
   getPermissionsLoading,
   getPermissionsError,
+  getPermissionsPagination,
   deletePermission,
 } from '../../../redux';
 import {
@@ -24,12 +24,12 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
-import {
-  SearchableSelect,
-  useSearchableSelect,
-} from '../../../components/SearchableSelect';
+import { SearchableSelect } from '../../../components/SearchableSelect';
 import PermissionCard from './components/PermissionCard';
 import s from './Permissions.css';
+
+// Pagination items per page
+const ITEMS_PER_PAGE = 10;
 
 function Permissions() {
   const { t } = useTranslation();
@@ -38,27 +38,14 @@ function Permissions() {
   const permissions = useSelector(getPermissions);
   const loading = useSelector(getPermissionsLoading);
   const error = useSelector(getPermissionsError);
+  const pagination = useSelector(getPermissionsPagination);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Filter state
   const [search, setSearch] = useState('');
-  const [resourceFilter, setResourceFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-
-  // Use hook for resource filter dropdown with async loading
-  const {
-    options: resourceOptions,
-    loading: resourcesLoading,
-    loadingMore: resourcesLoadingMore,
-    hasMore: resourcesHasMore,
-    onSearch: handleResourceSearch,
-    onLoadMore: handleResourceLoadMore,
-  } = useSearchableSelect({
-    fetch: params => dispatch(fetchPermissionResources(params)),
-    dataKey: 'resources',
-    mapOption: r => ({ value: r, label: r }),
-    includeAllOption: true,
-    allOptionLabel: 'All Resources',
-  });
 
   // Debounce timer ref
   const debounceTimer = useRef(null);
@@ -69,11 +56,12 @@ function Permissions() {
       clearTimeout(debounceTimer.current);
     }
     debounceTimer.current = setTimeout(() => {
+      setCurrentPage(1);
       dispatch(
         fetchPermissions({
           page: 1,
+          limit: ITEMS_PER_PAGE,
           search,
-          resource: resourceFilter,
           status: statusFilter,
         }),
       );
@@ -84,19 +72,35 @@ function Permissions() {
         clearTimeout(debounceTimer.current);
       }
     };
-  }, [dispatch, search, resourceFilter, statusFilter]);
+  }, [dispatch, search, statusFilter]);
+
+  // Fetch when page changes (separate from filter changes)
+  useEffect(() => {
+    // Only fetch if not the initial render (page 1 is handled by filter effect)
+    if (currentPage > 1) {
+      dispatch(
+        fetchPermissions({
+          page: currentPage,
+          limit: ITEMS_PER_PAGE,
+          search,
+          status: statusFilter,
+        }),
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
 
   // Refresh permissions list callback
   const refreshPermissions = useCallback(() => {
     dispatch(
       fetchPermissions({
-        page: 1,
+        page: currentPage,
+        limit: ITEMS_PER_PAGE,
         search,
-        resource: resourceFilter,
         status: statusFilter,
       }),
     );
-  }, [dispatch, search, resourceFilter, statusFilter]);
+  }, [dispatch, currentPage, search, statusFilter]);
 
   // Modal ref
   const deleteModalRef = useRef();
@@ -136,12 +140,12 @@ function Permissions() {
 
   const handleClearFilters = useCallback(() => {
     setSearch('');
-    setResourceFilter('');
     setStatusFilter('');
+    setCurrentPage(1);
   }, []);
 
   // Check if any filter is active
-  const hasActiveFilters = search || resourceFilter || statusFilter;
+  const hasActiveFilters = search || statusFilter;
 
   // Group permissions by resource
   const { groupedPermissions, categories } = useMemo(() => {
@@ -193,7 +197,7 @@ function Permissions() {
           </span>
           <input
             type='text'
-            placeholder='Search permissions...'
+            placeholder='Search e.g. users, users:read, :create'
             value={search}
             onChange={handleSearchChange}
             className={s.searchInput}
@@ -208,21 +212,6 @@ function Permissions() {
               ✕
             </button>
           )}
-        </div>
-
-        <div className={s.filterSearchableSelect}>
-          <SearchableSelect
-            options={resourceOptions}
-            value={resourceFilter}
-            onChange={setResourceFilter}
-            onSearch={handleResourceSearch}
-            onLoadMore={handleResourceLoadMore}
-            hasMore={resourcesHasMore}
-            loading={resourcesLoading}
-            loadingMore={resourcesLoadingMore}
-            placeholder='All Resources'
-            searchPlaceholder='Search resources...'
-          />
         </div>
 
         <div className={s.filterSearchableSelect}>
@@ -288,6 +277,17 @@ function Permissions() {
             </div>
           </div>
         ))
+      )}
+
+      {/* Pagination */}
+      {pagination && pagination.pages > 1 && (
+        <Table.Pagination
+          currentPage={currentPage}
+          totalPages={pagination.pages}
+          totalItems={pagination.total}
+          onPageChange={setCurrentPage}
+          loading={loading}
+        />
       )}
 
       {/* Delete Confirmation Modal */}

@@ -53,76 +53,199 @@ export async function createPermission(permissionData, models) {
 }
 
 /**
- * Get all permissions with pagination
+ * Parse search query into resource and action filters
+ *
+ * Supports patterns:
+ * - 'keyword' → search resource, action, description
+ * - 'resource:' or 'resource:*' → search resource only
+ * - ':action' or '*:action' → search action only
+ * - 'resource:action' → search both
+ * - Invalid patterns (empty, wildcards only) → null
+ *
+ * @param {string} q - Search query string
+ * @returns {Object|null} Parsed search with type and values, or null if invalid
+ */
+function parseSearchQuery(q) {
+  if (!q) return null;
+
+  const normalized = q.trim();
+  if (!normalized || normalized === DEFAULT_RESOURCES.ALL) return null;
+
+  // Check for colon pattern
+  const colonIndex = normalized.indexOf(':');
+  if (colonIndex === -1) {
+    // Simple keyword search
+    return { type: 'keyword', value: normalized };
+  }
+
+  // Parse resource:action pattern
+  const resource = normalized.slice(0, colonIndex).trim();
+  const action = normalized.slice(colonIndex + 1).trim();
+
+  // Normalize wildcards to empty string
+  const isResourceEmpty = resource === '' || resource === DEFAULT_RESOURCES.ALL;
+  const isActionEmpty = action === '' || action === DEFAULT_ACTIONS.MANAGE;
+
+  // Invalid: both parts are empty/wildcards
+  if (isResourceEmpty && isActionEmpty) return null;
+
+  // Return parsed result
+  if (!isResourceEmpty && isActionEmpty) {
+    return { type: 'resource', value: resource };
+  }
+  if (isResourceEmpty && !isActionEmpty) {
+    return { type: 'action', value: action };
+  }
+  return { type: 'both', resource, action };
+}
+
+/**
+ * Build search where condition based on parsed query
+ *
+ * @param {Object} parsed - Parsed search query
+ * @param {Object} Op - Sequelize operators
+ * @returns {Object} Where condition for search
+ */
+function buildSearchCondition(parsed, Op) {
+  if (!parsed) return {};
+
+  switch (parsed.type) {
+    case 'keyword':
+      return {
+        [Op.or]: [
+          {
+            resource: {
+              [Op.and]: [
+                { [Op.ne]: DEFAULT_RESOURCES.ALL },
+                { [Op.like]: `%${parsed.value}%` },
+              ],
+            },
+          },
+          {
+            action: {
+              [Op.and]: [
+                { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+                { [Op.like]: `%${parsed.value}%` },
+              ],
+            },
+          },
+          { description: { [Op.like]: `%${parsed.value}%` } },
+        ],
+      };
+
+    case 'resource':
+      return {
+        resource: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_RESOURCES.ALL },
+            { [Op.like]: `%${parsed.value}%` },
+          ],
+        },
+      };
+
+    case 'action':
+      return {
+        action: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+            { [Op.like]: `%${parsed.value}%` },
+          ],
+        },
+      };
+
+    case 'both':
+      return {
+        resource: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_RESOURCES.ALL },
+            { [Op.like]: `%${parsed.resource}%` },
+          ],
+        },
+        action: {
+          [Op.and]: [
+            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+            { [Op.like]: `%${parsed.action}%` },
+          ],
+        },
+      };
+
+    default:
+      return {};
+  }
+}
+
+/**
+ * Get all permissions with pagination by resource
+ *
+ * Paginates by distinct resources first, then returns all permissions
+ * for each resource in the current page. This keeps resource groups together.
  *
  * @param {Object} options - Query options
- * @param {number} options.page - Page number
- * @param {number} options.limit - Items per page
- * @param {string} options.search - Search term
- * @param {string} options.resource - Filter by resource
+ * @param {number} options.page - Page number (paginates resources, not permissions)
+ * @param {number} options.limit - Resources per page
+ * @param {string} options.search - Search term (supports resource:action patterns)
  * @param {string} options.status - Filter by status: 'active' | 'inactive' | ''
  * @param {Object} models - Database models
- * @returns {Promise<Object>} Permissions with pagination
+ * @returns {Promise<Object>} Permissions grouped by resource with pagination
  */
 export async function getPermissions(options, models) {
-  const {
-    page = 1,
-    limit = 10,
-    search = '',
-    resource = '',
-    status = '',
-  } = options;
+  const { page = 1, limit = 10, search = '', status = '' } = options;
   const offset = (page - 1) * limit;
 
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
-  const whereCondition = {
-    // Exclude wildcard resource from admin listings
+  // Build where condition
+  const baseWhereCondition = {
     resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
+    ...buildSearchCondition(parseSearchQuery(search), Op),
   };
 
-  // Skip search if it's just the wildcard character
-  if (search && search !== DEFAULT_RESOURCES.ALL) {
-    whereCondition[Op.or] = [
-      {
-        resource: {
-          [Op.and]: [
-            { [Op.ne]: DEFAULT_RESOURCES.ALL },
-            { [Op.like]: `%${search}%` },
-          ],
-        },
-      },
-      {
-        action: {
-          [Op.and]: [
-            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
-            { [Op.like]: `%${search}%` },
-          ],
-        },
-      },
-      { description: { [Op.like]: `%${search}%` } },
-    ];
+  // Apply status filter
+  if (status === 'active') {
+    baseWhereCondition.is_active = true;
+  } else if (status === 'inactive') {
+    baseWhereCondition.is_active = false;
   }
 
-  if (resource) {
-    // Combine with wildcard exclusion
-    whereCondition.resource = {
-      [Op.and]: [{ [Op.ne]: DEFAULT_RESOURCES.ALL }, { [Op.eq]: resource }],
+  // Step 1: Get total count of distinct resources
+  const totalResources = await Permission.count({
+    where: baseWhereCondition,
+    distinct: true,
+    col: 'resource',
+  });
+
+  // Step 2: Get paginated distinct resources
+  const resourceRows = await Permission.findAll({
+    attributes: ['resource'],
+    where: baseWhereCondition,
+    group: ['resource'],
+    order: [['resource', 'ASC']],
+    limit: parseInt(limit),
+    offset: parseInt(offset),
+    raw: true,
+  });
+
+  // Step 3: Get ALL permissions for the resources in this page
+  const resourcesInPage = resourceRows.map(r => r.resource);
+  if (resourcesInPage.length === 0) {
+    return {
+      permissions: [],
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: 0,
+        pages: 0,
+      },
     };
   }
 
-  if (status === 'active') {
-    whereCondition.is_active = true;
-  } else if (status === 'inactive') {
-    whereCondition.is_active = false;
-  }
-
-  const { count, rows: permissions } = await Permission.findAndCountAll({
-    where: whereCondition,
-    limit: parseInt(limit),
-    offset: parseInt(offset),
+  const permissions = await Permission.findAll({
+    where: {
+      ...baseWhereCondition,
+      resource: { [Op.in]: resourcesInPage },
+    },
     order: [
       ['resource', 'ASC'],
       ['action', 'ASC'],
@@ -134,68 +257,8 @@ export async function getPermissions(options, models) {
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
-      total: count,
-      pages: Math.ceil(count / limit),
-    },
-  };
-}
-
-/**
- * Get unique resources for filter dropdown
- *
- * @param {Object} options - Query parameters
- * @param {string} options.search - Search term
- * @param {number} options.page - Page number
- * @param {number} options.limit - Items per page
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Object with resources array and pagination
- */
-export async function getPermissionResources(options, models) {
-  const { search = '', page = 1, limit = 10 } = options;
-  const offset = (page - 1) * limit;
-
-  const { Permission } = models;
-  const { sequelize } = Permission;
-  const { Op } = sequelize.Sequelize;
-
-  // Build where condition for search (always exclude wildcard resource)
-  const whereCondition = {
-    resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-  };
-  if (search) {
-    whereCondition.resource = {
-      [Op.and]: [
-        { [Op.ne]: DEFAULT_RESOURCES.ALL },
-        { [Op.like]: `%${search}%` },
-      ],
-    };
-  }
-
-  // Get total count of unique resources first
-  const countResult = await Permission.count({
-    where: whereCondition,
-    distinct: true,
-    col: 'resource',
-  });
-
-  // Get paginated resources using GROUP BY
-  const rows = await Permission.findAll({
-    attributes: ['resource'],
-    where: whereCondition,
-    group: ['resource'],
-    order: [['resource', 'ASC']],
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    raw: true,
-  });
-
-  return {
-    resources: rows.map(r => r.resource),
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: countResult,
-      pages: Math.ceil(countResult / limit),
+      total: totalResources,
+      pages: Math.ceil(totalResources / limit),
     },
   };
 }
@@ -355,38 +418,6 @@ export async function deletePermission(permission_id, models) {
 
   await permission.destroy();
   return permission;
-}
-
-/**
- * Bulk create permissions
- *
- * @param {Object[]} permissionsData - Array of permission data
- * @param {Object} models - Database models
- * @returns {Promise<Object[]>} Created permissions
- */
-export async function bulkCreatePermissions(permissionsData, models) {
-  const { Permission } = models;
-  const createdPermissions = [];
-
-  for (const permData of permissionsData) {
-    try {
-      const existing = await Permission.findOne({
-        where: { resource: permData.resource, action: permData.action },
-      });
-
-      if (!existing) {
-        const permission = await Permission.create(permData);
-        createdPermissions.push(permission);
-      }
-    } catch (error) {
-      console.warn(
-        `Failed to create permission ${permData.resource}:${permData.action}:`,
-        error.message,
-      );
-    }
-  }
-
-  return createdPermissions;
 }
 
 /**

@@ -115,7 +115,7 @@ function CreateGroup() {
   }, []);
 
   const handleCancel = useCallback(() => {
-    confirmBackModalRef.current?.open();
+    confirmBackModalRef.current && confirmBackModalRef.current.open();
   }, []);
 
   const handleConfirmBack = useCallback(() => {
