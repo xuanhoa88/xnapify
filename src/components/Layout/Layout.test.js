@@ -37,7 +37,7 @@ const initialState = {
   },
   user: null,
   ui: {
-    adminSidebarOpen: false,
+    isAdminSidebarOpen: false,
     isAdminPanel: false,
   },
 };
