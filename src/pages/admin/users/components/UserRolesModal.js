@@ -15,7 +15,7 @@ import {
 } from 'react';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { Modal } from '../../../../components/Modal';
+import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import { fetchRoles, assignRolesToUser, fetchUsers } from '../../../../redux';
 import s from './UserRolesModal.css';

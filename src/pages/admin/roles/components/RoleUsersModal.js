@@ -16,7 +16,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { Modal } from '../../../../components/Modal';
+import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import { fetchRoleUsers } from '../../../../redux';
 import s from './RoleUsersModal.css';

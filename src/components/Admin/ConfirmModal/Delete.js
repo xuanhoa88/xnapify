@@ -7,7 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import PropTypes from 'prop-types';
-import { Modal } from '../../Modal';
+import Modal from '../../Modal';
 
 /**
  * ConfirmDeleteModal - Reusable confirmation modal for delete operations

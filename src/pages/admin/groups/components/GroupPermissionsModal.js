@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { Modal } from '../../../../components/Modal';
+import Modal from '../../../../components/Modal';
 import { fetchGroupPermissions } from '../../../../redux';
 import s from './GroupPermissionsModal.css';
 
