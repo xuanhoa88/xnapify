@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './Notifications.css';
 
 // Mock notification data
@@ -83,17 +84,18 @@ function AdminNotifications() {
 
   return (
     <div className={s.notificationWrapper} ref={dropdownRef}>
-      <button
+      <Button
+        variant='unstyled'
+        iconOnly
         className={s.notificationBtn}
         onClick={handleToggle}
-        aria-label={t('common.notifications', 'Notifications')}
-        aria-expanded={isOpen}
+        title={t('common.notifications', 'Notifications')}
       >
         <Icon name='bell' size={20} />
         {unreadCount > 0 && (
           <span className={s.notificationBadge}>{unreadCount}</span>
         )}
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.dropdown}>
@@ -127,9 +129,9 @@ function AdminNotifications() {
           </div>
 
           <div className={s.dropdownFooter}>
-            <button className={s.viewAllBtn}>
+            <Button variant='unstyled' className={s.viewAllBtn}>
               {t('common.viewAll', 'View all notifications')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

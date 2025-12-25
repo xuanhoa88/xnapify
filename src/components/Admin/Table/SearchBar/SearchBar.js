@@ -8,6 +8,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './SearchBar.css';
 
 /**
@@ -109,14 +110,16 @@ function SearchBar({
         onKeyDown={handleKeyDown}
       />
       {value && (
-        <button
+        <Button
+          variant='ghost'
+          size='small'
+          iconOnly
           className={s.searchClear}
           onClick={handleClear}
-          type='button'
           title='Clear search'
         >
           ✕
-        </button>
+        </Button>
       )}
     </div>
   );

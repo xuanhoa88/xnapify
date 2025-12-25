@@ -7,6 +7,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Link } from '../../components/History';
+import Button from '../../components/Button';
 import s from './NotFound.css';
 
 /**
@@ -37,13 +38,13 @@ function NotFound() {
             <Link to='/' className={s.btnPrimary}>
               {t('notFound.backToHome', 'Back to Home')}
             </Link>
-            <button
-              type='button'
+            <Button
+              variant='secondary'
               className={s.btnSecondary}
               onClick={() => window.history.back()}
             >
               {t('notFound.goBack', 'Go Back')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -11,6 +11,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { emailVerification } from '../../redux';
 import { Link } from '../../components/History';
+import Button from '../../components/Button';
 import s from './EmailVerification.css';
 
 /**
@@ -135,15 +136,17 @@ function EmailVerification({ token: initialToken }) {
                   />
                 </div>
               )}
-              <button
-                className={s.submitButton}
+              <Button
+                variant='primary'
                 type='submit'
-                disabled={loading}
+                fullWidth
+                className={s.submitButton}
+                loading={loading}
               >
                 {loading
                   ? t('emailVerification.loading', 'Verifying...')
                   : t('emailVerification.submit', 'Verify Email')}
-              </button>
+              </Button>
             </form>
           )}
 

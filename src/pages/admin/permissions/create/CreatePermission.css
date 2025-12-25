@@ -13,27 +13,6 @@
   min-height: 100%;
 }
 
-.backBtn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-5);
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.backBtn:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-}
-
 .formContainer {
   background: var(--color-background);
   padding: var(--spacing-8);
@@ -197,49 +176,6 @@
   padding-top: var(--spacing-4);
 }
 
-.cancelBtn {
-  height: 44px;
-  padding: 0 var(--spacing-6);
-  background: transparent;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  color: var(--color-text-secondary);
-}
-
-.cancelBtn:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-}
-
-.submitBtn {
-  height: 44px;
-  padding: 0 var(--spacing-6);
-  background: var(--color-primary);
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: white;
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.submitBtn:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
-.submitBtn:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-}
-
 /* =============================================================================
    RESPONSIVE DESIGN - MOBILE
    ============================================================================= */
@@ -247,12 +183,6 @@
 @media (max-width: 768px) {
   .root {
     padding: var(--spacing-3);
-  }
-
-  .backBtn {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
-    gap: var(--spacing-1);
   }
 
   .formContainer {
@@ -301,20 +231,6 @@
     padding-top: var(--spacing-4);
   }
 
-  .cancelBtn {
-    width: 100%;
-    padding: var(--spacing-3) var(--spacing-4);
-    font-size: var(--font-size-base);
-    text-align: center;
-  }
-
-  .submitBtn {
-    width: 100%;
-    padding: var(--spacing-3) var(--spacing-4);
-    font-size: var(--font-size-base);
-    text-align: center;
-  }
-
   .formError {
     padding: var(--spacing-3);
     font-size: var(--font-size-xs);
@@ -330,11 +246,5 @@
 
   .formContainer {
     padding: var(--spacing-3);
-  }
-
-  .cancelBtn,
-  .submitBtn {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
   }
 }

@@ -17,6 +17,7 @@ import {
 } from '../../../redux';
 import { useWebSocket } from '../../WebSocket';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './ProfileDropdown.css';
 
 /**
@@ -83,13 +84,7 @@ function ProfileDropdown() {
 
   return (
     <div className={s.userMenu} ref={dropdownRef}>
-      <button
-        className={s.userMenuBtn}
-        onClick={handleToggle}
-        aria-expanded={isOpen}
-        aria-haspopup='true'
-        aria-label={t('common.userMenu', 'User menu')}
-      >
+      <Button variant='ghost' className={s.userMenuBtn} onClick={handleToggle}>
         <div className={s.userAvatar}>
           {avatarUrl ? (
             <img
@@ -117,7 +112,7 @@ function ProfileDropdown() {
             [s.dropdownIconOpen]: isOpen,
           })}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.userDropdown} role='menu'>
@@ -150,14 +145,14 @@ function ProfileDropdown() {
 
           <div className={s.dropdownDivider} />
 
-          <button
+          <Button
+            variant='danger'
             className={clsx(s.dropdownItem, s.dropdownItemDanger)}
             onClick={handleLogout}
-            role='menuitem'
           >
             <Icon name='logout' size={16} />
             {t('navigation.logout', 'Logout')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

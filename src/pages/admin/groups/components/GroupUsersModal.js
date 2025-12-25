@@ -18,6 +18,8 @@ import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
+import Avatar from '../../../../components/Avatar';
 import { fetchGroupUsers } from '../../../../redux';
 import s from './GroupUsersModal.css';
 
@@ -34,16 +36,6 @@ import s from './GroupUsersModal.css';
  *   - Pagination with page navigation
  */
 const ITEMS_PER_PAGE = 10;
-
-// Get user initials
-const getInitials = name => {
-  if (!name) return '??';
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
 
 const GroupUsersModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
@@ -184,14 +176,16 @@ const GroupUsersModal = forwardRef((props, ref) => {
             onChange={handleSearchChange}
           />
           {inputValue && (
-            <button
+            <Button
+              variant='ghost'
+              size='small'
+              iconOnly
               className={s.searchClear}
               onClick={handleClearSearch}
-              type='button'
               title={t('common.clearSearch', 'Clear search')}
             >
               ✕
-            </button>
+            </Button>
           )}
         </div>
 
@@ -205,13 +199,15 @@ const GroupUsersModal = forwardRef((props, ref) => {
           ) : (
             users.map(user => (
               <div key={user.id} className={s.userItem}>
-                <div className={s.userAvatar}>
-                  {getInitials(
+                <Avatar
+                  name={
                     (user.profile && user.profile.display_name) ||
-                      user.display_name ||
-                      user.email,
-                  )}
-                </div>
+                    user.display_name ||
+                    user.email
+                  }
+                  size='small'
+                  className={s.userAvatar}
+                />
                 <div className={s.userInfo}>
                   <span className={s.userName}>
                     {(user.profile && user.profile.display_name) ||

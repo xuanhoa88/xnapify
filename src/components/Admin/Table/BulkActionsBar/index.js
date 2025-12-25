@@ -6,6 +6,7 @@
  */
 
 import PropTypes from 'prop-types';
+import Button from '../../../Button';
 import s from './BulkActionsBar.css';
 
 /**
@@ -26,18 +27,18 @@ function BulkActionsBar({ count, itemLabel = 'item', actions, onClear }) {
         {count} {pluralLabel} selected
       </span>
       {actions.map(action => (
-        <button
+        <Button
           key={action.label}
-          className={action.variant === 'danger' ? s.bulkBtnDanger : s.bulkBtn}
+          variant={action.variant === 'danger' ? 'danger' : 'primary'}
+          size='small'
           onClick={action.onClick}
-          type='button'
         >
           {action.label}
-        </button>
+        </Button>
       ))}
-      <button className={s.bulkClear} onClick={onClear} type='button'>
+      <Button variant='ghost' size='small' onClick={onClear}>
         ✕ Clear
-      </button>
+      </Button>
     </div>
   );
 }

@@ -18,6 +18,7 @@ import { useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import { fetchRoles, assignRolesToGroup, fetchGroups } from '../../../../redux';
 import s from './GroupRolesModal.css';
 
@@ -219,13 +220,15 @@ const GroupRolesModal = forwardRef((props, ref) => {
             onChange={handleSearchChange}
           />
           {searchInput && (
-            <button
+            <Button
+              variant='ghost'
+              size='small'
+              iconOnly
               className={s.searchClear}
               onClick={handleClearSearch}
-              type='button'
             >
               <Icon name='close' size={10} />
-            </button>
+            </Button>
           )}
         </div>
 

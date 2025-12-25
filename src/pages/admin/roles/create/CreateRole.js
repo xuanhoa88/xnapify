@@ -14,6 +14,7 @@ import {
   useDebounce,
 } from '../../../../components/InfiniteScroll';
 import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './CreateRole.css';
 
 function CreateRole() {
@@ -171,9 +172,9 @@ function CreateRole() {
         title='Create New Role'
         subtitle='Define a new access level'
       >
-        <button type='button' onClick={handleCancel} className={s.backBtn}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Roles
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -281,16 +282,12 @@ function CreateRole() {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Cancel
-            </button>
-            <button type='submit' disabled={loading} className={s.submitBtn}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Creating...' : 'Create Role'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -127,17 +127,22 @@
 }
 
 .btnSecondary {
-  background: rgb(255 255 255 / 20%);
+  background: rgb(255 255 255 / 15%);
   color: white;
   border: 2px solid rgb(255 255 255 / 30%);
   backdrop-filter: blur(10px);
 }
 
 .btnSecondary:hover {
-  background: rgb(255 255 255 / 30%);
+  background: rgb(255 255 255 / 25%);
   border-color: rgb(255 255 255 / 50%);
   transform: translateY(-2px);
   text-decoration: none;
+}
+
+.btnSecondary:active {
+  transform: translateY(0);
+  background: rgb(255 255 255 / 20%);
 }
 
 /* =============================================================================

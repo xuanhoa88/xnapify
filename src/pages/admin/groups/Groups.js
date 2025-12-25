@@ -29,7 +29,11 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Button from '../../../components/Button';
 import Card from '../../../components/Card';
+import Tag from '../../../components/Tag';
+import Avatar from '../../../components/Avatar';
+import RoleTag from '../users/components/RoleTag';
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
@@ -38,16 +42,6 @@ import s from './Groups.css';
 
 // Pagination items per page
 const ITEMS_PER_PAGE = 10;
-
-// Helper to get user initials from display name or email
-const getInitials = name => {
-  if (!name) return '??';
-  const parts = name.trim().split(' ');
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
 
 function Groups() {
   const { t } = useTranslation();
@@ -220,10 +214,10 @@ function Groups() {
         title='Group Management'
         subtitle='Organize users into groups for easier access control'
       >
-        <button className={s.addButton} onClick={handleAddGroup}>
+        <Button variant='primary' onClick={handleAddGroup}>
           <Icon name='plus' size={16} />
           Add Group
-        </button>
+        </Button>
       </Page.Header>
 
       {/* Filters */}
@@ -248,14 +242,15 @@ function Groups() {
           />
         </div>
         {hasActiveFilters && (
-          <button
-            className={s.clearFiltersBtn}
+          <Button
+            variant='ghost'
+            size='small'
             onClick={handleClearFilters}
             type='button'
             title='Reset all filters'
           >
             ✕ Clear Filters
-          </button>
+          </Button>
         )}
       </div>
 
@@ -295,12 +290,12 @@ function Groups() {
                   actions={
                     <div className={s.headerRight}>
                       <div className={s.headerBadges}>
-                        <span className={s.userCount}>
+                        <Tag variant='info'>
                           {userCount} {userCount === 1 ? 'user' : 'users'}
-                        </span>
-                        <span className={s.roleCountBadge}>
+                        </Tag>
+                        <Tag variant='secondary'>
                           {roleCount} {roleCount === 1 ? 'role' : 'roles'}
-                        </span>
+                        </Tag>
                       </div>
                       <GroupActionsDropdown
                         group={group}
@@ -325,24 +320,20 @@ function Groups() {
                   {/* Roles Section */}
                   <div className={s.rolesSection}>
                     <span className={s.sectionLabel}>Roles:</span>
-                    <div className={s.roles}>
-                      {roles.length > 0 ? (
-                        <>
-                          {visibleRoles.map(role => (
-                            <span key={role.id} className={s.roleBadge}>
-                              {role.name}
-                            </span>
-                          ))}
-                          {remainingRoleCount > 0 && (
-                            <span className={s.roleBadgeMore}>
-                              +{remainingRoleCount}
-                            </span>
-                          )}
-                        </>
-                      ) : (
-                        <span className={s.noRoles}>No roles assigned</span>
+                    <Tag.List emptyText='No roles assigned'>
+                      {visibleRoles.map(role => (
+                        <RoleTag
+                          key={role.id}
+                          name={role.name}
+                          className={s.roleTag}
+                        />
+                      ))}
+                      {remainingRoleCount > 0 && (
+                        <Tag variant='neutral' className={s.roleTag}>
+                          +{remainingRoleCount}
+                        </Tag>
                       )}
-                    </div>
+                    </Tag.List>
                   </div>
 
                   {/* Users Section */}
@@ -350,16 +341,17 @@ function Groups() {
                     {visibleUsers.length > 0 ? (
                       <>
                         {visibleUsers.map(user => (
-                          <div
+                          <Avatar
                             key={user.id}
-                            className={s.avatar}
-                            title={user.display_name || user.email}
-                          >
-                            {getInitials(user.display_name || user.email)}
-                          </div>
+                            name={user.display_name || user.email}
+                            size='small'
+                          />
                         ))}
                         {remainingUserCount > 0 && (
-                          <div className={s.avatar}>+{remainingUserCount}</div>
+                          <Avatar
+                            name={`+${remainingUserCount}`}
+                            size='small'
+                          />
                         )}
                       </>
                     ) : (

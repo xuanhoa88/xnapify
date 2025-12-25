@@ -25,6 +25,8 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Button from '../../../components/Button';
+import Tag from '../../../components/Tag';
 import { SearchableSelect } from '../../../components/SearchableSelect';
 import s from './Permissions.css';
 
@@ -262,10 +264,10 @@ function Permissions() {
         title='Permission Management'
         subtitle='Configure granular access controls'
       >
-        <button className={s.addButton} onClick={handleAdd}>
+        <Button variant='primary' onClick={handleAdd}>
           <Icon name='plus' size={16} />
           Add Permission
-        </button>
+        </Button>
       </Page.Header>
 
       {/* Bulk Actions Bar */}
@@ -307,13 +309,14 @@ function Permissions() {
 
         <div className={s.filterActions}>
           {hasActiveFilters && (
-            <button
+            <Button
+              variant='ghost'
+              size='small'
               type='button'
-              className={s.clearFiltersBtn}
               onClick={handleClearFilters}
             >
               ✕ Clear Filters
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -373,13 +376,13 @@ function Permissions() {
                     {/* Show resource name only on first row of group */}
                     <td>
                       {index === 0 ? (
-                        <span className={s.resourceBadge}>{resource}</span>
+                        <Tag variant='primary'>{resource}</Tag>
                       ) : (
                         <span className={s.resourceEmpty} />
                       )}
                     </td>
                     <td>
-                      <code className={s.actionCode}>{permission.action}</code>
+                      <Tag variant='secondary'>{permission.action}</Tag>
                     </td>
                     <td className={s.descriptionCell}>
                       {permission.description || (
@@ -387,32 +390,32 @@ function Permissions() {
                       )}
                     </td>
                     <td>
-                      <span
-                        className={
-                          permission.is_active
-                            ? s.statusActive
-                            : s.statusInactive
-                        }
+                      <Tag
+                        variant={permission.is_active ? 'success' : 'neutral'}
                       >
                         {permission.is_active ? 'Active' : 'Inactive'}
-                      </span>
+                      </Tag>
                     </td>
                     <td>
                       <div className={s.actions}>
-                        <button
-                          className={s.actionBtn}
+                        <Button
+                          variant='ghost'
+                          size='small'
+                          iconOnly
                           title='Edit'
                           onClick={() => handleEdit(permission.id)}
                         >
                           <Icon name='edit' size={16} />
-                        </button>
-                        <button
-                          className={s.actionBtn}
+                        </Button>
+                        <Button
+                          variant='ghost'
+                          size='small'
+                          iconOnly
                           title='Delete'
                           onClick={() => handleDelete(permission)}
                         >
                           <Icon name='trash' size={16} />
-                        </button>
+                        </Button>
                       </div>
                     </td>
                   </tr>

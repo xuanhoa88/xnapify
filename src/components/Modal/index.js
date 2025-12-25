@@ -7,6 +7,7 @@
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import Button from '../Button';
 import s from './Modal.css';
 
 /**
@@ -33,9 +34,14 @@ const ModalHeader = ({ children, onClose }) => (
   <div className={s.modalHeader}>
     <h3 className={s.modalTitle}>{children}</h3>
     {onClose && (
-      <button className={s.modalClose} onClick={onClose} type='button'>
+      <Button
+        variant='ghost'
+        iconOnly
+        className={s.modalClose}
+        onClick={onClose}
+      >
         ×
-      </button>
+      </Button>
     )}
   </div>
 );
@@ -129,19 +135,18 @@ const ModalButton = ({
   disabled,
   onClick,
   variant = 'secondary',
-  type = 'button',
 }) => (
-  <button
+  <Button
+    variant={variant}
     className={clsx(
       s.modalBtn,
       variant === 'primary' ? s.modalBtnPrimary : s.modalBtnSecondary,
     )}
     onClick={onClick}
     disabled={disabled}
-    type={type}
   >
     {children}
-  </button>
+  </Button>
 );
 
 ModalButton.propTypes = {

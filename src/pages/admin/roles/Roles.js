@@ -17,6 +17,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Button from '../../../components/Button';
 import Card from '../../../components/Card';
 import RoleActionsDropdown from './components/RoleActionsDropdown';
 import RolePermissionsModal from './components/RolePermissionsModal';
@@ -174,10 +175,10 @@ function Roles() {
         title={t('roles.title', 'Role Management')}
         subtitle='Define access levels and permissions'
       >
-        <button type='button' className={s.addButton} onClick={handleAddRole}>
+        <Button variant='primary' onClick={handleAddRole}>
           <Icon name='plus' size={16} />
           {t('roles.addRole', 'Add Role')}
-        </button>
+        </Button>
       </Page.Header>
 
       {/* Search/Filter Section */}

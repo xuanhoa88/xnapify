@@ -15,6 +15,7 @@ import {
   useDebounce,
 } from '../../../../components/InfiniteScroll';
 import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './EditRole.css';
 
 function EditRole({ roleId }) {
@@ -207,9 +208,9 @@ function EditRole({ roleId }) {
           title='Edit Role'
           subtitle='Modify role permissions'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Roles
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <Loader variant='spinner' message='Loading role data...' />
@@ -226,20 +227,16 @@ function EditRole({ roleId }) {
           title='Edit Role'
           subtitle='Modify role permissions'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Roles
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load role data</div>
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Back to Roles
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -253,9 +250,9 @@ function EditRole({ roleId }) {
         title='Edit Role'
         subtitle='Modify role permissions'
       >
-        <button type='button' onClick={handleCancel} className={s.backBtn}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Roles
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -363,16 +360,12 @@ function EditRole({ roleId }) {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Cancel
-            </button>
-            <button type='submit' disabled={loading} className={s.submitBtn}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

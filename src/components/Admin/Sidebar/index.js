@@ -19,6 +19,7 @@ import {
 import { useHistory, Link } from '../../History';
 import { useWebSocket } from '../../WebSocket';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './Sidebar.css';
 
 function AdminSidebar() {
@@ -111,13 +112,14 @@ function AdminSidebar() {
             <span className={s.brandLogo}>⚡</span>
             <span className={s.brandName}>RSK</span>
           </div>
-          <button
-            className={s.closeBtn}
+          <Button
+            variant='ghost'
+            iconOnly
             onClick={handleCloseSidebar}
-            aria-label='Close menu'
+            title='Close menu'
           >
             <Icon name='close' size={20} />
-          </button>
+          </Button>
         </div>
 
         {/* Navigation */}
@@ -183,13 +185,14 @@ function AdminSidebar() {
                 <span className={s.userRole}>{user.email}</span>
               </div>
             </div>
-            <button
-              className={s.logoutBtn}
+            <Button
+              variant='ghost'
+              iconOnly
               onClick={handleLogout}
-              aria-label={t('navigation.logout', 'Logout')}
+              title={t('navigation.logout', 'Logout')}
             >
               <Icon name='logout' size={18} />
-            </button>
+            </Button>
           </div>
         )}
       </aside>

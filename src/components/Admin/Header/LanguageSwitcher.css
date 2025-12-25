@@ -24,7 +24,7 @@
   align-items: center;
   gap: var(--spacing-1);
   padding: var(--spacing-1) var(--spacing-2);
-  background: transparent;
+  background-color: transparent;
   border: none;
   border-radius: var(--radius-md);
   color: rgb(255 255 255 / 70%);
@@ -36,7 +36,7 @@
 }
 
 .trigger:hover {
-  background: rgb(255 255 255 / 10%);
+  background-color: rgb(255 255 255 / 10%);
   color: white;
 }
 
@@ -99,7 +99,7 @@
   justify-content: space-between;
   width: 100%;
   padding: var(--spacing-2) var(--spacing-3);
-  background: transparent;
+  background-color: transparent;
   border: none;
   font-family: inherit;
   font-size: var(--font-size-sm);
@@ -110,13 +110,13 @@
 }
 
 .option:hover {
-  background: rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 8%);
   color: white;
 }
 
 .optionActive {
   color: white;
-  background: rgb(255 255 255 / 5%);
+  background-color: rgb(255 255 255 / 5%);
 }
 
 .optionName {

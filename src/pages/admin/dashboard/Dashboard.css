@@ -118,25 +118,10 @@
   border-bottom: none;
 }
 
-/* User Cell */
 .userCell {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--gradient-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: var(--font-weight-bold);
-  font-size: var(--font-size-xs);
-  flex-shrink: 0;
 }
 
 .userName {
@@ -208,12 +193,6 @@
   .table th,
   .table td {
     padding: var(--spacing-2) var(--spacing-3);
-  }
-
-  .avatar {
-    width: 32px;
-    height: 32px;
-    font-size: var(--font-size-xs);
   }
 
   .userName {

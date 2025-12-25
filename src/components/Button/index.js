@@ -72,6 +72,7 @@ Button.propTypes = {
     'ghost',
     'danger',
     'success',
+    'unstyled',
   ]),
   /** Button size */
   size: PropTypes.oneOf(['small', 'medium', 'large']),

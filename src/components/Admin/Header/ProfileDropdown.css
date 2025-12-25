@@ -31,7 +31,7 @@
 }
 
 .userMenuBtn:hover {
-  background: rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 8%) !important;
 }
 
 .userAvatar {
@@ -151,7 +151,7 @@
   font-weight: var(--font-weight-medium);
   cursor: pointer;
   border: none;
-  background: transparent;
+  background: transparent !important;
   width: 100%;
   text-align: left;
   font-family: inherit;
@@ -172,7 +172,7 @@
 }
 
 .dropdownItem:hover {
-  background: rgb(255 255 255 / 10%);
+  background-color: rgb(255 255 255 / 10%) !important;
   color: white;
   text-decoration: none;
 }
@@ -192,7 +192,7 @@
 }
 
 .dropdownItemDanger:hover {
-  background: rgb(239 68 68 / 15%);
+  background-color: rgb(239 68 68 / 15%) !important;
   color: rgb(248 113 113);
 }
 

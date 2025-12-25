@@ -13,27 +13,6 @@
   min-height: 100%;
 }
 
-.addButton {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-5);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.addButton:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
 /* Filters */
 .filters {
   display: flex;
@@ -49,29 +28,6 @@
 
 .filterItem {
   min-width: 200px;
-}
-
-.clearFiltersBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: 0 var(--spacing-3);
-  height: 40px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  white-space: nowrap;
-}
-
-.clearFiltersBtn:hover {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fecaca;
 }
 
 .grid {
@@ -105,16 +61,6 @@
   word-break: break-word;
 }
 
-.userCount {
-  font-size: var(--font-size-xs);
-  color: var(--color-primary);
-  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-full);
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-}
-
 .groupDescription {
   margin: 0 0 var(--spacing-3) 0;
   color: var(--color-text-secondary);
@@ -133,16 +79,6 @@
   display: flex;
   gap: var(--spacing-2);
   flex-wrap: nowrap;
-}
-
-.roleCountBadge {
-  font-size: var(--font-size-xs);
-  color: #7c3aed;
-  background: linear-gradient(135deg, #ede9fe 0%, #e0e7ff 100%);
-  padding: var(--spacing-1) var(--spacing-2);
-  border-radius: var(--radius-full);
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
 }
 
 /* Roles Section */
@@ -168,48 +104,17 @@
   flex-shrink: 0;
 }
 
-.roles {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--spacing-2);
-  align-items: center;
-}
-
-.roleBadge {
+/* Role tags - match avatar dimensions */
+.roleTag {
+  min-width: 36px;
+  height: 36px;
+  padding: 0 var(--spacing-3);
+  border-radius: var(--radius-full);
   display: inline-flex;
   align-items: center;
-  padding: var(--spacing-1) var(--spacing-3);
-  background: linear-gradient(135deg, #ddd6fe 0%, #c4b5fd 100%);
-  color: #5b21b6;
-  border-radius: var(--radius-full);
+  justify-content: center;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-  transition: var(--transition-base);
-  box-shadow: 0 1px 2px rgb(139 92 246 / 15%);
-}
-
-.roleBadge:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 3px 8px rgb(139 92 246 / 25%);
-}
-
-.roleBadgeMore {
-  display: inline-flex;
-  align-items: center;
-  padding: var(--spacing-1) var(--spacing-2);
-  background: var(--color-background);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-full);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-}
-
-.noRoles {
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
-  font-style: italic;
 }
 
 .users {
@@ -229,34 +134,6 @@
   border-color: var(--color-border);
 }
 
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-full);
-  background: var(--gradient-primary);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-xs);
-  border: 2px solid var(--color-background);
-  margin-left: -8px;
-  position: relative;
-  transition: var(--transition-base);
-  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
-}
-
-.avatar:first-child {
-  margin-left: 0;
-}
-
-.avatar:hover {
-  transform: translateY(-2px) scale(1.1);
-  z-index: 10;
-  box-shadow: 0 4px 8px rgb(0 0 0 / 20%);
-}
-
 .noUsers {
   color: var(--color-text-tertiary);
   font-size: var(--font-size-sm);
@@ -272,13 +149,6 @@
     padding: var(--spacing-3);
   }
 
-  /* Add button compact */
-  .addButton {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
-    gap: var(--spacing-1);
-  }
-
   /* Filters - 2-column grid */
   .filters {
     display: grid;
@@ -290,14 +160,6 @@
 
   .filterItem {
     min-width: unset;
-  }
-
-  .clearFiltersBtn {
-    grid-column: 1 / -1;
-    width: 100%;
-    height: 36px;
-    justify-content: center;
-    font-size: var(--font-size-xs);
   }
 
   /* Grid single column */
@@ -333,12 +195,6 @@
     gap: var(--spacing-1);
   }
 
-  .userCount,
-  .roleCountBadge {
-    font-size: 10px;
-    padding: var(--spacing-1) var(--spacing-2);
-  }
-
   /* Roles section compact */
   .rolesSection {
     padding: var(--spacing-2) var(--spacing-3);
@@ -353,11 +209,6 @@
     padding-top: 0;
   }
 
-  .roleBadge {
-    font-size: 10px;
-    padding: var(--spacing-1) var(--spacing-2);
-  }
-
   .users {
     min-height: 44px;
     padding: var(--spacing-2) var(--spacing-3);
@@ -365,19 +216,9 @@
     border-radius: var(--radius-md);
   }
 
-  .avatar {
-    width: 32px;
+  .roleTag {
+    min-width: 32px;
     height: 32px;
-    font-size: 10px;
-    margin-left: -6px;
-  }
-
-  .roleBadgeMore {
-    font-size: 10px;
-    padding: 2px var(--spacing-1);
-  }
-
-  .noRoles {
     font-size: 10px;
   }
 

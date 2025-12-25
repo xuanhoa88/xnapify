@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { getLocale, setLocale, getAvailableLocales } from '../../../../redux';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './LanguageSwitcher.css';
 
 /**
@@ -68,13 +69,11 @@ function LanguageSwitcher() {
 
   return (
     <div className={s.wrapper} ref={dropdownRef}>
-      <button
+      <Button
+        variant='ghost'
         className={s.trigger}
         onClick={handleToggle}
-        aria-expanded={isOpen}
-        aria-haspopup='true'
-        type='button'
-        aria-label='Language switcher'
+        title='Language switcher'
       >
         <Icon name='globe' size={18} className={s.globeIcon} />
         <span className={s.langName}>{currentLanguageName}</span>
@@ -83,25 +82,24 @@ function LanguageSwitcher() {
           size={12}
           className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.dropdown} role='menu'>
           {localeEntries.map(([code, name]) => (
-            <button
+            <Button
               key={code}
+              variant='ghost'
               onClick={e => handleLocaleChange(code, e)}
               className={clsx(s.option, {
                 [s.optionActive]: code === currentLocale,
               })}
-              type='button'
-              role='menuitem'
             >
               <span className={s.optionName}>{name}</span>
               {code === currentLocale && (
                 <Icon name='check' size={14} className={s.checkmark} />
               )}
-            </button>
+            </Button>
           ))}
         </div>
       )}

@@ -30,34 +30,17 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Tag from '../../../components/Tag';
+import Button from '../../../components/Button';
+import Avatar from '../../../components/Avatar';
 
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
+import RoleTag from './components/RoleTag';
+import GroupTag from './components/GroupTag';
 import s from './Users.css';
-
-const getInitials = displayName => {
-  if (!displayName) return '?';
-  const parts = displayName.split(' ');
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return displayName.substring(0, 2).toUpperCase();
-};
-
-const getRoleClass = role => {
-  const roleClasses = {
-    admin: s.roleAdmin,
-    mod: s.roleModerator,
-    moderator: s.roleModerator,
-    editor: s.roleUser,
-    user: s.roleUser,
-  };
-  return typeof role === 'string'
-    ? roleClasses[role.toLowerCase()] || s.roleUser
-    : s.roleUser;
-};
 
 const formatDate = dateString => {
   if (!dateString) return 'N/A';
@@ -270,12 +253,12 @@ function Users() {
         title='User Management'
         subtitle='Manage users, roles, and permissions'
       >
-        <button
-          className={s.addButton}
+        <Button
+          variant='primary'
           onClick={() => history.push('/admin/users/create')}
         >
           Add User
-        </button>
+        </Button>
       </Page.Header>
 
       {selectedUsers.length > 0 && (
@@ -338,14 +321,15 @@ function Users() {
         />
         <div className={s.filterActions}>
           {hasActiveFilters && (
-            <button
-              className={s.clearFiltersBtn}
+            <Button
+              variant='ghost'
+              size='small'
               onClick={handleClearAllFilters}
               type='button'
               title='Reset all filters'
             >
               ✕ Clear Filters
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -366,7 +350,7 @@ function Users() {
               </th>
               <th>User</th>
               <th>Email</th>
-              <th>Role</th>
+              <th>Roles</th>
               <th>Groups</th>
               <th>Status</th>
               <th>Joined</th>
@@ -386,65 +370,59 @@ function Users() {
                 </td>
                 <td>
                   <div className={s.userCell}>
-                    <div className={s.avatar}>
-                      {getInitials(user.display_name || user.email)}
-                    </div>
+                    <Avatar
+                      name={user.display_name || user.email}
+                      size='small'
+                    />
                     <span>{user.display_name || user.email}</span>
                   </div>
                 </td>
                 <td>{user.email}</td>
                 <td>
-                  <div className={s.rolesCell}>
+                  <Tag.List>
                     {user.roles && user.roles.length > 0 ? (
-                      user.roles.map(role => (
-                        <span key={role} className={getRoleClass(role)}>
-                          {role}
-                        </span>
-                      ))
+                      user.roles.map(role => <RoleTag key={role} name={role} />)
                     ) : (
-                      <span className={getRoleClass('user')}>User</span>
+                      <RoleTag name='User' />
                     )}
-                  </div>
+                  </Tag.List>
                 </td>
                 <td>
-                  {user.groups && user.groups.length > 0 ? (
-                    user.groups.map(group => (
-                      <span key={group.id} className={s.groupBadge}>
-                        {group.name}
-                      </span>
-                    ))
-                  ) : (
-                    <span className={s.noGroup}>—</span>
-                  )}
+                  <Tag.List>
+                    {user.groups &&
+                      user.groups.map(group => (
+                        <GroupTag key={group.id} name={group.name} />
+                      ))}
+                  </Tag.List>
                 </td>
                 <td>
-                  <span
-                    className={
-                      user.is_active ? s.statusActive : s.statusInactive
-                    }
-                  >
+                  <Tag variant={user.is_active ? 'success' : 'neutral'}>
                     {user.is_active ? 'Active' : 'Inactive'}
-                  </span>
+                  </Tag>
                 </td>
                 <td>{formatDate(user.created_at)}</td>
                 <td>
                   <div className={s.actions}>
-                    <button
-                      className={s.actionBtn}
+                    <Button
+                      variant='ghost'
+                      size='small'
+                      iconOnly
                       title='Edit'
                       onClick={() =>
                         history.push(`/admin/users/${user.id}/edit`)
                       }
                     >
                       <Icon name='edit' size={16} />
-                    </button>
-                    <button
-                      className={s.actionBtn}
+                    </Button>
+                    <Button
+                      variant='ghost'
+                      size='small'
+                      iconOnly
                       title='Delete'
                       onClick={() => handleDelete(user)}
                     >
                       <Icon name='trash' size={16} />
-                    </button>
+                    </Button>
                     <UserActionsDropdown
                       user={user}
                       isOpen={activeDropdownId === user.id}

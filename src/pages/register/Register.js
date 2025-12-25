@@ -10,6 +10,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { register } from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
+import Button from '../../components/Button';
 import s from './Register.css';
 
 /**
@@ -194,9 +195,15 @@ function Register() {
               />
             </div>
 
-            <button className={s.submitButton} type='submit' disabled={loading}>
+            <Button
+              variant='primary'
+              type='submit'
+              fullWidth
+              className={s.submitButton}
+              loading={loading}
+            >
               {loading ? t('register.loading') : t('register.submit')}
-            </button>
+            </Button>
           </form>
 
           <div className={s.loginLink}>

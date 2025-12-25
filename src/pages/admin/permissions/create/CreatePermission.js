@@ -10,6 +10,7 @@ import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { createPermission } from '../../../../redux';
 import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {
@@ -72,9 +73,9 @@ export default function CreatePermission() {
         title='Create New Permission'
         subtitle='Define a new access control rule'
       >
-        <button type='button' className={s.backBtn} onClick={handleCancel}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Permissions
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -156,17 +157,16 @@ export default function CreatePermission() {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              className={s.cancelBtn}
+            <Button
+              variant='secondary'
               onClick={handleCancel}
               disabled={loading}
             >
               Cancel
-            </button>
-            <button type='submit' className={s.submitBtn} disabled={loading}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Creating...' : 'Create Permission'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

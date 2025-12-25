@@ -21,6 +21,7 @@ import {
   useDebounce,
 } from '../../../../components/InfiniteScroll';
 import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './EditUser.css';
 
 function EditUser({ userId }) {
@@ -300,9 +301,9 @@ function EditUser({ userId }) {
           title='Edit User'
           subtitle='Modify user account details'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Users
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <Loader variant='spinner' message='Loading user data...' />
@@ -319,20 +320,16 @@ function EditUser({ userId }) {
           title='Edit User'
           subtitle='Modify user account details'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Users
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load user data</div>
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Back to Users
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -346,9 +343,9 @@ function EditUser({ userId }) {
         title='Edit User'
         subtitle='Modify user account details'
       >
-        <button type='button' onClick={handleCancel} className={s.backBtn}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Users
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -380,9 +377,10 @@ function EditUser({ userId }) {
                   id='password'
                 />
                 {newPassword && (
-                  <button
-                    type='button'
-                    className={s.showPasswordBtn}
+                  <Button
+                    variant='ghost'
+                    size='small'
+                    iconOnly
                     onClick={() => setShowPassword(!showPassword)}
                     title={showPassword ? 'Hide password' : 'Show password'}
                   >
@@ -391,23 +389,26 @@ function EditUser({ userId }) {
                     ) : (
                       <Icon name='eye' size={18} />
                     )}
-                  </button>
+                  </Button>
                 )}
               </div>
-              <button
-                type='button'
-                onClick={handleGeneratePassword}
-                disabled={generatingPassword}
-                className={s.generatePasswordBtn}
-              >
-                {generatingPassword ? (
-                  'Generating...'
-                ) : (
-                  <>
-                    <Icon name='key' size={16} /> Generate New Password
-                  </>
-                )}
-              </button>
+              <div className={s.generatePasswordRow}>
+                <Button
+                  variant='secondary'
+                  size='small'
+                  onClick={handleGeneratePassword}
+                  disabled={generatingPassword}
+                  className={s.generateBtn}
+                >
+                  {generatingPassword ? (
+                    'Generating...'
+                  ) : (
+                    <>
+                      <Icon name='key' size={14} /> Generate New Password
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -567,16 +568,12 @@ function EditUser({ userId }) {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Cancel
-            </button>
-            <button type='submit' disabled={loading} className={s.submitBtn}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

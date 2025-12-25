@@ -14,6 +14,7 @@ import {
   useDebounce,
 } from '../../../../components/InfiniteScroll';
 import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './CreateGroup.css';
 
 function CreateGroup() {
@@ -152,9 +153,9 @@ function CreateGroup() {
         title='Create New Group'
         subtitle='Organize users into a new group'
       >
-        <button type='button' onClick={handleCancel} className={s.backBtn}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Groups
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -267,16 +268,12 @@ function CreateGroup() {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Cancel
-            </button>
-            <button type='submit' disabled={loading} className={s.submitBtn}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Creating...' : 'Create Group'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

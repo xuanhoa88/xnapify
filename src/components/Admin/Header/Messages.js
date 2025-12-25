@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './Messages.css';
 
 // Mock message data
@@ -101,17 +102,18 @@ function AdminMessages() {
 
   return (
     <div className={s.messagesWrapper} ref={dropdownRef}>
-      <button
+      <Button
+        variant='unstyled'
+        iconOnly
         className={s.messagesBtn}
         onClick={handleToggle}
-        aria-label={t('common.messages', 'Messages')}
-        aria-expanded={isOpen}
+        title={t('common.messages', 'Messages')}
       >
         <Icon name='mail' size={20} />
         {unreadCount > 0 && (
           <span className={s.messagesBadge}>{unreadCount}</span>
         )}
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.dropdown}>
@@ -146,9 +148,9 @@ function AdminMessages() {
           </div>
 
           <div className={s.dropdownFooter}>
-            <button className={s.viewAllBtn}>
+            <Button variant='unstyled' className={s.viewAllBtn}>
               {t('common.viewAllMessages', 'View all messages')}
-            </button>
+            </Button>
           </div>
         </div>
       )}

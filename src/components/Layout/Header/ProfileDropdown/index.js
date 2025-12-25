@@ -17,6 +17,7 @@ import {
 } from '../../../../redux';
 import { Link, useHistory } from '../../../History';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './ProfileDropdown.css';
 
 /**
@@ -80,13 +81,7 @@ function ProfileDropdown() {
 
   return (
     <div className={s.profileMenu} ref={dropdownRef}>
-      <button
-        className={s.profileBtn}
-        onClick={handleToggle}
-        aria-expanded={isOpen}
-        aria-haspopup='true'
-        aria-label={t('common.userMenu', 'User menu')}
-      >
+      <Button variant='ghost' className={s.profileBtn} onClick={handleToggle}>
         <div className={s.avatar}>
           {avatarUrl ? (
             <img
@@ -107,7 +102,7 @@ function ProfileDropdown() {
           size={12}
           className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.dropdown} role='menu'>
@@ -138,14 +133,14 @@ function ProfileDropdown() {
 
           <div className={s.dropdownDivider} />
 
-          <button
+          <Button
+            variant='danger'
             className={clsx(s.dropdownItem, s.dropdownItemDanger)}
             onClick={handleLogout}
-            role='menuitem'
           >
             <Icon name='logout' size={16} />
             {t('navigation.logout', 'Logout')}
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -10,6 +10,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { resetPassword } from '../../redux';
 import { Link } from '../../components/History';
+import Button from '../../components/Button';
 import s from './ResetPassword.css';
 
 /**
@@ -108,15 +109,17 @@ function RequestResetPassword() {
                   autoFocus // eslint-disable-line jsx-a11y/no-autofocus
                 />
               </div>
-              <button
-                className={s.submitButton}
+              <Button
+                variant='primary'
                 type='submit'
-                disabled={loading}
+                fullWidth
+                className={s.submitButton}
+                loading={loading}
               >
                 {loading
                   ? t('resetPassword.loading', 'Sending...')
                   : t('resetPassword.submit', 'Send Reset Link')}
-              </button>
+              </Button>
             </form>
           )}
 

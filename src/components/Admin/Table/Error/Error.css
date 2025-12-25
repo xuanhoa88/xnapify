@@ -67,42 +67,6 @@
 }
 
 /* =============================================================================
-   RETRY BUTTON
-   ============================================================================= */
-
-.retryButton {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-6);
-  background: var(--color-danger, rgb(239 68 68));
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-semibold);
-  cursor: pointer;
-  transition: all var(--transition-base);
-}
-
-.retryButton:hover {
-  background: var(--color-danger-hover, rgb(220 38 38));
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgb(239 68 68 / 30%);
-}
-
-.retryButton:active {
-  transform: translateY(0);
-}
-
-/* stylelint-disable-next-line selector-pseudo-class-no-unknown */
-.retryButton:focus-visible {
-  outline: 2px solid var(--color-danger, rgb(239 68 68));
-  outline-offset: 2px;
-}
-
-/* =============================================================================
    RESPONSIVE
    ============================================================================= */
 

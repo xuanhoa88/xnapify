@@ -344,7 +344,7 @@
   padding: var(--spacing-3) var(--spacing-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
-  background: var(--color-background-secondary);
+  background: var(--color-background-secondary) !important;
   cursor: pointer;
   transition: all var(--transition-fast);
   text-align: left;
@@ -353,7 +353,7 @@
 
 .userCard:hover {
   border-color: var(--color-primary);
-  background: var(--color-background-tertiary);
+  background: var(--color-background-tertiary) !important;
   transform: translateX(4px);
   box-shadow: var(--shadow-sm);
 }

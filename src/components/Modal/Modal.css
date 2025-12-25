@@ -60,7 +60,7 @@
 }
 
 .modalClose {
-  background: transparent;
+  background: transparent !important;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
@@ -70,6 +70,7 @@
 }
 
 .modalClose:hover {
+  background-color: var(--color-background-secondary) !important;
   color: var(--color-text-primary);
 }
 
@@ -90,7 +91,7 @@
 
 .modalFooter {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--spacing-3);
   padding: var(--spacing-4) var(--spacing-6);

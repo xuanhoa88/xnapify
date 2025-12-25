@@ -18,6 +18,7 @@ import {
 } from '../../../redux';
 import { Page, Icon, Loader, Table } from '../../../components/Admin';
 import Card from '../../../components/Card';
+import Avatar from '../../../components/Avatar';
 import s from './Dashboard.css';
 
 /**
@@ -156,14 +157,10 @@ function Dashboard() {
                     <tr key={activity.id}>
                       <td>
                         <div className={s.userCell}>
-                          <div className={s.avatar}>
-                            {(activity.user &&
-                              activity.user.displayName &&
-                              activity.user.displayName
-                                .substring(0, 2)
-                                .toUpperCase()) ||
-                              '?'}
-                          </div>
+                          <Avatar
+                            name={activity.user?.displayName}
+                            size='small'
+                          />
                           <div>
                             <div className={s.userName}>
                               {(activity.user && activity.user.displayName) ||

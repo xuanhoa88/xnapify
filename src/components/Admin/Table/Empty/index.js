@@ -8,6 +8,7 @@
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './Empty.css';
 
 /**
@@ -32,9 +33,9 @@ function Empty({
       <h3 className={s.title}>{title}</h3>
       {description && <p className={s.description}>{description}</p>}
       {actionLabel && onAction && (
-        <button type='button' className={s.actionButton} onClick={onAction}>
+        <Button variant='primary' onClick={onAction}>
           {actionLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

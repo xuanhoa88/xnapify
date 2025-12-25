@@ -31,7 +31,7 @@
 }
 
 .notificationBtn:hover {
-  background: rgb(255 255 255 / 10%);
+  background-color: rgb(255 255 255 / 10%) !important;
   color: white;
 }
 
@@ -149,7 +149,14 @@
 }
 
 .notificationIcon {
-  font-size: 1.2em;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(255 255 255 / 10%);
+  border-radius: var(--radius-full);
+  color: rgb(255 255 255 / 80%);
   flex-shrink: 0;
 }
 
@@ -191,7 +198,7 @@
 .viewAllBtn {
   width: 100%;
   padding: var(--spacing-2) var(--spacing-3);
-  background: rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 8%) !important;
   border: none;
   border-radius: var(--radius-md);
   color: rgb(255 255 255 / 80%);
@@ -203,7 +210,7 @@
 }
 
 .viewAllBtn:hover {
-  background: rgb(255 255 255 / 12%);
+  background-color: rgb(255 255 255 / 12%) !important;
   color: white;
 }
 

@@ -11,6 +11,7 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import { resetPasswordConfirmation } from '../../redux';
 import { Link } from '../../components/History';
+import Button from '../../components/Button';
 import s from './ResetPassword.css';
 
 /**
@@ -156,15 +157,17 @@ function ResetPasswordConfirmation({ token }) {
                   minLength={8}
                 />
               </div>
-              <button
-                className={s.submitButton}
+              <Button
+                variant='primary'
                 type='submit'
-                disabled={loading}
+                fullWidth
+                className={s.submitButton}
+                loading={loading}
               >
                 {loading
                   ? t('resetPasswordConfirmation.loading', 'Resetting...')
                   : t('resetPasswordConfirmation.submit', 'Reset Password')}
-              </button>
+              </Button>
             </form>
           )}
 

@@ -62,25 +62,6 @@
   letter-spacing: -0.02em;
 }
 
-.closeBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 60%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-}
-
-.closeBtn:hover {
-  background: rgb(255 255 255 / 10%);
-  color: white;
-}
-
 /* =============================================================================
    NAVIGATION
    ============================================================================= */
@@ -237,26 +218,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.logoutBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 50%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.logoutBtn:hover {
-  background: rgb(255 100 100 / 15%);
-  color: rgb(255 100 100);
 }
 
 /* =============================================================================

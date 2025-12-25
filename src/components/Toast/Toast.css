@@ -1,0 +1,164 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ==========================================================================
+   Toast Component Styles
+   ========================================================================== */
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  min-width: 300px;
+  max-width: 450px;
+  padding: var(--spacing-4);
+  background-color: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  border-left: 4px solid;
+  animation: slideIn 0.2s ease-out;
+}
+
+.toast.exiting {
+  animation: slideOut 0.2s ease-in forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* ==========================================================================
+   Toast Content
+   ========================================================================== */
+
+.iconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+}
+
+/* ==========================================================================
+   Toast Variants
+   ========================================================================== */
+
+/* Success Toast */
+.success {
+  border-left-color: var(--color-success);
+}
+
+.success .iconWrapper {
+  color: var(--color-success);
+  background-color: #ecfdf5; /* Green 50 */
+}
+
+/* Error Toast */
+.error {
+  border-left-color: var(--color-error);
+}
+
+.error .iconWrapper {
+  color: var(--color-error);
+  background-color: var(--color-error-bg);
+}
+
+/* Warning Toast */
+.warning {
+  border-left-color: var(--color-warning);
+}
+
+.warning .iconWrapper {
+  color: var(--color-warning);
+  background-color: #fffbeb; /* Amber 50 */
+}
+
+/* Info Toast */
+.info {
+  border-left-color: var(--color-info);
+}
+
+.info .iconWrapper {
+  color: var(--color-info);
+  background-color: var(--color-primary-bg);
+}
+
+.icon {
+  flex-shrink: 0;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-1);
+}
+
+.message {
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  line-height: var(--line-height-normal);
+}
+
+/* ==========================================================================
+   Close Button
+   ========================================================================== */
+
+.closeButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background-color: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.closeButton:hover {
+  background-color: var(--color-background-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.closeButton:focus {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}

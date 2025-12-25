@@ -15,6 +15,7 @@ import {
   useDebounce,
 } from '../../../../components/InfiniteScroll';
 import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
@@ -190,9 +191,9 @@ function EditGroup({ groupId }) {
           title='Edit Group'
           subtitle='Modify group details'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Groups
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <Loader variant='spinner' message='Loading group data...' />
@@ -209,20 +210,16 @@ function EditGroup({ groupId }) {
           title='Edit Group'
           subtitle='Modify group details'
         >
-          <button type='button' onClick={handleCancel} className={s.backBtn}>
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Groups
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load group data</div>
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Back to Groups
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -236,9 +233,9 @@ function EditGroup({ groupId }) {
         title='Edit Group'
         subtitle='Modify group details'
       >
-        <button type='button' onClick={handleCancel} className={s.backBtn}>
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Groups
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -350,16 +347,12 @@ function EditGroup({ groupId }) {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
-              onClick={handleCancel}
-              className={s.cancelBtn}
-            >
+            <Button variant='secondary' onClick={handleCancel}>
               Cancel
-            </button>
-            <button type='submit' disabled={loading} className={s.submitBtn}>
+            </Button>
+            <Button variant='primary' type='submit' loading={loading}>
               {loading ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

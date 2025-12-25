@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './ScrollToTop.css';
 
 /**
@@ -62,14 +63,15 @@ function ScrollToTop() {
   }, []);
 
   return (
-    <button
+    <Button
+      variant='primary'
+      iconOnly
       className={clsx(s.scrollToTop, { [s.visible]: showScroll })}
       onClick={scrollToTop}
-      aria-label='Scroll to top'
-      type='button'
+      title='Scroll to top'
     >
       <Icon name='arrowUp' size={24} className={s.icon} />
-    </button>
+    </Button>
   );
 }
 

@@ -124,6 +124,15 @@
   transform: translateY(0);
 }
 
+/* Unstyled Button - No background/color/hover styles, custom className controls all */
+.unstyled {
+  background-color: transparent;
+  color: inherit;
+  border: none;
+}
+
+/* No hover/active styles for unstyled - controlled by custom className */
+
 /* ==========================================================================
    Button Sizes
    ========================================================================== */

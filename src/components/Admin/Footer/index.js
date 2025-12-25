@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './Footer.css';
 
 /**
@@ -71,14 +72,15 @@ function AdminFooter() {
       </footer>
 
       {/* Scroll to Top Button */}
-      <button
+      <Button
+        variant='primary'
+        iconOnly
         className={clsx(s.scrollToTop, showScroll && s.visible)}
         onClick={scrollToTop}
-        aria-label={t('common.scrollToTop', 'Scroll to top')}
-        type='button'
+        title={t('common.scrollToTop', 'Scroll to top')}
       >
         <Icon name='arrowUp' size={20} />
-      </button>
+      </Button>
     </>
   );
 }

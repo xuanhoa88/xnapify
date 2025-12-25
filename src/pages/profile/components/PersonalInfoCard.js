@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Icon from '../../../components/Icon';
+import Button from '../../../components/Button';
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
@@ -150,10 +151,14 @@ function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
           />
         </div>
 
-        <button className={s.button} type='submit' disabled={loading}>
-          {loading && <span className={s.spinner} />}
+        <Button
+          variant='primary'
+          type='submit'
+          className={s.button}
+          loading={loading}
+        >
           {loading ? t('profile.saving') : t('profile.saveChanges')}
-        </button>
+        </Button>
       </form>
     </div>
   );

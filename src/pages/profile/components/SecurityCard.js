@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Icon from '../../../components/Icon';
+import Button from '../../../components/Button';
 import s from './SecurityCard.css';
 
 function SecurityCard({ onChangePassword, loading, message }) {
@@ -93,20 +94,19 @@ function SecurityCard({ onChangePassword, loading, message }) {
               required
               placeholder='••••••••'
             />
-            <button
-              type='button'
+            <Button
+              variant='ghost'
+              iconOnly
               className={s.togglePassword}
               onClick={() => togglePasswordVisibility('current')}
-              aria-label={
-                showPasswords.current ? 'Hide password' : 'Show password'
-              }
+              title={showPasswords.current ? 'Hide password' : 'Show password'}
             >
               {showPasswords.current ? (
                 <Icon name='eyeOff' size={20} />
               ) : (
                 <Icon name='eye' size={20} />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -126,18 +126,19 @@ function SecurityCard({ onChangePassword, loading, message }) {
               minLength={8}
               placeholder='••••••••'
             />
-            <button
-              type='button'
+            <Button
+              variant='ghost'
+              iconOnly
               className={s.togglePassword}
               onClick={() => togglePasswordVisibility('new')}
-              aria-label={showPasswords.new ? 'Hide password' : 'Show password'}
+              title={showPasswords.new ? 'Hide password' : 'Show password'}
             >
               {showPasswords.new ? (
                 <Icon name='eyeOff' size={20} />
               ) : (
                 <Icon name='eye' size={20} />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -157,29 +158,32 @@ function SecurityCard({ onChangePassword, loading, message }) {
               minLength={8}
               placeholder='••••••••'
             />
-            <button
-              type='button'
+            <Button
+              variant='ghost'
+              iconOnly
               className={s.togglePassword}
               onClick={() => togglePasswordVisibility('confirm')}
-              aria-label={
-                showPasswords.confirm ? 'Hide password' : 'Show password'
-              }
+              title={showPasswords.confirm ? 'Hide password' : 'Show password'}
             >
               {showPasswords.confirm ? (
                 <Icon name='eyeOff' size={20} />
               ) : (
                 <Icon name='eye' size={20} />
               )}
-            </button>
+            </Button>
           </div>
         </div>
 
-        <button className={s.buttonSecondary} type='submit' disabled={loading}>
-          {loading && <span className={s.spinner} />}
+        <Button
+          variant='secondary'
+          type='submit'
+          className={s.buttonSecondary}
+          loading={loading}
+        >
           {loading
             ? t('profile.changingPassword')
             : t('profile.updatePassword')}
-        </button>
+        </Button>
       </form>
     </div>
   );

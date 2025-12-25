@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
 import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
@@ -96,9 +97,13 @@ export default function EditPermission({ permissionId }) {
           title='Edit Permission'
           subtitle='Modify permission rule'
         >
-          <button type='button' className={s.backBtn} onClick={handleCancel}>
+          <Button
+            variant='secondary'
+            className={s.backBtn}
+            onClick={handleCancel}
+          >
             ← Back to Permissions
-          </button>
+          </Button>
         </Page.Header>
         <div className={s.formContainer}>
           <div className={s.loading}>Loading permission...</div>
@@ -114,9 +119,13 @@ export default function EditPermission({ permissionId }) {
         title='Edit Permission'
         subtitle='Modify permission rule'
       >
-        <button type='button' className={s.backBtn} onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          className={s.backBtn}
+          onClick={handleCancel}
+        >
           ← Back to Permissions
-        </button>
+        </Button>
       </Page.Header>
 
       <div className={s.formContainer}>
@@ -198,17 +207,22 @@ export default function EditPermission({ permissionId }) {
           </div>
 
           <div className={s.formActions}>
-            <button
-              type='button'
+            <Button
+              variant='secondary'
               className={s.cancelBtn}
               onClick={handleCancel}
               disabled={saving}
             >
               Cancel
-            </button>
-            <button type='submit' className={s.submitBtn} disabled={saving}>
+            </Button>
+            <Button
+              variant='primary'
+              type='submit'
+              className={s.submitBtn}
+              loading={saving}
+            >
               {saving ? 'Saving...' : 'Save Changes'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

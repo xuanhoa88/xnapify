@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { getLocale, setLocale, getAvailableLocales } from '../../../redux';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import s from './LanguageSwitcher.css';
 
 /**
@@ -73,13 +74,7 @@ function AdminLanguageSwitcher() {
 
   return (
     <div className={s.wrapper} ref={dropdownRef}>
-      <button
-        className={s.trigger}
-        onClick={handleToggle}
-        aria-expanded={isOpen}
-        aria-haspopup='true'
-        type='button'
-      >
+      <Button variant='unstyled' className={s.trigger} onClick={handleToggle}>
         <span className={s.globeIcon}>
           <Icon name='globe' size={18} />
         </span>
@@ -89,22 +84,22 @@ function AdminLanguageSwitcher() {
           size={12}
           className={clsx(s.chevron, { [s.chevronOpen]: isOpen })}
         />
-      </button>
+      </Button>
 
       {isOpen && (
         <div className={s.dropdown}>
           {localeEntries.map(([code, name]) => (
-            <button
+            <Button
               key={code}
+              variant='unstyled'
               onClick={e => handleLocaleChange(code, e)}
               className={clsx(s.option, {
                 [s.optionActive]: code === currentLocale,
               })}
-              type='button'
             >
               <span className={s.optionName}>{name}</span>
               {code === currentLocale && <span className={s.checkmark}>✓</span>}
-            </button>
+            </Button>
           ))}
         </div>
       )}

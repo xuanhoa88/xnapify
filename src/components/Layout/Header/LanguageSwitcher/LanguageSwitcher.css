@@ -27,21 +27,21 @@
   height: 36px;
   min-width: 36px;
   padding: 0 var(--spacing-3);
-  background: rgb(255 255 255 / 8%);
+  background-color: rgb(255 255 255 / 8%) !important;
   border: 1px solid rgb(255 255 255 / 12%);
   border-radius: var(--radius-full);
   cursor: pointer;
   transition: all var(--transition-fast);
-  color: rgb(255 255 255 / 85%);
+  color: rgb(255 255 255 / 85%) !important;
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   font-family: inherit;
 }
 
 .trigger:hover {
-  background: rgb(255 255 255 / 12%);
+  background-color: rgb(255 255 255 / 12%) !important;
   border-color: rgb(255 255 255 / 20%);
-  color: white;
+  color: white !important;
 }
 
 .globeIcon {
@@ -110,9 +110,9 @@
   padding: var(--spacing-3) var(--spacing-4);
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary) !important;
   text-decoration: none;
-  background: none;
+  background-color: transparent !important;
   border: none;
   cursor: pointer;
   transition: all var(--transition-fast);
@@ -121,17 +121,17 @@
 }
 
 .option:hover {
-  background: var(--color-bg-tertiary);
-  color: var(--color-text-primary);
+  background-color: var(--color-bg-tertiary) !important;
+  color: var(--color-text-primary) !important;
 }
 
 .optionActive {
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
   font-weight: var(--font-weight-semibold);
 }
 
 .optionActive:hover {
-  color: var(--color-primary);
+  color: var(--color-primary) !important;
 }
 
 .optionName {

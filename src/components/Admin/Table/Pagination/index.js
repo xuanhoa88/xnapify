@@ -8,6 +8,7 @@
 import { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import Button from '../../../Button';
 import s from './Pagination.css';
 
 /**
@@ -95,14 +96,14 @@ function Pagination({
         </span>
       )}
 
-      <button
-        type='button'
-        className={s.navBtn}
+      <Button
+        variant='ghost'
+        size='small'
         onClick={handlePrev}
         disabled={currentPage === 1 || loading}
       >
         {prevLabel}
-      </button>
+      </Button>
 
       <div className={s.pageNumbers}>
         {pageNumbers.map((page, idx) =>
@@ -111,27 +112,28 @@ function Pagination({
               ...
             </span>
           ) : (
-            <button
+            <Button
               key={page}
-              type='button'
-              className={clsx(s.pageBtn, { [s.active]: currentPage === page })}
+              variant='ghost'
+              size='small'
+              className={clsx({ [s.active]: currentPage === page })}
               onClick={() => handlePageClick(page)}
               disabled={loading}
             >
               {page}
-            </button>
+            </Button>
           ),
         )}
       </div>
 
-      <button
-        type='button'
-        className={s.navBtn}
+      <Button
+        variant='ghost'
+        size='small'
         onClick={handleNext}
         disabled={currentPage >= totalPages || loading}
       >
         {nextLabel}
-      </button>
+      </Button>
     </div>
   );
 }

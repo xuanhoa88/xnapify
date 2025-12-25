@@ -13,27 +13,6 @@
   min-height: 100%;
 }
 
-.addButton {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-5);
-  background: var(--color-primary);
-  color: white;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-base);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.addButton:hover {
-  background: var(--color-primary-dark);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-}
-
 /* Filters Section - matches Users.css */
 .filters {
   display: grid;
@@ -56,29 +35,6 @@
   display: flex;
   gap: var(--spacing-2);
   align-items: center;
-}
-
-.clearFiltersBtn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: 0 var(--spacing-3);
-  height: 40px;
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-  white-space: nowrap;
-}
-
-.clearFiltersBtn:hover {
-  background: #fee2e2;
-  color: #991b1b;
-  border-color: #fecaca;
 }
 
 /* Table Container - matches Users.css */
@@ -135,31 +91,10 @@
   accent-color: var(--color-primary);
 }
 
-/* Resource Badge */
-.resourceBadge {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-3);
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-  color: var(--color-primary);
-  background: rgb(59 130 246 / 10%);
-  border-radius: var(--radius-md);
-}
-
+/* Resource Empty (used for grouped rows) */
 .resourceEmpty {
   display: block;
   width: 100%;
-}
-
-/* Action Code */
-.actionCode {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-2);
-  font-family: var(--font-mono);
-  font-size: var(--font-size-xs);
-  color: var(--color-text);
-  background: var(--color-background-tertiary);
-  border-radius: var(--radius-sm);
 }
 
 /* Description */
@@ -172,51 +107,10 @@
   color: var(--color-text-tertiary);
 }
 
-/* Status Badges - matches Users.css */
-.statusActive {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-3);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-success);
-  background: rgb(34 197 94 / 10%);
-  border-radius: var(--radius-full);
-}
-
-.statusInactive {
-  display: inline-block;
-  padding: var(--spacing-1) var(--spacing-3);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-tertiary);
-  background: var(--color-background-tertiary);
-  border-radius: var(--radius-full);
-}
-
 /* Actions - matches Users.css */
 .actions {
   display: flex;
   gap: var(--spacing-1);
-}
-
-.actionBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.actionBtn:hover {
-  background: var(--color-background-tertiary);
-  color: var(--color-primary);
 }
 
 /* =============================================================================
@@ -226,12 +120,6 @@
 @media (max-width: 768px) {
   .root {
     padding: var(--spacing-3);
-  }
-
-  .addButton {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
-    gap: var(--spacing-1);
   }
 
   .filters {
@@ -250,13 +138,6 @@
   .filterActions {
     grid-column: 1 / -1;
     display: flex;
-  }
-
-  .clearFiltersBtn {
-    width: 100%;
-    height: 36px;
-    justify-content: center;
-    font-size: var(--font-size-xs);
   }
 
   .table th,

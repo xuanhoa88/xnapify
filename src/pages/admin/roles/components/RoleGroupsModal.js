@@ -17,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
+import Button from '../../../../components/Button';
 import { fetchRoleGroups } from '../../../../redux';
 import s from './RoleGroupsModal.css';
 
@@ -171,14 +172,16 @@ const RoleGroupsModal = forwardRef((props, ref) => {
             onChange={handleSearchChange}
           />
           {inputValue && (
-            <button
+            <Button
+              variant='ghost'
+              size='small'
+              iconOnly
               className={s.searchClear}
               onClick={handleClearSearch}
-              type='button'
               title={t('common.clearSearch', 'Clear search')}
             >
               <Icon name='close' size={10} />
-            </button>
+            </Button>
           )}
         </div>
 

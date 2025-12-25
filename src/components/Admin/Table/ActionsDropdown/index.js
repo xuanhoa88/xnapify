@@ -8,6 +8,7 @@
 import { useEffect, useCallback, createContext, useContext } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import Button from '../../../Button';
 // eslint-disable-next-line css-modules/no-unused-class -- right, left, danger, warning are accessed dynamically
 import s from './ActionsDropdown.css';
 
@@ -82,17 +83,16 @@ function Trigger({ children, className, title = 'More actions', ...props }) {
   );
 
   return (
-    <button
+    <Button
+      variant='ghost'
+      iconOnly
       className={clsx(s.trigger, className)}
       onClick={handleClick}
-      type='button'
       title={title}
-      aria-expanded={ctx.isOpen}
-      aria-haspopup='true'
       {...props}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -150,17 +150,16 @@ function Item({
   );
 
   return (
-    <button
+    <Button
+      variant='unstyled'
       className={clsx(s.item, { [s[variant]]: variant }, className)}
       onClick={handleClick}
       disabled={disabled}
-      type='button'
-      role='menuitem'
       {...props}
     >
       {icon && <span className={s.itemIcon}>{icon}</span>}
       {children}
-    </button>
+    </Button>
   );
 }
 

@@ -124,7 +124,7 @@
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  background: none;
+  background: none !important;
   border: none;
   cursor: pointer;
   padding: var(--spacing-1);
@@ -135,7 +135,7 @@
 
 .togglePassword:hover {
   color: var(--color-text-primary);
-  background: var(--color-background-secondary);
+  background: var(--color-background-secondary) !important;
 }
 
 .togglePassword svg {
@@ -203,22 +203,6 @@
   align-items: center;
   gap: var(--spacing-2);
   border: 1px solid #fecaca;
-}
-
-/* Loading spinner */
-.spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid rgb(255 255 255 / 30%);
-  border-top-color: white;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* =============================================================================

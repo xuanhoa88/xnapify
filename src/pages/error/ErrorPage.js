@@ -8,6 +8,7 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { Link } from '../../components/History';
+import Button from '../../components/Button';
 import s from './ErrorPage.css';
 
 /**
@@ -33,13 +34,13 @@ function ErrorPage({ error = null }) {
               <Link to='/' className={s.btnPrimary}>
                 {t('error.backToHome', 'Back to Home')}
               </Link>
-              <button
-                type='button'
+              <Button
+                variant='secondary'
                 className={s.btnSecondary}
                 onClick={() => window.location.reload()}
               >
                 {t('error.tryAgain', 'Try Again')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -65,13 +66,13 @@ function ErrorPage({ error = null }) {
             <Link to='/' className={s.btnPrimary}>
               {t('error.backToHome', 'Back to Home')}
             </Link>
-            <button
-              type='button'
+            <Button
+              variant='secondary'
               className={s.btnSecondary}
               onClick={() => window.location.reload()}
             >
               {t('error.tryAgain', 'Try Again')}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import { toggleAdminSidebar, isAuthenticated } from '../../../redux';
 import Icon from '../../Icon';
+import Button from '../../Button';
 import LanguageSwitcher from './LanguageSwitcher';
 import Breadcrumbs from './Breadcrumbs';
 import SearchBar from './SearchBar';
@@ -42,13 +43,14 @@ function AdminHeader() {
       <div className={s.headerContainer}>
         {/* Left Section - Toggle & Breadcrumbs */}
         <div className={s.leftSection}>
-          <button
-            className={s.sidebarToggle}
+          <Button
+            variant='ghost'
+            iconOnly
             onClick={handleToggleSidebar}
-            aria-label={t('common.toggleSidebar', 'Toggle sidebar')}
+            title={t('common.toggleSidebar', 'Toggle sidebar')}
           >
             <Icon name='menu' size={20} />
-          </button>
+          </Button>
           <Breadcrumbs />
         </div>
 

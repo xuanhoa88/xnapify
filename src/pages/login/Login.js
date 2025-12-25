@@ -11,6 +11,7 @@ import { useDispatch } from 'react-redux';
 import { login } from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
 import { useWebSocket } from '../../components/WebSocket';
+import Button from '../../components/Button';
 import s from './Login.css';
 
 // Demo users for quick access
@@ -171,9 +172,15 @@ function Login() {
               </label>
             </div>
 
-            <button className={s.submitButton} type='submit' disabled={loading}>
+            <Button
+              variant='primary'
+              type='submit'
+              fullWidth
+              className={s.submitButton}
+              loading={loading}
+            >
               {loading ? t('login.loading') : t('login.submit')}
-            </button>
+            </Button>
           </form>
 
           <div className={s.registerLink}>
@@ -192,9 +199,9 @@ function Login() {
             </h3>
             <div className={s.userList}>
               {DEMO_USERS.map(user => (
-                <button
+                <Button
                   key={user.email}
-                  type='button'
+                  variant='ghost'
                   className={s.userCard}
                   onClick={() => handleQuickLogin(user)}
                 >
@@ -203,7 +210,7 @@ function Login() {
                     <span className={s.userName}>{user.name}</span>
                     <span className={s.userRole}>{user.role}</span>
                   </div>
-                </button>
+                </Button>
               ))}
             </div>
           </div>

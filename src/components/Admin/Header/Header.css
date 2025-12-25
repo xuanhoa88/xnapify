@@ -43,26 +43,6 @@
   min-width: 0;
 }
 
-.sidebarToggle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 70%);
-  cursor: pointer;
-  transition: all var(--transition-fast);
-  flex-shrink: 0;
-}
-
-.sidebarToggle:hover {
-  background: rgb(255 255 255 / 10%);
-  color: white;
-}
-
 /* =============================================================================
    RIGHT SECTION
    ============================================================================= */
@@ -99,10 +79,5 @@
   .headerContainer {
     padding: var(--spacing-2) var(--spacing-3);
     gap: var(--spacing-2);
-  }
-
-  .sidebarToggle {
-    width: 32px;
-    height: 32px;
   }
 }

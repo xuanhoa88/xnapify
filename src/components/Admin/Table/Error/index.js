@@ -8,6 +8,7 @@
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Icon from '../../../Icon';
+import Button from '../../../Button';
 import s from './Error.css';
 
 /**
@@ -32,9 +33,9 @@ function Error({
       <h3 className={s.title}>{title}</h3>
       {error && <p className={s.error}>{String(error)}</p>}
       {onRetry && (
-        <button type='button' className={s.retryButton} onClick={onRetry}>
+        <Button variant='primary' onClick={onRetry}>
           {retryLabel}
-        </button>
+        </Button>
       )}
     </div>
   );

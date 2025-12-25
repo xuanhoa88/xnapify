@@ -9,6 +9,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Icon from '../Icon';
+import Button from '../Button';
 import s from './SearchableSelect.css';
 
 /**
@@ -213,15 +214,16 @@ function SearchableSelect({
         </span>
         <div className={s.controlRight}>
           {showClearButton && (
-            <button
-              type='button'
+            <Button
+              variant='ghost'
+              size='small'
+              iconOnly
               className={s.clearBtn}
               onClick={handleClear}
-              title='Clear'
-              aria-label='Clear selection'
+              title='Clear selection'
             >
               <Icon name='close' size={12} />
-            </button>
+            </Button>
           )}
           <span className={s.arrow} />
         </div>

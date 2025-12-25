@@ -9,6 +9,7 @@ import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/Icon';
+import Button from '../../components/Button';
 import s from './Contact.css';
 
 /**
@@ -192,15 +193,17 @@ function Contact({ title }) {
                 />
               </div>
 
-              <button
+              <Button
+                variant='primary'
                 type='submit'
+                fullWidth
                 className={s.submitButton}
-                disabled={isSubmitting}
+                loading={isSubmitting}
               >
                 {isSubmitting
                   ? t('contact.form.sending')
                   : t('contact.form.submit')}
-              </button>
+              </Button>
             </form>
           </div>
 
