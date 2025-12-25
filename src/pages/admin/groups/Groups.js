@@ -337,9 +337,10 @@ function Groups() {
                   </div>
 
                   {/* Users Section */}
-                  <div className={s.users}>
+                  <div className={s.usersSection}>
+                    <span className={s.usersSectionLabel}>Users:</span>
                     {visibleUsers.length > 0 ? (
-                      <>
+                      <div className={s.usersAvatars}>
                         {visibleUsers.map(user => (
                           <Avatar
                             key={user.id}
@@ -353,7 +354,7 @@ function Groups() {
                             size='small'
                           />
                         )}
-                      </>
+                      </div>
                     ) : (
                       <span className={s.noUsers}>No users yet</span>
                     )}

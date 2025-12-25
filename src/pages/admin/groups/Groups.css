@@ -104,10 +104,10 @@
   flex-shrink: 0;
 }
 
-/* Role tags - match avatar dimensions */
+/* Role tags - match avatar dimensions (32px = Avatar small size) */
 .roleTag {
-  min-width: 36px;
-  height: 36px;
+  min-width: 32px;
+  height: 32px;
   padding: 0 var(--spacing-3);
   border-radius: var(--radius-full);
   display: inline-flex;
@@ -117,21 +117,52 @@
   font-weight: var(--font-weight-semibold);
 }
 
-.users {
+/* Users Section - matches Roles Section styling */
+.usersSection {
   display: flex;
-  margin-bottom: var(--spacing-4);
-  padding: var(--spacing-3);
-  background: var(--color-background-secondary);
-  border-radius: var(--radius-lg);
-  min-height: 52px;
   align-items: center;
-  border: 1px solid transparent;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-3);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  min-height: 48px;
   transition: var(--transition-base);
-  flex-grow: 1;
 }
 
-.users:hover {
-  border-color: var(--color-border);
+.usersSection:hover {
+  background: var(--color-background-tertiary);
+}
+
+.usersSectionLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+/* Stacked Avatars Container */
+.usersAvatars {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+/* Stacked Avatar Effect */
+.usersAvatars > * {
+  margin-left: -8px;
+  border: 2px solid var(--color-background);
+  box-shadow: 0 2px 4px rgb(0 0 0 / 10%);
+  transition: var(--transition-base);
+  position: relative;
+}
+
+.usersAvatars > *:first-child {
+  margin-left: 0;
+}
+
+.usersAvatars > *:hover {
+  box-shadow: 0 4px 8px rgb(0 0 0 / 20%);
 }
 
 .noUsers {
@@ -204,16 +235,23 @@
     border-radius: var(--radius-md);
   }
 
-  .sectionLabel {
+  .sectionLabel,
+  .usersSectionLabel {
     font-size: 10px;
     padding-top: 0;
   }
 
-  .users {
-    min-height: 44px;
+  /* Users section compact */
+  .usersSection {
     padding: var(--spacing-2) var(--spacing-3);
     margin-bottom: var(--spacing-3);
+    min-height: 36px;
+    gap: var(--spacing-2);
     border-radius: var(--radius-md);
+  }
+
+  .usersAvatars > * {
+    margin-left: -6px;
   }
 
   .roleTag {

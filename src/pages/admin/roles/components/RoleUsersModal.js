@@ -15,11 +15,11 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import Avatar from '../../../../components/Avatar';
+import Tag from '../../../../components/Tag';
 import { fetchRoleUsers } from '../../../../redux';
 import s from './RoleUsersModal.css';
 
@@ -216,16 +216,11 @@ const RoleUsersModal = forwardRef((props, ref) => {
                   <span className={s.userEmail}>{user.email}</span>
                 </div>
                 <div className={s.userMeta}>
-                  <span
-                    className={clsx(s.status, {
-                      [s.statusActive]: user.is_active,
-                      [s.statusInactive]: !user.is_active,
-                    })}
-                  >
+                  <Tag variant={user.is_active ? 'success' : 'error'}>
                     {user.is_active
                       ? t('common.active', 'Active')
                       : t('common.inactive', 'Inactive')}
-                  </span>
+                  </Tag>
                 </div>
               </div>
             ))
