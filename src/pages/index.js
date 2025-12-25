@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getRuntimeVariable, setAdminPanel } from '../redux';
+import { getRuntimeVariable } from '../redux';
 import IsomorphicNavigator from '../shared/navigator';
 
 /**
@@ -264,11 +264,6 @@ export default async function createNavigator() {
 
     // Add action to execute child page and wrap with metadata
     async action(context) {
-      // Reset UI state for non-admin, non-home pages
-      // Note: These are fire-and-forget Redux dispatches
-      // If side effects need to complete before navigation, consider awaiting them
-      context.store.dispatch(setAdminPanel(false));
-
       // Execute child page
       const page = await context.next();
 

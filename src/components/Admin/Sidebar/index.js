@@ -10,7 +10,7 @@ import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import {
-  closeAdminSidebar,
+  toggleAdminSidebar,
   isAdminSidebarOpen,
   isAuthenticated,
   logout,
@@ -43,7 +43,7 @@ function AdminSidebar() {
   }, [history]);
 
   const handleCloseSidebar = useCallback(() => {
-    dispatch(closeAdminSidebar());
+    dispatch(toggleAdminSidebar());
   }, [dispatch]);
 
   const handleLogout = useCallback(async () => {

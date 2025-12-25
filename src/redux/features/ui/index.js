@@ -6,12 +6,7 @@
  */
 
 // Public API - Actions
-export {
-  toggleAdminSidebar,
-  openAdminSidebar,
-  closeAdminSidebar,
-  setAdminPanel,
-} from './slice';
+export { toggleAdminSidebar } from './slice';
 
 // Public API - Selectors
 export * from './selector';

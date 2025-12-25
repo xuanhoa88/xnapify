@@ -6,7 +6,7 @@
  */
 
 import AdminLayout from '../../components/Admin';
-import { isAuthenticated, setAdminPanel } from '../../redux';
+import { isAuthenticated } from '../../redux';
 
 // Lazy load children pages context
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
@@ -33,9 +33,6 @@ async function action(context) {
   if (!isAuthenticated(state)) {
     return { redirect: '/login' };
   }
-
-  // Set admin panel state
-  context.store.dispatch(setAdminPanel(true));
 
   // Now context.next() works because children were pre-populated
   const childResult = await context.next();
