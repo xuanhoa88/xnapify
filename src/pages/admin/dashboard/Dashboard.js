@@ -158,12 +158,12 @@ function Dashboard() {
                       <td>
                         <div className={s.userCell}>
                           <Avatar
-                            name={activity.user?.displayName}
+                            name={activity.user && activity.user.display_name}
                             size='small'
                           />
                           <div>
                             <div className={s.userName}>
-                              {(activity.user && activity.user.displayName) ||
+                              {(activity.user && activity.user.display_name) ||
                                 t('common.unknown', 'Unknown')}
                             </div>
                             <div className={s.userEmail}>

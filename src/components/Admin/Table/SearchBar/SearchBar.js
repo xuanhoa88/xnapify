@@ -82,9 +82,9 @@ function SearchBar({
           clearTimeout(debounceTimer.current);
         }
         if (onSubmit) {
-          onSubmit(inputRef.current?.value || '');
+          onSubmit((inputRef.current && inputRef.current.value) || '');
         } else {
-          onChange(inputRef.current?.value || '');
+          onChange((inputRef.current && inputRef.current.value) || '');
         }
       }
     },

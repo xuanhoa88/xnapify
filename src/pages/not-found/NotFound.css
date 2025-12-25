@@ -92,6 +92,22 @@
   z-index: 1;
 }
 
+.heroPath {
+  font-size: var(--font-size-base);
+  color: rgb(255 255 255 / 70%);
+  margin: var(--spacing-4) 0 0;
+  position: relative;
+  z-index: 1;
+}
+
+.heroPath code {
+  background: rgb(255 255 255 / 15%);
+  padding: var(--spacing-1) var(--spacing-2);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-family-monospace);
+  font-size: var(--font-size-sm);
+}
+
 /* =============================================================================
    CONTENT SECTION
    ============================================================================= */

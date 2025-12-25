@@ -351,7 +351,8 @@ async function handlePageChange(location, action) {
     if (signal.aborted || currentLocation.key !== location.key) return;
 
     if (page.redirect) {
-      window.location.href = page.redirect;
+      // Redux state is already set before redirect, just navigate
+      history.push(page.redirect);
       return;
     }
 

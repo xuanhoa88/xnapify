@@ -35,19 +35,21 @@ async function action(context) {
   }
 
   // Now context.next() works because children were pre-populated
-  const childResult = await context.next();
+  const nextPage = await context.next();
+
+  // If no child route matched, redirect to 404 page
+  if (!nextPage || !nextPage.component) {
+    return { redirect: '/not-found' };
+  }
 
   // Set page title
   const title =
-    (childResult && childResult.title) ||
-    context.i18n.t('navigation.admin', 'Admin Panel');
+    nextPage.title || context.i18n.t('navigation.admin', 'Admin Panel');
 
   // Return admin page action
   return {
     title,
-    component: (
-      <AdminLayout>{childResult && childResult.component}</AdminLayout>
-    ),
+    component: <AdminLayout>{nextPage.component}</AdminLayout>,
   };
 }
 

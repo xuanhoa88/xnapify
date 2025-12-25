@@ -90,7 +90,7 @@ export async function getDashboard(req, res, next) {
           ? {
               id: user.id,
               email: user.email,
-              displayName,
+              display_name: displayName,
             }
           : null,
         action: activity.success ? 'Login' : 'Failed login attempt',

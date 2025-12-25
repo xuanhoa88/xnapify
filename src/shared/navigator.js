@@ -315,9 +315,9 @@ async function defaultViewResolver(ctx, params, autoDelegate) {
     Array.isArray(ctx.view.children) && ctx.view.children.length > 0;
 
   if (hasChildren && autoDelegate) {
-    const childResult = await ctx.next();
-    if (childResult != null) {
-      return childResult;
+    const nextPage = await ctx.next();
+    if (nextPage != null) {
+      return nextPage;
     }
   }
 
