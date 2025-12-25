@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../../../components/variables.css';
+@import '../../admin.css';
 
 .bulkActions {
   display: flex;
@@ -52,6 +52,22 @@
   background: rgb(255 255 255 / 30%);
 }
 
+.bulkBtnDanger {
+  padding: var(--spacing-2) var(--spacing-4);
+  background: rgb(239 68 68 / 80%);
+  color: white;
+  border: 1px solid rgb(239 68 68 / 100%);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.bulkBtnDanger:hover {
+  background: rgb(239 68 68 / 100%);
+}
+
 .bulkClear {
   margin-left: auto;
   background: transparent;
@@ -82,7 +98,8 @@
     width: auto;
   }
 
-  .bulkBtn {
+  .bulkBtn,
+  .bulkBtnDanger {
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-xs);
     flex: 1;
@@ -102,7 +119,8 @@
     padding: var(--spacing-2);
   }
 
-  .bulkBtn {
+  .bulkBtn,
+  .bulkBtnDanger {
     padding: var(--spacing-1) var(--spacing-2);
   }
 }

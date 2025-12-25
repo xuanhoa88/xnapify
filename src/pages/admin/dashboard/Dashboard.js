@@ -17,6 +17,7 @@ import {
   getDashboardRecentActivities,
 } from '../../../redux';
 import { Page, Icon, Loader, Table } from '../../../components/Admin';
+import Card from '../../../components/Card';
 import s from './Dashboard.css';
 
 /**
@@ -72,64 +73,74 @@ function Dashboard() {
     return (
       <div className={s.dashboardGrid}>
         {/* Stats Cards */}
-        <div className={s.card}>
-          <div className={s.cardHeader}>
+        <Card variant='default' className={s.statsCard}>
+          <Card.Header
+            className={s.statsCardHeader}
+            actions={<Icon name='users' size={24} className={s.cardIcon} />}
+          >
             <h3 className={s.cardTitle}>Total Users</h3>
-            <span className={s.cardIcon}>
-              <Icon name='users' size={24} />
-            </span>
-          </div>
-          <div className={s.cardValue}>{stats.totalUsers || 0}</div>
-          <div className={s.cardTrend}>
-            {stats.activeUsers || 0} active users
-          </div>
-        </div>
+          </Card.Header>
+          <Card.Body className={s.statsCardBody}>
+            <div className={s.cardValue}>{stats.totalUsers || 0}</div>
+            <div className={s.cardTrend}>
+              {stats.activeUsers || 0} active users
+            </div>
+          </Card.Body>
+        </Card>
 
-        <div className={s.card}>
-          <div className={s.cardHeader}>
+        <Card variant='default' className={s.statsCard}>
+          <Card.Header
+            className={s.statsCardHeader}
+            actions={<Icon name='shield' size={24} className={s.cardIcon} />}
+          >
             <h3 className={s.cardTitle}>Total Roles</h3>
-            <span className={s.cardIcon}>
-              <Icon name='shield' size={24} />
-            </span>
-          </div>
-          <div className={s.cardValue}>{stats.totalRoles || 0}</div>
-          <div className={s.cardTrend}>
-            {stats.activeRoles || 0} active roles
-          </div>
-        </div>
+          </Card.Header>
+          <Card.Body className={s.statsCardBody}>
+            <div className={s.cardValue}>{stats.totalRoles || 0}</div>
+            <div className={s.cardTrend}>
+              {stats.activeRoles || 0} active roles
+            </div>
+          </Card.Body>
+        </Card>
 
-        <div className={s.card}>
-          <div className={s.cardHeader}>
+        <Card variant='default' className={s.statsCard}>
+          <Card.Header
+            className={s.statsCardHeader}
+            actions={<Icon name='folder' size={24} className={s.cardIcon} />}
+          >
             <h3 className={s.cardTitle}>Total Groups</h3>
-            <span className={s.cardIcon} role='img' aria-label='Groups'>
-              <Icon name='folder' size={24} />
-            </span>
-          </div>
-          <div className={s.cardValue}>{stats.totalGroups || 0}</div>
-          <div className={s.cardTrend}>
-            {stats.activeGroups || 0} active groups
-          </div>
-        </div>
+          </Card.Header>
+          <Card.Body className={s.statsCardBody}>
+            <div className={s.cardValue}>{stats.totalGroups || 0}</div>
+            <div className={s.cardTrend}>
+              {stats.activeGroups || 0} active groups
+            </div>
+          </Card.Body>
+        </Card>
 
-        <div className={s.card}>
-          <div className={s.cardHeader}>
+        <Card variant='default' className={s.statsCard}>
+          <Card.Header
+            className={s.statsCardHeader}
+            actions={
+              <Icon name='check-circle' size={24} className={s.cardIcon} />
+            }
+          >
             <h3 className={s.cardTitle}>System Status</h3>
-            <span className={s.cardIcon}>
-              <Icon name='check-circle' size={24} />
-            </span>
-          </div>
-          <div className={s.cardValue}>
-            {stats.systemStatus || t('common.unknown', 'Unknown')}
-          </div>
-          <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
-        </div>
+          </Card.Header>
+          <Card.Body className={s.statsCardBody}>
+            <div className={s.cardValue}>
+              {stats.systemStatus || t('common.unknown', 'Unknown')}
+            </div>
+            <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
+          </Card.Body>
+        </Card>
 
         {/* Recent Activities Table */}
-        <div className={s.fullWidthCard}>
-          <div className={s.cardHeader}>
+        <Card variant='default' className={s.fullWidthCard}>
+          <Card.Header className={s.tableCardHeader}>
             <h3 className={s.cardTitle}>Recent Activities</h3>
-          </div>
-          <div className={s.tableContainer}>
+          </Card.Header>
+          <Card.Body className={s.tableCardBody}>
             {recentActivities && recentActivities.length > 0 ? (
               <table className={s.table}>
                 <thead>
@@ -189,8 +200,8 @@ function Dashboard() {
                 description='Activity will appear here as users interact with the system.'
               />
             )}
-          </div>
-        </div>
+          </Card.Body>
+        </Card>
       </div>
     );
   };

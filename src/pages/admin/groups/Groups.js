@@ -29,6 +29,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Card from '../../../components/Card';
 import GroupActionsDropdown from './components/GroupActionsDropdown';
 import GroupRolesModal from './components/GroupRolesModal';
 import GroupPermissionsModal from './components/GroupPermissionsModal';
@@ -62,7 +63,6 @@ function Groups() {
 
   // Search state
   const [search, setSearch] = useState('');
-  const [inputValue, setInputValue] = useState('');
 
   // Filter state
   const [roleFilter, setRoleFilter] = useState('');
@@ -78,9 +78,6 @@ function Groups() {
 
   // Ref for DeleteGroupModal
   const deleteModalRef = useRef();
-
-  // Debounce timer ref
-  const debounceTimer = useRef(null);
 
   // State for managing which dropdown is open
   const [activeDropdownId, setActiveDropdownId] = useState(null);
@@ -168,41 +165,10 @@ function Groups() {
   }, []);
 
   // Search handlers
-  const handleSearchChange = useCallback(e => {
-    const { value } = e.target;
-    setInputValue(value);
-
-    // Debounced search - auto-search after 500ms
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      setSearch(value);
-      setCurrentPage(1);
-    }, 500);
-  }, []);
-
-  const handleSearchSubmit = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setSearch(inputValue);
-    setCurrentPage(1);
-  }, [inputValue]);
-
-  const handleClearSearch = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
-    setSearch('');
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
     setCurrentPage(1);
   }, []);
-
-  const handleKeyDown = useCallback(
-    e => e.key === 'Enter' && handleSearchSubmit(),
-    [handleSearchSubmit],
-  );
 
   const handleRoleFilterChange = useCallback(value => {
     setRoleFilter(value);
@@ -210,10 +176,6 @@ function Groups() {
   }, []);
 
   const handleClearFilters = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
     setSearch('');
     setRoleFilter('');
     setCurrentPage(1);
@@ -266,29 +228,11 @@ function Groups() {
 
       {/* Filters */}
       <div className={s.filters}>
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder='Search groups...'
-            className={s.searchInput}
-            value={inputValue}
-            onChange={handleSearchChange}
-            onKeyDown={handleKeyDown}
-          />
-          {inputValue && (
-            <button
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              type='button'
-              title='Clear search'
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder='Search groups...'
+        />
         <div className={s.filterItem}>
           <SearchableSelect
             options={roleOptions}
@@ -299,7 +243,7 @@ function Groups() {
             hasMore={rolesHasMore}
             loading={rolesLoading}
             loadingMore={rolesLoadingMore}
-            placeholder='Filter by role...'
+            placeholder='All Roles'
             searchPlaceholder='Search roles...'
           />
         </div>
@@ -340,79 +284,90 @@ function Groups() {
             const remainingRoleCount = roleCount - visibleRoles.length;
 
             return (
-              <div key={group.id} className={s.groupCard}>
-                <div className={s.groupHeader}>
-                  <h3 className={s.groupName}>{group.name}</h3>
-                  <div className={s.headerRight}>
-                    <div className={s.headerBadges}>
-                      <span className={s.userCount}>
-                        {userCount} {userCount === 1 ? 'user' : 'users'}
-                      </span>
-                      <span className={s.roleCountBadge}>
-                        {roleCount} {roleCount === 1 ? 'role' : 'roles'}
-                      </span>
+              <Card
+                key={group.id}
+                variant='default'
+                interactive
+                className={s.groupCard}
+              >
+                <Card.Header
+                  className={s.groupCardHeader}
+                  actions={
+                    <div className={s.headerRight}>
+                      <div className={s.headerBadges}>
+                        <span className={s.userCount}>
+                          {userCount} {userCount === 1 ? 'user' : 'users'}
+                        </span>
+                        <span className={s.roleCountBadge}>
+                          {roleCount} {roleCount === 1 ? 'role' : 'roles'}
+                        </span>
+                      </div>
+                      <GroupActionsDropdown
+                        group={group}
+                        isOpen={activeDropdownId === group.id}
+                        onToggle={handleToggleDropdown}
+                        onViewUsers={handleViewUsers}
+                        onManageRoles={handleManageRoles}
+                        onViewPermissions={handleViewPermissions}
+                        onEdit={handleEditGroup}
+                        onDelete={handleDeleteGroup}
+                      />
                     </div>
-                    <GroupActionsDropdown
-                      group={group}
-                      isOpen={activeDropdownId === group.id}
-                      onToggle={handleToggleDropdown}
-                      onViewUsers={handleViewUsers}
-                      onManageRoles={handleManageRoles}
-                      onViewPermissions={handleViewPermissions}
-                      onEdit={handleEditGroup}
-                      onDelete={handleDeleteGroup}
-                    />
-                  </div>
-                </div>
-                <p className={s.groupDescription}>
-                  {group.description || 'No description'}
-                </p>
+                  }
+                >
+                  <h3 className={s.groupName}>{group.name}</h3>
+                </Card.Header>
+                <Card.Body className={s.groupCardBody}>
+                  <p className={s.groupDescription}>
+                    {group.description || 'No description'}
+                  </p>
 
-                {/* Roles Section */}
-                <div className={s.rolesSection}>
-                  <span className={s.sectionLabel}>Roles:</span>
-                  <div className={s.roles}>
-                    {roles.length > 0 ? (
+                  {/* Roles Section */}
+                  <div className={s.rolesSection}>
+                    <span className={s.sectionLabel}>Roles:</span>
+                    <div className={s.roles}>
+                      {roles.length > 0 ? (
+                        <>
+                          {visibleRoles.map(role => (
+                            <span key={role.id} className={s.roleBadge}>
+                              {role.name}
+                            </span>
+                          ))}
+                          {remainingRoleCount > 0 && (
+                            <span className={s.roleBadgeMore}>
+                              +{remainingRoleCount}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className={s.noRoles}>No roles assigned</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Users Section */}
+                  <div className={s.users}>
+                    {visibleUsers.length > 0 ? (
                       <>
-                        {visibleRoles.map(role => (
-                          <span key={role.id} className={s.roleBadge}>
-                            {role.name}
-                          </span>
+                        {visibleUsers.map(user => (
+                          <div
+                            key={user.id}
+                            className={s.avatar}
+                            title={user.display_name || user.email}
+                          >
+                            {getInitials(user.display_name || user.email)}
+                          </div>
                         ))}
-                        {remainingRoleCount > 0 && (
-                          <span className={s.roleBadgeMore}>
-                            +{remainingRoleCount}
-                          </span>
+                        {remainingUserCount > 0 && (
+                          <div className={s.avatar}>+{remainingUserCount}</div>
                         )}
                       </>
                     ) : (
-                      <span className={s.noRoles}>No roles assigned</span>
+                      <span className={s.noUsers}>No users yet</span>
                     )}
                   </div>
-                </div>
-
-                {/* Users Section */}
-                <div className={s.users}>
-                  {visibleUsers.length > 0 ? (
-                    <>
-                      {visibleUsers.map(user => (
-                        <div
-                          key={user.id}
-                          className={s.avatar}
-                          title={user.display_name || user.email}
-                        >
-                          {getInitials(user.display_name || user.email)}
-                        </div>
-                      ))}
-                      {remainingUserCount > 0 && (
-                        <div className={s.avatar}>+{remainingUserCount}</div>
-                      )}
-                    </>
-                  ) : (
-                    <span className={s.noUsers}>No users yet</span>
-                  )}
-                </div>
-              </div>
+                </Card.Body>
+              </Card>
             );
           })}
         </div>

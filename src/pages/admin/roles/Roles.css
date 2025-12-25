@@ -47,112 +47,33 @@
   border: 1px solid var(--color-border);
 }
 
-/* Search Bar - matches Users.css */
-.searchWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 200px;
-}
-
-.searchIcon {
-  position: absolute;
-  left: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-  color: var(--color-text-secondary);
-  transition: var(--transition-base);
-}
-
-.searchWrapper:focus-within .searchIcon {
-  color: var(--color-primary);
-}
-
-.searchInput {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--spacing-4);
-  padding-left: calc(var(--spacing-3) + 28px);
-  padding-right: calc(var(--spacing-3) + 32px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  background: var(--color-background);
-  transition: var(--transition-base);
-}
-
-.searchInput:hover {
-  border-color: var(--color-border-hover);
-}
-
-.searchInput:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
-}
-
-.searchInput::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.searchClear {
-  position: absolute;
-  right: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: var(--color-background-tertiary);
-  border: none;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-  z-index: 2;
-}
-
-.searchClear:hover {
-  background: var(--color-error);
-  color: white;
-  transform: scale(1.1);
-}
-
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: var(--spacing-5);
 }
 
+/* Role Card - Supplementary styles (Card component handles base styling) */
 .roleCard {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-5);
-  transition: var(--transition-base);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
   display: flex;
   flex-direction: column;
 }
 
-.roleCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
-  border-color: var(--color-primary);
+/* Card.Header customization for role cards */
+.roleCardHeader {
+  border-bottom: none;
 }
 
-.roleHeader {
+/* Header content wrapper for icon and name */
+.roleHeaderContent {
   display: flex;
   align-items: center;
   gap: var(--spacing-3);
-  margin-bottom: var(--spacing-2);
+}
+
+/* Card.Body customization for role cards */
+.roleCardBody {
+  padding-top: 0;
 }
 
 .roleIcon {
@@ -164,7 +85,6 @@
 
 .roleName {
   margin: 0;
-  flex: 1;
   font-size: var(--font-size-lg);
   font-weight: var(--font-weight-bold);
   color: var(--color-text-primary);
@@ -233,15 +153,6 @@
     margin-bottom: var(--spacing-4);
   }
 
-  .searchWrapper {
-    min-width: unset;
-  }
-
-  .searchInput {
-    height: 36px;
-    font-size: var(--font-size-xs);
-  }
-
   /* Grid single column */
   .grid {
     grid-template-columns: 1fr;
@@ -256,10 +167,6 @@
 
   .roleCard:hover {
     transform: none;
-  }
-
-  .roleHeader {
-    margin-bottom: var(--spacing-2);
   }
 
   .roleName {

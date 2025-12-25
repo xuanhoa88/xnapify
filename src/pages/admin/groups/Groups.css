@@ -51,84 +51,6 @@
   min-width: 200px;
 }
 
-/* Search Bar */
-.searchWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  flex: 1;
-  min-width: 200px;
-}
-
-.searchIcon {
-  position: absolute;
-  left: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-  color: var(--color-text-secondary);
-  transition: var(--transition-base);
-}
-
-.searchWrapper:focus-within .searchIcon {
-  color: var(--color-primary);
-}
-
-.searchInput {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--spacing-4);
-  padding-left: calc(var(--spacing-3) + 28px);
-  padding-right: calc(var(--spacing-3) + 32px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  background: var(--color-background);
-  transition: var(--transition-base);
-}
-
-.searchInput:hover {
-  border-color: var(--color-border-hover);
-}
-
-.searchInput:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
-}
-
-.searchInput::placeholder {
-  color: var(--color-text-tertiary);
-}
-
-.searchClear {
-  position: absolute;
-  right: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: var(--color-background-tertiary);
-  border: none;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-  z-index: 2;
-}
-
-.searchClear:hover {
-  background: var(--color-error);
-  color: white;
-  transform: scale(1.1);
-}
-
 .clearFiltersBtn {
   display: inline-flex;
   align-items: center;
@@ -158,29 +80,20 @@
   gap: var(--spacing-6);
 }
 
+/* Group Card - Supplementary styles (Card component handles base styling) */
 .groupCard {
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xl);
-  padding: var(--spacing-5);
-  transition: var(--transition-base);
-  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
   display: flex;
   flex-direction: column;
 }
 
-.groupCard:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgb(0 0 0 / 10%);
-  border-color: var(--color-primary);
+/* Card.Header customization for group cards */
+.groupCardHeader {
+  border-bottom: none;
 }
 
-.groupHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-2);
-  gap: var(--spacing-3);
+/* Card.Body customization for group cards */
+.groupCardBody {
+  padding-top: 0;
 }
 
 .groupName {
@@ -190,7 +103,6 @@
   color: var(--color-text-primary);
   line-height: 1.4;
   word-break: break-word;
-  flex: 1;
 }
 
 .userCount {
@@ -376,16 +288,6 @@
     margin-bottom: var(--spacing-4);
   }
 
-  .searchWrapper {
-    grid-column: 1 / -1;
-    min-width: unset;
-  }
-
-  .searchInput {
-    height: 36px;
-    font-size: var(--font-size-xs);
-  }
-
   .filterItem {
     min-width: unset;
   }
@@ -404,19 +306,10 @@
     gap: var(--spacing-4);
   }
 
-  /* Group card compact */
+  /* Group card compact - Card handles base styling */
   .groupCard {
     padding: var(--spacing-4);
     border-radius: var(--radius-lg);
-  }
-
-  .groupCard:hover {
-    transform: none;
-  }
-
-  .groupHeader {
-    margin-bottom: var(--spacing-3);
-    flex-wrap: wrap;
   }
 
   .groupName {

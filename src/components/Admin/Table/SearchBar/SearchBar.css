@@ -1,0 +1,104 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../admin.css';
+
+/* Search Bar Wrapper */
+.searchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 200px;
+}
+
+/* Search Icon */
+.searchIcon {
+  position: absolute;
+  left: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--color-text-secondary);
+  transition: var(--transition-base);
+}
+
+.searchWrapper:focus-within .searchIcon {
+  color: var(--color-primary);
+}
+
+/* Search Input */
+.searchInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--spacing-4);
+  padding-left: calc(var(--spacing-3) + 28px);
+  padding-right: calc(var(--spacing-3) + 32px);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+  transition: var(--transition-base);
+}
+
+.searchInput:hover {
+  border-color: var(--color-border-hover);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+/* Search Clear Button */
+.searchClear {
+  position: absolute;
+  right: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--color-background-tertiary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+  z-index: 2;
+}
+
+.searchClear:hover {
+  background: var(--color-error);
+  color: white;
+  transform: scale(1.1);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .searchWrapper {
+    min-width: unset;
+  }
+
+  .searchInput {
+    height: 36px;
+    font-size: var(--font-size-xs);
+  }
+}

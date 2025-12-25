@@ -27,26 +27,24 @@
   }
 }
 
-/* Cards */
-.card {
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-6);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
+/* Stats Cards - Supplementary styles for Card component */
+.statsCard {
   transition: var(--transition-base);
 }
 
-.card:hover {
+.statsCard:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-2px);
 }
 
-.cardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: var(--spacing-4);
+/* Card.Header customization for stats cards */
+.statsCardHeader {
+  border-bottom: none;
+}
+
+/* Card.Body customization for stats cards */
+.statsCardBody {
+  padding-top: 0;
 }
 
 .cardTitle {
@@ -57,9 +55,6 @@
 }
 
 .cardIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: var(--color-primary);
 }
 
@@ -78,17 +73,17 @@
 /* Full Width Card */
 .fullWidthCard {
   grid-column: 1 / -1;
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  padding: var(--spacing-6);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
 }
 
-/* Table */
-.tableContainer {
+/* Table Card Header */
+.tableCardHeader {
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Table Card Body */
+.tableCardBody {
+  padding: 0;
   overflow-x: auto;
-  margin-top: var(--spacing-4);
 }
 
 .table {
@@ -184,21 +179,12 @@
     gap: var(--spacing-3);
   }
 
-  .card {
-    padding: var(--spacing-3);
-    overflow: hidden;
-  }
-
-  .cardHeader {
-    margin-bottom: var(--spacing-2);
+  .statsCard:hover {
+    transform: none;
   }
 
   .cardTitle {
     font-size: var(--font-size-xs);
-  }
-
-  .cardIcon {
-    flex-shrink: 0;
   }
 
   .cardIcon svg {
@@ -213,10 +199,6 @@
 
   .cardTrend {
     font-size: var(--font-size-xs);
-  }
-
-  .fullWidthCard {
-    padding: var(--spacing-3);
   }
 
   .table {
@@ -256,10 +238,6 @@
   .dashboardGrid {
     grid-template-columns: 1fr;
     gap: var(--spacing-2);
-  }
-
-  .card {
-    padding: var(--spacing-3);
   }
 
   .cardValue {

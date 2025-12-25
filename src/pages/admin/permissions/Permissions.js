@@ -26,7 +26,6 @@ import {
   ConfirmModal,
 } from '../../../components/Admin';
 import { SearchableSelect } from '../../../components/SearchableSelect';
-import PermissionBulkActionsBar from './components/PermissionBulkActionsBar';
 import s from './Permissions.css';
 
 // Pagination items per page
@@ -135,12 +134,8 @@ function Permissions() {
     [history],
   );
 
-  const handleSearchChange = useCallback(e => {
-    setSearch(e.target.value);
-  }, []);
-
-  const handleClearSearch = useCallback(() => {
-    setSearch('');
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
   }, []);
 
   const handleClearFilters = useCallback(() => {
@@ -275,39 +270,26 @@ function Permissions() {
 
       {/* Bulk Actions Bar */}
       {selectedPermissions.length > 0 && (
-        <PermissionBulkActionsBar
+        <Table.BulkActionsBar
           count={selectedPermissions.length}
-          onActivate={handleBulkActivate}
-          onDeactivate={handleBulkDeactivate}
-          onDelete={handleBulkDelete}
+          itemLabel='permission'
+          actions={[
+            { label: 'Activate', onClick: handleBulkActivate },
+            { label: 'Deactivate', onClick: handleBulkDeactivate },
+            { label: 'Delete', onClick: handleBulkDelete, variant: 'danger' },
+          ]}
           onClear={clearSelection}
         />
       )}
 
       {/* Search/Filter Section */}
       <div className={s.filters}>
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder='Search e.g. users, users:read, :create'
-            value={search}
-            onChange={handleSearchChange}
-            className={s.searchInput}
-          />
-          {search && (
-            <button
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              type='button'
-              title='Clear search'
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder='Search e.g. users, users:read, :create'
+          debounce={300}
+        />
 
         <div className={s.filterSearchableSelect}>
           <SearchableSelect
@@ -346,7 +328,7 @@ function Permissions() {
               : 'Create granular permissions to control access to resources.'
           }
           actionLabel={search ? 'Clear Search' : 'Add Permission'}
-          onAction={search ? handleClearSearch : handleAdd}
+          onAction={search ? () => handleSearchChange('') : handleAdd}
         />
       ) : (
         <div className={s.tableContainer}>

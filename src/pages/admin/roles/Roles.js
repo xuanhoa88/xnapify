@@ -17,6 +17,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
+import Card from '../../../components/Card';
 import RoleActionsDropdown from './components/RoleActionsDropdown';
 import RolePermissionsModal from './components/RolePermissionsModal';
 import RoleUsersModal from './components/RoleUsersModal';
@@ -53,8 +54,6 @@ function Roles() {
 
   // Search state
   const [search, setSearch] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const debounceTimer = useRef(null);
 
   // Delete modal ref
   const deleteModalRef = useRef();
@@ -121,41 +120,10 @@ function Roles() {
   const getRoleName = useCallback(item => item.name, []);
 
   // Search handlers
-  const handleSearchChange = useCallback(e => {
-    const { value } = e.target;
-    setInputValue(value);
-
-    // Debounced search - auto-search after 500ms
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      setSearch(value);
-      setCurrentPage(1);
-    }, 500);
-  }, []);
-
-  const handleClearSearch = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
-    setSearch('');
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
     setCurrentPage(1);
   }, []);
-
-  const handleSearchKeyDown = useCallback(
-    e => {
-      if (e.key === 'Enter') {
-        if (debounceTimer.current) {
-          clearTimeout(debounceTimer.current);
-        }
-        setSearch(inputValue);
-        setCurrentPage(1);
-      }
-    },
-    [inputValue],
-  );
 
   if (loading && roles.length === 0) {
     return (
@@ -214,29 +182,11 @@ function Roles() {
 
       {/* Search/Filter Section */}
       <div className={s.filters}>
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder={t('roles.searchPlaceholder', 'Search roles...')}
-            className={s.searchInput}
-            value={inputValue}
-            onChange={handleSearchChange}
-            onKeyDown={handleSearchKeyDown}
-          />
-          {inputValue && (
-            <button
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              type='button'
-              title={t('common.clearSearch', 'Clear search')}
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder={t('roles.searchPlaceholder', 'Search roles...')}
+        />
       </div>
 
       {roles.length === 0 ? (
@@ -253,48 +203,61 @@ function Roles() {
       ) : (
         <div className={s.grid}>
           {roles.map(role => (
-            <div key={role.id} className={s.roleCard}>
-              <div className={s.roleHeader}>
-                <div className={s.roleIcon}>{getRoleIcon(role.name)}</div>
-                <h3 className={s.roleName}>{role.name}</h3>
-                <RoleActionsDropdown
-                  role={role}
-                  isOpen={activeDropdownId === role.id}
-                  onToggle={handleToggleDropdown}
-                  onViewUsers={handleViewUsers}
-                  onViewGroups={handleViewGroups}
-                  onViewPermissions={handleViewPermissions}
-                  onEdit={handleEditRole}
-                  onDelete={handleDeleteClick}
-                />
-              </div>
-              <p className={s.roleDescription}>
-                {role.description ||
-                  t('roles.noDescription', 'No description available')}
-              </p>
-              <div className={s.roleStats}>
-                <div className={s.stat}>
-                  <span className={s.statLabel}>
-                    {t('roles.users', 'Users')}:
-                  </span>
-                  <span className={s.statValue}>{role.usersCount || 0}</span>
+            <Card
+              key={role.id}
+              variant='default'
+              interactive
+              className={s.roleCard}
+            >
+              <Card.Header
+                className={s.roleCardHeader}
+                actions={
+                  <RoleActionsDropdown
+                    role={role}
+                    isOpen={activeDropdownId === role.id}
+                    onToggle={handleToggleDropdown}
+                    onViewUsers={handleViewUsers}
+                    onViewGroups={handleViewGroups}
+                    onViewPermissions={handleViewPermissions}
+                    onEdit={handleEditRole}
+                    onDelete={handleDeleteClick}
+                  />
+                }
+              >
+                <div className={s.roleHeaderContent}>
+                  <div className={s.roleIcon}>{getRoleIcon(role.name)}</div>
+                  <h3 className={s.roleName}>{role.name}</h3>
                 </div>
-                <div className={s.stat}>
-                  <span className={s.statLabel}>
-                    {t('roles.groups', 'Groups')}:
-                  </span>
-                  <span className={s.statValue}>{role.groupsCount || 0}</span>
+              </Card.Header>
+              <Card.Body className={s.roleCardBody}>
+                <p className={s.roleDescription}>
+                  {role.description ||
+                    t('roles.noDescription', 'No description available')}
+                </p>
+                <div className={s.roleStats}>
+                  <div className={s.stat}>
+                    <span className={s.statLabel}>
+                      {t('roles.users', 'Users')}:
+                    </span>
+                    <span className={s.statValue}>{role.usersCount || 0}</span>
+                  </div>
+                  <div className={s.stat}>
+                    <span className={s.statLabel}>
+                      {t('roles.groups', 'Groups')}:
+                    </span>
+                    <span className={s.statValue}>{role.groupsCount || 0}</span>
+                  </div>
+                  <div className={s.stat}>
+                    <span className={s.statLabel}>
+                      {t('roles.permissions', 'Permissions')}:
+                    </span>
+                    <span className={s.statValue}>
+                      {role.permissionsCount || 0}
+                    </span>
+                  </div>
                 </div>
-                <div className={s.stat}>
-                  <span className={s.statLabel}>
-                    {t('roles.permissions', 'Permissions')}:
-                  </span>
-                  <span className={s.statValue}>
-                    {role.permissionsCount || 0}
-                  </span>
-                </div>
-              </div>
-            </div>
+              </Card.Body>
+            </Card>
           ))}
         </div>
       )}

@@ -30,7 +30,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../components/Admin';
-import UserBulkActionsBar from './components/UserBulkActionsBar';
+
 import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
@@ -111,7 +111,6 @@ function Users() {
 
   // Filter state
   const [search, setSearch] = useState('');
-  const [inputValue, setInputValue] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [groupFilter, setGroupFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
@@ -167,35 +166,12 @@ function Users() {
   );
 
   // Filter handlers
-  const debounceTimer = useRef(null);
-
-  const handleSearchChange = useCallback(e => {
-    const { value } = e.target;
-    setInputValue(value);
-
-    // Debounced search - auto-search after 500ms
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      setSearch(value);
-      setCurrentPage(1);
-    }, 500);
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
+    setCurrentPage(1);
   }, []);
 
-  const handleSearchSubmit = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setSearch(inputValue);
-    setCurrentPage(1);
-  }, [inputValue]);
-
   const handleClearAllFilters = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
     setSearch('');
     setRoleFilter('');
     setGroupFilter('');
@@ -203,21 +179,8 @@ function Users() {
     setCurrentPage(1);
   }, []);
 
-  const handleClearSearch = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
-    setSearch('');
-    setCurrentPage(1);
-  }, []);
-
   const hasActiveFilters = search || roleFilter || groupFilter || statusFilter;
 
-  const handleKeyDown = useCallback(
-    e => e.key === 'Enter' && handleSearchSubmit(),
-    [handleSearchSubmit],
-  );
   const handleRoleFilterChange = useCallback(value => {
     setRoleFilter(value);
     setCurrentPage(1);
@@ -316,38 +279,23 @@ function Users() {
       </Page.Header>
 
       {selectedUsers.length > 0 && (
-        <UserBulkActionsBar
+        <Table.BulkActionsBar
           count={selectedUsers.length}
-          onAssignRoles={openBulkRolesModal}
-          onAssignGroups={openBulkGroupsModal}
+          itemLabel='user'
+          actions={[
+            { label: 'Assign Roles', onClick: openBulkRolesModal },
+            { label: 'Assign Groups', onClick: openBulkGroupsModal },
+          ]}
           onClear={clearSelection}
         />
       )}
 
       <div className={s.filters}>
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder='Search users...'
-            className={s.searchInput}
-            value={inputValue}
-            onChange={handleSearchChange}
-            onKeyDown={handleKeyDown}
-          />
-          {inputValue && (
-            <button
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              type='button'
-              title='Clear search'
-            >
-              ✕
-            </button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder='Search users...'
+        />
         <div className={s.filterSearchableSelect}>
           <SearchableSelect
             options={roleOptions}
