@@ -12,12 +12,6 @@ import {
   fetchUserByIdStart,
   fetchUserByIdSuccess,
   fetchUserByIdError,
-  deleteUserStart,
-  deleteUserSuccess,
-  deleteUserError,
-  updateUserStatusStart,
-  updateUserStatusSuccess,
-  updateUserStatusError,
   createUserStart,
   createUserSuccess,
   createUserError,
@@ -28,6 +22,12 @@ import {
   fetchUserPermissionsSuccess,
   fetchUserPermissionsError,
   clearUserPermissions,
+  bulkUpdateStatusStart,
+  bulkUpdateStatusSuccess,
+  bulkUpdateStatusError,
+  bulkDeleteStart,
+  bulkDeleteSuccess,
+  bulkDeleteError,
 } from './slice';
 
 /**
@@ -102,60 +102,6 @@ export function fetchUsers(options = {}) {
       return { success: true, data };
     } catch (error) {
       dispatch(fetchUsersError(error.message));
-
-      return { success: false, error: error.message };
-    }
-  };
-}
-
-/**
- * Delete a user
- *
- * @param {string} userId - User ID to delete
- * @returns {Function} Redux thunk action
- */
-export function deleteUser(userId) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(deleteUserStart());
-
-    try {
-      await fetch(`/api/admin/users/${userId}`, {
-        method: 'DELETE',
-      });
-
-      dispatch(deleteUserSuccess(userId));
-
-      return { success: true };
-    } catch (error) {
-      dispatch(deleteUserError(error.message));
-
-      return { success: false, error: error.message };
-    }
-  };
-}
-
-/**
- * Update user status (activate/deactivate)
- *
- * @param {string} userId - User ID
- * @param {boolean} isActive - New active status
- * @returns {Function} Redux thunk action
- */
-export function updateUserStatus(userId, isActive) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(updateUserStatusStart());
-
-    try {
-      const { data } = await fetch(`/api/admin/users/${userId}`, {
-        method: 'PUT',
-        body: { is_active: isActive },
-      });
-
-      dispatch(updateUserStatusSuccess(data.user));
-
-      return { success: true, user: data.user };
-    } catch (error) {
-      dispatch(updateUserStatusError(error.message));
 
       return { success: false, error: error.message };
     }
@@ -363,6 +309,64 @@ export function fetchUserRoles(userId) {
         roles: [],
         error: error.message,
       };
+    }
+  };
+}
+
+/**
+ * Bulk update user status
+ *
+ * @param {string[]} ids - Array of user IDs to update
+ * @param {boolean} isActive - New status value
+ * @returns {Function} Redux thunk action
+ */
+export function bulkUpdateUserStatus(ids, isActive) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(bulkUpdateStatusStart());
+
+    try {
+      const { data } = await fetch('/api/admin/users/status', {
+        method: 'PATCH',
+        body: { ids, is_active: isActive },
+      });
+
+      dispatch(bulkUpdateStatusSuccess(data.users));
+
+      return { success: true, updated: data.updated };
+    } catch (error) {
+      dispatch(bulkUpdateStatusError(error.message));
+
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Bulk delete users
+ *
+ * @param {string[]} ids - Array of user IDs to delete
+ * @returns {Function} Redux thunk action
+ */
+export function bulkDeleteUsers(ids) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(bulkDeleteStart());
+
+    try {
+      const { data } = await fetch('/api/admin/users', {
+        method: 'DELETE',
+        body: { ids },
+      });
+
+      dispatch(bulkDeleteSuccess(data.deletedIds));
+
+      return {
+        success: true,
+        deleted: data.deleted,
+      };
+    } catch (error) {
+      dispatch(bulkDeleteError(error.message));
+
+      return { success: false, error: error.message };
     }
   };
 }

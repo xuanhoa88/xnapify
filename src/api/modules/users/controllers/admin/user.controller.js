@@ -291,89 +291,6 @@ export async function updateUserById(req, res) {
 }
 
 /**
- * Delete user by ID
- *
- * @route   DELETE /api/users/:id
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function deleteUserById(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-
-    // Prevent admin from deleting themselves
-    if (req.user.id === id) {
-      return http.sendValidationError(res, {
-        id: 'Cannot delete your own account',
-      });
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Delete user (cascade will handle profile)
-    await userAdminService.deleteUserById(id, models);
-
-    return http.sendSuccess(res, {
-      message: 'User deleted successfully',
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to delete user');
-  }
-}
-
-/**
- * Update user status (active/inactive)
- *
- * @route   PUT /api/users/:id/status
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function updateUserStatus(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const { is_active } = req.body;
-
-    // Validate status
-    if (typeof is_active !== 'boolean') {
-      return http.sendValidationError(res, {
-        is_active: 'Status must be true or false',
-      });
-    }
-
-    // Prevent admin from deactivating themselves
-    if (req.user.id === id && !is_active) {
-      return http.sendError(res, 'Cannot deactivate your own account', 400);
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Update user status
-    const user = await userAdminService.updateUserStatus(id, is_active, models);
-
-    return http.sendSuccess(res, {
-      message: `User ${is_active ? 'activated' : 'deactivated'} successfully`,
-      user: {
-        id: user.id,
-        email: user.email,
-        is_active: user.is_active,
-      },
-    });
-  } catch (error) {
-    if (error.name === 'UserNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-
-    return http.sendServerError(res, 'Failed to update user status');
-  }
-}
-
-/**
  * Lock/unlock user account
  *
  * @route   PUT /api/users/:id/lock
@@ -450,5 +367,99 @@ export async function generateRandomPassword(req, res) {
     return http.sendSuccess(res, { password });
   } catch (error) {
     return http.sendServerError(res, 'Failed to generate password');
+  }
+}
+
+/**
+ * Bulk update user status
+ *
+ * @route   PATCH /api/admin/users/status
+ * @access  Admin
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function bulkUpdateStatus(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { ids, is_active } = req.body;
+
+    // Validate input
+    const errors = {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      errors.ids = 'IDS_REQUIRED';
+    }
+    if (typeof is_active !== 'boolean') {
+      errors.is_active = 'IS_ACTIVE_REQUIRED';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return http.sendValidationError(res, errors);
+    }
+
+    // Prevent admin from deactivating themselves
+    if (ids.includes(req.user.id) && !is_active) {
+      return http.sendError(res, 'Cannot deactivate your own account', 400);
+    }
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Bulk update status
+    const result = await userAdminService.bulkUpdateStatus(
+      ids,
+      is_active,
+      models,
+    );
+
+    return http.sendSuccess(res, {
+      message: `${result.updated} user(s) ${is_active ? 'activated' : 'deactivated'} successfully`,
+      users: result.users.map(u => ({
+        id: u.id,
+        email: u.email,
+        is_active: u.is_active,
+      })),
+      updated: result.updated,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to bulk update user status');
+  }
+}
+
+/**
+ * Bulk delete users
+ *
+ * @route   DELETE /api/admin/users
+ * @access  Admin
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function bulkDelete(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { ids } = req.body;
+
+    // Validate input
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return http.sendValidationError(res, { ids: 'IDS_REQUIRED' });
+    }
+
+    // Prevent admin from deleting themselves
+    if (ids.includes(req.user.id)) {
+      return http.sendError(res, 'Cannot delete your own account', 400);
+    }
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Bulk delete users
+    const result = await userAdminService.bulkDelete(ids, models);
+
+    return http.sendSuccess(res, {
+      message: `Deleted ${result.deleted} user(s)`,
+      deleted: result.deleted,
+      deletedIds: result.deletedIds,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to bulk delete users');
   }
 }

@@ -16,20 +16,13 @@ import {
   getUsersError,
   fetchGroups,
   fetchRoles,
-  deleteUser,
 } from '../../../redux';
 import { useHistory } from '../../../components/History';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
-import {
-  Box,
-  Icon,
-  Loader,
-  Table,
-  ConfirmModal,
-} from '../../../components/Admin';
+import { Box, Icon, Loader, Table } from '../../../components/Admin';
 import Tag from '../../../components/Tag';
 import Button from '../../../components/Button';
 import Avatar from '../../../components/Avatar';
@@ -38,6 +31,8 @@ import UserActionsDropdown from './components/UserActionsDropdown';
 import UserRolesModal from './components/UserRolesModal';
 import UserGroupsModal from './components/UserGroupsModal';
 import UserPermissionsModal from './components/UserPermissionsModal';
+import DeleteUserModal from './components/DeleteUserModal';
+import ChangeStatusUserModal from './components/ChangeStatusUserModal';
 import RoleTag from './components/RoleTag';
 import GroupTag from './components/GroupTag';
 import s from './Users.css';
@@ -108,6 +103,9 @@ function Users() {
   const groupsModalRef = useRef();
   const permissionsModalRef = useRef();
   const deleteModalRef = useRef();
+  const changeStatusModalRef = useRef();
+
+  const clearSelection = useCallback(() => setSelectedUsers([]), []);
 
   useEffect(() => {
     dispatch(
@@ -134,19 +132,36 @@ function Users() {
   }, [dispatch, currentPage, search, roleFilter, groupFilter, statusFilter]);
 
   const handleDelete = useCallback(user => {
-    // Open the delete modal for this user
-    deleteModalRef.current && deleteModalRef.current.open(user);
+    // Open the delete modal for single user (wrapped in unified format)
+    deleteModalRef.current &&
+      deleteModalRef.current.open({
+        ids: [user.id],
+        items: [user],
+      });
   }, []);
 
-  const handleDeleteUser = useCallback(
-    item => dispatch(deleteUser(item.id)),
-    [dispatch],
-  );
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({
+        ids: selectedUsers,
+      });
+  }, [selectedUsers]);
 
-  const getUserDisplayName = useCallback(
-    item => item.display_name || item.email,
-    [],
-  );
+  const handleBulkActivate = useCallback(() => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
+        ids: selectedUsers,
+        isActive: true,
+      });
+  }, [selectedUsers]);
+
+  const handleBulkDeactivate = useCallback(() => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
+        ids: selectedUsers,
+        isActive: false,
+      });
+  }, [selectedUsers]);
 
   // Filter handlers
   const handleSearchChange = useCallback(value => {
@@ -168,10 +183,12 @@ function Users() {
     setRoleFilter(value);
     setCurrentPage(1);
   }, []);
+
   const handleGroupFilterChange = useCallback(value => {
     setGroupFilter(value);
     setCurrentPage(1);
   }, []);
+
   const handleStatusFilterChange = useCallback(value => {
     setStatusFilter(value);
     setCurrentPage(1);
@@ -184,37 +201,46 @@ function Users() {
     },
     [users],
   );
+
   const handleSelectUser = useCallback((userId, checked) => {
     setSelectedUsers(prev =>
       checked ? [...prev, userId] : prev.filter(id => id !== userId),
     );
   }, []);
-  const clearSelection = useCallback(() => setSelectedUsers([]), []);
 
   // Modal handlers
   const openRolesModal = useCallback(
     user => rolesModalRef.current && rolesModalRef.current.open(user),
     [],
   );
+
   const openGroupsModal = useCallback(
     user => groupsModalRef.current && groupsModalRef.current.open(user),
     [],
   );
+
   const openPermissionsModal = useCallback(
     user =>
       permissionsModalRef.current && permissionsModalRef.current.open(user),
     [],
   );
+
   const openBulkRolesModal = useCallback(
     () =>
       rolesModalRef.current && rolesModalRef.current.openBulk(selectedUsers),
     [selectedUsers],
   );
+
   const openBulkGroupsModal = useCallback(
     () =>
       groupsModalRef.current && groupsModalRef.current.openBulk(selectedUsers),
     [selectedUsers],
   );
+
+  const handleRefreshUsers = useCallback(() => {
+    clearSelection();
+    refreshUsers();
+  }, [clearSelection, refreshUsers]);
 
   if (loading && users.length === 0) {
     return (
@@ -272,29 +298,20 @@ function Users() {
             {
               label: 'Activate',
               icon: <Icon name='check' size={16} />,
-              onClick: () => {
-                // TODO: Implement bulk activate
-                console.log('Activate users:', selectedUsers);
-              },
+              onClick: handleBulkActivate,
             },
             {
               label: 'Deactivate',
               icon: <Icon name='close' size={16} />,
               variant: 'warning',
-              onClick: () => {
-                // TODO: Implement bulk deactivate
-                console.log('Deactivate users:', selectedUsers);
-              },
+              onClick: handleBulkDeactivate,
             },
             { type: 'divider' },
             {
               label: 'Delete',
               icon: <Icon name='trash' size={16} />,
               variant: 'danger',
-              onClick: () => {
-                // TODO: Implement bulk delete
-                console.log('Delete users:', selectedUsers);
-              },
+              onClick: handleBulkDelete,
             },
           ]}
           onClear={clearSelection}
@@ -488,16 +505,13 @@ function Users() {
         />
       )}
 
-      {/* Modals - self-contained with ref-based API */}
-      <UserRolesModal ref={rolesModalRef} />
-      <UserGroupsModal ref={groupsModalRef} />
+      <UserRolesModal ref={rolesModalRef} onSuccess={handleRefreshUsers} />
+      <UserGroupsModal ref={groupsModalRef} onSuccess={handleRefreshUsers} />
       <UserPermissionsModal ref={permissionsModalRef} />
-      <ConfirmModal.Delete
-        ref={deleteModalRef}
-        title='Delete User'
-        getItemName={getUserDisplayName}
-        onDelete={handleDeleteUser}
-        onSuccess={refreshUsers}
+      <DeleteUserModal ref={deleteModalRef} onSuccess={handleRefreshUsers} />
+      <ChangeStatusUserModal
+        ref={changeStatusModalRef}
+        onSuccess={handleRefreshUsers}
       />
     </div>
   );

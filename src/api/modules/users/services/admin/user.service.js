@@ -419,62 +419,6 @@ export async function updateUserById(user_id, userData, models) {
 }
 
 /**
- * Delete user by admin
- *
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} Success status
- * @throws {Error} If UserNotFoundError
- */
-export async function deleteUserById(user_id, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Delete user (cascade will handle related records)
-  await user.destroy();
-
-  // Invalidate RBAC cache
-  rbacCache.invalidateUser(user_id);
-
-  return true;
-}
-
-/**
- * Update user status (active/inactive)
- *
- * @param {string} user_id - User ID
- * @param {boolean} is_active - Active status
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated user
- * @throws {Error} If UserNotFoundError
- */
-export async function updateUserStatus(user_id, is_active, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await user.update({ is_active });
-
-  // Invalidate RBAC cache (status affects access)
-  rbacCache.invalidateUser(user_id);
-
-  return user;
-}
-
-/**
  * Update user lock status
  *
  * @param {string} user_id - User ID
@@ -618,4 +562,69 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
   });
 
   return user;
+}
+
+/**
+ * Bulk update user status
+ *
+ * @param {string[]} ids - Array of user IDs
+ * @param {boolean} is_active - New status
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Updated users
+ */
+export async function bulkUpdateStatus(ids, is_active, models) {
+  const { User } = models;
+  const { sequelize } = User;
+  const { Op } = sequelize.Sequelize;
+
+  // Update all users
+  await User.update({ is_active }, { where: { id: { [Op.in]: ids } } });
+
+  // Fetch updated users
+  const users = await User.findAll({
+    where: { id: { [Op.in]: ids } },
+  });
+
+  // Invalidate RBAC cache for all updated users
+  users.forEach(user => rbacCache.invalidateUser(user.id));
+
+  return {
+    users,
+    updated: users.length,
+  };
+}
+
+/**
+ * Bulk delete users
+ *
+ * @param {string[]} ids - Array of user IDs to delete
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Result with deleted count
+ */
+export async function bulkDelete(ids, models) {
+  const { User } = models;
+  const { sequelize } = User;
+  const { Op } = sequelize.Sequelize;
+
+  // Find users to delete
+  const usersToDelete = await User.findAll({
+    where: { id: { [Op.in]: ids } },
+  });
+
+  const deletedIds = usersToDelete.map(u => u.id);
+
+  // Delete users
+  if (deletedIds.length > 0) {
+    await User.destroy({
+      where: { id: { [Op.in]: deletedIds } },
+    });
+
+    // Invalidate RBAC cache
+    deletedIds.forEach(id => rbacCache.invalidateUser(id));
+  }
+
+  return {
+    deleted: deletedIds.length,
+    deletedIds,
+  };
 }

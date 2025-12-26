@@ -204,6 +204,11 @@ function Permissions() {
       });
   }, [selectedPermissions]);
 
+  const handleRefreshPermissions = useCallback(() => {
+    clearSelection();
+    refreshPermissions();
+  }, [clearSelection, refreshPermissions]);
+
   // Check if any filter is active
   const hasActiveFilters = search || statusFilter;
 
@@ -435,22 +440,16 @@ function Permissions() {
         />
       )}
 
-      {/* Delete Confirmation Modal (unified for single and bulk) */}
       <ConfirmModal.Delete
         ref={deleteModalRef}
         title='Delete Permission(s)'
         getItemName={getDeleteName}
         onDelete={handleDeleteConfirm}
-        onSuccess={refreshPermissions}
+        onSuccess={handleRefreshPermissions}
       />
-
-      {/* Change Status Confirmation Modal */}
       <ChangeStatusPermissionModal
         ref={changeStatusModalRef}
-        onSuccess={() => {
-          clearSelection();
-          refreshPermissions();
-        }}
+        onSuccess={handleRefreshPermissions}
       />
     </div>
   );

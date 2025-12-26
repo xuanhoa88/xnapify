@@ -64,6 +64,22 @@ export default function userRoutes(deps, userMiddlewares) {
   );
 
   /**
+   * @route   PATCH /status
+   * @desc    Bulk update user status
+   * @access  Admin only
+   * @body    { ids: string[], is_active: boolean }
+   */
+  router.patch('/status', requireAdmin, userController.bulkUpdateStatus);
+
+  /**
+   * @route   DELETE /
+   * @desc    Bulk delete users
+   * @access  Admin only
+   * @body    { ids: string[] }
+   */
+  router.delete('/', requireAdmin, userController.bulkDelete);
+
+  /**
    * @route   GET /:id
    * @desc    Get specific user by ID
    * @access  Admin only
@@ -79,23 +95,6 @@ export default function userRoutes(deps, userMiddlewares) {
    * @body    { email, display_name, is_active, email_confirmed }
    */
   router.put('/:id', requireAdmin, userController.updateUserById);
-
-  /**
-   * @route   DELETE /:id
-   * @desc    Delete user by ID
-   * @access  Admin only
-   * @param   {string} id - User ID
-   */
-  router.delete('/:id', requireAdmin, userController.deleteUserById);
-
-  /**
-   * @route   PUT /:id/status
-   * @desc    Update user status (active/inactive)
-   * @access  Admin only
-   * @param   {string} id - User ID
-   * @body    { is_active }
-   */
-  router.put('/:id/status', requireAdmin, userController.updateUserStatus);
 
   // ========================================================================
   // USER ASSIGNMENT ROUTES (roles, groups, permissions)

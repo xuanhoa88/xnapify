@@ -58,6 +58,7 @@
 .registerBtn:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgb(102 126 234 / 40%);
+  color: white;
   text-decoration: none;
 }
 

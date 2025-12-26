@@ -18,7 +18,7 @@ import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
-import { fetchRoles, assignRolesToUser, fetchUsers } from '../../../../redux';
+import { fetchRoles, assignRolesToUser } from '../../../../redux';
 import s from './UserRolesModal.css';
 
 /**
@@ -37,7 +37,7 @@ import s from './UserRolesModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const UserRolesModal = forwardRef((props, ref) => {
+const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
 
   // Local roles state - fetched independently when modal opens
@@ -205,15 +205,15 @@ const UserRolesModal = forwardRef((props, ref) => {
           return;
         }
       }
-      // Refresh users list
-      dispatch(fetchUsers({ page: 1 }));
+      // Call success callback
+      onSuccess && onSuccess();
       handleClose();
     } catch (err) {
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
-  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose]);
+  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose, onSuccess]);
 
   const description = isBulk
     ? 'Select roles to assign to the selected users.'
@@ -328,5 +328,9 @@ const UserRolesModal = forwardRef((props, ref) => {
 });
 
 UserRolesModal.displayName = 'UserRolesModal';
+
+UserRolesModal.propTypes = {
+  onSuccess: require('prop-types').func,
+};
 
 export default UserRolesModal;

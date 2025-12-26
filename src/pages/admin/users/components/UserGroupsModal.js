@@ -18,7 +18,7 @@ import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
-import { assignGroupsToUser, fetchUsers, fetchGroups } from '../../../../redux';
+import { assignGroupsToUser, fetchGroups } from '../../../../redux';
 import s from './UserGroupsModal.css';
 
 /**
@@ -37,7 +37,7 @@ import s from './UserGroupsModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const UserGroupsModal = forwardRef((props, ref) => {
+const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
 
   // Local groups state - fetched independently when modal opens
@@ -204,15 +204,15 @@ const UserGroupsModal = forwardRef((props, ref) => {
           return;
         }
       }
-      // Refresh users list
-      dispatch(fetchUsers({ page: 1 }));
+      // Call success callback
+      onSuccess && onSuccess();
       handleClose();
     } catch (err) {
       setError(err.message || 'An error occurred');
     } finally {
       setLoading(false);
     }
-  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose]);
+  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose, onSuccess]);
 
   const description = isBulk
     ? 'Select groups to assign to the selected users.'
@@ -329,5 +329,9 @@ const UserGroupsModal = forwardRef((props, ref) => {
 });
 
 UserGroupsModal.displayName = 'UserGroupsModal';
+
+UserGroupsModal.propTypes = {
+  onSuccess: require('prop-types').func,
+};
 
 export default UserGroupsModal;

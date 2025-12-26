@@ -9,32 +9,31 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkDeleteUsers } from '../../../../redux';
+import { bulkUpdateUserStatus } from '../../../../redux';
 
 /**
- * DeleteUserModal - Self-contained modal for deleting users (single or bulk)
+ * ChangeStatusUserModal - Self-contained modal for changing user status
  *
  * Usage:
- *   const deleteModalRef = useRef();
- *   deleteModalRef.current.open({ ids: [userId], items: [user] });  // Single
- *   deleteModalRef.current.open({ ids: [...] });                    // Bulk
- *   deleteModalRef.current.close();
+ *   const changeStatusModalRef = useRef();
+ *   changeStatusModalRef.current.open({ ids: [...], isActive: true });
+ *   changeStatusModalRef.current.close();
  */
-const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
+const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   // Reset state helper
   const resetState = useCallback(() => {
     setIsOpen(false);
     setData(null);
     setError(null);
-    setDeleting(false);
+    setProcessing(false);
   }, []);
 
   // Expose methods via ref
@@ -53,17 +52,19 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
   );
 
   const handleClose = useCallback(() => {
-    if (!deleting) {
+    if (!processing) {
       resetState();
     }
-  }, [deleting, resetState]);
+  }, [processing, resetState]);
 
   const handleConfirm = useCallback(async () => {
     if (!data) return;
-    setDeleting(true);
+    setProcessing(true);
     setError(null);
-    const result = await dispatch(bulkDeleteUsers(data.ids));
-    setDeleting(false);
+    const result = await dispatch(
+      bulkUpdateUserStatus(data.ids, data.isActive),
+    );
+    setProcessing(false);
     if (result.success) {
       resetState();
       onSuccess && onSuccess(data);
@@ -72,23 +73,18 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
     }
   }, [dispatch, data, resetState, onSuccess]);
 
-  // Generate display name
-  const getDisplayName = () => {
-    if (data && data.items && data.items.length === 1) {
-      const user = data.items[0];
-      return `"${user.display_name || user.email}"`;
-    }
-    const count = data && data.ids ? data.ids.length : 0;
-    return `${count} user(s)`;
-  };
+  const count = data && data.ids ? data.ids.length : 0;
+  const isActive = data && data.isActive;
+  const actionText = isActive ? 'activate' : 'deactivate';
+  const buttonText = isActive ? 'Activate' : 'Deactivate';
+  const processingText = isActive ? 'Activating...' : 'Deactivating...';
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Delete User(s)</Modal.Header>
+      <Modal.Header onClose={handleClose}>Change User Status</Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete {getDisplayName()}? This action cannot
-          be undone.
+          Are you sure you want to {actionText} {count} user(s)?
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
@@ -96,16 +92,16 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
           <Modal.Button
             variant='secondary'
             onClick={handleClose}
-            disabled={deleting}
+            disabled={processing}
           >
             Cancel
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
-            disabled={deleting}
+            disabled={processing}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {processing ? processingText : buttonText}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
@@ -113,10 +109,10 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
   );
 });
 
-DeleteUserModal.displayName = 'DeleteUserModal';
+ChangeStatusUserModal.displayName = 'ChangeStatusUserModal';
 
-DeleteUserModal.propTypes = {
+ChangeStatusUserModal.propTypes = {
   onSuccess: PropTypes.func,
 };
 
-export default DeleteUserModal;
+export default ChangeStatusUserModal;

@@ -60,39 +60,6 @@ const usersSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Delete user
-    deleteUserStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    deleteUserSuccess: (state, action) => {
-      state.loading = false;
-      state.users = state.users.filter(user => user.id !== action.payload);
-      state.error = null;
-    },
-    deleteUserError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
-    // Update user status
-    updateUserStatusStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    updateUserStatusSuccess: (state, action) => {
-      state.loading = false;
-      const index = state.users.findIndex(u => u.id === action.payload.id);
-      if (index !== -1) {
-        state.users[index] = { ...state.users[index], ...action.payload };
-      }
-      state.error = null;
-    },
-    updateUserStatusError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
     // Create user
     createUserStart: state => {
       state.loading = true;
@@ -144,6 +111,43 @@ const usersSlice = createSlice({
     clearUserPermissions: state => {
       state.permissions = initialState.permissions;
     },
+
+    // Bulk update user status
+    bulkUpdateStatusStart: state => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkUpdateStatusSuccess: (state, action) => {
+      state.loading = false;
+      action.payload.forEach(updatedUser => {
+        const index = state.users.findIndex(u => u.id === updatedUser.id);
+        if (index !== -1) {
+          state.users[index] = { ...state.users[index], ...updatedUser };
+        }
+      });
+      state.error = null;
+    },
+    bulkUpdateStatusError: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Bulk delete users
+    bulkDeleteStart: state => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkDeleteSuccess: (state, action) => {
+      state.loading = false;
+      state.users = state.users.filter(
+        user => !action.payload.includes(user.id),
+      );
+      state.error = null;
+    },
+    bulkDeleteError: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
   },
 });
 
@@ -154,12 +158,6 @@ export const {
   fetchUserByIdStart,
   fetchUserByIdSuccess,
   fetchUserByIdError,
-  deleteUserStart,
-  deleteUserSuccess,
-  deleteUserError,
-  updateUserStatusStart,
-  updateUserStatusSuccess,
-  updateUserStatusError,
   createUserStart,
   createUserSuccess,
   createUserError,
@@ -170,6 +168,12 @@ export const {
   fetchUserPermissionsSuccess,
   fetchUserPermissionsError,
   clearUserPermissions,
+  bulkUpdateStatusStart,
+  bulkUpdateStatusSuccess,
+  bulkUpdateStatusError,
+  bulkDeleteStart,
+  bulkDeleteSuccess,
+  bulkDeleteError,
 } = usersSlice.actions;
 
 export default usersSlice.reducer;

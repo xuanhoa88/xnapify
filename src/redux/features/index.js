@@ -45,7 +45,6 @@ export { default as userReducer } from './user';
 // FEATURE: UI (UI State)
 // =============================================================================
 
-export * from './ui';
 export { default as uiReducer } from './ui';
 
 // =============================================================================
