@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { forwardRef } from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 // eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant] and s[size]
@@ -19,19 +20,22 @@ import s from './Button.css';
  *   <Button variant="danger" loading>Deleting...</Button>
  *   <Button as="a" href="/path" variant="secondary">Link Button</Button>
  */
-function Button({
-  children,
-  variant = 'primary',
-  size = 'medium',
-  type = 'button',
-  disabled = false,
-  loading = false,
-  fullWidth = false,
-  iconOnly = false,
-  className = '',
-  as: Component = 'button',
-  ...props
-}) {
+const Button = forwardRef(function Button(
+  {
+    children,
+    variant = 'primary',
+    size = 'medium',
+    type = 'button',
+    disabled = false,
+    loading = false,
+    fullWidth = false,
+    iconOnly = false,
+    className = '',
+    as: Component = 'button',
+    ...props
+  },
+  ref,
+) {
   // Use button-specific props only for button elements
   const buttonProps =
     Component === 'button'
@@ -43,6 +47,7 @@ function Button({
 
   return (
     <Component
+      ref={ref}
       className={clsx(
         s.button,
         s[variant],
@@ -59,7 +64,7 @@ function Button({
       {children}
     </Component>
   );
-}
+});
 
 Button.propTypes = {
   /** Button content */

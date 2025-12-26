@@ -9,26 +9,20 @@ import { useCallback, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import {
-  toggleAdminSidebar,
-  isAdminSidebarOpen,
-  isAuthenticated,
-  logout,
-  getCurrentUser,
-} from '../../../redux';
+import { isAuthenticated, logout, getCurrentUser } from '../../../redux';
 import { useHistory, Link } from '../../History';
 import { useWebSocket } from '../../WebSocket';
 import Icon from '../../Icon';
 import Button from '../../Button';
-import s from './Sidebar.css';
+import s from './Drawer.css';
 
-function AdminSidebar() {
+function Drawer() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
 
-  const sidebarOpen = useSelector(isAdminSidebarOpen);
+  const drawerOpen = useSelector(state => state.ui.isAdminDrawerOpen);
   const isAuth = useSelector(isAuthenticated);
   const user = useSelector(getCurrentUser);
 
@@ -42,17 +36,17 @@ function AdminSidebar() {
     return unsubscribe;
   }, [history]);
 
-  const handleCloseSidebar = useCallback(() => {
-    dispatch(toggleAdminSidebar());
+  const handleCloseDrawer = useCallback(() => {
+    dispatch({ type: 'TOGGLE_ADMIN_DRAWER' });
   }, [dispatch]);
 
   const handleLogout = useCallback(async () => {
     await dispatch(logout());
-    handleCloseSidebar();
+    handleCloseDrawer();
     if (ws) {
       ws.logout();
     }
-  }, [dispatch, handleCloseSidebar, ws]);
+  }, [dispatch, handleCloseDrawer, ws]);
 
   const isActive = useCallback(
     (path, exact = false) => {
@@ -105,9 +99,9 @@ function AdminSidebar() {
 
   return (
     <>
-      <aside className={clsx(s.sidebar, { [s.open]: sidebarOpen })}>
-        {/* Sidebar Header */}
-        <div className={s.sidebarHeader}>
+      <aside className={clsx(s.drawer, { [s.open]: drawerOpen })}>
+        {/* Header */}
+        <div className={s.drawerHeader}>
           <div className={s.brand}>
             <span className={s.brandLogo}>⚡</span>
             <span className={s.brandName}>RSK</span>
@@ -115,7 +109,7 @@ function AdminSidebar() {
           <Button
             variant='ghost'
             iconOnly
-            onClick={handleCloseSidebar}
+            onClick={handleCloseDrawer}
             title='Close menu'
           >
             <Icon name='close' size={20} />
@@ -135,7 +129,7 @@ function AdminSidebar() {
                       className={clsx(s.menuLink, {
                         [s.active]: isActive(item.path, item.exact),
                       })}
-                      onClick={handleCloseSidebar}
+                      onClick={handleCloseDrawer}
                     >
                       <Icon name={item.icon} size={18} className={s.menuIcon} />
                       <span className={s.menuLabel}>{item.label}</span>
@@ -156,11 +150,7 @@ function AdminSidebar() {
             </h3>
             <ul className={s.menuList}>
               <li>
-                <Link
-                  to='/'
-                  className={s.menuLink}
-                  onClick={handleCloseSidebar}
-                >
+                <Link to='/' className={s.menuLink} onClick={handleCloseDrawer}>
                   <Icon name='arrowUp' size={18} className={s.menuIcon} />
                   <span className={s.menuLabel}>
                     {t('navigation.backToSite', 'Back to Site')}
@@ -198,10 +188,10 @@ function AdminSidebar() {
       </aside>
 
       {/* Overlay */}
-      {sidebarOpen && (
+      {drawerOpen && (
         <div
           className={s.overlay}
-          onClick={handleCloseSidebar}
+          onClick={handleCloseDrawer}
           role='presentation'
         />
       )}
@@ -209,4 +199,4 @@ function AdminSidebar() {
   );
 }
 
-export default AdminSidebar;
+export default Drawer;

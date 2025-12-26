@@ -8,29 +8,31 @@
 import 'normalize.css';
 import PropTypes from 'prop-types';
 import Footer from '../Footer';
-import Sidebar from '../Sidebar';
+import Drawer from '../Drawer';
 import Header from '../Header';
-import s from './Layout.css';
+import FlashMessage from './FlashMessage';
+import s from './Portal.css';
 
 /**
- * AdminLayout Component
+ * Portal Component
  *
  * A dedicated layout component for admin panel pages.
- * Features the AdminHeader and admin-specific styling.
+ * Features Header, Drawer, Footer, and FlashMessage components.
  */
-function AdminLayout({ children }) {
+function Portal({ children }) {
   return (
     <div className={s.root}>
       <Header />
-      <Sidebar />
+      <Drawer />
       <main className={s.content}>{children}</main>
+      <FlashMessage />
       <Footer />
     </div>
   );
 }
 
-AdminLayout.propTypes = {
+Portal.propTypes = {
   children: PropTypes.node,
 };
 
-export default AdminLayout;
+export default Portal;

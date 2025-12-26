@@ -5,11 +5,5 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Actions
-export { toggleAdminSidebar } from './slice';
-
-// Public API - Selectors
-export * from './selector';
-
 // Public API - Reducer
 export { default } from './slice';

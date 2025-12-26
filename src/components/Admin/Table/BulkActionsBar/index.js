@@ -5,8 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import Button from '../../../Button';
+import Icon from '../../../Icon';
+import ActionsDropdown from '../ActionsDropdown';
 import s from './BulkActionsBar.css';
 
 /**
@@ -14,30 +18,94 @@ import s from './BulkActionsBar.css';
  *
  * @param {object} props - Component props
  * @param {number} props.count - Number of selected items
- * @param {string} [props.itemLabel='item'] - Singular label for items (e.g., "user", "permission")
- * @param {Array<{label: string, onClick: Function, variant?: 'default'|'danger'}>} props.actions - Action buttons
+ * @param {string} [props.itemCountLabel] - Custom i18n key for the selection message
+ * @param {Array<{label: string, onClick: Function, icon?: string, variant?: 'default'|'danger'}>} props.actions - Primary action buttons
+ * @param {Array<{label: string, onClick: Function, icon?: ReactNode, variant?: 'danger'|'warning'}>} [props.moreActions] - Secondary actions in dropdown
  * @param {Function} props.onClear - Clear selection callback
  */
-function BulkActionsBar({ count, itemLabel = 'item', actions, onClear }) {
-  const pluralLabel = count === 1 ? itemLabel : `${itemLabel}s`;
+function BulkActionsBar({
+  count,
+  itemCountLabel,
+  actions,
+  moreActions,
+  onClear,
+}) {
+  const { t } = useTranslation();
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
+
+  const handleMoreToggle = useCallback(value => {
+    if (typeof value === 'function') {
+      setIsMoreOpen(prev => Boolean(value(prev)));
+    } else {
+      setIsMoreOpen(Boolean(value));
+    }
+  }, []);
 
   return (
     <div className={s.bulkActions}>
       <span className={s.bulkInfo}>
-        {count} {pluralLabel} selected
+        {t(itemCountLabel || 'table.bulkActions.itemSelected', {
+          count,
+          defaultValue_one: '{{count}} item selected',
+          defaultValue_other: '{{count}} items selected',
+        })}
       </span>
-      {actions.map(action => (
-        <Button
-          key={action.label}
-          variant={action.variant === 'danger' ? 'danger' : 'primary'}
-          size='small'
-          onClick={action.onClick}
-        >
-          {action.label}
-        </Button>
-      ))}
-      <Button variant='ghost' size='small' onClick={onClear}>
-        ✕ Clear
+      <div className={s.actionButtons}>
+        {Array.isArray(actions) &&
+          actions.map(action => (
+            <Button
+              key={action.label}
+              variant='unstyled'
+              size='small'
+              className={
+                action.variant === 'danger' ? s.dangerButton : s.actionButton
+              }
+              onClick={action.onClick}
+            >
+              {action.icon && <Icon name={action.icon} size={14} />}
+              {action.label}
+            </Button>
+          ))}
+        {Array.isArray(moreActions) && moreActions.length > 0 && (
+          <ActionsDropdown
+            isOpen={isMoreOpen}
+            onToggle={handleMoreToggle}
+            align='left'
+            className={s.moreDropdown}
+          >
+            <ActionsDropdown.Trigger
+              className={s.moreButton}
+              title='More actions'
+            >
+              <Icon name='more-vertical' size={16} />
+            </ActionsDropdown.Trigger>
+            <ActionsDropdown.Menu>
+              {moreActions.map((action, index) =>
+                action.type === 'divider' ? (
+                  <ActionsDropdown.Divider key={`divider-${index}`} />
+                ) : (
+                  <ActionsDropdown.Item
+                    key={action.label}
+                    onClick={action.onClick}
+                    icon={action.icon}
+                    variant={action.variant}
+                  >
+                    {action.label}
+                  </ActionsDropdown.Item>
+                ),
+              )}
+            </ActionsDropdown.Menu>
+          </ActionsDropdown>
+        )}
+      </div>
+      <Button
+        variant='unstyled'
+        size='small'
+        className={s.clearButton}
+        onClick={onClear}
+      >
+        <Icon name='close' size={14} />
+        Clear
       </Button>
     </div>
   );
@@ -45,14 +113,30 @@ function BulkActionsBar({ count, itemLabel = 'item', actions, onClear }) {
 
 BulkActionsBar.propTypes = {
   count: PropTypes.number.isRequired,
-  itemLabel: PropTypes.string,
+  itemCountLabel: PropTypes.string,
   actions: PropTypes.arrayOf(
     PropTypes.shape({
       label: PropTypes.string.isRequired,
       onClick: PropTypes.func.isRequired,
+      icon: PropTypes.string,
       variant: PropTypes.oneOf(['default', 'danger']),
     }),
   ).isRequired,
+  moreActions: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      // Action item
+      PropTypes.shape({
+        label: PropTypes.string.isRequired,
+        onClick: PropTypes.func.isRequired,
+        icon: PropTypes.node,
+        variant: PropTypes.oneOf(['danger', 'warning']),
+      }),
+      // Divider item
+      PropTypes.shape({
+        type: PropTypes.oneOf(['divider']).isRequired,
+      }),
+    ]),
+  ),
   onClear: PropTypes.func.isRequired,
 };
 

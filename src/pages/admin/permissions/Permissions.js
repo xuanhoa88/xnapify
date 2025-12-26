@@ -19,7 +19,7 @@ import {
   updatePermission,
 } from '../../../redux';
 import {
-  Page,
+  Box,
   Icon,
   Loader,
   Table,
@@ -230,7 +230,7 @@ function Permissions() {
   if (loading && permissions.length === 0) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='key' size={24} />}
           title='Permission Management'
           subtitle='Configure granular access controls'
@@ -243,7 +243,7 @@ function Permissions() {
   if (error) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='key' size={24} />}
           title='Permission Management'
           subtitle='Configure granular access controls'
@@ -259,7 +259,7 @@ function Permissions() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='key' size={24} />}
         title='Permission Management'
         subtitle='Configure granular access controls'
@@ -268,7 +268,7 @@ function Permissions() {
           <Icon name='plus' size={16} />
           Add Permission
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       {/* Bulk Actions Bar */}
       {selectedPermissions.length > 0 && (

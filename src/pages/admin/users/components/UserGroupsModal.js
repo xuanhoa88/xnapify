@@ -312,11 +312,7 @@ const UserGroupsModal = forwardRef((props, ref) => {
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Modal.SelectionCount
-          count={selections.length}
-          singular='group'
-          plural='groups'
-        />
+        <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
           <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
           <Modal.Button

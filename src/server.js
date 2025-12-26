@@ -487,7 +487,7 @@ async function main(app, staticPath) {
       }
 
       if (page.redirect) {
-        return res.redirect(page.status || 302, page.redirect);
+        return res.redirect(page.redirect);
       }
 
       if (!page.component) {

@@ -5,7 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, createContext, useContext } from 'react';
+import {
+  useEffect,
+  useCallback,
+  createContext,
+  useContext,
+  useRef,
+} from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Button from '../../../Button';
@@ -41,6 +47,8 @@ function ActionsDropdown({
   align = 'right',
   className,
 }) {
+  const triggerRef = useRef(null);
+
   // Close on outside click
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -54,7 +62,9 @@ function ActionsDropdown({
   }, [isOpen, onToggle]);
 
   return (
-    <ActionsDropdownContext.Provider value={{ isOpen, onToggle, align }}>
+    <ActionsDropdownContext.Provider
+      value={{ isOpen, onToggle, align, triggerRef }}
+    >
       <div className={clsx(s.dropdown, { [s.open]: isOpen }, className)}>
         {children}
       </div>
@@ -84,6 +94,7 @@ function Trigger({ children, className, title = 'More actions', ...props }) {
 
   return (
     <Button
+      ref={ctx.triggerRef}
       variant='ghost'
       iconOnly
       className={clsx(s.trigger, className)}
@@ -102,15 +113,37 @@ Trigger.propTypes = {
   title: PropTypes.string,
 };
 
-// Menu container
+// Menu container - uses fixed positioning to avoid clipping by overflow containers
 function Menu({ children, className }) {
   const ctx = useContext(ActionsDropdownContext);
 
   if (!ctx.isOpen) return null;
 
+  // Calculate position synchronously when rendering
+  const trigger = ctx.triggerRef?.current;
+  const rect = trigger?.getBoundingClientRect();
+
+  const position = {
+    top: rect ? rect.bottom + 6 : 0,
+  };
+
+  if (ctx.align === 'right') {
+    position.right = rect ? window.innerWidth - rect.right : 0;
+    position.left = 'auto';
+  } else {
+    position.left = rect ? rect.left : 0;
+    position.right = 'auto';
+  }
+
   return (
     <div
-      className={clsx(s.menu, s[ctx.align], className)}
+      className={clsx(s.menu, className)}
+      style={{
+        position: 'fixed',
+        top: position.top,
+        left: position.left,
+        right: position.right,
+      }}
       onClick={e => e.stopPropagation()}
       onKeyDown={e => e.stopPropagation()}
       role='menu'

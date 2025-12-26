@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { useDispatch } from 'react-redux';
 import { useHistory } from '../../../../components/History';
 import { fetchPermissionById, updatePermission } from '../../../../redux';
-import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './EditPermission.css';
 
@@ -92,7 +92,7 @@ export default function EditPermission({ permissionId }) {
   if (loading) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='key' size={24} />}
           title='Edit Permission'
           subtitle='Modify permission rule'
@@ -104,7 +104,7 @@ export default function EditPermission({ permissionId }) {
           >
             ← Back to Permissions
           </Button>
-        </Page.Header>
+        </Box.Header>
         <div className={s.formContainer}>
           <div className={s.loading}>Loading permission...</div>
         </div>
@@ -114,7 +114,7 @@ export default function EditPermission({ permissionId }) {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='key' size={24} />}
         title='Edit Permission'
         subtitle='Modify permission rule'
@@ -126,7 +126,7 @@ export default function EditPermission({ permissionId }) {
         >
           ← Back to Permissions
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

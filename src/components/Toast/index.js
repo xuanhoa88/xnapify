@@ -15,7 +15,8 @@ import {
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import Icon from '../Icon';
-// eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant]
+import Button from '../Button';
+// eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant] and s[placementClasses[placement]]
 import s from './Toast.css';
 
 /**
@@ -35,7 +36,7 @@ import s from './Toast.css';
  *   // Hide toast imperatively
  *   toastRef.current.hide();
  *
- *   <Toast ref={toastRef} />
+ *   <Toast ref={toastRef} placement="top-center" />
  */
 
 // Icon mapping for each variant
@@ -46,8 +47,18 @@ const variantIcons = {
   info: 'info',
 };
 
+// CSS class mapping for each placement
+const placementClasses = {
+  'top-right': 'topRight',
+  'top-left': 'topLeft',
+  'top-center': 'topCenter',
+  'bottom-right': 'bottomRight',
+  'bottom-left': 'bottomLeft',
+  'bottom-center': 'bottomCenter',
+};
+
 const Toast = forwardRef(function Toast(
-  { closable = true, className = '' },
+  { closable = true, className = '', placement = 'top-center' },
   ref,
 ) {
   const [isVisible, setIsVisible] = useState(false);
@@ -86,7 +97,7 @@ const Toast = forwardRef(function Toast(
         variant: options.variant || 'info',
         title: options.title || '',
         message: options.message || '',
-        duration: options.duration ?? 4000,
+        duration: options.duration || 4000,
       };
 
       setConfig(newConfig);
@@ -146,12 +157,14 @@ const Toast = forwardRef(function Toast(
 
   const { variant, title, message } = config;
   const iconName = variantIcons[variant];
+  const placementClass = placementClasses[placement] || 'topCenter';
 
   return (
     <div
       className={clsx(
         s.toast,
         s[variant],
+        s[placementClass],
         { [s.exiting]: isExiting },
         className,
       )}
@@ -166,14 +179,15 @@ const Toast = forwardRef(function Toast(
         <div className={s.message}>{message}</div>
       </div>
       {closable && (
-        <button
-          type='button'
+        <Button
+          variant='ghost'
+          iconOnly
           className={s.closeButton}
           onClick={hide}
           aria-label='Close notification'
         >
           <Icon name='close' size={16} />
-        </button>
+        </Button>
       )}
     </div>
   );
@@ -186,6 +200,15 @@ Toast.propTypes = {
   closable: PropTypes.bool,
   /** Additional CSS class names */
   className: PropTypes.string,
+  /** Placement of the toast: 'top-right', 'top-left', 'top-center', 'bottom-right', 'bottom-left', 'bottom-center' */
+  placement: PropTypes.oneOf([
+    'top-right',
+    'top-left',
+    'top-center',
+    'bottom-right',
+    'bottom-left',
+    'bottom-center',
+  ]),
 };
 
 export default Toast;

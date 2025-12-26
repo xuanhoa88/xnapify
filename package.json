@@ -78,7 +78,6 @@
     "react-redux": "7.2.9",
     "redux": "5.0.1",
     "redux-logger": "3.0.6",
-    "rxjs": "5.5.12",
     "sequelize": "6.37.7",
     "serialize-javascript": "6.0.2",
     "source-map-support": "0.5.21",

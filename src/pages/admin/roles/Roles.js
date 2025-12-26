@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../components/History';
 import { fetchRoles, getRolesPagination, deleteRole } from '../../../redux';
 import {
-  Page,
+  Box,
   Icon,
   Loader,
   Table,
@@ -129,7 +129,7 @@ function Roles() {
   if (loading && roles.length === 0) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='shield' size={24} />}
           title={t('roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
@@ -145,7 +145,7 @@ function Roles() {
   if (error) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='shield' size={24} />}
           title={t('roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
@@ -170,7 +170,7 @@ function Roles() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='shield' size={24} />}
         title={t('roles.title', 'Role Management')}
         subtitle='Define access levels and permissions'
@@ -179,7 +179,7 @@ function Roles() {
           <Icon name='plus' size={16} />
           {t('roles.addRole', 'Add Role')}
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       {/* Search/Filter Section */}
       <div className={s.filters}>

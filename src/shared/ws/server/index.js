@@ -287,7 +287,12 @@ export class WebSocketServer extends EventEmitter {
       return acc;
     }, {});
 
-    const token = cookies.id_token;
+    const token =
+      cookies[
+        this.config.jwtCookieName ||
+          process.env.RSK_JWT_COOKIE_NAME ||
+          'id_token'
+      ];
     if (!token) {
       return;
     }

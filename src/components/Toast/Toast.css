@@ -10,6 +10,8 @@
    ========================================================================== */
 
 .toast {
+  position: fixed;
+  z-index: 9999;
   display: flex;
   align-items: flex-start;
   gap: var(--spacing-3);
@@ -20,14 +22,137 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   border-left: 4px solid;
-  animation: slideIn 0.2s ease-out;
 }
 
 .toast.exiting {
-  animation: slideOut 0.2s ease-in forwards;
+  animation-fill-mode: forwards;
 }
 
-@keyframes slideIn {
+/* ==========================================================================
+   Position Classes
+   ========================================================================== */
+
+/* Top Center */
+.topCenter {
+  top: var(--spacing-6);
+  left: 50%;
+  transform: translateX(-50%);
+  animation: slideInTopCenter 0.2s ease-out;
+}
+
+.topCenter.exiting {
+  animation: slideOutTopCenter 0.2s ease-in forwards;
+}
+
+/* Top Right */
+.topRight {
+  top: var(--spacing-6);
+  right: var(--spacing-6);
+  animation: slideInRight 0.2s ease-out;
+}
+
+.topRight.exiting {
+  animation: slideOutRight 0.2s ease-in forwards;
+}
+
+/* Top Left */
+.topLeft {
+  top: var(--spacing-6);
+  left: var(--spacing-6);
+  animation: slideInLeft 0.2s ease-out;
+}
+
+.topLeft.exiting {
+  animation: slideOutLeft 0.2s ease-in forwards;
+}
+
+/* Bottom Center */
+.bottomCenter {
+  bottom: var(--spacing-6);
+  left: 50%;
+  transform: translateX(-50%);
+  animation: slideInBottomCenter 0.2s ease-out;
+}
+
+.bottomCenter.exiting {
+  animation: slideOutBottomCenter 0.2s ease-in forwards;
+}
+
+/* Bottom Right */
+.bottomRight {
+  bottom: var(--spacing-6);
+  right: var(--spacing-6);
+  animation: slideInRight 0.2s ease-out;
+}
+
+.bottomRight.exiting {
+  animation: slideOutRight 0.2s ease-in forwards;
+}
+
+/* Bottom Left */
+.bottomLeft {
+  bottom: var(--spacing-6);
+  left: var(--spacing-6);
+  animation: slideInLeft 0.2s ease-out;
+}
+
+.bottomLeft.exiting {
+  animation: slideOutLeft 0.2s ease-in forwards;
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes slideInTopCenter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideOutTopCenter {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-100%);
+  }
+}
+
+@keyframes slideInBottomCenter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes slideOutBottomCenter {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(100%);
+  }
+}
+
+@keyframes slideInRight {
   from {
     opacity: 0;
     transform: translateX(100%);
@@ -39,7 +164,7 @@
   }
 }
 
-@keyframes slideOut {
+@keyframes slideOutRight {
   from {
     opacity: 1;
     transform: translateX(0);
@@ -48,6 +173,30 @@
   to {
     opacity: 0;
     transform: translateX(100%);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutLeft {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-100%);
   }
 }
 

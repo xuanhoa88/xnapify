@@ -23,7 +23,7 @@ import {
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
 import {
-  Page,
+  Box,
   Icon,
   Loader,
   Table,
@@ -180,7 +180,7 @@ function Groups() {
   if (loading && groups.length === 0) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='folder' size={24} />}
           title='Group Management'
           subtitle='Organize users into groups for easier access control'
@@ -193,7 +193,7 @@ function Groups() {
   if (error) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='folder' size={24} />}
           title='Group Management'
           subtitle='Organize users into groups for easier access control'
@@ -209,7 +209,7 @@ function Groups() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='folder' size={24} />}
         title='Group Management'
         subtitle='Organize users into groups for easier access control'
@@ -218,7 +218,7 @@ function Groups() {
           <Icon name='plus' size={16} />
           Add Group
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       {/* Filters */}
       <div className={s.filters}>

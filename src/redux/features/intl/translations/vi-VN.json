@@ -136,10 +136,18 @@
       "sending": "Đang gửi..."
     },
     "hours": {
-      "monday_friday": "Thứ Hai - Thứ Sáu:",
+      "workday": "Thứ Hai - Thứ Sáu:",
       "saturday": "Thứ Bảy:",
       "sunday": "Thứ Tám:",
       "closed": "Đóng cửa"
     }
+  },
+  "table.bulkActions": {
+    "itemSelected_one": "Đã chọn {{count}} mục",
+    "itemSelected_other": "Đã chọn {{count}} mục"
+  },
+  "modal": {
+    "itemSelected_one": "Đã chọn {{count}} mục",
+    "itemSelected_other": "Đã chọn {{count}} mục"
   }
 }

@@ -66,7 +66,7 @@ const SOCIAL_LINKS = [
  * Office hours configuration
  */
 const OFFICE_HOURS = [
-  { day: 'monday_friday', hours: '9:00 AM - 6:00 PM PST' },
+  { day: 'workday', hours: '9:00 AM - 6:00 PM PST' },
   { day: 'saturday', hours: '10:00 AM - 4:00 PM PST' },
   { day: 'sunday', hours: 'closed' },
 ];

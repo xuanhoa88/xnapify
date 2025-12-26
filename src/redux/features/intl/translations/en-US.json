@@ -141,10 +141,18 @@
       "sending": "Sending..."
     },
     "hours": {
-      "monday_friday": "Monday - Friday:",
+      "workday": "Monday - Friday:",
       "saturday": "Saturday:",
       "sunday": "Sunday:",
       "closed": "Closed"
     }
+  },
+  "table.bulkActions": {
+    "itemSelected_one": "{{count}} item selected",
+    "itemSelected_other": "{{count}} items selected"
+  },
+  "modal": {
+    "itemSelected_one": "{{count}} item selected",
+    "itemSelected_other": "{{count}} items selected"
   }
 }

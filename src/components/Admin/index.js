@@ -5,10 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default } from './Layout';
+// Portal (default export)
+export { default } from './Portal';
+
+// Components
 export { default as Icon } from '../Icon';
 export { default as Loader } from './Loader';
 export { default as ConfirmModal } from './ConfirmModal';
 
+// Namespaced exports
 export * as Table from './Table';
-export * as Page from './Page';
+export * as Box from './Box';

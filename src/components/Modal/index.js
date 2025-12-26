@@ -7,6 +7,7 @@
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import Button from '../Button';
 import s from './Modal.css';
 
@@ -105,21 +106,27 @@ ModalActions.propTypes = {
 };
 
 /**
- * Modal.SelectionCount - Selection count display
+ * Modal.SelectionCount - Selection count display with i18n support
  * @param {number} count - Number of selected items
- * @param {string} singular - Singular label (e.g., "item")
- * @param {string} plural - Plural label (e.g., "items")
+ * @param {string} countLabel - i18n key for the selection message (e.g., "users.selected")
  */
-const ModalSelectionCount = ({ count, singular, plural }) => (
-  <span className={s.selectionCount}>
-    {count} {count !== 1 ? plural : singular} selected
-  </span>
-);
+const ModalSelectionCount = ({ count, countLabel }) => {
+  const { t } = useTranslation();
+
+  return (
+    <span className={s.selectionCount}>
+      {t(countLabel || 'modal.itemSelected', {
+        count,
+        defaultValue_one: '{{count}} item selected',
+        defaultValue_other: '{{count}} items selected',
+      })}
+    </span>
+  );
+};
 
 ModalSelectionCount.propTypes = {
   count: PropTypes.number.isRequired,
-  singular: PropTypes.string.isRequired,
-  plural: PropTypes.string.isRequired,
+  countLabel: PropTypes.string,
 };
 
 /**

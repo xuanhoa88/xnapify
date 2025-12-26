@@ -24,7 +24,7 @@ import {
   useSearchableSelect,
 } from '../../../components/SearchableSelect';
 import {
-  Page,
+  Box,
   Icon,
   Loader,
   Table,
@@ -219,7 +219,7 @@ function Users() {
   if (loading && users.length === 0) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='users' size={24} />}
           title='User Management'
           subtitle='Manage users, roles, and permissions'
@@ -232,7 +232,7 @@ function Users() {
   if (error) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='users' size={24} />}
           title='User Management'
           subtitle='Manage users, roles, and permissions'
@@ -248,7 +248,7 @@ function Users() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='users' size={24} />}
         title='User Management'
         subtitle='Manage users, roles, and permissions'
@@ -259,15 +259,43 @@ function Users() {
         >
           Add User
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       {selectedUsers.length > 0 && (
         <Table.BulkActionsBar
           count={selectedUsers.length}
-          itemLabel='user'
           actions={[
             { label: 'Assign Roles', onClick: openBulkRolesModal },
             { label: 'Assign Groups', onClick: openBulkGroupsModal },
+          ]}
+          moreActions={[
+            {
+              label: 'Activate',
+              icon: <Icon name='check' size={16} />,
+              onClick: () => {
+                // TODO: Implement bulk activate
+                console.log('Activate users:', selectedUsers);
+              },
+            },
+            {
+              label: 'Deactivate',
+              icon: <Icon name='close' size={16} />,
+              variant: 'warning',
+              onClick: () => {
+                // TODO: Implement bulk deactivate
+                console.log('Deactivate users:', selectedUsers);
+              },
+            },
+            { type: 'divider' },
+            {
+              label: 'Delete',
+              icon: <Icon name='trash' size={16} />,
+              variant: 'danger',
+              onClick: () => {
+                // TODO: Implement bulk delete
+                console.log('Delete users:', selectedUsers);
+              },
+            },
           ]}
           onClear={clearSelection}
         />

@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../admin.css';
+@import '../../variables.css';
 
 /* =============================================================================
-   SIDEBAR - Dark theme to match header
+   DRAWER - Dark theme to match header
    ============================================================================= */
 
-.sidebar {
+.drawer {
   position: fixed;
   top: 0;
   left: 0;
@@ -26,7 +26,7 @@
   flex-direction: column;
 }
 
-.sidebar.open {
+.drawer.open {
   transform: translateX(0);
 }
 
@@ -34,7 +34,7 @@
    HEADER
    ============================================================================= */
 
-.sidebarHeader {
+.drawerHeader {
   padding: var(--spacing-4) var(--spacing-4);
   border-bottom: 1px solid rgb(255 255 255 / 8%);
   display: flex;

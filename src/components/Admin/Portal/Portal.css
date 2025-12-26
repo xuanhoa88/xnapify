@@ -5,12 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../admin.css';
-
-/*
- * AdminLayout component styles
- * Similar to Layout but optimized for admin panel
- * ========================================================================== */
+/* Re-export shared variables for Admin components */
+@import '../../variables.css';
 
 .root {
   display: flex;

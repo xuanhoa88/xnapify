@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import crypto from 'crypto';
-
 /**
  * Default cookie configuration
  */
@@ -20,8 +18,9 @@ export const DEFAULT_COOKIE_CONFIG = Object.freeze({
 /**
  * Cookie names
  */
-const JWT_COOKIE_NAME = 'id_token';
-const REFRESH_COOKIE_NAME = 'refresh_token';
+const JWT_COOKIE_NAME = process.env.RSK_JWT_COOKIE_NAME || 'id_token';
+const REFRESH_COOKIE_NAME =
+  process.env.RSK_REFRESH_COOKIE_NAME || 'refresh_token';
 
 /**
  * Predefined cookie types with their configurations
@@ -128,13 +127,7 @@ function hasCookie(req, name) {
  * @param {Object} [options] - Additional options
  * @returns {string|boolean|void} Result based on action
  */
-export function manageCookie(
-  action,
-  type,
-  context = {},
-  value = null,
-  options = {},
-) {
+function manageCookie(action, type, context = {}, value = null, options = {}) {
   // Validate required parameters
   if (typeof action !== 'string' || action.trim().length === 0) {
     const error = new Error('Action must be a non-empty string');
@@ -211,13 +204,6 @@ export function manageCookie(
       throw error;
     }
   }
-}
-
-/**
- * Generate a cryptographically secure random ID
- */
-export function generateSecureId(length = 32) {
-  return crypto.randomBytes(length).toString('hex');
 }
 
 /**

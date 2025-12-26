@@ -311,11 +311,7 @@ const UserRolesModal = forwardRef((props, ref) => {
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Modal.SelectionCount
-          count={selections.length}
-          singular='role'
-          plural='roles'
-        />
+        <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
           <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
           <Modal.Button

@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { toggleAdminSidebar, isAuthenticated } from '../../../redux';
+import { isAuthenticated } from '../../../redux';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -30,8 +30,8 @@ function AdminHeader() {
   const dispatch = useDispatch();
   const isAuth = useSelector(isAuthenticated);
 
-  const handleToggleSidebar = useCallback(() => {
-    dispatch(toggleAdminSidebar());
+  const handleToggleDrawer = useCallback(() => {
+    dispatch({ type: 'TOGGLE_ADMIN_DRAWER' });
   }, [dispatch]);
 
   if (!isAuth) {
@@ -46,8 +46,8 @@ function AdminHeader() {
           <Button
             variant='ghost'
             iconOnly
-            onClick={handleToggleSidebar}
-            title={t('common.toggleSidebar', 'Toggle sidebar')}
+            onClick={handleToggleDrawer}
+            title={t('common.toggleDrawer', 'Toggle drawer')}
           >
             <Icon name='menu' size={20} />
           </Button>

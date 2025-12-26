@@ -18,7 +18,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './CreateUser.css';
 
@@ -260,7 +260,7 @@ function CreateUser() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='users' size={24} />}
         title='Create New User'
         subtitle='Add a new user account'
@@ -268,7 +268,7 @@ function CreateUser() {
         <Button variant='secondary' onClick={handleCancel}>
           ← Back to Users
         </Button>
-      </Page.Header>
+      </Box.Header>
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>
           {error && <div className={s.formError}>{error}</div>}

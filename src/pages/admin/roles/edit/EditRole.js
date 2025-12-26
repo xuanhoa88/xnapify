@@ -14,7 +14,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
+import { Box, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './EditRole.css';
 
@@ -203,7 +203,7 @@ function EditRole({ roleId }) {
   if (fetchingRole) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='shield' size={24} />}
           title='Edit Role'
           subtitle='Modify role permissions'
@@ -211,7 +211,7 @@ function EditRole({ roleId }) {
           <Button variant='secondary' onClick={handleCancel}>
             ← Back to Roles
           </Button>
-        </Page.Header>
+        </Box.Header>
         <div className={s.formContainer}>
           <Loader variant='spinner' message='Loading role data...' />
         </div>
@@ -222,7 +222,7 @@ function EditRole({ roleId }) {
   if (!role) {
     return (
       <div className={s.root}>
-        <Page.Header
+        <Box.Header
           icon={<Icon name='shield' size={24} />}
           title='Edit Role'
           subtitle='Modify role permissions'
@@ -230,7 +230,7 @@ function EditRole({ roleId }) {
           <Button variant='secondary' onClick={handleCancel}>
             ← Back to Roles
           </Button>
-        </Page.Header>
+        </Box.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load role data</div>
           <div className={s.formActions}>
@@ -245,7 +245,7 @@ function EditRole({ roleId }) {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='shield' size={24} />}
         title='Edit Role'
         subtitle='Modify role permissions'
@@ -253,7 +253,7 @@ function EditRole({ roleId }) {
         <Button variant='secondary' onClick={handleCancel}>
           ← Back to Roles
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

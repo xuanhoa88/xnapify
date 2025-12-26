@@ -13,7 +13,7 @@ import {
   useInfiniteScroll,
   useDebounce,
 } from '../../../../components/InfiniteScroll';
-import { Page, Icon, ConfirmModal } from '../../../../components/Admin';
+import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './CreateGroup.css';
 
@@ -148,7 +148,7 @@ function CreateGroup() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='folder' size={24} />}
         title='Create New Group'
         subtitle='Organize users into a new group'
@@ -156,7 +156,7 @@ function CreateGroup() {
         <Button variant='secondary' onClick={handleCancel}>
           ← Back to Groups
         </Button>
-      </Page.Header>
+      </Box.Header>
 
       <div className={s.formContainer}>
         <form onSubmit={handleSubmit} className={s.form}>

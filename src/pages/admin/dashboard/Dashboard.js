@@ -16,7 +16,7 @@ import {
   getDashboardError,
   getDashboardRecentActivities,
 } from '../../../redux';
-import { Page, Icon, Loader, Table } from '../../../components/Admin';
+import { Box, Icon, Loader, Table } from '../../../components/Admin';
 import Card from '../../../components/Card';
 import Avatar from '../../../components/Avatar';
 import s from './Dashboard.css';
@@ -205,7 +205,7 @@ function Dashboard() {
 
   return (
     <div className={s.root}>
-      <Page.Header
+      <Box.Header
         icon={<Icon name='dashboard' size={24} />}
         title='Dashboard'
         subtitle='Overview of your system activity'
