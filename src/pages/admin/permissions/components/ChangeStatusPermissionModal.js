@@ -9,39 +9,40 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkDeletePermissions } from '../../../../redux';
+import { bulkUpdatePermissionStatus } from '../../../../redux';
 
 /**
- * DeletePermissionModal - Self-contained modal for deleting a permission
+ * ChangeStatusPermissionModal - Self-contained modal for changing permission status
  *
  * Usage:
- *   const deleteModalRef = useRef();
- *   deleteModalRef.current.open(permission);    // Open for permission
- *   deleteModalRef.current.close();             // Close modal
+ *   const changeStatusModalRef = useRef();
+ *   changeStatusModalRef.current.open({ ids: [...], isActive: true });
+ *   changeStatusModalRef.current.close();
  */
-const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
+const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
-  const [permission, setPermission] = useState(null);
+  const [data, setData] = useState(null);
   const [error, setError] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   // Reset state helper
   const resetState = useCallback(() => {
     setIsOpen(false);
-    setPermission(null);
+    setData(null);
     setError(null);
-    setDeleting(false);
+    setProcessing(false);
   }, []);
 
   // Expose methods via ref
   useImperativeHandle(
     ref,
     () => ({
-      open: targetPermission => {
-        setPermission(targetPermission);
+      open: targetData => {
+        if (!targetData || !Array.isArray(targetData.ids)) return;
+        setData(targetData);
         setError(null);
         setIsOpen(true);
       },
@@ -51,34 +52,41 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
   );
 
   const handleClose = useCallback(() => {
-    if (!deleting) {
+    if (!processing) {
       resetState();
     }
-  }, [deleting, resetState]);
+  }, [processing, resetState]);
 
   const handleConfirm = useCallback(async () => {
-    if (!permission) return;
-    setDeleting(true);
+    if (!data) return;
+    setProcessing(true);
     setError(null);
-    const result = await dispatch(bulkDeletePermissions([permission.id]));
-    setDeleting(false);
+    const result = await dispatch(
+      bulkUpdatePermissionStatus(data.ids, data.isActive),
+    );
+    setProcessing(false);
     if (result.success) {
       resetState();
-      // Call success callback if provided
-      onSuccess && onSuccess(permission);
+      onSuccess && onSuccess(data);
     } else {
       setError(result.error);
     }
-  }, [dispatch, permission, resetState, onSuccess]);
+  }, [dispatch, data, resetState, onSuccess]);
+
+  const count = data && data.ids ? data.ids.length : 0;
+  const isActive = data && data.isActive;
+  const actionText = isActive ? 'activate' : 'deactivate';
+  const buttonText = isActive ? 'Activate' : 'Deactivate';
+  const processingText = isActive ? 'Activating...' : 'Deactivating...';
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Delete Permission</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        Change Permission Status
+      </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete the permission &quot;
-          {permission && `${permission.resource}:${permission.action}`}
-          &quot;? This action cannot be undone.
+          Are you sure you want to {actionText} {count} permission(s)?
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
@@ -86,16 +94,16 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
           <Modal.Button
             variant='secondary'
             onClick={handleClose}
-            disabled={deleting}
+            disabled={processing}
           >
             Cancel
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
-            disabled={deleting}
+            disabled={processing}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {processing ? processingText : buttonText}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
@@ -103,10 +111,10 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
   );
 });
 
-DeletePermissionModal.displayName = 'DeletePermissionModal';
+ChangeStatusPermissionModal.displayName = 'ChangeStatusPermissionModal';
 
-DeletePermissionModal.propTypes = {
+ChangeStatusPermissionModal.propTypes = {
   onSuccess: PropTypes.func,
 };
 
-export default DeletePermissionModal;
+export default ChangeStatusPermissionModal;

@@ -9,15 +9,18 @@ import {
   fetchPermissionsStart,
   fetchPermissionsSuccess,
   fetchPermissionsError,
-  deletePermissionStart,
-  deletePermissionSuccess,
-  deletePermissionError,
   createPermissionStart,
   createPermissionSuccess,
   createPermissionError,
   updatePermissionStart,
   updatePermissionSuccess,
   updatePermissionError,
+  bulkUpdateStatusStart,
+  bulkUpdateStatusSuccess,
+  bulkUpdateStatusError,
+  bulkDeleteStart,
+  bulkDeleteSuccess,
+  bulkDeleteError,
 } from './slice';
 
 /**
@@ -82,32 +85,6 @@ export function fetchPermissionById(permissionId) {
 }
 
 /**
- * Delete a permission
- *
- * @param {string} permissionId - Permission ID to delete
- * @returns {Function} Redux thunk action
- */
-export function deletePermission(permissionId) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(deletePermissionStart());
-
-    try {
-      await fetch(`/api/admin/permissions/${permissionId}`, {
-        method: 'DELETE',
-      });
-
-      dispatch(deletePermissionSuccess(permissionId));
-
-      return { success: true };
-    } catch (error) {
-      dispatch(deletePermissionError(error.message));
-
-      return { success: false, error: error.message };
-    }
-  };
-}
-
-/**
  * Create a new permission
  *
  * @param {Object} permissionData - Permission data
@@ -160,6 +137,65 @@ export function updatePermission(permissionId, permissionData) {
       return { success: true, permission: data.permission };
     } catch (error) {
       dispatch(updatePermissionError(error.message));
+
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Bulk update permission status
+ *
+ * @param {string[]} ids - Array of permission IDs to update
+ * @param {boolean} isActive - New status value
+ * @returns {Function} Redux thunk action
+ */
+export function bulkUpdatePermissionStatus(ids, isActive) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(bulkUpdateStatusStart());
+
+    try {
+      const { data } = await fetch('/api/admin/permissions/status', {
+        method: 'PATCH',
+        body: { ids, state: isActive ? 'active' : 'inactive' },
+      });
+
+      dispatch(bulkUpdateStatusSuccess(data.permissions));
+
+      return { success: true, updated: data.updated };
+    } catch (error) {
+      dispatch(bulkUpdateStatusError(error.message));
+
+      return { success: false, error: error.message };
+    }
+  };
+}
+
+/**
+ * Bulk delete permissions
+ *
+ * @param {string[]} ids - Array of permission IDs to delete
+ * @returns {Function} Redux thunk action
+ */
+export function bulkDeletePermissions(ids) {
+  return async (dispatch, getState, { fetch }) => {
+    dispatch(bulkDeleteStart());
+
+    try {
+      const { data } = await fetch('/api/admin/permissions', {
+        method: 'DELETE',
+        body: { ids },
+      });
+
+      dispatch(bulkDeleteSuccess(data.deletedIds));
+
+      return {
+        success: true,
+        deleted: data.deleted,
+        protectedIds: data.protectedIds,
+      };
+    } catch (error) {
+      dispatch(bulkDeleteError(error.message));
 
       return { success: false, error: error.message };
     }

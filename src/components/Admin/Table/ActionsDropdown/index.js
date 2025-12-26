@@ -120,8 +120,10 @@ function Menu({ children, className }) {
   if (!ctx.isOpen) return null;
 
   // Calculate position synchronously when rendering
-  const trigger = ctx.triggerRef?.current;
-  const rect = trigger?.getBoundingClientRect();
+  const rect =
+    ctx.triggerRef &&
+    ctx.triggerRef.current &&
+    ctx.triggerRef.current.getBoundingClientRect();
 
   const position = {
     top: rect ? rect.bottom + 6 : 0,

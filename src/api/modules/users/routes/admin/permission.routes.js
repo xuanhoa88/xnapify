@@ -37,6 +37,30 @@ export default function permissionRoutes(deps, userMiddlewares) {
   );
 
   /**
+   * @route   PATCH /status
+   * @desc    Bulk update permission status
+   * @access  Admin (requires 'permissions:update' permission)
+   * @body    { ids: string[], is_active: boolean }
+   */
+  router.patch(
+    '/status',
+    requirePermission('permissions:update'),
+    permissionController.bulkUpdateStatus,
+  );
+
+  /**
+   * @route   DELETE /
+   * @desc    Delete one or more permissions
+   * @access  Admin (requires 'permissions:delete' permission)
+   * @body    { id: string } or { ids: string[] }
+   */
+  router.delete(
+    '/',
+    requirePermission('permissions:delete'),
+    permissionController.deletePermissions,
+  );
+
+  /**
    * @route   GET /resources/:resource
    * @desc    Get permissions by resource with pagination
    * @access  Admin (requires 'permissions:read' permission)
@@ -80,17 +104,6 @@ export default function permissionRoutes(deps, userMiddlewares) {
     '/:id',
     requirePermission('permissions:update'),
     permissionController.updatePermission,
-  );
-
-  /**
-   * @route   DELETE /:id
-   * @desc    Delete permission by ID
-   * @access  Admin (requires 'permissions:delete' permission)
-   */
-  router.delete(
-    '/:id',
-    requirePermission('permissions:delete'),
-    permissionController.deletePermission,
   );
 
   return router;

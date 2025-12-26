@@ -39,23 +39,6 @@ const permissionsSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Delete actions
-    deletePermissionStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    deletePermissionSuccess: (state, action) => {
-      state.loading = false;
-      state.permissions = state.permissions.filter(
-        p => p.id !== action.payload,
-      );
-      state.error = null;
-    },
-    deletePermissionError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
     // Create actions
     createPermissionStart: state => {
       state.loading = true;
@@ -90,6 +73,43 @@ const permissionsSlice = createSlice({
       state.loading = false;
       state.error = action.payload;
     },
+
+    // Bulk update status actions
+    bulkUpdateStatusStart: state => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkUpdateStatusSuccess: (state, action) => {
+      state.loading = false;
+      action.payload.forEach(updated => {
+        const index = state.permissions.findIndex(p => p.id === updated.id);
+        if (index !== -1) {
+          state.permissions[index] = updated;
+        }
+      });
+      state.error = null;
+    },
+    bulkUpdateStatusError: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+
+    // Bulk delete actions
+    bulkDeleteStart: state => {
+      state.loading = true;
+      state.error = null;
+    },
+    bulkDeleteSuccess: (state, action) => {
+      state.loading = false;
+      state.permissions = state.permissions.filter(
+        p => !action.payload.includes(p.id),
+      );
+      state.error = null;
+    },
+    bulkDeleteError: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
   },
 });
 
@@ -97,15 +117,18 @@ export const {
   fetchPermissionsStart,
   fetchPermissionsSuccess,
   fetchPermissionsError,
-  deletePermissionStart,
-  deletePermissionSuccess,
-  deletePermissionError,
   createPermissionStart,
   createPermissionSuccess,
   createPermissionError,
   updatePermissionStart,
   updatePermissionSuccess,
   updatePermissionError,
+  bulkUpdateStatusStart,
+  bulkUpdateStatusSuccess,
+  bulkUpdateStatusError,
+  bulkDeleteStart,
+  bulkDeleteSuccess,
+  bulkDeleteError,
 } = permissionsSlice.actions;
 
 export default permissionsSlice.reducer;

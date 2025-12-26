@@ -160,28 +160,81 @@ export async function updatePermission(req, res) {
 }
 
 /**
- * Delete permission by ID
+ * Bulk update permission status
  *
- * @route   DELETE /api/admin/permissions/:id
- * @access  Admin (requires 'permissions:delete' permission)
+ * @route   PATCH /api/admin/permissions/status
+ * @access  Admin (requires 'permissions:update' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function deletePermission(req, res) {
+export async function bulkUpdateStatus(req, res) {
   const http = req.app.get('http');
   try {
-    const { id } = req.params;
+    const { ids, state } = req.body;
+
+    // Validate input
+    const errors = {};
+    if (!Array.isArray(ids) || ids.length === 0) {
+      errors.ids = 'IDS_REQUIRED';
+    }
+    if (typeof state !== 'string') {
+      errors.state = 'STATE_REQUIRED';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      return http.sendValidationError(res, errors);
+    }
+
+    // Get models from app context
     const models = req.app.get('models');
 
-    const removedPermission = await permissionService.deletePermission(
-      id,
+    // Bulk update permissions
+    const permissions = await permissionService.bulkUpdateStatus(
+      ids,
+      state === 'active',
       models,
     );
 
     return http.sendSuccess(res, {
-      message: `Permission '${removedPermission.name}' deleted successfully`,
+      permissions,
+      updated: permissions.length,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to delete permission');
+    return http.sendServerError(res, 'Failed to bulk update permissions');
+  }
+}
+
+/**
+ * Delete one or more permissions
+ *
+ * @route   DELETE /api/admin/permissions
+ * @access  Admin (requires 'permissions:delete' permission)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function deletePermissions(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { ids } = req.body;
+
+    // Validate input
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return http.sendValidationError(res, { ids: 'IDS_REQUIRED' });
+    }
+
+    // Get models from app context
+    const models = req.app.get('models');
+
+    // Delete permissions
+    const result = await permissionService.bulkDelete(ids, models);
+
+    return http.sendSuccess(res, {
+      message: `Deleted ${result.deleted} permission(s)`,
+      deleted: result.deleted,
+      deletedIds: result.deletedIds,
+      protectedIds: result.protectedIds,
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to delete permissions');
   }
 }

@@ -15,8 +15,7 @@ import {
   getPermissionsLoading,
   getPermissionsError,
   getPermissionsPagination,
-  deletePermission,
-  updatePermission,
+  bulkDeletePermissions,
 } from '../../../redux';
 import {
   Box,
@@ -28,6 +27,7 @@ import {
 import Button from '../../../components/Button';
 import Tag from '../../../components/Tag';
 import { SearchableSelect } from '../../../components/SearchableSelect';
+import ChangeStatusPermissionModal from './components/ChangeStatusPermissionModal';
 import s from './Permissions.css';
 
 // Pagination items per page
@@ -109,21 +109,37 @@ function Permissions() {
 
   // Modal refs
   const deleteModalRef = useRef();
-  const bulkDeleteModalRef = useRef();
+  const changeStatusModalRef = useRef();
+
+  const clearSelection = useCallback(() => setSelectedPermissions([]), []);
 
   const handleDelete = useCallback(permission => {
-    deleteModalRef.current && deleteModalRef.current.open(permission);
+    // Single delete - wrap in array format for unified handling
+    deleteModalRef.current &&
+      deleteModalRef.current.open({
+        ids: [permission.id],
+        items: [permission],
+      });
   }, []);
 
-  const handleDeletePermission = useCallback(
-    item => dispatch(deletePermission(item.id)),
-    [dispatch],
+  const handleDeleteConfirm = useCallback(
+    async item => {
+      const result = await dispatch(bulkDeletePermissions(item.ids));
+      if (result.success) {
+        clearSelection();
+      }
+      return result;
+    },
+    [dispatch, clearSelection],
   );
 
-  const getPermissionName = useCallback(
-    item => `${item.resource}:${item.action}`,
-    [],
-  );
+  const getDeleteName = useCallback(item => {
+    if (item.items && item.items.length === 1) {
+      const perm = item.items[0];
+      return `${perm.resource}:${perm.action}`;
+    }
+    return `${item.ids.length} permission(s)`;
+  }, []);
 
   const handleAdd = useCallback(() => {
     history.push('/admin/permissions/create');
@@ -164,47 +180,29 @@ function Permissions() {
     );
   }, []);
 
-  const clearSelection = useCallback(() => setSelectedPermissions([]), []);
-
   // Bulk action handlers
-  const handleBulkActivate = useCallback(async () => {
-    for (const id of selectedPermissions) {
-      await dispatch(updatePermission(id, { is_active: true }));
-    }
-    clearSelection();
-    refreshPermissions();
-  }, [dispatch, selectedPermissions, clearSelection, refreshPermissions]);
-
-  const handleBulkDeactivate = useCallback(async () => {
-    for (const id of selectedPermissions) {
-      await dispatch(updatePermission(id, { is_active: false }));
-    }
-    clearSelection();
-    refreshPermissions();
-  }, [dispatch, selectedPermissions, clearSelection, refreshPermissions]);
-
-  const handleBulkDelete = useCallback(() => {
-    bulkDeleteModalRef.current &&
-      bulkDeleteModalRef.current.open({
+  const handleBulkActivate = useCallback(() => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
         ids: selectedPermissions,
-        count: selectedPermissions.length,
+        isActive: true,
       });
   }, [selectedPermissions]);
 
-  const handleBulkDeleteConfirm = useCallback(
-    async item => {
-      for (const id of item.ids) {
-        await dispatch(deletePermission(id));
-      }
-      clearSelection();
-    },
-    [dispatch, clearSelection],
-  );
+  const handleBulkDeactivate = useCallback(() => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
+        ids: selectedPermissions,
+        isActive: false,
+      });
+  }, [selectedPermissions]);
 
-  const getBulkDeleteName = useCallback(
-    item => `${item.count} permission(s)`,
-    [],
-  );
+  const handleBulkDelete = useCallback(() => {
+    deleteModalRef.current &&
+      deleteModalRef.current.open({
+        ids: selectedPermissions,
+      });
+  }, [selectedPermissions]);
 
   // Check if any filter is active
   const hasActiveFilters = search || statusFilter;
@@ -437,22 +435,22 @@ function Permissions() {
         />
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* Delete Confirmation Modal (unified for single and bulk) */}
       <ConfirmModal.Delete
         ref={deleteModalRef}
-        title='Delete Permission'
-        getItemName={getPermissionName}
-        onDelete={handleDeletePermission}
+        title='Delete Permission(s)'
+        getItemName={getDeleteName}
+        onDelete={handleDeleteConfirm}
         onSuccess={refreshPermissions}
       />
 
-      {/* Bulk Delete Confirmation Modal */}
-      <ConfirmModal.Delete
-        ref={bulkDeleteModalRef}
-        title='Delete Permissions'
-        getItemName={getBulkDeleteName}
-        onDelete={handleBulkDeleteConfirm}
-        onSuccess={refreshPermissions}
+      {/* Change Status Confirmation Modal */}
+      <ChangeStatusPermissionModal
+        ref={changeStatusModalRef}
+        onSuccess={() => {
+          clearSelection();
+          refreshPermissions();
+        }}
       />
     </div>
   );

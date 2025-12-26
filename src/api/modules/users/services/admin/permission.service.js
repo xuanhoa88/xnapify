@@ -421,6 +421,78 @@ export async function deletePermission(permission_id, models) {
 }
 
 /**
+ * Bulk update permission status
+ *
+ * @param {string[]} ids - Array of permission IDs
+ * @param {boolean} is_active - New status value
+ * @param {Object} models - Database models
+ * @returns {Promise<Object[]>} Updated permissions
+ */
+export async function bulkUpdateStatus(ids, is_active, models) {
+  const { Permission } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Update all permissions with the given IDs
+  await Permission.update({ is_active }, { where: { id: { [Op.in]: ids } } });
+
+  // Return the updated permissions
+  const updatedPermissions = await Permission.findAll({
+    where: { id: { [Op.in]: ids } },
+  });
+
+  return updatedPermissions;
+}
+
+/**
+ * Bulk delete permissions
+ *
+ * @param {string[]} ids - Array of permission IDs to delete
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} Result with deleted count and any protected IDs
+ */
+export async function bulkDelete(ids, models) {
+  const { Permission } = models;
+  const { sequelize } = Permission;
+  const { Op } = sequelize.Sequelize;
+
+  // Find all permissions to delete
+  const permissionsToDelete = await Permission.findAll({
+    where: { id: { [Op.in]: ids } },
+  });
+
+  // Filter out system permissions (cannot be deleted)
+  const protectedIds = [];
+  const deletablePermissions = permissionsToDelete.filter(permission => {
+    const isSystem = SYSTEM_PERMISSIONS.some(
+      perm =>
+        perm.resource === permission.resource &&
+        perm.action === permission.action,
+    );
+    if (isSystem) {
+      protectedIds.push(permission.id);
+      return false;
+    }
+    return true;
+  });
+
+  const deletableIds = deletablePermissions.map(p => p.id);
+
+  // Delete the permissions
+  if (deletableIds.length > 0) {
+    await Permission.destroy({
+      where: { id: { [Op.in]: deletableIds } },
+    });
+  }
+
+  return {
+    deleted: deletableIds.length,
+    deletedIds: deletableIds,
+    protectedIds,
+  };
+}
+
+/**
  * Get permission statistics
  *
  * @param {Object} models - Database models
