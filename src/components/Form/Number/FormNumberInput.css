@@ -1,0 +1,97 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../components/variables.css';
+
+.numberWrapper {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  background: var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.numberWrapper.error {
+  background: var(--color-error-border);
+}
+
+.input {
+  display: block;
+  box-sizing: border-box;
+  flex: 1;
+  height: 44px;
+  padding: 0 var(--spacing-3);
+  border: none;
+  outline: 0;
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  text-align: center;
+  transition: var(--transition-base);
+}
+
+.input:focus {
+  box-shadow: inset 0 0 0 2px var(--color-primary);
+}
+
+.input:disabled {
+  background-color: var(--color-background-subtle);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.inputError {
+  /* Error state handled by numberWrapper.error */
+}
+
+.input::-webkit-inner-spin-button,
+.input::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.input[type='number'] {
+  appearance: textfield;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  background: var(--color-background);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: var(--transition-base);
+  user-select: none;
+}
+
+.button:focus {
+  outline: none;
+}
+
+.button:disabled {
+  background-color: var(--color-background-subtle);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button:hover:not(:disabled) {
+  background: var(--color-background-subtle);
+  color: var(--color-primary);
+}
+
+.button:active:not(:disabled) {
+  background: var(--color-border);
+}

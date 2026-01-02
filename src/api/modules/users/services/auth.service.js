@@ -128,7 +128,7 @@ export async function getCurrentUser(userId, models) {
  * @throws {Error} If user already exists or creation fails
  */
 export async function registerUser(userData, { models }) {
-  const { email, password, display_name } = userData;
+  const { email, password } = userData;
   const { User, UserProfile, Role } = models;
 
   // Check if user already exists
@@ -150,7 +150,7 @@ export async function registerUser(userData, { models }) {
       is_locked: false,
       failed_login_attempts: 0,
       profile: {
-        display_name: display_name || email.split('@')[0],
+        display_name: email.split('@')[0],
       },
     },
     {

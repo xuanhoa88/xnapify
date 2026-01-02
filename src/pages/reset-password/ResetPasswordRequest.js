@@ -6,21 +6,21 @@
  */
 
 import { useCallback, useState } from 'react';
-import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { passwordResetConfirmFormSchema } from '../../shared/validators';
-import { resetPasswordConfirmation } from '../../redux';
+import PropTypes from 'prop-types';
+import { passwordResetRequestFormSchema } from '../../shared/validators';
+import { resetPassword } from '../../redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';
-import s from './ResetPasswordConfirmation.css';
+import s from './ResetPasswordRequest.css';
 
 /**
- * Reset Password Confirmation Page Component
+ * Reset Password Request Page Component
  * Standalone full-page form without header/footer
  */
-function ResetPasswordConfirmation({ token }) {
+function ResetPasswordRequest() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const [error, setError] = useState('');
@@ -33,13 +33,7 @@ function ResetPasswordConfirmation({ token }) {
       setSuccess(false);
       setLoading(true);
 
-      const result = await dispatch(
-        resetPasswordConfirmation({
-          token,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
-      );
+      const result = await dispatch(resetPassword({ email: data.email }));
 
       setLoading(false);
 
@@ -49,7 +43,7 @@ function ResetPasswordConfirmation({ token }) {
         setError(result.error);
       }
     },
-    [token, dispatch],
+    [dispatch],
   );
 
   return (
@@ -65,30 +59,23 @@ function ResetPasswordConfirmation({ token }) {
               <div className={s.successIcon}>✓</div>
               <Trans
                 t={t}
-                i18nKey='resetPasswordConfirmation.success'
+                i18nKey='resetPassword.success'
                 components={[<strong key='0' />]}
               />
-              <Link to='/login' className={s.submitButton}>
-                {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
-              </Link>
             </div>
           ) : (
             <Form
-              schema={passwordResetConfirmFormSchema}
-              defaultValues={{
-                token,
-                password: '',
-                confirmPassword: '',
-              }}
+              schema={passwordResetRequestFormSchema}
+              defaultValues={{ email: '' }}
               onSubmit={handleSubmit}
             >
-              <ResetFormFields loading={loading} />
+              <RequestFormFields loading={loading} />
             </Form>
           )}
 
           <div className={s.backLink}>
             <Link to='/login' className={s.link}>
-              {t('resetPasswordConfirmation.backToLogin', '← Back to Login')}
+              {t('resetPassword.backToLogin', '← Back to Login')}
             </Link>
           </div>
         </div>
@@ -96,10 +83,6 @@ function ResetPasswordConfirmation({ token }) {
     </div>
   );
 }
-
-ResetPasswordConfirmation.propTypes = {
-  token: PropTypes.string.isRequired,
-};
 
 /**
  * Hero Section
@@ -120,14 +103,14 @@ function HeroSection() {
           />
           <span className={s.brandText}>React Starter Kit</span>
         </Link>
-        <div className={s.heroIcon}>🔐</div>
+        <div className={s.heroIcon}>🔑</div>
         <h1 className={s.heroTitle}>
-          {t('resetPasswordConfirmation.title', 'Set New Password')}
+          {t('resetPassword.title', 'Reset Password')}
         </h1>
         <p className={s.heroSubtitle}>
           {t(
-            'resetPasswordConfirmation.subtitle',
-            'Create a strong password for your account',
+            'resetPassword.subtitle',
+            "Enter your email and we'll send you a reset link",
           )}
         </p>
       </div>
@@ -136,9 +119,9 @@ function HeroSection() {
 }
 
 /**
- * Reset Form Fields
+ * Request Form Fields
  */
-function ResetFormFields({ loading }) {
+function RequestFormFields({ loading }) {
   const { t } = useTranslation();
   const {
     formState: { isSubmitting },
@@ -147,21 +130,16 @@ function ResetFormFields({ loading }) {
   return (
     <>
       <Form.Field
-        name='password'
-        label={t('resetPasswordConfirmation.password')}
+        name='email'
+        label={t('resetPassword.email', 'Email Address')}
       >
-        {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
-        <Form.Password />
-      </Form.Field>
-
-      <Form.Field
-        name='confirmPassword'
-        label={t(
-          'resetPasswordConfirmation.confirmPassword',
-          'Confirm Password',
-        )}
-      >
-        <Form.Password />
+        <Form.Input
+          type='email'
+          placeholder={t(
+            'resetPassword.emailPlaceholder',
+            'your.email@example.com',
+          )}
+        />
       </Form.Field>
 
       <Button
@@ -172,15 +150,15 @@ function ResetFormFields({ loading }) {
         loading={loading || isSubmitting}
       >
         {loading
-          ? t('resetPasswordConfirmation.loading', 'Resetting...')
-          : t('resetPasswordConfirmation.submit', 'Reset Password')}
+          ? t('resetPassword.loading', 'Sending...')
+          : t('resetPassword.submit', 'Send Reset Link')}
       </Button>
     </>
   );
 }
 
-ResetFormFields.propTypes = {
+RequestFormFields.propTypes = {
   loading: PropTypes.bool,
 };
 
-export default ResetPasswordConfirmation;
+export default ResetPasswordRequest;

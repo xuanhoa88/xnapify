@@ -5,72 +5,65 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
+import PropTypes from 'prop-types';
+import { loginFormSchema } from '../../shared/validators';
 import { login } from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
 import { useWebSocket } from '../../components/WebSocket';
 import Button from '../../components/Button';
+import Form, { useFormContext } from '../../components/Form';
 import s from './Login.css';
 
 // Demo users for quick access
-const DEMO_USERS = [
+const DEMO_USERS = Object.freeze([
   {
     name: 'Admin User',
     email: 'admin@example.com',
     password: 'admin123',
     role: 'Administrator',
-    avatar: '👑',
   },
   {
     name: 'John Doe',
     email: 'john.doe@example.com',
     password: 'password123',
     role: 'Editor',
-    avatar: '👤',
   },
   {
     name: 'Jane Smith',
     email: 'jane.smith@example.com',
     password: 'password123',
     role: 'Viewer',
-    avatar: '👩',
   },
-];
+]);
 
 /**
  * Login Page Component
- * Standalone full-page login without header/footer
  */
 function Login() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Get returnTo from query params
   const returnTo = useQuery('returnTo') || '/';
 
-  // Handle quick login user selection
-  const handleQuickLogin = useCallback(user => {
-    setEmail(user.email);
-    setPassword(user.password);
-    setError('');
-  }, []);
-
   const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
+    async data => {
       setError('');
       setLoading(true);
 
-      const result = await dispatch(login({ email, password, rememberMe }));
+      const result = await dispatch(
+        login({
+          email: data.email,
+          password: data.password,
+          rememberMe: data.rememberMe || false,
+        }),
+      );
 
       setLoading(false);
 
@@ -83,105 +76,27 @@ function Login() {
         history.replace(returnTo);
       }
     },
-    [email, password, rememberMe, dispatch, history, returnTo, ws],
+    [dispatch, history, returnTo, ws],
   );
 
   return (
     <div className={s.root}>
-      {/* Hero Section (Left) */}
-      <div className={s.hero}>
-        <div className={s.heroContent}>
-          <Link to='/' className={s.brand}>
-            <img
-              src='/rsk_38x38.png'
-              srcSet='/rsk_72x72.png 2x'
-              width='48'
-              height='48'
-              alt='RSK'
-            />
-            <span className={s.brandText}>React Starter Kit</span>
-          </Link>
-          <h1 className={s.heroTitle}>{t('login.welcome', 'Welcome Back')}</h1>
-          <p className={s.heroSubtitle}>
-            {t('login.heroSubtitle', 'Sign in to continue to your account')}
-          </p>
-        </div>
-      </div>
+      <HeroSection />
 
-      {/* Form Section (Right) */}
       <div className={s.formSection}>
         <div className={s.formContainer}>
           <h2 className={s.formTitle}>{t('navigation.login', 'Log In')}</h2>
 
-          {error && <div className={s.error}>{error}</div>}
+          <Form.Error message={error} />
 
-          <form method='post' onSubmit={handleSubmit}>
-            <div className={s.formGroup}>
-              <label className={s.label} htmlFor='email'>
-                {t('login.email')}
-              </label>
-              <input
-                className={s.input}
-                id='email'
-                type='email'
-                name='email'
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder={t(
-                  'login.emailPlaceholder',
-                  'your.email@example.com',
-                )}
-                required
-                // eslint-disable-next-line jsx-a11y/no-autofocus
-                autoFocus
-              />
-            </div>
-
-            <div className={s.formGroup}>
-              <div className={s.labelRow}>
-                <label className={s.label} htmlFor='password'>
-                  {t('login.password')}
-                </label>
-                <Link to='/reset-password' className={s.forgotLink}>
-                  {t('login.forgotPassword')}
-                </Link>
-              </div>
-              <input
-                className={s.input}
-                id='password'
-                type='password'
-                name='password'
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                placeholder='••••••••'
-                required
-              />
-            </div>
-
-            <div className={s.checkboxGroup}>
-              <label className={s.checkboxLabel} htmlFor='rememberMe'>
-                <input
-                  id='rememberMe'
-                  type='checkbox'
-                  name='rememberMe'
-                  checked={rememberMe}
-                  onChange={e => setRememberMe(e.target.checked)}
-                  className={s.checkbox}
-                />
-                <span>{t('login.rememberMe', 'Remember me')}</span>
-              </label>
-            </div>
-
-            <Button
-              variant='primary'
-              type='submit'
-              fullWidth
-              className={s.submitButton}
-              loading={loading}
-            >
-              {loading ? t('login.loading') : t('login.submit')}
-            </Button>
-          </form>
+          <Form
+            schema={loginFormSchema}
+            defaultValues={{ email: '', password: '', rememberMe: false }}
+            onSubmit={handleSubmit}
+          >
+            <LoginFormFields loading={loading} />
+            <QuickAccess />
+          </Form>
 
           <div className={s.registerLink}>
             <Trans
@@ -191,30 +106,156 @@ function Login() {
               components={[<Link to='/register' className={s.link} />]}
             />
           </div>
-
-          {/* Quick Access */}
-          <div className={s.quickAccess}>
-            <h3 className={s.quickAccessTitle}>
-              {t('login.quickAccess', 'Quick Access')}
-            </h3>
-            <div className={s.userList}>
-              {DEMO_USERS.map(user => (
-                <Button
-                  key={user.email}
-                  variant='ghost'
-                  className={s.userCard}
-                  onClick={() => handleQuickLogin(user)}
-                >
-                  <span className={s.userAvatar}>{user.avatar}</span>
-                  <div className={s.userInfo}>
-                    <span className={s.userName}>{user.name}</span>
-                    <span className={s.userRole}>{user.role}</span>
-                  </div>
-                </Button>
-              ))}
-            </div>
-          </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Hero Section - Left side branding
+ */
+function HeroSection() {
+  const { t } = useTranslation();
+
+  return (
+    <div className={s.hero}>
+      <div className={s.heroContent}>
+        <Link to='/' className={s.brand}>
+          <img
+            src='/rsk_38x38.png'
+            srcSet='/rsk_72x72.png 2x'
+            width='48'
+            height='48'
+            alt='RSK'
+          />
+          <span className={s.brandText}>React Starter Kit</span>
+        </Link>
+        <h1 className={s.heroTitle}>{t('login.welcome', 'Welcome Back')}</h1>
+        <p className={s.heroSubtitle}>
+          {t('login.heroSubtitle', 'Sign in to continue to your account')}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Login Form Fields
+ */
+function LoginFormFields({ loading }) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <Form.Field name='email' label={t('login.email')}>
+        <Form.Input
+          type='email'
+          placeholder={t('login.emailPlaceholder', 'your.email@example.com')}
+        />
+      </Form.Field>
+
+      <Form.Field name='password' showError={false}>
+        <div className={s.labelRow}>
+          <Form.Label>{t('login.password')}</Form.Label>
+          <Link to='/reset-password' className={s.forgotLink}>
+            {t('login.forgotPassword')}
+          </Link>
+        </div>
+        <Form.Password />
+        <Form.Error />
+      </Form.Field>
+
+      <Form.Field name='rememberMe'>
+        <Form.Checkbox label={t('login.rememberMe', 'Remember me')} />
+      </Form.Field>
+
+      <Button
+        variant='primary'
+        type='submit'
+        fullWidth
+        className={s.submitButton}
+        loading={loading}
+      >
+        {loading ? t('login.loading') : t('login.submit')}
+      </Button>
+    </>
+  );
+}
+
+LoginFormFields.propTypes = {
+  loading: PropTypes.bool,
+};
+
+/**
+ * Quick Access - Demo user selection with auto-submit
+ */
+function QuickAccess() {
+  const { t } = useTranslation();
+  const { setValue, handleSubmit } = useFormContext();
+
+  const handleQuickLogin = useCallback(
+    user => {
+      setValue('email', user.email, { shouldValidate: false });
+      setValue('password', user.password, { shouldValidate: false });
+      setValue('rememberMe', true, { shouldValidate: false });
+
+      setTimeout(() => {
+        handleSubmit(() => {
+          const formElement = document.querySelector('form');
+          if (formElement) {
+            formElement.dispatchEvent(
+              new Event('submit', { bubbles: true, cancelable: true }),
+            );
+          }
+        })();
+      }, 100);
+    },
+    [setValue, handleSubmit],
+  );
+
+  const handleKeyDown = useCallback(
+    event => {
+      const { key } = event;
+      if (key >= '1' && key <= '3') {
+        const userIndex = parseInt(key, 10) - 1;
+        if (DEMO_USERS[userIndex]) {
+          event.preventDefault();
+          handleQuickLogin(DEMO_USERS[userIndex]);
+        }
+      }
+    },
+    [handleQuickLogin],
+  );
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+
+  return (
+    <div className={s.quickAccess}>
+      <h3 className={s.quickAccessTitle}>
+        {t('login.quickAccess', 'Quick Access')}
+        <span className={s.quickAccessHint}>
+          {t('login.quickAccessHint', 'Press 1-3 or click to login')}
+        </span>
+      </h3>
+      <div className={s.userList}>
+        {DEMO_USERS.map((user, index) => (
+          <Button
+            key={user.email}
+            variant='ghost'
+            className={s.userCard}
+            onClick={() => handleQuickLogin(user)}
+          >
+            <span className={s.userShortcut}>{index + 1}</span>
+            <div className={s.userInfo}>
+              <span className={s.userName}>{user.name}</span>
+              <span className={s.userRole}>{user.role}</span>
+            </div>
+          </Button>
+        ))}
       </div>
     </div>
   );

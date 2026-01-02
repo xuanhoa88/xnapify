@@ -6,7 +6,13 @@
  */
 
 import * as authService from '../services/auth.service';
-import { validateRegistration, validateLogin } from '../utils/validation';
+import {
+  loginFormSchema,
+  registerFormSchema,
+  passwordResetRequestFormSchema,
+  passwordResetConfirmFormSchema,
+  validateWithSchema,
+} from '../../../../shared/validators';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -24,13 +30,13 @@ export async function register(req, res) {
   const http = req.app.get('http');
 
   try {
-    const { email, password, display_name } = req.body;
+    const { email, password, confirmPassword } = req.body;
 
     // Validate input
-    const validationErrors = validateRegistration({
+    const validationErrors = validateWithSchema(registerFormSchema, {
       email,
       password,
-      display_name,
+      confirmPassword,
     });
     if (Object.keys(validationErrors).length > 0) {
       return http.sendValidationError(res, validationErrors);
@@ -45,7 +51,6 @@ export async function register(req, res) {
       {
         email,
         password,
-        display_name,
       },
       { models, auth },
     );
@@ -86,7 +91,10 @@ export async function login(req, res) {
     const { email, password, rememberMe = false } = req.body;
 
     // Validate input
-    const validationErrors = validateLogin({ email, password });
+    const validationErrors = validateWithSchema(loginFormSchema, {
+      email,
+      password,
+    });
     if (Object.keys(validationErrors).length > 0) {
       return http.sendValidationError(res, validationErrors);
     }
@@ -303,10 +311,15 @@ export async function requestResetPassword(req, res) {
   try {
     const { email } = req.body;
 
-    if (!email) {
-      return http.sendValidationError(res, {
-        email: 'Email is required',
-      });
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(
+      passwordResetRequestFormSchema,
+      {
+        email,
+      },
+    );
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models from app context
@@ -340,16 +353,17 @@ export async function resetPasswordConfirmation(req, res) {
   try {
     const { token, password, confirmPassword } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!token) errors.token = 'RESET_TOKEN_REQUIRED';
-    if (!password) errors.password = 'NEW_PASSWORD_REQUIRED';
-    if (!confirmPassword) errors.confirmPassword = 'CONFIRM_PASSWORD_REQUIRED';
-    if (password && password !== confirmPassword)
-      errors.confirmPassword = 'PASSWORDS_DO_NOT_MATCH';
-
-    if (Object.keys(errors).length > 0) {
-      return http.sendValidationError(res, errors);
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(
+      passwordResetConfirmFormSchema,
+      {
+        token,
+        password,
+        confirmPassword,
+      },
+    );
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models and auth utilities from app context

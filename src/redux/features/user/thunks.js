@@ -79,10 +79,10 @@ export function login({ email, password, rememberMe = false }) {
  * @param {Object} userData - Registration data
  * @param {string} userData.email - User email
  * @param {string} userData.password - User password
- * @param {string} userData.displayName - User display name (optional)
+ * @param {string} userData.confirmPassword - User confirm password
  * @returns {Function} Redux thunk action
  */
-export function register({ email, password, displayName }) {
+export function register({ email, password, confirmPassword }) {
   return async (dispatch, getState, { fetch }) => {
     dispatch(registerStart());
 
@@ -92,7 +92,7 @@ export function register({ email, password, displayName }) {
         body: {
           email,
           password,
-          display_name: displayName,
+          confirmPassword,
         },
       });
 

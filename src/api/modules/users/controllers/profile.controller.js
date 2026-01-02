@@ -7,7 +7,45 @@
 
 import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
-import { validatePassword } from '../utils/validation';
+import {
+  changePasswordFormSchema,
+  deleteAccountFormSchema,
+  updateProfileFormSchema,
+  updatePreferencesFormSchema,
+  validateWithSchema,
+} from '../../../../shared/validators';
+
+// ========================================================================
+// HELPER FUNCTIONS
+// ========================================================================
+
+/**
+ * Format user profile response
+ * @param {Object} user - User object with profile, roles, and groups
+ * @returns {Object} Formatted profile object
+ */
+function formatProfileResponse(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: user.profile?.display_name || null,
+    first_name: user.profile?.first_name || null,
+    last_name: user.profile?.last_name || null,
+    picture: user.profile?.picture || null,
+    bio: user.profile?.bio || null,
+    location: user.profile?.location || null,
+    website: user.profile?.website || null,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(role => role.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  };
+}
 
 // ========================================================================
 // PROFILE MANAGEMENT CONTROLLERS
@@ -24,10 +62,7 @@ import { validatePassword } from '../utils/validation';
 export async function getProfile(req, res) {
   const http = req.app.get('http');
   try {
-    // Get models from app context
     const models = req.app.get('models');
-
-    // Get user with profile
     const user = await profileService.getUserWithProfile(req.user.id, models);
 
     if (!user) {
@@ -35,26 +70,7 @@ export async function getProfile(req, res) {
     }
 
     return http.sendSuccess(res, {
-      profile: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles.map(role => role.name)
-            : [DEFAULT_ROLE],
-        groups: user.groups || [],
-      },
+      profile: formatProfileResponse(user),
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user profile');
@@ -75,44 +91,28 @@ export async function updateProfile(req, res) {
     const { display_name, first_name, last_name, bio, location, website } =
       req.body;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(updateProfileFormSchema, {
+      display_name,
+      first_name,
+      last_name,
+      bio,
+      location,
+      website,
+    });
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
+    }
 
-    // Update user profile
+    const models = req.app.get('models');
     const user = await profileService.updateUserProfile(
       req.user.id,
-      {
-        display_name,
-        first_name,
-        last_name,
-        bio,
-        location,
-        website,
-      },
+      { display_name, first_name, last_name, bio, location, website },
       models,
     );
 
     return http.sendSuccess(res, {
-      profile: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles.map(role => role.name)
-            : [DEFAULT_ROLE],
-        groups: user.groups || [],
-      },
+      profile: formatProfileResponse(user),
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update profile');
@@ -136,23 +136,20 @@ export async function uploadAvatar(req, res) {
       });
     }
 
-    // Get filesystem actions and models from app context
     const fs = req.app.get('fs');
     const models = req.app.get('models');
 
-    // Upload avatar
     const user = await profileService.uploadUserAvatar(req.user.id, req.file, {
       models,
       fs,
     });
 
-    // Respond with success message and updated profile
     return http.sendSuccess(res, {
       message: 'Avatar uploaded successfully',
       profile: {
         id: user.id,
         email: user.email,
-        picture: (user.profile && user.profile.picture) || null,
+        picture: user.profile?.picture || null,
       },
     });
   } catch (error) {
@@ -197,11 +194,9 @@ export async function linkAvatar(req, res) {
       });
     }
 
-    // Get filesystem actions and models from app context
     const fs = req.app.get('fs');
     const models = req.app.get('models');
 
-    // Validate file exists
     const fileExists = await fs.actions.fileExists(fileName);
     if (!fileExists) {
       return http.sendValidationError(res, {
@@ -209,19 +204,17 @@ export async function linkAvatar(req, res) {
       });
     }
 
-    // Update user profile with avatar
     const user = await profileService.linkUserAvatar(req.user.id, fileName, {
       models,
       fs,
     });
 
-    // Respond with success message and updated profile
     return http.sendSuccess(res, {
       message: 'Avatar linked successfully',
       profile: {
         id: user.id,
         email: user.email,
-        picture: (user.profile && user.profile.picture) || null,
+        picture: user.profile?.picture || null,
       },
     });
   } catch (error) {
@@ -240,11 +233,9 @@ export async function linkAvatar(req, res) {
 export async function removeAvatar(req, res) {
   const http = req.app.get('http');
   try {
-    // Get filesystem actions and models from app context
     const fs = req.app.get('fs');
     const models = req.app.get('models');
 
-    // Remove avatar
     const user = await profileService.removeUserAvatar(req.user.id, {
       models,
       fs,
@@ -276,25 +267,15 @@ export async function changePassword(req, res) {
   try {
     const { currentPassword, newPassword } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!currentPassword) {
-      errors.currentPassword = 'PASSWORD_REQUIRED';
-    }
-    if (!newPassword) {
-      errors.newPassword = 'PASSWORD_REQUIRED';
-    } else {
-      const passwordValidation = validatePassword(newPassword);
-      if (!passwordValidation.isValid) {
-        errors.newPassword = passwordValidation.errors[0];
-      }
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(changePasswordFormSchema, {
+      currentPassword,
+      newPassword,
+    });
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
     }
 
-    if (Object.keys(errors).length > 0) {
-      return http.sendValidationError(res, errors);
-    }
-
-    // Change password
     await profileService.changeUserPassword(
       req.user.id,
       currentPassword,
@@ -328,11 +309,8 @@ export async function getUserActivities(req, res) {
   const http = req.app.get('http');
   try {
     const { page = 1, limit = 10 } = req.query;
-
-    // Get models from app context
     const models = req.app.get('models');
 
-    // Get user activity
     const result = await profileService.getUserActivities(
       req.user.id,
       { page, limit },
@@ -358,18 +336,21 @@ export async function updatePreferences(req, res) {
   try {
     const { language, timezone, notifications, theme } = req.body;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(updatePreferencesFormSchema, {
+      language,
+      timezone,
+      notifications,
+      theme,
+    });
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
+    }
 
-    // Update preferences
+    const models = req.app.get('models');
     const preferences = await profileService.updateUserPreferences(
       req.user.id,
-      {
-        language,
-        timezone,
-        notifications,
-        theme,
-      },
+      { language, timezone, notifications, theme },
       models,
     );
 
@@ -393,10 +374,7 @@ export async function updatePreferences(req, res) {
 export async function getPreferences(req, res) {
   const http = req.app.get('http');
   try {
-    // Get models from app context
     const models = req.app.get('models');
-
-    // Get preferences
     const preferences = await profileService.getUserPreferences(
       req.user.id,
       models,
@@ -421,26 +399,20 @@ export async function deleteAccount(req, res) {
   try {
     const { password, confirm } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!password) {
-      errors.password = 'PASSWORD_REQUIRED';
-    }
-    if (confirm !== 'DELETE_MY_ACCOUNT') {
-      errors.confirm = 'CONFIRMATION_REQUIRED';
-    }
-
-    if (Object.keys(errors).length > 0) {
-      return http.sendValidationError(res, errors);
+    // Validate input using shared schema
+    const validationErrors = validateWithSchema(deleteAccountFormSchema, {
+      password,
+      confirm,
+    });
+    if (Object.keys(validationErrors).length > 0) {
+      return http.sendValidationError(res, validationErrors);
     }
 
-    // Delete account
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
       auth: req.app.get('auth'),
     });
 
-    // Clear token cookie
     req.app.get('auth').clearAllAuthCookies(res);
 
     return http.sendSuccess(res, {

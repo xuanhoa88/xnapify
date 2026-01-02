@@ -6,7 +6,7 @@
  */
 
 import { isAuthenticated } from '../../redux';
-import RequestResetPassword from './RequestResetPassword';
+import ResetPasswordRequest from './ResetPasswordRequest';
 import ResetPasswordConfirmation from './ResetPasswordConfirmation';
 
 /**
@@ -19,10 +19,7 @@ const route = {
     {
       path: '',
       action: context => {
-        const title = context.i18n.t(
-          'resetPassword.title',
-          'Request Reset Password',
-        );
+        const title = context.i18n.t('resetPassword.title', 'Reset Password');
         const state = context.store.getState();
 
         if (isAuthenticated(state)) {
@@ -31,7 +28,7 @@ const route = {
 
         return {
           title,
-          component: <RequestResetPassword />,
+          component: <ResetPasswordRequest />,
         };
       },
     },
