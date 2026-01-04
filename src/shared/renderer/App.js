@@ -9,7 +9,7 @@ import PropTypes from 'prop-types';
 import React from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
-import { HistoryProvider } from '../components/History';
+import { HistoryProvider } from '../../components/History';
 
 export default function App({ context, children }) {
   return (

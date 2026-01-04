@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback, useState } from 'react';
+import { forwardRef, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormField } from '../FormContext';
+import { useFormField, useMergeRefs } from '../FormContext';
 import s from './FormPasswordInput.css';
 
 /**
@@ -32,17 +32,8 @@ const FormPasswordInput = forwardRef(function FormPasswordInput$(
   const { ref: registerRef, ...registerProps } = register(name);
 
   // Merge refs - both react-hook-form ref and forwarded ref
-  const handleRef = useCallback(
-    element => {
-      registerRef(element);
-      if (typeof forwardedRef === 'function') {
-        forwardedRef(element);
-      } else if (forwardedRef) {
-        forwardedRef.current = element;
-      }
-    },
-    [registerRef, forwardedRef],
-  );
+  // Merge refs - both react-hook-form ref and forwarded ref
+  const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   const togglePasswordVisibility = () => {
     setShowPassword(prev => !prev);

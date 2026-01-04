@@ -5,9 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormField, useFormSchema, isFieldRequired } from '../FormContext';
+import {
+  useFormField,
+  useFormValidation,
+  isFieldRequired,
+} from '../FormContext';
 import s from './FormLabel.css';
 
 /**
@@ -21,10 +27,24 @@ import s from './FormLabel.css';
  */
 function FormLabel({ children, className, required: requiredProp }) {
   const { id, name } = useFormField();
-  const schema = useFormSchema();
+  const { schema, z } = useFormValidation();
+  const { i18n } = useTranslation();
+
+  const resolvedSchema = useMemo(() => {
+    if (typeof schema === 'function') {
+      try {
+        return schema({ i18n, z });
+      } catch (error) {
+        console.warn('Failed to resolve schema for label:', error);
+        return null;
+      }
+    }
+    return schema;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [schema, i18n, i18n.language]);
 
   // Auto-detect required from schema, allow override via prop
-  const required = requiredProp || isFieldRequired(schema, name);
+  const required = requiredProp || isFieldRequired(resolvedSchema, name);
 
   return (
     <label className={clsx(s.label, className)} htmlFor={id}>

@@ -162,7 +162,7 @@ export function me() {
  *
  * @returns {Function} Redux thunk action
  */
-export function refreshSession() {
+export function refreshToken() {
   return async (dispatch, getState, { fetch }) => {
     try {
       const { data } = await fetch('/api/refresh-token', { method: 'POST' });

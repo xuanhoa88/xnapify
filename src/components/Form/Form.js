@@ -6,10 +6,12 @@
  */
 
 import { useForm, FormProvider } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { FormSchemaContext } from './FormContext';
+import { z } from '../../shared/validator';
+import { FormValidationContext } from './FormContext';
 import s from './Form.css';
 
 /**
@@ -31,8 +33,13 @@ function Form({
   className,
   ...props
 }) {
+  const { i18n } = useTranslation();
+
   const methods = useForm({
-    resolver: schema ? zodResolver(schema) : undefined,
+    resolver:
+      typeof schema === 'function'
+        ? zodResolver(schema({ i18n, z }))
+        : undefined,
     defaultValues,
     mode: 'onChange', // Validates on every change - works reliably on desktop and mobile
   });
@@ -44,26 +51,26 @@ function Form({
   });
 
   return (
-    <FormSchemaContext.Provider value={schema}>
+    <FormValidationContext.Provider value={{ schema, z }}>
       <FormProvider {...methods}>
         <form
           className={clsx(s.form, className)}
           {...props}
-          onSubmit={handleFormSubmit}
           noValidate
+          onSubmit={handleFormSubmit}
         >
           {children}
         </form>
       </FormProvider>
-    </FormSchemaContext.Provider>
+    </FormValidationContext.Provider>
   );
 }
 
 Form.propTypes = {
   /** Form content (form fields) */
   children: PropTypes.node.isRequired,
-  /** Zod validation schema */
-  schema: PropTypes.object,
+  /** Zod validation schema factory function */
+  schema: PropTypes.func,
   /** Default form values */
   defaultValues: PropTypes.object,
   /** Form submission handler */

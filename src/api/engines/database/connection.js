@@ -6,7 +6,43 @@
  */
 
 import Sequelize from 'sequelize';
-import merge from 'lodash/merge';
+
+/**
+ * Check if value is a plain object
+ * @param {*} item
+ * @returns {boolean}
+ */
+function isObject(item) {
+  return item && typeof item === 'object' && !Array.isArray(item);
+}
+
+/**
+ * Deep merge two objects representing Zod schemas or generic objects
+ * @param {Object} target
+ * @param {Object} source
+ * @returns {Object}
+ */
+function merge(target, source) {
+  if (!isObject(target) || !isObject(source)) {
+    return source;
+  }
+
+  const output = { ...target };
+
+  Object.keys(source).forEach(key => {
+    if (isObject(source[key])) {
+      if (!(key in target)) {
+        Object.assign(output, { [key]: source[key] });
+      } else {
+        output[key] = merge(target[key], source[key]);
+      }
+    } else {
+      Object.assign(output, { [key]: source[key] });
+    }
+  });
+
+  return output;
+}
 
 /**
  * Create a new Sequelize connection instance

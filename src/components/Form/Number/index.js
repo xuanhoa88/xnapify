@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { forwardRef, useCallback } from 'react';
+import { forwardRef } from 'react';
 import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormField } from '../FormContext';
+import { useFormField, useMergeRefs } from '../FormContext';
 import s from './FormNumberInput.css';
 
 /**
@@ -44,17 +44,8 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
   });
 
   // Merge refs
-  const handleRef = useCallback(
-    element => {
-      registerRef(element);
-      if (typeof forwardedRef === 'function') {
-        forwardedRef(element);
-      } else if (forwardedRef) {
-        forwardedRef.current = element;
-      }
-    },
-    [registerRef, forwardedRef],
-  );
+  // Merge refs
+  const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   const increment = () => {
     const newValue = Number(currentValue) + step;

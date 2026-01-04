@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as authService from '../services/auth.service';
+import { validateForm } from '../../../../shared/validator';
 import {
   loginFormSchema,
   registerFormSchema,
   passwordResetRequestFormSchema,
   passwordResetConfirmFormSchema,
-  validateWithSchema,
-} from '../../../../shared/validators';
+} from '../../../../shared/validator/features/auth';
+import * as authService from '../services/auth.service';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -33,13 +33,13 @@ export async function register(req, res) {
     const { email, password, confirmPassword } = req.body;
 
     // Validate input
-    const validationErrors = validateWithSchema(registerFormSchema, {
+    const [isValid, validationErrors] = validateForm(registerFormSchema, {
       email,
       password,
       confirmPassword,
     });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     // Get models and auth utilities from app context
@@ -91,12 +91,12 @@ export async function login(req, res) {
     const { email, password, rememberMe = false } = req.body;
 
     // Validate input
-    const validationErrors = validateWithSchema(loginFormSchema, {
+    const [isValid, validationErrors] = validateForm(loginFormSchema, {
       email,
       password,
     });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     // Get models and auth utilities from app context
@@ -312,14 +312,14 @@ export async function requestResetPassword(req, res) {
     const { email } = req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(
+    const [isValid, validationErrors] = validateForm(
       passwordResetRequestFormSchema,
       {
         email,
       },
     );
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     // Get models from app context
@@ -354,7 +354,7 @@ export async function resetPasswordConfirmation(req, res) {
     const { token, password, confirmPassword } = req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(
+    const [isValid, validationErrors] = validateForm(
       passwordResetConfirmFormSchema,
       {
         token,
@@ -362,8 +362,8 @@ export async function resetPasswordConfirmation(req, res) {
         confirmPassword,
       },
     );
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     // Get models and auth utilities from app context

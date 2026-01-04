@@ -6,6 +6,7 @@
  */
 
 import { useFormContext, Controller } from 'react-hook-form';
+import '../../shared/validator';
 import Form from './Form';
 import FormField from './Field';
 import FormLabel from './Label';
@@ -19,7 +20,7 @@ import FormSwitch from './Switch';
 import FormRadio from './Radio';
 import FormFileUpload from './FileUpload';
 import FormError from './Error';
-import { useFormSchema, useFormField } from './FormContext';
+import { useFormValidation, useFormField } from './FormContext';
 
 // Attach sub-components
 Form.Field = FormField;
@@ -36,6 +37,6 @@ Form.FileUpload = FormFileUpload;
 Form.Error = FormError;
 
 // Export hooks for custom usage
-export { useFormContext, useFormSchema, useFormField, Controller };
+export { useFormContext, useFormValidation, useFormField, Controller };
 
 export default Form;

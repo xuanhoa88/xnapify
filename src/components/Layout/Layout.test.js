@@ -7,18 +7,13 @@
 
 import renderer, { act } from 'react-test-renderer';
 import configureStore from 'redux-mock-store';
-import {
-  DEFAULT_LOCALE,
-  AVAILABLE_LOCALES,
-  getI18nInstance,
-} from '../../redux';
-import App from '../App';
-import Layout from './index';
+import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '../../shared/i18n';
+import App from '../../shared/renderer/App';
+import Layout from '.';
 
 // =============================================================================
 // TEST SETUP
 // =============================================================================
-const i18n = getI18nInstance();
 const mockStore = configureStore();
 const fetch = jest.fn();
 

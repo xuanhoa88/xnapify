@@ -47,7 +47,7 @@
     "generate:jwt": "babel-node tools/run jwt"
   },
   "dependencies": {
-    "@hookform/resolvers": "3.9.0",
+    "@hookform/resolvers": "3.9.1",
     "@loadable/component": "5.16.4",
     "@loadable/server": "5.16.4",
     "@reduxjs/toolkit": "2.11.1",

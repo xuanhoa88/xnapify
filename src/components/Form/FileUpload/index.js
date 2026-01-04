@@ -9,7 +9,7 @@ import { forwardRef, useCallback, useState } from 'react';
 import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormField } from '../FormContext';
+import { useFormField, useMergeRefs } from '../FormContext';
 import s from './FormFileUpload.css';
 
 /**
@@ -33,17 +33,7 @@ const FormFileUpload = forwardRef(function FormFileUpload$(
   const { ref: registerRef, onChange, ...registerProps } = register(name);
 
   // Merge refs
-  const handleRef = useCallback(
-    element => {
-      registerRef(element);
-      if (typeof forwardedRef === 'function') {
-        forwardedRef(element);
-      } else if (forwardedRef) {
-        forwardedRef.current = element;
-      }
-    },
-    [registerRef, forwardedRef],
-  );
+  const handleRef = useMergeRefs(registerRef, forwardedRef);
 
   const handleFileChange = useCallback(
     e => {

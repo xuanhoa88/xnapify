@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
-import { registerFormSchema } from '../../shared/validators';
+import { registerFormSchema } from '../../shared/validator/features/auth';
 import { register } from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
 import Button from '../../components/Button';

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_LOCALE } from './config';
+import { DEFAULT_LOCALE } from '../../../shared/i18n';
 
 /**
  * Get current locale

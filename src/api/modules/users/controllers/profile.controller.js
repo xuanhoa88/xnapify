@@ -5,15 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ROLE } from '../constants/rbac';
-import * as profileService from '../services/profile.service';
+import { validateForm } from '../../../../shared/validator';
 import {
   changePasswordFormSchema,
   deleteAccountFormSchema,
   updateProfileFormSchema,
   updatePreferencesFormSchema,
-  validateWithSchema,
-} from '../../../../shared/validators';
+} from '../../../../shared/validator/features/auth';
+import { DEFAULT_ROLE } from '../constants/rbac';
+import * as profileService from '../services/profile.service';
 
 // ========================================================================
 // HELPER FUNCTIONS
@@ -32,13 +32,13 @@ function formatProfileResponse(user) {
     is_active: user.is_active,
     created_at: user.created_at,
     updated_at: user.updated_at,
-    display_name: user.profile?.display_name || null,
-    first_name: user.profile?.first_name || null,
-    last_name: user.profile?.last_name || null,
-    picture: user.profile?.picture || null,
-    bio: user.profile?.bio || null,
-    location: user.profile?.location || null,
-    website: user.profile?.website || null,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    bio: (user.profile && user.profile.bio) || null,
+    location: (user.profile && user.profile.location) || null,
+    website: (user.profile && user.profile.website) || null,
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(role => role.name)
@@ -92,7 +92,7 @@ export async function updateProfile(req, res) {
       req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(updateProfileFormSchema, {
+    const [isValid, validationErrors] = validateForm(updateProfileFormSchema, {
       display_name,
       first_name,
       last_name,
@@ -100,8 +100,8 @@ export async function updateProfile(req, res) {
       location,
       website,
     });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     const models = req.app.get('models');
@@ -149,7 +149,7 @@ export async function uploadAvatar(req, res) {
       profile: {
         id: user.id,
         email: user.email,
-        picture: user.profile?.picture || null,
+        picture: (user.profile && user.profile.picture) || null,
       },
     });
   } catch (error) {
@@ -214,7 +214,7 @@ export async function linkAvatar(req, res) {
       profile: {
         id: user.id,
         email: user.email,
-        picture: user.profile?.picture || null,
+        picture: (user.profile && user.profile.picture) || null,
       },
     });
   } catch (error) {
@@ -268,12 +268,12 @@ export async function changePassword(req, res) {
     const { currentPassword, newPassword } = req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(changePasswordFormSchema, {
+    const [isValid, validationErrors] = validateForm(changePasswordFormSchema, {
       currentPassword,
       newPassword,
     });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     await profileService.changeUserPassword(
@@ -337,14 +337,17 @@ export async function updatePreferences(req, res) {
     const { language, timezone, notifications, theme } = req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(updatePreferencesFormSchema, {
-      language,
-      timezone,
-      notifications,
-      theme,
-    });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    const [isValid, validationErrors] = validateForm(
+      updatePreferencesFormSchema,
+      {
+        language,
+        timezone,
+        notifications,
+        theme,
+      },
+    );
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     const models = req.app.get('models');
@@ -397,15 +400,15 @@ export async function getPreferences(req, res) {
 export async function deleteAccount(req, res) {
   const http = req.app.get('http');
   try {
-    const { password, confirm } = req.body;
+    const { password, confirmPassword } = req.body;
 
     // Validate input using shared schema
-    const validationErrors = validateWithSchema(deleteAccountFormSchema, {
+    const [isValid, validationErrors] = validateForm(deleteAccountFormSchema, {
       password,
-      confirm,
+      confirmPassword,
     });
-    if (Object.keys(validationErrors).length > 0) {
-      return http.sendValidationError(res, validationErrors);
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     await profileService.deleteUserAccount(req.user.id, password, {

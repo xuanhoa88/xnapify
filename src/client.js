@@ -8,22 +8,15 @@
 import 'whatwg-fetch';
 import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
-import App from './components/App';
-import { WebSocketProvider } from './components/WebSocket';
 import { createFetch } from './shared/fetch';
-import {
-  DEFAULT_LOCALE,
-  configureStore,
-  getI18nInstance,
-  refreshSession,
-  logout,
-  isAuthenticated,
-} from './redux';
+import { configureStore, refreshToken, logout, isAuthenticated } from './redux';
+import i18n, { DEFAULT_LOCALE } from './shared/i18n';
 import {
   createWebSocketClient,
   EventType,
   MessageType,
 } from './shared/ws/client';
+import App from './shared/renderer/App';
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION
@@ -31,14 +24,13 @@ import {
 
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
-const ROOT_KEY = '__rskRoot';
+const ROOT_KEY = Symbol('__rsk__');
 
 // =============================================================================
 // INITIALIZATION
 // =============================================================================
 
 const history = createBrowserHistory({ basename: '' });
-const i18n = getI18nInstance();
 const fetch = createFetch(window.fetch);
 
 // eslint-disable-next-line no-underscore-dangle
@@ -360,18 +352,13 @@ async function handlePageChange(location, action) {
       payload: { page, location, action },
     });
 
-    const appElement = (
-      <WebSocketProvider client={wsClient}>
-        <App context={context}>{page.component}</App>
-      </WebSocketProvider>
-    );
     const container = document.getElementById('app');
-
     if (!container) {
       console.error('Root element #app not found');
       return;
     }
 
+    const appElement = <App context={context}>{page.component}</App>;
     renderApp(appElement, container, isInitial);
 
     if (page.title || page.description) {
@@ -504,7 +491,7 @@ async function initializeApp() {
 
     try {
       // Refresh tokens silently - middleware handles the actual refresh
-      const refreshResult = await store.dispatch(refreshSession());
+      const refreshResult = await store.dispatch(refreshToken());
       if (!refreshResult.success) {
         // Refresh explicitly failed - session is truly expired
         store.dispatch(logout());

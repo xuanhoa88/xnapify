@@ -35,10 +35,8 @@ OpenGraphMeta.propTypes = {
  * Renders loadable component state scripts
  * Required for @loadable/component SSR hydration
  */
-function LoadableStateScripts({ loadableState }) {
-  if (!loadableState) return null;
-
-  const { requiredChunks, namedChunks } = loadableState;
+function LoadableStateScripts({ requiredChunks, namedChunks }) {
+  if (!requiredChunks && !namedChunks) return null;
 
   return (
     <>
@@ -61,10 +59,8 @@ function LoadableStateScripts({ loadableState }) {
 }
 
 LoadableStateScripts.propTypes = {
-  loadableState: PropTypes.shape({
-    requiredChunks: PropTypes.string,
-    namedChunks: PropTypes.string,
-  }),
+  requiredChunks: PropTypes.string,
+  namedChunks: PropTypes.string,
 };
 
 /**
@@ -76,13 +72,13 @@ LoadableStateScripts.propTypes = {
  * @param {string} props.description - Page description
  * @param {string} [props.image] - Open Graph image URL
  * @param {string} [props.url] - Canonical URL
- * @param {string} [props.locale] - Default locale
+ * @param {string} [props.locale='en-US'] - Document locale
  * @param {string} [props.type='website'] - Open Graph type
  * @param {Array} [props.styles=[]] - Inline CSS styles from @loadable/component
  * @param {Array} [props.styleLinks=[]] - CSS file URLs
  * @param {Array} [props.scripts=[]] - JavaScript file URLs
  * @param {Object} [props.loadableState] - Loadable component state for SSR
- * @param {Object} props.appState - Application state and configuration (redux)
+ * @param {Object} props.appState - Application state (contains Redux state)
  * @param {string} props.children - Rendered React app HTML
  */
 function Html({
@@ -99,8 +95,10 @@ function Html({
   appState,
   children,
 }) {
+  const safeLocale = locale || 'en-US';
+
   return (
-    <html className='no-js' lang={locale || 'en-US'}>
+    <html className='no-js' lang={safeLocale}>
       <head>
         {/* Basic meta tags */}
         <meta charSet='utf-8' />
@@ -110,7 +108,7 @@ function Html({
         {/* Page metadata */}
         <title>{title}</title>
         <meta name='description' content={description} />
-        <link rel='shortcut icon' href={`/rsk.ico?v=${Date.now()}`} />
+        <link rel='shortcut icon' href='/rsk.ico' />
 
         {/* Open Graph meta tags for social media */}
         <OpenGraphMeta
@@ -124,22 +122,19 @@ function Html({
         {/* Canonical URL for SEO */}
         {url && <link rel='canonical' href={url} />}
 
-        {/* Stylesheets from @loadable/component */}
+        {/* CSS stylesheets from @loadable/component */}
         {styleLinks.map(href => (
           <link key={href} rel='stylesheet' href={href} />
         ))}
 
-        {/* Preload JavaScript bundles */}
+        {/* Preload JavaScript bundles for faster loading */}
         {scripts.map(src => (
           <link key={src} rel='preload' href={src} as='script' />
         ))}
 
         {/* PWA manifest and icons */}
-        <link rel='manifest' href={`/site.webmanifest?v=${Date.now()}`} />
-        <link
-          rel='apple-touch-icon'
-          href={`/rsk_192x192.png?v=${Date.now()}`}
-        />
+        <link rel='manifest' href='/site.webmanifest' />
+        <link rel='apple-touch-icon' href='/rsk_192x192.png' />
 
         {/* Critical inline CSS from @loadable/component */}
         {styles.map(({ cssText }, index) => (
@@ -155,9 +150,14 @@ function Html({
         <div id='app' dangerouslySetInnerHTML={{ __html: children }} />
 
         {/* Loadable component state (must come before app state) */}
-        <LoadableStateScripts loadableState={loadableState} />
+        {loadableState && (
+          <LoadableStateScripts
+            requiredChunks={loadableState.requiredChunks}
+            namedChunks={loadableState.namedChunks}
+          />
+        )}
 
-        {/* Application state */}
+        {/* Application state for client hydration */}
         <script
           dangerouslySetInnerHTML={{
             __html: `window.__PRELOADED_STATE__=${serialize(appState)}`,
@@ -192,8 +192,8 @@ Html.propTypes = {
     namedChunks: PropTypes.string,
   }),
   appState: PropTypes.shape({
-    redux: PropTypes.object,
-  }),
+    redux: PropTypes.object.isRequired,
+  }).isRequired,
   children: PropTypes.string.isRequired,
 };
 

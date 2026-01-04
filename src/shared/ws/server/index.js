@@ -8,7 +8,6 @@
 import { EventEmitter } from 'events';
 import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
-
 import {
   DefaultConfig,
   MessageType,
@@ -16,9 +15,10 @@ import {
   EventType as SharedEventType,
   CloseCode,
   ChannelType,
-} from '../shared/constants';
-import { createMessage, parseMessage } from '../shared/messages';
-import { createLogger } from '../shared/logger';
+  createMessage,
+  parseMessage,
+  createLogger,
+} from '../utils';
 
 /**
  * Server-specific event types
@@ -42,7 +42,7 @@ const EventType = Object.freeze({
 /**
  * WebSocket Server Class
  */
-export class WebSocketServer extends EventEmitter {
+class WebSocketServer extends EventEmitter {
   constructor(options = {}) {
     super();
 
@@ -983,5 +983,4 @@ export function createWebSocketServer(options = {}, httpServer = null) {
 }
 
 // Re-export types for convenience
-export { EventType };
-export { MessageType, CloseCode, ChannelType } from '../shared/constants';
+export { EventType, MessageType, CloseCode, ChannelType };

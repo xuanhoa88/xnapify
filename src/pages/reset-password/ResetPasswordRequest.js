@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
-import { passwordResetRequestFormSchema } from '../../shared/validators';
+import { passwordResetRequestFormSchema } from '../../shared/validator/features/auth';
 import { resetPassword } from '../../redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';

@@ -6,7 +6,7 @@ import {
   setLocaleFallback,
   updateAvailableLocales,
 } from './slice';
-import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from './config';
+import { DEFAULT_LOCALE, LOCALE_COOKIE_NAME } from '../../../shared/i18n';
 
 // =============================================================================
 // THUNKS

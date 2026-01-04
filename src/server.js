@@ -17,20 +17,16 @@ import Youch from 'youch';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
-import {
+import { configureStore, setLocale, me, setRuntimeVariable } from './redux';
+import i18n, {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
   AVAILABLE_LOCALES,
-  configureStore,
-  setLocale,
-  me,
-  setRuntimeVariable,
-  getI18nInstance,
-} from './redux';
+} from './shared/i18n';
 import { createFetch } from './shared/fetch';
-import App from './components/App';
-import Html from './components/Html';
+import Html from './shared/renderer/Html';
+import App from './shared/renderer/App';
 import { createWebSocketServer } from './shared/ws/server';
 import { configureJwt } from './jwt';
 
@@ -65,7 +61,6 @@ const config = Object.freeze({
     process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '10mb',
 });
 
-const i18n = getI18nInstance();
 let cachedNavigator = null;
 
 // =============================================================================

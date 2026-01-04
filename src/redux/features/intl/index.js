@@ -5,15 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Config (re-export for backward compatibility)
-export {
-  DEFAULT_LOCALE,
-  LOCALE_COOKIE_NAME,
-  LOCALE_COOKIE_MAX_AGE,
-  AVAILABLE_LOCALES,
-  getI18nInstance,
-} from './config';
-
 // Public API - Async Thunks
 export * from './thunks';
 

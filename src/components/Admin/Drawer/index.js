@@ -11,7 +11,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { isAuthenticated, logout, getCurrentUser } from '../../../redux';
 import { useHistory, Link } from '../../History';
-import { useWebSocket } from '../../WebSocket';
+import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import s from './Drawer.css';

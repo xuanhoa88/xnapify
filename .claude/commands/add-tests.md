@@ -16,18 +16,13 @@ Components that use Redux, i18n, or History need the full `App` context:
 // src/components/MyComponent/MyComponent.test.js
 import renderer, { act } from 'react-test-renderer';
 import configureStore from 'redux-mock-store';
-import {
-  DEFAULT_LOCALE,
-  AVAILABLE_LOCALES,
-  getI18nInstance,
-} from '../../redux';
+import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '../../shared/i18n';
 import App from '../App';
 import MyComponent from './index';
 
 // =============================================================================
 // TEST SETUP
 // =============================================================================
-const i18n = getI18nInstance();
 const mockStore = configureStore();
 const fetch = jest.fn();
 

@@ -9,7 +9,7 @@ import { useCallback, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import { passwordResetConfirmFormSchema } from '../../shared/validators';
+import { passwordResetConfirmFormSchema } from '../../shared/validator/features/auth';
 import { resetPasswordConfirmation } from '../../redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
@@ -150,7 +150,6 @@ function ResetFormFields({ loading }) {
         name='password'
         label={t('resetPasswordConfirmation.password')}
       >
-        {/* eslint-disable-next-line jsx-a11y/no-autofocus */}
         <Form.Password />
       </Form.Field>
 

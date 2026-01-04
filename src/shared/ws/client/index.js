@@ -11,9 +11,11 @@ import {
   DefaultConfig,
   MessageType,
   EventType as SharedEventType,
-} from '../shared/constants';
-import { parseMessage } from '../shared/messages';
-import { createLogger } from '../shared/logger';
+  parseMessage,
+  createLogger,
+  setWebSocketClient,
+  useWebSocket,
+} from '../utils';
 
 /**
  * Client-specific event types
@@ -41,7 +43,7 @@ const EventType = Object.freeze({
 /**
  * WebSocket Client Class
  */
-export class WebSocketClient extends EventEmitter {
+class WebSocketClient extends EventEmitter {
   constructor(options = {}) {
     super();
 
@@ -593,9 +595,10 @@ export class WebSocketClient extends EventEmitter {
  * Factory function
  */
 export function createWebSocketClient(options = {}) {
-  return new WebSocketClient(options);
+  const wsClientInstance = new WebSocketClient(options);
+  setWebSocketClient(wsClientInstance);
+  return wsClientInstance;
 }
 
 // Re-export types for convenience
-export { EventType };
-export { MessageType } from '../shared/constants';
+export { EventType, MessageType, useWebSocket };

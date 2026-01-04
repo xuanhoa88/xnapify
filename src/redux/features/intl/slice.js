@@ -6,7 +6,7 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
-import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from './config';
+import { AVAILABLE_LOCALES, DEFAULT_LOCALE } from '../../../shared/i18n';
 
 /**
  * Intl Slice

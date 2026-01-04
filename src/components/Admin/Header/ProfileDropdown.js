@@ -15,7 +15,7 @@ import {
   getCurrentUserAvatarUrl,
   logout,
 } from '../../../redux';
-import { useWebSocket } from '../../WebSocket';
+import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import s from './ProfileDropdown.css';
