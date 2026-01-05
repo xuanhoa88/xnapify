@@ -5,12 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { passwordResetConfirmFormSchema } from '../../shared/validator/features/auth';
-import { resetPasswordConfirmation } from '../../redux';
+import {
+  resetPasswordConfirmation,
+  isResetPasswordLoading,
+  getResetPasswordError,
+  clearResetPasswordError,
+} from '../../redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';
@@ -23,30 +28,30 @@ import s from './ResetPasswordConfirmation.css';
 function ResetPasswordConfirmation({ token }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [error, setError] = useState('');
+  const loading = useSelector(isResetPasswordLoading);
+  const error = useSelector(getResetPasswordError);
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearResetPasswordError());
+    };
+  }, [dispatch]);
 
   const handleSubmit = useCallback(
     async data => {
-      setError('');
-      setSuccess(false);
-      setLoading(true);
-
-      const result = await dispatch(
-        resetPasswordConfirmation({
-          token,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
-      );
-
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(
+          resetPasswordConfirmation({
+            token,
+            password: data.password,
+            confirmPassword: data.confirmPassword,
+          }),
+        ).unwrap();
         setSuccess(true);
-      } else {
-        setError(result.error);
+      } catch {
+        // Error is handled by Redux state
       }
     },
     [token, dispatch],
@@ -66,7 +71,8 @@ function ResetPasswordConfirmation({ token }) {
               <Trans
                 t={t}
                 i18nKey='resetPasswordConfirmation.success'
-                components={[<strong key='0' />]}
+                // eslint-disable-next-line react/jsx-key
+                components={[<strong />]}
               />
               <Link to='/login' className={s.submitButton}>
                 {t('resetPasswordConfirmation.goToLogin', 'Go to Login')}
@@ -148,7 +154,7 @@ function ResetFormFields({ loading }) {
     <>
       <Form.Field
         name='password'
-        label={t('resetPasswordConfirmation.password')}
+        label={t('resetPasswordConfirmation.newPassword', 'New Password')}
       >
         <Form.Password />
       </Form.Field>
@@ -156,8 +162,8 @@ function ResetFormFields({ loading }) {
       <Form.Field
         name='confirmPassword'
         label={t(
-          'resetPasswordConfirmation.confirmPassword',
-          'Confirm Password',
+          'resetPasswordConfirmation.confirmNewPassword',
+          'Confirm New Password',
         )}
       >
         <Form.Password />

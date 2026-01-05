@@ -5,25 +5,42 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useRef, useCallback, useMemo } from 'react';
+import { useRef, useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import PropTypes from 'prop-types';
+import { useSelector, useDispatch } from 'react-redux';
+import {
+  getUserProfile,
+  getUserAvatarUrl,
+  uploadUserAvatar,
+  isAvatarLoading,
+  getAvatarError,
+  clearAvatarError,
+} from '../../../redux';
 import Icon from '../../../components/Icon';
 import s from './ProfileHeader.css';
 
-function ProfileHeader({
-  user,
-  avatarUrl,
-  displayName,
-  onAvatarUpload,
-  loading,
-}) {
+function ProfileHeader() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const user = useSelector(getUserProfile);
+  const avatarUrl = useSelector(getUserAvatarUrl);
+  const loading = useSelector(isAvatarLoading);
+  const error = useSelector(getAvatarError);
   const fileInputRef = useRef(null);
 
-  const avatarInitial = useMemo(() => {
-    return displayName ? displayName.charAt(0).toUpperCase() : 'U';
-  }, [displayName]);
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearAvatarError());
+    };
+  }, [dispatch]);
+
+  const displayName = user && user.display_name;
+
+  const avatarInitial = useMemo(
+    () => (displayName ? displayName.charAt(0).toUpperCase() : 'U'),
+    [displayName],
+  );
 
   const handleAvatarClick = useCallback(() => {
     if (fileInputRef.current) {
@@ -36,17 +53,22 @@ function ProfileHeader({
       const file = e.target.files[0];
       if (!file) return;
 
-      await onAvatarUpload(file);
-      e.target.value = '';
+      try {
+        await dispatch(uploadUserAvatar(file)).unwrap();
+      } catch {
+        // Error is handled by Redux state
+      } finally {
+        e.target.value = '';
+      }
     },
-    [onAvatarUpload],
+    [dispatch],
   );
 
   return (
     <div className={s.profileHeader}>
       <div className={s.avatarSection}>
         <div
-          className={s.avatarWrapper}
+          className={`${s.avatarWrapper} ${loading ? s.avatarLoading : ''}`}
           onClick={handleAvatarClick}
           role='button'
           tabIndex={0}
@@ -60,7 +82,11 @@ function ProfileHeader({
             <div className={s.avatar}>{avatarInitial}</div>
           )}
           <div className={s.avatarOverlay}>
-            <Icon name='camera' size={24} />
+            {loading ? (
+              <Icon name='loader' size={24} />
+            ) : (
+              <Icon name='camera' size={24} />
+            )}
           </div>
         </div>
         <input
@@ -71,6 +97,9 @@ function ProfileHeader({
           accept='image/*'
           disabled={loading}
         />
+        {error && (
+          <div className={`${s.avatarMessage} ${s.avatarError}`}>{error}</div>
+        )}
       </div>
 
       <div className={s.userInfo}>
@@ -96,17 +125,5 @@ function ProfileHeader({
     </div>
   );
 }
-
-ProfileHeader.propTypes = {
-  user: PropTypes.shape({
-    email: PropTypes.string,
-    roles: PropTypes.array,
-    groups: PropTypes.array,
-  }),
-  avatarUrl: PropTypes.string,
-  displayName: PropTypes.string,
-  onAvatarUpload: PropTypes.func.isRequired,
-  loading: PropTypes.bool,
-};
 
 export default ProfileHeader;

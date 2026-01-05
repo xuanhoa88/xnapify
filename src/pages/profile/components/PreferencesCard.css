@@ -1,5 +1,5 @@
 /**
- * PersonalInfoCard Component Styles
+ * PreferencesCard Component Styles
  */
 @import '../../../components/variables.css';
 
@@ -32,13 +32,13 @@
   border-radius: var(--radius-lg);
   background: linear-gradient(
     135deg,
-    var(--color-primary) 0%,
-    var(--color-primary-dark) 100%
+    var(--color-text-secondary) 0%,
+    var(--color-text-primary) 100%
   );
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgb(59 130 246 / 25%);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   flex-shrink: 0;
 }
 
@@ -62,21 +62,34 @@
   margin: var(--spacing-1) 0 0;
 }
 
-/* Layout */
-.row {
+/* Loading state */
+.loading {
   display: flex;
-  gap: var(--spacing-4);
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-8);
+  color: var(--color-text-secondary);
 }
 
-.col {
-  flex: 1;
-  min-width: 0;
+.loading svg {
+  animation: spin 1s linear infinite;
 }
 
-/* Button layout */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Button */
 .button {
   width: 100%;
-  margin-top: var(--spacing-2);
+  margin-top: var(--spacing-4);
 }
 
 /* Messages */
@@ -97,11 +110,6 @@
    RESPONSIVE DESIGN - TABLET
    ============================================================================= */
 @media (max-width: 768px) {
-  .row {
-    flex-direction: column;
-    gap: 0;
-  }
-
   .card {
     padding: var(--spacing-4);
     border-radius: var(--radius-lg);

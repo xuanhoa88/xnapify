@@ -9,6 +9,7 @@ import { validateForm } from '../../../../shared/validator';
 import {
   loginFormSchema,
   registerFormSchema,
+  emailVerificationFormSchema,
   passwordResetRequestFormSchema,
   passwordResetConfirmFormSchema,
 } from '../../../../shared/validator/features/auth';
@@ -66,8 +67,15 @@ export async function register(req, res) {
     auth.setTokenCookie(res, tokens.accessToken);
     auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
-    // Return user data with RBAC information
-    return http.sendSuccess(res, { user: userData }, 201);
+    // Return user data with RBAC information and access token for WS auth
+    return http.sendSuccess(
+      res,
+      {
+        user: userData,
+        accessToken: tokens.accessToken,
+      },
+      201,
+    );
   } catch (error) {
     if (error.name === 'UserAlreadyExistsError') {
       return http.sendError(res, 'User with this email already exists', 409);
@@ -258,10 +266,13 @@ export async function emailVerification(req, res) {
   try {
     const { token } = req.body;
 
-    if (!token) {
-      return http.sendValidationError(res, {
-        token: 'Verification token is required',
-      });
+    // Validate input using shared schema
+    const [isValid, validationErrors] = validateForm(
+      emailVerificationFormSchema,
+      { token },
+    );
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     // Get models from app context
@@ -270,13 +281,22 @@ export async function emailVerification(req, res) {
     // Verify email with token
     const user = await authService.verifyEmail(token, models);
 
+    // Get complete user data with RBAC information
+    const userData = await authService.getCurrentUser(user.id, models);
+
+    // Generate token pair using configured JWT instance
+    const jwt = req.app.get('jwt');
+    const auth = req.app.get('auth');
+    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
+
+    // Set token cookies
+    auth.setTokenCookie(res, tokens.accessToken);
+    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+
     return http.sendSuccess(res, {
       message: 'Email verified successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-      },
+      user: userData,
+      accessToken: tokens.accessToken,
     });
   } catch (error) {
     if (

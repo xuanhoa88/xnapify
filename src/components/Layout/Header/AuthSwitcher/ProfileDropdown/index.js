@@ -10,14 +10,15 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import {
-  getCurrentUserDisplayName,
-  getCurrentUserEmail,
-  getCurrentUserAvatarUrl,
+  getUserDisplayName,
+  getUserEmail,
+  getUserAvatarUrl,
   logout,
-} from '../../../../redux';
-import { Link, useHistory } from '../../../History';
-import Icon from '../../../Icon';
-import Button from '../../../Button';
+} from '../../../../../redux';
+import { Link, useHistory } from '../../../../History';
+import { useWebSocket } from '../../../../../shared/ws/client';
+import Icon from '../../../../Icon';
+import Button from '../../../../Button';
 import s from './ProfileDropdown.css';
 
 /**
@@ -28,11 +29,12 @@ function ProfileDropdown() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const ws = useWebSocket();
 
   // Redux state
-  const displayName = useSelector(getCurrentUserDisplayName);
-  const email = useSelector(getCurrentUserEmail);
-  const avatarUrl = useSelector(getCurrentUserAvatarUrl);
+  const displayName = useSelector(getUserDisplayName);
+  const email = useSelector(getUserEmail);
+  const avatarUrl = useSelector(getUserAvatarUrl);
 
   // Local state
   const [isOpen, setIsOpen] = useState(false);
@@ -69,9 +71,12 @@ function ProfileDropdown() {
       e.preventDefault();
       setIsOpen(false);
       await dispatch(logout());
+      if (ws) {
+        ws.logout();
+      }
       history.replace('/');
     },
-    [dispatch, history],
+    [dispatch, ws, history],
   );
 
   // Get avatar initial

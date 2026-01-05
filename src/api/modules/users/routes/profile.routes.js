@@ -60,5 +60,20 @@ export default function profileRoutes(deps, userMiddlewares, app) {
    */
   router.put('/password', requireAuth, profileController.changePassword);
 
+  /**
+   * @route   GET /preferences
+   * @desc    Get user preferences
+   * @access  Private (requires authentication)
+   */
+  router.get('/preferences', requireAuth, profileController.getPreferences);
+
+  /**
+   * @route   PUT /preferences
+   * @desc    Update user preferences
+   * @access  Private (requires authentication)
+   * @body    { language, timezone, notifications, theme }
+   */
+  router.put('/preferences', requireAuth, profileController.updatePreferences);
+
   return router;
 }

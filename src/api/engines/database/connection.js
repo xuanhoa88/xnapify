@@ -67,6 +67,8 @@ export function createConnection(...args) {
   }
 
   const defaultOptions = {
+    // Timezone configuration (defaults to UTC)
+    timezone: process.env.RSK_DATABASE_TIMEZONE || '+00:00',
     // Connection pooling for better performance
     pool: {
       max: 5,
@@ -76,8 +78,6 @@ export function createConnection(...args) {
     },
     // Logging configuration
     logging: process.env.RSK_DATABASE_LOGGING === 'true' ? console.log : false,
-    // Disable operatorsAliases for security (prevents string-based operator injection)
-    operatorsAliases: false,
     define: {
       freezeTableName: true,
       timestamps: true,

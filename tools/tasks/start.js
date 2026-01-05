@@ -38,7 +38,7 @@ import clean from './clean';
 import generateJWT from './jwt';
 
 // Unique symbol to mark webpack middlewares
-const kWebpackMiddleware = Symbol('webpack-middleware');
+const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
 
 const silent = isSilent(); // Cache silent check
 

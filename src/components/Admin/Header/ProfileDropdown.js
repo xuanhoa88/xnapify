@@ -10,11 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { Link, useHistory } from '../../History';
-import {
-  getCurrentUserDisplayName,
-  getCurrentUserAvatarUrl,
-  logout,
-} from '../../../redux';
+import { getUserDisplayName, getUserAvatarUrl, logout } from '../../../redux';
 import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
 import Button from '../../Button';
@@ -31,8 +27,8 @@ function ProfileDropdown() {
   const ws = useWebSocket();
 
   // Redux state
-  const displayName = useSelector(getCurrentUserDisplayName);
-  const avatarUrl = useSelector(getCurrentUserAvatarUrl);
+  const displayName = useSelector(getUserDisplayName);
+  const avatarUrl = useSelector(getUserAvatarUrl);
 
   // Local state
   const [isOpen, setIsOpen] = useState(false);

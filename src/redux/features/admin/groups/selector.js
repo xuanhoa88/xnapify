@@ -14,14 +14,6 @@
 export const getGroups = state => state.admin.groups.items;
 
 /**
- * Get current group
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} Current group or null
- */
-export const getCurrentGroup = state => state.admin.groups.currentGroup;
-
-/**
  * Get groups pagination
  *
  * @param {Object} state - Redux state

@@ -5,307 +5,199 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  loginStart,
-  loginSuccess,
-  loginError,
-  registerStart,
-  registerSuccess,
-  registerError,
-  logout as logoutAction,
-  fetchUserStart,
-  fetchUserSuccess,
-  fetchUserError,
-  resetPasswordStart,
-  resetPasswordSuccess,
-  resetPasswordError,
-  resetPasswordConfirmationStart,
-  resetPasswordConfirmationSuccess,
-  resetPasswordConfirmationError,
-  emailVerificationStart,
-  emailVerificationSuccess,
-  emailVerificationError,
-  updateUser,
-  updateUserAvatar,
-} from './slice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
  * User Thunks
  *
- * Async thunk actions for user authentication and profile management.
- * These maintain the existing return pattern { success, data/error } for backward compatibility.
+ * Async thunk actions using Redux Toolkit's createAsyncThunk.
+ * Each thunk automatically dispatches pending/fulfilled/rejected actions.
+ *
+ * Return values are available in the fulfilled action payload.
+ * Errors are available in the rejected action payload via rejectWithValue.
  */
+
+// =============================================================================
+// AUTHENTICATION THUNKS
+// =============================================================================
 
 /**
  * Login user
- *
- * Authenticates user with email and password
- *
- * @param {Object} credentials - Login credentials
- * @param {string} credentials.email - User email
- * @param {string} credentials.password - User password
- * @returns {Function} Redux thunk action
  */
-export function login({ email, password, rememberMe = false }) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(loginStart());
-
+export const login = createAsyncThunk(
+  'user/login',
+  async (
+    { email, password, rememberMe = false },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
       const { data } = await fetch('/api/login', {
         method: 'POST',
         body: { email, password, rememberMe },
       });
-
-      dispatch(loginSuccess(data.user));
-
-      return {
-        success: true,
-        user: data.user,
-        accessToken: data.accessToken,
-      };
+      return { user: data.user, accessToken: data.accessToken };
     } catch (error) {
-      dispatch(loginError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Register new user
- *
- * Creates a new user account
- *
- * @param {Object} userData - Registration data
- * @param {string} userData.email - User email
- * @param {string} userData.password - User password
- * @param {string} userData.confirmPassword - User confirm password
- * @returns {Function} Redux thunk action
  */
-export function register({ email, password, confirmPassword }) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(registerStart());
-
+export const register = createAsyncThunk(
+  'user/register',
+  async (
+    { email, password, confirmPassword },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
       const { data } = await fetch('/api/register', {
         method: 'POST',
-        body: {
-          email,
-          password,
-          confirmPassword,
-        },
+        body: { email, password, confirmPassword },
       });
-
-      dispatch(registerSuccess(data.user));
-
-      return { success: true, user: data.user };
+      return { user: data.user, accessToken: data.accessToken };
     } catch (error) {
-      dispatch(registerError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Logout user
- *
- * Clears user state and calls logout API endpoint
- *
- * @returns {Function} Redux thunk action
  */
-export function logout() {
-  return async (dispatch, getState, { fetch }) => {
+export const logout = createAsyncThunk(
+  'user/logout',
+  async (_, { extra: { fetch } }) => {
     try {
-      await fetch('/api/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      dispatch(logoutAction());
+      await fetch('/api/logout', { method: 'POST' });
+    } catch {
+      // Ignore logout API errors - always clear state
     }
-  };
-}
+    return null;
+  },
+);
 
 /**
  * Get current user
- *
- * Fetches current authenticated user from server
- *
- * @returns {Function} Redux thunk action
  */
-export function me() {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchUserStart());
-
+export const me = createAsyncThunk(
+  'user/me',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/me');
-
-      dispatch(fetchUserSuccess(data.user));
-
-      return { success: true, user: data.user };
+      return { user: data.user };
     } catch (error) {
-      dispatch(fetchUserError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Refresh session tokens
- *
- * Explicitly requests new access/refresh tokens from the server.
- * Called when access token is near expiration or after encountering auth errors.
- * This is a lightweight operation that only refreshes tokens without fetching user data.
- *
- * @returns {Function} Redux thunk action
  */
-export function refreshToken() {
-  return async (dispatch, getState, { fetch }) => {
+export const refreshToken = createAsyncThunk(
+  'user/refreshToken',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/refresh-token', { method: 'POST' });
-
-      // If the refresh endpoint returns user data, update the store
-      if (data && data.user) {
-        dispatch(fetchUserSuccess(data.user));
-        return { success: true, user: data.user };
-      }
-
-      return { success: true };
+      return { user: (data && data.user) || null };
     } catch (error) {
-      // Don't dispatch logout here - let the caller decide
-      // This allows for retry logic before giving up
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
+
+// =============================================================================
+// PASSWORD RESET THUNKS
+// =============================================================================
 
 /**
- * Reset password
- *
- * Sends password reset email to user
- *
- * @param {Object} data - Reset password data
- * @param {string} data.email - User email
- * @returns {Function} Redux thunk action
+ * Reset password (request)
  */
-export function resetPassword({ email }) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(resetPasswordStart());
-
+export const resetPasswordRequest = createAsyncThunk(
+  'user/resetPasswordRequest',
+  async ({ email }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/users/reset-password/request', {
         method: 'POST',
         body: { email },
       });
-
-      dispatch(resetPasswordSuccess());
-
-      return { success: true, message: data.message };
+      return { message: data.message };
     } catch (error) {
-      dispatch(resetPasswordError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Reset password confirmation
- *
- * Confirms password reset with token and new password
- *
- * @param {Object} data - Confirmation data
- * @param {string} data.token - Reset token from email
- * @param {string} data.password - New password
- * @returns {Function} Redux thunk action
  */
-export function resetPasswordConfirmation({ token, password }) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(resetPasswordConfirmationStart());
-
+export const resetPasswordConfirmation = createAsyncThunk(
+  'user/resetPasswordConfirmation',
+  async ({ token, password }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/users/password-reset/confirmation', {
         method: 'POST',
         body: { token, password },
       });
-
-      dispatch(resetPasswordConfirmationSuccess());
-
-      return { success: true, message: data.message };
+      return { message: data.message };
     } catch (error) {
-      dispatch(resetPasswordConfirmationError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Email verification
- *
- * Verifies email address with token
- *
- * @param {Object} data - Verification data
- * @param {string} data.token - Verification token from email
- * @returns {Function} Redux thunk action
  */
-export function emailVerification({ token }) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(emailVerificationStart());
-
+export const emailVerification = createAsyncThunk(
+  'user/emailVerification',
+  async ({ token }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/users/email-verification', {
         method: 'POST',
         body: { token },
       });
-
-      dispatch(emailVerificationSuccess());
-
-      return { success: true, message: data.message };
+      return {
+        user: data.user,
+        accessToken: data.accessToken,
+        message: data.message,
+      };
     } catch (error) {
-      dispatch(emailVerificationError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
+
+// =============================================================================
+// PROFILE THUNKS
+// =============================================================================
 
 /**
- * Updates user profile information on the server
- *
- * @param {Object} userData - User data to update
- * @returns {Function} Redux thunk action
+ * Update user profile
  */
-export function updateCurrentUser(userData) {
-  return async (dispatch, getState, { fetch }) => {
+export const updateUserProfile = createAsyncThunk(
+  'user/updateProfile',
+  async (userData, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/profile', {
         method: 'PUT',
         body: userData,
       });
-
-      dispatch(updateUser(data.profile));
-
-      return { success: true, user: data.profile };
+      return { profile: data.profile };
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Upload user avatar
- *
- * Uploads a new avatar image for the current user
- *
- * @param {File} file - Avatar image file
- * @returns {Function} Redux thunk action
  */
-export function uploadUserAvatar(file) {
-  return async (dispatch, getState, { fetch }) => {
+export const uploadUserAvatar = createAsyncThunk(
+  'user/uploadAvatar',
+  async (file, { extra: { fetch }, rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append('files', file);
@@ -313,53 +205,109 @@ export function uploadUserAvatar(file) {
       const { data } = await fetch('/api/fs/upload', {
         method: 'POST',
         body: formData,
-        // Content-Type header is not set for FormData,
-        // fetch/browser will set it with boundary automatically
       });
 
-      // The fs upload returns { success, data: { successful: [...] } }
       if (data && data.successful.length > 0) {
         const uploadedFile = data.successful[0];
-        // Link avatar to user profile (validates file exists)
+
+        // Link avatar to user profile
         const linkResponse = await fetch('/api/profile/avatar', {
           method: 'PUT',
           body: { fileName: uploadedFile.data.fileName },
         });
 
         if (linkResponse.data) {
-          dispatch(updateUserAvatar(linkResponse.data.profile.picture));
-          return { success: true, user: linkResponse.data.profile };
+          return { picture: linkResponse.data.profile.picture };
         }
       }
 
-      return { success: false, error: 'Upload failed' };
+      return rejectWithValue('Upload failed');
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Change user password
- *
- * Changes the password for the currently authenticated user
- *
- * @param {Object} data - Password change data
- * @param {string} data.currentPassword - Current password
- * @param {string} data.newPassword - New password
- * @returns {Function} Redux thunk action
  */
-export function changePassword({ currentPassword, newPassword }) {
-  return async (dispatch, getState, { fetch }) => {
+export const changeUserPassword = createAsyncThunk(
+  'user/changePassword',
+  async (
+    { currentPassword, newPassword },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
       const { data } = await fetch('/api/profile/password', {
         method: 'PUT',
         body: { currentPassword, newPassword },
       });
-
-      return { success: true, message: data.message };
+      return { message: data.message };
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
+
+/**
+ * Delete current user
+ */
+export const deleteUser = createAsyncThunk(
+  'user/delete',
+  async (
+    { password, confirmPassword },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
+    try {
+      await fetch('/api/profile', {
+        method: 'DELETE',
+        body: { password, confirmPassword },
+      });
+      return null;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+// =============================================================================
+// PREFERENCES THUNKS
+// =============================================================================
+
+/**
+ * Get user preferences
+ */
+export const getUserPreferences = createAsyncThunk(
+  'user/getPreferences',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/profile/preferences', {
+        method: 'GET',
+      });
+      return { preferences: data.preferences };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+/**
+ * Update user preferences
+ */
+export const updateUserPreferences = createAsyncThunk(
+  'user/updatePreferences',
+  async (
+    { language, timezone, notifications, theme },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
+    try {
+      const { data } = await fetch('/api/profile/preferences', {
+        method: 'PUT',
+        body: { language, timezone, notifications, theme },
+      });
+      return { preferences: data.preferences };
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);

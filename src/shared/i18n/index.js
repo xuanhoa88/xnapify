@@ -35,7 +35,7 @@ function getLocaleDisplayName(locale) {
     const displayNames = new Intl.DisplayNames([locale], { type: 'language' });
     const name = displayNames.of(language);
 
-    return `${name} (${locale})`;
+    return name || locale;
   } catch (error) {
     // Fallback to the locale code if Intl.DisplayNames fails
     console.warn(`Failed to get display name for locale ${locale}:`, error);

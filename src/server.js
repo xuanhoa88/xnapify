@@ -17,7 +17,7 @@ import Youch from 'youch';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
-import { configureStore, setLocale, me, setRuntimeVariable } from './redux';
+import { configureStore, setRuntimeVariable, setLocale, me } from './redux';
 import i18n, {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
@@ -147,7 +147,11 @@ function getInnerHTML(element) {
 }
 
 async function createReduxStore(req, { fetch, history }, locale) {
-  const store = configureStore({ user: null }, { fetch, history, i18n });
+  // Initialize user state with null data
+  const store = configureStore(
+    { user: { data: null } },
+    { fetch, history, i18n },
+  );
 
   // Try to restore authenticated user from cookies via /api/me
   // The fetch instance forwards cookies from the SSR request,
@@ -157,10 +161,9 @@ async function createReduxStore(req, { fetch, history }, locale) {
   // This handles cases like transient network errors or token refresh issues.
   // The client has retry logic and can recover the session if cookies are valid.
   try {
-    await store.dispatch(me());
+    await store.dispatch(me()).unwrap();
   } catch (error) {
-    // SSR auth failed - log for debugging but continue as guest
-    // Client-side will attempt recovery if cookies exist
+    // SSR auth failed - expected for unauthenticated users, continue as guest
     if (__DEV__) {
       console.log('⚠️ SSR auth skipped:', error.message || 'Unknown error');
     }

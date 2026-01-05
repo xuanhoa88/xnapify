@@ -5,7 +5,20 @@
     "PASSWORD_REQUIRED": "Password is required",
     "PASSWORD_MIN_LENGTH": "Password must be at least {{min}} characters",
     "PASSWORD_MAX_LENGTH": "Password must be at most {{max}} characters",
-    "PASSWORD_MISMATCH": "Passwords do not match"
+    "PASSWORD_MISMATCH": "Passwords do not match",
+    "TOKEN_REQUIRED": "Verification token is required"
+  },
+  "profile": {
+    "DISPLAY_NAME_MAX": "Display name must be at most 100 characters",
+    "FIRST_NAME_MAX": "First name must be at most 50 characters",
+    "LAST_NAME_MAX": "Last name must be at most 50 characters",
+    "BIO_MAX": "Bio must be at most 500 characters",
+    "LOCATION_MAX": "Location must be at most 100 characters",
+    "WEBSITE_INVALID": "Please enter a valid URL",
+    "AVATAR_REQUIRED": "Avatar image is required",
+    "AVATAR_INVALID_TYPE": "Invalid file type. Only JPEG, PNG, and GIF are allowed",
+    "AVATAR_TOO_LARGE": "File too large. Maximum size is 5MB",
+    "FILENAME_REQUIRED": "File name is required"
   },
   "errors": {
     "invalid_type": "Expected {{expected}}, received {{received}}",

@@ -6,11 +6,14 @@
  */
 
 import { validateForm } from '../../../../shared/validator';
+import i18n from '../../../../shared/i18n';
 import {
   changePasswordFormSchema,
   deleteAccountFormSchema,
   updateProfileFormSchema,
   updatePreferencesFormSchema,
+  avatarUploadFormSchema,
+  linkAvatarFormSchema,
 } from '../../../../shared/validator/features/auth';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
@@ -132,8 +135,16 @@ export async function uploadAvatar(req, res) {
   try {
     if (!req.file) {
       return http.sendValidationError(res, {
-        avatar: 'Avatar image is required',
+        avatar: i18n.t('zod:profile.AVATAR_REQUIRED'),
       });
+    }
+
+    // Validate file metadata using Zod schema
+    const [isValid, validationErrors] = validateForm(avatarUploadFormSchema, {
+      file: req.file,
+    });
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     const fs = req.app.get('fs');
@@ -155,13 +166,13 @@ export async function uploadAvatar(req, res) {
   } catch (error) {
     if (error.name === 'INVALID_FILE_TYPE') {
       return http.sendValidationError(res, {
-        avatar: 'Invalid file type. Only JPEG, PNG, and GIF are allowed',
+        avatar: i18n.t('zod:profile.AVATAR_INVALID_TYPE'),
       });
     }
 
     if (error.code === 'LIMIT_FILE_SIZE') {
       return http.sendValidationError(res, {
-        avatar: 'File too large. Maximum size is 5MB',
+        avatar: i18n.t('zod:profile.AVATAR_TOO_LARGE'),
       });
     }
 
@@ -188,10 +199,12 @@ export async function linkAvatar(req, res) {
   try {
     const { fileName } = req.body;
 
-    if (!fileName) {
-      return http.sendValidationError(res, {
-        fileName: 'fileName is required',
-      });
+    // Validate input using shared schema
+    const [isValid, validationErrors] = validateForm(linkAvatarFormSchema, {
+      fileName,
+    });
+    if (!isValid) {
+      return http.sendValidationError(res, validationErrors[0]);
     }
 
     const fs = req.app.get('fs');

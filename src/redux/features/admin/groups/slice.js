@@ -9,7 +9,6 @@ import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
   items: [],
-  currentGroup: null,
   pagination: {
     page: 1,
     limit: 10,
@@ -45,75 +44,6 @@ const groupsSlice = createSlice({
       state.error = action.payload;
     },
 
-    // Fetch single group actions
-    fetchGroupStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    fetchGroupSuccess: (state, action) => {
-      state.currentGroup = action.payload;
-      state.loading = false;
-      state.error = null;
-    },
-    fetchGroupError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
-    // Create group actions
-    createGroupStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    createGroupSuccess: (state, action) => {
-      state.items.unshift(action.payload);
-      state.loading = false;
-      state.error = null;
-    },
-    createGroupError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
-    // Update group actions
-    updateGroupStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    updateGroupSuccess: (state, action) => {
-      const index = state.items.findIndex(g => g.id === action.payload.id);
-      if (index !== -1) {
-        state.items[index] = action.payload;
-      }
-      if (state.currentGroup && state.currentGroup.id === action.payload.id) {
-        state.currentGroup = action.payload;
-      }
-      state.loading = false;
-      state.error = null;
-    },
-    updateGroupError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
-    // Delete group actions
-    deleteGroupStart: state => {
-      state.loading = true;
-      state.error = null;
-    },
-    deleteGroupSuccess: (state, action) => {
-      state.items = state.items.filter(g => g.id !== action.payload);
-      if (state.currentGroup && state.currentGroup.id === action.payload) {
-        state.currentGroup = null;
-      }
-      state.loading = false;
-      state.error = null;
-    },
-    deleteGroupError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
-
     // Clear error
     clearGroupsError: state => {
       state.error = null;
@@ -125,18 +55,6 @@ export const {
   fetchGroupsStart,
   fetchGroupsSuccess,
   fetchGroupsError,
-  fetchGroupStart,
-  fetchGroupSuccess,
-  fetchGroupError,
-  createGroupStart,
-  createGroupSuccess,
-  createGroupError,
-  updateGroupStart,
-  updateGroupSuccess,
-  updateGroupError,
-  deleteGroupStart,
-  deleteGroupSuccess,
-  deleteGroupError,
   clearGroupsError,
 } = groupsSlice.actions;
 

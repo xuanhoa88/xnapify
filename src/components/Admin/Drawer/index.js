@@ -9,7 +9,7 @@ import { useCallback, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { isAuthenticated, logout, getCurrentUser } from '../../../redux';
+import { isAuthenticated, logout, getUserProfile } from '../../../redux';
 import { useHistory, Link } from '../../History';
 import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
@@ -24,7 +24,7 @@ function Drawer() {
 
   const drawerOpen = useSelector(state => state.ui.isAdminDrawerOpen);
   const isAuth = useSelector(isAuthenticated);
-  const user = useSelector(getCurrentUser);
+  const user = useSelector(getUserProfile);
 
   const [currentPath, setCurrentPath] = useState('');
 

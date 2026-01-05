@@ -19,24 +19,12 @@
   margin: 0 auto;
 }
 
-/* Cards grid */
-.cardsGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--spacing-6);
-}
-
 /* =============================================================================
    RESPONSIVE DESIGN - TABLET
    ============================================================================= */
 @media (max-width: 768px) {
   .root {
     padding: var(--spacing-4);
-  }
-
-  .cardsGrid {
-    grid-template-columns: 1fr;
-    gap: var(--spacing-4);
   }
 }
 
@@ -46,9 +34,5 @@
 @media (max-width: 375px) {
   .root {
     padding: var(--spacing-3);
-  }
-
-  .cardsGrid {
-    gap: var(--spacing-3);
   }
 }

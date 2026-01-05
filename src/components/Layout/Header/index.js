@@ -6,12 +6,9 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { useSelector } from 'react-redux';
-import { isAuthenticated } from '../../../redux';
 import { Link } from '../../History';
 import LanguageSwitcher from './LanguageSwitcher';
-import ProfileDropdown from './ProfileDropdown';
-import AuthButtons from './AuthButtons';
+import AuthSwitcher from './AuthSwitcher';
 import s from './Header.css';
 
 /**
@@ -22,7 +19,6 @@ import s from './Header.css';
  */
 function Header() {
   const { t } = useTranslation();
-  const isAuth = useSelector(isAuthenticated);
 
   return (
     <div className={s.navbar}>
@@ -39,10 +35,10 @@ function Header() {
           <span className={s.brandTxt}>{t('header.brand')}</span>
         </Link>
 
-        {/* Right: Language Switcher + Auth */}
+        {/* Right: Language Switcher + Auth Switcher */}
         <div className={s.rightSection}>
           <LanguageSwitcher />
-          {isAuth ? <ProfileDropdown /> : <AuthButtons />}
+          <AuthSwitcher />
         </div>
       </div>
     </div>

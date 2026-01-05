@@ -75,6 +75,22 @@ export default function createUserProfileModel({ connection, DataTypes }) {
         allowNull: true,
         comment: 'User biography',
       },
+
+      preferences: {
+        type: DataTypes.JSON,
+        allowNull: true,
+        defaultValue: {
+          language: 'en-US',
+          timezone: 'UTC',
+          theme: 'system',
+          notifications: {
+            email: true,
+            push: true,
+            sms: false,
+          },
+        },
+        comment: 'User preferences (language, timezone, theme, notifications)',
+      },
     },
     {
       tableName: 'user_profiles',

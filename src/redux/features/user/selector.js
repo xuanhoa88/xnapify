@@ -5,79 +5,226 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Check if user is authenticated
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if user is logged in
- */
-export const isAuthenticated = state => state.user && !!state.user.id;
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
 
 /**
- * Get current user
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} User object or null if not authenticated
+ * Safely get nested property from state
  */
-export const getCurrentUser = state => state.user;
-
-/**
- * Get user ID
- *
- * @param {Object} state - Redux state
- * @returns {string|null} User ID or null
- */
-export const getCurrentUserId = state => (state.user && state.user.id) || null;
-
-/**
- * Get user email
- *
- * @param {Object} state - Redux state
- * @returns {string|null} User email or null
- */
-export const getCurrentUserEmail = state =>
-  (state.user && state.user.email) || null;
-
-/**
- * Get user display name
- *
- * @param {Object} state - Redux state
- * @returns {string|null} User display name or null
- */
-export const getCurrentUserDisplayName = state => {
-  if (!state.user) return null;
-  // Check top-level display_name first (API response format)
-  if (state.user.display_name) return state.user.display_name;
-  // Check nested profile (just in case structure changes)
-  if (state.user.profile && state.user.profile.display_name)
-    return state.user.profile.display_name;
-  // Fallback to email
-  return state.user.email;
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(state && state.user);
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
 };
 
 /**
- * Check if user has admin role
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if user has admin role
+ * Get user data from state (handles all formats)
  */
-export const isAdmin = state => {
-  if (!state.user || !state.user.roles) return false;
-  return state.user.roles.includes('admin');
+const getUserData = state => {
+  const normalized = normalizeState(state && state.user);
+  return normalized.data;
+};
+
+// =============================================================================
+// USER DATA SELECTORS
+// =============================================================================
+
+/**
+ * Check if user is authenticated
+ */
+export const isAuthenticated = state => {
+  const user = getUserData(state);
+  return !!(user && user.id);
+};
+
+/**
+ * Get current user data
+ */
+export const getUserProfile = state => {
+  return getUserData(state) || null;
+};
+
+/**
+ * Get user email
+ */
+export const getUserEmail = state => {
+  const user = getUserData(state);
+  return (user && user.email) || null;
+};
+
+/**
+ * Get user display name
+ */
+export const getUserDisplayName = state => {
+  const user = getUserData(state);
+  if (!user) return null;
+  if (user.display_name) return user.display_name;
+  if (user.profile && user.profile.display_name)
+    return user.profile.display_name;
+  return user.email;
 };
 
 /**
  * Get current user's avatar URL
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Avatar URL or null
  */
-export const getCurrentUserAvatarUrl = state => {
-  if (!state.user || !state.user.picture) return null;
-  // External URL (http/https)
-  if (state.user.picture.startsWith('http')) {
-    return state.user.picture;
+export const getUserAvatarUrl = state => {
+  const user = getUserData(state);
+  if (!user || !user.picture) return null;
+  if (/^https?:\/\//i.test(user.picture)) return user.picture;
+  return '/api/fs/preview?fileName=' + encodeURIComponent(user.picture);
+};
+
+/**
+ * Get user preferences
+ */
+export const getUserPreferencesData = state => {
+  const user = getUserData(state);
+  return (user && user.preferences) || null;
+};
+
+// =============================================================================
+// AUTH OPERATION (login, register, logout, me, refreshToken)
+// =============================================================================
+
+export const isAuthLoading = state => {
+  const op = getOperationState(state, 'auth');
+  return !!(op && op.loading);
+};
+
+export const getAuthError = state => {
+  const op = getOperationState(state, 'auth');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// EMAIL VERIFICATION OPERATION
+// =============================================================================
+
+export const isEmailVerificationLoading = state => {
+  const op = getOperationState(state, 'emailVerification');
+  return !!(op && op.loading);
+};
+
+export const getEmailVerificationError = state => {
+  const op = getOperationState(state, 'emailVerification');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// RESET PASSWORD OPERATION (request + confirmation)
+// =============================================================================
+
+export const isResetPasswordLoading = state => {
+  const op = getOperationState(state, 'resetPassword');
+  return !!(op && op.loading);
+};
+
+export const getResetPasswordError = state => {
+  const op = getOperationState(state, 'resetPassword');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// PROFILE OPERATION (updateUserProfile)
+// =============================================================================
+
+export const isProfileLoading = state => {
+  const op = getOperationState(state, 'profile');
+  return !!(op && op.loading);
+};
+
+export const getProfileError = state => {
+  const op = getOperationState(state, 'profile');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// AVATAR OPERATION (uploadUserAvatar)
+// =============================================================================
+
+export const isAvatarLoading = state => {
+  const op = getOperationState(state, 'avatar');
+  return !!(op && op.loading);
+};
+
+export const getAvatarError = state => {
+  const op = getOperationState(state, 'avatar');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// PASSWORD OPERATION (changeUserPassword)
+// =============================================================================
+
+export const isPasswordLoading = state => {
+  const op = getOperationState(state, 'password');
+  return !!(op && op.loading);
+};
+
+export const getPasswordError = state => {
+  const op = getOperationState(state, 'password');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// DELETE OPERATION (deleteUser)
+// =============================================================================
+
+export const isDeleteLoading = state => {
+  const op = getOperationState(state, 'delete');
+  return !!(op && op.loading);
+};
+
+export const getDeleteError = state => {
+  const op = getOperationState(state, 'delete');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// PREFERENCES OPERATION (getUserPreferences, updateUserPreferences)
+// =============================================================================
+
+export const isPreferencesLoading = state => {
+  const op = getOperationState(state, 'preferences');
+  return !!(op && op.loading);
+};
+
+export const getPreferencesError = state => {
+  const op = getOperationState(state, 'preferences');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// DEPRECATED - Keep for backward compatibility (will be removed later)
+// =============================================================================
+
+/**
+ * @deprecated Use operation-specific selectors instead (isAuthLoading, getAuthError, etc.)
+ */
+export const isUserLoading = state => {
+  const normalized = normalizeState(state && state.user);
+  if (!normalized.operations) {
+    return false;
   }
-  // Internal file - use fs preview endpoint
-  return `/api/fs/preview?fileName=${encodeURIComponent(state.user.picture)}`;
+  const ops = normalized.operations;
+  return Object.values(ops).some(op => !!(op && op.loading));
+};
+
+/**
+ * @deprecated Use operation-specific selectors instead
+ */
+export const getUserError = state => {
+  const normalized = normalizeState(state && state.user);
+  if (!normalized.operations) {
+    return null;
+  }
+  const ops = normalized.operations;
+  const values = Object.values(ops);
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] && values[i].error) return values[i].error;
+  }
+  return null;
 };

@@ -9,19 +9,7 @@ import {
   fetchGroupsStart,
   fetchGroupsSuccess,
   fetchGroupsError,
-  fetchGroupStart,
-  fetchGroupSuccess,
-  fetchGroupError,
-  createGroupStart,
-  createGroupSuccess,
-  createGroupError,
-  updateGroupStart,
-  updateGroupSuccess,
-  updateGroupError,
-  deleteGroupStart,
-  deleteGroupSuccess,
-  deleteGroupError,
-  clearGroupsError as clearError,
+  clearGroupsError as clearUserError,
 } from './slice';
 
 /**
@@ -93,17 +81,11 @@ export function fetchGroups(options = {}) {
  */
 export function fetchGroupById(groupId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchGroupStart());
-
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`);
 
-      dispatch(fetchGroupSuccess(data.group));
-
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch(fetchGroupError(error.message));
-
       return { success: false, error: error.message };
     }
   };
@@ -121,20 +103,14 @@ export function fetchGroupById(groupId) {
  */
 export function createGroup(groupData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch(createGroupStart());
-
     try {
       const { data } = await fetch('/api/admin/groups', {
         method: 'POST',
         body: groupData,
       });
 
-      dispatch(createGroupSuccess(data.group));
-
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch(createGroupError(error.message));
-
       return { success: false, error: error.message };
     }
   };
@@ -149,20 +125,14 @@ export function createGroup(groupData) {
  */
 export function updateGroup(groupId, updateData) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch(updateGroupStart());
-
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`, {
         method: 'PUT',
         body: updateData,
       });
 
-      dispatch(updateGroupSuccess(data.group));
-
       return { success: true, group: data.group };
     } catch (error) {
-      dispatch(updateGroupError(error.message));
-
       return { success: false, error: error.message };
     }
   };
@@ -176,19 +146,13 @@ export function updateGroup(groupId, updateData) {
  */
 export function deleteGroup(groupId) {
   return async (dispatch, getState, { fetch }) => {
-    dispatch(deleteGroupStart());
-
     try {
       await fetch(`/api/admin/groups/${groupId}`, {
         method: 'DELETE',
       });
 
-      dispatch(deleteGroupSuccess(groupId));
-
       return { success: true };
     } catch (error) {
-      dispatch(deleteGroupError(error.message));
-
       return { success: false, error: error.message };
     }
   };
@@ -231,7 +195,7 @@ export function fetchGroupUsers(groupId, options = {}) {
  * @returns {Object} Redux action
  */
 export function clearGroupsError() {
-  return clearError();
+  return clearUserError();
 }
 
 /**
@@ -248,11 +212,6 @@ export function assignRolesToGroup(groupId, roleNames) {
         method: 'PUT',
         body: { role_names: roleNames },
       });
-
-      // Update the group in state with new roles
-      if (data.group) {
-        dispatch(updateGroupSuccess(data.group));
-      }
 
       return { success: true, group: data.group };
     } catch (error) {

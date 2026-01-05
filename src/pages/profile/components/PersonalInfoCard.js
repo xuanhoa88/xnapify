@@ -5,22 +5,62 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import {
+  getUserProfile,
+  updateUserProfile,
+  isProfileLoading,
+  getProfileError,
+  clearProfileError,
+} from '../../../redux';
+import { updateProfileFormSchema } from '../../../shared/validator/features/auth';
 import Icon from '../../../components/Icon';
 import Button from '../../../components/Button';
+import Form, { useFormContext } from '../../../components/Form';
 import s from './PersonalInfoCard.css';
 
-function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
+function PersonalInfoCard() {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
+  const user = useSelector(getUserProfile);
+  const loading = useSelector(isProfileLoading);
+  const error = useSelector(getProfileError);
 
-  const handleChange = useCallback(
-    e => {
-      const { name, value } = e.target;
-      onChange(name, value);
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearProfileError());
+    };
+  }, [dispatch]);
+
+  // Derive default values from user (memoized to prevent unnecessary re-renders)
+  const defaultValues = useMemo(
+    () => ({
+      display_name: (user && user.display_name) || '',
+      first_name: (user && user.first_name) || '',
+      last_name: (user && user.last_name) || '',
+      bio: (user && user.bio) || '',
+      location: (user && user.location) || '',
+      website: (user && user.website) || '',
+    }),
+    [user],
+  );
+
+  // Handle form submit - Form component provides methods via callback
+  const handleSubmit = useCallback(
+    async (data, { reset }) => {
+      try {
+        await dispatch(updateUserProfile(data)).unwrap();
+        // Reset form with the new saved data
+        reset(data);
+      } catch {
+        // Error is handled by Redux state
+      }
     },
-    [onChange],
+    [dispatch],
   );
 
   return (
@@ -39,147 +79,94 @@ function PersonalInfoCard({ formData, onChange, onSubmit, loading, message }) {
         </div>
       </div>
 
-      {message.text && (
-        <div className={message.type === 'error' ? s.error : s.success}>
-          {message.type === 'success' && <Icon name='check' size={16} />}
-          {message.text}
-        </div>
-      )}
+      <Form.Error message={error || ''} />
 
-      <form onSubmit={onSubmit}>
-        <div className={s.formGroup}>
-          <label className={s.label} htmlFor='display_name'>
-            {t('profile.displayName')}
-          </label>
-          <input
-            className={s.input}
-            id='display_name'
-            name='display_name'
-            type='text'
-            value={formData.display_name}
-            onChange={handleChange}
-            placeholder={t(
-              'profile.displayNamePlaceholder',
-              'Enter your display name',
-            )}
-          />
-        </div>
-
-        <div className={s.row}>
-          <div className={s.col}>
-            <div className={s.formGroup}>
-              <label className={s.label} htmlFor='first_name'>
-                {t('profile.firstName')}
-              </label>
-              <input
-                className={s.input}
-                id='first_name'
-                name='first_name'
-                type='text'
-                value={formData.first_name}
-                onChange={handleChange}
-                placeholder={t('profile.firstNamePlaceholder', 'First name')}
-              />
-            </div>
-          </div>
-          <div className={s.col}>
-            <div className={s.formGroup}>
-              <label className={s.label} htmlFor='last_name'>
-                {t('profile.lastName')}
-              </label>
-              <input
-                className={s.input}
-                id='last_name'
-                name='last_name'
-                type='text'
-                value={formData.last_name}
-                onChange={handleChange}
-                placeholder={t('profile.lastNamePlaceholder', 'Last name')}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className={s.formGroup}>
-          <label className={s.label} htmlFor='bio'>
-            {t('profile.bio')}
-          </label>
-          <textarea
-            className={s.textarea}
-            id='bio'
-            name='bio'
-            rows='3'
-            value={formData.bio}
-            onChange={handleChange}
-            placeholder={t(
-              'profile.bioPlaceholder',
-              'Tell us about yourself...',
-            )}
-          />
-        </div>
-
-        <div className={s.formGroup}>
-          <label className={s.label} htmlFor='location'>
-            {t('profile.location')}
-          </label>
-          <input
-            className={s.input}
-            id='location'
-            name='location'
-            type='text'
-            value={formData.location}
-            onChange={handleChange}
-            placeholder={t('profile.locationPlaceholder', 'Your location')}
-          />
-        </div>
-
-        <div className={s.formGroup}>
-          <label className={s.label} htmlFor='website'>
-            {t('profile.website')}
-          </label>
-          <input
-            className={s.input}
-            id='website'
-            name='website'
-            type='url'
-            value={formData.website}
-            onChange={handleChange}
-            placeholder={t(
-              'profile.websitePlaceholder',
-              'https://yourwebsite.com',
-            )}
-          />
-        </div>
-
-        <Button
-          variant='primary'
-          type='submit'
-          className={s.button}
-          loading={loading}
-        >
-          {loading ? t('profile.saving') : t('profile.saveChanges')}
-        </Button>
-      </form>
+      <Form
+        schema={updateProfileFormSchema}
+        defaultValues={defaultValues}
+        onSubmit={handleSubmit}
+      >
+        <PersonalInfoFormFields loading={loading} />
+      </Form>
     </div>
   );
 }
 
-PersonalInfoCard.propTypes = {
-  formData: PropTypes.shape({
-    display_name: PropTypes.string,
-    first_name: PropTypes.string,
-    last_name: PropTypes.string,
-    bio: PropTypes.string,
-    location: PropTypes.string,
-    website: PropTypes.string,
-  }).isRequired,
-  onChange: PropTypes.func.isRequired,
-  onSubmit: PropTypes.func.isRequired,
+function PersonalInfoFormFields({ loading }) {
+  const { t } = useTranslation();
+  const {
+    formState: { isSubmitting },
+  } = useFormContext();
+
+  return (
+    <>
+      <Form.Field name='display_name' label={t('profile.displayName')}>
+        <Form.Input
+          type='text'
+          placeholder={t(
+            'profile.displayNamePlaceholder',
+            'Enter your display name',
+          )}
+        />
+      </Form.Field>
+
+      <div className={s.row}>
+        <div className={s.col}>
+          <Form.Field name='first_name' label={t('profile.firstName')}>
+            <Form.Input
+              type='text'
+              placeholder={t('profile.firstNamePlaceholder', 'First name')}
+            />
+          </Form.Field>
+        </div>
+        <div className={s.col}>
+          <Form.Field name='last_name' label={t('profile.lastName')}>
+            <Form.Input
+              type='text'
+              placeholder={t('profile.lastNamePlaceholder', 'Last name')}
+            />
+          </Form.Field>
+        </div>
+      </div>
+
+      <Form.Field name='bio' label={t('profile.bio')}>
+        <Form.Textarea
+          rows={3}
+          placeholder={t('profile.bioPlaceholder', 'Tell us about yourself...')}
+        />
+      </Form.Field>
+
+      <Form.Field name='location' label={t('profile.location')}>
+        <Form.Input
+          type='text'
+          placeholder={t('profile.locationPlaceholder', 'Your location')}
+        />
+      </Form.Field>
+
+      <Form.Field name='website' label={t('profile.website')}>
+        <Form.Input
+          type='url'
+          placeholder={t(
+            'profile.websitePlaceholder',
+            'https://yourwebsite.com',
+          )}
+        />
+      </Form.Field>
+
+      <Button
+        variant='primary'
+        type='submit'
+        className={s.button}
+        loading={loading || isSubmitting}
+      >
+        {loading ? t('profile.saving') : t('profile.saveChanges')}
+      </Button>
+    </>
+  );
+}
+
+PersonalInfoFormFields.propTypes = {
   loading: PropTypes.bool,
-  message: PropTypes.shape({
-    type: PropTypes.string,
-    text: PropTypes.string,
-  }),
 };
 
 export default PersonalInfoCard;

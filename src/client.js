@@ -24,7 +24,7 @@ import App from './shared/renderer/App';
 
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
-const ROOT_KEY = Symbol('__rsk__');
+const ROOT_KEY = Symbol('__rsk.client__');
 
 // =============================================================================
 // INITIALIZATION
@@ -490,15 +490,12 @@ async function initializeApp() {
     if (!isAuthenticated(store.getState())) return;
 
     try {
-      // Refresh tokens silently - middleware handles the actual refresh
-      const refreshResult = await store.dispatch(refreshToken());
-      if (!refreshResult.success) {
-        // Refresh explicitly failed - session is truly expired
-        store.dispatch(logout());
-        if (__DEV__) console.log('⚠️ Session expired while away');
-      }
+      // Refresh tokens silently - unwrap() throws if rejected
+      await store.dispatch(refreshToken()).unwrap();
     } catch {
-      // Network error - don't logout, user may still have valid session
+      // Refresh explicitly failed - session is truly expired
+      await store.dispatch(logout());
+      if (__DEV__) console.log('⚠️ Session expired while away');
     }
   };
   document.addEventListener('visibilitychange', visibilityChangeHandler);

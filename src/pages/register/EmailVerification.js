@@ -5,13 +5,21 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
-import { useDispatch } from 'react-redux';
-import { emailVerification } from '../../redux';
-import { Link } from '../../components/History';
+import { useDispatch, useSelector } from 'react-redux';
+import { emailVerificationFormSchema } from '../../shared/validator/features/auth';
+import {
+  emailVerification,
+  isEmailVerificationLoading,
+  getEmailVerificationError,
+  clearEmailVerificationError,
+} from '../../redux';
+import { useWebSocket } from '../../shared/ws/client';
+import { Link, useHistory } from '../../components/History';
 import Button from '../../components/Button';
+import Form, { useFormContext } from '../../components/Form';
 import s from './EmailVerification.css';
 
 /**
@@ -21,61 +29,44 @@ import s from './EmailVerification.css';
 function EmailVerification({ token: initialToken }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [token, setToken] = useState(initialToken || '');
-  const [error, setError] = useState('');
+  const history = useHistory();
+  const ws = useWebSocket();
+  const loading = useSelector(isEmailVerificationLoading);
+  const error = useSelector(getEmailVerificationError);
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
 
-  const handleVerify = useCallback(
-    async tokenToVerify => {
-      setError('');
-      setSuccess(false);
-      setLoading(true);
-
-      const result = await dispatch(
-        emailVerification({ token: tokenToVerify }),
-      );
-
-      setLoading(false);
-
-      if (result.success) {
-        setSuccess(true);
-      } else {
-        setError(result.error);
-      }
-    },
-    [dispatch],
-  );
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearEmailVerificationError());
+    };
+  }, [dispatch]);
 
   const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      handleVerify(token);
+    async data => {
+      try {
+        const result = await dispatch(
+          emailVerification({ token: data.token }),
+        ).unwrap();
+
+        setSuccess(true);
+        if (ws && result.accessToken) {
+          ws.login(result.accessToken);
+        }
+        // Redirect to home after short delay to show success message
+        setTimeout(() => {
+          history.replace('/');
+        }, 3000); // 3 seconds delay for user to read success message
+      } catch {
+        // Error is handled by Redux state
+      }
     },
-    [token, handleVerify],
+    [dispatch, history, ws],
   );
 
   return (
     <div className={s.root}>
-      {/* Hero Section */}
-      <div className={s.hero}>
-        <div className={s.heroContent}>
-          <Link to='/' className={s.brand}>
-            <img
-              src='/rsk_38x38.png'
-              srcSet='/rsk_72x72.png 2x'
-              width='48'
-              height='48'
-              alt='RSK'
-            />
-            <span className={s.brandText}>React Starter Kit</span>
-          </Link>
-          <div className={s.heroIcon}>✉️</div>
-          <h1 className={s.heroTitle}>
-            {t('emailVerification.title', 'Email Verification')}
-          </h1>
-        </div>
-      </div>
+      <HeroSection />
 
       {/* Content Section */}
       <div className={s.formSection}>
@@ -88,11 +79,7 @@ function EmailVerification({ token: initialToken }) {
             </div>
           )}
 
-          {error && !loading && (
-            <div className={s.error}>
-              <strong>{t('emailVerification.error', 'Error:')}</strong> {error}
-            </div>
-          )}
+          <Form.Error message={error} />
 
           {success && !loading && (
             <div className={s.successBox}>
@@ -100,54 +87,26 @@ function EmailVerification({ token: initialToken }) {
               <Trans
                 t={t}
                 i18nKey='emailVerification.success'
-                components={[<strong key='0' />]}
+                // eslint-disable-next-line react/jsx-key
+                components={[<strong />]}
               />
-              <Link to='/login' className={s.submitButton}>
-                {t('emailVerification.goToLogin', 'Go to Login')}
-              </Link>
+              <p className={s.redirectMessage}>
+                {t('emailVerification.redirecting', 'Redirecting to home...')}
+              </p>
             </div>
           )}
 
           {!success && !loading && (
-            <form method='post' onSubmit={handleSubmit}>
-              <p className={s.description}>
-                {t(
-                  'emailVerification.description',
-                  'Click the button below to verify your email address.',
-                )}
-              </p>
-              {!initialToken && (
-                <div className={s.formGroup}>
-                  <label className={s.label} htmlFor='token'>
-                    {t('emailVerification.token', 'Verification Token')}
-                  </label>
-                  <input
-                    className={s.input}
-                    id='token'
-                    type='text'
-                    name='token'
-                    value={token}
-                    onChange={e => setToken(e.target.value)}
-                    required
-                    placeholder={t(
-                      'emailVerification.tokenPlaceholder',
-                      'Enter your verification token',
-                    )}
-                  />
-                </div>
-              )}
-              <Button
-                variant='primary'
-                type='submit'
-                fullWidth
-                className={s.submitButton}
+            <Form
+              schema={emailVerificationFormSchema}
+              defaultValues={{ token: initialToken || '' }}
+              onSubmit={handleSubmit}
+            >
+              <EmailVerificationFormFields
                 loading={loading}
-              >
-                {loading
-                  ? t('emailVerification.loading', 'Verifying...')
-                  : t('emailVerification.submit', 'Verify Email')}
-              </Button>
-            </form>
+                showTokenField={!initialToken}
+              />
+            </Form>
           )}
 
           <div className={s.backLink}>
@@ -160,6 +119,87 @@ function EmailVerification({ token: initialToken }) {
     </div>
   );
 }
+
+/**
+ * Hero Section
+ */
+function HeroSection() {
+  const { t } = useTranslation();
+
+  return (
+    <div className={s.hero}>
+      <div className={s.heroContent}>
+        <Link to='/' className={s.brand}>
+          <img
+            src='/rsk_38x38.png'
+            srcSet='/rsk_72x72.png 2x'
+            width='48'
+            height='48'
+            alt='RSK'
+          />
+          <span className={s.brandText}>React Starter Kit</span>
+        </Link>
+        <div className={s.heroIcon}>✉️</div>
+        <h1 className={s.heroTitle}>
+          {t('emailVerification.title', 'Email Verification')}
+        </h1>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Email Verification Form Fields
+ */
+function EmailVerificationFormFields({ loading, showTokenField }) {
+  const { t } = useTranslation();
+  const {
+    formState: { isSubmitting },
+  } = useFormContext();
+
+  return (
+    <>
+      <p className={s.description}>
+        {t(
+          'emailVerification.description',
+          'Click the button below to verify your email address.',
+        )}
+      </p>
+
+      {showTokenField && (
+        <Form.Field
+          name='token'
+          label={t('emailVerification.token', 'Verification Token')}
+        >
+          <Form.Input
+            type='text'
+            placeholder={t(
+              'emailVerification.tokenPlaceholder',
+              'Enter your verification token',
+            )}
+          />
+        </Form.Field>
+      )}
+
+      <Button
+        variant='primary'
+        type='submit'
+        fullWidth
+        className={s.submitButton}
+        loading={loading || isSubmitting}
+      >
+        {loading
+          ? t('emailVerification.loading', 'Verifying...')
+          : t('emailVerification.submit', 'Verify Email')}
+      </Button>
+    </>
+  );
+}
+
+EmailVerificationFormFields.propTypes = {
+  loading: PropTypes.bool,
+  showTokenField: PropTypes.bool,
+};
 
 EmailVerification.propTypes = {
   token: PropTypes.string.isRequired,

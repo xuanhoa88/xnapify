@@ -5,12 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { passwordResetRequestFormSchema } from '../../shared/validator/features/auth';
-import { resetPassword } from '../../redux';
+import {
+  resetPasswordRequest,
+  isResetPasswordLoading,
+  getResetPasswordError,
+  clearResetPasswordError,
+} from '../../redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';
@@ -23,24 +28,24 @@ import s from './ResetPasswordRequest.css';
 function ResetPasswordRequest() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const [error, setError] = useState('');
+  const loading = useSelector(isResetPasswordLoading);
+  const error = useSelector(getResetPasswordError);
   const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearResetPasswordError());
+    };
+  }, [dispatch]);
 
   const handleSubmit = useCallback(
     async data => {
-      setError('');
-      setSuccess(false);
-      setLoading(true);
-
-      const result = await dispatch(resetPassword({ email: data.email }));
-
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(resetPasswordRequest({ email: data.email })).unwrap();
         setSuccess(true);
-      } else {
-        setError(result.error);
+      } catch {
+        // Error is handled by Redux state
       }
     },
     [dispatch],
@@ -60,7 +65,8 @@ function ResetPasswordRequest() {
               <Trans
                 t={t}
                 i18nKey='resetPassword.success'
-                components={[<strong key='0' />]}
+                // eslint-disable-next-line react/jsx-key
+                components={[<strong />]}
               />
             </div>
           ) : (

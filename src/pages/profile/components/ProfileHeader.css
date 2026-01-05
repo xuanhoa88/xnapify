@@ -87,8 +87,48 @@
   color: white;
 }
 
+.avatarLoading .avatarOverlay {
+  opacity: 1;
+}
+
+.avatarLoading .avatarOverlay svg {
+  animation: spin 1s linear infinite;
+}
+
 .avatarWrapper:hover .avatarOverlay {
   opacity: 1;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Avatar upload message */
+.avatarMessage {
+  margin-top: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  text-align: center;
+  max-width: 100px;
+}
+
+.avatarSuccess {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.avatarError {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
 }
 
 /* User info section */

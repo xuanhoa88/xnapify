@@ -5,12 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { loginFormSchema } from '../../shared/validator/features/auth';
-import { login } from '../../redux';
+import {
+  login,
+  getUserPreferences,
+  setLocale,
+  getLocale,
+  isAuthLoading,
+  getAuthError,
+  clearAuthError,
+} from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
 import { useWebSocket } from '../../shared/ws/client';
 import Button from '../../components/Button';
@@ -47,36 +55,54 @@ function Login() {
   const dispatch = useDispatch();
   const history = useHistory();
   const ws = useWebSocket();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const loading = useSelector(isAuthLoading);
+  const error = useSelector(getAuthError);
+  const currentLocale = useSelector(getLocale);
 
   const returnTo = useQuery('returnTo') || '/';
 
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
+
   const handleSubmit = useCallback(
     async data => {
-      setError('');
-      setLoading(true);
+      try {
+        const result = await dispatch(
+          login({
+            email: data.email,
+            password: data.password,
+            rememberMe: data.rememberMe || false,
+          }),
+        ).unwrap();
 
-      const result = await dispatch(
-        login({
-          email: data.email,
-          password: data.password,
-          rememberMe: data.rememberMe || false,
-        }),
-      );
-
-      setLoading(false);
-
-      if (!result.success) {
-        setError(result.error);
-      } else {
         if (ws && result.accessToken) {
           ws.login(result.accessToken);
         }
+
+        // Fetch user preferences and set locale
+        try {
+          const prefsResult = await dispatch(getUserPreferences()).unwrap();
+          if (
+            prefsResult.preferences &&
+            prefsResult.preferences.language &&
+            prefsResult.preferences.language !== currentLocale
+          ) {
+            dispatch(setLocale(prefsResult.preferences.language));
+          }
+        } catch {
+          // Ignore preferences fetch error
+        }
+
         history.replace(returnTo);
+      } catch {
+        // Error is handled by Redux state
       }
     },
-    [dispatch, history, returnTo, ws],
+    [dispatch, history, returnTo, ws, currentLocale],
   );
 
   return (

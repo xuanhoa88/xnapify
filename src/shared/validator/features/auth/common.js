@@ -18,15 +18,17 @@ const PASSWORD_MAX_LENGTH = 100;
 export const emailRule = ({ i18n, z }) =>
   z
     .string()
-    .min(1, i18n.t('zod:auth.EMAIL_REQUIRED'))
-    .email(i18n.t('zod:auth.EMAIL_INVALID'));
+    .min(1, i18n.t('zod:auth.EMAIL_REQUIRED', 'Email is required'))
+    .email(i18n.t('zod:auth.EMAIL_INVALID', 'Email is invalid'));
 
 /**
  * Password validation rule - factory function for login validation
  * (just requires non-empty for login)
  */
 export const passwordRule = ({ i18n, z }) =>
-  z.string().min(1, i18n.t('zod:auth.PASSWORD_REQUIRED'));
+  z
+    .string()
+    .min(1, i18n.t('zod:auth.PASSWORD_REQUIRED', 'Password is required'));
 
 /**
  * Strong password validation rule - for registration and password reset
@@ -37,9 +39,15 @@ export const strongPasswordRule = ({ i18n, z }) =>
     .string()
     .min(
       PASSWORD_MIN_LENGTH,
-      i18n.t('zod:auth.PASSWORD_MIN_LENGTH', { min: PASSWORD_MIN_LENGTH }),
+      i18n.t('zod:auth.PASSWORD_MIN_LENGTH', {
+        min: PASSWORD_MIN_LENGTH,
+        defaultValue: `Password must be at least ${PASSWORD_MIN_LENGTH} characters`,
+      }),
     )
     .max(
       PASSWORD_MAX_LENGTH,
-      i18n.t('zod:auth.PASSWORD_MAX_LENGTH', { max: PASSWORD_MAX_LENGTH }),
+      i18n.t('zod:auth.PASSWORD_MAX_LENGTH', {
+        max: PASSWORD_MAX_LENGTH,
+        defaultValue: `Password must be at most ${PASSWORD_MAX_LENGTH} characters`,
+      }),
     );

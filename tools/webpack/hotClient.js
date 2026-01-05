@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const hotClientAPI = Symbol('hotClientAPI');
+const hotClientAPI = Symbol('__rsk.hotClientAPI__');
 
 // Only intercept EventSource once
 if (!window[hotClientAPI]) {

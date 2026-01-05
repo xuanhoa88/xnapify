@@ -6,18 +6,18 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import { Link } from '../../../History';
-import s from './AuthButtons.css';
+import { Link } from '../../../../History';
+import s from './GuestMode.css';
 
 /**
- * AuthButtons Component
+ * GuestMode Component
  * Login and Register buttons for guest users
  */
-function AuthButtons() {
+function GuestMode() {
   const { t } = useTranslation();
 
   return (
-    <div className={s.authButtons}>
+    <div className={s.guestMode}>
       <Link to='/login' className={s.loginBtn}>
         {t('navigation.login', 'Login')}
       </Link>
@@ -28,4 +28,4 @@ function AuthButtons() {
   );
 }
 
-export default AuthButtons;
+export default GuestMode;

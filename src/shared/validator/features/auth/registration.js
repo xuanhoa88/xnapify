@@ -22,6 +22,9 @@ export const registerFormSchema = ({ i18n, z }) =>
       confirmPassword: z.string(),
     })
     .refine(data => data.password === data.confirmPassword, {
-      message: i18n.t('zod:auth.PASSWORDS_DO_NOT_MATCH'),
+      message: i18n.t(
+        'zod:auth.PASSWORDS_DO_NOT_MATCH',
+        'Passwords do not match',
+      ),
       path: ['confirmPassword'],
     });

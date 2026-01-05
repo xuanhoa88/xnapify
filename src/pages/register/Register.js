@@ -5,13 +5,19 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import { registerFormSchema } from '../../shared/validator/features/auth';
-import { register } from '../../redux';
+import {
+  register,
+  isAuthLoading,
+  getAuthError,
+  clearAuthError,
+} from '../../redux';
 import { Link, useHistory, useQuery } from '../../components/History';
+import { useWebSocket } from '../../shared/ws/client';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';
 import s from './Register.css';
@@ -24,33 +30,39 @@ function Register() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const ws = useWebSocket();
+  const loading = useSelector(isAuthLoading);
+  const error = useSelector(getAuthError);
 
-  const returnTo = useQuery('returnTo') || '/login';
+  const returnTo = useQuery('returnTo') || '/';
+
+  // Clear error on unmount
+  useEffect(() => {
+    return () => {
+      dispatch(clearAuthError());
+    };
+  }, [dispatch]);
 
   const handleSubmit = useCallback(
     async data => {
-      setError('');
-      setLoading(true);
+      try {
+        const result = await dispatch(
+          register({
+            email: data.email,
+            password: data.password,
+            confirmPassword: data.confirmPassword,
+          }),
+        ).unwrap();
 
-      const result = await dispatch(
-        register({
-          email: data.email,
-          password: data.password,
-          confirmPassword: data.confirmPassword,
-        }),
-      );
-
-      setLoading(false);
-
-      if (!result.success) {
-        setError(result.error);
-      } else {
+        if (ws && result.accessToken) {
+          ws.login(result.accessToken);
+        }
         history.replace(returnTo);
+      } catch {
+        // Error is handled by Redux state
       }
     },
-    [dispatch, history, returnTo],
+    [dispatch, history, returnTo, ws],
   );
 
   return (
