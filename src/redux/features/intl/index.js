@@ -5,11 +5,36 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Async Thunks
-export * from './thunks';
-
 // Public API - Selectors
-export * from './selector';
+export {
+  // Locale selectors
+  getLocale,
+  isLocaleLoading,
+  getLoadingLocale,
+  // Fallback selectors
+  getLocaleFallback,
+  hasLocaleFallback,
+  // Available locales selectors
+  getAvailableLocales,
+  getAvailableLocaleCodes,
+  isLocaleAvailable,
+  getLocaleDisplayName,
+  getCurrentLocaleDisplayName,
+} from './selector';
+
+// Public API - Async Thunks
+export { setLocale, setAvailableLocales } from './thunks';
+
+// Public API - Actions (from slice)
+export {
+  setLocaleStart,
+  setLocaleSuccess,
+  setLocaleError,
+  setLocaleFallback,
+  clearLocaleFallback,
+  updateAvailableLocales,
+  resetIntlState,
+} from './slice';
 
 // Public API - Reducer
 export { default } from './slice';

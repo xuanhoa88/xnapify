@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { isAuthenticated } from '../../../redux';
+import { isAuthenticated, toggleAdminDrawer } from '../../../redux';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import LanguageSwitcher from './LanguageSwitcher';
@@ -31,7 +31,7 @@ function AdminHeader() {
   const isAuth = useSelector(isAuthenticated);
 
   const handleToggleDrawer = useCallback(() => {
-    dispatch({ type: 'TOGGLE_ADMIN_DRAWER' });
+    dispatch(toggleAdminDrawer());
   }, [dispatch]);
 
   if (!isAuth) {

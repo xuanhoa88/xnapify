@@ -93,20 +93,6 @@
   margin-top: var(--spacing-2);
 }
 
-/* Messages */
-.success {
-  margin-bottom: var(--spacing-4);
-  padding: var(--spacing-3) var(--spacing-4);
-  border-radius: var(--radius-md);
-  background: #dcfce7;
-  color: #166534;
-  font-size: var(--font-size-sm);
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  border: 1px solid #bbf7d0;
-}
-
 /* =============================================================================
    RESPONSIVE DESIGN - TABLET
    ============================================================================= */
@@ -179,10 +165,5 @@
     flex-direction: column;
     gap: var(--spacing-2);
     padding: var(--spacing-3);
-  }
-
-  .success {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
   }
 }

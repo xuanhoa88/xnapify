@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getRuntimeVariable } from '../redux';
+import { getAppName, getAppDescription } from '../redux';
 import IsomorphicNavigator from '../shared/navigator';
 
 /**
@@ -279,12 +279,8 @@ export default async function createNavigator() {
 
       // Get application metadata from Redux runtime variables
       const state = context.store.getState();
-      const appName = getRuntimeVariable(state, 'appName', 'React Starter Kit');
-      const appDescription = getRuntimeVariable(
-        state,
-        'appDescription',
-        'Boilerplate for React.js web applications',
-      );
+      const appName = getAppName(state);
+      const appDescription = getAppDescription(state);
 
       // Apply default metadata
       return {

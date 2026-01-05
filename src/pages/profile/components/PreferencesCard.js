@@ -180,9 +180,44 @@ function PreferencesFormFields({ loading }) {
       </Form.Field>
 
       <Form.Field name='timezone' label={t('profile.timezone', 'Timezone')}>
-        <Form.Input
-          type='text'
-          placeholder={t('profile.timezonePlaceholder', 'America/New_York')}
+        <Form.Select
+          options={[
+            { value: 'UTC', label: 'UTC' },
+            { value: 'America/New_York', label: 'America/New_York (EST/EDT)' },
+            { value: 'America/Chicago', label: 'America/Chicago (CST/CDT)' },
+            { value: 'America/Denver', label: 'America/Denver (MST/MDT)' },
+            {
+              value: 'America/Los_Angeles',
+              label: 'America/Los_Angeles (PST/PDT)',
+            },
+            { value: 'America/Sao_Paulo', label: 'America/Sao_Paulo (BRT)' },
+            { value: 'Europe/London', label: 'Europe/London (GMT/BST)' },
+            { value: 'Europe/Paris', label: 'Europe/Paris (CET/CEST)' },
+            { value: 'Europe/Berlin', label: 'Europe/Berlin (CET/CEST)' },
+            { value: 'Europe/Moscow', label: 'Europe/Moscow (MSK)' },
+            { value: 'Asia/Dubai', label: 'Asia/Dubai (GST)' },
+            { value: 'Asia/Kolkata', label: 'Asia/Kolkata (IST)' },
+            { value: 'Asia/Bangkok', label: 'Asia/Bangkok (ICT)' },
+            { value: 'Asia/Ho_Chi_Minh', label: 'Asia/Ho_Chi_Minh (ICT)' },
+            { value: 'Asia/Singapore', label: 'Asia/Singapore (SGT)' },
+            { value: 'Asia/Shanghai', label: 'Asia/Shanghai (CST)' },
+            { value: 'Asia/Tokyo', label: 'Asia/Tokyo (JST)' },
+            { value: 'Asia/Seoul', label: 'Asia/Seoul (KST)' },
+            {
+              value: 'Australia/Sydney',
+              label: 'Australia/Sydney (AEST/AEDT)',
+            },
+            {
+              value: 'Australia/Melbourne',
+              label: 'Australia/Melbourne (AEST/AEDT)',
+            },
+            {
+              value: 'Pacific/Auckland',
+              label: 'Pacific/Auckland (NZST/NZDT)',
+            },
+            { value: 'Pacific/Honolulu', label: 'Pacific/Honolulu (HST)' },
+          ]}
+          placeholder={t('profile.timezonePlaceholder', 'Select a timezone')}
         />
       </Form.Field>
 

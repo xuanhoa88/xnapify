@@ -71,32 +71,30 @@ const initialState = {
  * Normalize state to ensure it has the expected shape.
  * This handles migration from old state format (plain user object or null)
  * to new format ({ data, operations }).
+ * Always clones operations to avoid SSR frozen state issues.
  * Exported for reuse in selectors.
  */
 export const normalizeState = state => {
-  // Already in correct format with operations
-  if (state && typeof state === 'object' && 'operations' in state) {
-    return state;
+  // Handle null/undefined/non-object
+  if (!state || typeof state !== 'object') {
+    return { data: null, operations: createFreshOperations() };
   }
-  // Simplified format with data but no operations (from SSR)
-  if (state && typeof state === 'object' && 'data' in state) {
+
+  // State already has proper structure - clone operations to ensure mutability
+  if ('operations' in state) {
     return {
       data: state.data,
-      operations: createFreshOperations(),
+      operations: { ...createFreshOperations(), ...state.operations },
     };
   }
-  // Old format with loading/error at root level
-  if (state && typeof state === 'object' && 'loading' in state) {
-    return {
-      data: state.data,
-      operations: createFreshOperations(),
-    };
+
+  // Legacy state with 'data' key (SSR) or with 'loading' at root
+  if ('data' in state || 'loading' in state) {
+    return { data: state.data || null, operations: createFreshOperations() };
   }
-  // Very old format: state is the user data directly (or null)
-  return {
-    data: state,
-    operations: createFreshOperations(),
-  };
+
+  // Very old format: state is user data directly
+  return { data: state, operations: createFreshOperations() };
 };
 
 /**
@@ -105,7 +103,7 @@ export const normalizeState = state => {
 const createPendingHandler = operationKey => state => {
   const normalized = normalizeState(state);
   normalized.operations[operationKey] = { loading: true, error: null };
-  return normalized;
+  Object.assign(state, normalized);
 };
 
 /**
@@ -120,7 +118,7 @@ const createRejectedHandler = operationKey => (state, action) => {
       (action.error && action.error.message) ||
       'An error occurred',
   };
-  return normalized;
+  Object.assign(state, normalized);
 };
 
 /**
@@ -128,8 +126,8 @@ const createRejectedHandler = operationKey => (state, action) => {
  */
 const createFulfilledHandler = operationKey => state => {
   const normalized = normalizeState(state);
-  normalized.operations[operationKey] = { loading: false, error: null };
-  return normalized;
+  normalized.operations[operationKey] = createOperationState();
+  Object.assign(state, normalized);
 };
 
 const userSlice = createSlice({
@@ -142,42 +140,42 @@ const userSlice = createSlice({
     clearAuthError: state => {
       const normalized = normalizeState(state);
       normalized.operations.auth.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearEmailVerificationError: state => {
       const normalized = normalizeState(state);
       normalized.operations.emailVerification.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearResetPasswordError: state => {
       const normalized = normalizeState(state);
       normalized.operations.resetPassword.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearProfileError: state => {
       const normalized = normalizeState(state);
       normalized.operations.profile.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearAvatarError: state => {
       const normalized = normalizeState(state);
       normalized.operations.avatar.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearPasswordError: state => {
       const normalized = normalizeState(state);
       normalized.operations.password.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearDeleteError: state => {
       const normalized = normalizeState(state);
       normalized.operations.delete.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
     clearPreferencesError: state => {
       const normalized = normalizeState(state);
       normalized.operations.preferences.error = null;
-      return normalized;
+      Object.assign(state, normalized);
     },
 
     /**
@@ -194,8 +192,8 @@ const userSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.data = action.payload.user;
-        normalized.operations.auth = { loading: false, error: null };
-        return normalized;
+        normalized.operations.auth = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(login.rejected, createRejectedHandler('auth'));
 
@@ -207,8 +205,8 @@ const userSlice = createSlice({
       .addCase(register.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.data = action.payload.user;
-        normalized.operations.auth = { loading: false, error: null };
-        return normalized;
+        normalized.operations.auth = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(register.rejected, createRejectedHandler('auth'));
 
@@ -228,15 +226,15 @@ const userSlice = createSlice({
       .addCase(me.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.data = action.payload.user;
-        normalized.operations.auth = { loading: false, error: null };
-        return normalized;
+        normalized.operations.auth = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(me.rejected, state => {
         // Don't store error for me() - failing to authenticate is expected for guests
         // We only want to show errors for explicit login/register actions
         const normalized = normalizeState(state);
-        normalized.operations.auth = { loading: false, error: null };
-        return normalized;
+        normalized.operations.auth = createOperationState();
+        Object.assign(state, normalized);
       });
 
     // =========================================================================
@@ -247,14 +245,14 @@ const userSlice = createSlice({
         // Don't show loading for background token refresh
         const normalized = normalizeState(state);
         normalized.operations.auth.error = null;
-        return normalized;
+        Object.assign(state, normalized);
       })
       .addCase(refreshToken.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         if (action.payload.user) {
           normalized.data = action.payload.user;
         }
-        return normalized;
+        Object.assign(state, normalized);
       })
       .addCase(refreshToken.rejected, createRejectedHandler('auth'));
 
@@ -307,7 +305,7 @@ const userSlice = createSlice({
           loading: false,
           error: null,
         };
-        return normalized;
+        Object.assign(state, normalized);
       })
       .addCase(
         emailVerification.rejected,
@@ -326,8 +324,8 @@ const userSlice = createSlice({
         } else {
           normalized.data = action.payload.profile;
         }
-        normalized.operations.profile = { loading: false, error: null };
-        return normalized;
+        normalized.operations.profile = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(updateUserProfile.rejected, createRejectedHandler('profile'));
 
@@ -341,8 +339,8 @@ const userSlice = createSlice({
         if (normalized.data) {
           normalized.data.picture = action.payload.picture;
         }
-        normalized.operations.avatar = { loading: false, error: null };
-        return normalized;
+        normalized.operations.avatar = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(uploadUserAvatar.rejected, createRejectedHandler('avatar'));
 
@@ -372,8 +370,8 @@ const userSlice = createSlice({
         if (normalized.data) {
           normalized.data.preferences = action.payload.preferences;
         }
-        normalized.operations.preferences = { loading: false, error: null };
-        return normalized;
+        normalized.operations.preferences = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(
         getUserPreferences.rejected,
@@ -393,8 +391,8 @@ const userSlice = createSlice({
         if (normalized.data) {
           normalized.data.preferences = action.payload.preferences;
         }
-        normalized.operations.preferences = { loading: false, error: null };
-        return normalized;
+        normalized.operations.preferences = createOperationState();
+        Object.assign(state, normalized);
       })
       .addCase(
         updateUserPreferences.rejected,

@@ -23,7 +23,7 @@ const getOperationState = (state, operationKey) => {
 /**
  * Get user data from state (handles all formats)
  */
-const getUserData = state => {
+const getUserState = state => {
   const normalized = normalizeState(state && state.user);
   return normalized.data;
 };
@@ -36,7 +36,7 @@ const getUserData = state => {
  * Check if user is authenticated
  */
 export const isAuthenticated = state => {
-  const user = getUserData(state);
+  const user = getUserState(state);
   return !!(user && user.id);
 };
 
@@ -44,14 +44,14 @@ export const isAuthenticated = state => {
  * Get current user data
  */
 export const getUserProfile = state => {
-  return getUserData(state) || null;
+  return getUserState(state) || null;
 };
 
 /**
  * Get user email
  */
 export const getUserEmail = state => {
-  const user = getUserData(state);
+  const user = getUserState(state);
   return (user && user.email) || null;
 };
 
@@ -59,7 +59,7 @@ export const getUserEmail = state => {
  * Get user display name
  */
 export const getUserDisplayName = state => {
-  const user = getUserData(state);
+  const user = getUserState(state);
   if (!user) return null;
   if (user.display_name) return user.display_name;
   if (user.profile && user.profile.display_name)
@@ -71,7 +71,7 @@ export const getUserDisplayName = state => {
  * Get current user's avatar URL
  */
 export const getUserAvatarUrl = state => {
-  const user = getUserData(state);
+  const user = getUserState(state);
   if (!user || !user.picture) return null;
   if (/^https?:\/\//i.test(user.picture)) return user.picture;
   return '/api/fs/preview?fileName=' + encodeURIComponent(user.picture);
@@ -81,7 +81,7 @@ export const getUserAvatarUrl = state => {
  * Get user preferences
  */
 export const getUserPreferencesData = state => {
-  const user = getUserData(state);
+  const user = getUserState(state);
   return (user && user.preferences) || null;
 };
 

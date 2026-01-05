@@ -1,0 +1,85 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Safely get UI state with normalization
+ *
+ * @param {Object} state - Redux state
+ * @returns {Object} Normalized UI state
+ */
+const getUiState = state => {
+  return normalizeState(state && state.ui);
+};
+
+// =============================================================================
+// ADMIN DRAWER SELECTORS
+// =============================================================================
+
+/**
+ * Check if admin drawer is open
+ *
+ * @param {Object} state - Redux state
+ * @returns {boolean} Whether admin drawer is open
+ */
+export const isAdminDrawerOpen = state => {
+  const ui = getUiState(state);
+  return ui.isAdminDrawerOpen;
+};
+
+// =============================================================================
+// FLASH MESSAGE SELECTORS
+// =============================================================================
+
+/**
+ * Get current flash message
+ *
+ * @param {Object} state - Redux state
+ * @returns {Object|null} Flash message object or null
+ */
+export const getFlashMessage = state => {
+  const ui = getUiState(state);
+  return ui.flashMessage;
+};
+
+/**
+ * Check if there is an active flash message
+ *
+ * @param {Object} state - Redux state
+ * @returns {boolean} Whether there is an active flash message
+ */
+export const hasFlashMessage = state => {
+  const message = getFlashMessage(state);
+  return message !== null;
+};
+
+/**
+ * Get flash message variant
+ *
+ * @param {Object} state - Redux state
+ * @returns {string|null} Flash message variant or null
+ */
+export const getFlashMessageVariant = state => {
+  const message = getFlashMessage(state);
+  return message && message.variant ? message.variant : null;
+};
+
+/**
+ * Get flash message text
+ *
+ * @param {Object} state - Redux state
+ * @returns {string|null} Flash message text or null
+ */
+export const getFlashMessageText = state => {
+  const message = getFlashMessage(state);
+  return message && message.message ? message.message : null;
+};

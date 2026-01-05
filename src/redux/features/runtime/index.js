@@ -5,11 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Public API - Actions
-export { setRuntimeVariable } from './slice';
-
 // Public API - Selectors
-export * from './selector';
+export {
+  // Typed selectors for known runtime variables
+  getAppName,
+  getAppDescription,
+  getInitialNow,
+  // Generic selector for custom variables
+  getRuntimeVariable,
+} from './selector';
+
+// Public API - Actions (from slice)
+export { setRuntimeVariable, resetRuntimeState } from './slice';
 
 // Public API - Reducer
 export { default } from './slice';

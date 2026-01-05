@@ -9,7 +9,13 @@ import { useCallback, useState, useEffect } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { isAuthenticated, logout, getUserProfile } from '../../../redux';
+import {
+  isAuthenticated,
+  logout,
+  getUserProfile,
+  toggleAdminDrawer,
+  isAdminDrawerOpen,
+} from '../../../redux';
 import { useHistory, Link } from '../../History';
 import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
@@ -22,7 +28,7 @@ function Drawer() {
   const history = useHistory();
   const ws = useWebSocket();
 
-  const drawerOpen = useSelector(state => state.ui.isAdminDrawerOpen);
+  const drawerOpen = useSelector(isAdminDrawerOpen);
   const isAuth = useSelector(isAuthenticated);
   const user = useSelector(getUserProfile);
 
@@ -37,7 +43,7 @@ function Drawer() {
   }, [history]);
 
   const handleCloseDrawer = useCallback(() => {
-    dispatch({ type: 'TOGGLE_ADMIN_DRAWER' });
+    dispatch(toggleAdminDrawer());
   }, [dispatch]);
 
   const handleLogout = useCallback(async () => {

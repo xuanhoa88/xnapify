@@ -7,11 +7,12 @@
 
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { getFlashMessage, clearFlashMessage } from '../../../redux';
 import Toast from '../../Toast';
 
 function FlashMessage() {
   const dispatch = useDispatch();
-  const flashMessage = useSelector(state => state.ui.flashMessage);
+  const flashMessage = useSelector(getFlashMessage);
   const toastRef = useRef(null);
 
   useEffect(() => {
@@ -25,7 +26,7 @@ function FlashMessage() {
       });
 
       // Clear from Redux state after displaying
-      dispatch({ type: 'FLASH_MESSAGE_CLEAR' });
+      dispatch(clearFlashMessage());
     }
   }, [flashMessage, dispatch]);
 
