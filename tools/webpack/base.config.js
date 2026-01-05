@@ -249,13 +249,6 @@ export function createBaseConfig() {
       // Public URL path for assets (must match client config)
       // This ensures server and client generate the same asset URLs
       publicPath: '/',
-
-      // Source map filename template - controls how file paths appear in stack traces
-      // Development: absolute paths for exact file location
-      // Production: relative paths from project root for portability and security
-      devtoolModuleFilenameTemplate: isDebug
-        ? info => path.resolve(info.absoluteResourcePath)
-        : info => path.relative(config.ROOT_DIR, info.absoluteResourcePath),
     },
 
     resolve: {
