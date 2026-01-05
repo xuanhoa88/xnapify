@@ -10,6 +10,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import Icon from '../../components/Icon';
 import Button from '../../components/Button';
+import Form from '../../components/Form';
 import s from './Contact.css';
 
 /**
@@ -72,13 +73,68 @@ const OFFICE_HOURS = [
 ];
 
 /**
- * Initial form state
+ * Default form values
  */
-const INITIAL_FORM_STATE = {
-  name: '',
+const DEFAULT_FORM_VALUES = {
+  phone: '',
   email: '',
   subject: '',
   message: '',
+};
+
+/**
+ * Contact Form Fields Component
+ */
+function ContactFormFields({ loading }) {
+  const { t } = useTranslation();
+
+  return (
+    <>
+      <div className={s.formRow}>
+        <Form.Field name='email' label={t('contact.form.email')} required>
+          <Form.Input
+            type='email'
+            placeholder={t('contact.form.emailPlaceholder')}
+          />
+        </Form.Field>
+
+        <Form.Field name='phone' label={t('contact.form.phone')}>
+          <Form.Input
+            type='phone'
+            placeholder={t('contact.form.phonePlaceholder')}
+          />
+        </Form.Field>
+      </div>
+
+      <Form.Field name='subject' label={t('contact.form.subject')} required>
+        <Form.Input
+          type='text'
+          placeholder={t('contact.form.subjectPlaceholder')}
+        />
+      </Form.Field>
+
+      <Form.Field name='message' label={t('contact.form.message')} required>
+        <Form.Textarea
+          rows={5}
+          placeholder={t('contact.form.messagePlaceholder')}
+        />
+      </Form.Field>
+
+      <Button
+        variant='primary'
+        type='submit'
+        fullWidth
+        className={s.submitButton}
+        loading={loading}
+      >
+        {loading ? t('contact.form.sending') : t('contact.form.submit')}
+      </Button>
+    </>
+  );
+}
+
+ContactFormFields.propTypes = {
+  loading: PropTypes.bool,
 };
 
 /**
@@ -86,35 +142,25 @@ const INITIAL_FORM_STATE = {
  */
 function Contact({ title }) {
   const { t } = useTranslation();
-  const [formData, setFormData] = useState(INITIAL_FORM_STATE);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = useCallback(e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+  const handleSubmit = useCallback(async data => {
+    setIsSubmitting(true);
+
+    try {
+      // TODO: Implement form submission logic
+      // eslint-disable-next-line no-console
+      console.log('Form submitted:', data);
+
+      // Reset form on success
+      // Form will handle reset via defaultValues
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Form submission error:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   }, []);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setIsSubmitting(true);
-
-      try {
-        // TODO: Implement form submission logic
-        // eslint-disable-next-line no-console
-        console.log('Form submitted:', formData);
-
-        // Reset form on success
-        setFormData(INITIAL_FORM_STATE);
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Form submission error:', error);
-      } finally {
-        setIsSubmitting(false);
-      }
-    },
-    [formData],
-  );
 
   return (
     <div className={s.root}>
@@ -139,72 +185,13 @@ function Contact({ title }) {
               )}
             </p>
 
-            <form className={s.form} onSubmit={handleSubmit}>
-              <div className={s.formRow}>
-                <div className={s.formGroup}>
-                  <label htmlFor='name'>{t('contact.form.name')}</label>
-                  <input
-                    type='text'
-                    id='name'
-                    name='name'
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    placeholder={t('contact.form.namePlaceholder')}
-                    required
-                  />
-                </div>
-                <div className={s.formGroup}>
-                  <label htmlFor='email'>{t('contact.form.email')}</label>
-                  <input
-                    type='email'
-                    id='email'
-                    name='email'
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder={t('contact.form.emailPlaceholder')}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className={s.formGroup}>
-                <label htmlFor='subject'>{t('contact.form.subject')}</label>
-                <input
-                  type='text'
-                  id='subject'
-                  name='subject'
-                  value={formData.subject}
-                  onChange={handleInputChange}
-                  placeholder={t('contact.form.subjectPlaceholder')}
-                  required
-                />
-              </div>
-
-              <div className={s.formGroup}>
-                <label htmlFor='message'>{t('contact.form.message')}</label>
-                <textarea
-                  id='message'
-                  name='message'
-                  rows='5'
-                  value={formData.message}
-                  onChange={handleInputChange}
-                  placeholder={t('contact.form.messagePlaceholder')}
-                  required
-                />
-              </div>
-
-              <Button
-                variant='primary'
-                type='submit'
-                fullWidth
-                className={s.submitButton}
-                loading={isSubmitting}
-              >
-                {isSubmitting
-                  ? t('contact.form.sending')
-                  : t('contact.form.submit')}
-              </Button>
-            </form>
+            <Form
+              defaultValues={DEFAULT_FORM_VALUES}
+              onSubmit={handleSubmit}
+              className={s.form}
+            >
+              <ContactFormFields loading={isSubmitting} />
+            </Form>
           </div>
 
           {/* Sidebar (Right) */}

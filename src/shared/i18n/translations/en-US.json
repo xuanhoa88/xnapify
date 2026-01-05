@@ -130,8 +130,8 @@
     "phone": "Phone:",
     "address": "Address:",
     "form": {
-      "name": "Name",
-      "namePlaceholder": "Your name",
+      "phone": "Phone",
+      "phonePlaceholder": "Your phone",
       "email": "Email",
       "emailPlaceholder": "your.email@example.com",
       "subject": "Subject",

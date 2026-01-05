@@ -125,8 +125,8 @@
     "phone": "Số điện thoại:",
     "address": "Địa chỉ:",
     "form": {
-      "name": "Tên",
-      "namePlaceholder": "Tên của bạn",
+      "phone": "Số điện thoại",
+      "phonePlaceholder": "Số điện thoại của bạn",
       "email": "Email",
       "emailPlaceholder": "your.email@example.com",
       "subject": "Tiêu đề",
