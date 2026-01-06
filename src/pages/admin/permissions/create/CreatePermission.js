@@ -6,9 +6,9 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../components/History';
-import { createPermission } from '../../../../redux';
+import { createPermission, isPermissionCreateLoading } from '../../../../redux';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './CreatePermission.css';
@@ -16,29 +16,26 @@ import s from './CreatePermission.css';
 export default function CreatePermission() {
   const dispatch = useDispatch();
   const history = useHistory();
+  const loading = useSelector(isPermissionCreateLoading);
   const [formData, setFormData] = useState({
     resource: '',
     action: '',
     description: '',
     is_active: true,
   });
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
 
   const handleSubmit = useCallback(
     async e => {
       e.preventDefault();
-      setLoading(true);
       setError(null);
 
-      const result = await dispatch(createPermission(formData));
-
-      if (result.success) {
+      try {
+        await dispatch(createPermission(formData)).unwrap();
         history.push('/admin/permissions');
-      } else {
-        setError(result.error);
-        setLoading(false);
+      } catch (err) {
+        setError(err);
       }
     },
     [dispatch, history, formData],

@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
 import {
   updateUser,
@@ -15,6 +16,12 @@ import {
   fetchRoles,
   fetchGroups,
   generatePassword,
+  isUserUpdateLoading,
+  isUserFetchLoading,
+  isUserFetchInitialized,
+  getFetchedUser,
+  getUserFetchError,
+  getUserProfile,
 } from '../../../../redux';
 import {
   useInfiniteScroll,
@@ -26,7 +33,14 @@ import s from './EditUser.css';
 
 function EditUser({ userId }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
+  const currentUser = useSelector(getUserProfile);
+  const loading = useSelector(isUserUpdateLoading);
+  const fetchingUser = useSelector(isUserFetchLoading);
+  const fetchInitialized = useSelector(isUserFetchInitialized);
+  const user = useSelector(getFetchedUser);
+  const userLoadError = useSelector(getUserFetchError);
 
   // Roles state for infinite loading
   const [roles, setRoles] = useState([]);
@@ -54,10 +68,7 @@ function EditUser({ userId }) {
     groups: [],
     is_active: true,
   });
-  const [user, setUser] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [fetchingUser, setFetchingUser] = useState(true);
   const [roleSearch, setRoleSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -75,22 +86,22 @@ function EditUser({ userId }) {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: rolesLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newRoles = result.data.roles || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newRoles = data.roles || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setRoles(newRoles);
-          } else {
-            setRoles(prev => [...prev, ...newRoles]);
-          }
-
-          setRolesHasMore(pagination && pagination.page < pagination.pages);
-          setRolesPage(page);
+        if (reset) {
+          setRoles(newRoles);
+        } else {
+          setRoles(prev => [...prev, ...newRoles]);
         }
+
+        setRolesHasMore(pagination && pagination.page < pagination.pages);
+        setRolesPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -130,22 +141,22 @@ function EditUser({ userId }) {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchGroups({ page, limit: groupsLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newGroups = result.data.groups || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newGroups = data.groups || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setGroups(newGroups);
-          } else {
-            setGroups(prev => [...prev, ...newGroups]);
-          }
-
-          setGroupsHasMore(pagination && pagination.page < pagination.pages);
-          setGroupsPage(page);
+        if (reset) {
+          setGroups(newGroups);
+        } else {
+          setGroups(prev => [...prev, ...newGroups]);
         }
+
+        setGroupsHasMore(pagination && pagination.page < pagination.pages);
+        setGroupsPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setGroupsLoading(false);
         setGroupsLoadingMore(false);
@@ -177,19 +188,8 @@ function EditUser({ userId }) {
 
   // Fetch user data on mount
   useEffect(() => {
-    async function loadUser() {
-      setFetchingUser(true);
-      const result = await dispatch(fetchUserById(userId));
-      if (result.success) {
-        setUser(result.user);
-      } else {
-        setError(result.error);
-      }
-      setFetchingUser(false);
-    }
-
     if (userId) {
-      loadUser();
+      dispatch(fetchUserById(userId));
     }
   }, [dispatch, userId]);
 
@@ -250,19 +250,17 @@ function EditUser({ userId }) {
   const handleGeneratePassword = useCallback(async () => {
     setGeneratingPassword(true);
     try {
-      const result = await dispatch(generatePassword());
-      if (result.success && result.password) {
-        setNewPassword(result.password);
-        setShowPassword(true);
-      } else {
-        setError(result.error || 'Failed to generate password');
-      }
+      const password = await dispatch(generatePassword()).unwrap();
+      setNewPassword(password);
+      setShowPassword(true);
     } catch (err) {
-      setError('Failed to generate password');
+      setError(
+        err || t('errors.generatePassword', 'Failed to generate password'),
+      );
     } finally {
       setGeneratingPassword(false);
     }
-  }, [dispatch]);
+  }, [dispatch, t]);
 
   const handleSubmit = useCallback(
     async e => {
@@ -270,11 +268,9 @@ function EditUser({ userId }) {
       setError(null);
 
       if (formData.roles.length === 0) {
-        setError('Please select at least one role');
+        setError(t('errors.selectRole', 'Please select at least one role'));
         return;
       }
-
-      setLoading(true);
 
       // Include password only if a new one was generated
       const updateData = { ...formData };
@@ -282,18 +278,20 @@ function EditUser({ userId }) {
         updateData.password = newPassword;
       }
 
-      const result = await dispatch(updateUser(user.id, updateData));
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(
+          updateUser({ userId: user.id, userData: updateData }),
+        ).unwrap();
         history.push('/admin/users');
-      } else {
-        setError(result.error);
+      } catch (err) {
+        setError(err || t('errors.updateUser', 'Failed to update user'));
       }
     },
-    [formData, newPassword, dispatch, user, history],
+    [formData, newPassword, dispatch, user, history, t],
   );
-  if (fetchingUser) {
+
+  // Show loading on first fetch or when still fetching
+  if (!fetchInitialized || fetchingUser) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -312,7 +310,7 @@ function EditUser({ userId }) {
     );
   }
 
-  if (!user) {
+  if (!user || userLoadError) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -329,6 +327,40 @@ function EditUser({ userId }) {
           <div className={s.formActions}>
             <Button variant='secondary' onClick={handleCancel}>
               Back to Users
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Prevent admin from editing their own account
+  const isSelf = currentUser && currentUser.id === userId;
+  if (isSelf) {
+    return (
+      <div className={s.root}>
+        <Box.Header
+          icon={<Icon name='users' size={24} />}
+          title='Edit User'
+          subtitle='Modify user account details'
+        >
+          <Button variant='secondary' onClick={handleCancel}>
+            ← Back to Users
+          </Button>
+        </Box.Header>
+        <div className={s.formContainer}>
+          <div className={s.formError}>
+            {t(
+              'errors.cannotEditSelf',
+              'You cannot edit your own account from the admin panel. Please use your profile settings instead.',
+            )}
+          </div>
+          <div className={s.formActions}>
+            <Button variant='secondary' onClick={handleCancel}>
+              Back to Users
+            </Button>
+            <Button variant='primary' onClick={() => history.push('/profile')}>
+              Go to Profile Settings
             </Button>
           </div>
         </div>

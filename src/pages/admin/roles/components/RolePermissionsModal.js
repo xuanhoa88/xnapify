@@ -13,9 +13,12 @@ import {
   useEffect,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Modal from '../../../../components/Modal';
-import { fetchRolePermissions } from '../../../../redux';
+import {
+  fetchRolePermissions,
+  isRoleFetchPermissionsLoading,
+} from '../../../../redux';
 import s from './RolePermissionsModal.css';
 
 /**
@@ -32,9 +35,9 @@ import s from './RolePermissionsModal.css';
 const RolePermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const loading = useSelector(isRoleFetchPermissionsLoading);
 
-  // Loading and data state
-  const [loading, setLoading] = useState(false);
+  // Data state
   const [permissions, setPermissions] = useState([]);
 
   // Internal state
@@ -45,12 +48,14 @@ const RolePermissionsModal = forwardRef((props, ref) => {
   useEffect(() => {
     if (isOpen && role) {
       const loadPermissions = async () => {
-        setLoading(true);
-        const result = await dispatch(fetchRolePermissions(role.id));
-        if (result.success) {
-          setPermissions(result.permissions || []);
+        try {
+          const permissions = await dispatch(
+            fetchRolePermissions(role.id),
+          ).unwrap();
+          setPermissions(permissions || []);
+        } catch (err) {
+          // Silently handle error
         }
-        setLoading(false);
       };
       loadPermissions();
     }
@@ -61,7 +66,6 @@ const RolePermissionsModal = forwardRef((props, ref) => {
     setIsOpen(false);
     setRole(null);
     setPermissions([]);
-    setLoading(false);
   }, []);
 
   // Expose methods via ref

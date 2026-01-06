@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../Modal';
 
 /**
@@ -25,6 +26,8 @@ import Modal from '../../Modal';
  */
 const ConfirmDeleteModal = forwardRef(
   ({ title, getItemName, onDelete, onSuccess }, ref) => {
+    const { t } = useTranslation();
+
     // Internal state
     const [isOpen, setIsOpen] = useState(false);
     const [item, setItem] = useState(null);
@@ -72,13 +75,13 @@ const ConfirmDeleteModal = forwardRef(
           resetState();
           onSuccess && onSuccess(item);
         } else {
-          setError(result.error || 'Failed to delete');
+          setError(result.error || t('errors.delete', 'Failed to delete'));
         }
       } catch (err) {
         setDeleting(false);
-        setError(err.message || 'An error occurred');
+        setError(err.message || t('errors.delete', 'An error occurred'));
       }
-    }, [item, onDelete, resetState, onSuccess]);
+    }, [item, onDelete, resetState, onSuccess, t]);
 
     const itemName = item && getItemName ? getItemName(item) : '';
 

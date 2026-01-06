@@ -5,45 +5,159 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(
+    state && state.admin && state.admin.permissions,
+  );
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
+};
+
+const getPermissionsState = state => {
+  const normalized = normalizeState(
+    state && state.admin && state.admin.permissions,
+  );
+  return normalized.data;
+};
+
+// =============================================================================
+// DATA SELECTORS
+// =============================================================================
+
 /**
  * Get all permissions
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of permission objects
  */
-export const getPermissions = state => state.admin.permissions.permissions;
+export const getPermissions = state => {
+  const data = getPermissionsState(state);
+  return (data && data.permissions) || [];
+};
 
 /**
  * Get permissions pagination
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} Pagination object
  */
-export const getPermissionsPagination = state =>
-  state.admin.permissions.pagination;
+export const getPermissionsPagination = state => {
+  const data = getPermissionsState(state);
+  return (data && data.pagination) || null;
+};
 
 /**
- * Get permissions loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if permissions are loading
+ * Check if permissions list has been fetched at least once
  */
-export const getPermissionsLoading = state => state.admin.permissions.loading;
+export const isPermissionsListInitialized = state => {
+  const data = getPermissionsState(state);
+  return !!(data && data.initialized && data.initialized.list);
+};
 
 /**
- * Get permissions error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
+ * Check if single permission fetch has been completed at least once
  */
-export const getPermissionsError = state => state.admin.permissions.error;
+export const isPermissionFetchInitialized = state => {
+  const data = getPermissionsState(state);
+  return !!(data && data.initialized && data.initialized.fetch);
+};
+
+/**
+ * Get the fetched permission (single permission fetched by ID)
+ */
+export const getFetchedPermission = state => {
+  const data = getPermissionsState(state);
+  return (data && data.fetchedPermission) || null;
+};
 
 /**
  * Get permission by ID
- *
- * @param {Object} state - Redux state
- * @param {string} id - Permission ID
- * @returns {Object|undefined} Permission object or undefined
  */
-export const getPermissionById = (state, id) =>
-  state.admin.permissions.permissions.find(permission => permission.id === id);
+export const getPermissionById = (state, id) => {
+  const permissions = getPermissions(state);
+  return permissions.find(permission => permission.id === id);
+};
+
+// =============================================================================
+// LIST OPERATION (fetchPermissions)
+// =============================================================================
+
+export const isPermissionsListLoading = state => {
+  const op = getOperationState(state, 'list');
+  return !!(op && op.loading);
+};
+
+export const getPermissionsListError = state => {
+  const op = getOperationState(state, 'list');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH OPERATION (fetchPermissionById)
+// =============================================================================
+
+export const isPermissionFetchLoading = state => {
+  const op = getOperationState(state, 'fetch');
+  return !!(op && op.loading);
+};
+
+export const getPermissionFetchError = state => {
+  const op = getOperationState(state, 'fetch');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// CREATE OPERATION (createPermission)
+// =============================================================================
+
+export const isPermissionCreateLoading = state => {
+  const op = getOperationState(state, 'create');
+  return !!(op && op.loading);
+};
+
+export const getPermissionCreateError = state => {
+  const op = getOperationState(state, 'create');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// UPDATE OPERATION (updatePermission)
+// =============================================================================
+
+export const isPermissionUpdateLoading = state => {
+  const op = getOperationState(state, 'update');
+  return !!(op && op.loading);
+};
+
+export const getPermissionUpdateError = state => {
+  const op = getOperationState(state, 'update');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// BULK STATUS OPERATION (bulkUpdatePermissionStatus)
+// =============================================================================
+
+export const isPermissionBulkStatusLoading = state => {
+  const op = getOperationState(state, 'bulkStatus');
+  return !!(op && op.loading);
+};
+
+export const getPermissionBulkStatusError = state => {
+  const op = getOperationState(state, 'bulkStatus');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// BULK DELETE OPERATION (bulkDeletePermissions)
+// =============================================================================
+
+export const isPermissionBulkDeleteLoading = state => {
+  const op = getOperationState(state, 'bulkDelete');
+  return !!(op && op.loading);
+};
+
+export const getPermissionBulkDeleteError = state => {
+  const op = getOperationState(state, 'bulkDelete');
+  return (op && op.error) || null;
+};

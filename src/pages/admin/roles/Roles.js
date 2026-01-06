@@ -9,7 +9,15 @@ import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../components/History';
-import { fetchRoles, getRolesPagination, deleteRole } from '../../../redux';
+import {
+  fetchRoles,
+  getRoles,
+  getRolesPagination,
+  isRolesListLoading,
+  isRolesListInitialized,
+  getRolesListError,
+  deleteRole,
+} from '../../../redux';
 import {
   Box,
   Icon,
@@ -47,7 +55,10 @@ function Roles() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
-  const { roles, loading, error } = useSelector(state => state.admin.roles);
+  const roles = useSelector(getRoles);
+  const loading = useSelector(isRolesListLoading);
+  const initialized = useSelector(isRolesListInitialized);
+  const error = useSelector(getRolesListError);
   const pagination = useSelector(getRolesPagination);
 
   // Pagination state
@@ -126,7 +137,8 @@ function Roles() {
     setCurrentPage(1);
   }, []);
 
-  if (loading && roles.length === 0) {
+  // Show loading on first fetch (not initialized) or when loading with no data
+  if (!initialized || (loading && roles.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header

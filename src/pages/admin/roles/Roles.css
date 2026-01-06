@@ -36,6 +36,13 @@
 .roleCard {
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* When dropdown is open, elevate card above other cards */
+.roleCard:has(.open) {
+  z-index: 9999;
 }
 
 /* Card.Header customization for role cards */

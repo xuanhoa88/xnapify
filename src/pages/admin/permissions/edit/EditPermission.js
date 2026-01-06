@@ -7,9 +7,17 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../components/History';
-import { fetchPermissionById, updatePermission } from '../../../../redux';
+import {
+  fetchPermissionById,
+  updatePermission,
+  isPermissionFetchLoading,
+  isPermissionUpdateLoading,
+  isPermissionFetchInitialized,
+  getFetchedPermission,
+  getPermissionFetchError,
+} from '../../../../redux';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
 import s from './EditPermission.css';
@@ -17,51 +25,51 @@ import s from './EditPermission.css';
 export default function EditPermission({ permissionId }) {
   const dispatch = useDispatch();
   const history = useHistory();
+  const loading = useSelector(isPermissionFetchLoading);
+  const saving = useSelector(isPermissionUpdateLoading);
+  const fetchInitialized = useSelector(isPermissionFetchInitialized);
+  const permission = useSelector(getFetchedPermission);
+  const permissionLoadError = useSelector(getPermissionFetchError);
   const [formData, setFormData] = useState({
     resource: '',
     action: '',
     description: '',
     is_active: true,
   });
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
 
+  // Fetch permission data on mount
   useEffect(() => {
-    async function loadPermission() {
-      setLoading(true);
-      const result = await dispatch(fetchPermissionById(permissionId));
-      if (result.success) {
-        setFormData({
-          resource: result.data.permission.resource,
-          action: result.data.permission.action,
-          description: result.data.permission.description || '',
-          is_active: result.data.permission.is_active !== false,
-        });
-      } else {
-        setError(result.error);
-      }
-      setLoading(false);
-    }
     if (permissionId) {
-      loadPermission();
+      dispatch(fetchPermissionById(permissionId));
     }
   }, [dispatch, permissionId]);
+
+  // Update form data when permission is loaded
+  useEffect(() => {
+    if (permission) {
+      setFormData({
+        resource: permission.resource || '',
+        action: permission.action || '',
+        description: permission.description || '',
+        is_active: permission.is_active !== false,
+      });
+    }
+  }, [permission]);
 
   const handleSubmit = useCallback(
     async e => {
       e.preventDefault();
-      setSaving(true);
       setError(null);
 
-      const result = await dispatch(updatePermission(permissionId, formData));
-
-      if (result.success) {
+      try {
+        await dispatch(
+          updatePermission({ permissionId, permissionData: formData }),
+        ).unwrap();
         history.push('/admin/permissions');
-      } else {
-        setError(result.error);
-        setSaving(false);
+      } catch (err) {
+        setError(err);
       }
     },
     [dispatch, history, permissionId, formData],
@@ -88,8 +96,8 @@ export default function EditPermission({ permissionId }) {
     formData.resource && formData.action
       ? `${formData.resource}:${formData.action}`
       : '-';
-
-  if (loading) {
+  // Show loading on first fetch or when still fetching
+  if (!fetchInitialized || loading) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -107,6 +115,34 @@ export default function EditPermission({ permissionId }) {
         </Box.Header>
         <div className={s.formContainer}>
           <div className={s.loading}>Loading permission...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (permissionLoadError) {
+    return (
+      <div className={s.root}>
+        <Box.Header
+          icon={<Icon name='key' size={24} />}
+          title='Edit Permission'
+          subtitle='Modify permission rule'
+        >
+          <Button
+            variant='secondary'
+            className={s.backBtn}
+            onClick={handleCancel}
+          >
+            ← Back to Permissions
+          </Button>
+        </Box.Header>
+        <div className={s.formContainer}>
+          <div className={s.formError}>Failed to load permission data</div>
+          <div className={s.formActions}>
+            <Button variant='secondary' onClick={handleCancel}>
+              Back to Permissions
+            </Button>
+          </div>
         </div>
       </div>
     );

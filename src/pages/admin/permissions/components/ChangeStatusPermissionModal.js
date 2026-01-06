@@ -61,15 +61,16 @@ const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
     if (!data) return;
     setProcessing(true);
     setError(null);
-    const result = await dispatch(
-      bulkUpdatePermissionStatus(data.ids, data.isActive),
-    );
-    setProcessing(false);
-    if (result.success) {
+    try {
+      await dispatch(
+        bulkUpdatePermissionStatus({ ids: data.ids, isActive: data.isActive }),
+      ).unwrap();
       resetState();
       onSuccess && onSuccess(data);
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setProcessing(false);
     }
   }, [dispatch, data, resetState, onSuccess]);
 

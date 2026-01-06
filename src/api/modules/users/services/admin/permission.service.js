@@ -83,8 +83,8 @@ function parseSearchQuery(q) {
   const action = normalized.slice(colonIndex + 1).trim();
 
   // Normalize wildcards to empty string
-  const isResourceEmpty = resource === '' || resource === DEFAULT_RESOURCES.ALL;
-  const isActionEmpty = action === '' || action === DEFAULT_ACTIONS.MANAGE;
+  const isResourceEmpty = !resource || resource === DEFAULT_RESOURCES.ALL;
+  const isActionEmpty = !action || action === DEFAULT_ACTIONS.MANAGE;
 
   // Invalid: both parts are empty/wildcards
   if (isResourceEmpty && isActionEmpty) return null;

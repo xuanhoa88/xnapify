@@ -12,8 +12,9 @@ import { useHistory } from '../../../components/History';
 import {
   fetchGroups,
   getGroups,
-  getGroupsLoading,
-  getGroupsError,
+  isGroupsListLoading,
+  isGroupsListInitialized,
+  getGroupsListError,
   getGroupsPagination,
   fetchRoles,
   deleteGroup,
@@ -48,8 +49,9 @@ function Groups() {
   const dispatch = useDispatch();
   const history = useHistory();
   const groups = useSelector(getGroups);
-  const loading = useSelector(getGroupsLoading);
-  const error = useSelector(getGroupsError);
+  const loading = useSelector(isGroupsListLoading);
+  const initialized = useSelector(isGroupsListInitialized);
+  const error = useSelector(getGroupsListError);
   const pagination = useSelector(getGroupsPagination);
 
   // Pagination state
@@ -177,7 +179,8 @@ function Groups() {
 
   const hasActiveFilters = Boolean(search || roleFilter);
 
-  if (loading && groups.length === 0) {
+  // Show loading on first fetch (not initialized) or when loading with no data
+  if (!initialized || (loading && groups.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header

@@ -7,9 +7,19 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
-import { updateGroup, fetchGroupById, fetchRoles } from '../../../../redux';
+import {
+  updateGroup,
+  fetchGroupById,
+  fetchRoles,
+  isGroupUpdateLoading,
+  isGroupFetchLoading,
+  isGroupFetchInitialized,
+  getFetchedGroup,
+  getGroupFetchError,
+} from '../../../../redux';
 import {
   useInfiniteScroll,
   useDebounce,
@@ -20,7 +30,13 @@ import s from './EditGroup.css';
 
 function EditGroup({ groupId }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
+  const loading = useSelector(isGroupUpdateLoading);
+  const fetchingGroup = useSelector(isGroupFetchLoading);
+  const fetchInitialized = useSelector(isGroupFetchInitialized);
+  const group = useSelector(getFetchedGroup);
+  const groupLoadError = useSelector(getGroupFetchError);
 
   // Roles state for infinite loading
   const [roles, setRoles] = useState([]);
@@ -31,7 +47,6 @@ function EditGroup({ groupId }) {
   const rolesLimit = 10;
   const rolesContainerRef = useRef(null);
 
-  const [group, setGroup] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -41,8 +56,6 @@ function EditGroup({ groupId }) {
   });
   const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [fetchingGroup, setFetchingGroup] = useState(true);
   const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
@@ -55,22 +68,22 @@ function EditGroup({ groupId }) {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: rolesLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newRoles = result.data.roles || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newRoles = data.roles || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setRoles(newRoles);
-          } else {
-            setRoles(prev => [...prev, ...newRoles]);
-          }
-
-          setRolesHasMore(pagination && pagination.page < pagination.pages);
-          setRolesPage(page);
+        if (reset) {
+          setRoles(newRoles);
+        } else {
+          setRoles(prev => [...prev, ...newRoles]);
         }
+
+        setRolesHasMore(pagination && pagination.page < pagination.pages);
+        setRolesPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -132,38 +145,26 @@ function EditGroup({ groupId }) {
       setError(null);
 
       if (!formData.name.trim()) {
-        setError('Group name is required');
+        setError(t('errors.groupNameRequired', 'Group name is required'));
         return;
       }
 
-      setLoading(true);
-      const result = await dispatch(updateGroup(group.id, formData));
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(
+          updateGroup({ groupId: group.id, groupData: formData }),
+        ).unwrap();
         history.push('/admin/groups');
-      } else {
-        setError(result.error);
+      } catch (err) {
+        setError(err);
       }
     },
-    [formData, dispatch, group, history],
+    [formData, dispatch, group, history, t],
   );
 
   // Fetch group data on mount
   useEffect(() => {
-    async function loadGroup() {
-      setFetchingGroup(true);
-      const result = await dispatch(fetchGroupById(groupId));
-      if (result.success) {
-        setGroup(result.group);
-      } else {
-        setError(result.error);
-      }
-      setFetchingGroup(false);
-    }
-
     if (groupId) {
-      loadGroup();
+      dispatch(fetchGroupById(groupId));
     }
   }, [dispatch, groupId]);
 
@@ -183,7 +184,8 @@ function EditGroup({ groupId }) {
     }
   }, [group]);
 
-  if (fetchingGroup) {
+  // Show loading on first fetch or when still fetching
+  if (!fetchInitialized || fetchingGroup) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -202,7 +204,7 @@ function EditGroup({ groupId }) {
     );
   }
 
-  if (!group) {
+  if (!group || groupLoadError) {
     return (
       <div className={s.root}>
         <Box.Header

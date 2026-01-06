@@ -62,14 +62,14 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
     if (!role) return;
     setDeleting(true);
     setError(null);
-    const result = await dispatch(deleteRole(role.id));
-    setDeleting(false);
-    if (result.success) {
+    try {
+      await dispatch(deleteRole(role.id)).unwrap();
       resetState();
-      // Call success callback if provided
       onSuccess && onSuccess(role);
-    } else {
-      setError(result.error || t('roles.deleteError', 'Failed to delete role'));
+    } catch (err) {
+      setError(err || t('roles.deleteError', 'Failed to delete role'));
+    } finally {
+      setDeleting(false);
     }
   }, [dispatch, role, resetState, onSuccess, t]);
 

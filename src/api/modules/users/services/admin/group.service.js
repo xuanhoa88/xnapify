@@ -258,7 +258,7 @@ export async function updateGroupById(group_id, groupData, models) {
   await group.update(groupUpdates);
 
   // Update roles if provided
-  if (roles !== undefined && Array.isArray(roles)) {
+  if (roles != null && Array.isArray(roles)) {
     // Remove all existing roles
     await group.setRoles([]);
 

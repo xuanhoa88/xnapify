@@ -5,23 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  fetchPermissionsStart,
-  fetchPermissionsSuccess,
-  fetchPermissionsError,
-  createPermissionStart,
-  createPermissionSuccess,
-  createPermissionError,
-  updatePermissionStart,
-  updatePermissionSuccess,
-  updatePermissionError,
-  bulkUpdateStatusStart,
-  bulkUpdateStatusSuccess,
-  bulkUpdateStatusError,
-  bulkDeleteStart,
-  bulkDeleteSuccess,
-  bulkDeleteError,
-} from './slice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
  * Permissions Thunks
@@ -31,18 +15,10 @@ import {
 
 /**
  * Fetch all permissions
- *
- * @param {Object} options - Query parameters
- * @param {number} options.page - Page number
- * @param {number} options.limit - Items per page
- * @param {string} options.search - Search term
- * @param {string} options.status - Filter by status: 'active' | 'inactive' | ''
- * @returns {Function} Redux thunk action
  */
-export function fetchPermissions(options = {}) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchPermissionsStart());
-
+export const fetchPermissions = createAsyncThunk(
+  'admin/permissions/fetchPermissions',
+  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { page = 1, limit = 100, search = '', status = '' } = options || {};
 
@@ -56,148 +32,103 @@ export function fetchPermissions(options = {}) {
         `/api/admin/permissions?${params.toString()}`,
       );
 
-      dispatch(fetchPermissionsSuccess(data));
-
-      return { success: true, data };
+      return data;
     } catch (error) {
-      dispatch(fetchPermissionsError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch permission by ID
- *
- * @param {string} permissionId - Permission ID
- * @returns {Function} Redux thunk action
  */
-export function fetchPermissionById(permissionId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchPermissionById = createAsyncThunk(
+  'admin/permissions/fetchPermissionById',
+  async (permissionId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`);
-      return { success: true, data };
+      return data.permission;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Create a new permission
- *
- * @param {Object} permissionData - Permission data
- * @param {string} permissionData.resource - Resource name
- * @param {string} permissionData.action - Action name
- * @param {string} permissionData.description - Permission description
- * @param {boolean} [permissionData.is_active] - Whether permission is active
- * @returns {Function} Redux thunk action
  */
-export function createPermission(permissionData) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(createPermissionStart());
-
+export const createPermission = createAsyncThunk(
+  'admin/permissions/createPermission',
+  async (permissionData, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/permissions', {
         method: 'POST',
         body: permissionData,
       });
-
-      dispatch(createPermissionSuccess(data.permission));
-
-      return { success: true, permission: data.permission };
+      return data.permission;
     } catch (error) {
-      dispatch(createPermissionError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Update a permission
- *
- * @param {string} permissionId - Permission ID
- * @param {Object} permissionData - Updated permission data
- * @returns {Function} Redux thunk action
  */
-export function updatePermission(permissionId, permissionData) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(updatePermissionStart());
-
+export const updatePermission = createAsyncThunk(
+  'admin/permissions/updatePermission',
+  async (
+    { permissionId, permissionData },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`, {
         method: 'PUT',
         body: permissionData,
       });
-
-      dispatch(updatePermissionSuccess(data.permission));
-
-      return { success: true, permission: data.permission };
+      return data.permission;
     } catch (error) {
-      dispatch(updatePermissionError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Bulk update permission status
- *
- * @param {string[]} ids - Array of permission IDs to update
- * @param {boolean} isActive - New status value
- * @returns {Function} Redux thunk action
  */
-export function bulkUpdatePermissionStatus(ids, isActive) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(bulkUpdateStatusStart());
-
+export const bulkUpdatePermissionStatus = createAsyncThunk(
+  'admin/permissions/bulkUpdatePermissionStatus',
+  async ({ ids, isActive }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/permissions/status', {
         method: 'PATCH',
         body: { ids, state: isActive ? 'active' : 'inactive' },
       });
-
-      dispatch(bulkUpdateStatusSuccess(data.permissions));
-
-      return { success: true, updated: data.updated };
+      return { permissions: data.permissions, updated: data.updated };
     } catch (error) {
-      dispatch(bulkUpdateStatusError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Bulk delete permissions
- *
- * @param {string[]} ids - Array of permission IDs to delete
- * @returns {Function} Redux thunk action
  */
-export function bulkDeletePermissions(ids) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(bulkDeleteStart());
-
+export const bulkDeletePermissions = createAsyncThunk(
+  'admin/permissions/bulkDeletePermissions',
+  async (ids, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/permissions', {
         method: 'DELETE',
         body: { ids },
       });
-
-      dispatch(bulkDeleteSuccess(data.deletedIds));
-
       return {
-        success: true,
+        deletedIds: data.deletedIds,
         deleted: data.deleted,
         protectedIds: data.protectedIds,
       };
     } catch (error) {
-      dispatch(bulkDeleteError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);

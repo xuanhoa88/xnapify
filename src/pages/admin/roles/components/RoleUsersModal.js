@@ -60,27 +60,28 @@ const RoleUsersModal = forwardRef((props, ref) => {
       if (!role) return;
       setUsersLoading(true);
       try {
-        const result = await dispatch(
-          fetchRoleUsers(role.id, { page, limit: ITEMS_PER_PAGE, search }),
-        );
-        if (result.success && result.data) {
-          const usersData = result.data.users || result.data.rows || [];
-          setUsers(usersData);
-          if (result.data.pagination) {
-            setCurrentPage(result.data.pagination.page || page);
-            setTotalPages(result.data.pagination.pages || 1);
-            setTotalItems(result.data.pagination.total || 0);
-          }
-        } else {
-          setError(result.error || 'Failed to load users');
+        const data = await dispatch(
+          fetchRoleUsers({
+            roleId: role.id,
+            page,
+            limit: ITEMS_PER_PAGE,
+            search,
+          }),
+        ).unwrap();
+        const usersData = data.users || data.rows || [];
+        setUsers(usersData);
+        if (data.pagination) {
+          setCurrentPage(data.pagination.page || page);
+          setTotalPages(data.pagination.pages || 1);
+          setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError('Failed to load users');
+        setError(err || t('errors.loadUsers', 'Failed to load users'));
       } finally {
         setUsersLoading(false);
       }
     },
-    [dispatch, role, search],
+    [dispatch, role, search, t],
   );
 
   useEffect(() => {

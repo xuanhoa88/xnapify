@@ -5,93 +5,191 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(state && state.admin && state.admin.roles);
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
+};
+
+const getRolesState = state => {
+  const normalized = normalizeState(state && state.admin && state.admin.roles);
+  return normalized.data;
+};
+
+// =============================================================================
+// DATA SELECTORS
+// =============================================================================
+
 /**
  * Get all roles
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of role objects
  */
-export const getRoles = state => state.admin.roles.roles;
+export const getRoles = state => {
+  const data = getRolesState(state);
+  return (data && data.roles) || [];
+};
 
 /**
  * Get roles pagination
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} Pagination object
  */
-export const getRolesPagination = state => state.admin.roles.pagination;
+export const getRolesPagination = state => {
+  const data = getRolesState(state);
+  return (data && data.pagination) || null;
+};
 
 /**
- * Get roles loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if roles are loading
+ * Check if roles list has been fetched at least once
  */
-export const getRolesLoading = state => state.admin.roles.loading;
+export const isRolesListInitialized = state => {
+  const data = getRolesState(state);
+  return !!(data && data.initialized && data.initialized.list);
+};
 
 /**
- * Get roles error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
+ * Check if single role fetch has been completed at least once
  */
-export const getRolesError = state => state.admin.roles.error;
+export const isRoleFetchInitialized = state => {
+  const data = getRolesState(state);
+  return !!(data && data.initialized && data.initialized.fetch);
+};
+
+/**
+ * Get the fetched role (single role fetched by ID)
+ */
+export const getFetchedRole = state => {
+  const data = getRolesState(state);
+  return (data && data.fetchedRole) || null;
+};
 
 /**
  * Get role by ID
- *
- * @param {Object} state - Redux state
- * @param {string} id - Role ID
- * @returns {Object|undefined} Role object or undefined
  */
-export const getRoleById = (state, id) =>
-  state.admin.roles.roles.find(role => role.id === id);
+export const getRoleById = (state, id) => {
+  const roles = getRoles(state);
+  return roles.find(role => role.id === id);
+};
 
 /**
  * Get roles by array of IDs
- *
- * @param {Object} state - Redux state
- * @param {string[]} ids - Array of role IDs
- * @returns {Array} Array of role objects
  */
 export const getRolesByIds = (state, ids) => {
   if (!ids || ids.length === 0) return [];
+  const roles = getRoles(state);
   const idSet = new Set(ids);
-  return state.admin.roles.roles.filter(role => idSet.has(role.id));
+  return roles.filter(role => idSet.has(role.id));
 };
 
 /**
  * Get all role names
- *
- * @param {Object} state - Redux state
- * @returns {string[]} Array of role names
  */
-export const getRoleNames = state =>
-  state.admin.roles.roles.map(role => role.name);
+export const getRoleNames = state => {
+  const roles = getRoles(state);
+  return roles.map(role => role.name);
+};
 
 /**
  * Get role by name
- *
- * @param {Object} state - Redux state
- * @param {string} name - Role name
- * @returns {Object|undefined} Role object or undefined
  */
-export const getRoleByName = (state, name) =>
-  state.admin.roles.roles.find(
-    role => role.name.toLowerCase() === name.toLowerCase(),
-  );
+export const getRoleByName = (state, name) => {
+  const roles = getRoles(state);
+  return roles.find(role => role.name.toLowerCase() === name.toLowerCase());
+};
 
 /**
  * Get roles by array of names
- *
- * @param {Object} state - Redux state
- * @param {string[]} names - Array of role names
- * @returns {Array} Array of role objects
  */
 export const getRolesByNames = (state, names) => {
   if (!names || names.length === 0) return [];
+  const roles = getRoles(state);
   const nameSet = new Set(names.map(n => n.toLowerCase()));
-  return state.admin.roles.roles.filter(role =>
-    nameSet.has(role.name.toLowerCase()),
-  );
+  return roles.filter(role => nameSet.has(role.name.toLowerCase()));
+};
+
+// =============================================================================
+// LIST OPERATION (fetchRoles)
+// =============================================================================
+
+export const isRolesListLoading = state => {
+  const op = getOperationState(state, 'list');
+  return !!(op && op.loading);
+};
+
+export const getRolesListError = state => {
+  const op = getOperationState(state, 'list');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH OPERATION (fetchRoleById)
+// =============================================================================
+
+export const isRoleFetchLoading = state => {
+  const op = getOperationState(state, 'fetch');
+  return !!(op && op.loading);
+};
+
+export const getRoleFetchError = state => {
+  const op = getOperationState(state, 'fetch');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// CREATE OPERATION (createRole)
+// =============================================================================
+
+export const isRoleCreateLoading = state => {
+  const op = getOperationState(state, 'create');
+  return !!(op && op.loading);
+};
+
+export const getRoleCreateError = state => {
+  const op = getOperationState(state, 'create');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// UPDATE OPERATION (updateRole)
+// =============================================================================
+
+export const isRoleUpdateLoading = state => {
+  const op = getOperationState(state, 'update');
+  return !!(op && op.loading);
+};
+
+export const getRoleUpdateError = state => {
+  const op = getOperationState(state, 'update');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// DELETE OPERATION (deleteRole)
+// =============================================================================
+
+export const isRoleDeleteLoading = state => {
+  const op = getOperationState(state, 'delete');
+  return !!(op && op.loading);
+};
+
+export const getRoleDeleteError = state => {
+  const op = getOperationState(state, 'delete');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH PERMISSIONS OPERATION (fetchRolePermissions)
+// =============================================================================
+
+export const isRoleFetchPermissionsLoading = state => {
+  const op = getOperationState(state, 'fetchPermissions');
+  return !!(op && op.loading);
+};
+
+export const getRoleFetchPermissionsError = state => {
+  const op = getOperationState(state, 'fetchPermissions');
+  return (op && op.error) || null;
 };

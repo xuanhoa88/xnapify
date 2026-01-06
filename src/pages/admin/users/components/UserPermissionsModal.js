@@ -19,9 +19,9 @@ import Modal from '../../../../components/Modal';
 import s from './UserPermissionsModal.css';
 import {
   fetchUserPermissions,
-  clearPermissions,
+  clearUserPermissions,
   getUserPermissions,
-  getUserPermissionsLoading,
+  isUserPermissionsOperationLoading,
 } from '../../../../redux';
 
 /**
@@ -39,7 +39,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const permissions = useSelector(getUserPermissions);
-  const loading = useSelector(getUserPermissionsLoading);
+  const loading = useSelector(isUserPermissionsOperationLoading);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
@@ -52,7 +52,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
     }
     return () => {
       if (!isOpen) {
-        dispatch(clearPermissions());
+        dispatch(clearUserPermissions());
       }
     };
   }, [dispatch, isOpen, user]);
@@ -77,7 +77,7 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   const resetState = useCallback(() => {
     setIsOpen(false);
     setUser(null);
-    dispatch(clearPermissions());
+    dispatch(clearUserPermissions());
   }, [dispatch]);
 
   // Expose methods via ref

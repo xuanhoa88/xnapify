@@ -11,5 +11,15 @@ export * from './thunks';
 // Public API - Selectors
 export * from './selector';
 
+// Public API - Actions (from slice)
+export {
+  clearGroupsListError,
+  clearGroupsFetchError,
+  clearGroupsCreateError,
+  clearGroupsUpdateError,
+  clearGroupsDeleteError,
+  resetGroupsState,
+} from './slice';
+
 // Public API - Reducer
 export { default } from './slice';

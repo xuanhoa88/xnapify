@@ -12,8 +12,9 @@ import { useHistory } from '../../../components/History';
 import {
   fetchPermissions,
   getPermissions,
-  getPermissionsLoading,
-  getPermissionsError,
+  isPermissionsListLoading,
+  isPermissionsListInitialized,
+  getPermissionsListError,
   getPermissionsPagination,
   bulkDeletePermissions,
 } from '../../../redux';
@@ -38,8 +39,9 @@ function Permissions() {
   const dispatch = useDispatch();
   const history = useHistory();
   const permissions = useSelector(getPermissions);
-  const loading = useSelector(getPermissionsLoading);
-  const error = useSelector(getPermissionsError);
+  const loading = useSelector(isPermissionsListLoading);
+  const initialized = useSelector(isPermissionsListInitialized);
+  const error = useSelector(getPermissionsListError);
   const pagination = useSelector(getPermissionsPagination);
 
   // Pagination state
@@ -124,11 +126,13 @@ function Permissions() {
 
   const handleDeleteConfirm = useCallback(
     async item => {
-      const result = await dispatch(bulkDeletePermissions(item.ids));
-      if (result.success) {
+      try {
+        const result = await dispatch(bulkDeletePermissions(item.ids)).unwrap();
         clearSelection();
+        return { success: true, ...result };
+      } catch (err) {
+        return { success: false, error: err };
       }
-      return result;
     },
     [dispatch, clearSelection],
   );
@@ -230,7 +234,8 @@ function Permissions() {
     [groupedPermissions],
   );
 
-  if (loading && permissions.length === 0) {
+  // Show loading on first fetch (not initialized) or when loading with no data
+  if (!initialized || (loading && permissions.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header

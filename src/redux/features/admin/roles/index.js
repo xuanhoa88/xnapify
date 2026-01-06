@@ -11,5 +11,15 @@ export * from './thunks';
 // Public API - Selectors
 export * from './selector';
 
+// Public API - Actions (from slice)
+export {
+  clearRolesListError,
+  clearRoleFetchError,
+  clearRoleCreateError,
+  clearRoleUpdateError,
+  clearRoleDeleteError,
+  resetRolesState,
+} from './slice';
+
 // Public API - Reducer
 export { default } from './slice';

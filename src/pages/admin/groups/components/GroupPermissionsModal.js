@@ -13,9 +13,12 @@ import {
   useEffect,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import Modal from '../../../../components/Modal';
-import { fetchGroupPermissions } from '../../../../redux';
+import {
+  fetchGroupPermissions,
+  isGroupFetchPermissionsLoading,
+} from '../../../../redux';
 import s from './GroupPermissionsModal.css';
 
 /**
@@ -32,9 +35,9 @@ import s from './GroupPermissionsModal.css';
 const GroupPermissionsModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const loading = useSelector(isGroupFetchPermissionsLoading);
 
-  // Loading and data state
-  const [loading, setLoading] = useState(false);
+  // Data state
   const [permissions, setPermissions] = useState([]);
   const [roleDetails, setRoleDetails] = useState([]);
 
@@ -46,13 +49,13 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
   useEffect(() => {
     if (isOpen && group) {
       const loadPermissions = async () => {
-        setLoading(true);
-        const result = await dispatch(fetchGroupPermissions(group.id));
-        if (result.success) {
-          setPermissions(result.permissions);
-          setRoleDetails(result.roleDetails);
+        try {
+          const data = await dispatch(fetchGroupPermissions(group.id)).unwrap();
+          setPermissions(data.permissions || []);
+          setRoleDetails(data.roleDetails || []);
+        } catch (err) {
+          // Silently handle error
         }
-        setLoading(false);
       };
       loadPermissions();
     }
@@ -64,7 +67,6 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
     setGroup(null);
     setPermissions([]);
     setRoleDetails([]);
-    setLoading(false);
   }, []);
 
   // Expose methods via ref

@@ -6,10 +6,10 @@
  */
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkUpdateUserStatus } from '../../../../redux';
+import { bulkUpdateUserStatus, getUserProfile } from '../../../../redux';
 
 /**
  * ChangeStatusUserModal - Self-contained modal for changing user status
@@ -21,6 +21,7 @@ import { bulkUpdateUserStatus } from '../../../../redux';
  */
 const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
+  const currentUser = useSelector(getUserProfile);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
@@ -59,19 +60,31 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
 
   const handleConfirm = useCallback(async () => {
     if (!data) return;
+
+    // Filter out current user's ID to prevent self-status change (especially deactivation)
+    const idsToUpdate = currentUser
+      ? data.ids.filter(id => id !== currentUser.id)
+      : data.ids;
+
+    if (idsToUpdate.length === 0) {
+      setError('You cannot change your own account status.');
+      return;
+    }
+
     setProcessing(true);
     setError(null);
-    const result = await dispatch(
-      bulkUpdateUserStatus(data.ids, data.isActive),
-    );
-    setProcessing(false);
-    if (result.success) {
+    try {
+      await dispatch(
+        bulkUpdateUserStatus({ ids: idsToUpdate, isActive: data.isActive }),
+      ).unwrap();
       resetState();
-      onSuccess && onSuccess(data);
-    } else {
-      setError(result.error);
+      onSuccess && onSuccess({ ...data, ids: idsToUpdate });
+    } catch (err) {
+      setError(err);
+    } finally {
+      setProcessing(false);
     }
-  }, [dispatch, data, resetState, onSuccess]);
+  }, [dispatch, data, resetState, onSuccess, currentUser]);
 
   const count = data && data.ids ? data.ids.length : 0;
   const isActive = data && data.isActive;
@@ -86,6 +99,15 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
         <Modal.Description>
           Are you sure you want to {actionText} {count} user(s)?
         </Modal.Description>
+        {currentUser &&
+          data &&
+          data.ids &&
+          data.ids.includes(currentUser.id) && (
+            <Modal.Description>
+              <strong>Note:</strong> Your own account will be excluded from this
+              action.
+            </Modal.Description>
+          )}
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>

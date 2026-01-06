@@ -17,7 +17,7 @@ export async function up({ context }) {
   const now = new Date();
 
   const rolePermissions = [
-    // Admin role - super admin permission (*:*)
+    // Admin role - super admin permission (*:*) grants all permissions dynamically
     {
       id: uuidv4(),
       role_id: demoRoleIds.admin,
@@ -95,6 +95,80 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       role_id: demoRoleIds.mod,
+      permission_id: demoPermissionIds.permissionsRead,
+      created_at: now,
+      updated_at: now,
+    },
+
+    // Editor role - read all + create/update users
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.usersRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.usersCreate,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.usersUpdate,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.rolesRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.groupsRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.editor,
+      permission_id: demoPermissionIds.permissionsRead,
+      created_at: now,
+      updated_at: now,
+    },
+
+    // Viewer role - read-only permissions
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.viewer,
+      permission_id: demoPermissionIds.usersRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.viewer,
+      permission_id: demoPermissionIds.rolesRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.viewer,
+      permission_id: demoPermissionIds.groupsRead,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: uuidv4(),
+      role_id: demoRoleIds.viewer,
       permission_id: demoPermissionIds.permissionsRead,
       created_at: now,
       updated_at: now,

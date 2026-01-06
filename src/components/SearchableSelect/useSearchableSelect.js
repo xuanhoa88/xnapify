@@ -93,13 +93,22 @@ function useSearchableSelect({
 
       setLoading(true);
       try {
-        const result = await fetch({ page: 1, limit, search: term });
-        if (result.success && result.data) {
-          const data = result.data[dataKey];
+        const fetchPromise = fetch({ page: 1, limit, search: term });
+        // Support both createAsyncThunk .unwrap() and legacy callback patterns
+        const result =
+          typeof fetchPromise.unwrap === 'function'
+            ? await fetchPromise.unwrap()
+            : await fetchPromise;
+
+        // Handle response - supports both direct data and {success, data} wrapper
+        const responseData =
+          result && result.success != null ? result.data : result;
+        if (responseData) {
+          const data = responseData[dataKey];
           if (Array.isArray(data)) {
             setItems(data);
             // Cache the results
-            const { pagination } = result.data;
+            const { pagination } = responseData;
             const more = pagination && pagination.page < pagination.pages;
             cache.current.set(cacheKey, {
               items: data,
@@ -108,6 +117,8 @@ function useSearchableSelect({
             setHasMore(more);
           }
         }
+      } catch {
+        // Silently handle search errors
       } finally {
         setLoading(false);
       }
@@ -120,20 +131,31 @@ function useSearchableSelect({
     const nextPage = page + 1;
     setLoadingMore(true);
     try {
-      const result = await fetch({
+      const fetchPromise = fetch({
         page: nextPage,
         limit,
         search: searchTerm.current,
       });
-      if (result.success && result.data) {
-        const data = result.data[dataKey];
+      // Support both createAsyncThunk .unwrap() and legacy callback patterns
+      const result =
+        typeof fetchPromise.unwrap === 'function'
+          ? await fetchPromise.unwrap()
+          : await fetchPromise;
+
+      // Handle response - supports both direct data and {success, data} wrapper
+      const responseData =
+        result && result.success != null ? result.data : result;
+      if (responseData) {
+        const data = responseData[dataKey];
         if (Array.isArray(data)) {
           setItems(prev => [...prev, ...data]);
-          const { pagination } = result.data;
+          const { pagination } = responseData;
           setHasMore(pagination && pagination.page < pagination.pages);
           setPage(nextPage);
         }
       }
+    } catch {
+      // Silently handle load more errors
     } finally {
       setLoadingMore(false);
     }

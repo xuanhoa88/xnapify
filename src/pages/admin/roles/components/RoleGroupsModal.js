@@ -58,27 +58,28 @@ const RoleGroupsModal = forwardRef((props, ref) => {
       if (!role) return;
       setGroupsLoading(true);
       try {
-        const result = await dispatch(
-          fetchRoleGroups(role.id, { page, limit: ITEMS_PER_PAGE, search }),
-        );
-        if (result.success && result.data) {
-          const groupsData = result.data.groups || result.data.rows || [];
-          setGroups(groupsData);
-          if (result.data.pagination) {
-            setCurrentPage(result.data.pagination.page || page);
-            setTotalPages(result.data.pagination.pages || 1);
-            setTotalItems(result.data.pagination.total || 0);
-          }
-        } else {
-          setError(result.error || 'Failed to load groups');
+        const data = await dispatch(
+          fetchRoleGroups({
+            roleId: role.id,
+            page,
+            limit: ITEMS_PER_PAGE,
+            search,
+          }),
+        ).unwrap();
+        const groupsData = data.groups || data.rows || [];
+        setGroups(groupsData);
+        if (data.pagination) {
+          setCurrentPage(data.pagination.page || page);
+          setTotalPages(data.pagination.pages || 1);
+          setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError('Failed to load groups');
+        setError(err || t('errors.loadGroups', 'Failed to load groups'));
       } finally {
         setGroupsLoading(false);
       }
     },
-    [dispatch, role, search],
+    [dispatch, role, search, t],
   );
 
   useEffect(() => {

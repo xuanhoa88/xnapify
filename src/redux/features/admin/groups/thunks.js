@@ -5,12 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  fetchGroupsStart,
-  fetchGroupsSuccess,
-  fetchGroupsError,
-  clearGroupsError as clearUserError,
-} from './slice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
  * Groups Thunks
@@ -20,19 +15,10 @@ import {
 
 /**
  * Fetch all groups with pagination
- *
- * @param {Object} options - Query options
- * @param {number} options.page - Page number (default: 1)
- * @param {number} options.limit - Items per page (default: 10)
- * @param {string} options.search - Search term (optional)
- * @param {string} options.category - Filter by category (optional)
- * @param {string} options.type - Filter by type (optional)
- * @returns {Function} Redux thunk action
  */
-export function fetchGroups(options = {}) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchGroupsStart());
-
+export const fetchGroups = createAsyncThunk(
+  'admin/groups/fetchGroups',
+  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
     try {
       const {
         page = 1,
@@ -57,118 +43,91 @@ export function fetchGroups(options = {}) {
         `/api/admin/groups/list?${params.toString()}`,
       );
 
-      dispatch(
-        fetchGroupsSuccess({
-          groups: data.groups,
-          pagination: data.pagination,
-        }),
-      );
-
-      return { success: true, data };
+      return data;
     } catch (error) {
-      dispatch(fetchGroupsError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch group by ID
- *
- * @param {string} groupId - Group ID
- * @returns {Function} Redux thunk action
  */
-export function fetchGroupById(groupId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchGroupById = createAsyncThunk(
+  'admin/groups/fetchGroupById',
+  async (groupId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`);
-
-      return { success: true, group: data.group };
+      return data.group;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Create a new group
- *
- * @param {Object} groupData - Group data
- * @param {string} groupData.name - Group name
- * @param {string} groupData.description - Group description (optional)
- * @param {string} groupData.category - Group category (optional)
- * @param {string} groupData.type - Group type (optional)
- * @returns {Function} Redux thunk action
  */
-export function createGroup(groupData) {
-  return async (dispatch, getState, { fetch }) => {
+export const createGroup = createAsyncThunk(
+  'admin/groups/createGroup',
+  async (groupData, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/groups', {
         method: 'POST',
         body: groupData,
       });
-
-      return { success: true, group: data.group };
+      return data.group;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Update group by ID
- *
- * @param {string} groupId - Group ID
- * @param {Object} updateData - Data to update
- * @returns {Function} Redux thunk action
  */
-export function updateGroup(groupId, updateData) {
-  return async (dispatch, getState, { fetch }) => {
+export const updateGroup = createAsyncThunk(
+  'admin/groups/updateGroup',
+  async ({ groupId, groupData }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}`, {
         method: 'PUT',
-        body: updateData,
+        body: groupData,
       });
-
-      return { success: true, group: data.group };
+      return data.group;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Delete group by ID
- *
- * @param {string} groupId - Group ID
- * @returns {Function} Redux thunk action
  */
-export function deleteGroup(groupId) {
-  return async (dispatch, getState, { fetch }) => {
+export const deleteGroup = createAsyncThunk(
+  'admin/groups/deleteGroup',
+  async (groupId, { extra: { fetch }, rejectWithValue }) => {
     try {
       await fetch(`/api/admin/groups/${groupId}`, {
         method: 'DELETE',
       });
-
-      return { success: true };
+      return groupId;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch group users
- *
- * @param {string} groupId - Group ID
- * @param {Object} options - Pagination options
- * @returns {Function} Redux thunk action
  */
-export function fetchGroupUsers(groupId, options = {}) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchGroupUsers = createAsyncThunk(
+  'admin/groups/fetchGroupUsers',
+  async (
+    { groupId, page = 1, limit = 10, search = '' },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
-      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: page.toString(),
         limit: limit.toString(),
@@ -182,97 +141,63 @@ export function fetchGroupUsers(groupId, options = {}) {
         `/api/admin/groups/${groupId}/users?${params.toString()}`,
       );
 
-      return { success: true, data };
+      return data;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
-
-/**
- * Clear groups error
- *
- * @returns {Object} Redux action
- */
-export function clearGroupsError() {
-  return clearUserError();
-}
+  },
+);
 
 /**
  * Assign roles to a group
- *
- * @param {string} groupId - Group ID
- * @param {string[]} roleNames - Array of role names to assign
- * @returns {Function} Redux thunk action
  */
-export function assignRolesToGroup(groupId, roleNames) {
-  return async (dispatch, getState, { fetch }) => {
+export const assignRolesToGroup = createAsyncThunk(
+  'admin/groups/assignRolesToGroup',
+  async ({ groupId, roleNames }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}/roles`, {
         method: 'PUT',
         body: { role_names: roleNames },
       });
-
-      return { success: true, group: data.group };
+      return data.group;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch group permissions
- *
- * Gets all effective permissions for a group from its assigned roles.
- *
- * @param {string} groupId - Group ID
- * @returns {Function} Redux thunk action
  */
-export function fetchGroupPermissions(groupId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchGroupPermissions = createAsyncThunk(
+  'admin/groups/fetchGroupPermissions',
+  async (groupId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}/permissions`);
-
       return {
-        success: true,
         permissions: data.permissions || [],
         roleDetails: data.roleDetails || [],
       };
     } catch (error) {
-      return {
-        success: false,
-        permissions: [],
-        roleDetails: [],
-        error: error.message,
-      };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch group's roles
- *
- * Gets all roles assigned to a group with their permissions.
- *
- * @param {string} groupId - Group ID
- * @returns {Function} Redux thunk action
  */
-export function fetchGroupRoles(groupId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchGroupRoles = createAsyncThunk(
+  'admin/groups/fetchGroupRoles',
+  async (groupId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/groups/${groupId}/roles`);
-
       return {
-        success: true,
         group: data.group,
         roles: data.roles || [],
       };
     } catch (error) {
-      return {
-        success: false,
-        roles: [],
-        error: error.message,
-      };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);

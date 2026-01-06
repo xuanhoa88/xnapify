@@ -60,14 +60,14 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
     if (!permission) return;
     setDeleting(true);
     setError(null);
-    const result = await dispatch(bulkDeletePermissions([permission.id]));
-    setDeleting(false);
-    if (result.success) {
+    try {
+      await dispatch(bulkDeletePermissions([permission.id])).unwrap();
       resetState();
-      // Call success callback if provided
       onSuccess && onSuccess(permission);
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setDeleting(false);
     }
   }, [dispatch, permission, resetState, onSuccess]);
 

@@ -5,41 +5,23 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  fetchRolesStart,
-  fetchRolesSuccess,
-  fetchRolesError,
-  deleteRoleStart,
-  deleteRoleSuccess,
-  deleteRoleError,
-  createRoleStart,
-  createRoleSuccess,
-  createRoleError,
-  updateRoleStart,
-  updateRoleSuccess,
-  updateRoleError,
-} from './slice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
  * Roles Thunks
  *
  * Async thunk actions for roles CRUD operations.
- * Maintains backward compatible return pattern { success, data/error }.
  */
 
 /**
  * Fetch all roles
- *
- * @param {Object} params - Query parameters
- * @param {number} params.page - Page number
- * @param {number} params.limit - Items per page
- * @param {string} params.search - Search term
- * @returns {Function} Redux thunk action
  */
-export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchRolesStart());
-
+export const fetchRoles = createAsyncThunk(
+  'admin/roles/fetchRoles',
+  async (
+    { page = 1, limit = 100, search = '' } = {},
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
       const params = new URLSearchParams();
       if (page) params.append('page', page);
@@ -50,129 +32,91 @@ export function fetchRoles({ page = 1, limit = 100, search = '' } = {}) {
         `/api/admin/roles/list?${params.toString()}`,
       );
 
-      dispatch(fetchRolesSuccess(data));
-
-      return { success: true, data };
+      return data;
     } catch (error) {
-      dispatch(fetchRolesError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch role by ID
- *
- * @param {string} roleId - Role ID
- * @returns {Function} Redux thunk action
  */
-export function fetchRoleById(roleId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchRoleById = createAsyncThunk(
+  'admin/roles/fetchRoleById',
+  async (roleId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/roles/${roleId}`);
-
-      return { success: true, role: data.role };
+      return data.role;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Delete a role
- *
- * @param {string} roleId - Role ID to delete
- * @returns {Function} Redux thunk action
  */
-export function deleteRole(roleId) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(deleteRoleStart());
-
+export const deleteRole = createAsyncThunk(
+  'admin/roles/deleteRole',
+  async (roleId, { extra: { fetch }, rejectWithValue }) => {
     try {
       await fetch(`/api/admin/roles/${roleId}`, {
         method: 'DELETE',
       });
-
-      dispatch(deleteRoleSuccess(roleId));
-
-      return { success: true };
+      return roleId;
     } catch (error) {
-      dispatch(deleteRoleError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Create a new role
- *
- * @param {Object} roleData - Role data
- * @param {string} roleData.name - Role name
- * @param {string} roleData.description - Role description
- * @returns {Function} Redux thunk action
  */
-export function createRole(roleData) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(createRoleStart());
-
+export const createRole = createAsyncThunk(
+  'admin/roles/createRole',
+  async (roleData, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/roles', {
         method: 'POST',
         body: roleData,
       });
-
-      dispatch(createRoleSuccess(data.role));
-
-      return { success: true, role: data.role };
+      return data.role;
     } catch (error) {
-      dispatch(createRoleError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Update a role
- *
- * @param {string} roleId - Role ID
- * @param {Object} roleData - Updated role data
- * @returns {Function} Redux thunk action
  */
-export function updateRole(roleId, roleData) {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(updateRoleStart());
-
+export const updateRole = createAsyncThunk(
+  'admin/roles/updateRole',
+  async ({ roleId, roleData }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/roles/${roleId}`, {
         method: 'PUT',
         body: roleData,
       });
-
-      dispatch(updateRoleSuccess(data.role));
-
-      return { success: true, role: data.role };
+      return data.role;
     } catch (error) {
-      dispatch(updateRoleError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch users assigned to a role
- *
- * @param {string} roleId - Role ID
- * @param {Object} options - Pagination options
- * @returns {Function} Redux thunk action
  */
-export function fetchRoleUsers(roleId, options = {}) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchRoleUsers = createAsyncThunk(
+  'admin/roles/fetchRoleUsers',
+  async (
+    { roleId, page = 1, limit = 10, search = '' },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
-      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
@@ -186,24 +130,23 @@ export function fetchRoleUsers(roleId, options = {}) {
         `/api/admin/roles/${roleId}/users?${params.toString()}`,
       );
 
-      return { success: true, data };
+      return data;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch groups assigned to a role
- *
- * @param {string} roleId - Role ID
- * @param {Object} options - Pagination options
- * @returns {Function} Redux thunk action
  */
-export function fetchRoleGroups(roleId, options = {}) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchRoleGroups = createAsyncThunk(
+  'admin/roles/fetchRoleGroups',
+  async (
+    { roleId, page = 1, limit = 10, search = '' },
+    { extra: { fetch }, rejectWithValue },
+  ) => {
     try {
-      const { page = 1, limit = 10, search = '' } = options;
       const params = new URLSearchParams({
         page: String(page),
         limit: String(limit),
@@ -217,27 +160,24 @@ export function fetchRoleGroups(roleId, options = {}) {
         `/api/admin/roles/${roleId}/groups?${params.toString()}`,
       );
 
-      return { success: true, data };
+      return data;
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);
 
 /**
  * Fetch permissions assigned to a role
- *
- * @param {string} roleId - Role ID
- * @returns {Function} Redux thunk action
  */
-export function fetchRolePermissions(roleId) {
-  return async (dispatch, getState, { fetch }) => {
+export const fetchRolePermissions = createAsyncThunk(
+  'admin/roles/fetchRolePermissions',
+  async (roleId, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`/api/admin/roles/${roleId}/permissions`);
-
-      return { success: true, permissions: data.permissions || [] };
+      return data.permissions || [];
     } catch (error) {
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);

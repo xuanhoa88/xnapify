@@ -12,7 +12,7 @@ import clsx from 'clsx';
 import {
   fetchDashboard,
   getDashboardStats,
-  getDashboardLoading,
+  isDashboardLoading,
   getDashboardError,
   getDashboardRecentActivities,
 } from '../../../redux';
@@ -46,7 +46,7 @@ function Dashboard() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const stats = useSelector(getDashboardStats);
-  const loading = useSelector(getDashboardLoading);
+  const loading = useSelector(isDashboardLoading);
   const error = useSelector(getDashboardError);
   const recentActivities = useSelector(getDashboardRecentActivities);
 

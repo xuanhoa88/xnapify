@@ -8,10 +8,12 @@
 import {
   useEffect,
   useCallback,
+  useState,
   createContext,
   useContext,
   useRef,
 } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Button from '../../../Button';
@@ -53,10 +55,7 @@ function ActionsDropdown({
   useEffect(() => {
     if (!isOpen) return undefined;
 
-    const handleClickOutside = () => {
-      onToggle(null);
-    };
-
+    const handleClickOutside = () => onToggle(null);
     document.addEventListener('click', handleClickOutside);
     return () => document.removeEventListener('click', handleClickOutside);
   }, [isOpen, onToggle]);
@@ -113,31 +112,35 @@ Trigger.propTypes = {
   title: PropTypes.string,
 };
 
-// Menu container - uses fixed positioning to avoid clipping by overflow containers
+// Menu container - uses portal with fixed positioning to escape stacking contexts
 function Menu({ children, className }) {
   const ctx = useContext(ActionsDropdownContext);
+  const [position, setPosition] = useState({ top: 0, left: 0, right: 'auto' });
+
+  // Calculate position when menu opens
+  useEffect(() => {
+    if (!ctx.isOpen || !ctx.triggerRef.current) return;
+
+    const rect = ctx.triggerRef.current.getBoundingClientRect();
+    const newPosition = {
+      top: rect.bottom + 6,
+    };
+
+    if (ctx.align === 'right') {
+      newPosition.right = window.innerWidth - rect.right;
+      newPosition.left = 'auto';
+    } else {
+      newPosition.left = rect.left;
+      newPosition.right = 'auto';
+    }
+
+    setPosition(newPosition);
+  }, [ctx.isOpen, ctx.align, ctx.triggerRef]);
 
   if (!ctx.isOpen) return null;
 
-  // Calculate position synchronously when rendering
-  const rect =
-    ctx.triggerRef &&
-    ctx.triggerRef.current &&
-    ctx.triggerRef.current.getBoundingClientRect();
-
-  const position = {
-    top: rect ? rect.bottom + 6 : 0,
-  };
-
-  if (ctx.align === 'right') {
-    position.right = rect ? window.innerWidth - rect.right : 0;
-    position.left = 'auto';
-  } else {
-    position.left = rect ? rect.left : 0;
-    position.right = 'auto';
-  }
-
-  return (
+  // Use portal to render menu at body level, escaping any stacking context
+  return createPortal(
     <div
       className={clsx(s.menu, className)}
       style={{
@@ -152,7 +155,8 @@ function Menu({ children, className }) {
       tabIndex={-1}
     >
       {children}
-    </div>
+    </div>,
+    document.body,
   );
 }
 

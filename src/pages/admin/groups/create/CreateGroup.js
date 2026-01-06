@@ -6,9 +6,14 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
-import { createGroup, fetchRoles } from '../../../../redux';
+import {
+  createGroup,
+  fetchRoles,
+  isGroupCreateLoading,
+} from '../../../../redux';
 import {
   useInfiniteScroll,
   useDebounce,
@@ -19,7 +24,9 @@ import s from './CreateGroup.css';
 
 function CreateGroup() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
+  const loading = useSelector(isGroupCreateLoading);
 
   // Roles state for infinite loading
   const [roles, setRoles] = useState([]);
@@ -39,7 +46,6 @@ function CreateGroup() {
   });
   const [roleSearch, setRoleSearch] = useState('');
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
@@ -52,22 +58,22 @@ function CreateGroup() {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: rolesLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newRoles = result.data.roles || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newRoles = data.roles || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setRoles(newRoles);
-          } else {
-            setRoles(prev => [...prev, ...newRoles]);
-          }
-
-          setRolesHasMore(pagination && pagination.page < pagination.pages);
-          setRolesPage(page);
+        if (reset) {
+          setRoles(newRoles);
+        } else {
+          setRoles(prev => [...prev, ...newRoles]);
         }
+
+        setRolesHasMore(pagination && pagination.page < pagination.pages);
+        setRolesPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -129,21 +135,18 @@ function CreateGroup() {
       setError(null);
 
       if (!formData.name.trim()) {
-        setError('Group name is required');
+        setError(t('errors.groupNameRequired', 'Group name is required'));
         return;
       }
 
-      setLoading(true);
-      const result = await dispatch(createGroup(formData));
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(createGroup(formData)).unwrap();
         history.push('/admin/groups');
-      } else {
-        setError(result.error);
+      } catch (err) {
+        setError(err);
       }
     },
-    [dispatch, formData, history],
+    [dispatch, formData, history, t],
   );
 
   return (

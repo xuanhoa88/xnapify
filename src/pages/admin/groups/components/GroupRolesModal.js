@@ -14,12 +14,17 @@ import {
   useRef,
 } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
-import { fetchRoles, assignRolesToGroup, fetchGroups } from '../../../../redux';
+import {
+  fetchRoles,
+  assignRolesToGroup,
+  fetchGroups,
+  isGroupAssignRolesLoading,
+} from '../../../../redux';
 import s from './GroupRolesModal.css';
 
 /**
@@ -40,6 +45,7 @@ const ITEMS_PER_PAGE = 10;
 const GroupRolesModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const loading = useSelector(isGroupAssignRolesLoading);
 
   // Local roles state - fetched independently when modal opens
   const [roles, setRoles] = useState([]);
@@ -57,7 +63,6 @@ const GroupRolesModal = forwardRef((props, ref) => {
   const [isOpen, setIsOpen] = useState(false);
   const [group, setGroup] = useState(null);
   const [selections, setSelections] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Load roles function
@@ -65,27 +70,25 @@ const GroupRolesModal = forwardRef((props, ref) => {
     async (page = 1, search = '') => {
       setRolesLoading(true);
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: ITEMS_PER_PAGE, search }),
-        );
-        if (result.success && result.data) {
-          const { roles: fetchedRoles, pagination } = result.data;
-          if (Array.isArray(fetchedRoles)) {
-            setRoles(fetchedRoles);
-          }
-          if (pagination) {
-            setCurrentPage(pagination.page || page);
-            setTotalPages(pagination.pages || 1);
-            setTotalItems(pagination.total || 0);
-          }
+        ).unwrap();
+        const { roles: fetchedRoles, pagination } = data;
+        if (Array.isArray(fetchedRoles)) {
+          setRoles(fetchedRoles);
+        }
+        if (pagination) {
+          setCurrentPage(pagination.page || page);
+          setTotalPages(pagination.pages || 1);
+          setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError('Failed to load roles');
+        setError(err || t('errors.loadRoles', 'Failed to load roles'));
       } finally {
         setRolesLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // Fetch roles when modal opens or search/page changes
@@ -177,23 +180,18 @@ const GroupRolesModal = forwardRef((props, ref) => {
   }, [resetState]);
 
   const handleSave = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
-      const result = await dispatch(assignRolesToGroup(group.id, selections));
-      if (result.success) {
-        // Refresh groups list
-        dispatch(fetchGroups({ page: 1 }));
-        handleClose();
-      } else {
-        setError(result.error || 'Failed to assign roles');
-      }
+      await dispatch(
+        assignRolesToGroup({ groupId: group.id, roleNames: selections }),
+      ).unwrap();
+      // Refresh groups list
+      dispatch(fetchGroups({ page: 1 }));
+      handleClose();
     } catch (err) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+      setError(err || t('errors.assignRoles', 'An error occurred'));
     }
-  }, [dispatch, group, selections, handleClose]);
+  }, [dispatch, group, selections, handleClose, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>

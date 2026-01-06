@@ -5,7 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SYSTEM_ROLES } from '../../constants/rbac';
+import {
+  SYSTEM_ROLES,
+  DEFAULT_RESOURCES,
+  DEFAULT_ACTIONS,
+} from '../../constants/rbac';
 import { manageRolePermissions } from './rbac.service';
 import * as rbacCache from '../../utils/rbac/cache';
 
@@ -95,9 +99,28 @@ export async function getRoles(options, models) {
     order: [['name', 'ASC']],
   });
 
+  // Get total non-wildcard permissions count (for roles with wildcard)
+  const totalPermissionsCount = await Permission.count({
+    where: {
+      [Op.not]: {
+        [Op.and]: [
+          { resource: DEFAULT_RESOURCES.ALL },
+          { action: DEFAULT_ACTIONS.MANAGE },
+        ],
+      },
+    },
+  });
+
   // Fetch counts for each role
   const rolesWithCounts = await Promise.all(
     roles.map(async role => {
+      // Check if role has wildcard permission
+      const hasWildcard = role.permissions.some(
+        p =>
+          p.resource === DEFAULT_RESOURCES.ALL &&
+          p.action === DEFAULT_ACTIONS.MANAGE,
+      );
+
       const [usersCount, groupsCount, permissionsCount] = await Promise.all([
         User.count({
           include: [
@@ -119,16 +142,18 @@ export async function getRoles(options, models) {
             },
           ],
         }),
-        Permission.count({
-          include: [
-            {
-              model: Role,
-              as: 'roles',
-              where: { id: role.id },
-              required: true,
-            },
-          ],
-        }),
+        // If wildcard, return total count; otherwise count actual permissions
+        hasWildcard
+          ? Promise.resolve(totalPermissionsCount)
+          : Promise.resolve(
+              role.permissions.filter(
+                p =>
+                  !(
+                    p.resource === DEFAULT_RESOURCES.ALL &&
+                    p.action === DEFAULT_ACTIONS.MANAGE
+                  ),
+              ).length,
+            ),
       ]);
 
       return {
@@ -176,6 +201,37 @@ export async function getRoleById(role_id, models) {
     error.name = 'RoleNotFoundError';
     error.status = 404;
     throw error;
+  }
+
+  // Check if role has wildcard permission (*:manage or *:*)
+  const wildcardPerm = `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`;
+  const hasWildcard = role.permissions.some(
+    p => `${p.resource}:${p.action}` === wildcardPerm,
+  );
+
+  // If role has wildcard, expand to all individual permissions
+  if (hasWildcard) {
+    const allPermissions = await Permission.findAll({
+      where: {
+        is_active: true,
+      },
+      order: [
+        ['resource', 'ASC'],
+        ['action', 'ASC'],
+      ],
+    });
+
+    // Filter out the wildcard permission itself for UI display
+    const filteredPermissions = allPermissions.filter(
+      p => `${p.resource}:${p.action}` !== wildcardPerm,
+    );
+
+    // Return role with expanded permissions
+    return {
+      ...role.toJSON(),
+      permissions: filteredPermissions.map(p => p.toJSON()),
+      hasWildcardPermission: true, // Flag for UI to know this is wildcarded
+    };
   }
 
   return role;

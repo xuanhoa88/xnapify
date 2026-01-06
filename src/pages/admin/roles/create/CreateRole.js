@@ -6,9 +6,14 @@
  */
 
 import { useState, useCallback, useMemo, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
-import { createRole, fetchPermissions } from '../../../../redux';
+import {
+  createRole,
+  fetchPermissions,
+  isRoleCreateLoading,
+} from '../../../../redux';
 import {
   useInfiniteScroll,
   useDebounce,
@@ -19,7 +24,9 @@ import s from './CreateRole.css';
 
 function CreateRole() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
+  const loading = useSelector(isRoleCreateLoading);
 
   // Permissions state for infinite loading
   const [permissions, setPermissions] = useState([]);
@@ -36,7 +43,6 @@ function CreateRole() {
     permissions: [],
   });
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [permissionSearch, setPermissionSearch] = useState('');
   const confirmBackModalRef = useRef(null);
 
@@ -50,24 +56,22 @@ function CreateRole() {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchPermissions({ page, limit: permissionsLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newPermissions = result.data.permissions || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newPermissions = data.permissions || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setPermissions(newPermissions);
-          } else {
-            setPermissions(prev => [...prev, ...newPermissions]);
-          }
-
-          setPermissionsHasMore(
-            pagination && pagination.page < pagination.pages,
-          );
-          setPermissionsPage(page);
+        if (reset) {
+          setPermissions(newPermissions);
+        } else {
+          setPermissions(prev => [...prev, ...newPermissions]);
         }
+
+        setPermissionsHasMore(pagination && pagination.page < pagination.pages);
+        setPermissionsPage(page);
+      } catch (err) {
+        // Silently handle permission loading errors
       } finally {
         setPermissionsLoading(false);
         setPermissionsLoadingMore(false);
@@ -135,21 +139,18 @@ function CreateRole() {
       setError(null);
 
       if (!formData.name.trim()) {
-        setError('Role name is required');
+        setError(t('errors.roleNameRequired', 'Role name is required'));
         return;
       }
 
-      setLoading(true);
-      const result = await dispatch(createRole(formData));
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(createRole(formData)).unwrap();
         history.push('/admin/roles');
-      } else {
-        setError(result.error);
+      } catch (err) {
+        setError(err);
       }
     },
-    [dispatch, formData, history],
+    [dispatch, formData, history, t],
   );
 
   // Group permissions by resource for better organization

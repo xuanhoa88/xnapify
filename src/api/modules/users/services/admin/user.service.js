@@ -354,7 +354,7 @@ export async function updateUserById(user_id, userData, models) {
   }
 
   // Update roles if provided
-  if (roles !== undefined && Array.isArray(roles)) {
+  if (roles != null && Array.isArray(roles)) {
     // Remove all existing roles
     await user.setRoles([]);
 
@@ -370,7 +370,7 @@ export async function updateUserById(user_id, userData, models) {
   }
 
   // Update groups if provided
-  if (groups !== undefined && Array.isArray(groups)) {
+  if (groups != null && Array.isArray(groups)) {
     // Remove all existing groups
     await user.setGroups([]);
 

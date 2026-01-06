@@ -5,95 +5,111 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(state && state.admin && state.admin.groups);
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
+};
+
+const getGroupsState = state => {
+  const normalized = normalizeState(state && state.admin && state.admin.groups);
+  return normalized.data;
+};
+
+// =============================================================================
+// DATA SELECTORS
+// =============================================================================
+
 /**
  * Get all groups
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of group objects
  */
-export const getGroups = state => state.admin.groups.items;
+export const getGroups = state => {
+  const data = getGroupsState(state);
+  return (data && data.groups) || [];
+};
 
 /**
  * Get groups pagination
- *
- * @param {Object} state - Redux state
- * @returns {Object} Pagination object
  */
-export const getGroupsPagination = state => state.admin.groups.pagination;
+export const getGroupsPagination = state => {
+  const data = getGroupsState(state);
+  return (data && data.pagination) || null;
+};
 
 /**
- * Get groups loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if groups are loading
+ * Check if groups list has been fetched at least once
  */
-export const getGroupsLoading = state => state.admin.groups.loading;
+export const isGroupsListInitialized = state => {
+  const data = getGroupsState(state);
+  return !!(data && data.initialized && data.initialized.list);
+};
 
 /**
- * Get groups error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
+ * Check if single group fetch has been completed at least once
  */
-export const getGroupsError = state => state.admin.groups.error;
+export const isGroupFetchInitialized = state => {
+  const data = getGroupsState(state);
+  return !!(data && data.initialized && data.initialized.fetch);
+};
+
+/**
+ * Get the fetched group (single group fetched by ID)
+ */
+export const getFetchedGroup = state => {
+  const data = getGroupsState(state);
+  return (data && data.fetchedGroup) || null;
+};
 
 /**
  * Get group by ID
- *
- * @param {Object} state - Redux state
- * @param {string} groupId - Group ID
- * @returns {Object|undefined} Group object or undefined
  */
-export const getGroupById = (state, groupId) =>
-  state.admin.groups.items.find(group => group.id === groupId);
+export const getGroupById = (state, groupId) => {
+  const groups = getGroups(state);
+  return groups.find(group => group.id === groupId);
+};
 
 /**
  * Get roles for a specific group
- *
- * @param {Object} state - Redux state
- * @param {string} groupId - Group ID
- * @returns {Array} Array of role objects for the group
  */
 export const getGroupRoles = (state, groupId) => {
-  const group = state.admin.groups.items.find(g => g.id === groupId);
+  const group = getGroupById(state, groupId);
   return (group && group.roles) || [];
 };
 
 /**
  * Get groups that have at least one role assigned
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of group objects with roles
  */
-export const getGroupsWithRoles = state =>
-  state.admin.groups.items.filter(
-    group => group.roles && group.roles.length > 0,
-  );
+export const getGroupsWithRoles = state => {
+  const groups = getGroups(state);
+  return groups.filter(group => group.roles && group.roles.length > 0);
+};
 
 /**
  * Get groups filtered by role name
- *
- * @param {Object} state - Redux state
- * @param {string} roleName - Role name to filter by
- * @returns {Array} Array of group objects with the specified role
  */
-export const getGroupsByRoleName = (state, roleName) =>
-  state.admin.groups.items.filter(
+export const getGroupsByRoleName = (state, roleName) => {
+  const groups = getGroups(state);
+  return groups.filter(
     group =>
       group.roles &&
       group.roles.some(
         role => role.name.toLowerCase() === roleName.toLowerCase(),
       ),
   );
+};
 
 /**
  * Get total role count across all groups
- *
- * @param {Object} state - Redux state
- * @returns {number} Total number of group-role assignments
  */
-export const getTotalGroupRoleCount = state =>
-  state.admin.groups.items.reduce(
+export const getTotalGroupRoleCount = state => {
+  const groups = getGroups(state);
+  return groups.reduce(
     (total, group) =>
       total +
       ((group &&
@@ -102,3 +118,102 @@ export const getTotalGroupRoleCount = state =>
         0),
     0,
   );
+};
+
+// =============================================================================
+// LIST OPERATION (fetchGroups)
+// =============================================================================
+
+export const isGroupsListLoading = state => {
+  const op = getOperationState(state, 'list');
+  return !!(op && op.loading);
+};
+
+export const getGroupsListError = state => {
+  const op = getOperationState(state, 'list');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH OPERATION (fetchGroupById)
+// =============================================================================
+
+export const isGroupFetchLoading = state => {
+  const op = getOperationState(state, 'fetch');
+  return !!(op && op.loading);
+};
+
+export const getGroupFetchError = state => {
+  const op = getOperationState(state, 'fetch');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// CREATE OPERATION (createGroup)
+// =============================================================================
+
+export const isGroupCreateLoading = state => {
+  const op = getOperationState(state, 'create');
+  return !!(op && op.loading);
+};
+
+export const getGroupCreateError = state => {
+  const op = getOperationState(state, 'create');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// UPDATE OPERATION (updateGroup)
+// =============================================================================
+
+export const isGroupUpdateLoading = state => {
+  const op = getOperationState(state, 'update');
+  return !!(op && op.loading);
+};
+
+export const getGroupUpdateError = state => {
+  const op = getOperationState(state, 'update');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// DELETE OPERATION (deleteGroup)
+// =============================================================================
+
+export const isGroupDeleteLoading = state => {
+  const op = getOperationState(state, 'delete');
+  return !!(op && op.loading);
+};
+
+export const getGroupDeleteError = state => {
+  const op = getOperationState(state, 'delete');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// ASSIGN ROLES OPERATION (assignRolesToGroup)
+// =============================================================================
+
+export const isGroupAssignRolesLoading = state => {
+  const op = getOperationState(state, 'assignRoles');
+  return !!(op && op.loading);
+};
+
+export const getGroupAssignRolesError = state => {
+  const op = getOperationState(state, 'assignRoles');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH PERMISSIONS OPERATION (fetchGroupPermissions)
+// =============================================================================
+
+export const isGroupFetchPermissionsLoading = state => {
+  const op = getOperationState(state, 'fetchPermissions');
+  return !!(op && op.loading);
+};
+
+export const getGroupFetchPermissionsError = state => {
+  const op = getOperationState(state, 'fetchPermissions');
+  return (op && op.error) || null;
+};

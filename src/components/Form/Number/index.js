@@ -92,9 +92,7 @@ const FormNumberInput = forwardRef(function FormNumberInput$(
         type='button'
         className={s.button}
         onClick={increment}
-        disabled={
-          disabled || (max !== undefined && Number(currentValue) >= max)
-        }
+        disabled={disabled || (max != null && Number(currentValue) >= max)}
         aria-label='Increase'
         tabIndex={-1}
       >

@@ -6,13 +6,15 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
 import {
   createUser,
   fetchRoles,
   fetchGroups,
   generatePassword,
+  isUserCreateLoading,
 } from '../../../../redux';
 import {
   useInfiniteScroll,
@@ -24,7 +26,9 @@ import s from './CreateUser.css';
 
 function CreateUser() {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
+  const loading = useSelector(isUserCreateLoading);
 
   // Roles state for infinite loading
   const [roles, setRoles] = useState([]);
@@ -56,7 +60,6 @@ function CreateUser() {
     is_active: true,
   });
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [roleSearch, setRoleSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -73,22 +76,22 @@ function CreateUser() {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: rolesLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newRoles = result.data.roles || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newRoles = data.roles || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setRoles(newRoles);
-          } else {
-            setRoles(prev => [...prev, ...newRoles]);
-          }
-
-          setRolesHasMore(pagination && pagination.page < pagination.pages);
-          setRolesPage(page);
+        if (reset) {
+          setRoles(newRoles);
+        } else {
+          setRoles(prev => [...prev, ...newRoles]);
         }
+
+        setRolesHasMore(pagination && pagination.page < pagination.pages);
+        setRolesPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -128,22 +131,22 @@ function CreateUser() {
       }
 
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchGroups({ page, limit: groupsLimit, search }),
-        );
-        if (result.success && result.data) {
-          const newGroups = result.data.groups || [];
-          const { pagination } = result.data;
+        ).unwrap();
+        const newGroups = data.groups || [];
+        const { pagination } = data;
 
-          if (reset) {
-            setGroups(newGroups);
-          } else {
-            setGroups(prev => [...prev, ...newGroups]);
-          }
-
-          setGroupsHasMore(pagination && pagination.page < pagination.pages);
-          setGroupsPage(page);
+        if (reset) {
+          setGroups(newGroups);
+        } else {
+          setGroups(prev => [...prev, ...newGroups]);
         }
+
+        setGroupsHasMore(pagination && pagination.page < pagination.pages);
+        setGroupsPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setGroupsLoading(false);
         setGroupsLoadingMore(false);
@@ -212,23 +215,21 @@ function CreateUser() {
   const handleGeneratePassword = useCallback(async () => {
     setGeneratingPassword(true);
     try {
-      const result = await dispatch(generatePassword());
-      if (result.success && result.password) {
-        setFormData(prev => ({
-          ...prev,
-          password: result.password,
-          confirm_password: result.password,
-        }));
-        setShowPassword(true);
-      } else {
-        setError(result.error || 'Failed to generate password');
-      }
+      const password = await dispatch(generatePassword()).unwrap();
+      setFormData(prev => ({
+        ...prev,
+        password: password,
+        confirm_password: password,
+      }));
+      setShowPassword(true);
     } catch (err) {
-      setError('Failed to generate password');
+      setError(
+        err || t('errors.generatePassword', 'Failed to generate password'),
+      );
     } finally {
       setGeneratingPassword(false);
     }
-  }, [dispatch]);
+  }, [dispatch, t]);
 
   const handleSubmit = useCallback(
     async e => {
@@ -236,26 +237,23 @@ function CreateUser() {
       setError(null);
 
       if (formData.password !== formData.confirm_password) {
-        setError('Passwords do not match');
+        setError(t('errors.passwordMatch', 'Passwords do not match'));
         return;
       }
 
       if (formData.roles.length === 0) {
-        setError('Please select at least one role');
+        setError(t('errors.selectRole', 'Please select at least one role'));
         return;
       }
 
-      setLoading(true);
-      const result = await dispatch(createUser(formData));
-      setLoading(false);
-
-      if (result.success) {
+      try {
+        await dispatch(createUser(formData)).unwrap();
         history.push('/admin/users');
-      } else {
-        setError(result.error);
+      } catch (err) {
+        setError(err);
       }
     },
-    [dispatch, formData, history],
+    [dispatch, formData, history, t],
   );
 
   return (

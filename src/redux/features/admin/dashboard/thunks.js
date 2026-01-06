@@ -5,11 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  fetchDashboardStart,
-  fetchDashboardSuccess,
-  fetchDashboardError,
-} from './slice';
+import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
  * Dashboard Thunks
@@ -20,23 +16,15 @@ import {
  *
  * Retrieves system-wide statistics including user counts, role counts,
  * system status, and recent user activity.
- *
- * @returns {Function} Redux thunk action
  */
-export function fetchDashboard() {
-  return async (dispatch, getState, { fetch }) => {
-    dispatch(fetchDashboardStart());
-
+export const fetchDashboard = createAsyncThunk(
+  'admin/dashboard/fetchDashboard',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/users/dashboard');
-
-      dispatch(fetchDashboardSuccess(data));
-
-      return { success: true, data };
+      return data;
     } catch (error) {
-      dispatch(fetchDashboardError(error.message));
-
-      return { success: false, error: error.message };
+      return rejectWithValue(error.message);
     }
-  };
-}
+  },
+);

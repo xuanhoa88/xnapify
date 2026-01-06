@@ -11,5 +11,20 @@ export * from './thunks';
 // Public API - Selectors
 export * from './selector';
 
+// Public API - Actions (from slice)
+export {
+  // Per-operation error clear actions
+  clearUsersListError,
+  clearUserFetchError,
+  clearUserCreateError,
+  clearUserUpdateError,
+  clearUserBulkStatusError,
+  clearUserBulkDeleteError,
+  clearUserPermissionsError,
+  // Utility actions
+  clearUserPermissions,
+  resetUsersState,
+} from './slice';
+
 // Public API - Reducer
 export { default } from './slice';

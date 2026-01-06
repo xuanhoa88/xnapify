@@ -48,8 +48,7 @@ class WebSocketServer extends EventEmitter {
 
     // Configuration - handle false values explicitly
     this.config = {
-      path:
-        options.path !== undefined ? options.path : DefaultConfig.SERVER_PATH,
+      path: options.path != null ? options.path : DefaultConfig.SERVER_PATH,
       authTimeout: options.authTimeout || DefaultConfig.AUTH_TIMEOUT,
       onAuthentication:
         typeof options.onAuthentication === 'function'
@@ -58,7 +57,7 @@ class WebSocketServer extends EventEmitter {
       heartbeatInterval:
         options.heartbeatInterval || DefaultConfig.HEARTBEAT_INTERVAL,
       enableLogging:
-        options.enableLogging !== undefined
+        options.enableLogging != null
           ? options.enableLogging
           : DefaultConfig.ENABLE_LOGGING,
       logLevel: options.logLevel || DefaultConfig.LOG_LEVEL,

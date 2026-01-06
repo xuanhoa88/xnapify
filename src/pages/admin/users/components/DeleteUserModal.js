@@ -5,11 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { useDispatch } from 'react-redux';
+import {
+  useState,
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+  useMemo,
+} from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkDeleteUsers } from '../../../../redux';
+import { bulkDeleteUsers, getUserProfile } from '../../../../redux';
 
 /**
  * DeleteUserModal - Self-contained modal for deleting users (single or bulk)
@@ -22,6 +28,7 @@ import { bulkDeleteUsers } from '../../../../redux';
  */
 const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
+  const currentUser = useSelector(getUserProfile);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
@@ -60,36 +67,57 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
 
   const handleConfirm = useCallback(async () => {
     if (!data) return;
+
+    // Filter out current user's ID to prevent self-deletion
+    const idsToDelete = currentUser
+      ? data.ids.filter(id => id !== currentUser.id)
+      : data.ids;
+
+    if (idsToDelete.length === 0) {
+      setError('You cannot delete your own account.');
+      return;
+    }
+
     setDeleting(true);
     setError(null);
-    const result = await dispatch(bulkDeleteUsers(data.ids));
-    setDeleting(false);
-    if (result.success) {
+    try {
+      await dispatch(bulkDeleteUsers(idsToDelete)).unwrap();
       resetState();
-      onSuccess && onSuccess(data);
-    } else {
-      setError(result.error);
+      onSuccess && onSuccess({ ...data, ids: idsToDelete });
+    } catch (err) {
+      setError(err);
+    } finally {
+      setDeleting(false);
     }
-  }, [dispatch, data, resetState, onSuccess]);
+  }, [dispatch, data, resetState, onSuccess, currentUser]);
 
   // Generate display name
-  const getDisplayName = () => {
+  const displayName = useMemo(() => {
     if (data && data.items && data.items.length === 1) {
       const user = data.items[0];
       return `"${user.display_name || user.email}"`;
     }
     const count = data && data.ids ? data.ids.length : 0;
     return `${count} user(s)`;
-  };
+  }, [data]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>Delete User(s)</Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete {getDisplayName()}? This action cannot
-          be undone.
+          Are you sure you want to delete {displayName}? This action cannot be
+          undone.
         </Modal.Description>
+        {currentUser &&
+          data &&
+          data.ids &&
+          data.ids.includes(currentUser.id) && (
+            <Modal.Description>
+              <strong>Note:</strong> Your own account will be excluded from
+              deletion.
+            </Modal.Description>
+          )}
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>

@@ -90,7 +90,7 @@ function Pagination({
 
   return (
     <div className={s.root}>
-      {showInfo && totalItems !== undefined && (
+      {showInfo && totalItems != null && (
         <span className={s.info}>
           {totalItems} total · Page {currentPage} of {totalPages}
         </span>

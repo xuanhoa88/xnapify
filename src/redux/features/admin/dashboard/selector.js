@@ -5,35 +5,57 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+const getDashboardState = state => {
+  const normalized = normalizeState(
+    state && state.admin && state.admin.dashboard,
+  );
+  return normalized.data;
+};
+
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(
+    state && state.admin && state.admin.dashboard,
+  );
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
+};
+
+// =============================================================================
+// DATA SELECTORS
+// =============================================================================
+
 /**
  * Get dashboard stats
- *
- * @param {Object} state - Redux state
- * @returns {Object} Dashboard statistics
  */
-export const getDashboardStats = state => state.admin.dashboard.stats;
+export const getDashboardStats = state => {
+  const data = getDashboardState(state);
+  return data && data.stats;
+};
 
 /**
  * Get recent activities
- *
- * @param {Object} state - Redux state
- * @returns {Array} Recent activity items
  */
-export const getDashboardRecentActivities = state =>
-  state.admin.dashboard.recentActivities;
+export const getDashboardRecentActivities = state => {
+  const data = getDashboardState(state);
+  return (data && data.recentActivities) || [];
+};
 
-/**
- * Get dashboard loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if dashboard is loading
- */
-export const getDashboardLoading = state => state.admin.dashboard.loading;
+// =============================================================================
+// FETCH OPERATION (fetchDashboard)
+// =============================================================================
 
-/**
- * Get dashboard error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
- */
-export const getDashboardError = state => state.admin.dashboard.error;
+export const isDashboardLoading = state => {
+  const op = getOperationState(state, 'fetch');
+  return !!(op && op.loading);
+};
+
+export const getDashboardError = state => {
+  const op = getOperationState(state, 'fetch');
+  return (op && op.error) || null;
+};

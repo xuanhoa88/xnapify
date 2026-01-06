@@ -13,12 +13,17 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
-import { assignGroupsToUser, fetchGroups } from '../../../../redux';
+import {
+  assignGroupsToUser,
+  fetchGroups,
+  isUserAssignGroupsLoading,
+} from '../../../../redux';
 import s from './UserGroupsModal.css';
 
 /**
@@ -39,6 +44,8 @@ const ITEMS_PER_PAGE = 10;
 
 const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const loading = useSelector(isUserAssignGroupsLoading);
 
   // Local groups state - fetched independently when modal opens
   const [groups, setGroups] = useState([]);
@@ -58,7 +65,6 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   const [isBulk, setIsBulk] = useState(false);
   const [bulkUserIds, setBulkUserIds] = useState([]);
   const [selections, setSelections] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Load groups function
@@ -66,28 +72,26 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
     async (page = 1, search = '') => {
       setGroupsLoading(true);
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchGroups({ page, limit: ITEMS_PER_PAGE, search }),
-        );
-        if (result.success && result.data) {
-          if (Array.isArray(result.data.groups)) {
-            setGroups(result.data.groups);
-          }
+        ).unwrap();
+        if (Array.isArray(data.groups)) {
+          setGroups(data.groups);
+        }
 
-          const { pagination } = result.data;
-          if (pagination) {
-            setCurrentPage(pagination.page || page);
-            setTotalPages(pagination.pages || 1);
-            setTotalItems(pagination.total || 0);
-          }
+        const { pagination } = data;
+        if (pagination) {
+          setCurrentPage(pagination.page || page);
+          setTotalPages(pagination.pages || 1);
+          setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError('Failed to load groups');
+        setError(err || t('errors.loadGroups', 'Failed to load groups'));
       } finally {
         setGroupsLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // Fetch groups when modal opens or search/page changes
@@ -192,27 +196,30 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   }, [resetState]);
 
   const handleSave = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const targetUsers = isBulk ? bulkUserIds : [user.id];
       for (const userId of targetUsers) {
-        const result = await dispatch(assignGroupsToUser(userId, selections));
-        if (!result.success) {
-          setError(result.error || 'Failed to assign groups');
-          setLoading(false);
-          return;
-        }
+        await dispatch(
+          assignGroupsToUser({ userId, groupIds: selections }),
+        ).unwrap();
       }
       // Call success callback
       onSuccess && onSuccess();
       handleClose();
     } catch (err) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+      setError(err || t('errors.assignGroups', 'Failed to assign groups'));
     }
-  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose, onSuccess]);
+  }, [
+    dispatch,
+    isBulk,
+    bulkUserIds,
+    user,
+    selections,
+    handleClose,
+    onSuccess,
+    t,
+  ]);
 
   const description = isBulk
     ? 'Select groups to assign to the selected users.'

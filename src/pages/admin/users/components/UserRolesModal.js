@@ -13,12 +13,17 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
-import { fetchRoles, assignRolesToUser } from '../../../../redux';
+import {
+  fetchRoles,
+  assignRolesToUser,
+  isUserAssignRolesLoading,
+} from '../../../../redux';
 import s from './UserRolesModal.css';
 
 /**
@@ -39,6 +44,8 @@ const ITEMS_PER_PAGE = 10;
 
 const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const loading = useSelector(isUserAssignRolesLoading);
 
   // Local roles state - fetched independently when modal opens
   const [roles, setRoles] = useState([]);
@@ -58,7 +65,6 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   const [isBulk, setIsBulk] = useState(false);
   const [bulkUserIds, setBulkUserIds] = useState([]);
   const [selections, setSelections] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   // Load roles function
@@ -66,27 +72,25 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
     async (page = 1, search = '') => {
       setRolesLoading(true);
       try {
-        const result = await dispatch(
+        const data = await dispatch(
           fetchRoles({ page, limit: ITEMS_PER_PAGE, search }),
-        );
-        if (result.success && result.data) {
-          const { roles, pagination } = result.data;
-          if (Array.isArray(roles)) {
-            setRoles(roles);
-          }
-          if (pagination) {
-            setCurrentPage(pagination.page || page);
-            setTotalPages(pagination.pages || 1);
-            setTotalItems(pagination.total || 0);
-          }
+        ).unwrap();
+        const { roles, pagination } = data;
+        if (Array.isArray(roles)) {
+          setRoles(roles);
+        }
+        if (pagination) {
+          setCurrentPage(pagination.page || page);
+          setTotalPages(pagination.pages || 1);
+          setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError('Failed to load roles');
+        setError(err || t('errors.loadRoles', 'Failed to load roles'));
       } finally {
         setRolesLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // Fetch roles when modal opens or search/page changes
@@ -193,27 +197,30 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   }, [resetState]);
 
   const handleSave = useCallback(async () => {
-    setLoading(true);
     setError(null);
     try {
       const targetUsers = isBulk ? bulkUserIds : [user.id];
       for (const userId of targetUsers) {
-        const result = await dispatch(assignRolesToUser(userId, selections));
-        if (!result.success) {
-          setError(result.error || 'Failed to assign roles');
-          setLoading(false);
-          return;
-        }
+        await dispatch(
+          assignRolesToUser({ userId, roleNames: selections }),
+        ).unwrap();
       }
       // Call success callback
       onSuccess && onSuccess();
       handleClose();
     } catch (err) {
-      setError(err.message || 'An error occurred');
-    } finally {
-      setLoading(false);
+      setError(err || t('errors.assignRoles', 'Failed to assign roles'));
     }
-  }, [dispatch, isBulk, bulkUserIds, user, selections, handleClose, onSuccess]);
+  }, [
+    dispatch,
+    isBulk,
+    bulkUserIds,
+    user,
+    selections,
+    handleClose,
+    onSuccess,
+    t,
+  ]);
 
   const description = isBulk
     ? 'Select roles to assign to the selected users.'

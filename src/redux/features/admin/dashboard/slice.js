@@ -6,8 +6,16 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
+import { fetchDashboard } from './thunks';
 
-const initialState = {
+// =============================================================================
+// STATE SHAPE
+// =============================================================================
+
+/**
+ * Default dashboard state values
+ */
+const DEFAULT_DASHBOARD_DATA = Object.freeze({
   stats: {
     totalUsers: 0,
     totalGroups: 0,
@@ -17,9 +25,37 @@ const initialState = {
     uptime: '0%',
   },
   recentActivities: [],
-  loading: false,
-  error: null,
+});
+
+/**
+ * Create fresh initial state
+ */
+const createFreshState = () => ({
+  data: { ...DEFAULT_DASHBOARD_DATA },
+  operations: {
+    fetch: { loading: false, error: null },
+  },
+});
+
+/**
+ * Normalize state - ensures consistent state shape
+ */
+export const normalizeState = state => {
+  if (!state) return createFreshState();
+
+  return {
+    data: state.data || { ...DEFAULT_DASHBOARD_DATA },
+    operations: state.operations || {
+      fetch: { loading: false, error: null },
+    },
+  };
 };
+
+const initialState = createFreshState();
+
+// =============================================================================
+// SLICE DEFINITION
+// =============================================================================
 
 /**
  * Dashboard Slice
@@ -30,27 +66,32 @@ const dashboardSlice = createSlice({
   name: 'admin/dashboard',
   initialState,
   reducers: {
-    fetchDashboardStart: state => {
-      state.loading = true;
-      state.error = null;
+    clearDashboardError: state => {
+      if (state.operations) {
+        state.operations.fetch.error = null;
+      }
     },
-    fetchDashboardSuccess: (state, action) => {
-      state.loading = false;
-      state.stats = action.payload.stats || initialState.stats;
-      state.recentActivities = action.payload.recentActivities || [];
-      state.error = null;
-    },
-    fetchDashboardError: (state, action) => {
-      state.loading = false;
-      state.error = action.payload;
-    },
+  },
+  extraReducers: builder => {
+    builder
+      // Fetch dashboard
+      .addCase(fetchDashboard.pending, state => {
+        state.operations.fetch.loading = true;
+        state.operations.fetch.error = null;
+      })
+      .addCase(fetchDashboard.fulfilled, (state, action) => {
+        state.operations.fetch.loading = false;
+        state.operations.fetch.error = null;
+        state.data.stats = action.payload.stats || DEFAULT_DASHBOARD_DATA.stats;
+        state.data.recentActivities = action.payload.recentActivities || [];
+      })
+      .addCase(fetchDashboard.rejected, (state, action) => {
+        state.operations.fetch.loading = false;
+        state.operations.fetch.error = action.payload || action.error.message;
+      });
   },
 });
 
-export const {
-  fetchDashboardStart,
-  fetchDashboardSuccess,
-  fetchDashboardError,
-} = dashboardSlice.actions;
+export const { clearDashboardError } = dashboardSlice.actions;
 
 export default dashboardSlice.reducer;

@@ -12,10 +12,12 @@ import {
   fetchUsers,
   getUsers,
   getUsersPagination,
-  getUsersLoading,
-  getUsersError,
+  isUsersListLoading,
+  isUsersListInitialized,
+  getUsersListError,
   fetchGroups,
   fetchRoles,
+  getUserProfile,
 } from '../../../redux';
 import { useHistory } from '../../../components/History';
 import {
@@ -53,8 +55,10 @@ function Users() {
   const history = useHistory();
   const users = useSelector(getUsers);
   const pagination = useSelector(getUsersPagination);
-  const loading = useSelector(getUsersLoading);
-  const error = useSelector(getUsersError);
+  const loading = useSelector(isUsersListLoading);
+  const initialized = useSelector(isUsersListInitialized);
+  const error = useSelector(getUsersListError);
+  const currentUser = useSelector(getUserProfile);
 
   // Use hooks for filter dropdowns with caching
   const {
@@ -242,7 +246,8 @@ function Users() {
     refreshUsers();
   }, [clearSelection, refreshUsers]);
 
-  if (loading && users.length === 0) {
+  // Show loading on first fetch (not initialized) or when loading with no data
+  if (!initialized || (loading && users.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -419,7 +424,12 @@ function Users() {
                       name={user.display_name || user.email}
                       size='small'
                     />
-                    <span>{user.display_name || user.email}</span>
+                    <span>
+                      {user.display_name || user.email}
+                      {currentUser && currentUser.id === user.id && (
+                        <span className={s.youBadge}> (You)</span>
+                      )}
+                    </span>
                   </div>
                 </td>
                 <td>{user.email}</td>
@@ -452,7 +462,12 @@ function Users() {
                       variant='ghost'
                       size='small'
                       iconOnly
-                      title='Edit'
+                      title={
+                        currentUser && currentUser.id === user.id
+                          ? 'Cannot edit your own account'
+                          : 'Edit'
+                      }
+                      disabled={currentUser && currentUser.id === user.id}
                       onClick={() =>
                         history.push(`/admin/users/${user.id}/edit`)
                       }
@@ -463,7 +478,12 @@ function Users() {
                       variant='ghost'
                       size='small'
                       iconOnly
-                      title='Delete'
+                      title={
+                        currentUser && currentUser.id === user.id
+                          ? 'Cannot delete your own account'
+                          : 'Delete'
+                      }
+                      disabled={currentUser && currentUser.id === user.id}
                       onClick={() => handleDelete(user)}
                     >
                       <Icon name='trash' size={16} />

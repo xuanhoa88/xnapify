@@ -11,5 +11,8 @@ export * from './thunks';
 // Public API - Selectors
 export * from './selector';
 
+// Public API - Actions
+export { clearDashboardError } from './slice';
+
 // Public API - Reducer
 export { default } from './slice';

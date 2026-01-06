@@ -60,14 +60,14 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
     if (!group) return;
     setDeleting(true);
     setError(null);
-    const result = await dispatch(deleteGroup(group.id));
-    setDeleting(false);
-    if (result.success) {
+    try {
+      await dispatch(deleteGroup(group.id)).unwrap();
       resetState();
-      // Call success callback if provided
       onSuccess && onSuccess(group);
-    } else {
-      setError(result.error);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setDeleting(false);
     }
   }, [dispatch, group, resetState, onSuccess]);
 

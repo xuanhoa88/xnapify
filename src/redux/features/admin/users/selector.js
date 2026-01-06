@@ -5,70 +5,227 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './slice';
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Safely get nested property from state
+ */
+const getOperationState = (state, operationKey) => {
+  const normalized = normalizeState(state && state.admin && state.admin.users);
+  if (!normalized.operations) return null;
+  return normalized.operations[operationKey] || null;
+};
+
+/**
+ * Get users data from state (handles all formats)
+ */
+const getUsersState = state => {
+  const normalized = normalizeState(state && state.admin && state.admin.users);
+  return normalized.data;
+};
+
+/**
+ * Get permissions state
+ */
+const getPermissionsState = state => {
+  const normalized = normalizeState(state && state.admin && state.admin.users);
+  return normalized.permissions;
+};
+
+// =============================================================================
+// DATA SELECTORS
+// =============================================================================
+
 /**
  * Get all users
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of user objects
  */
-export const getUsers = state => state.admin.users.users;
+export const getUsers = state => {
+  const data = getUsersState(state);
+  return (data && data.users) || [];
+};
 
 /**
  * Get users pagination
- *
- * @param {Object} state - Redux state
- * @returns {Object|null} Pagination object
  */
-export const getUsersPagination = state => state.admin.users.pagination;
+export const getUsersPagination = state => {
+  const data = getUsersState(state);
+  return (data && data.pagination) || null;
+};
 
 /**
- * Get users loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if users are loading
+ * Check if users list has been fetched at least once
  */
-export const getUsersLoading = state => state.admin.users.loading;
+export const isUsersListInitialized = state => {
+  const data = getUsersState(state);
+  return !!(data && data.initialized && data.initialized.list);
+};
 
 /**
- * Get users error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
+ * Check if single user fetch has been completed at least once
  */
-export const getUsersError = state => state.admin.users.error;
+export const isUserFetchInitialized = state => {
+  const data = getUsersState(state);
+  return !!(data && data.initialized && data.initialized.fetch);
+};
+
+/**
+ * Get the fetched user (single user fetched by ID)
+ */
+export const getFetchedUser = state => {
+  const data = getUsersState(state);
+  return (data && data.fetchedUser) || null;
+};
 
 /**
  * Get user by ID
- *
- * @param {Object} state - Redux state
- * @param {string} id - User ID
- * @returns {Object|undefined} User object or undefined
  */
-export const getUserById = (state, id) =>
-  state.admin.users.users.find(user => user.id === id);
+export const getUserById = (state, id) => {
+  const users = getUsers(state);
+  return users.find(user => user.id === id);
+};
 
 /**
- * Get user permissions
- *
- * @param {Object} state - Redux state
- * @returns {Array} Array of permission strings
+ * Get user permissions items
  */
-export const getUserPermissions = state => state.admin.users.permissions.items;
+export const getUserPermissions = state => {
+  const permissions = getPermissionsState(state);
+  return (permissions && permissions.items) || [];
+};
 
 /**
- * Get user permissions loading state
- *
- * @param {Object} state - Redux state
- * @returns {boolean} True if permissions are loading
+ * Get user permissions userId
  */
-export const getUserPermissionsLoading = state =>
-  state.admin.users.permissions.loading;
+export const getUserPermissionsUserId = state => {
+  const permissions = getPermissionsState(state);
+  return (permissions && permissions.userId) || null;
+};
 
-/**
- * Get user permissions error
- *
- * @param {Object} state - Redux state
- * @returns {string|null} Error message or null
- */
-export const getUserPermissionsError = state =>
-  state.admin.users.permissions.error;
+// =============================================================================
+// LIST OPERATION (fetchUsers)
+// =============================================================================
+
+export const isUsersListLoading = state => {
+  const op = getOperationState(state, 'list');
+  return !!(op && op.loading);
+};
+
+export const getUsersListError = state => {
+  const op = getOperationState(state, 'list');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// FETCH OPERATION (fetchUserById)
+// =============================================================================
+
+export const isUserFetchLoading = state => {
+  const op = getOperationState(state, 'fetch');
+  return !!(op && op.loading);
+};
+
+export const getUserFetchError = state => {
+  const op = getOperationState(state, 'fetch');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// CREATE OPERATION (createUser)
+// =============================================================================
+
+export const isUserCreateLoading = state => {
+  const op = getOperationState(state, 'create');
+  return !!(op && op.loading);
+};
+
+export const getUserCreateError = state => {
+  const op = getOperationState(state, 'create');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// UPDATE OPERATION (updateUser)
+// =============================================================================
+
+export const isUserUpdateLoading = state => {
+  const op = getOperationState(state, 'update');
+  return !!(op && op.loading);
+};
+
+export const getUserUpdateError = state => {
+  const op = getOperationState(state, 'update');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// BULK STATUS OPERATION (bulkUpdateUserStatus)
+// =============================================================================
+
+export const isUserBulkStatusLoading = state => {
+  const op = getOperationState(state, 'bulkStatus');
+  return !!(op && op.loading);
+};
+
+export const getUserBulkStatusError = state => {
+  const op = getOperationState(state, 'bulkStatus');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// BULK DELETE OPERATION (bulkDeleteUsers)
+// =============================================================================
+
+export const isUserBulkDeleteLoading = state => {
+  const op = getOperationState(state, 'bulkDelete');
+  return !!(op && op.loading);
+};
+
+export const getUserBulkDeleteError = state => {
+  const op = getOperationState(state, 'bulkDelete');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// USER PERMISSIONS OPERATION (fetchUserPermissions)
+// =============================================================================
+
+export const isUserPermissionsOperationLoading = state => {
+  const op = getOperationState(state, 'permissions');
+  return !!(op && op.loading);
+};
+
+export const getUserPermissionsOperationError = state => {
+  const op = getOperationState(state, 'permissions');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// ASSIGN ROLES OPERATION (assignRolesToUser)
+// =============================================================================
+
+export const isUserAssignRolesLoading = state => {
+  const op = getOperationState(state, 'assignRoles');
+  return !!(op && op.loading);
+};
+
+export const getUserAssignRolesError = state => {
+  const op = getOperationState(state, 'assignRoles');
+  return (op && op.error) || null;
+};
+
+// =============================================================================
+// ASSIGN GROUPS OPERATION (assignGroupsToUser)
+// =============================================================================
+
+export const isUserAssignGroupsLoading = state => {
+  const op = getOperationState(state, 'assignGroups');
+  return !!(op && op.loading);
+};
+
+export const getUserAssignGroupsError = state => {
+  const op = getOperationState(state, 'assignGroups');
+  return (op && op.error) || null;
+};

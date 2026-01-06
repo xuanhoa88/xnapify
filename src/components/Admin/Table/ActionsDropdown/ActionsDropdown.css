@@ -47,27 +47,21 @@
   box-shadow: 0 0 0 2px rgb(59 130 246 / 20%);
 }
 
-/* Menu container */
+/* Menu container - position/top/left/right applied via inline styles when using portal */
 .menu {
   min-width: 200px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-lg);
   box-shadow:
-    0 10px 40px rgb(0 0 0 / 12%),
-    0 4px 12px rgb(0 0 0 / 8%);
-  z-index: 9999;
+    0 10px 40px rgb(0 0 0 / 15%),
+    0 4px 12px rgb(0 0 0 / 10%),
+    0 0 0 1px rgb(0 0 0 / 5%);
+  z-index: 99999;
   overflow: hidden;
   animation: dropdownFadeIn 0.2s ease-out;
   padding: var(--spacing-1) 0;
-}
-
-.menu.right {
-  right: 0;
-}
-
-.menu.left {
-  left: 0;
+  backdrop-filter: blur(8px);
 }
 
 @keyframes dropdownFadeIn {
