@@ -94,12 +94,6 @@ const createRejectedHandler = operationKey => (state, action) => {
   Object.assign(state, normalized);
 };
 
-const createFulfilledHandler = operationKey => state => {
-  const normalized = normalizeState(state);
-  normalized.operations[operationKey] = createOperationState();
-  Object.assign(state, normalized);
-};
-
 const permissionsSlice = createSlice({
   name: 'admin/permissions',
   initialState,

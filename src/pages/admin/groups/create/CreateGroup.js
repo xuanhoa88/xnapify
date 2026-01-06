@@ -6,20 +6,20 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
+import { createGroupFormSchema } from '../../../../shared/validator/features/admin';
 import {
   createGroup,
   fetchRoles,
   isGroupCreateLoading,
 } from '../../../../redux';
-import {
-  useInfiniteScroll,
-  useDebounce,
-} from '../../../../components/InfiniteScroll';
+import { useDebounce } from '../../../../components/InfiniteScroll';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
+import Form, { useFormContext } from '../../../../components/Form';
 import s from './CreateGroup.css';
 
 function CreateGroup() {
@@ -28,33 +28,99 @@ function CreateGroup() {
   const history = useHistory();
   const loading = useSelector(isGroupCreateLoading);
 
-  // Roles state for infinite loading
-  const [roles, setRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(false);
-  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
-  const [rolesHasMore, setRolesHasMore] = useState(false);
-  const [rolesPage, setRolesPage] = useState(1);
-  const rolesLimit = 10;
-  const rolesContainerRef = useRef(null);
+  const [error, setError] = useState(null);
+  const confirmBackModalRef = useRef(null);
 
-  const [formData, setFormData] = useState({
+  const handleCancel = useCallback(() => {
+    confirmBackModalRef.current && confirmBackModalRef.current.open();
+  }, []);
+
+  const handleConfirmBack = useCallback(() => {
+    history.push('/admin/groups');
+  }, [history]);
+
+  const handleSubmit = useCallback(
+    async data => {
+      setError(null);
+
+      try {
+        await dispatch(createGroup(data)).unwrap();
+        history.push('/admin/groups');
+      } catch (err) {
+        setError(err || t('errors.createGroup', 'Failed to create group'));
+      }
+    },
+    [dispatch, history, t],
+  );
+
+  const defaultValues = {
     name: '',
     description: '',
     category: '',
     type: '',
     roles: [],
-  });
+  };
+
+  return (
+    <div className={s.root}>
+      <Box.Header
+        icon={<Icon name='folder' size={24} />}
+        title='Create New Group'
+        subtitle='Organize users into a new group'
+      >
+        <Button variant='secondary' onClick={handleCancel}>
+          ← Back to Groups
+        </Button>
+      </Box.Header>
+
+      <div className={s.formContainer}>
+        <Form.Error message={error} />
+
+        <Form
+          schema={createGroupFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <CreateGroupFormFields
+            handleCancel={handleCancel}
+            loading={loading}
+          />
+        </Form>
+      </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
+    </div>
+  );
+}
+
+/**
+ * CreateGroupFormFields - Form fields component that uses react-hook-form context
+ */
+function CreateGroupFormFields({ handleCancel, loading }) {
+  const dispatch = useDispatch();
+  const { watch } = useFormContext();
+
+  // Watch selected roles count
+  const selectedRoles = watch('roles') || [];
+
+  // Roles state for loading
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesHasMore, setRolesHasMore] = useState(false);
+  const [rolesPage, setRolesPage] = useState(1);
+  const rolesLimit = 20;
+
+  // Role search state
   const [roleSearch, setRoleSearch] = useState('');
-  const [error, setError] = useState(null);
-  const confirmBackModalRef = useRef(null);
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
     async (page, search = '', reset = false) => {
       if (reset) {
         setRolesLoading(true);
-      } else {
-        setRolesLoadingMore(true);
       }
 
       try {
@@ -76,216 +142,87 @@ function CreateGroup() {
         // Silently handle error
       } finally {
         setRolesLoading(false);
-        setRolesLoadingMore(false);
       }
     },
     [dispatch],
   );
 
-  // Debounced role search using RxJS (also handles initial load on mount)
+  // Debounced role search (also handles initial load on mount)
   useDebounce(roleSearch, 300, debouncedSearch => {
     loadRoles(1, debouncedSearch, true);
   });
 
   // Load more roles handler
   const handleLoadMoreRoles = useCallback(() => {
-    if (!rolesLoadingMore && rolesHasMore) {
+    if (!rolesLoading && rolesHasMore) {
       loadRoles(rolesPage + 1, roleSearch, false);
     }
-  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
-
-  // RxJS-based infinite scroll for roles
-  useInfiniteScroll({
-    containerRef: rolesContainerRef,
-    onLoadMore: handleLoadMoreRoles,
-    hasMore: rolesHasMore,
-    loading: rolesLoadingMore,
-    threshold: 50,
-  });
-
-  const handleChange = useCallback(e => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-  }, []);
-
-  const handleRoleChange = useCallback(e => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      roles: checked
-        ? [...prev.roles, value]
-        : prev.roles.filter(r => r !== value),
-    }));
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
-
-  const handleConfirmBack = useCallback(() => {
-    history.push('/admin/groups');
-  }, [history]);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setError(null);
-
-      if (!formData.name.trim()) {
-        setError(t('errors.groupNameRequired', 'Group name is required'));
-        return;
-      }
-
-      try {
-        await dispatch(createGroup(formData)).unwrap();
-        history.push('/admin/groups');
-      } catch (err) {
-        setError(err);
-      }
-    },
-    [dispatch, formData, history, t],
-  );
+  }, [rolesLoading, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='folder' size={24} />}
-        title='Create New Group'
-        subtitle='Organize users into a new group'
-      >
-        <Button variant='secondary' onClick={handleCancel}>
-          ← Back to Groups
-        </Button>
-      </Box.Header>
+    <>
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Group Information</h3>
 
-      <div className={s.formContainer}>
-        <form onSubmit={handleSubmit} className={s.form}>
-          {error && <div className={s.formError}>{error}</div>}
+        <Form.Field name='name' label='Group Name' required>
+          <Form.Input placeholder='e.g., Engineering, Marketing, Support' />
+        </Form.Field>
 
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Group Information</h3>
+        <Form.Field name='description' label='Description'>
+          <Form.Textarea
+            placeholder='Describe what this group is for...'
+            rows={3}
+          />
+        </Form.Field>
 
-            <div className={s.formGroup}>
-              <label htmlFor='name'>Group Name *</label>
-              <input
-                type='text'
-                id='name'
-                name='name'
-                value={formData.name}
-                onChange={handleChange}
-                required
-                className={s.formInput}
-                placeholder='e.g., Engineering, Marketing, Support'
-              />
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='description'>Description</label>
-              <textarea
-                id='description'
-                name='description'
-                value={formData.description}
-                onChange={handleChange}
-                className={s.formTextarea}
-                placeholder='Describe what this group is for...'
-                rows={3}
-              />
-            </div>
-
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='category'>Category</label>
-                <input
-                  type='text'
-                  id='category'
-                  name='category'
-                  value={formData.category}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='e.g., System, Organization, Department'
-                />
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='type'>Type</label>
-                <input
-                  type='text'
-                  id='type'
-                  name='type'
-                  value={formData.type}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='e.g., Security, Organizational, Functional, Default'
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>
-              Roles ({formData.roles.length} selected)
-            </h3>
-            <input
-              type='text'
-              placeholder='Search roles...'
-              value={roleSearch}
-              onChange={e => setRoleSearch(e.target.value)}
-              className={s.searchInput}
-            />
-            {rolesLoading ? (
-              <div className={s.loading}>Loading roles...</div>
-            ) : (
-              <div ref={rolesContainerRef} className={s.checkboxGroup}>
-                {roles.length > 0 ? (
-                  <>
-                    {roles.map(role => (
-                      <label key={role.id} className={s.checkboxItem}>
-                        <input
-                          type='checkbox'
-                          name='roles'
-                          value={role.name}
-                          checked={formData.roles.includes(role.name)}
-                          onChange={handleRoleChange}
-                        />
-                        <span>
-                          {role.name}
-                          {role.description && (
-                            <span className={s.itemDescription}>
-                              {role.description}
-                            </span>
-                          )}
-                        </span>
-                      </label>
-                    ))}
-                    {rolesLoadingMore && (
-                      <div className={s.loadingMore}>Loading more...</div>
-                    )}
-                  </>
-                ) : (
-                  <div className={s.noItemsFound}>No roles found</div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button variant='primary' type='submit' loading={loading}>
-              {loading ? 'Creating...' : 'Create Group'}
-            </Button>
-          </div>
-        </form>
+        <div className={s.formRow}>
+          <Form.Field name='category' label='Category'>
+            <Form.Input placeholder='e.g., System, Organization, Department' />
+          </Form.Field>
+          <Form.Field name='type' label='Type'>
+            <Form.Input placeholder='e.g., Security, Organizational, Functional' />
+          </Form.Field>
+        </div>
       </div>
-      <ConfirmModal.Back
-        ref={confirmBackModalRef}
-        onConfirm={handleConfirmBack}
-      />
-    </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>
+          Roles ({selectedRoles.length} selected)
+        </h3>
+
+        <Form.Field name='roles'>
+          <Form.CheckboxList
+            items={roles}
+            valueKey='name'
+            labelKey='name'
+            descriptionKey='description'
+            loading={rolesLoading}
+            hasMore={rolesHasMore}
+            onLoadMore={handleLoadMoreRoles}
+            searchable
+            searchPlaceholder='Search roles...'
+            onSearch={setRoleSearch}
+            emptyMessage='No roles found'
+            loadingMessage='Loading roles...'
+          />
+        </Form.Field>
+      </div>
+
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button variant='primary' type='submit' loading={loading}>
+          {loading ? 'Creating...' : 'Create Group'}
+        </Button>
+      </div>
+    </>
   );
 }
+
+CreateGroupFormFields.propTypes = {
+  handleCancel: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+};
 
 export default CreateGroup;

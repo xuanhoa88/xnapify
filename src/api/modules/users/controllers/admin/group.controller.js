@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { validateForm } from '../../../../../shared/validator';
+import {
+  createGroupFormSchema,
+  updateGroupFormSchema,
+} from '../../../../../shared/validator/features/admin';
 import { DEFAULT_ROLE } from '../../constants/rbac';
 import * as groupService from '../../services/admin/group.service';
 
@@ -25,11 +30,17 @@ export async function createGroup(req, res) {
   try {
     const { name, description, category, type, roles } = req.body;
 
-    // Validate input
-    if (!name) {
-      return http.sendValidationError(res, {
-        name: 'Group name is required',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(createGroupFormSchema, {
+      name: name || '',
+      description: description || '',
+      category: category || '',
+      type: type || '',
+      roles: roles || [],
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -139,6 +150,19 @@ export async function updateGroupById(req, res) {
   try {
     const { id } = req.params;
     const { name, description, category, type, roles } = req.body;
+
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(updateGroupFormSchema, {
+      name: name || '',
+      description: description || '',
+      category: category || '',
+      type: type || '',
+      roles: roles || [],
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
 
     // Get models from app context
     const models = req.app.get('models');

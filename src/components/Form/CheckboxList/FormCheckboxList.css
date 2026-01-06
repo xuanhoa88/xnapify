@@ -14,13 +14,40 @@
   gap: var(--spacing-2);
 }
 
+/* Search Container */
+.searchContainer {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+}
+
+/* Search Icon */
+.searchIcon {
+  position: absolute;
+  left: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 1;
+  color: var(--color-text-secondary);
+  transition: var(--transition-base);
+}
+
+.searchContainer:focus-within .searchIcon {
+  color: var(--color-primary);
+}
+
 /* Search Input */
 .searchInput {
   display: block;
   box-sizing: border-box;
   width: 100%;
   height: 40px;
-  padding: 0 var(--spacing-3);
+  padding: 0 var(--spacing-4);
+  padding-left: calc(var(--spacing-3) + 28px);
+  padding-right: calc(var(--spacing-3) + 32px);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
@@ -48,6 +75,37 @@
   background-color: var(--color-background-tertiary);
   cursor: not-allowed;
   opacity: 0.6;
+}
+
+/* Search Clear Button */
+.searchClear {
+  position: absolute;
+  right: var(--spacing-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: var(--color-background-tertiary);
+  border: none;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+  z-index: 2;
+}
+
+.searchClear:hover {
+  background-color: var(--color-error);
+  color: white;
+  transform: scale(1.1);
+}
+
+.searchContainer:focus-within .searchClear {
+  color: var(--color-primary);
 }
 
 /* Checkbox Group Container */
@@ -96,7 +154,7 @@
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
-  padding: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-4);
   margin: 0;
   border-radius: var(--radius-sm);
   transition: var(--transition-base);
@@ -171,4 +229,148 @@
   color: var(--color-text-secondary);
   font-size: var(--font-size-sm);
   font-style: italic;
+}
+
+/* =============================================================================
+   GROUPED LAYOUT - For permissions grouped by resource
+   ============================================================================= */
+
+.checkboxGroupGrouped {
+  padding: 0;
+}
+
+/* Permission/Group Container */
+.permissionGroup {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.permissionGroup:last-child {
+  border-bottom: none;
+}
+
+/* Group Header - Sticky Header with Select All Checkbox */
+.groupHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin: 0;
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-background-secondary);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.groupHeader:hover {
+  background: var(--color-background-tertiary);
+}
+
+/* Group Checkbox */
+.groupCheckbox {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.groupCheckbox:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Group Title */
+.groupTitle {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  text-transform: capitalize;
+  flex: 1;
+}
+
+/* Group Count */
+.groupCount {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-normal);
+  color: var(--color-text-secondary);
+}
+
+/* Group Items Container */
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--spacing-1) 0;
+}
+
+/* Item Label */
+.itemLabel {
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .searchInput {
+    height: 36px;
+    font-size: var(--font-size-xs);
+    padding-left: calc(var(--spacing-2) + 24px);
+    padding-right: calc(var(--spacing-2) + 28px);
+  }
+
+  .checkboxItem {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    gap: var(--spacing-2);
+  }
+
+  .checkboxItem input[type='checkbox'] {
+    width: 14px;
+    height: 14px;
+  }
+
+  .itemLabel {
+    font-size: var(--font-size-xs);
+  }
+
+  .itemDescription {
+    font-size: 10px;
+  }
+
+  .groupHeader {
+    padding: var(--spacing-2) var(--spacing-3);
+    gap: var(--spacing-2);
+  }
+
+  .groupCheckbox {
+    width: 14px;
+    height: 14px;
+  }
+
+  .groupTitle {
+    font-size: var(--font-size-xs);
+  }
+
+  .groupCount {
+    font-size: 10px;
+  }
+
+  .groupItems {
+    padding: var(--spacing-1) 0;
+  }
+
+  .loading,
+  .empty,
+  .loadingMore {
+    padding: var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
 }

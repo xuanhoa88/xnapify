@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { validateForm } from '../../../../../shared/validator';
+import {
+  createRoleFormSchema,
+  updateRoleFormSchema,
+} from '../../../../../shared/validator/features/admin';
 import * as roleService from '../../services/admin/role.service';
 
 // ========================================================================
@@ -24,11 +29,15 @@ export async function createRole(req, res) {
   try {
     const { name, description, permissions } = req.body;
 
-    // Validate input
-    if (!name) {
-      return http.sendValidationError(res, {
-        name: 'Role name is required',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(createRoleFormSchema, {
+      name: name || '',
+      description: description || '',
+      permissions: permissions || [],
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -118,6 +127,17 @@ export async function updateRole(req, res) {
   try {
     const { id } = req.params;
     const { name, description, permissions } = req.body;
+
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(updateRoleFormSchema, {
+      name: name || '',
+      description: description || '',
+      permissions: permissions || [],
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
 
     // Get models from app context
     const models = req.app.get('models');
