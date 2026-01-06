@@ -68,6 +68,11 @@ export async function assignRolesToUser(req, res) {
       return http.sendValidationError(res, errors);
     }
 
+    // Prevent user from changing their own roles
+    if (req.user.id === id) {
+      return http.sendError(res, 'Cannot change your own roles', 400);
+    }
+
     // Get models from app context
     const models = req.app.get('models');
 
@@ -144,6 +149,11 @@ export async function assignGroupsToUser(req, res) {
 
     if (!isValid) {
       return http.sendValidationError(res, errors);
+    }
+
+    // Prevent user from changing their own groups
+    if (req.user.id === id) {
+      return http.sendError(res, 'Cannot change your own groups', 400);
     }
 
     // Get models from app context
@@ -284,6 +294,11 @@ export async function removeRoleFromUser(req, res) {
   try {
     const { id, role_id } = req.params;
 
+    // Prevent user from removing their own roles
+    if (req.user.id === id) {
+      return http.sendError(res, 'Cannot remove your own roles', 400);
+    }
+
     // Get models from app context
     const models = req.app.get('models');
 
@@ -309,6 +324,11 @@ export async function removeGroupFromUser(req, res) {
   const http = req.app.get('http');
   try {
     const { id, group_id } = req.params;
+
+    // Prevent user from removing their own groups
+    if (req.user.id === id) {
+      return http.sendError(res, 'Cannot remove your own groups', 400);
+    }
 
     // Get models from app context
     const models = req.app.get('models');
@@ -408,6 +428,16 @@ export async function assignRolesToGroup(req, res) {
       return http.sendValidationError(res, errors);
     }
 
+    // Prevent user from modifying groups they belong to
+    const userGroups = req.user.groups || [];
+    if (userGroups.some(g => g === id)) {
+      return http.sendError(
+        res,
+        'Cannot modify roles for a group you belong to',
+        400,
+      );
+    }
+
     // Get models from app context
     const models = req.app.get('models');
 
@@ -444,6 +474,16 @@ export async function addRoleToGroup(req, res) {
   try {
     const { id, role_id } = req.params;
 
+    // Prevent user from modifying groups they belong to
+    const userGroups = req.user.groups || [];
+    if (userGroups.some(g => g === id)) {
+      return http.sendError(
+        res,
+        'Cannot add roles to a group you belong to',
+        400,
+      );
+    }
+
     const models = req.app.get('models');
 
     await rbacService.addRoleToGroup(id, role_id, models);
@@ -474,6 +514,16 @@ export async function removeRoleFromGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id, role_id } = req.params;
+
+    // Prevent user from modifying groups they belong to
+    const userGroups = req.user.groups || [];
+    if (userGroups.some(g => g === id)) {
+      return http.sendError(
+        res,
+        'Cannot remove roles from a group you belong to',
+        400,
+      );
+    }
 
     const models = req.app.get('models');
 
@@ -554,6 +604,16 @@ export async function manageRolePermissions(req, res) {
     const models = req.app.get('models');
 
     const role = await roleService.getRoleById(id, models);
+
+    // Prevent user from modifying permissions for roles they have
+    const userRoles = req.user.roles || [];
+    if (userRoles.some(r => r === role.name)) {
+      return http.sendError(
+        res,
+        'Cannot modify permissions for a role you have',
+        400,
+      );
+    }
     const updatedRole = await rbacService.manageRolePermissions(
       role.name,
       permissions,

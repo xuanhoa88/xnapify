@@ -164,6 +164,12 @@ export async function updateGroupById(req, res) {
       return http.sendValidationError(res, errors);
     }
 
+    // Prevent user from modifying groups they belong to
+    const userGroups = req.user.groups || [];
+    if (userGroups.some(g => g === id)) {
+      return http.sendError(res, 'Cannot update a group you belong to', 400);
+    }
+
     // Get models from app context
     const models = req.app.get('models');
 
@@ -204,6 +210,12 @@ export async function deleteGroup(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
+
+    // Prevent user from deleting groups they belong to
+    const userGroups = req.user.groups || [];
+    if (userGroups.some(g => g === id)) {
+      return http.sendError(res, 'Cannot delete a group you belong to', 400);
+    }
 
     // Get models from app context
     const models = req.app.get('models');

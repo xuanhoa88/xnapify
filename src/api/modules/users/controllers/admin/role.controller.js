@@ -142,6 +142,15 @@ export async function updateRole(req, res) {
     // Get models from app context
     const models = req.app.get('models');
 
+    // Fetch role first to check if user has this role
+    const existingRole = await roleService.getRoleById(id, models);
+
+    // Prevent user from modifying roles they have
+    const userRoles = req.user.roles || [];
+    if (userRoles.some(r => r === existingRole.name)) {
+      return http.sendError(res, 'Cannot update a role you have', 400);
+    }
+
     const role = await roleService.updateRole(
       id,
       { name, description, permissions },
@@ -179,6 +188,15 @@ export async function deleteRole(req, res) {
 
     // Get models from app context
     const models = req.app.get('models');
+
+    // Fetch role first to check if user has this role
+    const existingRole = await roleService.getRoleById(id, models);
+
+    // Prevent user from deleting roles they have
+    const userRoles = req.user.roles || [];
+    if (userRoles.some(r => r === existingRole.name)) {
+      return http.sendError(res, 'Cannot delete a role you have', 400);
+    }
 
     await roleService.deleteRole(id, models);
 
