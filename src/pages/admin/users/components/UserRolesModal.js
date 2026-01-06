@@ -11,14 +11,12 @@ import {
   useImperativeHandle,
   forwardRef,
   useEffect,
-  useRef,
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
-import { Icon, Table } from '../../../../components/Admin';
-import Button from '../../../../components/Button';
+import { Table } from '../../../../components/Admin';
 import {
   fetchRoles,
   assignRolesToUser,
@@ -56,8 +54,6 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
 
   // Search state
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchInput, setSearchInput] = useState('');
-  const debounceTimer = useRef(null);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
@@ -100,28 +96,10 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
     }
   }, [isOpen, currentPage, searchTerm, loadRoles]);
 
-  // Handle search input with debounce
-  const handleSearchChange = useCallback(e => {
-    const { value } = e.target;
-    setSearchInput(value);
-
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      setSearchTerm(value);
-      setCurrentPage(1); // Reset to first page on search
-    }, 300);
-  }, []);
-
-  // Clear search
-  const handleClearSearch = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setSearchInput('');
-    setSearchTerm('');
-    setCurrentPage(1);
+  // Handle search change
+  const handleSearchChange = useCallback(value => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page on search
   }, []);
 
   // Initialize selections from user roles
@@ -147,12 +125,8 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
     setCurrentPage(1);
     setTotalPages(1);
     setTotalItems(0);
-    setSearchInput('');
     setSearchTerm('');
     setError(null);
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
   }, []);
 
   // Expose methods via ref
@@ -165,7 +139,6 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
         setBulkUserIds([]);
         initSelections(targetUser);
         setError(null);
-        setSearchInput('');
         setSearchTerm('');
         setCurrentPage(1);
         setIsOpen(true);
@@ -176,7 +149,6 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
         setBulkUserIds(userIds);
         setSelections([]);
         setError(null);
-        setSearchInput('');
         setSearchTerm('');
         setCurrentPage(1);
         setIsOpen(true);
@@ -237,29 +209,13 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
         <Modal.Description>{description}</Modal.Description>
 
         {/* Search Input */}
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            className={s.searchInput}
-            placeholder='Search roles...'
-            value={searchInput}
-            onChange={handleSearchChange}
-          />
-          {searchInput && (
-            <Button
-              variant='ghost'
-              size='small'
-              iconOnly
-              className={s.searchClear}
-              onClick={handleClearSearch}
-            >
-              <Icon name='close' size={10} />
-            </Button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={searchTerm}
+          onChange={handleSearchChange}
+          placeholder='Search roles...'
+          debounce={300}
+          className={s.modalSearchBar}
+        />
 
         <div className={s.checkboxList}>
           {rolesLoading ? (

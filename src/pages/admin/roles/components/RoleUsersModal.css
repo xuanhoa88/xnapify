@@ -7,70 +7,9 @@
 
 @import '../../../../components/variables.css';
 
-/* Search Input */
-.searchWrapper {
-  position: relative;
+/* Search bar spacing */
+.modalSearchBar {
   margin-bottom: var(--spacing-4);
-}
-
-.searchWrapper .searchIcon {
-  position: absolute;
-  left: var(--spacing-3);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  color: var(--color-text-secondary);
-}
-
-.searchWrapper .searchInput {
-  width: 100%;
-  padding: var(--spacing-3) var(--spacing-3) var(--spacing-3) var(--spacing-8);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  background: var(--color-background);
-  transition: var(--transition-base);
-}
-
-.searchWrapper .searchInput:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
-}
-
-.searchWrapper .searchInput::placeholder {
-  color: var(--color-text-secondary);
-}
-
-.searchClear {
-  position: absolute;
-  right: var(--spacing-3);
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: var(--color-background-tertiary);
-  border: none;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-  z-index: 2;
-}
-
-.searchClear:hover {
-  background: var(--color-error);
-  color: white;
-  transform: translateY(-50%) scale(1.1);
 }
 
 /* User List */
@@ -153,25 +92,6 @@
 
 /* Responsive */
 @media (max-width: 768px) {
-  .searchWrapper {
-    margin-bottom: var(--spacing-3);
-  }
-
-  .searchWrapper .searchIcon {
-    left: var(--spacing-3);
-  }
-
-  .searchWrapper .searchInput {
-    padding: var(--spacing-2) var(--spacing-6) var(--spacing-2) var(--spacing-8);
-    font-size: var(--font-size-xs);
-  }
-
-  .searchClear {
-    right: var(--spacing-1);
-    font-size: 1rem;
-    padding: var(--spacing-1);
-  }
-
   .userItem {
     padding: var(--spacing-2);
     gap: var(--spacing-2);

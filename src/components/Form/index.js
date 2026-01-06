@@ -20,6 +20,7 @@ import FormSwitch from './Switch';
 import FormRadio from './Radio';
 import FormFileUpload from './FileUpload';
 import FormError from './Error';
+import FormSearchableSelect from './SearchableSelect';
 import { useFormValidation, useFormField } from './FormContext';
 
 // Attach sub-components
@@ -30,6 +31,7 @@ Form.Password = FormPasswordInput;
 Form.Number = FormNumberInput;
 Form.Textarea = FormTextarea;
 Form.Select = FormSelect;
+Form.SearchableSelect = FormSearchableSelect;
 Form.Checkbox = FormCheckbox;
 Form.Switch = FormSwitch;
 Form.Radio = FormRadio;

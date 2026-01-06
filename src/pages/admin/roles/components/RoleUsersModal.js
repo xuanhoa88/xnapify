@@ -11,13 +11,11 @@ import {
   useImperativeHandle,
   forwardRef,
   useEffect,
-  useRef,
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import Modal from '../../../../components/Modal';
-import { Icon, Table } from '../../../../components/Admin';
-import Button from '../../../../components/Button';
+import { Table } from '../../../../components/Admin';
 import Avatar from '../../../../components/Avatar';
 import Tag from '../../../../components/Tag';
 import { fetchRoleUsers } from '../../../../redux';
@@ -46,8 +44,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
 
   // Search state
   const [search, setSearch] = useState('');
-  const [inputValue, setInputValue] = useState('');
-  const debounceTimer = useRef(null);
 
   // Internal state
   const [isOpen, setIsOpen] = useState(false);
@@ -90,34 +86,14 @@ const RoleUsersModal = forwardRef((props, ref) => {
     }
   }, [isOpen, role, currentPage, loadUsers]);
 
-  // Search handlers
-  const handleSearchChange = useCallback(e => {
-    const { value } = e.target;
-    setInputValue(value);
-
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    debounceTimer.current = setTimeout(() => {
-      setSearch(value);
-      setCurrentPage(1);
-    }, 500);
-  }, []);
-
-  const handleClearSearch = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
-    setInputValue('');
-    setSearch('');
+  // Search handler
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
     setCurrentPage(1);
   }, []);
 
   // Reset state
   const resetState = useCallback(() => {
-    if (debounceTimer.current) {
-      clearTimeout(debounceTimer.current);
-    }
     setIsOpen(false);
     setRole(null);
     setUsers([]);
@@ -125,7 +101,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
     setTotalPages(1);
     setTotalItems(0);
     setSearch('');
-    setInputValue('');
     setError(null);
   }, []);
 
@@ -138,7 +113,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
         setError(null);
         setCurrentPage(1);
         setSearch('');
-        setInputValue('');
         setIsOpen(true);
       },
       close: resetState,
@@ -162,30 +136,12 @@ const RoleUsersModal = forwardRef((props, ref) => {
         </Modal.Description>
 
         {/* Search Input */}
-        <div className={s.searchWrapper}>
-          <span className={s.searchIcon}>
-            <Icon name='search' size={16} />
-          </span>
-          <input
-            type='text'
-            placeholder={t('common.searchUsers', 'Search users...')}
-            className={s.searchInput}
-            value={inputValue}
-            onChange={handleSearchChange}
-          />
-          {inputValue && (
-            <Button
-              variant='ghost'
-              size='small'
-              iconOnly
-              className={s.searchClear}
-              onClick={handleClearSearch}
-              title={t('common.clearSearch', 'Clear search')}
-            >
-              <Icon name='close' size={10} />
-            </Button>
-          )}
-        </div>
+        <Table.SearchBar
+          value={search}
+          onChange={handleSearchChange}
+          placeholder={t('common.searchUsers', 'Search users...')}
+          className={s.modalSearchBar}
+        />
 
         <div className={s.usersList}>
           {usersLoading ? (
