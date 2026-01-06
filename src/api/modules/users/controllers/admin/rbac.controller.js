@@ -5,6 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { validateForm } from '../../../../../shared/validator';
+import {
+  assignRolesToUserFormSchema,
+  assignGroupsToUserFormSchema,
+  assignRolesToGroupFormSchema,
+  manageRolePermissionsFormSchema,
+} from '../../../../../shared/validator/features/admin';
 import * as rbacService from '../../services/admin/rbac.service';
 import * as roleService from '../../services/admin/role.service';
 
@@ -52,11 +59,13 @@ export async function assignRolesToUser(req, res) {
     const { id } = req.params;
     const { role_names } = req.body;
 
-    // Validate input
-    if (!Array.isArray(role_names)) {
-      return http.sendValidationError(res, {
-        role_names: 'Role names must be an array',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(assignRolesToUserFormSchema, {
+      role_names,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -128,11 +137,13 @@ export async function assignGroupsToUser(req, res) {
     const { id } = req.params;
     const { group_ids } = req.body;
 
-    // Validate input
-    if (!Array.isArray(group_ids)) {
-      return http.sendValidationError(res, {
-        group_ids: 'Group IDs must be an array',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(assignGroupsToUserFormSchema, {
+      group_ids,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -388,11 +399,13 @@ export async function assignRolesToGroup(req, res) {
     const { id } = req.params;
     const { role_names } = req.body;
 
-    // Validate input
-    if (!Array.isArray(role_names)) {
-      return http.sendValidationError(res, {
-        role_names: 'Role names must be an array',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(assignRolesToGroupFormSchema, {
+      role_names,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -528,12 +541,14 @@ export async function manageRolePermissions(req, res) {
     const { id } = req.params;
     const { action, permissions } = req.body;
 
-    // Validate input
-    if (!Array.isArray(permissions)) {
-      return http.sendValidationError(res, {
-        permissions:
-          'Permissions must be an array of "resource:action" strings',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(manageRolePermissionsFormSchema, {
+      action,
+      permissions,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     const models = req.app.get('models');

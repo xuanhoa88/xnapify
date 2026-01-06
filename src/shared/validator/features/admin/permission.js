@@ -94,3 +94,49 @@ export const createPermissionFormSchema = ({ i18n, z }) =>
       .optional(),
     is_active: z.boolean(),
   });
+
+/**
+ * Bulk update permission status schema - callable factory function
+ *
+ * Used by:
+ * - Backend: PATCH /api/admin/permissions/status
+ */
+export const bulkUpdatePermissionStatusFormSchema = ({ i18n, z }) =>
+  z.object({
+    ids: z
+      .array(z.string().uuid())
+      .min(
+        1,
+        i18n.t(
+          'zod:admin.permission.IDS_REQUIRED',
+          'At least one permission ID is required',
+        ),
+      ),
+    state: z.enum(['active', 'inactive'], {
+      errorMap: () => ({
+        message: i18n.t(
+          'zod:admin.permission.STATE_REQUIRED',
+          'State must be either active or inactive',
+        ),
+      }),
+    }),
+  });
+
+/**
+ * Bulk delete permissions schema - callable factory function
+ *
+ * Used by:
+ * - Backend: DELETE /api/admin/permissions
+ */
+export const bulkDeletePermissionFormSchema = ({ i18n, z }) =>
+  z.object({
+    ids: z
+      .array(z.string().uuid())
+      .min(
+        1,
+        i18n.t(
+          'zod:admin.permission.IDS_REQUIRED',
+          'At least one permission ID is required',
+        ),
+      ),
+  });

@@ -72,7 +72,7 @@ export default function authRoutes(deps, userMiddlewares, app) {
    * @access  Public
    * @body    { email }
    */
-  router.post('/reset-password/request', authController.requestResetPassword);
+  router.post('/reset-password/request', authController.resetPasswordRequest);
 
   /**
    * @route   POST /password-reset/confirmation

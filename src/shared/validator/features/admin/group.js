@@ -118,3 +118,23 @@ export const createGroupFormSchema = ({ i18n, z }) =>
       .or(z.literal('')),
     roles: z.array(z.string()).optional().default([]),
   });
+
+/**
+ * Assign roles to group schema - callable factory function
+ *
+ * Used by:
+ * - Backend: PUT /api/admin/groups/:id/roles
+ */
+export const assignRolesToGroupFormSchema = ({ i18n, z }) =>
+  z.object({
+    role_names: z.array(z.string(), {
+      required_error: i18n.t(
+        'zod:admin.group.ROLE_NAMES_REQUIRED',
+        'Role names is required',
+      ),
+      invalid_type_error: i18n.t(
+        'zod:admin.group.ROLE_NAMES_INVALID',
+        'Role names must be an array',
+      ),
+    }),
+  });

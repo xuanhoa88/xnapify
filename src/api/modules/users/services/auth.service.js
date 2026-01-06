@@ -299,7 +299,7 @@ export async function verifyEmail(token, models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Reset token info (token for email, message)
  */
-export async function requestResetPassword(email, models) {
+export async function resetPasswordRequest(email, models) {
   const { User, PasswordResetToken } = models;
 
   const user = await User.findOne({ where: { email } });

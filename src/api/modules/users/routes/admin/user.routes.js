@@ -67,7 +67,7 @@ export default function userRoutes(deps, userMiddlewares) {
    * @route   PATCH /status
    * @desc    Bulk update user status
    * @access  Admin only
-   * @body    { ids: string[], is_active: boolean }
+   * @body    { ids: string[], state: 'active' | 'inactive' }
    */
   router.patch('/status', requireAdmin, userController.bulkUpdateStatus);
 

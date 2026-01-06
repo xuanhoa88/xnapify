@@ -74,3 +74,31 @@ export const createRoleFormSchema = ({ i18n, z }) =>
       .or(z.literal('')),
     permissions: z.array(z.string()).optional().default([]),
   });
+
+/**
+ * Manage role permissions schema - callable factory function
+ *
+ * Used by:
+ * - Backend: PUT /api/admin/roles/:id/permissions
+ */
+export const manageRolePermissionsFormSchema = ({ i18n, z }) =>
+  z.object({
+    action: z.enum(['add', 'remove', 'replace'], {
+      errorMap: () => ({
+        message: i18n.t(
+          'zod:admin.role.ACTION_INVALID',
+          'Action must be add, remove, or replace',
+        ),
+      }),
+    }),
+    permissions: z.array(z.string(), {
+      required_error: i18n.t(
+        'zod:admin.role.PERMISSIONS_REQUIRED',
+        'Permissions is required',
+      ),
+      invalid_type_error: i18n.t(
+        'zod:admin.role.PERMISSIONS_INVALID',
+        'Permissions must be an array of "resource:action" strings',
+      ),
+    }),
+  });

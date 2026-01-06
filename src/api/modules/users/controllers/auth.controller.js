@@ -326,7 +326,7 @@ export async function emailVerification(req, res) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
-export async function requestResetPassword(req, res) {
+export async function resetPasswordRequest(req, res) {
   const http = req.app.get('http');
   try {
     const { email } = req.body;
@@ -346,7 +346,7 @@ export async function requestResetPassword(req, res) {
     const models = req.app.get('models');
 
     // Request password reset
-    await authService.requestResetPassword(email, models);
+    await authService.resetPasswordRequest(email, models);
 
     // Always return success for security (don't reveal if email exists)
     return http.sendSuccess(res, {

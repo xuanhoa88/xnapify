@@ -9,6 +9,8 @@ import { validateForm } from '../../../../../shared/validator';
 import {
   createPermissionFormSchema,
   updatePermissionFormSchema,
+  bulkUpdatePermissionStatusFormSchema,
+  bulkDeletePermissionFormSchema,
 } from '../../../../../shared/validator/features/admin';
 import * as permissionService from '../../services/admin/permission.service';
 
@@ -192,16 +194,16 @@ export async function bulkUpdateStatus(req, res) {
   try {
     const { ids, state } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!Array.isArray(ids) || ids.length === 0) {
-      errors.ids = 'IDS_REQUIRED';
-    }
-    if (typeof state !== 'string') {
-      errors.state = 'STATE_REQUIRED';
-    }
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(
+      bulkUpdatePermissionStatusFormSchema,
+      {
+        ids,
+        state,
+      },
+    );
 
-    if (Object.keys(errors).length > 0) {
+    if (!isValid) {
       return http.sendValidationError(res, errors);
     }
 
@@ -237,9 +239,13 @@ export async function deletePermissions(req, res) {
   try {
     const { ids } = req.body;
 
-    // Validate input
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return http.sendValidationError(res, { ids: 'IDS_REQUIRED' });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(bulkDeletePermissionFormSchema, {
+      ids,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context

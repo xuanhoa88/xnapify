@@ -218,7 +218,7 @@ export const bulkUpdateUserStatus = createAsyncThunk(
     try {
       const { data } = await fetch('/api/admin/users/status', {
         method: 'PATCH',
-        body: { ids, is_active: isActive },
+        body: { ids, state: isActive ? 'active' : 'inactive' },
       });
 
       return data.users;

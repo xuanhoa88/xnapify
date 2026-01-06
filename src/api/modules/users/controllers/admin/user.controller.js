@@ -9,6 +9,9 @@ import { validateForm } from '../../../../../shared/validator';
 import {
   updateUserFormSchema,
   createUserFormSchema,
+  bulkUpdateUserStatusFormSchema,
+  updateUserLockStatusFormSchema,
+  bulkDeleteUserFormSchema,
 } from '../../../../../shared/validator/features/admin';
 import * as userAdminService from '../../services/admin/user.service';
 import { generatePassword } from '../../utils/password';
@@ -322,11 +325,14 @@ export async function updateUserLockStatus(req, res) {
     const { id } = req.params;
     const { is_locked, reason } = req.body;
 
-    // Validate input
-    if (typeof is_locked !== 'boolean') {
-      return http.sendValidationError(res, {
-        is_locked: 'Lock status must be true or false',
-      });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(updateUserLockStatusFormSchema, {
+      is_locked,
+      reason,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Prevent admin from locking themselves
@@ -399,23 +405,20 @@ export async function generateRandomPassword(req, res) {
 export async function bulkUpdateStatus(req, res) {
   const http = req.app.get('http');
   try {
-    const { ids, is_active } = req.body;
+    const { ids, state } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!Array.isArray(ids) || ids.length === 0) {
-      errors.ids = 'IDS_REQUIRED';
-    }
-    if (typeof is_active !== 'boolean') {
-      errors.is_active = 'IS_ACTIVE_REQUIRED';
-    }
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(bulkUpdateUserStatusFormSchema, {
+      ids,
+      state,
+    });
 
-    if (Object.keys(errors).length > 0) {
+    if (!isValid) {
       return http.sendValidationError(res, errors);
     }
 
     // Prevent admin from deactivating themselves
-    if (ids.includes(req.user.id) && !is_active) {
+    if (ids.includes(req.user.id) && !(state === 'active')) {
       return http.sendError(res, 'Cannot deactivate your own account', 400);
     }
 
@@ -425,12 +428,12 @@ export async function bulkUpdateStatus(req, res) {
     // Bulk update status
     const result = await userAdminService.bulkUpdateStatus(
       ids,
-      is_active,
+      state === 'active',
       models,
     );
 
     return http.sendSuccess(res, {
-      message: `${result.updated} user(s) ${is_active ? 'activated' : 'deactivated'} successfully`,
+      message: `${result.updated} user(s) ${state === 'active' ? 'activated' : 'deactivated'} successfully`,
       users: result.users.map(u => ({
         id: u.id,
         email: u.email,
@@ -456,9 +459,13 @@ export async function bulkDelete(req, res) {
   try {
     const { ids } = req.body;
 
-    // Validate input
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return http.sendValidationError(res, { ids: 'IDS_REQUIRED' });
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(bulkDeleteUserFormSchema, {
+      ids,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Prevent admin from deleting themselves
