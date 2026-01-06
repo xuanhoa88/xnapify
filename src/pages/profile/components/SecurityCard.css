@@ -62,6 +62,33 @@
   margin: var(--spacing-1) 0 0;
 }
 
+/* Security Tips Section */
+.securityTips {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-4);
+  background: var(--color-primary-bg);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgb(37 99 235 / 10%);
+}
+
+.tipItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+}
+
+.tipItem svg {
+  width: 16px;
+  height: 16px;
+  color: var(--color-success);
+  flex-shrink: 0;
+}
+
 /* Button layout */
 .buttonSecondary {
   width: 100%;
@@ -103,6 +130,10 @@
   .cardDescription {
     font-size: var(--font-size-xs);
   }
+
+  .securityTips {
+    padding: var(--spacing-3);
+  }
 }
 
 /* =============================================================================
@@ -130,5 +161,13 @@
 
   .cardTitle {
     font-size: var(--font-size-sm);
+  }
+
+  .securityTips {
+    padding: var(--spacing-3);
+  }
+
+  .tipItem {
+    font-size: var(--font-size-xs);
   }
 }

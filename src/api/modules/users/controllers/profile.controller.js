@@ -278,12 +278,13 @@ export async function removeAvatar(req, res) {
 export async function changePassword(req, res) {
   const http = req.app.get('http');
   try {
-    const { currentPassword, newPassword } = req.body;
+    const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
     // Validate input using shared schema
     const [isValid, validationErrors] = validateForm(changePasswordFormSchema, {
       currentPassword,
       newPassword,
+      confirmNewPassword,
     });
     if (!isValid) {
       return http.sendValidationError(res, validationErrors[0]);

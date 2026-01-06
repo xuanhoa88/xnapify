@@ -65,6 +65,28 @@ function SecurityCard() {
         </div>
       </div>
 
+      <div className={s.securityTips}>
+        <div className={s.tipItem}>
+          <Icon name='check-circle' size={16} />
+          <span>{t('profile.passwordTip1', 'Use at least 8 characters')}</span>
+        </div>
+        <div className={s.tipItem}>
+          <Icon name='check-circle' size={16} />
+          <span>
+            {t(
+              'profile.passwordTip2',
+              'Mix uppercase, lowercase, numbers & symbols',
+            )}
+          </span>
+        </div>
+        <div className={s.tipItem}>
+          <Icon name='check-circle' size={16} />
+          <span>
+            {t('profile.passwordTip3', 'Avoid common words or personal info')}
+          </span>
+        </div>
+      </div>
+
       <Form.Error message={error || ''} />
 
       <Form
@@ -72,6 +94,7 @@ function SecurityCard() {
         defaultValues={{
           currentPassword: '',
           newPassword: '',
+          confirmNewPassword: '',
         }}
         onSubmit={handleSubmit}
       >
@@ -94,6 +117,13 @@ function SecurityFormFields({ loading }) {
       </Form.Field>
 
       <Form.Field name='newPassword' label={t('profile.newPassword')}>
+        <Form.Password />
+      </Form.Field>
+
+      <Form.Field
+        name='confirmNewPassword'
+        label={t('profile.confirmNewPassword')}
+      >
         <Form.Password />
       </Form.Field>
 

@@ -15,10 +15,19 @@ import { passwordRule, strongPasswordRule } from './common';
  * - Backend: PUT /api/profile/password
  */
 export const changePasswordFormSchema = ({ i18n, z }) =>
-  z.object({
-    currentPassword: passwordRule({ i18n: i18n, z: z }),
-    newPassword: strongPasswordRule({ i18n: i18n, z: z }),
-  });
+  z
+    .object({
+      currentPassword: passwordRule({ i18n: i18n, z: z }),
+      newPassword: strongPasswordRule({ i18n: i18n, z: z }),
+      confirmNewPassword: z.string(),
+    })
+    .refine(data => data.newPassword === data.confirmNewPassword, {
+      message: i18n.t(
+        'zod:auth.PASSWORDS_DO_NOT_MATCH',
+        'Passwords do not match',
+      ),
+      path: ['confirmNewPassword'],
+    });
 
 /**
  * Delete account schema - callable factory function
@@ -30,7 +39,7 @@ export const changePasswordFormSchema = ({ i18n, z }) =>
 export const deleteAccountFormSchema = ({ i18n, z }) =>
   z
     .object({
-      password: strongPasswordRule({ i18n: i18n, z: z }),
+      password: passwordRule({ i18n: i18n, z: z }),
       confirmPassword: z.string(),
     })
     .refine(data => data.password === data.confirmPassword, {
