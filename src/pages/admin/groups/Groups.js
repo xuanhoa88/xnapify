@@ -224,38 +224,39 @@ function Groups() {
       </Box.Header>
 
       {/* Filters */}
-      <div className={s.filters}>
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder='Search groups...'
+      <Table.SearchBar
+        className={s.filters}
+        value={search}
+        onChange={handleSearchChange}
+        placeholder='Search groups...'
+      >
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={roleOptions}
+          value={roleFilter}
+          onChange={handleRoleFilterChange}
+          onSearch={handleRoleSearch}
+          onLoadMore={handleRoleLoadMore}
+          hasMore={rolesHasMore}
+          loading={rolesLoading}
+          loadingMore={rolesLoadingMore}
+          placeholder='All Roles'
+          searchPlaceholder='Search roles...'
         />
-        <div className={s.filterItem}>
-          <SearchableSelect
-            options={roleOptions}
-            value={roleFilter}
-            onChange={handleRoleFilterChange}
-            onSearch={handleRoleSearch}
-            onLoadMore={handleRoleLoadMore}
-            hasMore={rolesHasMore}
-            loading={rolesLoading}
-            loadingMore={rolesLoadingMore}
-            placeholder='All Roles'
-            searchPlaceholder='Search roles...'
-          />
+        <div className={s.filterActions}>
+          {hasActiveFilters && (
+            <Button
+              variant='ghost'
+              size='small'
+              onClick={handleClearFilters}
+              type='button'
+              title='Reset all filters'
+            >
+              ✕ Clear Filters
+            </Button>
+          )}
         </div>
-        {hasActiveFilters && (
-          <Button
-            variant='ghost'
-            size='small'
-            onClick={handleClearFilters}
-            type='button'
-            title='Reset all filters'
-          >
-            ✕ Clear Filters
-          </Button>
-        )}
-      </div>
+      </Table.SearchBar>
 
       {groups.length === 0 ? (
         <Table.Empty

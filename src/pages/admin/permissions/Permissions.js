@@ -293,28 +293,25 @@ function Permissions() {
       )}
 
       {/* Search/Filter Section */}
-      <div className={s.filters}>
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder='Search e.g. users, users:read, :create'
-          debounce={300}
+      <Table.SearchBar
+        className={s.filters}
+        value={search}
+        onChange={handleSearchChange}
+        placeholder='Search e.g. users, users:read, :create'
+        debounce={300}
+      >
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={[
+            { value: '', label: 'All Status' },
+            { value: 'active', label: 'Active' },
+            { value: 'inactive', label: 'Inactive' },
+          ]}
+          value={statusFilter}
+          onChange={setStatusFilter}
+          placeholder='All Status'
+          showSearch={false}
         />
-
-        <div className={s.filterSearchableSelect}>
-          <SearchableSelect
-            options={[
-              { value: '', label: 'All Status' },
-              { value: 'active', label: 'Active' },
-              { value: 'inactive', label: 'Inactive' },
-            ]}
-            value={statusFilter}
-            onChange={setStatusFilter}
-            placeholder='All Status'
-            showSearch={false}
-          />
-        </div>
-
         <div className={s.filterActions}>
           {hasActiveFilters && (
             <Button
@@ -327,7 +324,7 @@ function Permissions() {
             </Button>
           )}
         </div>
-      </div>
+      </Table.SearchBar>
 
       {permissions.length === 0 ? (
         <Table.Empty

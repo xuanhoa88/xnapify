@@ -194,13 +194,12 @@ function Roles() {
       </Box.Header>
 
       {/* Search/Filter Section */}
-      <div className={s.filters}>
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder={t('roles.searchPlaceholder', 'Search roles...')}
-        />
-      </div>
+      <Table.SearchBar
+        className={s.filters}
+        value={search}
+        onChange={handleSearchChange}
+        placeholder={t('roles.searchPlaceholder', 'Search roles...')}
+      />
 
       {roles.length === 0 ? (
         <Table.Empty

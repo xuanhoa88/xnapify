@@ -323,40 +323,38 @@ function Users() {
         />
       )}
 
-      <div className={s.filters}>
-        <Table.SearchBar
-          value={search}
-          onChange={handleSearchChange}
-          placeholder='Search users...'
+      <Table.SearchBar
+        className={s.filters}
+        value={search}
+        onChange={handleSearchChange}
+        placeholder='Search users...'
+      >
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={roleOptions}
+          value={roleFilter}
+          onChange={handleRoleFilterChange}
+          onSearch={handleRoleSearch}
+          onLoadMore={handleRoleLoadMore}
+          hasMore={rolesHasMore}
+          loading={rolesLoading}
+          loadingMore={rolesLoadingMore}
+          placeholder='All Roles'
+          searchPlaceholder='Search roles...'
         />
-        <div className={s.filterSearchableSelect}>
-          <SearchableSelect
-            options={roleOptions}
-            value={roleFilter}
-            onChange={handleRoleFilterChange}
-            onSearch={handleRoleSearch}
-            onLoadMore={handleRoleLoadMore}
-            hasMore={rolesHasMore}
-            loading={rolesLoading}
-            loadingMore={rolesLoadingMore}
-            placeholder='All Roles'
-            searchPlaceholder='Search roles...'
-          />
-        </div>
-        <div className={s.filterSearchableSelect}>
-          <SearchableSelect
-            options={groupOptions}
-            value={groupFilter}
-            onChange={handleGroupFilterChange}
-            onSearch={handleGroupSearch}
-            onLoadMore={handleGroupLoadMore}
-            hasMore={groupsHasMore}
-            loading={groupsLoading}
-            loadingMore={groupsLoadingMore}
-            placeholder='All Groups'
-            searchPlaceholder='Search groups...'
-          />
-        </div>
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={groupOptions}
+          value={groupFilter}
+          onChange={handleGroupFilterChange}
+          onSearch={handleGroupSearch}
+          onLoadMore={handleGroupLoadMore}
+          hasMore={groupsHasMore}
+          loading={groupsLoading}
+          loadingMore={groupsLoadingMore}
+          placeholder='All Groups'
+          searchPlaceholder='Search groups...'
+        />
         <SearchableSelect
           className={s.filterSearchableSelect}
           options={[
@@ -382,7 +380,7 @@ function Users() {
             </Button>
           )}
         </div>
-      </div>
+      </Table.SearchBar>
 
       <div className={s.tableContainer}>
         <table className={s.table}>

@@ -26,8 +26,14 @@
   border: 1px solid var(--color-border);
 }
 
-.filterItem {
+.filterSearchableSelect {
   min-width: 200px;
+}
+
+.filterActions {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }
 
 .grid {
@@ -189,7 +195,7 @@
     margin-bottom: var(--spacing-4);
   }
 
-  .filterItem {
+  .filterSearchableSelect {
     min-width: unset;
   }
 

@@ -109,7 +109,7 @@ function AdminMessages() {
         onClick={handleToggle}
         title={t('common.messages', 'Messages')}
       >
-        <Icon name='mail' size={20} />
+        <Icon name='mail' size={18} />
         {unreadCount > 0 && (
           <span className={s.messagesBadge}>{unreadCount}</span>
         )}

@@ -91,7 +91,7 @@ function AdminNotifications() {
         onClick={handleToggle}
         title={t('common.notifications', 'Notifications')}
       >
-        <Icon name='bell' size={20} />
+        <Icon name='bell' size={18} />
         {unreadCount > 0 && (
           <span className={s.notificationBadge}>{unreadCount}</span>
         )}

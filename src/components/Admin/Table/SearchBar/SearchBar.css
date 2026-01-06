@@ -14,78 +14,91 @@
   align-items: center;
   flex: 1;
   min-width: 200px;
-}
 
-/* Search Icon */
-.searchIcon {
-  position: absolute;
-  left: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-  z-index: 1;
-  color: var(--color-text-secondary);
-  transition: var(--transition-base);
-}
+  & :global(.search-container) {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    position: relative;
+  }
 
-.searchWrapper:focus-within .searchIcon {
-  color: var(--color-primary);
-}
+  /* Search Icon */
+  & :global(.search-icon) {
+    position: absolute;
+    left: var(--spacing-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 1;
+    color: var(--color-text-secondary);
+    transition: var(--transition-base);
+  }
 
-/* Search Input */
-.searchInput {
-  width: 100%;
-  height: 40px;
-  padding: 0 var(--spacing-4);
-  padding-left: calc(var(--spacing-3) + 28px);
-  padding-right: calc(var(--spacing-3) + 32px);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  background: var(--color-background);
-  transition: var(--transition-base);
-}
+  /* Search Input */
+  & :global(.search-input) {
+    width: 100%;
+    height: 40px;
+    padding: 0 var(--spacing-4);
+    padding-left: calc(var(--spacing-3) + 28px);
+    padding-right: calc(var(--spacing-3) + 32px);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--font-size-sm);
+    background: var(--color-background);
+    transition: var(--transition-base);
 
-.searchInput:hover {
-  border-color: var(--color-border-hover);
-}
+    &:hover {
+      border-color: var(--color-border-hover);
+    }
 
-.searchInput:focus {
-  outline: none;
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
-}
+    &:focus {
+      outline: none;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+    }
 
-.searchInput::placeholder {
-  color: var(--color-text-tertiary);
-}
+    &::placeholder {
+      color: var(--color-text-tertiary);
+    }
+  }
 
-/* Search Clear Button */
-.searchClear {
-  position: absolute;
-  right: var(--spacing-3);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  padding: 0;
-  background: var(--color-background-tertiary);
-  border: none;
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-secondary);
-  cursor: pointer;
-  transition: var(--transition-base);
-  z-index: 2;
-}
+  /* Search Clear Button */
+  & :global(.search-clear) {
+    position: absolute;
+    right: var(--spacing-3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    background: var(--color-background-tertiary);
+    border: none;
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: var(--transition-base);
+    z-index: 2;
 
-.searchClear:hover {
-  background: var(--color-error);
-  color: white;
-  transform: scale(1.1);
+    &:hover {
+      background-color: var(--color-error);
+      color: white;
+      transform: scale(1.1);
+    }
+  }
+
+  &:focus-within :global(.search-clear) {
+    color: var(--color-primary);
+  }
+
+  &:focus-within :global(.search-icon) {
+    color: var(--color-primary);
+  }
 }
 
 /* =============================================================================
@@ -95,10 +108,10 @@
 @media (max-width: 768px) {
   .searchWrapper {
     min-width: unset;
-  }
 
-  .searchInput {
-    height: 36px;
-    font-size: var(--font-size-xs);
+    & :global(.search-input) {
+      height: 36px;
+      font-size: var(--font-size-xs);
+    }
   }
 }
