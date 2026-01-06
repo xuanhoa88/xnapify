@@ -20,6 +20,14 @@
     "AVATAR_TOO_LARGE": "Tệp quá lớn. Kích thước tối đa 5MB",
     "FILENAME_REQUIRED": "Tên tệp bắt buộc"
   },
+  "admin": {
+    "user": {
+      "DISPLAY_NAME_MAX": "Tên hiển thị quá dài (tối đa 100 ký tự)",
+      "FIRST_NAME_MAX": "Tên quá dài (tối đa 50 ký tự)",
+      "LAST_NAME_MAX": "Họ quá dài (tối đa 50 ký tự)",
+      "ROLES_REQUIRED": "Cần chọn ít nhất một vai trò"
+    }
+  },
   "errors": {
     "invalid_type": "Mong đợi {{expected}}, nhận được {{received}}",
     "invalid_type_received_undefined": "Bắt buộc",

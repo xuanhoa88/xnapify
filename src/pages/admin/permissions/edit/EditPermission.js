@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../components/History';
+import { updatePermissionFormSchema } from '../../../../shared/validator/features/admin';
 import {
   fetchPermissionById,
   updatePermission,
@@ -18,8 +19,9 @@ import {
   getFetchedPermission,
   getPermissionFetchError,
 } from '../../../../redux';
-import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
+import { Box, Icon, ConfirmModal, Loader } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
+import Form, { useFormContext } from '../../../../components/Form';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
@@ -30,12 +32,6 @@ export default function EditPermission({ permissionId }) {
   const fetchInitialized = useSelector(isPermissionFetchInitialized);
   const permission = useSelector(getFetchedPermission);
   const permissionLoadError = useSelector(getPermissionFetchError);
-  const [formData, setFormData] = useState({
-    resource: '',
-    action: '',
-    description: '',
-    is_active: true,
-  });
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
 
@@ -46,43 +42,6 @@ export default function EditPermission({ permissionId }) {
     }
   }, [dispatch, permissionId]);
 
-  // Update form data when permission is loaded
-  useEffect(() => {
-    if (permission) {
-      setFormData({
-        resource: permission.resource || '',
-        action: permission.action || '',
-        description: permission.description || '',
-        is_active: permission.is_active !== false,
-      });
-    }
-  }, [permission]);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setError(null);
-
-      try {
-        await dispatch(
-          updatePermission({ permissionId, permissionData: formData }),
-        ).unwrap();
-        history.push('/admin/permissions');
-      } catch (err) {
-        setError(err);
-      }
-    },
-    [dispatch, history, permissionId, formData],
-  );
-
-  const handleChange = useCallback(e => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  }, []);
-
   const handleCancel = useCallback(() => {
     confirmBackModalRef.current && confirmBackModalRef.current.open();
   }, []);
@@ -91,11 +50,41 @@ export default function EditPermission({ permissionId }) {
     history.push('/admin/permissions');
   }, [history]);
 
-  // Auto-generate permission name preview
-  const generatedName =
-    formData.resource && formData.action
-      ? `${formData.resource}:${formData.action}`
-      : '-';
+  const handleSubmit = useCallback(
+    async data => {
+      setError(null);
+
+      try {
+        await dispatch(
+          updatePermission({ permissionId, permissionData: data }),
+        ).unwrap();
+        history.push('/admin/permissions');
+      } catch (err) {
+        setError(err);
+      }
+    },
+    [dispatch, history, permissionId],
+  );
+
+  // Build default values from permission data (memoized)
+  const defaultValues = useMemo(
+    () =>
+      permission
+        ? {
+            resource: permission.resource || '',
+            action: permission.action || '',
+            description: permission.description || '',
+            is_active: permission.is_active !== false,
+          }
+        : {
+            resource: '',
+            action: '',
+            description: '',
+            is_active: true,
+          },
+    [permission],
+  );
+
   // Show loading on first fetch or when still fetching
   if (!fetchInitialized || loading) {
     return (
@@ -105,16 +94,12 @@ export default function EditPermission({ permissionId }) {
           title='Edit Permission'
           subtitle='Modify permission rule'
         >
-          <Button
-            variant='secondary'
-            className={s.backBtn}
-            onClick={handleCancel}
-          >
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Permissions
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <div className={s.loading}>Loading permission...</div>
+          <Loader variant='spinner' message='Loading permission...' />
         </div>
       </div>
     );
@@ -128,11 +113,7 @@ export default function EditPermission({ permissionId }) {
           title='Edit Permission'
           subtitle='Modify permission rule'
         >
-          <Button
-            variant='secondary'
-            className={s.backBtn}
-            onClick={handleCancel}
-          >
+          <Button variant='secondary' onClick={handleCancel}>
             ← Back to Permissions
           </Button>
         </Box.Header>
@@ -155,112 +136,25 @@ export default function EditPermission({ permissionId }) {
         title='Edit Permission'
         subtitle='Modify permission rule'
       >
-        <Button
-          variant='secondary'
-          className={s.backBtn}
-          onClick={handleCancel}
-        >
+        <Button variant='secondary' onClick={handleCancel}>
           ← Back to Permissions
         </Button>
       </Box.Header>
 
       <div className={s.formContainer}>
-        <form onSubmit={handleSubmit} className={s.form}>
-          {error && <div className={s.formError}>{error}</div>}
+        <Form.Error message={error} />
 
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Permission Information</h3>
-
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='resource'>Resource *</label>
-                <input
-                  id='resource'
-                  name='resource'
-                  type='text'
-                  className={s.formInput}
-                  value={formData.resource}
-                  onChange={handleChange}
-                  placeholder='e.g. users, posts, comments'
-                  required
-                />
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='action'>Action *</label>
-                <input
-                  id='action'
-                  name='action'
-                  type='text'
-                  className={s.formInput}
-                  value={formData.action}
-                  onChange={handleChange}
-                  placeholder='e.g. read, write, delete'
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='description'>Description</label>
-              <textarea
-                id='description'
-                name='description'
-                className={s.formTextarea}
-                value={formData.description}
-                onChange={handleChange}
-                placeholder='Describe what this permission allows...'
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Status</h3>
-
-            <div className={s.checkboxGroup}>
-              <label className={s.checkboxLabel}>
-                <input
-                  type='checkbox'
-                  name='is_active'
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                />
-                <span>Active</span>
-              </label>
-              <p className={s.checkboxHint}>
-                Inactive permissions will not be enforced in authorization
-                checks
-              </p>
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Generated Name</h3>
-            <div className={s.previewName}>{generatedName}</div>
-            <p className={s.previewHint}>
-              Permission name is auto-generated from resource and action
-            </p>
-          </div>
-
-          <div className={s.formActions}>
-            <Button
-              variant='secondary'
-              className={s.cancelBtn}
-              onClick={handleCancel}
-              disabled={saving}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant='primary'
-              type='submit'
-              className={s.submitBtn}
-              loading={saving}
-            >
-              {saving ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </form>
+        <Form
+          schema={updatePermissionFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <EditPermissionFormFields
+            handleCancel={handleCancel}
+            saving={saving}
+          />
+        </Form>
       </div>
       <ConfirmModal.Back
         ref={confirmBackModalRef}
@@ -269,6 +163,75 @@ export default function EditPermission({ permissionId }) {
     </div>
   );
 }
+
+/**
+ * EditPermissionFormFields - Form fields component that uses react-hook-form context
+ */
+function EditPermissionFormFields({ handleCancel, saving }) {
+  const { watch } = useFormContext();
+
+  // Watch for auto-generated name preview
+  const resource = watch('resource') || '';
+  const action = watch('action') || '';
+  const generatedName = resource && action ? `${resource}:${action}` : '-';
+
+  return (
+    <>
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Permission Information</h3>
+
+        <div className={s.formRow}>
+          <Form.Field name='resource' label='Resource' required>
+            <Form.Input placeholder='e.g. users, posts, comments' />
+          </Form.Field>
+          <Form.Field name='action' label='Action' required>
+            <Form.Input placeholder='e.g. read, write, delete' />
+          </Form.Field>
+        </div>
+
+        <Form.Field name='description' label='Description'>
+          <Form.Textarea
+            placeholder='Describe what this permission allows...'
+            rows={3}
+          />
+        </Form.Field>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Status</h3>
+
+        <Form.Field name='is_active'>
+          <Form.Checkbox label='Active' />
+        </Form.Field>
+        <p className={s.checkboxHint}>
+          Inactive permissions will not be enforced in authorization checks
+        </p>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Generated Name</h3>
+        <div className={s.previewName}>{generatedName}</div>
+        <p className={s.previewHint}>
+          Permission name is auto-generated from resource and action
+        </p>
+      </div>
+
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel} disabled={saving}>
+          Cancel
+        </Button>
+        <Button variant='primary' type='submit' loading={saving}>
+          {saving ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+EditPermissionFormFields.propTypes = {
+  handleCancel: PropTypes.func.isRequired,
+  saving: PropTypes.bool.isRequired,
+};
 
 EditPermission.propTypes = {
   permissionId: PropTypes.string.isRequired,

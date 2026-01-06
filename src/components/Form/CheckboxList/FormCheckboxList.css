@@ -1,0 +1,174 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../variables.css';
+
+/* Wrapper */
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+/* Search Input */
+.searchInput {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  transition: var(--transition-base);
+}
+
+.searchInput:hover {
+  border-color: var(--color-border-hover);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.searchInput:disabled {
+  background-color: var(--color-background-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Checkbox Group Container */
+.checkboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  overflow-y: auto;
+
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-tertiary);
+  }
+}
+
+.checkboxGroupError {
+  border-color: var(--color-error);
+}
+
+/* Checkbox Item */
+.checkboxItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--spacing-3);
+  cursor: pointer;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text-primary);
+  padding: var(--spacing-3);
+  margin: 0;
+  border-radius: var(--radius-sm);
+  transition: var(--transition-base);
+  border: none;
+}
+
+.checkboxItem:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.checkboxItem input[type='checkbox'] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.checkboxItem input[type='checkbox']:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.checkboxItem > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+/* Item Description */
+.itemDescription {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+  margin: 0;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+/* Loading State */
+.loading {
+  padding: var(--spacing-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Loading More */
+.loadingMore {
+  padding: var(--spacing-3);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+/* Empty State */
+.empty {
+  padding: var(--spacing-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}

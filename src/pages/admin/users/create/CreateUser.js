@@ -6,9 +6,11 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
+import { createUserFormSchema } from '../../../../shared/validator/features/admin';
 import {
   createUser,
   fetchRoles,
@@ -16,12 +18,10 @@ import {
   generatePassword,
   isUserCreateLoading,
 } from '../../../../redux';
-import {
-  useInfiniteScroll,
-  useDebounce,
-} from '../../../../components/InfiniteScroll';
+import { useDebounce } from '../../../../components/InfiniteScroll';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
+import Form, { useFormContext } from '../../../../components/Form';
 import s from './CreateUser.css';
 
 function CreateUser() {
@@ -30,25 +30,32 @@ function CreateUser() {
   const history = useHistory();
   const loading = useSelector(isUserCreateLoading);
 
-  // Roles state for infinite loading
-  const [roles, setRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(false);
-  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
-  const [rolesHasMore, setRolesHasMore] = useState(false);
-  const [rolesPage, setRolesPage] = useState(1);
-  const rolesLimit = 10;
-  const rolesContainerRef = useRef(null);
+  const [error, setError] = useState(null);
+  const confirmBackModalRef = useRef(null);
 
-  // Groups state for infinite loading
-  const [groups, setGroups] = useState([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
-  const [groupsHasMore, setGroupsHasMore] = useState(false);
-  const [groupsPage, setGroupsPage] = useState(1);
-  const groupsLimit = 10;
-  const groupsContainerRef = useRef(null);
+  const handleCancel = useCallback(() => {
+    confirmBackModalRef.current && confirmBackModalRef.current.open();
+  }, []);
 
-  const [formData, setFormData] = useState({
+  const handleConfirmBack = useCallback(() => {
+    history.push('/admin/users');
+  }, [history]);
+
+  const handleSubmit = useCallback(
+    async data => {
+      setError(null);
+
+      try {
+        await dispatch(createUser(data)).unwrap();
+        history.push('/admin/users');
+      } catch (err) {
+        setError(err || t('errors.createUser', 'Failed to create user'));
+      }
+    },
+    [dispatch, history, t],
+  );
+
+  const defaultValues = {
     email: '',
     password: '',
     confirm_password: '',
@@ -58,13 +65,77 @@ function CreateUser() {
     roles: [],
     groups: [],
     is_active: true,
-  });
-  const [error, setError] = useState(null);
+  };
+
+  return (
+    <div className={s.root}>
+      <Box.Header
+        icon={<Icon name='users' size={24} />}
+        title='Create New User'
+        subtitle='Add a new user account'
+      >
+        <Button variant='secondary' onClick={handleCancel}>
+          ← Back to Users
+        </Button>
+      </Box.Header>
+      <div className={s.formContainer}>
+        <Form.Error message={error} />
+
+        <Form
+          schema={createUserFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <CreateUserFormFields
+            setError={setError}
+            handleCancel={handleCancel}
+            loading={loading}
+          />
+        </Form>
+      </div>
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
+      />
+    </div>
+  );
+}
+
+/**
+ * CreateUserFormFields - Form fields component that uses react-hook-form context
+ */
+function CreateUserFormFields({ setError, handleCancel, loading }) {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const { watch, setValue } = useFormContext();
+
+  // Roles state for infinite loading
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
+  const [rolesHasMore, setRolesHasMore] = useState(false);
+  const [rolesPage, setRolesPage] = useState(1);
+  const rolesLimit = 10;
+
+  // Groups state for infinite loading
+  const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
+  const [groupsHasMore, setGroupsHasMore] = useState(false);
+  const [groupsPage, setGroupsPage] = useState(1);
+  const groupsLimit = 10;
+
+  // Search state
   const [roleSearch, setRoleSearch] = useState('');
   const [groupSearch, setGroupSearch] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+
+  // Password generation state
   const [generatingPassword, setGeneratingPassword] = useState(false);
-  const confirmBackModalRef = useRef(null);
+
+  // Watch the roles and groups arrays for display count
+  const selectedRoles = watch('roles') || [];
+  const selectedGroups = watch('groups') || [];
 
   // Fetch roles with pagination
   const loadRoles = useCallback(
@@ -112,15 +183,6 @@ function CreateUser() {
     }
   }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
 
-  // RxJS-based infinite scroll for roles
-  useInfiniteScroll({
-    containerRef: rolesContainerRef,
-    onLoadMore: handleLoadMoreRoles,
-    hasMore: rolesHasMore,
-    loading: rolesLoadingMore,
-    threshold: 50,
-  });
-
   // Fetch groups with pagination
   const loadGroups = useCallback(
     async (page, search = '', reset = false) => {
@@ -167,61 +229,12 @@ function CreateUser() {
     }
   }, [groupsLoadingMore, groupsHasMore, groupsPage, groupSearch, loadGroups]);
 
-  // RxJS-based infinite scroll for groups
-  useInfiniteScroll({
-    containerRef: groupsContainerRef,
-    onLoadMore: handleLoadMoreGroups,
-    hasMore: groupsHasMore,
-    loading: groupsLoadingMore,
-    threshold: 50,
-  });
-
-  const handleChange = useCallback(e => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  }, []);
-
-  const handleRoleChange = useCallback(e => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      roles: checked
-        ? [...prev.roles, value]
-        : prev.roles.filter(r => r !== value),
-    }));
-  }, []);
-
-  const handleGroupChange = useCallback(e => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      groups: checked
-        ? [...prev.groups, value]
-        : prev.groups.filter(g => g !== value),
-    }));
-  }, []);
-
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
-
-  const handleConfirmBack = useCallback(() => {
-    history.push('/admin/users');
-  }, [history]);
-
   const handleGeneratePassword = useCallback(async () => {
     setGeneratingPassword(true);
     try {
       const password = await dispatch(generatePassword()).unwrap();
-      setFormData(prev => ({
-        ...prev,
-        password: password,
-        confirm_password: password,
-      }));
-      setShowPassword(true);
+      setValue('password', password, { shouldValidate: true });
+      setValue('confirm_password', password, { shouldValidate: true });
     } catch (err) {
       setError(
         err || t('errors.generatePassword', 'Failed to generate password'),
@@ -229,299 +242,128 @@ function CreateUser() {
     } finally {
       setGeneratingPassword(false);
     }
-  }, [dispatch, t]);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setError(null);
-
-      if (formData.password !== formData.confirm_password) {
-        setError(t('errors.passwordMatch', 'Passwords do not match'));
-        return;
-      }
-
-      if (formData.roles.length === 0) {
-        setError(t('errors.selectRole', 'Please select at least one role'));
-        return;
-      }
-
-      try {
-        await dispatch(createUser(formData)).unwrap();
-        history.push('/admin/users');
-      } catch (err) {
-        setError(err);
-      }
-    },
-    [dispatch, formData, history, t],
-  );
+  }, [dispatch, setValue, setError, t]);
 
   return (
-    <div className={s.root}>
-      <Box.Header
-        icon={<Icon name='users' size={24} />}
-        title='Create New User'
-        subtitle='Add a new user account'
-      >
-        <Button variant='secondary' onClick={handleCancel}>
-          ← Back to Users
-        </Button>
-      </Box.Header>
-      <div className={s.formContainer}>
-        <form onSubmit={handleSubmit} className={s.form}>
-          {error && <div className={s.formError}>{error}</div>}
+    <>
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Account Information</h3>
 
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Account Information</h3>
+        <Form.Field name='email' label='Email' required>
+          <Form.Input type='email' placeholder='user@example.com' />
+        </Form.Field>
 
-            <div className={s.formGroup}>
-              <label htmlFor='email'>Email *</label>
-              <input
-                type='email'
-                id='email'
-                name='email'
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className={s.formInput}
-                placeholder='user@example.com'
-              />
-            </div>
+        <div className={s.formRow}>
+          <Form.Field name='password' label='Password' required>
+            <Form.Password placeholder='Enter password' />
+          </Form.Field>
+          <Form.Field name='confirm_password' label='Confirm Password' required>
+            <Form.Password placeholder='Confirm password' />
+          </Form.Field>
+        </div>
 
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='password'>Password *</label>
-                <div className={s.passwordInputWrapper}>
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    id='password'
-                    name='password'
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    className={s.formInput}
-                    placeholder='Enter password'
-                  />
-                  <Button
-                    variant='ghost'
-                    size='small'
-                    iconOnly
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <Icon name='eyeOff' size={18} />
-                    ) : (
-                      <Icon name='eye' size={18} />
-                    )}
-                  </Button>
-                </div>
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='confirm_password'>Confirm Password *</label>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id='confirm_password'
-                  name='confirm_password'
-                  value={formData.confirm_password}
-                  onChange={handleChange}
-                  required
-                  className={s.formInput}
-                  placeholder='Confirm password'
-                />
-              </div>
-            </div>
-
-            <div className={s.generatePasswordRow}>
-              <Button
-                variant='secondary'
-                size='small'
-                onClick={handleGeneratePassword}
-                disabled={generatingPassword}
-                className={s.generateBtn}
-              >
-                {generatingPassword ? (
-                  'Generating...'
-                ) : (
-                  <>
-                    <Icon name='key' size={14} /> Generate Secure Password
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Personal Information</h3>
-
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='first_name'>First Name</label>
-                <input
-                  type='text'
-                  id='first_name'
-                  name='first_name'
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='John'
-                />
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='last_name'>Last Name</label>
-                <input
-                  type='text'
-                  id='last_name'
-                  name='last_name'
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='Doe'
-                />
-              </div>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='display_name'>Display Name</label>
-              <input
-                type='text'
-                id='display_name'
-                name='display_name'
-                value={formData.display_name}
-                onChange={handleChange}
-                className={s.formInput}
-                placeholder='John Doe'
-              />
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Access & Permissions</h3>
-
-            <div className={s.formGroup}>
-              <label htmlFor='roles'>
-                Roles ({formData.roles.length} selected)
-              </label>
-              <input
-                type='text'
-                placeholder='Search roles...'
-                value={roleSearch}
-                onChange={e => setRoleSearch(e.target.value)}
-                className={s.searchInput}
-              />
-              {rolesLoading ? (
-                <div className={s.itemsLoading}>Loading roles...</div>
-              ) : (
-                <div ref={rolesContainerRef} className={s.checkboxGroup}>
-                  {roles.length > 0 ? (
-                    <>
-                      {roles.map(role => (
-                        <label key={role.name} className={s.checkboxItem}>
-                          <input
-                            type='checkbox'
-                            name='roles'
-                            value={role.name}
-                            checked={formData.roles.includes(role.name)}
-                            onChange={handleRoleChange}
-                          />
-                          <span>
-                            {role.name}
-                            {role.description && (
-                              <span className={s.itemDescription}>
-                                {role.description}
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                      {rolesLoadingMore && (
-                        <div className={s.loadingMore}>Loading more...</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className={s.noItemsFound}>No roles found</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='groups'>
-                Groups ({formData.groups.length} selected)
-              </label>
-              <input
-                type='text'
-                placeholder='Search groups...'
-                value={groupSearch}
-                onChange={e => setGroupSearch(e.target.value)}
-                className={s.searchInput}
-              />
-              {groupsLoading ? (
-                <div className={s.itemsLoading}>Loading groups...</div>
-              ) : (
-                <div ref={groupsContainerRef} className={s.checkboxGroup}>
-                  {groups.length > 0 ? (
-                    <>
-                      {groups.map(group => (
-                        <label key={group.id} className={s.checkboxItem}>
-                          <input
-                            type='checkbox'
-                            name='groups'
-                            value={group.id}
-                            checked={formData.groups.includes(group.id)}
-                            onChange={handleGroupChange}
-                          />
-                          <span>
-                            {group.name}
-                            {group.description && (
-                              <span className={s.itemDescription}>
-                                {group.description}
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                      {groupsLoadingMore && (
-                        <div className={s.loadingMore}>Loading more...</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className={s.noItemsFound}>No groups found</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={s.formGroupCheckbox}>
-              <label htmlFor='is_active'>
-                <input
-                  type='checkbox'
-                  id='is_active'
-                  name='is_active'
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                />
-                Active
-              </label>
-            </div>
-          </div>
-
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button variant='primary' type='submit' loading={loading}>
-              {loading ? 'Creating...' : 'Create User'}
-            </Button>
-          </div>
-        </form>
+        <div className={s.generatePasswordRow}>
+          <Button
+            variant='secondary'
+            size='small'
+            onClick={handleGeneratePassword}
+            disabled={generatingPassword}
+            className={s.generateBtn}
+          >
+            {generatingPassword ? (
+              'Generating...'
+            ) : (
+              <>
+                <Icon name='key' size={14} /> Generate Secure Password
+              </>
+            )}
+          </Button>
+        </div>
       </div>
-      <ConfirmModal.Back
-        ref={confirmBackModalRef}
-        onConfirm={handleConfirmBack}
-      />
-    </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Personal Information</h3>
+
+        <div className={s.formRow}>
+          <Form.Field name='first_name' label='First Name'>
+            <Form.Input placeholder='John' />
+          </Form.Field>
+          <Form.Field name='last_name' label='Last Name'>
+            <Form.Input placeholder='Doe' />
+          </Form.Field>
+        </div>
+
+        <Form.Field name='display_name' label='Display Name'>
+          <Form.Input placeholder='John Doe' />
+        </Form.Field>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Access &amp; Permissions</h3>
+
+        <Form.Field
+          name='roles'
+          label={`Roles (${selectedRoles.length} selected)`}
+        >
+          <Form.CheckboxList
+            items={roles}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
+            hasMore={rolesHasMore}
+            onLoadMore={handleLoadMoreRoles}
+            searchValue={roleSearch}
+            onSearchChange={setRoleSearch}
+            searchPlaceholder='Search roles...'
+            itemKey='name'
+            itemLabel='name'
+            itemDescription='description'
+            emptyMessage='No roles found'
+            loadingMessage='Loading roles...'
+          />
+        </Form.Field>
+
+        <Form.Field
+          name='groups'
+          label={`Groups (${selectedGroups.length} selected)`}
+        >
+          <Form.CheckboxList
+            items={groups}
+            loading={groupsLoading}
+            loadingMore={groupsLoadingMore}
+            hasMore={groupsHasMore}
+            onLoadMore={handleLoadMoreGroups}
+            searchValue={groupSearch}
+            onSearchChange={setGroupSearch}
+            searchPlaceholder='Search groups...'
+            itemKey='id'
+            itemLabel='name'
+            itemDescription='description'
+            emptyMessage='No groups found'
+            loadingMessage='Loading groups...'
+          />
+        </Form.Field>
+
+        <Form.Field name='is_active'>
+          <Form.Checkbox label='Active' />
+        </Form.Field>
+      </div>
+
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel}>
+          Cancel
+        </Button>
+        <Button variant='primary' type='submit' loading={loading}>
+          {loading ? 'Creating...' : 'Create User'}
+        </Button>
+      </div>
+    </>
   );
 }
+
+CreateUserFormFields.propTypes = {
+  setError: PropTypes.func.isRequired,
+  handleCancel: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+};
 
 export default CreateUser;

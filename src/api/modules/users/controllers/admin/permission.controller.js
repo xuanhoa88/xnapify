@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { validateForm } from '../../../../../shared/validator';
+import {
+  createPermissionFormSchema,
+  updatePermissionFormSchema,
+} from '../../../../../shared/validator/features/admin';
 import * as permissionService from '../../services/admin/permission.service';
 
 // ========================================================================
@@ -24,12 +29,15 @@ export async function createPermission(req, res) {
   try {
     const { resource, action, description, is_active } = req.body;
 
-    // Validate input
-    const errors = {};
-    if (!resource) errors.resource = 'RESOURCE_REQUIRED';
-    if (!action) errors.action = 'ACTION_REQUIRED';
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(createPermissionFormSchema, {
+      resource: resource || '',
+      action: action || '',
+      description: description || '',
+      is_active: is_active !== false,
+    });
 
-    if (Object.keys(errors).length > 0) {
+    if (!isValid) {
       return http.sendValidationError(res, errors);
     }
 
@@ -142,6 +150,18 @@ export async function updatePermission(req, res) {
     const { id } = req.params;
     const { resource, action, description, is_active } = req.body;
     const models = req.app.get('models');
+
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(updatePermissionFormSchema, {
+      resource: resource || '',
+      action: action || '',
+      description: description || '',
+      is_active: is_active !== false,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
 
     const updatedPermission = await permissionService.updatePermission(
       id,

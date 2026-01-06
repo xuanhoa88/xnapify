@@ -13,27 +13,6 @@
   min-height: 100%;
 }
 
-.backBtn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-3) var(--spacing-5);
-  background: transparent;
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: var(--transition-base);
-}
-
-.backBtn:hover {
-  background: var(--color-background-secondary);
-  color: var(--color-text-primary);
-  border-color: var(--color-border-hover);
-}
-
 .formContainer {
   background: var(--color-background);
   padding: var(--spacing-8);
@@ -67,25 +46,49 @@
 }
 
 .formGroup {
-  margin-bottom: var(--spacing-4);
-  flex: 1;
+  margin-bottom: var(--spacing-5);
+  flex: 1 1 0%;
+  min-width: 0; /* Prevent flex items from overflowing */
 }
 
 .formRow {
   display: flex;
-  gap: var(--spacing-4);
+  gap: var(--spacing-6);
+  margin-bottom: var(--spacing-5);
 }
 
-.formRow .formGroup {
+/* Ensure equal width for row children */
+.formRow > * {
+  flex: 1 1 0%;
+  min-width: 0;
+}
+
+/* Handle both direct .formGroup children and nested Form.Field (which has its own formGroup) */
+.formRow > .formGroup,
+.formRow > div {
+  flex: 1 1 0%;
+  min-width: 0;
   margin-bottom: 0;
 }
 
-.formGroup label {
+/* Remove margin from Form.Field's internal formGroup when inside formRow */
+.formRow > div > :global(.formGroup) {
+  margin-bottom: 0;
+}
+
+/* Override Form.Field default margin when directly in formRow */
+.formRow :global(.formGroup) {
+  margin-bottom: 0;
+}
+
+.formGroup label,
+.formRow :global(label) {
   display: block;
   margin-bottom: var(--spacing-2);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   color: var(--color-text-secondary);
+  letter-spacing: 0.03em;
 }
 
 .formInput {
@@ -342,6 +345,12 @@
   border: 1px solid #fecaca;
 }
 
+.fieldError {
+  margin-top: var(--spacing-2);
+  color: var(--color-error, #dc2626);
+  font-size: var(--font-size-xs);
+}
+
 .formActions {
   display: flex;
   justify-content: flex-end;
@@ -400,13 +409,6 @@
 @media (max-width: 768px) {
   .root {
     padding: var(--spacing-3);
-  }
-
-  /* Back button compact */
-  .backBtn {
-    padding: var(--spacing-2) var(--spacing-3);
-    font-size: var(--font-size-xs);
-    gap: var(--spacing-1);
   }
 
   /* Form container compact */

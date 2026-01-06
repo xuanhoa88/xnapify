@@ -5,6 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { validateForm } from '../../../../../shared/validator';
+import {
+  updateUserFormSchema,
+  createUserFormSchema,
+} from '../../../../../shared/validator/features/admin';
 import * as userAdminService from '../../services/admin/user.service';
 import { generatePassword } from '../../utils/password';
 import { DEFAULT_ROLE } from '../../constants/rbac';
@@ -36,19 +41,21 @@ export async function createUser(req, res) {
       is_active,
     } = req.body;
 
-    // Validate required fields
-    if (!email || !password) {
-      return http.sendValidationError(res, {
-        email: !email ? 'Email is required' : undefined,
-        password: !password ? 'Password is required' : undefined,
-      });
-    }
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(createUserFormSchema, {
+      email: email || '',
+      password: password || '',
+      confirm_password: confirm_password || '',
+      display_name: display_name || '',
+      first_name: first_name || '',
+      last_name: last_name || '',
+      roles: roles || [],
+      groups: groups || [],
+      is_active: is_active !== false,
+    });
 
-    // Validate password match
-    if (confirm_password && password !== confirm_password) {
-      return http.sendValidationError(res, {
-        confirm_password: 'Passwords do not match',
-      });
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
 
     // Get models from app context
@@ -215,13 +222,10 @@ export async function updateUserById(req, res) {
   try {
     const { id } = req.params;
     const {
-      email,
       display_name,
       first_name,
       last_name,
-      bio,
-      location,
-      website,
+      password,
       roles,
       groups,
       is_active,
@@ -232,26 +236,40 @@ export async function updateUserById(req, res) {
       return http.sendError(res, 'Cannot update your own account', 400);
     }
 
+    const [isValid, errors] = validateForm(updateUserFormSchema, {
+      display_name,
+      first_name,
+      last_name,
+      password: password || '',
+      roles: roles || [],
+      groups: groups || [],
+      is_active: !!is_active,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
+
     // Get models from app context
     const models = req.app.get('models');
 
+    // Build update data - only include password if provided
+    const updateData = {
+      display_name,
+      first_name,
+      last_name,
+      roles,
+      groups,
+      is_active,
+    };
+
+    // Only include password if it's provided and not empty
+    if (password && password.length > 0) {
+      updateData.password = password;
+    }
+
     // Update user
-    const user = await userAdminService.updateUserById(
-      id,
-      {
-        email,
-        display_name,
-        first_name,
-        last_name,
-        bio,
-        location,
-        website,
-        roles,
-        groups,
-        is_active,
-      },
-      models,
-    );
+    const user = await userAdminService.updateUserById(id, updateData, models);
 
     return http.sendSuccess(res, {
       user: {

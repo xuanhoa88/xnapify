@@ -5,11 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../components/History';
+import { updateUserFormSchema } from '../../../../shared/validator/features/admin';
 import {
   updateUser,
   fetchUserById,
@@ -23,12 +24,10 @@ import {
   getUserFetchError,
   getUserProfile,
 } from '../../../../redux';
-import {
-  useInfiniteScroll,
-  useDebounce,
-} from '../../../../components/InfiniteScroll';
+import { useDebounce } from '../../../../components/InfiniteScroll';
 import { Box, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
+import Form, { useFormContext } from '../../../../components/Form';
 import s from './EditUser.css';
 
 function EditUser({ userId }) {
@@ -42,149 +41,8 @@ function EditUser({ userId }) {
   const user = useSelector(getFetchedUser);
   const userLoadError = useSelector(getUserFetchError);
 
-  // Roles state for infinite loading
-  const [roles, setRoles] = useState([]);
-  const [rolesLoading, setRolesLoading] = useState(false);
-  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
-  const [rolesHasMore, setRolesHasMore] = useState(false);
-  const [rolesPage, setRolesPage] = useState(1);
-  const rolesLimit = 10;
-  const rolesContainerRef = useRef(null);
-
-  // Groups state for infinite loading
-  const [groups, setGroups] = useState([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
-  const [groupsHasMore, setGroupsHasMore] = useState(false);
-  const [groupsPage, setGroupsPage] = useState(1);
-  const groupsLimit = 10;
-  const groupsContainerRef = useRef(null);
-
-  const [formData, setFormData] = useState({
-    display_name: '',
-    first_name: '',
-    last_name: '',
-    roles: [],
-    groups: [],
-    is_active: true,
-  });
   const [error, setError] = useState(null);
-  const [roleSearch, setRoleSearch] = useState('');
-  const [groupSearch, setGroupSearch] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [generatingPassword, setGeneratingPassword] = useState(false);
   const confirmBackModalRef = useRef(null);
-
-  // Fetch roles with pagination
-  const loadRoles = useCallback(
-    async (page, search = '', reset = false) => {
-      if (reset) {
-        setRolesLoading(true);
-      } else {
-        setRolesLoadingMore(true);
-      }
-
-      try {
-        const data = await dispatch(
-          fetchRoles({ page, limit: rolesLimit, search }),
-        ).unwrap();
-        const newRoles = data.roles || [];
-        const { pagination } = data;
-
-        if (reset) {
-          setRoles(newRoles);
-        } else {
-          setRoles(prev => [...prev, ...newRoles]);
-        }
-
-        setRolesHasMore(pagination && pagination.page < pagination.pages);
-        setRolesPage(page);
-      } catch (err) {
-        // Silently handle error
-      } finally {
-        setRolesLoading(false);
-        setRolesLoadingMore(false);
-      }
-    },
-    [dispatch],
-  );
-
-  // Debounced role search using RxJS (also handles initial load on mount)
-  useDebounce(roleSearch, 300, debouncedSearch => {
-    loadRoles(1, debouncedSearch, true);
-  });
-
-  // Load more roles handler
-  const handleLoadMoreRoles = useCallback(() => {
-    if (!rolesLoadingMore && rolesHasMore) {
-      loadRoles(rolesPage + 1, roleSearch, false);
-    }
-  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
-
-  // RxJS-based infinite scroll for roles
-  useInfiniteScroll({
-    containerRef: rolesContainerRef,
-    onLoadMore: handleLoadMoreRoles,
-    hasMore: rolesHasMore,
-    loading: rolesLoadingMore,
-    threshold: 50,
-  });
-
-  // Fetch groups with pagination
-  const loadGroups = useCallback(
-    async (page, search = '', reset = false) => {
-      if (reset) {
-        setGroupsLoading(true);
-      } else {
-        setGroupsLoadingMore(true);
-      }
-
-      try {
-        const data = await dispatch(
-          fetchGroups({ page, limit: groupsLimit, search }),
-        ).unwrap();
-        const newGroups = data.groups || [];
-        const { pagination } = data;
-
-        if (reset) {
-          setGroups(newGroups);
-        } else {
-          setGroups(prev => [...prev, ...newGroups]);
-        }
-
-        setGroupsHasMore(pagination && pagination.page < pagination.pages);
-        setGroupsPage(page);
-      } catch (err) {
-        // Silently handle error
-      } finally {
-        setGroupsLoading(false);
-        setGroupsLoadingMore(false);
-      }
-    },
-    [dispatch],
-  );
-
-  // Debounced group search using RxJS (also handles initial load on mount)
-  useDebounce(groupSearch, 300, debouncedSearch => {
-    loadGroups(1, debouncedSearch, true);
-  });
-
-  // Load more groups handler
-  const handleLoadMoreGroups = useCallback(() => {
-    if (!groupsLoadingMore && groupsHasMore) {
-      loadGroups(groupsPage + 1, groupSearch, false);
-    }
-  }, [groupsLoadingMore, groupsHasMore, groupsPage, groupSearch, loadGroups]);
-
-  // RxJS-based infinite scroll for groups
-  useInfiniteScroll({
-    containerRef: groupsContainerRef,
-    onLoadMore: handleLoadMoreGroups,
-    hasMore: groupsHasMore,
-    loading: groupsLoadingMore,
-    threshold: 50,
-  });
 
   // Fetch user data on mount
   useEffect(() => {
@@ -192,52 +50,6 @@ function EditUser({ userId }) {
       dispatch(fetchUserById(userId));
     }
   }, [dispatch, userId]);
-
-  // Update form data when user is loaded
-  useEffect(() => {
-    if (user) {
-      setFormData({
-        display_name: user.display_name || '',
-        first_name: user.first_name || '',
-        last_name: user.last_name || '',
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0 ? user.roles : [],
-        groups:
-          Array.isArray(user.groups) && user.groups.length > 0
-            ? user.groups.map(g => g.id)
-            : [],
-        is_active: user.is_active,
-      });
-    }
-  }, [user]);
-
-  const handleChange = useCallback(e => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  }, []);
-
-  const handleRoleChange = useCallback(e => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      roles: checked
-        ? [...prev.roles, value]
-        : prev.roles.filter(r => r !== value),
-    }));
-  }, []);
-
-  const handleGroupChange = useCallback(e => {
-    const { value, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      groups: checked
-        ? [...prev.groups, value]
-        : prev.groups.filter(g => g !== value),
-    }));
-  }, []);
 
   const handleCancel = useCallback(() => {
     confirmBackModalRef.current && confirmBackModalRef.current.open();
@@ -247,47 +59,44 @@ function EditUser({ userId }) {
     history.push('/admin/users');
   }, [history]);
 
-  const handleGeneratePassword = useCallback(async () => {
-    setGeneratingPassword(true);
-    try {
-      const password = await dispatch(generatePassword()).unwrap();
-      setNewPassword(password);
-      setShowPassword(true);
-    } catch (err) {
-      setError(
-        err || t('errors.generatePassword', 'Failed to generate password'),
-      );
-    } finally {
-      setGeneratingPassword(false);
-    }
-  }, [dispatch, t]);
-
   const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
+    async data => {
       setError(null);
-
-      if (formData.roles.length === 0) {
-        setError(t('errors.selectRole', 'Please select at least one role'));
-        return;
-      }
-
-      // Include password only if a new one was generated
-      const updateData = { ...formData };
-      if (newPassword) {
-        updateData.password = newPassword;
-      }
 
       try {
         await dispatch(
-          updateUser({ userId: user.id, userData: updateData }),
+          updateUser({ userId: user.id, userData: data }),
         ).unwrap();
         history.push('/admin/users');
       } catch (err) {
         setError(err || t('errors.updateUser', 'Failed to update user'));
       }
     },
-    [formData, newPassword, dispatch, user, history, t],
+    [dispatch, user, history, t],
+  );
+
+  // Build default values from user data (memoized to prevent Form re-renders)
+  // Must be called before early returns to follow Rules of Hooks
+  const defaultValues = useMemo(
+    () =>
+      user
+        ? {
+            email: user.email || '',
+            display_name: user.display_name || '',
+            first_name: user.first_name || '',
+            last_name: user.last_name || '',
+            roles:
+              Array.isArray(user.roles) && user.roles.length > 0
+                ? user.roles
+                : [],
+            groups:
+              Array.isArray(user.groups) && user.groups.length > 0
+                ? user.groups.map(g => g.id)
+                : [],
+            is_active: user.is_active,
+          }
+        : {},
+    [user],
   );
 
   // Show loading on first fetch or when still fetching
@@ -335,8 +144,7 @@ function EditUser({ userId }) {
   }
 
   // Prevent admin from editing their own account
-  const isSelf = currentUser && currentUser.id === userId;
-  if (isSelf) {
+  if (currentUser && currentUser.id === userId) {
     return (
       <div className={s.root}>
         <Box.Header
@@ -381,233 +189,20 @@ function EditUser({ userId }) {
       </Box.Header>
 
       <div className={s.formContainer}>
-        <form onSubmit={handleSubmit} className={s.form}>
-          {error && <div className={s.formError}>{error}</div>}
+        <Form.Error message={error} />
 
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Account Information</h3>
-
-            <div className={s.formGroup}>
-              <label htmlFor='email'>Email</label>
-              <input
-                type='email'
-                value={user.email}
-                disabled
-                className={s.formInputDisabled}
-              />
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='password'>Reset Password (optional)</label>
-              <div className={s.passwordInputWrapper}>
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  className={s.formInput}
-                  placeholder='Leave empty to keep current password'
-                  id='password'
-                />
-                {newPassword && (
-                  <Button
-                    variant='ghost'
-                    size='small'
-                    iconOnly
-                    onClick={() => setShowPassword(!showPassword)}
-                    title={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    {showPassword ? (
-                      <Icon name='eyeOff' size={18} />
-                    ) : (
-                      <Icon name='eye' size={18} />
-                    )}
-                  </Button>
-                )}
-              </div>
-              <div className={s.generatePasswordRow}>
-                <Button
-                  variant='secondary'
-                  size='small'
-                  onClick={handleGeneratePassword}
-                  disabled={generatingPassword}
-                  className={s.generateBtn}
-                >
-                  {generatingPassword ? (
-                    'Generating...'
-                  ) : (
-                    <>
-                      <Icon name='key' size={14} /> Generate New Password
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Personal Information</h3>
-
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='first_name'>First Name</label>
-                <input
-                  type='text'
-                  id='first_name'
-                  name='first_name'
-                  value={formData.first_name}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='John'
-                />
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='last_name'>Last Name</label>
-                <input
-                  type='text'
-                  id='last_name'
-                  name='last_name'
-                  value={formData.last_name}
-                  onChange={handleChange}
-                  className={s.formInput}
-                  placeholder='Doe'
-                />
-              </div>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='display_name'>Display Name</label>
-              <input
-                type='text'
-                id='display_name'
-                name='display_name'
-                value={formData.display_name}
-                onChange={handleChange}
-                className={s.formInput}
-                placeholder='John Doe'
-              />
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Access & Permissions</h3>
-
-            <div className={s.formGroup}>
-              <label htmlFor='roles'>
-                Roles ({formData.roles.length} selected)
-              </label>
-              <input
-                type='text'
-                placeholder='Search roles...'
-                value={roleSearch}
-                onChange={e => setRoleSearch(e.target.value)}
-                className={s.searchInput}
-              />
-              {rolesLoading ? (
-                <div className={s.itemsLoading}>Loading roles...</div>
-              ) : (
-                <div ref={rolesContainerRef} className={s.checkboxGroup}>
-                  {roles.length > 0 ? (
-                    <>
-                      {roles.map(role => (
-                        <label key={role.name} className={s.checkboxItem}>
-                          <input
-                            type='checkbox'
-                            name='roles'
-                            value={role.name}
-                            checked={formData.roles.includes(role.name)}
-                            onChange={handleRoleChange}
-                          />
-                          <span>
-                            {role.name}
-                            {role.description && (
-                              <span className={s.itemDescription}>
-                                {role.description}
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                      {rolesLoadingMore && (
-                        <div className={s.loadingMore}>Loading more...</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className={s.noItemsFound}>No roles found</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='groups'>
-                Groups ({formData.groups.length} selected)
-              </label>
-              <input
-                type='text'
-                placeholder='Search groups...'
-                value={groupSearch}
-                onChange={e => setGroupSearch(e.target.value)}
-                className={s.searchInput}
-              />
-              {groupsLoading ? (
-                <div className={s.itemsLoading}>Loading groups...</div>
-              ) : (
-                <div ref={groupsContainerRef} className={s.checkboxGroup}>
-                  {groups.length > 0 ? (
-                    <>
-                      {groups.map(group => (
-                        <label key={group.id} className={s.checkboxItem}>
-                          <input
-                            type='checkbox'
-                            name='groups'
-                            value={group.id}
-                            checked={formData.groups.includes(group.id)}
-                            onChange={handleGroupChange}
-                          />
-                          <span>
-                            {group.name}
-                            {group.description && (
-                              <span className={s.itemDescription}>
-                                {group.description}
-                              </span>
-                            )}
-                          </span>
-                        </label>
-                      ))}
-                      {groupsLoadingMore && (
-                        <div className={s.loadingMore}>Loading more...</div>
-                      )}
-                    </>
-                  ) : (
-                    <div className={s.noItemsFound}>No groups found</div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            <div className={s.formGroupCheckbox}>
-              <label htmlFor='is_active'>
-                <input
-                  type='checkbox'
-                  id='is_active'
-                  name='is_active'
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                />
-                Active
-              </label>
-            </div>
-          </div>
-
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button variant='primary' type='submit' loading={loading}>
-              {loading ? 'Saving...' : 'Save Changes'}
-            </Button>
-          </div>
-        </form>
+        <Form
+          schema={updateUserFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <EditUserFormFields
+            setError={setError}
+            handleCancel={handleCancel}
+            loading={loading}
+          />
+        </Form>
       </div>
       <ConfirmModal.Back
         ref={confirmBackModalRef}
@@ -616,6 +211,262 @@ function EditUser({ userId }) {
     </div>
   );
 }
+
+/**
+ * EditUserFormFields - Form fields component that uses react-hook-form context
+ * Contains all the form fields and manages roles/groups state internally
+ */
+function EditUserFormFields({ setError, handleCancel, loading }) {
+  const dispatch = useDispatch();
+  const { t } = useTranslation();
+  const { watch, setValue } = useFormContext();
+
+  // Roles state for infinite loading
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+  const [rolesLoadingMore, setRolesLoadingMore] = useState(false);
+  const [rolesHasMore, setRolesHasMore] = useState(false);
+  const [rolesPage, setRolesPage] = useState(1);
+  const rolesLimit = 10;
+
+  // Groups state for infinite loading
+  const [groups, setGroups] = useState([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [groupsLoadingMore, setGroupsLoadingMore] = useState(false);
+  const [groupsHasMore, setGroupsHasMore] = useState(false);
+  const [groupsPage, setGroupsPage] = useState(1);
+  const groupsLimit = 10;
+
+  // Search state
+  const [roleSearch, setRoleSearch] = useState('');
+  const [groupSearch, setGroupSearch] = useState('');
+
+  // Password generation state
+  const [generatingPassword, setGeneratingPassword] = useState(false);
+
+  // Watch the roles and groups arrays for the custom checkbox lists
+  const selectedRoles = watch('roles') || [];
+  const selectedGroups = watch('groups') || [];
+
+  // Fetch roles with pagination
+  const loadRoles = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) {
+        setRolesLoading(true);
+      } else {
+        setRolesLoadingMore(true);
+      }
+
+      try {
+        const data = await dispatch(
+          fetchRoles({ page, limit: rolesLimit, search }),
+        ).unwrap();
+        const newRoles = data.roles || [];
+        const { pagination } = data;
+
+        if (reset) {
+          setRoles(newRoles);
+        } else {
+          setRoles(prev => [...prev, ...newRoles]);
+        }
+
+        setRolesHasMore(pagination && pagination.page < pagination.pages);
+        setRolesPage(page);
+      } finally {
+        setRolesLoading(false);
+        setRolesLoadingMore(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Debounced role search using RxJS (also handles initial load on mount)
+  useDebounce(roleSearch, 300, debouncedSearch => {
+    loadRoles(1, debouncedSearch, true);
+  });
+
+  // Load more roles handler
+  const handleLoadMoreRoles = useCallback(() => {
+    if (!rolesLoadingMore && rolesHasMore) {
+      loadRoles(rolesPage + 1, roleSearch, false);
+    }
+  }, [rolesLoadingMore, rolesHasMore, rolesPage, roleSearch, loadRoles]);
+
+  // Fetch groups with pagination
+  const loadGroups = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) {
+        setGroupsLoading(true);
+      } else {
+        setGroupsLoadingMore(true);
+      }
+
+      try {
+        const data = await dispatch(
+          fetchGroups({ page, limit: groupsLimit, search }),
+        ).unwrap();
+        const newGroups = data.groups || [];
+        const { pagination } = data;
+
+        if (reset) {
+          setGroups(newGroups);
+        } else {
+          setGroups(prev => [...prev, ...newGroups]);
+        }
+
+        setGroupsHasMore(pagination && pagination.page < pagination.pages);
+        setGroupsPage(page);
+      } catch (err) {
+        // Silently handle error
+      } finally {
+        setGroupsLoading(false);
+        setGroupsLoadingMore(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Debounced group search using RxJS (also handles initial load on mount)
+  useDebounce(groupSearch, 300, debouncedSearch => {
+    loadGroups(1, debouncedSearch, true);
+  });
+
+  // Load more groups handler
+  const handleLoadMoreGroups = useCallback(() => {
+    if (!groupsLoadingMore && groupsHasMore) {
+      loadGroups(groupsPage + 1, groupSearch, false);
+    }
+  }, [groupsLoadingMore, groupsHasMore, groupsPage, groupSearch, loadGroups]);
+
+  const handleGeneratePassword = useCallback(async () => {
+    setGeneratingPassword(true);
+    try {
+      const password = await dispatch(generatePassword()).unwrap();
+      setValue('password', password, { shouldValidate: true });
+    } catch (err) {
+      setError(
+        err || t('errors.generatePassword', 'Failed to generate password'),
+      );
+    } finally {
+      setGeneratingPassword(false);
+    }
+  }, [dispatch, setValue, setError, t]);
+
+  return (
+    <>
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Account Information</h3>
+
+        <Form.Field name='email' label='Email'>
+          <Form.Input type='email' disabled />
+        </Form.Field>
+
+        <Form.Field name='password' label='Reset Password (optional)'>
+          <Form.Password placeholder='Leave empty to keep current password' />
+        </Form.Field>
+        <div className={s.generatePasswordRow}>
+          <Button
+            variant='secondary'
+            size='small'
+            onClick={handleGeneratePassword}
+            disabled={generatingPassword}
+            className={s.generateBtn}
+          >
+            {generatingPassword ? (
+              'Generating...'
+            ) : (
+              <>
+                <Icon name='key' size={14} /> Generate New Password
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Personal Information</h3>
+
+        <div className={s.formRow}>
+          <Form.Field name='first_name' label='First Name'>
+            <Form.Input placeholder='John' />
+          </Form.Field>
+          <Form.Field name='last_name' label='Last Name'>
+            <Form.Input placeholder='Doe' />
+          </Form.Field>
+        </div>
+
+        <Form.Field name='display_name' label='Display Name'>
+          <Form.Input placeholder='John Doe' />
+        </Form.Field>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Access &amp; Permissions</h3>
+
+        <Form.Field
+          name='roles'
+          label={`Roles (${selectedRoles.length} selected)`}
+        >
+          <Form.CheckboxList
+            items={roles}
+            loading={rolesLoading}
+            loadingMore={rolesLoadingMore}
+            hasMore={rolesHasMore}
+            onLoadMore={handleLoadMoreRoles}
+            searchValue={roleSearch}
+            onSearchChange={setRoleSearch}
+            searchPlaceholder='Search roles...'
+            itemKey='name'
+            itemLabel='name'
+            itemDescription='description'
+            emptyMessage={t('No roles found')}
+            loadingMessage={t('Loading roles...')}
+          />
+        </Form.Field>
+
+        <Form.Field
+          name='groups'
+          label={`Groups (${selectedGroups.length} selected)`}
+        >
+          <Form.CheckboxList
+            items={groups}
+            loading={groupsLoading}
+            loadingMore={groupsLoadingMore}
+            hasMore={groupsHasMore}
+            onLoadMore={handleLoadMoreGroups}
+            searchValue={groupSearch}
+            onSearchChange={setGroupSearch}
+            searchPlaceholder='Search groups...'
+            itemKey='id'
+            itemLabel='name'
+            itemDescription='description'
+            emptyMessage='No groups found'
+            loadingMessage='Loading groups...'
+          />
+        </Form.Field>
+
+        <Form.Field name='is_active'>
+          <Form.Checkbox label='Active' />
+        </Form.Field>
+      </div>
+
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel}>
+          Cancel
+        </Button>
+        <Button variant='primary' type='submit' loading={loading}>
+          {loading ? 'Saving...' : 'Save Changes'}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+EditUserFormFields.propTypes = {
+  setError: PropTypes.func.isRequired,
+  handleCancel: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+};
 
 EditUser.propTypes = {
   userId: PropTypes.string.isRequired,

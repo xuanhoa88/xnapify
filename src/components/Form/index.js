@@ -21,6 +21,7 @@ import FormRadio from './Radio';
 import FormFileUpload from './FileUpload';
 import FormError from './Error';
 import FormSearchableSelect from './SearchableSelect';
+import FormCheckboxList from './CheckboxList';
 import { useFormValidation, useFormField } from './FormContext';
 
 // Attach sub-components
@@ -33,6 +34,7 @@ Form.Textarea = FormTextarea;
 Form.Select = FormSelect;
 Form.SearchableSelect = FormSearchableSelect;
 Form.Checkbox = FormCheckbox;
+Form.CheckboxList = FormCheckboxList;
 Form.Switch = FormSwitch;
 Form.Radio = FormRadio;
 Form.FileUpload = FormFileUpload;

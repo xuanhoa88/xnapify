@@ -6,48 +6,22 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../components/History';
+import { createPermissionFormSchema } from '../../../../shared/validator/features/admin';
 import { createPermission, isPermissionCreateLoading } from '../../../../redux';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
 import Button from '../../../../components/Button';
+import Form, { useFormContext } from '../../../../components/Form';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {
   const dispatch = useDispatch();
   const history = useHistory();
   const loading = useSelector(isPermissionCreateLoading);
-  const [formData, setFormData] = useState({
-    resource: '',
-    action: '',
-    description: '',
-    is_active: true,
-  });
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
-
-  const handleSubmit = useCallback(
-    async e => {
-      e.preventDefault();
-      setError(null);
-
-      try {
-        await dispatch(createPermission(formData)).unwrap();
-        history.push('/admin/permissions');
-      } catch (err) {
-        setError(err);
-      }
-    },
-    [dispatch, history, formData],
-  );
-
-  const handleChange = useCallback(e => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-  }, []);
 
   const handleCancel = useCallback(() => {
     confirmBackModalRef.current && confirmBackModalRef.current.open();
@@ -57,11 +31,26 @@ export default function CreatePermission() {
     history.push('/admin/permissions');
   }, [history]);
 
-  // Auto-generate permission name preview
-  const generatedName =
-    formData.resource && formData.action
-      ? `${formData.resource}:${formData.action}`
-      : '-';
+  const handleSubmit = useCallback(
+    async data => {
+      setError(null);
+
+      try {
+        await dispatch(createPermission(data)).unwrap();
+        history.push('/admin/permissions');
+      } catch (err) {
+        setError(err);
+      }
+    },
+    [dispatch, history],
+  );
+
+  const defaultValues = {
+    resource: '',
+    action: '',
+    description: '',
+    is_active: true,
+  };
 
   return (
     <div className={s.root}>
@@ -76,96 +65,19 @@ export default function CreatePermission() {
       </Box.Header>
 
       <div className={s.formContainer}>
-        <form onSubmit={handleSubmit} className={s.form}>
-          {error && <div className={s.formError}>{error}</div>}
+        <Form.Error message={error} />
 
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Permission Information</h3>
-
-            <div className={s.formRow}>
-              <div className={s.formGroup}>
-                <label htmlFor='resource'>Resource *</label>
-                <input
-                  id='resource'
-                  name='resource'
-                  type='text'
-                  className={s.formInput}
-                  value={formData.resource}
-                  onChange={handleChange}
-                  placeholder='e.g. users, posts, comments'
-                  required
-                />
-              </div>
-              <div className={s.formGroup}>
-                <label htmlFor='action'>Action *</label>
-                <input
-                  id='action'
-                  name='action'
-                  type='text'
-                  className={s.formInput}
-                  value={formData.action}
-                  onChange={handleChange}
-                  placeholder='e.g. read, write, delete'
-                  required
-                />
-              </div>
-            </div>
-
-            <div className={s.formGroup}>
-              <label htmlFor='description'>Description</label>
-              <textarea
-                id='description'
-                name='description'
-                className={s.formTextarea}
-                value={formData.description}
-                onChange={handleChange}
-                placeholder='Describe what this permission allows...'
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Status</h3>
-
-            <div className={s.checkboxGroup}>
-              <label className={s.checkboxLabel}>
-                <input
-                  type='checkbox'
-                  name='is_active'
-                  checked={formData.is_active}
-                  onChange={handleChange}
-                />
-                <span>Active</span>
-              </label>
-              <p className={s.checkboxHint}>
-                Inactive permissions will not be enforced in authorization
-                checks
-              </p>
-            </div>
-          </div>
-
-          <div className={s.formSection}>
-            <h3 className={s.sectionTitle}>Generated Name</h3>
-            <div className={s.previewName}>{generatedName}</div>
-            <p className={s.previewHint}>
-              Permission name is auto-generated from resource and action
-            </p>
-          </div>
-
-          <div className={s.formActions}>
-            <Button
-              variant='secondary'
-              onClick={handleCancel}
-              disabled={loading}
-            >
-              Cancel
-            </Button>
-            <Button variant='primary' type='submit' loading={loading}>
-              {loading ? 'Creating...' : 'Create Permission'}
-            </Button>
-          </div>
-        </form>
+        <Form
+          schema={createPermissionFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <CreatePermissionFormFields
+            handleCancel={handleCancel}
+            loading={loading}
+          />
+        </Form>
       </div>
       <ConfirmModal.Back
         ref={confirmBackModalRef}
@@ -174,3 +86,72 @@ export default function CreatePermission() {
     </div>
   );
 }
+
+/**
+ * CreatePermissionFormFields - Form fields component that uses react-hook-form context
+ */
+function CreatePermissionFormFields({ handleCancel, loading }) {
+  const { watch } = useFormContext();
+
+  // Watch for auto-generated name preview
+  const resource = watch('resource') || '';
+  const action = watch('action') || '';
+  const generatedName = resource && action ? `${resource}:${action}` : '-';
+
+  return (
+    <>
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Permission Information</h3>
+
+        <div className={s.formRow}>
+          <Form.Field name='resource' label='Resource' required>
+            <Form.Input placeholder='e.g. users, posts, comments' />
+          </Form.Field>
+          <Form.Field name='action' label='Action' required>
+            <Form.Input placeholder='e.g. read, write, delete' />
+          </Form.Field>
+        </div>
+
+        <Form.Field name='description' label='Description'>
+          <Form.Textarea
+            placeholder='Describe what this permission allows...'
+            rows={3}
+          />
+        </Form.Field>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Status</h3>
+
+        <Form.Field name='is_active'>
+          <Form.Checkbox label='Active' />
+        </Form.Field>
+        <p className={s.checkboxHint}>
+          Inactive permissions will not be enforced in authorization checks
+        </p>
+      </div>
+
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>Generated Name</h3>
+        <div className={s.previewName}>{generatedName}</div>
+        <p className={s.previewHint}>
+          Permission name is auto-generated from resource and action
+        </p>
+      </div>
+
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+          Cancel
+        </Button>
+        <Button variant='primary' type='submit' loading={loading}>
+          {loading ? 'Creating...' : 'Create Permission'}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+CreatePermissionFormFields.propTypes = {
+  handleCancel: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+};

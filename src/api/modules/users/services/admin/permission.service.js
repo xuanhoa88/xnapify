@@ -46,7 +46,7 @@ export async function createPermission(permissionData, models) {
     resource,
     action,
     description,
-    is_active: is_active !== undefined ? is_active : true,
+    is_active: !!is_active,
   });
 
   return permission;
@@ -377,8 +377,8 @@ export async function updatePermission(permission_id, updateData, models) {
   if (updateData.action !== undefined) updateFields.action = updateData.action;
   if (updateData.description !== undefined)
     updateFields.description = updateData.description;
-  if (updateData.is_active !== undefined)
-    updateFields.is_active = updateData.is_active;
+  if (updateData.is_active != null)
+    updateFields.is_active = !!updateData.is_active;
 
   await permission.update(updateFields);
   return permission;

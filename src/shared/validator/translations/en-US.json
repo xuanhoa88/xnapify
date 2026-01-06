@@ -20,6 +20,14 @@
     "AVATAR_TOO_LARGE": "File too large. Maximum size is 5MB",
     "FILENAME_REQUIRED": "File name is required"
   },
+  "admin": {
+    "user": {
+      "DISPLAY_NAME_MAX": "Display name is too long (max 100 characters)",
+      "FIRST_NAME_MAX": "First name is too long (max 50 characters)",
+      "LAST_NAME_MAX": "Last name is too long (max 50 characters)",
+      "ROLES_REQUIRED": "At least one role is required"
+    }
+  },
   "errors": {
     "invalid_type": "Expected {{expected}}, received {{received}}",
     "invalid_type_received_undefined": "Required",
