@@ -40,15 +40,7 @@ export const updateUserFormSchema = ({ i18n, z }) =>
         strongPasswordRule({ i18n, z }),
       ])
       .optional(),
-    roles: z
-      .array(z.string())
-      .min(
-        1,
-        i18n.t(
-          'zod:admin.user.ROLES_REQUIRED',
-          'At least one role is required',
-        ),
-      ),
+    roles: z.array(z.string()).optional(),
     groups: z.array(z.string()).optional(),
     is_active: z.boolean(),
   });
@@ -90,15 +82,7 @@ export const createUserFormSchema = ({ i18n, z }) =>
           i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
         )
         .optional(),
-      roles: z
-        .array(z.string())
-        .min(
-          1,
-          i18n.t(
-            'zod:admin.user.ROLES_REQUIRED',
-            'At least one role is required',
-          ),
-        ),
+      roles: z.array(z.string()).optional(),
       groups: z.array(z.string()).optional(),
       is_active: z.boolean(),
     })
