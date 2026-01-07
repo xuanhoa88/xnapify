@@ -14,13 +14,16 @@ const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 /**
  * Admin page factory
  */
-const route = async buildPages => {
-  const children = await buildPages(pagesContext);
+const route = async pageBuilder => {
+  const children = await pageBuilder(pagesContext);
 
   return {
+    children,
     path: '/admin',
     autoDelegate: false,
-    children,
+    breadcrumb: context => ({
+      label: context.i18n.t('navigation.dashboard', 'Dashboard'),
+    }),
   };
 };
 
@@ -35,21 +38,15 @@ async function action(context) {
   }
 
   // Delegate to child routes
-  const nextPage = await context.next();
-  if (!nextPage || !nextPage.component) {
+  const childPage = await context.next();
+  if (!childPage || !childPage.component) {
     return { redirect: '/not-found' };
   }
 
-  // Build breadcrumb: Dashboard + route breadcrumbs
-  const breadcrumb = [
-    { label: context.i18n.t('navigation.dashboard', 'Dashboard') },
-    ...(nextPage.breadcrumbs || []),
-  ];
-
   return {
-    title: nextPage.title || context.i18n.t('navigation.admin', 'Admin Panel'),
-    breadcrumb,
-    component: <AdminLayout>{nextPage.component}</AdminLayout>,
+    ...childPage,
+    title: childPage.title || context.i18n.t('navigation.admin', 'Admin Panel'),
+    component: <AdminLayout>{childPage.component}</AdminLayout>,
   };
 }
 

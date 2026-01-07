@@ -355,18 +355,59 @@ function isViewDescendant(parentView, childView) {
 }
 
 /**
- * Collects breadcrumbs from view's route config hierarchy.
- * Traverses from current view up through parents.
- * @param {Object} view - The matched view
- * @returns {Array<{label: string, url?: string}>}
+ * Builds the full URL path for a view by traversing up through parents.
+ * @param {Object} view - The view to build URL for
+ * @returns {string} The full URL path
  */
-function collectBreadcrumbs(view) {
-  const breadcrumbs = [];
+function buildViewUrl(view) {
+  const pathParts = [];
   let currentView = view;
 
   while (currentView) {
+    if (currentView.path) {
+      // Skip dynamic path segments (e.g., :userId, :id)
+      // These can't be auto-generated as clickable breadcrumb links
+      if (!currentView.path.includes(':')) {
+        pathParts.unshift(currentView.path);
+      }
+    }
+    currentView = currentView.parent;
+  }
+
+  // Join paths and normalize
+  return normalizePath(pathParts.join(''));
+}
+
+/**
+ * Collects breadcrumbs from view's route config hierarchy.
+ * Traverses from current view up through parents.
+ * Auto-generates URLs from route paths when not explicitly defined.
+ * @param {Object} ctx - The matched view context
+ * @returns {Promise<Array<{label: string, url?: string}>>}
+ */
+async function collectBreadcrumbs(ctx) {
+  const breadcrumbs = [];
+  let currentView = ctx.view;
+
+  while (currentView) {
     if (currentView.breadcrumb) {
-      breadcrumbs.unshift(currentView.breadcrumb);
+      // Clone the breadcrumb to avoid mutating the original config
+      // Support async/sync callable breadcrumbs
+      const breadcrumb =
+        typeof currentView.breadcrumb === 'function'
+          ? await currentView.breadcrumb(ctx)
+          : { ...currentView.breadcrumb };
+
+      // Auto-generate URL if not explicitly defined
+      if (!breadcrumb.url) {
+        const generatedUrl = buildViewUrl(currentView);
+        // Only set URL if we have a valid path (not just root)
+        if (generatedUrl && generatedUrl !== PATH.SEPARATOR) {
+          breadcrumb.url = generatedUrl;
+        }
+      }
+
+      breadcrumbs.unshift(breadcrumb);
     }
     currentView = currentView.parent;
   }
@@ -584,7 +625,7 @@ export default class IsomorphicNavigator {
    * @param {Object} context
    * @returns {Promise<*>}
    */
-  resolve(context) {
+  async resolve(context) {
     const ctx = {
       navigator: this,
       ...this.options.context,
@@ -592,24 +633,20 @@ export default class IsomorphicNavigator {
     };
 
     if (typeof ctx.pathname !== 'string' || ctx.pathname.length === 0) {
-      return Promise.reject(
-        createError(
-          'Pathname must be a non-empty string',
-          HTTP_STATUS.BAD_REQUEST,
-          {
-            pathname: ctx.pathname,
-          },
-        ),
+      throw createError(
+        'Pathname must be a non-empty string',
+        HTTP_STATUS.BAD_REQUEST,
+        {
+          pathname: ctx.pathname,
+        },
       );
     }
 
     if (this.baseUrl && !ctx.pathname.startsWith(this.baseUrl)) {
-      return Promise.reject(
-        createError(
-          `Pathname "${ctx.pathname}" does not match base URL "${this.baseUrl}"`,
-          HTTP_STATUS.BAD_REQUEST,
-          { pathname: ctx.pathname, baseUrl: this.baseUrl },
-        ),
+      throw createError(
+        `Pathname "${ctx.pathname}" does not match base URL "${this.baseUrl}"`,
+        HTTP_STATUS.BAD_REQUEST,
+        { pathname: ctx.pathname, baseUrl: this.baseUrl },
       );
     }
 
@@ -632,7 +669,7 @@ export default class IsomorphicNavigator {
 
     const state = { matches: null, cachedMatch: null, current: ctx };
 
-    const next = (resume, parent, prevResult) => {
+    const next = async (resume, parent, prevResult) => {
       if (parent == null) {
         parent =
           state.matches &&
@@ -661,59 +698,52 @@ export default class IsomorphicNavigator {
           (parent && !isViewDescendant(parent, state.matches.value.view))
         ) {
           state.cachedMatch = state.matches;
-          return Promise.resolve(null);
+          return null;
         }
       }
 
       if (state.matches.done) {
-        return Promise.reject(
-          createError(
-            `No view found for pathname: ${ctx.pathname}`,
-            HTTP_STATUS.NOT_FOUND,
-            {
-              pathname: ctx.pathname,
-            },
-          ),
+        throw createError(
+          `No view found for pathname: ${ctx.pathname}`,
+          HTTP_STATUS.NOT_FOUND,
+          {
+            pathname: ctx.pathname,
+          },
         );
       }
 
       state.current = { ...ctx, ...state.matches.value };
 
-      return Promise.resolve(
-        resolver(
-          state.current,
-          state.matches.value.params,
-          state.current.view.autoDelegate !== false,
-        ),
-      ).then(result => {
-        if (result != null) {
-          // Add breadcrumbs as separate property (don't merge - let parent routes handle)
-          if (
-            typeof result === 'object' &&
-            state.current &&
-            state.current.view
-          ) {
-            const breadcrumbs = collectBreadcrumbs(state.current.view);
-            if (breadcrumbs.length > 0 && !result.breadcrumbs) {
-              result.breadcrumbs = breadcrumbs;
-            }
+      const result = await resolver(
+        state.current,
+        state.matches.value.params,
+        state.current.view.autoDelegate !== false,
+      );
+
+      if (result != null) {
+        // Add breadcrumbs as separate property (don't merge - let parent routes handle)
+        if (typeof result === 'object' && state.current && state.current.view) {
+          const breadcrumb = await collectBreadcrumbs(state.current);
+          if (breadcrumb.length > 0 && !result.breadcrumb) {
+            result.breadcrumb = breadcrumb;
           }
-          return result;
         }
-        return next(resume, parent, result);
-      });
+        return result;
+      }
+
+      return next(resume, parent, result);
     };
 
     ctx.next = next;
 
-    return Promise.resolve()
-      .then(() => next(true, this.root))
-      .catch(error => {
-        if (typeof this.options.errorHandler === 'function') {
-          return this.options.errorHandler(error, state.current);
-        }
-        throw error;
-      });
+    try {
+      return await next(true, this.root);
+    } catch (error) {
+      if (typeof this.options.errorHandler === 'function') {
+        return this.options.errorHandler(error, state.current);
+      }
+      throw error;
+    }
   }
 
   /** Prints the view tree for debugging. */
