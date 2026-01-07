@@ -22,10 +22,18 @@ export default function CreatePermission() {
   const loading = useSelector(isPermissionCreateLoading);
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/permissions');
+      }
+    },
+    [history],
+  );
 
   const handleConfirmBack = useCallback(() => {
     history.push('/admin/permissions');
@@ -59,7 +67,10 @@ export default function CreatePermission() {
         title='Create New Permission'
         subtitle='Define a new access control rule'
       >
-        <Button variant='secondary' onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
           ← Back to Permissions
         </Button>
       </Box.Header>
@@ -74,8 +85,9 @@ export default function CreatePermission() {
           className={s.form}
         >
           <CreatePermissionFormFields
-            handleCancel={handleCancel}
+            onCancel={handleCancel}
             loading={loading}
+            isDirtyRef={isDirtyRef}
           />
         </Form>
       </div>
@@ -90,8 +102,19 @@ export default function CreatePermission() {
 /**
  * CreatePermissionFormFields - Form fields component that uses react-hook-form context
  */
-function CreatePermissionFormFields({ handleCancel, loading }) {
-  const { watch } = useFormContext();
+function CreatePermissionFormFields({ onCancel, loading, isDirtyRef }) {
+  const {
+    watch,
+    formState: { isDirty },
+  } = useFormContext();
+
+  // Keep isDirtyRef in sync with form dirty state
+  isDirtyRef.current = isDirty;
+
+  // Wrap onCancel to check dirty state
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
 
   // Watch for auto-generated name preview
   const resource = watch('resource') || '';
@@ -152,6 +175,7 @@ function CreatePermissionFormFields({ handleCancel, loading }) {
 }
 
 CreatePermissionFormFields.propTypes = {
-  handleCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };

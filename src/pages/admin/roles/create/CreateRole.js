@@ -30,10 +30,18 @@ function CreateRole() {
 
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/roles');
+      }
+    },
+    [history],
+  );
 
   const handleConfirmBack = useCallback(() => {
     history.push('/admin/roles');
@@ -66,7 +74,10 @@ function CreateRole() {
         title='Create New Role'
         subtitle='Define a new access level'
       >
-        <Button variant='secondary' onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
           ← Back to Roles
         </Button>
       </Box.Header>
@@ -80,7 +91,11 @@ function CreateRole() {
           onSubmit={handleSubmit}
           className={s.form}
         >
-          <CreateRoleFormFields handleCancel={handleCancel} loading={loading} />
+          <CreateRoleFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+          />
         </Form>
       </div>
       <ConfirmModal.Back
@@ -94,9 +109,20 @@ function CreateRole() {
 /**
  * CreateRoleFormFields - Form fields component that uses react-hook-form context
  */
-function CreateRoleFormFields({ handleCancel, loading }) {
+function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
-  const { watch } = useFormContext();
+  const {
+    watch,
+    formState: { isDirty },
+  } = useFormContext();
+
+  // Keep isDirtyRef in sync with form dirty state
+  isDirtyRef.current = isDirty;
+
+  // Wrap onCancel to check dirty state
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
 
   // Watch selected permissions count
   const selectedPermissions = watch('permissions') || [];
@@ -213,8 +239,9 @@ function CreateRoleFormFields({ handleCancel, loading }) {
 }
 
 CreateRoleFormFields.propTypes = {
-  handleCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
 export default CreateRole;

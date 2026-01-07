@@ -34,6 +34,7 @@ export default function EditPermission({ permissionId }) {
   const permissionLoadError = useSelector(getPermissionFetchError);
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
   // Fetch permission data on mount
   useEffect(() => {
@@ -42,9 +43,16 @@ export default function EditPermission({ permissionId }) {
     }
   }, [dispatch, permissionId]);
 
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/permissions');
+      }
+    },
+    [history],
+  );
 
   const handleConfirmBack = useCallback(() => {
     history.push('/admin/permissions');
@@ -94,7 +102,10 @@ export default function EditPermission({ permissionId }) {
           title='Edit Permission'
           subtitle='Modify permission rule'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
             ← Back to Permissions
           </Button>
         </Box.Header>
@@ -113,14 +124,20 @@ export default function EditPermission({ permissionId }) {
           title='Edit Permission'
           subtitle='Modify permission rule'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
             ← Back to Permissions
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load permission data</div>
           <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
+            <Button
+              variant='secondary'
+              onClick={() => handleCancel(isDirtyRef.current)}
+            >
               Back to Permissions
             </Button>
           </div>
@@ -136,7 +153,10 @@ export default function EditPermission({ permissionId }) {
         title='Edit Permission'
         subtitle='Modify permission rule'
       >
-        <Button variant='secondary' onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
           ← Back to Permissions
         </Button>
       </Box.Header>
@@ -151,8 +171,9 @@ export default function EditPermission({ permissionId }) {
           className={s.form}
         >
           <EditPermissionFormFields
-            handleCancel={handleCancel}
+            onCancel={handleCancel}
             saving={saving}
+            isDirtyRef={isDirtyRef}
           />
         </Form>
       </div>
@@ -167,8 +188,19 @@ export default function EditPermission({ permissionId }) {
 /**
  * EditPermissionFormFields - Form fields component that uses react-hook-form context
  */
-function EditPermissionFormFields({ handleCancel, saving }) {
-  const { watch } = useFormContext();
+function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
+  const {
+    watch,
+    formState: { isDirty },
+  } = useFormContext();
+
+  // Keep isDirtyRef in sync with form dirty state
+  isDirtyRef.current = isDirty;
+
+  // Wrap onCancel to check dirty state
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
 
   // Watch for auto-generated name preview
   const resource = watch('resource') || '';
@@ -229,8 +261,9 @@ function EditPermissionFormFields({ handleCancel, saving }) {
 }
 
 EditPermissionFormFields.propTypes = {
-  handleCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   saving: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
 EditPermission.propTypes = {

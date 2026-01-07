@@ -43,6 +43,7 @@ function EditUser({ userId }) {
 
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
   // Fetch user data on mount
   useEffect(() => {
@@ -51,9 +52,16 @@ function EditUser({ userId }) {
     }
   }, [dispatch, userId]);
 
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/users');
+      }
+    },
+    [history],
+  );
 
   const handleConfirmBack = useCallback(() => {
     history.push('/admin/users');
@@ -108,7 +116,7 @@ function EditUser({ userId }) {
           title='Edit User'
           subtitle='Modify user account details'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button variant='secondary' onClick={() => handleCancel(false)}>
             ← Back to Users
           </Button>
         </Box.Header>
@@ -127,14 +135,14 @@ function EditUser({ userId }) {
           title='Edit User'
           subtitle='Modify user account details'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button variant='secondary' onClick={() => handleCancel(false)}>
             ← Back to Users
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load user data</div>
           <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
+            <Button variant='secondary' onClick={() => handleCancel(false)}>
               Back to Users
             </Button>
           </div>
@@ -152,7 +160,7 @@ function EditUser({ userId }) {
           title='Edit User'
           subtitle='Modify user account details'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button variant='secondary' onClick={() => handleCancel(false)}>
             ← Back to Users
           </Button>
         </Box.Header>
@@ -164,7 +172,7 @@ function EditUser({ userId }) {
             )}
           </div>
           <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
+            <Button variant='secondary' onClick={() => handleCancel(false)}>
               Back to Users
             </Button>
             <Button variant='primary' onClick={() => history.push('/profile')}>
@@ -183,7 +191,10 @@ function EditUser({ userId }) {
         title='Edit User'
         subtitle='Modify user account details'
       >
-        <Button variant='secondary' onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
           ← Back to Users
         </Button>
       </Box.Header>
@@ -199,8 +210,9 @@ function EditUser({ userId }) {
         >
           <EditUserFormFields
             setError={setError}
-            handleCancel={handleCancel}
+            onCancel={handleCancel}
             loading={loading}
+            isDirtyRef={isDirtyRef}
           />
         </Form>
       </div>
@@ -216,10 +228,22 @@ function EditUser({ userId }) {
  * EditUserFormFields - Form fields component that uses react-hook-form context
  * Contains all the form fields and manages roles/groups state internally
  */
-function EditUserFormFields({ setError, handleCancel, loading }) {
+function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const { watch, setValue } = useFormContext();
+  const {
+    watch,
+    setValue,
+    formState: { isDirty },
+  } = useFormContext();
+
+  // Keep isDirtyRef in sync with form dirty state
+  isDirtyRef.current = isDirty;
+
+  // Wrap onCancel to check dirty state
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
 
   // Roles state for infinite loading
   const [roles, setRoles] = useState([]);
@@ -413,14 +437,15 @@ function EditUserFormFields({ setError, handleCancel, loading }) {
             loadingMore={rolesLoadingMore}
             hasMore={rolesHasMore}
             onLoadMore={handleLoadMoreRoles}
+            searchable
             searchValue={roleSearch}
-            onSearchChange={setRoleSearch}
+            onSearch={setRoleSearch}
             searchPlaceholder='Search roles...'
             itemKey='name'
             itemLabel='name'
             itemDescription='description'
-            emptyMessage={t('No roles found')}
-            loadingMessage={t('Loading roles...')}
+            emptyMessage='No roles found'
+            loadingMessage='Loading roles...'
           />
         </Form.Field>
 
@@ -434,8 +459,9 @@ function EditUserFormFields({ setError, handleCancel, loading }) {
             loadingMore={groupsLoadingMore}
             hasMore={groupsHasMore}
             onLoadMore={handleLoadMoreGroups}
+            searchable
             searchValue={groupSearch}
-            onSearchChange={setGroupSearch}
+            onSearch={setGroupSearch}
             searchPlaceholder='Search groups...'
             itemKey='id'
             itemLabel='name'
@@ -464,8 +490,9 @@ function EditUserFormFields({ setError, handleCancel, loading }) {
 
 EditUserFormFields.propTypes = {
   setError: PropTypes.func.isRequired,
-  handleCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
 EditUser.propTypes = {

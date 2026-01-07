@@ -39,10 +39,18 @@ function EditRole({ roleId }) {
 
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
-  const handleCancel = useCallback(() => {
-    confirmBackModalRef.current && confirmBackModalRef.current.open();
-  }, []);
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/roles');
+      }
+    },
+    [history],
+  );
 
   const handleConfirmBack = useCallback(() => {
     history.push('/admin/roles');
@@ -80,7 +88,10 @@ function EditRole({ roleId }) {
           title='Edit Role'
           subtitle='Modify role permissions'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
             ← Back to Roles
           </Button>
         </Box.Header>
@@ -103,14 +114,20 @@ function EditRole({ roleId }) {
           title='Edit Role'
           subtitle='Modify role permissions'
         >
-          <Button variant='secondary' onClick={handleCancel}>
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
             ← Back to Roles
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>Failed to load role data</div>
           <div className={s.formActions}>
-            <Button variant='secondary' onClick={handleCancel}>
+            <Button
+              variant='secondary'
+              onClick={() => handleCancel(isDirtyRef.current)}
+            >
               Back to Roles
             </Button>
           </div>
@@ -139,7 +156,10 @@ function EditRole({ roleId }) {
         title='Edit Role'
         subtitle='Modify role permissions'
       >
-        <Button variant='secondary' onClick={handleCancel}>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
           ← Back to Roles
         </Button>
       </Box.Header>
@@ -153,7 +173,11 @@ function EditRole({ roleId }) {
           onSubmit={handleSubmit}
           className={s.form}
         >
-          <EditRoleFormFields handleCancel={handleCancel} loading={loading} />
+          <EditRoleFormFields
+            onCancel={handleCancel}
+            loading={loading}
+            isDirtyRef={isDirtyRef}
+          />
         </Form>
       </div>
       <ConfirmModal.Back
@@ -167,9 +191,20 @@ function EditRole({ roleId }) {
 /**
  * EditRoleFormFields - Form fields component that uses react-hook-form context
  */
-function EditRoleFormFields({ handleCancel, loading }) {
+function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
-  const { watch } = useFormContext();
+  const {
+    watch,
+    formState: { isDirty },
+  } = useFormContext();
+
+  // Keep isDirtyRef in sync with form dirty state
+  isDirtyRef.current = isDirty;
+
+  // Wrap onCancel to check dirty state
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
 
   // Watch selected permissions count
   const selectedPermissions = watch('permissions') || [];
@@ -286,8 +321,9 @@ function EditRoleFormFields({ handleCancel, loading }) {
 }
 
 EditRoleFormFields.propTypes = {
-  handleCancel: PropTypes.func.isRequired,
+  onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
 EditRole.propTypes = {
