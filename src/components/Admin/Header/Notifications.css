@@ -16,23 +16,28 @@
 }
 
 .notificationBtn {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  color: rgb(255 255 255 / 70%);
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: var(--font-weight-medium) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  color: rgb(255 255 255 / 70%) !important;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .notificationBtn:hover {
   background-color: rgb(255 255 255 / 10%) !important;
-  color: white;
+  color: white !important;
+}
+
+.notificationBtn:active {
+  background-color: rgb(255 255 255 / 15%) !important;
+  transform: scale(0.95);
 }
 
 .notificationBadge {

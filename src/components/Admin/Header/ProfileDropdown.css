@@ -16,22 +16,28 @@
 }
 
 .userMenuBtn {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  padding: var(--spacing-1);
-  padding-right: var(--spacing-2);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-lg);
-  color: white;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: var(--spacing-2) !important;
+  padding: var(--spacing-1) !important;
+  padding-right: var(--spacing-2) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  color: white !important;
   cursor: pointer;
   transition: all var(--transition-fast);
   font-family: inherit;
 }
 
 .userMenuBtn:hover {
-  background-color: rgb(255 255 255 / 8%) !important;
+  background-color: rgb(255 255 255 / 10%) !important;
+}
+
+.userMenuBtn:active {
+  background-color: rgb(255 255 255 / 15%) !important;
+  transform: scale(0.98);
 }
 
 .userAvatar {

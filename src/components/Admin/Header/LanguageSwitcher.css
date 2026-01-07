@@ -20,27 +20,30 @@
    ============================================================================= */
 
 .trigger {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--spacing-1);
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  background-color: transparent;
-  border: none;
-  border-radius: var(--radius-full);
-  color: rgb(255 255 255 / 70%);
-  font-size: var(--font-size-xs);
-  font-weight: var(--font-weight-medium);
-  font-family: inherit;
+  position: relative !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: var(--spacing-1) !important;
+  padding: var(--spacing-2) var(--spacing-3) !important;
+  font-size: var(--font-size-xs) !important;
+  font-weight: var(--font-weight-medium) !important;
+  background: transparent !important;
+  border: none !important;
+  border-radius: var(--radius-md) !important;
+  color: rgb(255 255 255 / 70%) !important;
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .trigger:hover {
-  background-color: rgb(255 255 255 / 10%);
-  color: white;
+  background-color: rgb(255 255 255 / 10%) !important;
+  color: white !important;
+}
+
+.trigger:active {
+  background-color: rgb(255 255 255 / 15%) !important;
+  transform: scale(0.95);
 }
 
 .globeIcon {
@@ -138,8 +141,7 @@
 
 @media (max-width: 768px) {
   .trigger {
-    width: 32px;
-    height: 32px;
+    padding: var(--spacing-2) !important;
   }
 
   .globeIcon {
@@ -148,6 +150,10 @@
 
   .code {
     display: none;
+  }
+
+  .chevron {
+    display: block;
   }
 
   .dropdown {
@@ -164,8 +170,7 @@
 
 @media (max-width: 375px) {
   .trigger {
-    width: 28px;
-    height: 28px;
+    padding: var(--spacing-1) var(--spacing-2) !important;
   }
 
   .globeIcon {
