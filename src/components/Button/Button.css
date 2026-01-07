@@ -136,6 +136,7 @@
   font-size: inherit;
   font-weight: inherit;
   line-height: inherit;
+  text-decoration: none;
 }
 
 /* No hover/active styles for unstyled - controlled by custom className */
