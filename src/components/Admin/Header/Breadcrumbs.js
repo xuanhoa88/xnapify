@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Fragment } from 'react';
+import { Fragment, useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from '../../History';
 import Icon from '../../Icon';
@@ -17,38 +17,44 @@ import s from './Breadcrumbs.css';
  *
  * Renders breadcrumb navigation from Redux state.
  * Breadcrumbs are accumulated from route hierarchy by the navigator.
+ * Uses deferred rendering to prevent SSR hydration mismatch.
  */
 function AdminBreadcrumbs() {
   const breadcrumbs = useSelector(getBreadcrumbs);
 
-  // Don't render if no breadcrumbs
-  if (!breadcrumbs || breadcrumbs.length === 0) {
-    return null;
-  }
+  // Defer rendering until after hydration to prevent SSR mismatch
+  // Server renders empty nav, client waits for mount before showing content
+  const [isMounted, setIsMounted] = useState(false);
 
-  const lastIndex = breadcrumbs.length - 1;
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const hasBreadcrumbs = isMounted && breadcrumbs && breadcrumbs.length > 0;
+  const lastIndex = hasBreadcrumbs ? breadcrumbs.length - 1 : -1;
 
   return (
     <nav className={s.breadcrumbs} aria-label='Breadcrumb'>
-      {breadcrumbs.map((item, index) => {
-        const isLast = index === lastIndex;
-        const hasLink = item.url && !isLast;
+      {hasBreadcrumbs &&
+        breadcrumbs.map((item, index) => {
+          const isLast = index === lastIndex;
+          const hasLink = item.url && !isLast;
 
-        return (
-          <Fragment key={item.url || item.label}>
-            {index > 0 && (
-              <Icon name='chevronDown' size={10} className={s.separator} />
-            )}
-            {hasLink ? (
-              <Link className={s.homeLink} to={item.url}>
-                {item.label}
-              </Link>
-            ) : (
-              <span className={s.current}>{item.label}</span>
-            )}
-          </Fragment>
-        );
-      })}
+          return (
+            <Fragment key={item.url || item.label}>
+              {index > 0 && (
+                <Icon name='chevronDown' size={10} className={s.separator} />
+              )}
+              {hasLink ? (
+                <Link className={s.homeLink} to={item.url}>
+                  {item.label}
+                </Link>
+              ) : (
+                <span className={s.current}>{item.label}</span>
+              )}
+            </Fragment>
+          );
+        })}
     </nav>
   );
 }

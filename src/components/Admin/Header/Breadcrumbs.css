@@ -49,15 +49,7 @@
    ============================================================================= */
 
 @media (max-width: 768px) {
-  .homeLink {
+  .breadcrumbs {
     display: none;
-  }
-
-  .separator {
-    display: none;
-  }
-
-  .current {
-    font-size: var(--font-size-xs);
   }
 }
