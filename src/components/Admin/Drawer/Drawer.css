@@ -245,3 +245,50 @@
     opacity: 1;
   }
 }
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .drawer {
+    width: 280px;
+  }
+
+  .drawerHeader {
+    padding: var(--spacing-3);
+    height: 52px;
+  }
+
+  .nav {
+    padding: var(--spacing-3);
+  }
+
+  .menuLink {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .sectionTitle {
+    font-size: 9px;
+  }
+
+  .footer {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .userAvatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .userName {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 375px) {
+  .drawer {
+    width: 100%;
+  }
+}

@@ -22,11 +22,14 @@
 .trigger {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--spacing-1);
-  padding: var(--spacing-1) var(--spacing-2);
+  width: 36px;
+  height: 36px;
+  padding: 0;
   background-color: transparent;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-full);
   color: rgb(255 255 255 / 70%);
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-medium);
@@ -135,7 +138,12 @@
 
 @media (max-width: 768px) {
   .trigger {
-    padding: var(--spacing-1);
+    width: 32px;
+    height: 32px;
+  }
+
+  .globeIcon {
+    font-size: 16px;
   }
 
   .code {
@@ -145,5 +153,28 @@
   .dropdown {
     min-width: 140px;
     right: -40px;
+  }
+
+  .option {
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 375px) {
+  .trigger {
+    width: 28px;
+    height: 28px;
+  }
+
+  .globeIcon {
+    font-size: 14px;
+  }
+
+  .option {
+    min-height: 36px;
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
   }
 }

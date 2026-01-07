@@ -124,11 +124,18 @@
   transform: translateY(0);
 }
 
-/* Unstyled Button - No background/color/hover styles, custom className controls all */
+/* Unstyled Button - Resets all button styles so custom className has full control */
 .unstyled {
+  padding: 0;
   background-color: transparent;
   color: inherit;
   border: none;
+  border-radius: 0;
+  min-height: auto;
+  min-width: auto;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
 }
 
 /* No hover/active styles for unstyled - controlled by custom className */
@@ -213,4 +220,89 @@
 
 .iconOnly.large {
   padding: var(--spacing-4);
+}
+
+/* ==========================================================================
+   Responsive Design - Mobile
+   ========================================================================== */
+
+/* Mobile */
+@media (max-width: 768px) {
+  /* Only apply min-height to styled buttons, not unstyled */
+  .button:not(.unstyled) {
+    /* Ensure good touch targets on mobile */
+    font-size: var(--font-size-sm);
+  }
+
+  .small:not(.unstyled) {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    min-height: 32px;
+  }
+
+  .medium:not(.unstyled) {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    min-height: 40px;
+  }
+
+  .large:not(.unstyled) {
+    padding: var(--spacing-3) var(--spacing-5);
+    font-size: var(--font-size-sm);
+    min-height: 44px;
+  }
+
+  /* Disable hover transform on touch devices */
+  .primary:hover:not(:disabled),
+  .danger:hover:not(:disabled),
+  .success:hover:not(:disabled) {
+    transform: none;
+  }
+
+  /* Icon only adjustments */
+  .iconOnly:not(.unstyled) {
+    padding: var(--spacing-2);
+    min-height: 36px;
+    min-width: 36px;
+  }
+
+  .iconOnly.small:not(.unstyled) {
+    padding: var(--spacing-1);
+    min-height: 28px;
+    min-width: 28px;
+  }
+
+  .iconOnly.large:not(.unstyled) {
+    padding: var(--spacing-3);
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .button:not(.unstyled) {
+    font-size: var(--font-size-xs);
+  }
+
+  .small:not(.unstyled) {
+    padding: var(--spacing-1) var(--spacing-2);
+    min-height: 28px;
+  }
+
+  .medium:not(.unstyled) {
+    padding: var(--spacing-2) var(--spacing-3);
+    min-height: 36px;
+  }
+
+  .large:not(.unstyled) {
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    min-height: 40px;
+  }
+
+  .fullWidth:not(.unstyled) {
+    padding-left: var(--spacing-3);
+    padding-right: var(--spacing-3);
+  }
 }

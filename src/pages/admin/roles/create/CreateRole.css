@@ -405,15 +405,17 @@
 
   .cancelBtn {
     width: 100%;
-    padding: var(--spacing-3) var(--spacing-4);
-    font-size: var(--font-size-base);
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
     text-align: center;
   }
 
   .submitBtn {
     width: 100%;
-    padding: var(--spacing-3) var(--spacing-4);
-    font-size: var(--font-size-base);
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
     text-align: center;
   }
 
@@ -442,6 +444,7 @@
   .cancelBtn,
   .submitBtn {
     width: 100%;
+    min-height: 36px;
     padding: var(--spacing-2) var(--spacing-3);
     font-size: var(--font-size-xs);
     text-align: center;

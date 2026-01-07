@@ -209,6 +209,10 @@
 
 /* Mobile */
 @media (max-width: 768px) {
+  .userMenuBtn {
+    padding: var(--spacing-1);
+  }
+
   .userAvatar {
     width: 28px;
     height: 28px;
@@ -218,5 +222,29 @@
   .userDropdown {
     min-width: 180px;
     right: -4px;
+  }
+
+  .dropdownItem {
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-sm);
+  }
+}
+
+@media (max-width: 375px) {
+  .userAvatar {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .userDropdown {
+    min-width: 160px;
+  }
+
+  .dropdownItem {
+    min-height: 36px;
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
   }
 }

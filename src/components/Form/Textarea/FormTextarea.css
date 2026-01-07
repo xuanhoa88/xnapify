@@ -53,3 +53,14 @@
 .textareaError:focus {
   box-shadow: 0 0 0 3px rgb(239 68 68 / 15%);
 }
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .textarea {
+    min-height: 80px;
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+}
