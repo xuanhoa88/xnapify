@@ -151,9 +151,6 @@
   align-items: flex-start;
   gap: var(--spacing-3);
   cursor: pointer;
-  font-size: var(--font-size-sm);
-  font-weight: var(--font-weight-medium);
-  color: var(--color-text-primary);
   padding: var(--spacing-2) var(--spacing-4);
   margin: 0;
   border-radius: var(--radius-sm);
@@ -190,7 +187,7 @@
 .itemDescription {
   display: block;
   font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
   font-weight: var(--font-weight-normal);
   margin: 0;
   font-style: normal;
@@ -309,9 +306,11 @@
 
 /* Item Label */
 .itemLabel {
+  display: block;
+  font-size: var(--font-size-sm);
   font-weight: var(--font-weight-medium);
   color: var(--color-text-primary);
-  font-size: var(--font-size-sm);
+  line-height: 1.4;
 }
 
 /* =============================================================================
@@ -328,7 +327,6 @@
 
   .checkboxItem {
     padding: var(--spacing-1) var(--spacing-3);
-    font-size: var(--font-size-xs);
     gap: var(--spacing-2);
   }
 
@@ -342,7 +340,7 @@
   }
 
   .itemDescription {
-    font-size: 10px;
+    font-size: var(--font-size-2xs, 10px);
   }
 
   .groupHeader {
@@ -360,7 +358,7 @@
   }
 
   .groupCount {
-    font-size: 10px;
+    font-size: var(--font-size-2xs, 10px);
   }
 
   .groupItems {

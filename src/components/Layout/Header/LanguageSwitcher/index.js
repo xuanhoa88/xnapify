@@ -70,7 +70,7 @@ function LanguageSwitcher() {
   return (
     <div className={s.wrapper} ref={dropdownRef}>
       <Button
-        variant='ghost'
+        variant='unstyled'
         className={s.trigger}
         onClick={handleToggle}
         title='Language switcher'
@@ -89,7 +89,7 @@ function LanguageSwitcher() {
           {localeEntries.map(([code, name]) => (
             <Button
               key={code}
-              variant='ghost'
+              variant='unstyled'
               onClick={e => handleLocaleChange(code, e)}
               className={clsx(s.option, {
                 [s.optionActive]: code === currentLocale,

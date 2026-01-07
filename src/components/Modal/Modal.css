@@ -60,7 +60,7 @@
 }
 
 .modalClose {
-  background: transparent !important;
+  background: transparent;
   border: none;
   font-size: 1.5rem;
   cursor: pointer;
@@ -70,7 +70,7 @@
 }
 
 .modalClose:hover {
-  background-color: var(--color-background-secondary) !important;
+  background-color: var(--color-background-secondary);
   color: var(--color-text-primary);
 }
 

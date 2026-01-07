@@ -43,9 +43,9 @@
 
 /* Active state for page buttons using Button component */
 .active {
-  background: var(--color-primary) !important;
-  color: white !important;
-  border-color: var(--color-primary) !important;
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }
 
 .ellipsis {

@@ -279,7 +279,7 @@
     135deg,
     var(--color-background) 0%,
     var(--color-background-secondary) 100%
-  ) !important;
+  );
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;

@@ -80,7 +80,11 @@ function ProfileDropdown() {
 
   return (
     <div className={s.userMenu} ref={dropdownRef}>
-      <Button variant='ghost' className={s.userMenuBtn} onClick={handleToggle}>
+      <Button
+        variant='unstyled'
+        className={s.userMenuBtn}
+        onClick={handleToggle}
+      >
         <div className={s.userAvatar}>
           {avatarUrl ? (
             <img
@@ -142,7 +146,7 @@ function ProfileDropdown() {
           <div className={s.dropdownDivider} />
 
           <Button
-            variant='danger'
+            variant='unstyled'
             className={clsx(s.dropdownItem, s.dropdownItemDanger)}
             onClick={handleLogout}
           >

@@ -16,27 +16,27 @@
 }
 
 .messagesBtn {
-  position: relative !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: var(--font-size-xs) !important;
-  font-weight: var(--font-weight-medium) !important;
-  background: transparent !important;
-  border: none !important;
-  border-radius: var(--radius-md) !important;
-  color: rgb(255 255 255 / 70%) !important;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-md);
+  color: rgb(255 255 255 / 70%);
   cursor: pointer;
   transition: all var(--transition-fast);
 }
 
 .messagesBtn:hover {
-  background-color: rgb(255 255 255 / 10%) !important;
-  color: white !important;
+  background-color: rgb(255 255 255 / 10%);
+  color: white;
 }
 
 .messagesBtn:active {
-  background-color: rgb(255 255 255 / 15%) !important;
+  background-color: rgb(255 255 255 / 15%);
   transform: scale(0.95);
 }
 
@@ -223,7 +223,7 @@
 .viewAllBtn {
   width: 100%;
   padding: var(--spacing-2) var(--spacing-3);
-  background-color: rgb(255 255 255 / 8%) !important;
+  background-color: rgb(255 255 255 / 8%);
   border: none;
   border-radius: var(--radius-md);
   color: rgb(255 255 255 / 80%);
@@ -235,7 +235,7 @@
 }
 
 .viewAllBtn:hover {
-  background-color: rgb(255 255 255 / 12%) !important;
+  background-color: rgb(255 255 255 / 12%);
   color: white;
 }
 

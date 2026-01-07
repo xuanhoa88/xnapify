@@ -36,7 +36,7 @@ const ModalHeader = ({ children, onClose }) => (
     <h3 className={s.modalTitle}>{children}</h3>
     {onClose && (
       <Button
-        variant='ghost'
+        variant='unstyled'
         iconOnly
         className={s.modalClose}
         onClick={onClose}
