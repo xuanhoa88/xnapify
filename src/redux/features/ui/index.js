@@ -12,12 +12,12 @@ export {
   hasFlashMessage,
   getFlashMessageVariant,
   getFlashMessageText,
+  getBreadcrumbs,
 } from './selector';
 
 // Public API - Actions (from slice)
 export {
   toggleAdminDrawer,
-  setAdminDrawerOpen,
   setFlashMessage,
   clearFlashMessage,
   showSuccessMessage,

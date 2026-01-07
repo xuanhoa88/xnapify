@@ -315,9 +315,9 @@ async function defaultViewResolver(ctx, params, autoDelegate) {
     Array.isArray(ctx.view.children) && ctx.view.children.length > 0;
 
   if (hasChildren && autoDelegate) {
-    const nextPage = await ctx.next();
-    if (nextPage != null) {
-      return nextPage;
+    const childPage = await ctx.next();
+    if (childPage != null) {
+      return childPage;
     }
   }
 
@@ -352,6 +352,26 @@ function isViewDescendant(parentView, childView) {
     }
   }
   return false;
+}
+
+/**
+ * Collects breadcrumbs from view's route config hierarchy.
+ * Traverses from current view up through parents.
+ * @param {Object} view - The matched view
+ * @returns {Array<{label: string, url?: string}>}
+ */
+function collectBreadcrumbs(view) {
+  const breadcrumbs = [];
+  let currentView = view;
+
+  while (currentView) {
+    if (currentView.breadcrumb) {
+      breadcrumbs.unshift(currentView.breadcrumb);
+    }
+    currentView = currentView.parent;
+  }
+
+  return breadcrumbs;
 }
 
 /**
@@ -666,7 +686,20 @@ export default class IsomorphicNavigator {
           state.current.view.autoDelegate !== false,
         ),
       ).then(result => {
-        if (result != null) return result;
+        if (result != null) {
+          // Add breadcrumbs as separate property (don't merge - let parent routes handle)
+          if (
+            typeof result === 'object' &&
+            state.current &&
+            state.current.view
+          ) {
+            const breadcrumbs = collectBreadcrumbs(state.current.view);
+            if (breadcrumbs.length > 0 && !result.breadcrumbs) {
+              result.breadcrumbs = breadcrumbs;
+            }
+          }
+          return result;
+        }
         return next(resume, parent, result);
       });
     };

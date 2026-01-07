@@ -14,6 +14,7 @@ import EditUser from './edit/EditUser';
  */
 const route = {
   path: '/users',
+  breadcrumb: { label: 'Users' },
   children: [
     {
       path: '',
@@ -24,6 +25,7 @@ const route = {
     },
     {
       path: '/create',
+      breadcrumb: { label: 'Create' },
       action: () => ({
         title: 'Create User - Admin',
         component: <CreateUser />,
@@ -31,6 +33,7 @@ const route = {
     },
     {
       path: '/:userId/edit',
+      breadcrumb: { label: 'Edit' },
       action: context => ({
         title: 'Edit User - Admin',
         component: <EditUser userId={context.params.userId} />,
@@ -39,13 +42,4 @@ const route = {
   ],
 };
 
-/**
- * Route action
- * Authentication and authorization handled by parent route
- */
-async function action(context) {
-  // Delegate to child routes
-  return context.next();
-}
-
-export default [route, action];
+export default [route];

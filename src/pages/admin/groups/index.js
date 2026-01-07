@@ -14,6 +14,7 @@ import EditGroup from './edit/EditGroup';
  */
 const route = {
   path: '/groups',
+  breadcrumb: { label: 'Groups' },
   children: [
     {
       path: '',
@@ -24,6 +25,7 @@ const route = {
     },
     {
       path: '/create',
+      breadcrumb: { label: 'Create' },
       action: () => ({
         title: 'Create Group - Admin',
         component: <CreateGroup />,
@@ -31,6 +33,7 @@ const route = {
     },
     {
       path: '/:groupId/edit',
+      breadcrumb: { label: 'Edit' },
       action: context => ({
         title: 'Edit Group - Admin',
         component: <EditGroup groupId={context.params.groupId} />,

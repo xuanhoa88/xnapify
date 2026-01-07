@@ -14,6 +14,7 @@ import EditPermission from './edit/EditPermission';
  */
 const route = {
   path: '/permissions',
+  breadcrumb: { label: 'Permissions' },
   children: [
     {
       path: '',
@@ -24,6 +25,7 @@ const route = {
     },
     {
       path: '/create',
+      breadcrumb: { label: 'Create' },
       action: () => ({
         title: 'Create Permission - Admin',
         component: <CreatePermission />,
@@ -31,6 +33,7 @@ const route = {
     },
     {
       path: '/:permissionId/edit',
+      breadcrumb: { label: 'Edit' },
       action: context => ({
         title: 'Edit Permission - Admin',
         component: (

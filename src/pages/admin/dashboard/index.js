@@ -21,8 +21,8 @@ const route = {
  * Route action
  * Authentication and authorization handled by parent route
  */
-async function action() {
-  const title = 'Dashboard';
+async function action(context) {
+  const title = context.i18n.t('navigation.dashboard', 'Dashboard');
 
   return {
     title,

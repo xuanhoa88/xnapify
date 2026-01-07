@@ -15,6 +15,7 @@ import { createSlice } from '@reduxjs/toolkit';
  * State shape:
  * {
  *   isAdminDrawerOpen: boolean,
+ *   breadcrumbs: Array<{ label: string, url?: string }> | null,
  *   flashMessage: null | {
  *     variant: 'success' | 'error' | 'warning' | 'info',
  *     message: string,
@@ -31,6 +32,7 @@ import { createSlice } from '@reduxjs/toolkit';
  */
 const createFreshState = () => ({
   isAdminDrawerOpen: false,
+  breadcrumbs: null,
   flashMessage: null,
 });
 
@@ -65,13 +67,6 @@ const uiSlice = createSlice({
      */
     toggleAdminDrawer: state => {
       state.isAdminDrawerOpen = !state.isAdminDrawerOpen;
-    },
-
-    /**
-     * Set admin drawer open state explicitly
-     */
-    setAdminDrawerOpen: (state, action) => {
-      state.isAdminDrawerOpen = action.payload;
     },
 
     /**
@@ -144,13 +139,24 @@ const uiSlice = createSlice({
       })
       .addCase('TOGGLE_ADMIN_DRAWER', state => {
         state.isAdminDrawerOpen = !state.isAdminDrawerOpen;
+      })
+      // Handle navigation success to update breadcrumbs
+      .addCase('NAVIGATION_SUCCESS', (state, action) => {
+        const { page } = action.payload || {};
+        // Store breadcrumbs array from page result
+        if (page && page.breadcrumb) {
+          state.breadcrumbs = Array.isArray(page.breadcrumb)
+            ? page.breadcrumb
+            : [page.breadcrumb];
+        } else {
+          state.breadcrumbs = null;
+        }
       });
   },
 });
 
 export const {
   toggleAdminDrawer,
-  setAdminDrawerOpen,
   setFlashMessage,
   clearFlashMessage,
   showSuccessMessage,

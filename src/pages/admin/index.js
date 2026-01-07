@@ -12,14 +12,11 @@ import { isAuthenticated } from '../../redux';
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
 /**
- * Admin page factory - async to allow pre-building children
- * This ensures children are populated BEFORE the navigator evaluates them
+ * Admin page factory
  */
 const route = async buildPages => {
-  // Build children pages
   const children = await buildPages(pagesContext);
 
-  // Return admin page configuration
   return {
     path: '/admin',
     autoDelegate: false,
@@ -27,28 +24,31 @@ const route = async buildPages => {
   };
 };
 
+/**
+ * Admin route action
+ */
 async function action(context) {
-  // Auth check first
+  // Auth check
   const state = context.store.getState();
   if (!isAuthenticated(state)) {
     return { redirect: '/login' };
   }
 
-  // Now context.next() works because children were pre-populated
+  // Delegate to child routes
   const nextPage = await context.next();
-
-  // If no child route matched, redirect to 404 page
   if (!nextPage || !nextPage.component) {
     return { redirect: '/not-found' };
   }
 
-  // Set page title
-  const title =
-    nextPage.title || context.i18n.t('navigation.admin', 'Admin Panel');
+  // Build breadcrumb: Dashboard + route breadcrumbs
+  const breadcrumb = [
+    { label: context.i18n.t('navigation.dashboard', 'Dashboard') },
+    ...(nextPage.breadcrumbs || []),
+  ];
 
-  // Return admin page action
   return {
-    title,
+    title: nextPage.title || context.i18n.t('navigation.admin', 'Admin Panel'),
+    breadcrumb,
     component: <AdminLayout>{nextPage.component}</AdminLayout>,
   };
 }

@@ -14,6 +14,7 @@ import EditRole from './edit/EditRole';
  */
 const route = {
   path: '/roles',
+  breadcrumb: { label: 'Roles' },
   children: [
     {
       path: '',
@@ -24,6 +25,7 @@ const route = {
     },
     {
       path: '/create',
+      breadcrumb: { label: 'Create' },
       action: () => ({
         title: 'Create Role - Admin',
         component: <CreateRole />,
@@ -31,6 +33,7 @@ const route = {
     },
     {
       path: '/:roleId/edit',
+      breadcrumb: { label: 'Edit' },
       action: context => ({
         title: 'Edit Role - Admin',
         component: <EditRole roleId={context.params.roleId} />,

@@ -83,3 +83,18 @@ export const getFlashMessageText = state => {
   const message = getFlashMessage(state);
   return message && message.message ? message.message : null;
 };
+
+// =============================================================================
+// BREADCRUMB SELECTORS
+// =============================================================================
+
+/**
+ * Get current breadcrumbs trail (from navigation)
+ *
+ * @param {Object} state - Redux state
+ * @returns {Array<{ label: string, url?: string }>|null} Breadcrumbs array or null
+ */
+export const getBreadcrumbs = state => {
+  const ui = getUiState(state);
+  return ui.breadcrumbs;
+};

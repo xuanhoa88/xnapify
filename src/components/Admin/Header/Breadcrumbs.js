@@ -5,65 +5,50 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo, useEffect, useState } from 'react';
-import { useTranslation } from 'react-i18next';
-import { Link, useHistory } from '../../History';
+import { Fragment } from 'react';
+import { useSelector } from 'react-redux';
+import { Link } from '../../History';
 import Icon from '../../Icon';
+import { getBreadcrumbs } from '../../../redux';
 import s from './Breadcrumbs.css';
 
 /**
  * Breadcrumbs Component
- * Simple inline navigation showing current location
+ *
+ * Renders breadcrumb navigation from Redux state.
+ * Breadcrumbs are accumulated from route hierarchy by the navigator.
  */
 function AdminBreadcrumbs() {
-  const { t } = useTranslation();
-  const history = useHistory();
-  const [currentPath, setCurrentPath] = useState('');
+  const breadcrumbs = useSelector(getBreadcrumbs);
 
-  // Track current path
-  useEffect(() => {
-    setCurrentPath(history.location.pathname);
-    const unsubscribe = history.listen(location => {
-      setCurrentPath(location.pathname);
-    });
-    return unsubscribe;
-  }, [history]);
+  // Don't render if no breadcrumbs
+  if (!breadcrumbs || breadcrumbs.length === 0) {
+    return null;
+  }
 
-  // Get current page name
-  const currentPage = useMemo(() => {
-    if (!currentPath || currentPath === '/admin') {
-      return t('navigation.dashboard', 'Dashboard');
-    }
-
-    const segments = currentPath.split('/').filter(Boolean);
-    if (segments.length <= 1) {
-      return t('navigation.dashboard', 'Dashboard');
-    }
-
-    const lastSegment = segments[segments.length - 1];
-    const label = lastSegment.charAt(0).toUpperCase() + lastSegment.slice(1);
-    const translationKey = `navigation.${lastSegment}`;
-    const translated = t(translationKey, label);
-    return translated !== translationKey ? translated : label;
-  }, [currentPath, t]);
-
-  // Check if we're on a subpage
-  const isSubPage =
-    currentPath && currentPath !== '/admin' && currentPath !== '/admin/';
+  const lastIndex = breadcrumbs.length - 1;
 
   return (
     <nav className={s.breadcrumbs} aria-label='Breadcrumb'>
-      {isSubPage ? (
-        <>
-          <Link className={s.homeLink} to='/admin'>
-            {t('navigation.dashboard', 'Dashboard')}
-          </Link>
-          <Icon name='chevronDown' size={10} className={s.separator} />
-          <span className={s.current}>{currentPage}</span>
-        </>
-      ) : (
-        <span className={s.current}>{currentPage}</span>
-      )}
+      {breadcrumbs.map((item, index) => {
+        const isLast = index === lastIndex;
+        const hasLink = item.url && !isLast;
+
+        return (
+          <Fragment key={item.url || item.label}>
+            {index > 0 && (
+              <Icon name='chevronDown' size={10} className={s.separator} />
+            )}
+            {hasLink ? (
+              <Link className={s.homeLink} to={item.url}>
+                {item.label}
+              </Link>
+            ) : (
+              <span className={s.current}>{item.label}</span>
+            )}
+          </Fragment>
+        );
+      })}
     </nav>
   );
 }
