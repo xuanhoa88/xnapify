@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import 'url-polyfill';
 import 'whatwg-fetch';
 import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';

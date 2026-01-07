@@ -15,35 +15,56 @@ import { strongPasswordRule } from '../auth/common';
  * - Backend: PUT /api/admin/users/:id
  */
 export const updateUserFormSchema = ({ i18n, z }) =>
-  z.object({
-    display_name: z
-      .string()
-      .max(
-        100,
-        i18n.t('zod:admin.user.DISPLAY_NAME_MAX', 'Display name is too long'),
-      )
-      .optional(),
-    first_name: z
-      .string()
-      .max(
-        50,
-        i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
-      )
-      .optional(),
-    last_name: z
-      .string()
-      .max(50, i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'))
-      .optional(),
-    password: z
-      .union([
-        z.literal(''), // Allow empty string for no password change
-        strongPasswordRule({ i18n, z }),
-      ])
-      .optional(),
-    roles: z.array(z.string()).optional(),
-    groups: z.array(z.string()).optional(),
-    is_active: z.boolean(),
-  });
+  z
+    .object({
+      display_name: z
+        .string()
+        .max(
+          100,
+          i18n.t('zod:admin.user.DISPLAY_NAME_MAX', 'Display name is too long'),
+        )
+        .optional(),
+      first_name: z
+        .string()
+        .max(
+          50,
+          i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
+        )
+        .optional(),
+      last_name: z
+        .string()
+        .max(
+          50,
+          i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
+        )
+        .optional(),
+      password: z
+        .union([
+          z.literal(''), // Allow empty string for no password change
+          strongPasswordRule({ i18n, z }),
+        ])
+        .optional(),
+      password_confirmation: z.string().optional(),
+      roles: z.array(z.string()).optional(),
+      groups: z.array(z.string()).optional(),
+      is_active: z.boolean(),
+    })
+    .refine(
+      data => {
+        // If password is provided and not empty, confirmation must match
+        if (data.password && data.password !== '') {
+          return data.password === data.password_confirmation;
+        }
+        return true;
+      },
+      {
+        message: i18n.t(
+          'zod:auth.PASSWORDS_DO_NOT_MATCH',
+          'Passwords do not match',
+        ),
+        path: ['password_confirmation'],
+      },
+    );
 
 /**
  * Create user schema - callable factory function

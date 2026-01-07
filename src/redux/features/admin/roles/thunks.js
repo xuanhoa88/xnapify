@@ -23,14 +23,13 @@ export const fetchRoles = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const params = new URLSearchParams();
-      if (page) params.append('page', page);
-      if (limit) params.append('limit', limit);
-      if (search) params.append('search', search);
-
-      const { data } = await fetch(
-        `/api/admin/roles/list?${params.toString()}`,
-      );
+      const { data } = await fetch('/api/admin/roles/list', {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+        },
+      });
 
       return data;
     } catch (error) {
@@ -117,18 +116,13 @@ export const fetchRoleUsers = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
+      const { data } = await fetch(`/api/admin/roles/${roleId}/users`, {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+        },
       });
-
-      if (search) {
-        params.append('search', search);
-      }
-
-      const { data } = await fetch(
-        `/api/admin/roles/${roleId}/users?${params.toString()}`,
-      );
 
       return data;
     } catch (error) {
@@ -147,18 +141,13 @@ export const fetchRoleGroups = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const params = new URLSearchParams({
-        page: String(page),
-        limit: String(limit),
+      const { data } = await fetch(`/api/admin/roles/${roleId}/groups`, {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+        },
       });
-
-      if (search) {
-        params.append('search', search);
-      }
-
-      const { data } = await fetch(
-        `/api/admin/roles/${roleId}/groups?${params.toString()}`,
-      );
 
       return data;
     } catch (error) {

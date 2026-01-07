@@ -29,17 +29,16 @@ export const fetchUsers = createAsyncThunk(
         status = '',
       } = options || {};
 
-      const params = new URLSearchParams();
-      if (page) params.append('page', page);
-      if (limit) params.append('limit', limit);
-      if (search) params.append('search', search);
-      if (role) params.append('role', role);
-      if (group) params.append('group', group);
-      if (status) params.append('status', status);
-
-      const { data } = await fetch(
-        `/api/admin/users/list?${params.toString()}`,
-      );
+      const { data } = await fetch('/api/admin/users/list', {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+          role: role || undefined,
+          group: group || undefined,
+          status: status || undefined,
+        },
+      });
 
       return data;
     } catch (error) {
@@ -104,30 +103,6 @@ export const updateUser = createAsyncThunk(
       dispatch(fetchUsers());
 
       return data.user;
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  },
-);
-
-/**
- * Generate a random secure password
- */
-export const generatePassword = createAsyncThunk(
-  'admin/users/generatePassword',
-  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const { length = 16, includeSymbols = true } = options;
-
-      const params = new URLSearchParams();
-      if (length) params.append('length', length);
-      if (!includeSymbols) params.append('includeSymbols', 'false');
-
-      const { data } = await fetch(
-        `/api/admin/users/generate-password?${params.toString()}`,
-      );
-
-      return data.password;
     } catch (error) {
       return rejectWithValue(error.message);
     }

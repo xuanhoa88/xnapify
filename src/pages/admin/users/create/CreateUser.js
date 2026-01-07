@@ -17,6 +17,7 @@ import {
   fetchGroups,
   generatePassword,
   isUserCreateLoading,
+  showSuccessMessage,
 } from '../../../../redux';
 import { useDebounce } from '../../../../components/InfiniteScroll';
 import { Box, Icon, ConfirmModal } from '../../../../components/Admin';
@@ -259,6 +260,14 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
       const password = await dispatch(generatePassword()).unwrap();
       setValue('password', password, { shouldValidate: true });
       setValue('confirm_password', password, { shouldValidate: true });
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'admin.users.passwordGenerated',
+            'Password generated successfully!',
+          ),
+        }),
+      );
     } catch (err) {
       setError(
         err || t('errors.generatePassword', 'Failed to generate password'),
@@ -286,19 +295,23 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
           </Form.Field>
         </div>
 
-        <div className={s.generatePasswordRow}>
+        <div className={s.generatePasswordLink}>
           <Button
-            variant='secondary'
+            variant='unstyled'
             size='small'
             onClick={handleGeneratePassword}
             disabled={generatingPassword}
             className={s.generateBtn}
           >
             {generatingPassword ? (
-              'Generating...'
+              t('admin.users.generatingPassword', 'Generating...')
             ) : (
               <>
-                <Icon name='key' size={14} /> Generate Secure Password
+                <Icon name='key' size={14} />
+                {t(
+                  'admin.users.generateSecurePassword',
+                  'Generate Secure Password',
+                )}
               </>
             )}
           </Button>

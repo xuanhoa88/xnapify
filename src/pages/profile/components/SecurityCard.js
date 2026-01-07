@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
@@ -14,6 +14,8 @@ import {
   isPasswordLoading,
   getPasswordError,
   clearPasswordError,
+  generatePassword,
+  showSuccessMessage,
 } from '../../../redux';
 import { changePasswordFormSchema } from '../../../shared/validator/features/auth';
 import Icon from '../../../components/Icon';
@@ -98,17 +100,42 @@ function SecurityCard() {
         }}
         onSubmit={handleSubmit}
       >
-        <SecurityFormFields loading={loading} />
+        <SecurityFormFields loading={loading} dispatch={dispatch} />
       </Form>
     </div>
   );
 }
 
-function SecurityFormFields({ loading }) {
+function SecurityFormFields({ loading, dispatch }) {
   const { t } = useTranslation();
   const {
+    setValue,
     formState: { isSubmitting },
   } = useFormContext();
+
+  // Password generation state
+  const [generatingPassword, setGeneratingPassword] = useState(false);
+
+  const handleGeneratePassword = useCallback(async () => {
+    setGeneratingPassword(true);
+    try {
+      const password = await dispatch(generatePassword()).unwrap();
+      setValue('newPassword', password, { shouldValidate: true });
+      setValue('confirmNewPassword', password, { shouldValidate: true });
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'profile.passwordGenerated',
+            'Password generated successfully!',
+          ),
+        }),
+      );
+    } catch {
+      // Error handled silently or via flash message
+    } finally {
+      setGeneratingPassword(false);
+    }
+  }, [dispatch, setValue, t]);
 
   return (
     <>
@@ -127,6 +154,25 @@ function SecurityFormFields({ loading }) {
         <Form.Password />
       </Form.Field>
 
+      <div className={s.generatePasswordLink}>
+        <Button
+          variant='unstyled'
+          size='small'
+          onClick={handleGeneratePassword}
+          disabled={generatingPassword}
+          className={s.generateBtn}
+        >
+          {generatingPassword ? (
+            t('profile.generatingPassword', 'Generating...')
+          ) : (
+            <>
+              <Icon name='key' size={14} />
+              {t('profile.generatePassword', 'Generate Secure Password')}
+            </>
+          )}
+        </Button>
+      </div>
+
       <Button
         variant='secondary'
         type='submit'
@@ -141,6 +187,7 @@ function SecurityFormFields({ loading }) {
 
 SecurityFormFields.propTypes = {
   loading: PropTypes.bool,
+  dispatch: PropTypes.func.isRequired,
 };
 
 export default SecurityCard;

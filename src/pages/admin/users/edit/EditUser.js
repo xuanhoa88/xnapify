@@ -23,6 +23,7 @@ import {
   getFetchedUser,
   getUserFetchError,
   getUserProfile,
+  showSuccessMessage,
 } from '../../../../redux';
 import { useDebounce } from '../../../../components/InfiniteScroll';
 import { Box, Icon, Loader, ConfirmModal } from '../../../../components/Admin';
@@ -367,6 +368,15 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
     try {
       const password = await dispatch(generatePassword()).unwrap();
       setValue('password', password, { shouldValidate: true });
+      setValue('password_confirmation', password, { shouldValidate: true });
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'admin.users.passwordGenerated',
+            'Password generated successfully!',
+          ),
+        }),
+      );
     } catch (err) {
       setError(
         err || t('errors.generatePassword', 'Failed to generate password'),
@@ -385,22 +395,28 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
           <Form.Input type='email' disabled />
         </Form.Field>
 
-        <Form.Field name='password' label='Reset Password (optional)'>
+        <Form.Field name='password' label='New Password (optional)'>
           <Form.Password placeholder='Leave empty to keep current password' />
         </Form.Field>
-        <div className={s.generatePasswordRow}>
+
+        <Form.Field name='password_confirmation' label='Confirm New Password'>
+          <Form.Password placeholder='Confirm new password' />
+        </Form.Field>
+
+        <div className={s.generatePasswordLink}>
           <Button
-            variant='secondary'
+            variant='unstyled'
             size='small'
             onClick={handleGeneratePassword}
             disabled={generatingPassword}
             className={s.generateBtn}
           >
             {generatingPassword ? (
-              'Generating...'
+              t('admin.users.generatingPassword', 'Generating...')
             ) : (
               <>
-                <Icon name='key' size={14} /> Generate New Password
+                <Icon name='key' size={14} />
+                {t('admin.users.generateNewPassword', 'Generate New Password')}
               </>
             )}
           </Button>

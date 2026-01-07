@@ -52,18 +52,6 @@ export default function userRoutes(deps, userMiddlewares) {
   router.get('/list', requireAdmin, userController.getUserList);
 
   /**
-   * @route   GET /generate-password
-   * @desc    Generate a random secure password
-   * @access  Admin only
-   * @query   { length, includeSymbols }
-   */
-  router.get(
-    '/generate-password',
-    requireAdmin,
-    userController.generateRandomPassword,
-  );
-
-  /**
    * @route   PATCH /status
    * @desc    Bulk update user status
    * @access  Admin only

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -15,7 +15,13 @@ import {
   isResetPasswordLoading,
   getResetPasswordError,
   clearResetPasswordError,
+  generatePassword,
+  showSuccessMessage,
+  getFlashMessage,
+  clearFlashMessage,
 } from '../../redux';
+import Toast from '../../components/Toast';
+import Icon from '../../components/Icon';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';
@@ -30,7 +36,22 @@ function ResetPasswordConfirmation({ token }) {
   const dispatch = useDispatch();
   const loading = useSelector(isResetPasswordLoading);
   const error = useSelector(getResetPasswordError);
+  const flashMessage = useSelector(getFlashMessage);
   const [success, setSuccess] = useState(false);
+  const toastRef = useRef(null);
+
+  // Handle flash messages
+  useEffect(() => {
+    if (flashMessage && toastRef.current) {
+      toastRef.current.show({
+        variant: flashMessage.variant || 'info',
+        message: flashMessage.message,
+        title: flashMessage.title,
+        duration: flashMessage.duration || 4000,
+      });
+      dispatch(clearFlashMessage());
+    }
+  }, [flashMessage, dispatch]);
 
   // Clear error on unmount
   useEffect(() => {
@@ -88,7 +109,7 @@ function ResetPasswordConfirmation({ token }) {
               }}
               onSubmit={handleSubmit}
             >
-              <ResetFormFields loading={loading} />
+              <ResetFormFields loading={loading} dispatch={dispatch} />
             </Form>
           )}
 
@@ -99,6 +120,7 @@ function ResetPasswordConfirmation({ token }) {
           </div>
         </div>
       </div>
+      <Toast ref={toastRef} />
     </div>
   );
 }
@@ -144,11 +166,36 @@ function HeroSection() {
 /**
  * Reset Form Fields
  */
-function ResetFormFields({ loading }) {
+function ResetFormFields({ loading, dispatch }) {
   const { t } = useTranslation();
   const {
+    setValue,
     formState: { isSubmitting },
   } = useFormContext();
+
+  // Password generation state
+  const [generatingPassword, setGeneratingPassword] = useState(false);
+
+  const handleGeneratePassword = useCallback(async () => {
+    setGeneratingPassword(true);
+    try {
+      const password = await dispatch(generatePassword()).unwrap();
+      setValue('password', password, { shouldValidate: true });
+      setValue('confirmPassword', password, { shouldValidate: true });
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'resetPasswordConfirmation.passwordGenerated',
+            'Password generated successfully!',
+          ),
+        }),
+      );
+    } catch {
+      // Error handled silently
+    } finally {
+      setGeneratingPassword(false);
+    }
+  }, [dispatch, setValue, t]);
 
   return (
     <>
@@ -169,6 +216,28 @@ function ResetFormFields({ loading }) {
         <Form.Password />
       </Form.Field>
 
+      <div className={s.generatePasswordLink}>
+        <Button
+          variant='unstyled'
+          size='small'
+          onClick={handleGeneratePassword}
+          disabled={generatingPassword}
+          className={s.generateBtn}
+        >
+          {generatingPassword ? (
+            t('resetPasswordConfirmation.generatingPassword', 'Generating...')
+          ) : (
+            <>
+              <Icon name='key' size={14} />
+              {t(
+                'resetPasswordConfirmation.generatePassword',
+                'Generate Secure Password',
+              )}
+            </>
+          )}
+        </Button>
+      </div>
+
       <Button
         variant='primary'
         type='submit'
@@ -186,6 +255,7 @@ function ResetFormFields({ loading }) {
 
 ResetFormFields.propTypes = {
   loading: PropTypes.bool,
+  dispatch: PropTypes.func.isRequired,
 };
 
 export default ResetPasswordConfirmation;

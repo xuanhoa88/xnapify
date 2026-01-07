@@ -22,15 +22,14 @@ export const fetchPermissions = createAsyncThunk(
     try {
       const { page = 1, limit = 100, search = '', status = '' } = options || {};
 
-      const params = new URLSearchParams();
-      if (page) params.append('page', page);
-      if (limit) params.append('limit', limit);
-      if (search) params.append('search', search);
-      if (status) params.append('status', status);
-
-      const { data } = await fetch(
-        `/api/admin/permissions?${params.toString()}`,
-      );
+      const { data } = await fetch('/api/admin/permissions', {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+          status: status || undefined,
+        },
+      });
 
       return data;
     } catch (error) {

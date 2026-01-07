@@ -134,27 +134,35 @@
   color: var(--color-text-primary);
 }
 
-.generatePasswordRow {
+.generatePasswordLink {
   display: flex;
-  align-items: center;
-  margin-top: var(--spacing-3);
+  justify-content: flex-end;
+  margin-top: var(--spacing-1);
+  margin-bottom: var(--spacing-3);
 }
 
 .generateBtn {
-  width: 100%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) 0;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-primary);
+  background: transparent;
   border: none;
+  cursor: pointer;
+  transition: var(--transition-base);
 }
 
 .generateBtn:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .generateBtn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
-  opacity: 0.95;
+  color: var(--color-primary-dark);
+  text-decoration: underline;
 }
 
 .searchInput {
@@ -429,9 +437,10 @@
     height: 32px;
   }
 
-  /* Generate password row compact */
-  .generatePasswordRow {
+  /* Generate password link compact */
+  .generatePasswordLink {
     margin-top: var(--spacing-1);
+    margin-bottom: var(--spacing-2);
   }
 
   .generateBtn {

@@ -93,5 +93,13 @@ export default function authRoutes(deps, userMiddlewares, app) {
    */
   router.post('/email-verification', authController.emailVerification);
 
+  /**
+   * @route   GET /generate-password
+   * @desc    Generate a random secure password
+   * @access  Public
+   * @query   { length, includeSymbols }
+   */
+  router.get('/generate-password', authController.generateRandomPassword);
+
   return router;
 }

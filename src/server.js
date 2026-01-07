@@ -6,6 +6,7 @@
  */
 
 import 'source-map-support/register';
+import 'url-polyfill';
 import 'dotenv-flow/config';
 import path from 'path';
 import cookieParser from 'cookie-parser';

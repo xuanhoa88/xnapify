@@ -29,19 +29,16 @@ export const fetchGroups = createAsyncThunk(
         role = '',
       } = options;
 
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
+      const { data } = await fetch('/api/admin/groups/list', {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+          category: category || undefined,
+          type: type || undefined,
+          role: role || undefined,
+        },
       });
-
-      if (search) params.append('search', search);
-      if (category) params.append('category', category);
-      if (type) params.append('type', type);
-      if (role) params.append('role', role);
-
-      const { data } = await fetch(
-        `/api/admin/groups/list?${params.toString()}`,
-      );
 
       return data;
     } catch (error) {
@@ -128,18 +125,13 @@ export const fetchGroupUsers = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: limit.toString(),
+      const { data } = await fetch(`/api/admin/groups/${groupId}/users`, {
+        query: {
+          page,
+          limit,
+          search: search || undefined,
+        },
       });
-
-      if (search) {
-        params.append('search', search);
-      }
-
-      const { data } = await fetch(
-        `/api/admin/groups/${groupId}/users?${params.toString()}`,
-      );
 
       return data;
     } catch (error) {

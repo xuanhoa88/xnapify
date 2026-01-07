@@ -326,9 +326,9 @@ export function withQuery(input, query) {
     return queryString ? `${_input}?${queryString}` : _input;
   }
 
-  // Existing query string
-  const searchParams = new URLSearchParams(_input.slice(searchIndex + 1));
+  // Existing query string - merge with new params
   const base = _input.slice(0, searchIndex);
+  const searchParams = new URLSearchParams(_input.slice(searchIndex + 1));
 
   for (const [key, value] of Object.entries(query)) {
     if (value === undefined) {

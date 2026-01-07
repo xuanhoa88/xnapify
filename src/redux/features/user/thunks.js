@@ -149,6 +149,26 @@ export const resetPasswordConfirmation = createAsyncThunk(
 );
 
 /**
+ * Generate a random secure password
+ */
+export const generatePassword = createAsyncThunk(
+  'user/generatePassword',
+  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { length = 16, includeSymbols = true } = options;
+
+      const { data } = await fetch(`/api/generate-password`, {
+        query: { length, includeSymbols: includeSymbols ? undefined : 'false' },
+      });
+
+      return data.password;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+/**
  * Email verification
  */
 export const emailVerification = createAsyncThunk(

@@ -14,6 +14,7 @@ import {
   passwordResetConfirmFormSchema,
 } from '../../../../shared/validator/features/auth';
 import * as authService from '../services/auth.service';
+import { generatePassword } from '../utils/password';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -416,5 +417,30 @@ export async function resetPasswordConfirmation(req, res) {
     }
 
     return http.sendServerError(res, 'Password reset failed');
+  }
+}
+
+/**
+ * Generate a random secure password
+ *
+ * @route   GET /api/auth/generate-password
+ * @access  Public
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function generateRandomPassword(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { length = 16, includeSymbols = true } = req.query;
+
+    const password = generatePassword({
+      length: parseInt(length, 10) || 16,
+      includeSymbols: includeSymbols !== 'false',
+      excludeAmbiguous: true,
+    });
+
+    return http.sendSuccess(res, { password });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to generate password');
   }
 }

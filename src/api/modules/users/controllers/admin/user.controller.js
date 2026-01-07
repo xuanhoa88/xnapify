@@ -14,7 +14,6 @@ import {
   bulkDeleteUserFormSchema,
 } from '../../../../../shared/validator/features/admin';
 import * as userAdminService from '../../services/admin/user.service';
-import { generatePassword } from '../../utils/password';
 import { DEFAULT_ROLE } from '../../constants/rbac';
 
 // ========================================================================
@@ -366,31 +365,6 @@ export async function updateUserLockStatus(req, res) {
     }
 
     return http.sendServerError(res, 'Failed to update user lock status');
-  }
-}
-
-/**
- * Generate a random secure password
- *
- * @route   GET /api/admin/users/generate-password
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function generateRandomPassword(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { length = 16, includeSymbols = true } = req.query;
-
-    const password = generatePassword({
-      length: parseInt(length, 10) || 16,
-      includeSymbols: includeSymbols !== 'false',
-      excludeAmbiguous: true,
-    });
-
-    return http.sendSuccess(res, { password });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to generate password');
   }
 }
 
