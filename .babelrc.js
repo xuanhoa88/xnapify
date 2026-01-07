@@ -20,6 +20,7 @@ module.exports = api => {
 
   const NODE_ENV = process.env.NODE_ENV || 'development';
   const isProd = NODE_ENV === 'production';
+  const isTest = NODE_ENV === 'test';
 
   return {
     /**
@@ -78,6 +79,11 @@ module.exports = api => {
       '@babel/plugin-transform-optional-chaining',
       '@babel/plugin-transform-nullish-coalescing-operator',
       '@babel/plugin-transform-object-rest-spread',
+
+      // =====================
+      // 🧪 Test environment
+      // =====================
+      ...(isTest ? ['@storybook/babel-plugin-require-context-hook'] : []),
 
       // =====================
       // 🚀 Production Optimizations
