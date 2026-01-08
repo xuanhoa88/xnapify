@@ -13,7 +13,6 @@ import Icon from '../../Icon';
 import Button from '../../Button';
 import LanguageSwitcher from './LanguageSwitcher';
 import Breadcrumbs from './Breadcrumbs';
-import SearchBar from './SearchBar';
 import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
@@ -53,9 +52,6 @@ function AdminHeader() {
           </Button>
           <Breadcrumbs />
         </div>
-
-        {/* Center Section - Search */}
-        <SearchBar />
 
         {/* Right Section - Language | Notifications Group | User */}
         <div className={s.rightSection}>
