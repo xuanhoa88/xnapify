@@ -24,6 +24,22 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
   // Track dynamically injected reducers
   const injectedReducers = {};
 
+  // Get known root reducer keys
+  const rootReducerKeys = Object.keys(rootReducer);
+
+  // Separate initial state into known (root) and dynamic (to be injected) state
+  // This prevents "Unexpected key" warnings from combineReducers
+  const filteredInitialState = {};
+  const pendingDynamicState = {};
+
+  Object.keys(initialState).forEach(key => {
+    if (rootReducerKeys.includes(key)) {
+      filteredInitialState[key] = initialState[key];
+    } else {
+      pendingDynamicState[key] = initialState[key];
+    }
+  });
+
   // Build middleware array
   const getMiddleware = getDefaultMiddleware => {
     const middleware = getDefaultMiddleware({
@@ -59,7 +75,7 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
     reducer: combineReducers(rootReducer),
     // Enable duplicate middleware check
     duplicateMiddlewareCheck: true,
-    preloadedState: initialState,
+    preloadedState: filteredInitialState,
     middleware: getMiddleware,
     devTools: __DEV__
       ? {
@@ -72,6 +88,7 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
   /**
    * Injects a reducer into the store dynamically.
    * Used by modules to register their Redux slices at runtime.
+   * Restores any pending SSR state for the injected reducer.
    * @param {string} key - Reducer key in state
    * @param {Function} reducer - Reducer function
    */
@@ -84,6 +101,28 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
     injectedReducers[key] = reducer;
 
     // Rebuild the root reducer with injected reducers
+    const newRootReducer = combineReducers({
+      ...rootReducer,
+      ...injectedReducers,
+    });
+
+    store.replaceReducer(newRootReducer);
+
+    if (__DEV__) {
+      console.log(`[Redux] Injected reducer: ${key}`);
+    }
+  };
+
+  // Pre-populate injected reducers with identity reducers for pending SSR state
+  // This allows dynamic reducers to seamlessly take over the SSR state
+  Object.keys(pendingDynamicState).forEach(key => {
+    const ssrState = pendingDynamicState[key];
+    // Create an identity reducer that preserves SSR state until real reducer is injected
+    injectedReducers[key] = (state = ssrState) => state;
+  });
+
+  // If there's pending dynamic state, immediately replace the reducer to include it
+  if (Object.keys(pendingDynamicState).length > 0) {
     store.replaceReducer(
       combineReducers({
         ...rootReducer,
@@ -92,9 +131,11 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
     );
 
     if (__DEV__) {
-      console.log(`[Redux] Injected reducer: ${key}`);
+      console.log(
+        `[Redux] Pre-loaded SSR state for: ${Object.keys(pendingDynamicState).join(', ')}`,
+      );
     }
-  };
+  }
 
   /**
    * Gets all dynamically injected reducer keys.
