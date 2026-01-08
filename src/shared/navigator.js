@@ -120,12 +120,6 @@ function validateViewConfig(views, trace = '') {
     if (view.action != null && typeof view.action !== 'function') {
       throw new TypeError(`${viewPath}.action: must be a function`);
     }
-    if (view.init != null && typeof view.init !== 'function') {
-      throw new TypeError(`${viewPath}.init: must be a function`);
-    }
-    if (view.metadata != null && typeof view.metadata !== 'function') {
-      throw new TypeError(`${viewPath}.metadata: must be a function`);
-    }
     if (view.children != null) {
       validateViewConfig(view.children, `${viewPath}.children`);
     }
@@ -299,41 +293,41 @@ function createViewMatcher(
 }
 
 /**
- * Runs the view's init hook if defined and not already executed.
+ * Runs the view's boot hook if defined and not already executed.
  * Called once per module lifecycle for setup like registering Redux reducers.
  * @param {Object} view - The view object
  * @param {Object} ctx - The context object
  * @returns {Promise<void>}
  */
-async function runInit(view, ctx) {
+async function bootView(view, ctx) {
   try {
-    if (!view || typeof view.init !== 'function') return;
+    if (!view || typeof view.boot !== 'function') return;
 
     // Track initialization per view to prevent double execution
-    if (!view[NAV_INITIALIZED]) view[NAV_INITIALIZED] = await view.init(ctx);
+    if (!view[NAV_INITIALIZED]) view[NAV_INITIALIZED] = await view.boot(ctx);
   } catch (error) {
     console.error(
-      `[Navigator] Error running init hook for view "${view.path || '(no path)'}":`,
+      `[Navigator] Error running boot hook for view "${view.path || '(no path)'}":`,
       error,
     );
   }
 }
 
 /**
- * Runs the view's metadata hook and returns the result.
- * Called on every route match to prepare dynamic metadata.
+ * Runs the view's mount hook and returns the result.
+ * Called on every route match to prepare dynamic state (breadcrumbs, meta, etc).
  * @param {Object} view - The view object
  * @param {Object} ctx - The context object
  * @returns {Promise<Object|null>}
  */
-async function runMetadata(view, ctx) {
+async function mountView(view, ctx) {
   try {
-    if (!view || typeof view.metadata !== 'function') return null;
+    if (!view || typeof view.mount !== 'function') return null;
 
-    return await view.metadata(ctx);
+    return await view.mount(ctx);
   } catch (error) {
     console.error(
-      `[Navigator] Error running metadata hook for view "${view.path || '(no path)'}":`,
+      `[Navigator] Error running mount hook for view "${view.path || '(no path)'}":`,
       error,
     );
     return null;
@@ -342,23 +336,25 @@ async function runMetadata(view, ctx) {
 
 /**
  * Default view resolver. Handles sync/async view actions.
- * @param {Object} ctx
- * @param {Object} params
- * @param {boolean} autoDelegate
+ * @param {Object} ctx - Context with view, params, metadata, etc.
+ * @param {Object} options - Options object
+ * @param {Object} options.metadata - Metadata from matched view
+ * @param {boolean} options.autoDelegate - Whether to delegate to child routes
  * @returns {Promise<*>}
  */
-async function defaultViewResolver(ctx, params, autoDelegate) {
+async function defaultViewResolver(ctx, options) {
   if (!ctx.view || typeof ctx.view.action !== 'function') return undefined;
 
   const hasChildren =
     Array.isArray(ctx.view.children) && ctx.view.children.length > 0;
 
-  if (hasChildren && autoDelegate) {
+  if (hasChildren && options.autoDelegate) {
     const childPage = await ctx.next();
     if (childPage != null) return childPage;
   }
 
-  const actionResult = await ctx.view.action(ctx, params);
+  // Pass metadata as second param wrapped in object for consistent API
+  const actionResult = await ctx.view.action(ctx, options);
 
   if (
     actionResult &&
@@ -366,7 +362,7 @@ async function defaultViewResolver(ctx, params, autoDelegate) {
     'default' in actionResult
   ) {
     if (typeof actionResult.default === 'function')
-      return actionResult.default(ctx, params);
+      return actionResult.default(ctx, options);
     return actionResult.default;
   }
 
@@ -386,72 +382,6 @@ function isViewDescendant(parentView, childView) {
     if (currentView === parentView) return true;
   }
   return false;
-}
-
-/**
- * Builds the full URL path for a view by traversing up through parents.
- * @param {Object} view - The view to build URL for
- * @returns {string} The full URL path
- */
-function buildViewUrl(view) {
-  const pathParts = [];
-  let currentView = view;
-
-  while (currentView) {
-    if (currentView.path) {
-      // Skip dynamic path segments (e.g., :userId, :id)
-      // These can't be auto-generated as clickable breadcrumb links
-      if (!currentView.path.includes(':')) pathParts.unshift(currentView.path);
-    }
-    currentView = currentView.parent;
-  }
-
-  // Join paths and normalize
-  return normalizePath(pathParts.join(''));
-}
-
-/**
- * Collects breadcrumbs from view's route config hierarchy.
- * Traverses from current view up through parents.
- * Auto-generates URLs from route paths when not explicitly defined.
- * Checks metadata.breadcrumb first, then falls back to view.breadcrumb.
- * @param {Object} ctx - The matched view context
- * @returns {Promise<Array<{label: string, url?: string}>>}
- */
-async function collectBreadcrumbs(ctx) {
-  const breadcrumbs = [];
-  let currentView = ctx.view;
-
-  while (currentView) {
-    // Check metadata.breadcrumb first (for current view only), then fall back to view.breadcrumb
-    const breadcrumbSource =
-      currentView === ctx.view && ctx.metadata && ctx.metadata.breadcrumb
-        ? ctx.metadata.breadcrumb
-        : currentView.breadcrumb;
-
-    if (breadcrumbSource) {
-      // Clone the breadcrumb to avoid mutating the original config
-      // Support async/sync callable breadcrumbs
-      const breadcrumb =
-        typeof breadcrumbSource === 'function'
-          ? await breadcrumbSource(ctx)
-          : { ...breadcrumbSource };
-
-      // Auto-generate URL if not explicitly defined
-      if (!breadcrumb.url) {
-        const generatedUrl = buildViewUrl(currentView);
-        // Only set URL if we have a valid path (not just root)
-        if (generatedUrl && generatedUrl !== PATH.SEPARATOR) {
-          breadcrumb.url = generatedUrl;
-        }
-      }
-
-      breadcrumbs.unshift(breadcrumb);
-    }
-    currentView = currentView.parent;
-  }
-
-  return breadcrumbs;
 }
 
 /**
@@ -706,6 +636,8 @@ export default class IsomorphicNavigator {
         ? this.options.viewResolver
         : defaultViewResolver;
 
+    // Track accumulated metadata from all matched views
+    const metadata = [];
     const state = { matches: null, cachedMatch: null, current: ctx };
 
     const next = async (resume, parent, prevResult) => {
@@ -753,29 +685,28 @@ export default class IsomorphicNavigator {
 
       state.current = { ...ctx, ...state.matches.value };
 
-      // Run init hook for matched view (one-time per module)
-      await runInit(state.current.view, state.current);
+      // Run boot hook for matched view (one-time per module)
+      await bootView(state.current.view, state.current);
 
-      // Run metadata hook for matched view
-      state.current.metadata = await runMetadata(
-        state.current.view,
-        state.current,
-      );
+      // Run mount hook for matched view and accumulate into metadata array
+      const mountResult = await mountView(state.current.view, state.current);
 
-      const result = await resolver(
-        state.current,
-        state.matches.value.params,
-        state.current.view.autoDelegate !== false,
-      );
+      // Accumulate mount result with view reference for breadcrumb collection
+      if (mountResult) {
+        metadata.push({
+          view: state.current.view,
+          path: state.current.path,
+          baseUrl: state.current.baseUrl,
+          ...mountResult,
+        });
+      }
+
+      const result = await resolver(state.current, {
+        metadata,
+        autoDelegate: state.current.view.autoDelegate !== false,
+      });
 
       if (result != null) {
-        // Add breadcrumbs as separate property (don't merge - let parent routes handle)
-        if (typeof result === 'object' && state.current && state.current.view) {
-          const breadcrumb = await collectBreadcrumbs(state.current);
-          if (breadcrumb.length > 0 && !result.breadcrumb) {
-            result.breadcrumb = breadcrumb;
-          }
-        }
         return result;
       }
 

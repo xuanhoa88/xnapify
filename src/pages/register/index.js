@@ -13,7 +13,7 @@ import EmailVerification from './EmailVerification';
  * Route configuration
  * Renders register pages standalone without header/footer
  */
-const route = {
+export default {
   path: '/register',
   children: [
     {
@@ -59,5 +59,3 @@ const route = {
     },
   ],
 };
-
-export default [route];

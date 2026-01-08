@@ -10,32 +10,27 @@ import Login from './Login';
 
 /**
  * Route configuration
- */
-const route = {
-  path: '/login',
-};
-
-/**
- * Route action
  * Redirects authenticated users to home page
  * Renders login page standalone without header/footer
  */
-function action(context) {
-  // Get title for SSR page metadata
-  const title = context.i18n.t('navigation.login', 'Log In');
+export default {
+  path: '/login',
 
-  // Get state from Redux store
-  const state = context.store.getState();
+  action(context) {
+    // Get title for SSR page metadata
+    const title = context.i18n.t('navigation.login', 'Log In');
 
-  // Redirect authenticated users to home
-  if (isAuthenticated(state)) {
-    return { redirect: '/' };
-  }
+    // Get state from Redux store
+    const state = context.store.getState();
 
-  return {
-    title,
-    component: <Login />,
-  };
-}
+    // Redirect authenticated users to home
+    if (isAuthenticated(state)) {
+      return { redirect: '/' };
+    }
 
-export default [route, action];
+    return {
+      title,
+      component: <Login />,
+    };
+  },
+};

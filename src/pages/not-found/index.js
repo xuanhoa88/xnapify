@@ -10,22 +10,17 @@ import NotFound from './NotFound';
 /**
  * Route configuration
  * Catch-all route with lowest priority for 404 pages
- */
-const route = {
-  path: '/*path',
-  priority: 0,
-};
-
-/**
- * Route action (404)
  * Renders not-found page standalone without header/footer
  */
-function action() {
-  return {
-    title: 'Page Not Found',
-    component: <NotFound />,
-    status: 404,
-  };
-}
+export default {
+  path: '/*path',
+  priority: 0,
 
-export default [route, action];
+  action() {
+    return {
+      title: 'Page Not Found',
+      component: <NotFound />,
+      status: 404,
+    };
+  },
+};

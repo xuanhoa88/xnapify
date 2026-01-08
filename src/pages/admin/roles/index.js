@@ -13,48 +13,47 @@ import reducer, { SLICE_NAME } from './redux';
 /**
  * Route configuration with child routes
  */
-const route = {
+export default {
   path: '/roles',
 
   // One-time initialization - inject Redux slice
-  init: ({ store }) => {
+  boot: ({ store }) => {
     store.injectReducer(SLICE_NAME, reducer);
   },
 
-  // Dynamic metadata
-  metadata: ({ i18n }) => ({
-    breadcrumb: { label: i18n.t('admin.roles.title', 'Roles') },
+  mount: () => ({
+    breadcrumb: { label: 'Roles' },
   }),
 
   children: [
     {
       path: '',
-      action: () => ({
-        title: 'Role Management - Admin',
-        component: <Roles />,
-      }),
+      action() {
+        return {
+          title: 'Role Management',
+          component: <Roles />,
+        };
+      },
     },
     {
       path: '/create',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.roles.create', 'Create') },
-      }),
-      action: () => ({
-        title: 'Create Role - Admin',
-        component: <CreateRole />,
-      }),
+      action() {
+        return {
+          title: 'Create Role',
+          breadcrumb: { label: 'Create' },
+          component: <CreateRole />,
+        };
+      },
     },
     {
       path: '/:roleId/edit',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.roles.edit', 'Edit') },
-      }),
-      action: ({ params }) => ({
-        title: 'Edit Role - Admin',
-        component: <EditRole roleId={params.roleId} />,
-      }),
+      action({ params }) {
+        return {
+          title: 'Edit Role',
+          breadcrumb: { label: 'Edit' },
+          component: <EditRole roleId={params.roleId} />,
+        };
+      },
     },
   ],
 };
-
-export default [route];

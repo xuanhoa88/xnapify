@@ -13,48 +13,47 @@ import reducer, { SLICE_NAME } from './redux';
 /**
  * Route configuration
  */
-const route = {
+export default {
   path: '/permissions',
 
   // One-time initialization - inject Redux slice
-  init: ({ store }) => {
+  boot: ({ store }) => {
     store.injectReducer(SLICE_NAME, reducer);
   },
 
-  // Dynamic metadata
-  metadata: ({ i18n }) => ({
-    breadcrumb: { label: i18n.t('admin.permissions.title', 'Permissions') },
+  mount: () => ({
+    breadcrumb: { label: 'Permissions' },
   }),
 
   children: [
     {
       path: '',
-      action: () => ({
-        title: 'Permission Management - Admin',
-        component: <Permissions />,
-      }),
+      action() {
+        return {
+          title: 'Permission Management',
+          component: <Permissions />,
+        };
+      },
     },
     {
       path: '/create',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.permissions.create', 'Create') },
-      }),
-      action: () => ({
-        title: 'Create Permission - Admin',
-        component: <CreatePermission />,
-      }),
+      action() {
+        return {
+          title: 'Create Permission',
+          breadcrumb: { label: 'Create' },
+          component: <CreatePermission />,
+        };
+      },
     },
     {
       path: '/:permissionId/edit',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.permissions.edit', 'Edit') },
-      }),
-      action: ({ params }) => ({
-        title: 'Edit Permission - Admin',
-        component: <EditPermission permissionId={params.permissionId} />,
-      }),
+      action({ params }) {
+        return {
+          title: 'Edit Permission',
+          breadcrumb: { label: 'Edit' },
+          component: <EditPermission permissionId={params.permissionId} />,
+        };
+      },
     },
   ],
 };
-
-export default [route];

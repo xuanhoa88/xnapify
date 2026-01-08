@@ -89,12 +89,34 @@ export const getFlashMessageText = state => {
 // =============================================================================
 
 /**
- * Get current breadcrumbs trail (from navigation)
+ * Get all breadcrumbs (object keyed by namespace)
  *
  * @param {Object} state - Redux state
- * @returns {Array<{ label: string, url?: string }>|null} Breadcrumbs array or null
+ * @returns {Object} Breadcrumbs object { namespace: [...items] }
+ */
+export const getAllBreadcrumbs = state => {
+  const ui = getUiState(state);
+  return ui.breadcrumbs || {};
+};
+
+/**
+ * Get breadcrumbs for a specific namespace
+ *
+ * @param {Object} state - Redux state
+ * @param {string} namespace - Namespace to get breadcrumbs for
+ * @returns {Array<{ label: string, url?: string }>} Breadcrumbs array
+ */
+export const getBreadcrumbsByNamespace = (state, namespace) => {
+  const breadcrumbs = getAllBreadcrumbs(state);
+  return breadcrumbs[namespace] || [];
+};
+
+/**
+ * Get breadcrumbs for 'admin' namespace (convenience selector)
+ *
+ * @param {Object} state - Redux state
+ * @returns {Array<{ label: string, url?: string }>} Admin breadcrumbs array
  */
 export const getBreadcrumbs = state => {
-  const ui = getUiState(state);
-  return ui.breadcrumbs;
+  return getBreadcrumbsByNamespace(state, 'admin');
 };

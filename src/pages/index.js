@@ -9,18 +9,62 @@ import { getAppName, getAppDescription } from '../redux';
 import IsomorphicNavigator from '../shared/navigator';
 
 /**
+ * Checks if value is a plain object (created by Object constructor or Object.create(null))
+ * @param {*} value - The value to check
+ * @returns {boolean} Returns true if value is a plain object, else false
+ */
+function isPlainObject(value) {
+  // Early return for null, undefined, primitives
+  if (value == null || typeof value !== 'object') {
+    return false;
+  }
+
+  // Get the internal [[Class]]
+  const tag = Object.prototype.toString.call(value);
+
+  // Must be [object Object]
+  if (tag !== '[object Object]') {
+    return false;
+  }
+
+  // Objects created via Object.create(null) have no prototype - these are plain
+  const proto = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+
+  // Get the constructor from the prototype
+  const Ctor =
+    Object.prototype.hasOwnProperty.call(proto, 'constructor') &&
+    proto.constructor;
+
+  // Check if constructor is the Object constructor
+  return (
+    typeof Ctor === 'function' &&
+    Ctor instanceof Ctor &&
+    Function.prototype.toString.call(Ctor) ===
+      Function.prototype.toString.call(Object)
+  );
+}
+
+/**
  * Automatically discover and load all pages from page folders.
  *
  * This uses webpack's require.context to dynamically import all index.js files
- * from subdirectories. Each page folder should contain an index.js that exports:
- * [route, action] where:
- * - page: Page configuration object (path, priority, devOnly, etc.)
- * - action: Page action function
+ * from subdirectories. Each page folder should contain an index.js that exports
+ * a route configuration object with the following properties:
+ * - path: Route path (required)
+ * - action: Page action function (optional)
+ * - children: Child routes (optional)
+ * - priority: Route priority (optional, default: 50)
+ * - devOnly: Only load in development mode (optional)
+ * - boot: One-time initialization function (optional)
+ * - mount: Called on every route match to return metadata (optional)
  *
  * Page modules can export either:
- * 1. A static array: [route, action]
- * 2. A sync function: () => [route, action]
- * 3. An async function: async () => [route, action]
+ * 1. A static object: { path, action?, children?, ... }
+ * 2. A sync function: () => { path, action?, children?, ... }
+ * 3. An async function: async (pageBuilder) => { path, action?, children?, ... }
  *
  * Benefits:
  * - No manual page registration needed
@@ -31,35 +75,38 @@ import IsomorphicNavigator from '../shared/navigator';
  * - Supports both sync and async page module initialization
  *
  * @example
- * // pages/home/index.js - Static export
- * export default [
- *   {
- *     path: '/',
- *     priority: 100,
- *   },
- *   async (context) => {
+ * // pages/login/index.js - Simple route with inline action
+ * export default {
+ *   path: '/login',
+ *   action(context, { metadata }) {
  *     return {
- *       title: 'Home',
- *       component: <HomePage />,
+ *       title: 'Log In',
+ *       component: <LoginPage />,
  *     };
  *   },
- * ];
+ * };
  *
  * @example
- * // pages/dashboard/index.js - Async initialization
- * export default async () => {
- *   return [
- *     {
- *       path: '/dashboard',
- *       priority: 90,
+ * // pages/admin/index.js - Async initialization with child routes and lifecycle hooks
+ * export default async (pageBuilder) => {
+ *   const children = await pageBuilder(pagesContext);
+ *   return {
+ *     path: '/admin',
+ *     children,
+ *     boot({ store }) {
+ *       store.injectReducer('admin', reducer);
  *     },
- *     async (context) => {
+ *     mount() {
+ *       return { breadcrumb: { label: 'Admin' } };
+ *     },
+ *     async action(context, { metadata }) {
+ *       const childPage = await context.next();
  *       return {
- *         title: 'Dashboard',
- *         component: <DashboardPage />,
+ *         title: 'Admin Panel',
+ *         component: <AdminLayout>{childPage.component}</AdminLayout>,
  *       };
  *     },
- *   ];
+ *   };
  * };
  */
 
@@ -73,6 +120,8 @@ import IsomorphicNavigator from '../shared/navigator';
 /**
  * @typedef {Function} PageAction
  * @param {Object} context - Navigation context
+ * @param {Object} options - Options object
+ * @param {Array} options.metadata - Accumulated metadata from matched views
  * @returns {Promise<Object>} Page result
  */
 
@@ -95,57 +144,44 @@ const PAGE_PATH_REGEX = /^\.\/([^/]+)\//;
  * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context
  * @returns {Promise<Array<Object>>} Sorted array of page objects
  */
-async function buildPages(ctx) {
-  const pageKeys = ctx.keys();
+async function createPages(ctx) {
+  const modulePaths = ctx.keys();
 
   if (__DEV__) {
-    console.log(`[Navigator] Discovered ${pageKeys.length} page module(s)`);
+    console.log(`[Navigator] Discovered ${modulePaths.length} page module(s)`);
   }
 
-  const pagePromises = pageKeys.map(async resolvedPath => {
+  const pages = modulePaths.map(async resolvedPath => {
     // Extract folder name from path (e.g., './home/index.js' -> 'home')
-    const matchedPath = resolvedPath.match(PAGE_PATH_REGEX);
-    if (!matchedPath) {
+    const pathMatch = resolvedPath.match(PAGE_PATH_REGEX);
+    if (!pathMatch) {
       console.error(`[Navigator] Invalid page format: ${resolvedPath}`);
       return null;
     }
-    const folderName = matchedPath[1];
+    const folderName = pathMatch[1];
 
     try {
       // Load page module
-      let factory = ctx(resolvedPath).default;
+      let pageModule = ctx(resolvedPath).default;
 
-      // Handle dynamic exports (functions)
-      if (typeof factory === 'function') {
-        factory = await factory(buildPages);
+      // Handle dynamic exports (functions that return route config)
+      if (typeof pageModule === 'function') {
+        pageModule = await pageModule(createPages);
       }
 
-      // Invalid export format
-      if (!Array.isArray(factory)) {
+      // Validate export format - must be a plain object
+      if (!isPlainObject(pageModule)) {
         console.error(
-          `[Navigator] Invalid page module in ${folderName}/index.js. Must export an array [route, action] or a function returning [route, action].`,
+          `[Navigator] Invalid page module in ${folderName}/index.js. Must export an object { path, action?, children?, ... } or a function returning one.`,
         );
         return null;
       }
 
-      // Extract route and action from resolved factory
-      let [route, action] = factory;
-
-      // Resolve route if it's a function
-      if (typeof route === 'function') {
-        route = await route(buildPages);
-      }
-
-      // Validate route configuration
-      if (!route || typeof route !== 'object') {
-        console.error(
-          `[Navigator] Invalid route configuration in ${folderName}/index.js. Route must be an object.`,
-        );
-        return null;
-      }
+      // Extract route config and action from resolved module
+      const { action, ...routeConfig } = pageModule;
 
       // Validate that route has a path property (empty string '' is valid)
-      if (!Object.prototype.hasOwnProperty.call(route, 'path')) {
+      if (!Object.prototype.hasOwnProperty.call(routeConfig, 'path')) {
         console.error(
           `[Navigator] Route in ${folderName}/index.js must have a 'path' property.`,
         );
@@ -153,10 +189,10 @@ async function buildPages(ctx) {
       }
 
       // Skip development-only routes in production
-      if (route.devOnly && !__DEV__) {
+      if (routeConfig.devOnly && !__DEV__) {
         if (__DEV__) {
           console.log(
-            `[Navigator] Skipping dev-only route '${route.path}' in ${folderName} (production mode)`,
+            `[Navigator] Skipping dev-only route '${routeConfig.path}' in ${folderName} (production mode)`,
           );
         }
         return null;
@@ -169,9 +205,12 @@ async function buildPages(ctx) {
         );
       }
 
-      // Extract priority before building page
-      const priority = Object.prototype.hasOwnProperty.call(route, 'priority')
-        ? route.priority
+      // Extract priority before building page config
+      const priority = Object.prototype.hasOwnProperty.call(
+        routeConfig,
+        'priority',
+      )
+        ? routeConfig.priority
         : DEFAULT_PAGE_PRIORITY;
 
       // Validate priority is a number
@@ -182,23 +221,23 @@ async function buildPages(ctx) {
       }
 
       // Remove custom properties that shouldn't be passed to navigator
-      delete route.priority;
-      delete route.devOnly;
+      delete routeConfig.priority;
+      delete routeConfig.devOnly;
 
-      // Build complete page object
-      const config = {
-        ...route,
+      // Build complete page config
+      const pageConfig = {
+        ...routeConfig,
         action,
         _folderName: folderName, // Add folder name for debugging
       };
 
       if (__DEV__) {
         console.log(
-          `[Navigator] ✓ Page loaded: ${config.path || '(no path)'} (priority: ${priority}, folder: ${folderName})`,
+          `[Navigator] ✓ Page loaded: ${pageConfig.path || '(no path)'} (priority: ${priority}, folder: ${folderName})`,
         );
       }
 
-      return { config, priority };
+      return { pageConfig, priority };
     } catch (error) {
       console.error(
         `[Navigator] Error loading page module ${folderName}/index.js:`,
@@ -209,24 +248,26 @@ async function buildPages(ctx) {
   });
 
   // Wait for all page promises to resolve in parallel
-  const resolvedPages = await Promise.all(pagePromises);
+  const pageResults = await Promise.all(pages);
 
   // Filter out null values (failed/skipped pages)
-  const validPages = resolvedPages.filter(item => item != null);
+  const loadedPages = pageResults.filter(item => item != null);
 
   // Log summary of failed pages in development
   if (__DEV__) {
-    const failedCount = resolvedPages.length - validPages.length;
+    const failedCount = pageResults.length - loadedPages.length;
     if (failedCount > 0) {
       console.warn(
         `[Navigator] ⚠ ${failedCount} page(s) failed to load or were skipped`,
       );
     }
-    console.log(`[Navigator] Successfully loaded ${validPages.length} page(s)`);
+    console.log(
+      `[Navigator] Successfully loaded ${loadedPages.length} page(s)`,
+    );
   }
 
   // Sort pages by priority (higher priority first)
-  validPages.sort((a, b) => {
+  loadedPages.sort((a, b) => {
     const priorityA =
       typeof a.priority === 'number' ? a.priority : DEFAULT_PAGE_PRIORITY;
     const priorityB =
@@ -234,8 +275,8 @@ async function buildPages(ctx) {
     return priorityB - priorityA;
   });
 
-  // Extract page objects (without priority metadata)
-  return validPages.map(item => item.config);
+  // Extract page configs (without priority metadata)
+  return loadedPages.map(item => item.pageConfig);
 }
 
 /**
@@ -255,7 +296,7 @@ export default async function createNavigator() {
   }
 
   // Build pages asynchronously (supports async page modules)
-  const children = await buildPages(pagesContext);
+  const pages = await createPages(pagesContext);
 
   // Create navigator with loaded pages
   const navigator = new IsomorphicNavigator({
@@ -291,7 +332,7 @@ export default async function createNavigator() {
     },
 
     // Add pages from page modules
-    children,
+    children: pages,
   });
 
   if (__DEV__) {

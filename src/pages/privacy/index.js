@@ -10,13 +10,6 @@ import Layout from '../../components/Layout';
 import s from './Privacy.css';
 
 /**
- * Route configuration
- */
-const route = {
-  path: '/privacy',
-};
-
-/**
  * Privacy Page Component
  */
 function PrivacyPage({ title, html }) {
@@ -36,39 +29,41 @@ PrivacyPage.propTypes = {
 };
 
 /**
- * Route action
+ * Route configuration
  * Supports locale-specific content
  */
-async function action({ locale }) {
-  // Load locale-specific markdown file using static imports to avoid webpack warnings
-  let data;
+export default {
+  path: '/privacy',
 
-  // Use static imports with switch statement instead of dynamic template literals
-  switch (locale) {
-    case 'vi-VN':
-      try {
-        data = await import(
-          /* webpackChunkName: "privacy" */ './privacy.vi-VN.md'
-        );
-      } catch (e) {
-        // Fallback to default if locale file doesn't exist
+  async action({ locale }) {
+    // Load locale-specific markdown file using static imports to avoid webpack warnings
+    let data;
+
+    // Use static imports with switch statement instead of dynamic template literals
+    switch (locale) {
+      case 'vi-VN':
+        try {
+          data = await import(
+            /* webpackChunkName: "privacy" */ './privacy.vi-VN.md'
+          );
+        } catch (e) {
+          // Fallback to default if locale file doesn't exist
+          data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
+        }
+        break;
+      default:
+        // Default to English or base markdown file
         data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
-      }
-      break;
-    default:
-      // Default to English or base markdown file
-      data = await import(/* webpackChunkName: "privacy" */ './privacy.md');
-      break;
-  }
+        break;
+    }
 
-  return {
-    title: data.attributes.title,
-    component: (
-      <Layout>
-        <PrivacyPage title={data.attributes.title} html={data.html} />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];
+    return {
+      title: data.attributes.title,
+      component: (
+        <Layout>
+          <PrivacyPage title={data.attributes.title} html={data.html} />
+        </Layout>
+      ),
+    };
+  },
+};

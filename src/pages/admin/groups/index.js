@@ -13,48 +13,48 @@ import reducer, { SLICE_NAME } from './redux';
 /**
  * Route configuration with child routes
  */
-const route = {
+export default {
   path: '/groups',
 
   // One-time initialization - inject Redux slice
-  init: ({ store }) => {
+  boot: ({ store }) => {
     store.injectReducer(SLICE_NAME, reducer);
   },
 
-  // Dynamic metadata
-  metadata: ({ i18n }) => ({
-    breadcrumb: { label: i18n.t('admin.groups.title', 'Groups') },
+  mount: () => ({
+    breadcrumb: { label: 'Groups' },
   }),
 
   children: [
     {
       path: '',
-      action: () => ({
-        title: 'Group Management - Admin',
-        component: <Groups />,
-      }),
+      action() {
+        return {
+          title: 'Group Management',
+          component: <Groups />,
+        };
+      },
     },
     {
       path: '/create',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.groups.create', 'Create') },
-      }),
-      action: () => ({
-        title: 'Create Group - Admin',
-        component: <CreateGroup />,
-      }),
+      action() {
+        return {
+          title: 'Create Group',
+          breadcrumb: { label: 'Create' },
+          component: <CreateGroup />,
+        };
+      },
     },
     {
       path: '/:groupId/edit',
-      metadata: ({ i18n }) => ({
-        breadcrumb: { label: i18n.t('admin.groups.edit', 'Edit') },
-      }),
-      action: ({ params }) => ({
-        title: 'Edit Group - Admin',
-        component: <EditGroup groupId={params.groupId} />,
-      }),
+      title: 'Edit Group',
+      action({ params }) {
+        return {
+          title: 'Edit Group',
+          breadcrumb: { label: 'Edit' },
+          component: <EditGroup groupId={params.groupId} />,
+        };
+      },
     },
   ],
 };
-
-export default [route];

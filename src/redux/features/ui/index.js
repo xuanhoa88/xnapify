@@ -12,6 +12,8 @@ export {
   hasFlashMessage,
   getFlashMessageVariant,
   getFlashMessageText,
+  getAllBreadcrumbs,
+  getBreadcrumbsByNamespace,
   getBreadcrumbs,
 } from './selector';
 
@@ -24,6 +26,9 @@ export {
   showErrorMessage,
   showWarningMessage,
   showInfoMessage,
+  addBreadcrumb,
+  clearBreadcrumbs,
+  setBreadcrumbs,
   resetUiState,
 } from './slice';
 

@@ -8,22 +8,17 @@
 import ErrorPage from './ErrorPage';
 
 /**
- * Route configuration
- */
-const route = {
-  path: '/error',
-  devOnly: true,
-};
-
-/**
- * Route action (Development only)
+ * Route configuration (Development only)
  * Renders error page standalone without header/footer
  */
-function action() {
-  return {
-    title: 'Error',
-    component: <ErrorPage />,
-  };
-}
+export default {
+  path: '/error',
+  devOnly: true,
 
-export default [route, action];
+  action() {
+    return {
+      title: 'Error',
+      component: <ErrorPage />,
+    };
+  },
+};

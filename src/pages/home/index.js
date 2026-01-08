@@ -11,7 +11,10 @@ import Features from './Features';
 import FeatureDetails from './FeatureDetails';
 import { featuresData } from './data';
 
-const route = {
+/**
+ * Route configuration
+ */
+export default {
   path: '',
 
   children: [
@@ -87,5 +90,3 @@ const route = {
     },
   ],
 };
-
-export default [route];

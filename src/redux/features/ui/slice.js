@@ -10,12 +10,14 @@ import { createSlice } from '@reduxjs/toolkit';
 /**
  * UI Slice
  *
- * Manages UI-related state such as drawer visibility and flash messages.
+ * Manages UI-related state such as drawer visibility, flash messages, and breadcrumbs.
  *
  * State shape:
  * {
  *   isAdminDrawerOpen: boolean,
- *   breadcrumbs: Array<{ label: string, url?: string }> | null,
+ *   breadcrumbs: {
+ *     [namespace: string]: Array<{ label: string, url?: string }>
+ *   },
  *   flashMessage: null | {
  *     variant: 'success' | 'error' | 'warning' | 'info',
  *     message: string,
@@ -32,7 +34,7 @@ import { createSlice } from '@reduxjs/toolkit';
  */
 const createFreshState = () => ({
   isAdminDrawerOpen: false,
-  breadcrumbs: null,
+  breadcrumbs: {},
   flashMessage: null,
 });
 
@@ -54,8 +56,20 @@ export const normalizeState = state => {
     return createFreshState();
   }
 
+  // Handle legacy breadcrumbs format (array -> object)
+  const normalizedBreadcrumbs =
+    state.breadcrumbs && typeof state.breadcrumbs === 'object'
+      ? Array.isArray(state.breadcrumbs)
+        ? { default: state.breadcrumbs }
+        : state.breadcrumbs
+      : {};
+
   // Clone and merge with defaults to ensure all properties exist
-  return { ...createFreshState(), ...state };
+  return {
+    ...createFreshState(),
+    ...state,
+    breadcrumbs: normalizedBreadcrumbs,
+  };
 };
 
 const uiSlice = createSlice({
@@ -112,6 +126,69 @@ const uiSlice = createSlice({
     },
 
     /**
+     * Initialize/set breadcrumbs for namespace(s)
+     * Usage:
+     *   setBreadcrumbs('admin') - Reset namespace to empty
+     *   setBreadcrumbs({ admin: { label, url } }) - Set single item
+     *   setBreadcrumbs({ admin: [{ label, url }, ...] }) - Set array of items
+     */
+    setBreadcrumbs: (state, action) => {
+      const { payload } = action;
+
+      // String: reset namespace to empty array
+      if (typeof payload === 'string') {
+        state.breadcrumbs[payload] = [];
+        return;
+      }
+
+      // Object: set breadcrumbs for each namespace
+      if (payload && typeof payload === 'object') {
+        Object.entries(payload).forEach(([namespace, items]) => {
+          // Normalize to array
+          state.breadcrumbs[namespace || 'default'] = Array.isArray(items)
+            ? items
+            : [items];
+        });
+      }
+    },
+
+    /**
+     * Add breadcrumb(s) to a namespace
+     * Usage: addBreadcrumb(item, namespace) or addBreadcrumb([items], namespace)
+     */
+    addBreadcrumb: {
+      reducer: (state, action) => {
+        const { item, namespace = 'default' } = action.payload;
+
+        // Initialize namespace if not exists
+        if (!state.breadcrumbs[namespace]) {
+          state.breadcrumbs[namespace] = [];
+        }
+
+        // Add single item or array of items
+        if (Array.isArray(item)) {
+          state.breadcrumbs[namespace].push(...item);
+        } else {
+          state.breadcrumbs[namespace].push(item);
+        }
+      },
+      prepare: (item, namespace) => ({
+        payload: { item, namespace },
+      }),
+    },
+
+    /**
+     * Clear breadcrumbs for a namespace
+     * @param action.payload - Namespace to clear
+     */
+    clearBreadcrumbs: (state, action) => {
+      const namespace = action.payload;
+      if (state.breadcrumbs[namespace]) {
+        state.breadcrumbs[namespace] = [];
+      }
+    },
+
+    /**
      * Reset to initial state
      */
     resetUiState: () => initialState,
@@ -139,18 +216,6 @@ const uiSlice = createSlice({
       })
       .addCase('TOGGLE_ADMIN_DRAWER', state => {
         state.isAdminDrawerOpen = !state.isAdminDrawerOpen;
-      })
-      // Handle navigation success to update breadcrumbs
-      .addCase('NAVIGATION_SUCCESS', (state, action) => {
-        const { page } = action.payload || {};
-        // Store breadcrumbs array from page result
-        if (page && page.breadcrumb) {
-          state.breadcrumbs = Array.isArray(page.breadcrumb)
-            ? page.breadcrumb
-            : [page.breadcrumb];
-        } else {
-          state.breadcrumbs = null;
-        }
       });
   },
 });
@@ -163,6 +228,9 @@ export const {
   showErrorMessage,
   showWarningMessage,
   showInfoMessage,
+  setBreadcrumbs,
+  addBreadcrumb,
+  clearBreadcrumbs,
   resetUiState,
 } = uiSlice.actions;
 

@@ -13,7 +13,7 @@ import ResetPasswordConfirmation from './ResetPasswordConfirmation';
  * Route configuration with child routes
  * Renders reset password pages standalone without header/footer
  */
-const route = {
+export default {
   path: '/reset-password',
   children: [
     {
@@ -55,5 +55,3 @@ const route = {
     },
   ],
 };
-
-export default [route];

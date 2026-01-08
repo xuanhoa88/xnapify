@@ -11,30 +11,25 @@ import Profile from './Profile';
 
 /**
  * Route configuration
+ * Redirects unauthenticated users to login page
  */
-const route = {
+export default {
   path: '/profile',
+
+  action(context) {
+    const title = context.i18n.t('navigation.profile', 'Profile');
+
+    if (!isAuthenticated(context.store.getState())) {
+      return { redirect: '/login' };
+    }
+
+    return {
+      title,
+      component: (
+        <Layout>
+          <Profile />
+        </Layout>
+      ),
+    };
+  },
 };
-
-/**
- * Route action
- * Redirects authenticated users to home page
- */
-function action(context) {
-  const title = context.i18n.t('navigation.profile', 'Profile');
-
-  if (!isAuthenticated(context.store.getState())) {
-    return { redirect: '/login' };
-  }
-
-  return {
-    title,
-    component: (
-      <Layout>
-        <Profile />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];

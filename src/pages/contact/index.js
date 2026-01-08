@@ -11,24 +11,19 @@ import Contact from './Contact';
 /**
  * Route configuration
  */
-const route = {
+export default {
   path: '/contact',
+
+  action() {
+    const title = 'Contact Us';
+
+    return {
+      title,
+      component: (
+        <Layout>
+          <Contact title={title} />
+        </Layout>
+      ),
+    };
+  },
 };
-
-/**
- * Route action
- */
-function action() {
-  const title = 'Contact Us';
-
-  return {
-    title,
-    component: (
-      <Layout>
-        <Contact title={title} />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];
