@@ -7,7 +7,7 @@
 
 // Public API - Selectors
 export {
-  isAdminDrawerOpen,
+  isDrawerOpen,
   getFlashMessage,
   hasFlashMessage,
   getFlashMessageVariant,
@@ -19,7 +19,7 @@ export {
 
 // Public API - Actions (from slice)
 export {
-  toggleAdminDrawer,
+  toggleDrawer,
   setFlashMessage,
   clearFlashMessage,
   showSuccessMessage,

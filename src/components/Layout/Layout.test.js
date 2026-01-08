@@ -32,7 +32,7 @@ const initialState = {
   },
   user: null,
   ui: {
-    isAdminDrawerOpen: false,
+    drawers: { default: false },
   },
 };
 

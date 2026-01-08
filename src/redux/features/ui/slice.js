@@ -14,7 +14,9 @@ import { createSlice } from '@reduxjs/toolkit';
  *
  * State shape:
  * {
- *   isAdminDrawerOpen: boolean,
+ *   drawers: {
+ *     [namespace: string]: boolean
+ *   },
  *   breadcrumbs: {
  *     [namespace: string]: Array<{ label: string, url?: string }>
  *   },
@@ -33,7 +35,7 @@ import { createSlice } from '@reduxjs/toolkit';
  * This ensures we never return a reference to a frozen initialState.
  */
 const createFreshState = () => ({
-  isAdminDrawerOpen: false,
+  drawers: {},
   breadcrumbs: {},
   flashMessage: null,
 });
@@ -77,10 +79,15 @@ const uiSlice = createSlice({
   initialState,
   reducers: {
     /**
-     * Toggle admin drawer open/closed state
+     * Toggle drawer open/closed state for a given namespace
+     * @param action.payload - Namespace of the drawer (default: 'default')
      */
-    toggleAdminDrawer: state => {
-      state.isAdminDrawerOpen = !state.isAdminDrawerOpen;
+    toggleDrawer: (state, action) => {
+      const namespace = action.payload || 'default';
+      if (!state.drawers) {
+        state.drawers = {};
+      }
+      state.drawers[namespace] = !state.drawers[namespace];
     },
 
     /**
@@ -215,13 +222,16 @@ const uiSlice = createSlice({
         state.flashMessage = { ...action.payload, variant: 'info' };
       })
       .addCase('TOGGLE_ADMIN_DRAWER', state => {
-        state.isAdminDrawerOpen = !state.isAdminDrawerOpen;
+        if (!state.drawers) {
+          state.drawers = {};
+        }
+        state.drawers.admin = !state.drawers.admin;
       });
   },
 });
 
 export const {
-  toggleAdminDrawer,
+  toggleDrawer,
   setFlashMessage,
   clearFlashMessage,
   showSuccessMessage,

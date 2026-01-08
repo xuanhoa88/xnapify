@@ -13,8 +13,8 @@ import {
   isAuthenticated,
   logout,
   getUserProfile,
-  toggleAdminDrawer,
-  isAdminDrawerOpen,
+  toggleDrawer,
+  isDrawerOpen,
 } from '../../../redux';
 import { useHistory, Link } from '../../History';
 import { useWebSocket } from '../../../shared/ws/client';
@@ -28,7 +28,7 @@ function Drawer() {
   const history = useHistory();
   const ws = useWebSocket();
 
-  const drawerOpen = useSelector(isAdminDrawerOpen);
+  const drawerOpen = useSelector(state => isDrawerOpen(state, 'admin'));
   const isAuth = useSelector(isAuthenticated);
   const user = useSelector(getUserProfile);
 
@@ -43,7 +43,7 @@ function Drawer() {
   }, [history]);
 
   const handleCloseDrawer = useCallback(() => {
-    dispatch(toggleAdminDrawer());
+    dispatch(toggleDrawer('admin'));
   }, [dispatch]);
 
   const handleLogout = useCallback(async () => {

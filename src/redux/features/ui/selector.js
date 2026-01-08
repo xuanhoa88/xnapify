@@ -22,18 +22,19 @@ const getUiState = state => {
 };
 
 // =============================================================================
-// ADMIN DRAWER SELECTORS
+// DRAWER SELECTORS
 // =============================================================================
 
 /**
- * Check if admin drawer is open
+ * Check if a drawer is open for a given namespace
  *
  * @param {Object} state - Redux state
- * @returns {boolean} Whether admin drawer is open
+ * @param {string} namespace - Namespace of the drawer (default: 'default')
+ * @returns {boolean} Whether the drawer is open
  */
-export const isAdminDrawerOpen = state => {
+export const isDrawerOpen = (state, namespace = 'default') => {
   const ui = getUiState(state);
-  return ui.isAdminDrawerOpen;
+  return Boolean(ui.drawers && ui.drawers[namespace]);
 };
 
 // =============================================================================
