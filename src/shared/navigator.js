@@ -425,7 +425,7 @@ async function collectBreadcrumbs(ctx) {
   while (currentView) {
     // Check metadata.breadcrumb first (for current view only), then fall back to view.breadcrumb
     const breadcrumbSource =
-      currentView === ctx.view && ctx.metadata?.breadcrumb
+      currentView === ctx.view && ctx.metadata && ctx.metadata.breadcrumb
         ? ctx.metadata.breadcrumb
         : currentView.breadcrumb;
 
