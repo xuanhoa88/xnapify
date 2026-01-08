@@ -15,7 +15,8 @@ import {
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkDeleteUsers, getUserProfile } from '../../../../redux';
+import { bulkDeleteUsers } from '../redux';
+import { getUserProfile } from '../../../../redux';
 
 /**
  * DeleteUserModal - Self-contained modal for deleting users (single or bulk)

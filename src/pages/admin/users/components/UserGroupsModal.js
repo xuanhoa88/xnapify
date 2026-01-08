@@ -17,11 +17,8 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Table } from '../../../../components/Admin';
-import {
-  assignGroupsToUser,
-  fetchGroups,
-  isUserAssignGroupsLoading,
-} from '../../../../redux';
+import { fetchGroups } from '../../groups/redux';
+import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
 import s from './UserGroupsModal.css';
 
 /**

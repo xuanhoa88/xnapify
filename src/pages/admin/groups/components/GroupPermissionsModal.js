@@ -18,7 +18,7 @@ import Modal from '../../../../components/Modal';
 import {
   fetchGroupPermissions,
   isGroupFetchPermissionsLoading,
-} from '../../../../redux';
+} from '../redux';
 import s from './GroupPermissionsModal.css';
 
 /**

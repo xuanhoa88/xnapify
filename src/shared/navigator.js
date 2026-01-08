@@ -28,6 +28,9 @@ const NAV_INDEX = Symbol('__rsk.navigatorIndex__');
 const NAV_INDEX_BUILD = Symbol('__rsk.navigatorIndexBuild__');
 const NAV_INDEX_REBUILD = Symbol('__rsk.navigatorIndexRebuild__');
 
+/** Symbol key for tracking initialized views. */
+const NAV_INITIALIZED = Symbol('__rsk.navigatorInitialized__');
+
 /** WeakMap cache for view match functions. */
 let viewMatcherCache = new WeakMap();
 
@@ -81,22 +84,17 @@ function defaultUrlDecoder(val) {
  * @throws {Error} If path contains ".."
  */
 function normalizePath(path) {
-  if (typeof path !== 'string') {
-    return PATH.SEPARATOR;
-  }
-
-  if (path.includes('..')) {
+  if (typeof path !== 'string') return PATH.SEPARATOR;
+  if (path.includes('..'))
     throw new Error(`Path traversal not allowed: "${path}"`);
-  }
 
   let normalizedPath = (PATH.SEPARATOR + path).replace(
     new RegExp(`${PATH.SEPARATOR}+`, 'g'),
     PATH.SEPARATOR,
   );
 
-  if (normalizedPath.length > 1 && normalizedPath.endsWith(PATH.SEPARATOR)) {
+  if (normalizedPath.length > 1 && normalizedPath.endsWith(PATH.SEPARATOR))
     normalizedPath = normalizedPath.slice(0, -1);
-  }
 
   return normalizedPath;
 }
@@ -121,6 +119,12 @@ function validateViewConfig(views, trace = '') {
     }
     if (view.action != null && typeof view.action !== 'function') {
       throw new TypeError(`${viewPath}.action: must be a function`);
+    }
+    if (view.init != null && typeof view.init !== 'function') {
+      throw new TypeError(`${viewPath}.init: must be a function`);
+    }
+    if (view.metadata != null && typeof view.metadata !== 'function') {
+      throw new TypeError(`${viewPath}.metadata: must be a function`);
     }
     if (view.children != null) {
       validateViewConfig(view.children, `${viewPath}.children`);
@@ -163,9 +167,7 @@ function linkViewParents(view, parent = null) {
  * @returns {string}
  */
 function extractChildPath(pathname, consumedPath, matchedPath) {
-  if (consumedPath === '') {
-    return pathname;
-  }
+  if (consumedPath === '') return pathname;
 
   if (matchedPath.length > pathname.length) {
     console.warn(
@@ -175,12 +177,9 @@ function extractChildPath(pathname, consumedPath, matchedPath) {
   }
 
   let childPath = pathname.slice(matchedPath.length);
-  if (childPath && !childPath.startsWith(PATH.SEPARATOR)) {
+  if (childPath && !childPath.startsWith(PATH.SEPARATOR))
     childPath = PATH.SEPARATOR + childPath;
-  }
-  if (!childPath) {
-    childPath = PATH.SEPARATOR;
-  }
+  if (!childPath) childPath = PATH.SEPARATOR;
 
   return childPath;
 }
@@ -300,6 +299,48 @@ function createViewMatcher(
 }
 
 /**
+ * Runs the view's init hook if defined and not already executed.
+ * Called once per module lifecycle for setup like registering Redux reducers.
+ * @param {Object} view - The view object
+ * @param {Object} ctx - The context object
+ * @returns {Promise<void>}
+ */
+async function runInit(view, ctx) {
+  try {
+    if (!view || typeof view.init !== 'function') return;
+
+    // Track initialization per view to prevent double execution
+    if (!view[NAV_INITIALIZED]) view[NAV_INITIALIZED] = await view.init(ctx);
+  } catch (error) {
+    console.error(
+      `[Navigator] Error running init hook for view "${view.path || '(no path)'}":`,
+      error,
+    );
+  }
+}
+
+/**
+ * Runs the view's metadata hook and returns the result.
+ * Called on every route match to prepare dynamic metadata.
+ * @param {Object} view - The view object
+ * @param {Object} ctx - The context object
+ * @returns {Promise<Object|null>}
+ */
+async function runMetadata(view, ctx) {
+  try {
+    if (!view || typeof view.metadata !== 'function') return null;
+
+    return await view.metadata(ctx);
+  } catch (error) {
+    console.error(
+      `[Navigator] Error running metadata hook for view "${view.path || '(no path)'}":`,
+      error,
+    );
+    return null;
+  }
+}
+
+/**
  * Default view resolver. Handles sync/async view actions.
  * @param {Object} ctx
  * @param {Object} params
@@ -307,18 +348,14 @@ function createViewMatcher(
  * @returns {Promise<*>}
  */
 async function defaultViewResolver(ctx, params, autoDelegate) {
-  if (typeof ctx.view.action !== 'function') {
-    return undefined;
-  }
+  if (!ctx.view || typeof ctx.view.action !== 'function') return undefined;
 
   const hasChildren =
     Array.isArray(ctx.view.children) && ctx.view.children.length > 0;
 
   if (hasChildren && autoDelegate) {
     const childPage = await ctx.next();
-    if (childPage != null) {
-      return childPage;
-    }
+    if (childPage != null) return childPage;
   }
 
   const actionResult = await ctx.view.action(ctx, params);
@@ -328,9 +365,8 @@ async function defaultViewResolver(ctx, params, autoDelegate) {
     typeof actionResult === 'object' &&
     'default' in actionResult
   ) {
-    if (typeof actionResult.default === 'function') {
+    if (typeof actionResult.default === 'function')
       return actionResult.default(ctx, params);
-    }
     return actionResult.default;
   }
 
@@ -347,9 +383,7 @@ function isViewDescendant(parentView, childView) {
   let currentView = childView;
   while (currentView) {
     currentView = currentView.parent;
-    if (currentView === parentView) {
-      return true;
-    }
+    if (currentView === parentView) return true;
   }
   return false;
 }
@@ -367,9 +401,7 @@ function buildViewUrl(view) {
     if (currentView.path) {
       // Skip dynamic path segments (e.g., :userId, :id)
       // These can't be auto-generated as clickable breadcrumb links
-      if (!currentView.path.includes(':')) {
-        pathParts.unshift(currentView.path);
-      }
+      if (!currentView.path.includes(':')) pathParts.unshift(currentView.path);
     }
     currentView = currentView.parent;
   }
@@ -382,6 +414,7 @@ function buildViewUrl(view) {
  * Collects breadcrumbs from view's route config hierarchy.
  * Traverses from current view up through parents.
  * Auto-generates URLs from route paths when not explicitly defined.
+ * Checks metadata.breadcrumb first, then falls back to view.breadcrumb.
  * @param {Object} ctx - The matched view context
  * @returns {Promise<Array<{label: string, url?: string}>>}
  */
@@ -390,13 +423,19 @@ async function collectBreadcrumbs(ctx) {
   let currentView = ctx.view;
 
   while (currentView) {
-    if (currentView.breadcrumb) {
+    // Check metadata.breadcrumb first (for current view only), then fall back to view.breadcrumb
+    const breadcrumbSource =
+      currentView === ctx.view && ctx.metadata?.breadcrumb
+        ? ctx.metadata.breadcrumb
+        : currentView.breadcrumb;
+
+    if (breadcrumbSource) {
       // Clone the breadcrumb to avoid mutating the original config
       // Support async/sync callable breadcrumbs
       const breadcrumb =
-        typeof currentView.breadcrumb === 'function'
-          ? await currentView.breadcrumb(ctx)
-          : { ...currentView.breadcrumb };
+        typeof breadcrumbSource === 'function'
+          ? await breadcrumbSource(ctx)
+          : { ...breadcrumbSource };
 
       // Auto-generate URL if not explicitly defined
       if (!breadcrumb.url) {
@@ -713,6 +752,15 @@ export default class IsomorphicNavigator {
       }
 
       state.current = { ...ctx, ...state.matches.value };
+
+      // Run init hook for matched view (one-time per module)
+      await runInit(state.current.view, state.current);
+
+      // Run metadata hook for matched view
+      state.current.metadata = await runMetadata(
+        state.current.view,
+        state.current,
+      );
 
       const result = await resolver(
         state.current,

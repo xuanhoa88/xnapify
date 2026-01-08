@@ -5,16 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Permissions from './Permissions';
-import CreatePermission from './create/CreatePermission';
-import EditPermission from './edit/EditPermission';
+import Permissions from './routes/Permissions';
+import CreatePermission from './routes/create/CreatePermission';
+import EditPermission from './routes/edit/EditPermission';
+import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration
  */
 const route = {
   path: '/permissions',
-  breadcrumb: { label: 'Permissions' },
+
+  // One-time initialization - inject Redux slice
+  init: ({ store }) => {
+    store.injectReducer(SLICE_NAME, reducer);
+  },
+
+  // Dynamic metadata
+  metadata: ({ i18n }) => ({
+    breadcrumb: { label: i18n.t('admin.permissions.title', 'Permissions') },
+  }),
+
   children: [
     {
       path: '',
@@ -25,7 +36,9 @@ const route = {
     },
     {
       path: '/create',
-      breadcrumb: { label: 'Create' },
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.permissions.create', 'Create') },
+      }),
       action: () => ({
         title: 'Create Permission - Admin',
         component: <CreatePermission />,
@@ -33,12 +46,12 @@ const route = {
     },
     {
       path: '/:permissionId/edit',
-      breadcrumb: { label: 'Edit' },
-      action: context => ({
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.permissions.edit', 'Edit') },
+      }),
+      action: ({ params }) => ({
         title: 'Edit Permission - Admin',
-        component: (
-          <EditPermission permissionId={context.params.permissionId} />
-        ),
+        component: <EditPermission permissionId={params.permissionId} />,
       }),
     },
   ],

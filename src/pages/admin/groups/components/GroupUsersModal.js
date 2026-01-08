@@ -18,7 +18,7 @@ import Modal from '../../../../components/Modal';
 import { Table } from '../../../../components/Admin';
 import Avatar from '../../../../components/Avatar';
 import Tag from '../../../../components/Tag';
-import { fetchGroupUsers } from '../../../../redux';
+import { fetchGroupUsers } from '../redux';
 import s from './GroupUsersModal.css';
 
 /**

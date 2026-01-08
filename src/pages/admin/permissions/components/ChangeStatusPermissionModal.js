@@ -9,7 +9,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkUpdatePermissionStatus } from '../../../../redux';
+import { bulkUpdatePermissionStatus } from '../redux';
 
 /**
  * ChangeStatusPermissionModal - Self-contained modal for changing permission status

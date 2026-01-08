@@ -17,12 +17,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Table } from '../../../../components/Admin';
+import { fetchRoles } from '../../roles/redux';
 import {
-  fetchRoles,
   assignRolesToGroup,
   fetchGroups,
   isGroupAssignRolesLoading,
-} from '../../../../redux';
+} from '../redux';
 import s from './GroupRolesModal.css';
 
 /**

@@ -5,16 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Users from './Users';
-import CreateUser from './create/CreateUser';
-import EditUser from './edit/EditUser';
+import Users from './routes/Users';
+import CreateUser from './routes/create/CreateUser';
+import EditUser from './routes/edit/EditUser';
+import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration with child routes
  */
 const route = {
   path: '/users',
-  breadcrumb: { label: 'Users' },
+
+  // One-time initialization - inject Redux slice
+  init: ({ store }) => {
+    store.injectReducer(SLICE_NAME, reducer);
+  },
+
+  // Dynamic metadata
+  metadata: ({ i18n }) => ({
+    breadcrumb: { label: i18n.t('admin.users.title', 'Users') },
+  }),
+
   children: [
     {
       path: '',
@@ -25,7 +36,9 @@ const route = {
     },
     {
       path: '/create',
-      breadcrumb: { label: 'Create' },
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.users.create', 'Create') },
+      }),
       action: () => ({
         title: 'Create User - Admin',
         component: <CreateUser />,
@@ -33,10 +46,12 @@ const route = {
     },
     {
       path: '/:userId/edit',
-      breadcrumb: { label: 'Edit' },
-      action: context => ({
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.users.edit', 'Edit') },
+      }),
+      action: ({ params }) => ({
         title: 'Edit User - Admin',
-        component: <EditUser userId={context.params.userId} />,
+        component: <EditUser userId={params.userId} />,
       }),
     },
   ],

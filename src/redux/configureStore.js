@@ -5,7 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { configureStore as createStore } from '@reduxjs/toolkit';
+import {
+  configureStore as createStore,
+  combineReducers,
+} from '@reduxjs/toolkit';
 import rootReducer from './rootReducer';
 
 /**
@@ -15,9 +18,12 @@ import rootReducer from './rootReducer';
  * @param {Function} helpersConfig.fetch - Isomorphic fetch function
  * @param {Object} helpersConfig.history - History instance (memory on server, browser on client)
  * @param {Object} helpersConfig.i18n - i18next instance
- * @returns {Store} Configured Redux store
+ * @returns {Store} Configured Redux store with dynamic reducer injection
  */
 export default function configureStore(initialState = {}, helpersConfig = {}) {
+  // Track dynamically injected reducers
+  const injectedReducers = {};
+
   // Build middleware array
   const getMiddleware = getDefaultMiddleware => {
     const middleware = getDefaultMiddleware({
@@ -50,7 +56,9 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
 
   // Create store with RTK's configureStore
   const store = createStore({
-    reducer: rootReducer,
+    reducer: combineReducers(rootReducer),
+    // Enable duplicate middleware check
+    duplicateMiddlewareCheck: true,
     preloadedState: initialState,
     middleware: getMiddleware,
     devTools: __DEV__
@@ -60,6 +68,39 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
         }
       : false,
   });
+
+  /**
+   * Injects a reducer into the store dynamically.
+   * Used by modules to register their Redux slices at runtime.
+   * @param {string} key - Reducer key in state
+   * @param {Function} reducer - Reducer function
+   */
+  store.injectReducer = (key, reducer) => {
+    if (injectedReducers[key]) {
+      // Already injected, skip to prevent duplicate registration
+      return;
+    }
+
+    injectedReducers[key] = reducer;
+
+    // Rebuild the root reducer with injected reducers
+    store.replaceReducer(
+      combineReducers({
+        ...rootReducer,
+        ...injectedReducers,
+      }),
+    );
+
+    if (__DEV__) {
+      console.log(`[Redux] Injected reducer: ${key}`);
+    }
+  };
+
+  /**
+   * Gets all dynamically injected reducer keys.
+   * @returns {string[]} Array of injected reducer keys
+   */
+  store.getInjectedReducers = () => Object.keys(injectedReducers);
 
   return store;
 }

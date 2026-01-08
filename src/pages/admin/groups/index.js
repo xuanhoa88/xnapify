@@ -5,16 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Groups from './Groups';
-import CreateGroup from './create/CreateGroup';
-import EditGroup from './edit/EditGroup';
+import Groups from './routes/Groups';
+import CreateGroup from './routes/create/CreateGroup';
+import EditGroup from './routes/edit/EditGroup';
+import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration with child routes
  */
 const route = {
   path: '/groups',
-  breadcrumb: { label: 'Groups' },
+
+  // One-time initialization - inject Redux slice
+  init: ({ store }) => {
+    store.injectReducer(SLICE_NAME, reducer);
+  },
+
+  // Dynamic metadata
+  metadata: ({ i18n }) => ({
+    breadcrumb: { label: i18n.t('admin.groups.title', 'Groups') },
+  }),
+
   children: [
     {
       path: '',
@@ -25,7 +36,9 @@ const route = {
     },
     {
       path: '/create',
-      breadcrumb: { label: 'Create' },
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.groups.create', 'Create') },
+      }),
       action: () => ({
         title: 'Create Group - Admin',
         component: <CreateGroup />,
@@ -33,10 +46,12 @@ const route = {
     },
     {
       path: '/:groupId/edit',
-      breadcrumb: { label: 'Edit' },
-      action: context => ({
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.groups.edit', 'Edit') },
+      }),
+      action: ({ params }) => ({
         title: 'Edit Group - Admin',
-        component: <EditGroup groupId={context.params.groupId} />,
+        component: <EditGroup groupId={params.groupId} />,
       }),
     },
   ],

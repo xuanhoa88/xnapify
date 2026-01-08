@@ -5,16 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Roles from './Roles';
-import CreateRole from './create/CreateRole';
-import EditRole from './edit/EditRole';
+import Roles from './routes/Roles';
+import CreateRole from './routes/create/CreateRole';
+import EditRole from './routes/edit/EditRole';
+import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration with child routes
  */
 const route = {
   path: '/roles',
-  breadcrumb: { label: 'Roles' },
+
+  // One-time initialization - inject Redux slice
+  init: ({ store }) => {
+    store.injectReducer(SLICE_NAME, reducer);
+  },
+
+  // Dynamic metadata
+  metadata: ({ i18n }) => ({
+    breadcrumb: { label: i18n.t('admin.roles.title', 'Roles') },
+  }),
+
   children: [
     {
       path: '',
@@ -25,7 +36,9 @@ const route = {
     },
     {
       path: '/create',
-      breadcrumb: { label: 'Create' },
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.roles.create', 'Create') },
+      }),
       action: () => ({
         title: 'Create Role - Admin',
         component: <CreateRole />,
@@ -33,10 +46,12 @@ const route = {
     },
     {
       path: '/:roleId/edit',
-      breadcrumb: { label: 'Edit' },
-      action: context => ({
+      metadata: ({ i18n }) => ({
+        breadcrumb: { label: i18n.t('admin.roles.edit', 'Edit') },
+      }),
+      action: ({ params }) => ({
         title: 'Edit Role - Admin',
-        component: <EditRole roleId={context.params.roleId} />,
+        component: <EditRole roleId={params.roleId} />,
       }),
     },
   ],

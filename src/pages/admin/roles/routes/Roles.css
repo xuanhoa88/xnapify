@@ -1,0 +1,189 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../components/variables.css';
+
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+/* Filters Section - matches Users.css */
+.filters {
+  display: flex;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  flex-wrap: wrap;
+  background: var(--color-background);
+  padding: var(--spacing-5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: var(--spacing-5);
+}
+
+/* Role Card - Supplementary styles (Card component handles base styling) */
+.roleCard {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 1;
+}
+
+/* When dropdown is open, elevate card above other cards */
+.roleCard:has(.open) {
+  z-index: 9999;
+}
+
+/* Card.Header customization for role cards */
+.roleCardHeader {
+  border-bottom: none;
+}
+
+/* Header content wrapper for icon and name */
+.roleHeaderContent {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+}
+
+/* Card.Body customization for role cards */
+.roleCardBody {
+  padding-top: 0;
+}
+
+.roleIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-primary);
+}
+
+.roleName {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+}
+
+.roleDescription {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+}
+
+.roleStats {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-4);
+  padding: var(--spacing-3) var(--spacing-4);
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+}
+
+.roleStats:hover {
+  background: var(--color-background-tertiary);
+}
+
+.stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.statLabel {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.statValue {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  /* Filters compact */
+  .filters {
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  /* Grid single column */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-3);
+  }
+
+  /* Role card compact */
+  .roleCard {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .roleCard:hover {
+    transform: none;
+  }
+
+  .roleName {
+    font-size: var(--font-size-base);
+  }
+
+  .roleDescription {
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-3);
+    line-height: 1.5;
+  }
+
+  .roleStats {
+    padding: var(--spacing-2) var(--spacing-3);
+    margin-bottom: var(--spacing-3);
+    gap: var(--spacing-2);
+  }
+
+  .statLabel {
+    font-size: 10px;
+  }
+
+  .statValue {
+    font-size: var(--font-size-xs);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .roleCard {
+    padding: var(--spacing-3);
+  }
+
+  .roleName {
+    font-size: var(--font-size-sm);
+  }
+}

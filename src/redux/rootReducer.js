@@ -5,17 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { combineReducers } from '@reduxjs/toolkit';
 import user from './features/user';
 import runtime from './features/runtime';
 import intl from './features/intl';
 import ui from './features/ui';
-import admin from './features/admin';
 
-export default combineReducers({
+// Note: admin reducers are now dynamically injected by page modules
+// via store.injectReducer() in their route init hooks
+
+// Export as object for dynamic injection in configureStore
+export default {
   user,
   runtime,
   intl,
   ui,
-  admin,
-});
+};

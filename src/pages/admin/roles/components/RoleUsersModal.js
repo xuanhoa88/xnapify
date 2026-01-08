@@ -18,7 +18,7 @@ import Modal from '../../../../components/Modal';
 import { Table } from '../../../../components/Admin';
 import Avatar from '../../../../components/Avatar';
 import Tag from '../../../../components/Tag';
-import { fetchRoleUsers } from '../../../../redux';
+import { fetchRoleUsers } from '../redux';
 import s from './RoleUsersModal.css';
 
 /**

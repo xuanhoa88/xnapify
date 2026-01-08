@@ -9,7 +9,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { deleteGroup } from '../../../../redux';
+import { deleteGroup } from '../redux';
 
 /**
  * DeleteGroupModal - Self-contained modal for deleting a group

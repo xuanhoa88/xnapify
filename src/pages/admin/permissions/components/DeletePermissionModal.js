@@ -9,7 +9,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { bulkDeletePermissions } from '../../../../redux';
+import { bulkDeletePermissions } from '../redux';
 
 /**
  * DeletePermissionModal - Self-contained modal for deleting a permission

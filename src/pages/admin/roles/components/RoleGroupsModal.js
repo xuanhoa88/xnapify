@@ -16,7 +16,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
 import Modal from '../../../../components/Modal';
 import { Icon, Table } from '../../../../components/Admin';
-import { fetchRoleGroups } from '../../../../redux';
+import { fetchRoleGroups } from '../redux';
 import s from './RoleGroupsModal.css';
 
 /**

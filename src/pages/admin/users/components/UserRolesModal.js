@@ -17,11 +17,8 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../components/Modal';
 import { Table } from '../../../../components/Admin';
-import {
-  fetchRoles,
-  assignRolesToUser,
-  isUserAssignRolesLoading,
-} from '../../../../redux';
+import { fetchRoles } from '../../roles/redux';
+import { assignRolesToUser, isUserAssignRolesLoading } from '../redux';
 import s from './UserRolesModal.css';
 
 /**

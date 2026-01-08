@@ -1,0 +1,162 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../components/variables.css';
+
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+/* Filters Section - matches Users.css */
+.filters {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+  background: var(--color-background);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  align-items: center;
+}
+
+.filterSearchableSelect {
+  min-width: 140px;
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+/* Table Container - matches Users.css */
+.tableContainer {
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 700px;
+}
+
+.table th {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  border-bottom: 1px solid var(--color-border);
+  white-space: nowrap;
+}
+
+.table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  font-size: var(--font-size-sm);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr:hover {
+  background: var(--color-background-tertiary);
+}
+
+/* Checkbox Column */
+.checkboxCol {
+  width: 40px;
+  text-align: center;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--color-primary);
+}
+
+/* Resource Empty (used for grouped rows) */
+.resourceEmpty {
+  display: block;
+  width: 100%;
+}
+
+/* Description */
+.descriptionCell {
+  max-width: 300px;
+  color: var(--color-text-secondary);
+}
+
+.noDescription {
+  color: var(--color-text-tertiary);
+}
+
+/* Actions - matches Users.css */
+.actions {
+  display: flex;
+  gap: var(--spacing-1);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .filterSearchableSelect {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .filterActions {
+    grid-column: 1 / -1;
+    display: flex;
+  }
+
+  .table th,
+  .table td {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .descriptionCell {
+    max-width: 150px;
+  }
+}
+
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .filters {
+    padding: var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+}

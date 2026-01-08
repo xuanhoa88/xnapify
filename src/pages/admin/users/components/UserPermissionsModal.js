@@ -22,7 +22,7 @@ import {
   clearUserPermissions,
   getUserPermissions,
   isUserPermissionsOperationLoading,
-} from '../../../../redux';
+} from '../redux';
 
 /**
  * UserPermissionsModal - Self-contained modal for viewing user permissions

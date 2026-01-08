@@ -47,10 +47,3 @@ export { default as userReducer } from './user';
 
 export * from './ui';
 export { default as uiReducer } from './ui';
-
-// =============================================================================
-// FEATURE: ADMIN (Admin Features)
-// =============================================================================
-// Re-export all admin features (roles, groups, permissions, users, dashboard)
-export * from './admin';
-export { default as adminReducer } from './admin';

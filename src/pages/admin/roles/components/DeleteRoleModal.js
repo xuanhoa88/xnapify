@@ -10,7 +10,7 @@ import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
-import { deleteRole } from '../../../../redux';
+import { deleteRole } from '../redux';
 
 /**
  * DeleteRoleModal - Self-contained modal for deleting a role
