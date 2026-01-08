@@ -301,7 +301,7 @@ export default async function createNavigator() {
   // Create navigator with loaded pages
   const navigator = new IsomorphicNavigator({
     // Disable auto-delegation for root page since we need to post-process child results
-    autoDelegate: false,
+    autoResolve: false,
 
     // Add action to execute child page and wrap with metadata
     async action(context) {

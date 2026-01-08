@@ -8,9 +8,6 @@
 import AdminLayout from '../../components/Admin';
 import { isAuthenticated, setBreadcrumbs, addBreadcrumb } from '../../redux';
 
-// Admin base path
-const ADMIN_PATH = '/admin';
-
 // Lazy load children pages context
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
@@ -21,55 +18,40 @@ const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
  * We filter this array to extract breadcrumbs from intermediate routes
  * (skipping admin itself) and combine with the child's action result breadcrumb.
  *
- * @param {Object} context - Navigation context from the admin action
+ * @param {Object} i18n - I18n instance from the admin action
  * @param {Array} metadata - Accumulated metadata from matched views
  * @param {Object} childPage - Action result from child route
  * @returns {Array} Array of breadcrumb objects {label, url}
  */
-function collectBreadcrumbs(context, metadata, childPage) {
-  const breadcrumbs = [];
-  const { i18n } = context;
+function collectBreadcrumbs(i18n, metadata, childPage) {
+  // Normalize childPage breadcrumb to array format
+  const childBreadcrumbs = childPage.breadcrumb
+    ? [].concat(childPage.breadcrumb).map(crumb => ({ breadcrumb: crumb }))
+    : [];
 
-  // Collect breadcrumbs from metadata (accumulated by navigator)
-  // Skip admin view (path: '/admin') since Dashboard is already set
-  if (metadata && metadata.length > 0) {
-    for (const entry of metadata) {
-      // Skip admin view and root views
-      if (
-        !entry.view ||
-        entry.view.path === ADMIN_PATH ||
-        entry.view.path === '/'
-      ) {
-        continue;
-      }
+  // Combine metadata entries with child breadcrumbs (without mutating metadata)
+  const allEntries = [...metadata, ...childBreadcrumbs];
 
-      // Check if this entry has a breadcrumb
-      if (entry.breadcrumb) {
-        const crumb = entry.breadcrumb;
-        // Build URL from resolved baseUrl + path (not the route pattern)
-        const url = crumb.url || entry.baseUrl + entry.path;
-        breadcrumbs.push({
-          url,
-          label: crumb.key ? i18n.t(crumb.key, crumb.label) : crumb.label,
-        });
-      }
+  // Build breadcrumb objects from all entries
+  return allEntries.reduce((breadcrumbs, entry) => {
+    if (!entry.breadcrumb) {
+      return breadcrumbs;
     }
-  }
 
-  // Add child's action result breadcrumb (from the action return value)
-  if (childPage.breadcrumb) {
-    const crumbs = Array.isArray(childPage.breadcrumb)
-      ? childPage.breadcrumb
-      : [childPage.breadcrumb];
-    for (const crumb of crumbs) {
-      breadcrumbs.push({
-        label: crumb.key ? i18n.t(crumb.key, crumb.label) : crumb.label,
-        url: crumb.url,
-      });
+    const crumb = entry.breadcrumb;
+
+    // Build URL: prefer explicit url, fallback to resolved path, or undefined
+    let { url } = crumb;
+    if (!url && entry.baseUrl && entry.path) {
+      url = entry.baseUrl + entry.path;
     }
-  }
 
-  return breadcrumbs;
+    // Build label: translate if key provided, otherwise use label directly
+    const label = crumb.key ? i18n.t(crumb.key, crumb.label) : crumb.label;
+
+    breadcrumbs.push({ url, label });
+    return breadcrumbs;
+  }, []);
 }
 
 /**
@@ -81,47 +63,41 @@ export default async pageBuilder => {
 
   return {
     children,
-    path: ADMIN_PATH,
-    autoDelegate: false,
-
-    /**
-     * Admin route action
-     * @param {Object} context - Navigation context
-     * @param {Object} options - Options object
-     * @param {Array} options.metadata - Accumulated metadata from matched views
-     */
-    async action(context, { metadata }) {
+    path: '/admin',
+    autoResolve: false,
+    boot({ store, i18n, path }) {
+      // Set breadcrumbs for admin namespace
+      store.dispatch(
+        setBreadcrumbs({
+          admin: {
+            label: i18n.t('navigation.dashboard', 'Dashboard'),
+            url: path,
+          },
+        }),
+      );
+    },
+    async action({ store, i18n, next }, { metadata }) {
       // Auth check
-      const state = context.store.getState();
+      const state = store.getState();
       if (!isAuthenticated(state)) {
         return { redirect: '/login' };
       }
 
-      // Initialize admin breadcrumb namespace with Dashboard
-      context.store.dispatch(
-        setBreadcrumbs({
-          admin: {
-            label: context.i18n.t('navigation.dashboard', 'Dashboard'),
-            url: ADMIN_PATH,
-          },
-        }),
-      );
-
       // Delegate to child routes
-      const childPage = await context.next();
+      const childPage = await next();
       if (!childPage || !childPage.component) {
         return { redirect: '/not-found' };
       }
 
       // Collect and dispatch breadcrumbs from metadata and action result
-      const breadcrumbs = collectBreadcrumbs(context, metadata, childPage);
+      const breadcrumbs = collectBreadcrumbs(i18n, metadata, childPage);
       for (const crumb of breadcrumbs) {
-        context.store.dispatch(addBreadcrumb(crumb, 'admin'));
+        store.dispatch(addBreadcrumb(crumb, 'admin'));
       }
 
       // Get title from action result
       const title =
-        childPage.title || context.i18n.t('navigation.admin', 'Admin Panel');
+        childPage.title || i18n.t('navigation.admin', 'Admin Panel');
 
       return {
         ...childPage,

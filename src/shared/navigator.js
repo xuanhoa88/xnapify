@@ -339,7 +339,7 @@ async function mountView(view, ctx) {
  * @param {Object} ctx - Context with view, params, metadata, etc.
  * @param {Object} options - Options object
  * @param {Object} options.metadata - Metadata from matched view
- * @param {boolean} options.autoDelegate - Whether to delegate to child routes
+ * @param {boolean} options.autoResolve - Whether to automatically resolve child routes
  * @returns {Promise<*>}
  */
 async function defaultViewResolver(ctx, options) {
@@ -348,7 +348,7 @@ async function defaultViewResolver(ctx, options) {
   const hasChildren =
     Array.isArray(ctx.view.children) && ctx.view.children.length > 0;
 
-  if (hasChildren && options.autoDelegate) {
+  if (hasChildren && options.autoResolve) {
     const childPage = await ctx.next();
     if (childPage != null) return childPage;
   }
@@ -703,7 +703,7 @@ export default class IsomorphicNavigator {
 
       const result = await resolver(state.current, {
         metadata,
-        autoDelegate: state.current.view.autoDelegate !== false,
+        autoResolve: state.current.view.autoResolve !== false,
       });
 
       if (result != null) {
@@ -735,10 +735,10 @@ export default class IsomorphicNavigator {
       const icon = view.children ? '📁' : '📄';
       const path = view.path || '(root)';
       const hasAction = view.action ? '✓' : '✗';
-      const autoDelegate = view.autoDelegate !== false ? 'auto' : 'manual';
+      const autoResolve = view.autoResolve !== false ? 'auto' : 'manual';
 
       console.log(
-        `${indent}${icon} ${path} [action: ${hasAction}, delegate: ${autoDelegate}]`,
+        `${indent}${icon} ${path} [action: ${hasAction}, resolve: ${autoResolve}]`,
       );
 
       if (Array.isArray(view.children)) {
