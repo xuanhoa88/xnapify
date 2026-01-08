@@ -46,8 +46,8 @@ function collectBreadcrumbs(context, metadata, childPage) {
       // Check if this entry has a breadcrumb
       if (entry.breadcrumb) {
         const crumb = entry.breadcrumb;
-        // Build URL from admin base + view path
-        const url = crumb.url || ADMIN_PATH + (entry.view.path || '');
+        // Build URL from resolved baseUrl + path (not the route pattern)
+        const url = crumb.url || entry.baseUrl + entry.path;
         breadcrumbs.push({
           url,
           label: crumb.key ? i18n.t(crumb.key, crumb.label) : crumb.label,
