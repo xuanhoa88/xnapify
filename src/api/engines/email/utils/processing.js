@@ -12,7 +12,7 @@
 
 import { Liquid } from 'liquidjs';
 import { createResponse } from './errors';
-import { EmailManager } from '../manager';
+import { EmailManager } from '../factory';
 
 // Create a reusable Liquid engine instance
 const liquid = new Liquid();

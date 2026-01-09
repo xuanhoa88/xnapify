@@ -146,6 +146,21 @@ class EmailManager {
   }
 
   /**
+   * Add a custom email provider
+   * @param {string} name - Provider name
+   * @param {Object} provider - Provider instance (must implement send method)
+   * @returns {boolean} True if added, false if already exists
+   */
+  addProvider(name, provider) {
+    if (this.providers.has(name)) {
+      console.warn(`Email provider "${name}" already exists. Cannot override.`);
+      return false;
+    }
+    this.providers.set(name, provider);
+    return true;
+  }
+
+  /**
    * Send email(s)
    * Handles single email, bulk emails, and templates.
    * Automatically offloads to worker for large/batch operations.

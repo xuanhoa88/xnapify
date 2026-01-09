@@ -47,6 +47,20 @@
  * // 3. Create isolated instance (for testing)
  * const testEmail = createFactory({ defaultProvider: 'memory' });
  * await testEmail.send({ to, subject, html });
+ *
+ * @example
+ * // 4. Add custom provider (cannot override existing)
+ * const email = app.get('email');
+ *
+ * class ResendProvider {
+ *   async send(emailData) {
+ *     // Custom send logic
+ *     return { messageId: 'xxx', provider: 'resend' };
+ *   }
+ * }
+ *
+ * email.addProvider('resend', new ResendProvider());
+ * await email.send({ to, subject, html }, { provider: 'resend' });
  */
 
-export { default as emailFactory, createFactory } from './manager';
+export { default as emailFactory, createFactory } from './factory';
