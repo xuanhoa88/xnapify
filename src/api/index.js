@@ -6,11 +6,10 @@
  */
 
 import { Router } from 'express';
-import rateLimit from 'express-rate-limit';
 import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import { fs, http, auth, db, cache } from './engines';
+import { fs, http, auth, db, cache, email, worker } from './engines';
 
 // Module-scoped Symbol for allowing provider writes (shared across all guards)
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
@@ -21,10 +20,12 @@ const APP_PROVIDERS = new Set([
   'jwt', // JWT utilities
   'ws', // WebSocket server instance
   'db', // Database ORM instance
+  'worker', // Worker pool management
   'fs', // Filesystem utilities
   'http', // HTTP utilities
   'auth', // Authentication engine
   'cache', // Cache engine
+  'email', // Email engine
   'models', // Database models
 ]);
 
@@ -224,87 +225,6 @@ async function discoverModules(app, db) {
 }
 
 /**
- * Create rate limiting middleware
- *
- * @param {Object} config - API configuration
- * @param {Object} [config.rateLimit] - Rate limit overrides
- * @param {string[]} [config.rateLimitSkipPaths] - Paths to skip rate limiting
- * @returns {Function} Rate limiting middleware
- */
-const createRateLimiterMiddleware = (config = {}) => {
-  // Development: 1 minute window, 100 requests (lenient for testing)
-  // Production: 15 minute window, 50 requests (stricter for security)
-  const windowMs = __DEV__ ? 1 * 60 * 1000 : 15 * 60 * 1000;
-  const maxRequests = __DEV__ ? 100 : 50;
-
-  // Paths to skip rate limiting (static assets, browser defaults)
-  const defaultSkipPaths = [
-    '/rsk.ico',
-    '/rsk_192x192.png',
-    '/site.webmanifest',
-  ];
-  const skipPaths = config.rateLimitSkipPaths || defaultSkipPaths;
-
-  return rateLimit({
-    windowMs,
-    max: maxRequests,
-
-    // Use standardized RateLimit-* headers (RFC 6585)
-    standardHeaders: true,
-    legacyHeaders: false,
-
-    // Skip rate limiting for health checks, metrics, and static assets
-    skip: req => skipPaths.some(path => req.path.startsWith(path)),
-
-    // Custom error response
-    handler: (req, res, _next, rateLimitInfo) => {
-      res.status(rateLimitInfo.statusCode).json({
-        success: false,
-        error: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(rateLimitInfo.windowMs / 60000) + ' minutes',
-        limit: rateLimitInfo.max,
-        current: req.rateLimit.used,
-      });
-    },
-
-    // Allow overrides from config
-    ...config.rateLimit,
-  });
-};
-
-/**
- * Create health check endpoint handler
- *
- * @param {Object} options - API configuration
- * @returns {Function} Health check handler
- */
-function createHealthCheckHandler(options = {}) {
-  return async (req, res) => {
-    try {
-      // Check database connectivity
-      await db.connection.authenticate();
-
-      res.status(200).json({
-        status: 'healthy',
-        timestamp: new Date().toISOString(),
-        environment: options.nodeEnv,
-        version: options.apiVersion,
-        database: 'connected',
-      });
-    } catch (error) {
-      res.status(503).json({
-        status: 'unhealthy',
-        timestamp: new Date().toISOString(),
-        environment: options.nodeEnv,
-        version: options.apiVersion,
-        error: error.message,
-        database: 'disconnected',
-      });
-    }
-  };
-}
-
-/**
  * Register core app providers in Express app settings.
  * These providers are protected from modification by createProviderGuard.
  *
@@ -325,6 +245,12 @@ function registerAppProviders(app) {
 
   // Register cache provider
   app.set('cache', cache);
+
+  // Register email provider
+  app.set('email', email);
+
+  // Register worker provider
+  app.set('worker', worker);
 }
 
 /**
@@ -533,11 +459,7 @@ function createLoggingMiddleware(_options) {
     ? 'combined' // Apache combined log format for production
     : 'dev'; // Colored output for development
 
-  return morgan(format, {
-    skip: req =>
-      // Skip logging for health checks in production
-      __DEV__ && req.url === '/health',
-  });
+  return morgan(format);
 }
 
 /**
@@ -561,16 +483,10 @@ export default async function main(app, config = {}) {
     // Initialize database seeds
     await db.runSeeds(null, db.connection);
 
-    // Create rate limiter middleware
-    const rateLimiter = createRateLimiterMiddleware(config);
-
     // Apply global middleware (order matters!)
     app.use(createLoggingMiddleware(config)); // Log all requests first
     app.use(createCorsMiddleware(config)); // CORS handling
     app.use(createCompressionMiddleware(config)); // Response compression
-
-    // Health check endpoint (unrestricted for orchestration systems)
-    app.get('/health', createHealthCheckHandler(config));
 
     // Discover and initialize modules
     const { apiModels, apiRoutes } = await discoverModules(app, db);
@@ -579,7 +495,7 @@ export default async function main(app, config = {}) {
     app.set('models', apiModels);
 
     // Create API middlewares
-    const apiMiddlewares = [rateLimiter];
+    const apiMiddlewares = [];
 
     // JWT authentication middleware
     const jwt = app.get('jwt');
@@ -590,15 +506,6 @@ export default async function main(app, config = {}) {
       // Populate req.user from JWT cookies if present
       apiMiddlewares.push(auth.middlewares.optionalAuth());
     }
-
-    // Mount filesystem routes on apiRoutes
-    const fsRouter = fs.createRouter(Router, {
-      upload: {
-        maxFiles: 10,
-        maxFileSize: 50 * 1024 * 1024, // 50MB
-      },
-    });
-    apiRoutes.use('/fs', fsRouter);
 
     // Mount API routes with middleware stack
     app.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);

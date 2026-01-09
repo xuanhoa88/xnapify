@@ -8,8 +8,8 @@
 /** @namespace Filesystem action functions */
 export * as actions from './actions';
 
-/** @namespace Filesystem utility functions and constants */
-export * as utils from './utils';
+/** @namespace Filesystem constants */
+export * from './utils/constants';
 
-/** @namespace Filesystem controller for HTTP handling */
+/** @namespace Filesystem controllers */
 export * from './controllers';

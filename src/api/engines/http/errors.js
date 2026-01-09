@@ -347,30 +347,6 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
-  // Handle JWT errors
-  if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
-    const authError = new AuthenticationError(
-      err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired',
-    );
-    return res.status(authError.statusCode).json({
-      success: false,
-      error: authError.message,
-      code: authError.code,
-      timestamp: authError.timestamp,
-    });
-  }
-
-  // Handle multer errors (file upload)
-  if (err.code === 'LIMIT_FILE_SIZE') {
-    const uploadError = new BadRequestError('File too large');
-    return res.status(uploadError.statusCode).json({
-      success: false,
-      error: uploadError.message,
-      code: uploadError.code,
-      timestamp: uploadError.timestamp,
-    });
-  }
-
   // Handle syntax errors (malformed JSON)
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
     const syntaxError = new BadRequestError('Invalid JSON format');
@@ -382,14 +358,8 @@ export function errorHandler(err, req, res, next) {
     });
   }
 
-  // Default to internal server error
-  const serverError = new InternalServerError();
-  return res.status(serverError.statusCode).json({
-    success: false,
-    error: serverError.message,
-    code: serverError.code,
-    timestamp: serverError.timestamp,
-  });
+  // Pass unhandled errors to server.js error handler
+  next(err);
 }
 
 /**

@@ -1,0 +1,41 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
+ * Worker Engine Error Class
+ *
+ * Base error class for worker-related errors that can be extended
+ * by specific engine implementations.
+ */
+export class WorkerError extends Error {
+  constructor(message, code = 'WORKER_ERROR', statusCode = 500) {
+    super(message);
+    this.name = 'WorkerError';
+    this.code = code;
+    this.statusCode = statusCode;
+    this.timestamp = new Date().toISOString();
+
+    // Maintain proper stack trace for where our error was thrown
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, WorkerError);
+    }
+  }
+}
+
+/**
+ * Create a custom worker error class for a specific engine
+ * @param {string} name - Error class name
+ * @returns {class} Custom error class
+ */
+export function createWorkerErrorClass(name) {
+  return class extends WorkerError {
+    constructor(message, code = 'WORKER_ERROR', statusCode = 500) {
+      super(message, code, statusCode);
+      this.name = name;
+    }
+  };
+}

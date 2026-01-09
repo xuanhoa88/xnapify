@@ -28,6 +28,13 @@
       "ROLES_REQUIRED": "At least one role is required"
     }
   },
+  "email": {
+    "CONTENT_REQUIRED": "Email content is required (html, text, or templateId)",
+    "EMAILS_REQUIRED": "At least one email is required",
+    "BATCH_SIZE_EXCEEDED": "Batch size exceeds limit of {{max}} emails",
+    "INVALID_RECIPIENT": "Invalid recipient email address",
+    "SUBJECT_REQUIRED": "Subject is required"
+  },
   "errors": {
     "invalid_type": "Expected {{expected}}, received {{received}}",
     "invalid_type_received_undefined": "Required",

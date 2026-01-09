@@ -3,8 +3,9 @@
  * Supports both same-process and child process execution
  */
 
+import { createWorker, setupForkMode } from '../../worker';
 import { renameFile, renameFiles } from '../actions/rename';
-import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Process rename operations

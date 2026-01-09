@@ -283,45 +283,4 @@ export class FilesystemManager {
       totalProviders: this.providers.size,
     };
   }
-
-  /**
-   * Health check for all providers
-   */
-  async healthCheck() {
-    const results = {};
-
-    for (const [name, provider] of this.providers.entries()) {
-      try {
-        // Try to perform a basic operation
-        if (provider.getStats) {
-          await provider.getStats();
-          results[name] = { status: 'healthy', provider: name };
-        } else {
-          results[name] = {
-            status: 'unknown',
-            provider: name,
-            message: 'No health check method',
-          };
-        }
-      } catch (error) {
-        results[name] = {
-          status: 'unhealthy',
-          provider: name,
-          error: error.message,
-        };
-      }
-    }
-
-    const healthyCount = Object.values(results).filter(
-      r => r.status === 'healthy',
-    ).length;
-
-    return {
-      overall: healthyCount === this.providers.size ? 'healthy' : 'degraded',
-      providers: results,
-      healthyProviders: healthyCount,
-      totalProviders: this.providers.size,
-      timestamp: new Date().toISOString(),
-    };
-  }
 }

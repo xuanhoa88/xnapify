@@ -3,8 +3,9 @@
  * Supports both same-process and child process execution
  */
 
+import { createWorker, setupForkMode } from '../../worker';
 import { synchronizeFiles, synchronizeFile } from '../actions/sync';
-import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Process sync operations

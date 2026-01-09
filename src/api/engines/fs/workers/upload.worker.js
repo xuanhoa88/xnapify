@@ -3,8 +3,9 @@
  * Supports both same-process and child process execution
  */
 
+import { createWorker, setupForkMode } from '../../worker';
 import { uploadFile, uploadFiles } from '../actions/upload';
-import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Process upload operations

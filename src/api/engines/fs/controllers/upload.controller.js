@@ -14,7 +14,7 @@
 import multer from 'multer';
 import * as filesystemActions from '../actions';
 import workerService from '../workers';
-import { MAX_FILE_SIZE } from '../utils/constants';
+import { MAX_FILE_SIZE, MIDDLEWARE_RESULT } from '../utils/constants';
 
 /**
  * Hybrid decision logic for upload operations
@@ -98,13 +98,15 @@ function createMulterConfig(options = {}) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Object} options - Upload options
+ * @param {boolean} options.asMiddleware - If true, store result in req[UPLOAD] and call next()
  */
-export async function uploadFiles(req, res, options = {}) {
+export async function uploadFiles(req, res, options = {}, next = null) {
   const config = {
     maxFiles: 10,
     maxFileSize: 50 * 1024 * 1024, // 50MB default
     allowedMimeTypes: null, // null = allow all
     fileFieldName: 'files', // Default field name for file uploads
+    asMiddleware: false, // Default: send response
     ...options,
   };
 
@@ -129,6 +131,13 @@ export async function uploadFiles(req, res, options = {}) {
 
     // Check if files were uploaded
     if (!req.files || req.files.length === 0) {
+      if (config.asMiddleware && next) {
+        req[MIDDLEWARE_RESULT.UPLOAD] = {
+          success: false,
+          error: 'No files uploaded',
+        };
+        return next();
+      }
       return res.status(400).json({
         success: false,
         error: 'No files uploaded',
@@ -156,23 +165,50 @@ export async function uploadFiles(req, res, options = {}) {
       result = await filesystemActions.uploadFiles(filesData);
     }
 
+    // Middleware mode: store result and call next
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.UPLOAD] = result;
+      return next();
+    }
+
     res.json(result);
   } catch (err) {
     if (err instanceof multer.MulterError) {
       if (err.code === 'LIMIT_FILE_SIZE') {
         const maxSizeMB = Math.round(config.maxFileSize / (1024 * 1024));
+        if (config.asMiddleware && next) {
+          req[MIDDLEWARE_RESULT.UPLOAD] = {
+            success: false,
+            error: `File too large. Maximum size is ${maxSizeMB}MB`,
+          };
+          return next();
+        }
         return res.status(400).json({
           success: false,
           error: `File too large. Maximum size is ${maxSizeMB}MB`,
         });
       }
       if (err.code === 'LIMIT_FILE_COUNT') {
+        if (config.asMiddleware && next) {
+          req[MIDDLEWARE_RESULT.UPLOAD] = {
+            success: false,
+            error: `Too many files. Maximum is ${config.maxFiles} files`,
+          };
+          return next();
+        }
         return res.status(400).json({
           success: false,
           error: `Too many files. Maximum is ${config.maxFiles} files`,
         });
       }
       if (err.code === 'INVALID_FILE_TYPE') {
+        if (config.asMiddleware && next) {
+          req[MIDDLEWARE_RESULT.UPLOAD] = {
+            success: false,
+            error: err.message,
+          };
+          return next();
+        }
         return res.status(400).json({
           success: false,
           error: err.message,
@@ -181,6 +217,14 @@ export async function uploadFiles(req, res, options = {}) {
     }
 
     console.error('Upload error:', err);
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.UPLOAD] = {
+        success: false,
+        error: 'Upload failed',
+        details: err.message,
+      };
+      return next();
+    }
     return res.status(500).json({
       success: false,
       error: 'Upload failed',

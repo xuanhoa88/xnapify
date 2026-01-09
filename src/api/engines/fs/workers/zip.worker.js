@@ -3,13 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import {
-  setupForkMode,
-  createWorker,
-  createZip,
-  extractZip,
-  FilesystemWorkerError,
-} from '../utils';
+import { createWorker, setupForkMode } from '../../worker';
+import { createZip, extractZip, FilesystemWorkerError } from '../utils';
 
 /**
  * Process ZIP operations (compression and decompression)

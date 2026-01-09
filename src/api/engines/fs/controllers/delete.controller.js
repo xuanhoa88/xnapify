@@ -13,6 +13,7 @@
 
 import * as filesystemActions from '../actions';
 import workerService from '../workers';
+import { MIDDLEWARE_RESULT } from '../utils/constants';
 
 /**
  * Hybrid decision logic for delete operations
@@ -52,8 +53,15 @@ function makeDeleteDecision(fileNames, options = {}) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Object} options - Controller options
+ * @param {boolean} options.asMiddleware - If true, store result in req[DELETE] and call next()
+ * @param {Function} next - Express next middleware function
  */
-export async function deleteFiles(req, res, options = {}) {
+export async function deleteFiles(req, res, options = {}, next = null) {
+  const config = {
+    asMiddleware: false,
+    ...options,
+  };
+
   try {
     const { files, fileName } = req.body;
     let fileNames;
@@ -64,6 +72,13 @@ export async function deleteFiles(req, res, options = {}) {
     } else if (fileName) {
       fileNames = Array.isArray(fileName) ? fileName : [fileName];
     } else {
+      if (config.asMiddleware && next) {
+        req[MIDDLEWARE_RESULT.DELETE] = {
+          success: false,
+          error: 'Either files array or fileName is required',
+        };
+        return next();
+      }
       return res.status(400).json({
         success: false,
         error: 'Either files array or fileName is required',
@@ -115,9 +130,23 @@ export async function deleteFiles(req, res, options = {}) {
       };
     }
 
+    // Middleware mode: store result and call next
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.DELETE] = result;
+      return next();
+    }
+
     res.json(result);
   } catch (error) {
     console.error('Delete error:', error);
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.DELETE] = {
+        success: false,
+        error: 'Delete failed',
+        details: error.message,
+      };
+      return next();
+    }
     return res.status(500).json({
       success: false,
       error: 'Delete failed',

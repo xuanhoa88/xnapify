@@ -3,8 +3,9 @@
  * Supports both same-process and child process execution
  */
 
+import { createWorker, setupForkMode } from '../../worker';
 import { downloadFile, downloadFiles } from '../actions/download';
-import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Process download operations

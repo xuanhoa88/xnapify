@@ -22,12 +22,15 @@ import * as profileController from '../controllers/profile.controller';
  * @returns {Router} Express router with profile routes
  */
 export default function profileRoutes(deps, userMiddlewares, app) {
+  const router = deps.Router();
   const auth = app.get('auth');
+  const fs = app.get('fs');
 
   // Create requireAuth middleware
   const requireAuth = auth.middlewares.requireAuth();
 
-  const router = deps.Router();
+  // Create fs controller for preview
+  const fsControllers = fs.createControllers();
 
   /**
    * @route   GET /
@@ -45,12 +48,20 @@ export default function profileRoutes(deps, userMiddlewares, app) {
   router.put('/', requireAuth, profileController.updateProfile);
 
   /**
-   * @route   PUT /avatar
-   * @desc    Link uploaded file as user avatar
+   * @route   GET /avatar
+   * @desc    Preview uploaded avatar file
    * @access  Private (requires authentication)
-   * @body    { fileName }
+   * @query   { fileName }
    */
-  router.put('/avatar', requireAuth, profileController.linkAvatar);
+  router.get('/avatar', requireAuth, fsControllers.previewFile());
+
+  /**
+   * @route   POST /avatar
+   * @desc    Upload and link user avatar (handles multer internally)
+   * @access  Private (requires authentication)
+   * @body    multipart/form-data with 'avatar' field
+   */
+  router.post('/avatar', requireAuth, profileController.uploadAvatar);
 
   /**
    * @route   PUT /password

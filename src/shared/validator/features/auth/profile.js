@@ -163,16 +163,3 @@ export const avatarUploadFormSchema = ({ i18n, z }) =>
       })
       .optional(),
   });
-
-/**
- * Link avatar schema - callable factory function
- *
- * Used by:
- * - Backend: PUT /api/profile/avatar
- */
-export const linkAvatarFormSchema = ({ i18n, z }) =>
-  z.object({
-    fileName: z
-      .string()
-      .min(1, i18n.t('zod:profile.FILENAME_REQUIRED', 'File name is required')),
-  });

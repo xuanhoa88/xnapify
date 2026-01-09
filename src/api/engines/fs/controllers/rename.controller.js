@@ -13,6 +13,7 @@
 
 import * as filesystemActions from '../actions';
 import workerService from '../workers';
+import { MIDDLEWARE_RESULT } from '../utils/constants';
 
 /**
  * Hybrid decision logic for rename operations
@@ -52,8 +53,15 @@ function makeRenameDecision(operations, options = {}) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Object} options - Controller options
+ * @param {boolean} options.asMiddleware - If true, store result in req[RENAME] and call next()
+ * @param {Function} next - Express next middleware function
  */
-export async function renameFiles(req, res, options = {}) {
+export async function renameFiles(req, res, options = {}, next = null) {
+  const config = {
+    asMiddleware: false,
+    ...options,
+  };
+
   try {
     const { operations, oldName, newName } = req.body;
     let renameOperations;
@@ -61,6 +69,13 @@ export async function renameFiles(req, res, options = {}) {
     // Parse rename operations from different formats
     if (operations) {
       if (!Array.isArray(operations)) {
+        if (config.asMiddleware && next) {
+          req[MIDDLEWARE_RESULT.RENAME] = {
+            success: false,
+            error: 'Operations must be an array of {oldName, newName} objects',
+          };
+          return next();
+        }
         return res.status(400).json({
           success: false,
           error: 'Operations must be an array of {oldName, newName} objects',
@@ -71,6 +86,13 @@ export async function renameFiles(req, res, options = {}) {
       // Convert single rename to batch format
       renameOperations = [{ oldName, newName }];
     } else {
+      if (config.asMiddleware && next) {
+        req[MIDDLEWARE_RESULT.RENAME] = {
+          success: false,
+          error: 'Either operations array or oldName/newName pair is required',
+        };
+        return next();
+      }
       return res.status(400).json({
         success: false,
         error: 'Either operations array or oldName/newName pair is required',
@@ -128,9 +150,23 @@ export async function renameFiles(req, res, options = {}) {
       };
     }
 
+    // Middleware mode: store result and call next
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.RENAME] = result;
+      return next();
+    }
+
     res.json(result);
   } catch (error) {
     console.error('Rename error:', error);
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.RENAME] = {
+        success: false,
+        error: 'Rename failed',
+        details: error.message,
+      };
+      return next();
+    }
     return res.status(500).json({
       success: false,
       error: 'Rename failed',

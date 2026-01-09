@@ -3,9 +3,10 @@
  * Supports both same-process and child process execution
  */
 
+import { createWorker, setupForkMode } from '../../worker';
 import { getFileInfo } from '../actions/info';
 import { previewFile } from '../actions/preview';
-import { setupForkMode, createWorker, FilesystemWorkerError } from '../utils';
+import { FilesystemWorkerError } from '../utils';
 
 /**
  * Process info operations

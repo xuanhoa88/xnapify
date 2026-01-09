@@ -19,3 +19,9 @@ export * as auth from './auth';
 
 // Cache engine
 export * as cache from './cache';
+
+// Email engine
+export * as email from './email';
+
+// Worker engine (shared worker infrastructure)
+export * as worker from './worker';

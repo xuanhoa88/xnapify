@@ -26,43 +26,44 @@ import { synchronizeFiles } from './sync.controller';
  * Create action-based filesystem controllers
  * @returns {Object} Object containing all action-based controllers that accept options
  */
-export function createController() {
+export function createControllers() {
   // Return object with ALL functional controllers - no class instantiation!
   // Each controller function accepts options as a parameter
+  // All controllers support asMiddleware option to store result in req and call next()
   return {
     // Controller functions that accept options directly
     uploadFiles:
       (options = {}) =>
-      (req, res) =>
-        uploadFiles(req, res, options),
+      (req, res, next) =>
+        uploadFiles(req, res, options, next),
     downloadFiles:
       (options = {}) =>
-      (req, res) =>
-        downloadFiles(req, res, options),
+      (req, res, next) =>
+        downloadFiles(req, res, options, next),
     getFileInfo:
       (options = {}) =>
-      (req, res) =>
-        getFileInfo(req, res, options),
+      (req, res, next) =>
+        getFileInfo(req, res, options, next),
     previewFile:
       (options = {}) =>
-      (req, res) =>
-        previewFile(req, res, options),
+      (req, res, next) =>
+        previewFile(req, res, options, next),
     deleteFiles:
       (options = {}) =>
-      (req, res) =>
-        deleteFiles(req, res, options),
+      (req, res, next) =>
+        deleteFiles(req, res, options, next),
     renameFiles:
       (options = {}) =>
-      (req, res) =>
-        renameFiles(req, res, options),
+      (req, res, next) =>
+        renameFiles(req, res, options, next),
     copyFiles:
       (options = {}) =>
-      (req, res) =>
-        copyFiles(req, res, options),
+      (req, res, next) =>
+        copyFiles(req, res, options, next),
     synchronizeFiles:
       (options = {}) =>
-      (req, res) =>
-        synchronizeFiles(req, res, options),
+      (req, res, next) =>
+        synchronizeFiles(req, res, options, next),
   };
 }
 
@@ -102,7 +103,7 @@ export function createController() {
  */
 export function createRouter(Router, options = {}) {
   // Create action-based controllers
-  const controllers = createController();
+  const controllers = createControllers();
 
   // Create router
   const router = Router();
@@ -132,7 +133,8 @@ export function createRouter(Router, options = {}) {
   router.post('/sync', controllers.synchronizeFiles(options.sync));
 
   // Error handling middleware
-  router.use((error, req, res) => {
+  router.use((error, req, res, next) => {
+    // Handle FilesystemError locally
     if (error.name === 'FilesystemError') {
       return res.status(error.statusCode || 500).json({
         success: false,
@@ -141,6 +143,7 @@ export function createRouter(Router, options = {}) {
       });
     }
 
+    // Handle MulterError locally
     if (error.name === 'MulterError') {
       const statusCode = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
       return res.status(statusCode).json({
@@ -150,12 +153,8 @@ export function createRouter(Router, options = {}) {
       });
     }
 
-    return res.status(500).json({
-      success: false,
-      error: 'Internal server error',
-      details:
-        process.env.NODE_ENV === 'development' ? error.message : undefined,
-    });
+    // Pass other errors to global http.errorHandler
+    next(error);
   });
 
   return router;

@@ -13,6 +13,7 @@
 
 import * as filesystemActions from '../actions';
 import workerService from '../workers';
+import { MIDDLEWARE_RESULT } from '../utils/constants';
 
 /**
  * Hybrid decision logic for copy operations
@@ -52,8 +53,15 @@ function makeCopyDecision(operations, options = {}) {
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  * @param {Object} options - Controller options
+ * @param {boolean} options.asMiddleware - If true, store result in req[COPY] and call next()
+ * @param {Function} next - Express next middleware function
  */
-export async function copyFiles(req, res, options = {}) {
+export async function copyFiles(req, res, options = {}, next = null) {
+  const config = {
+    asMiddleware: false,
+    ...options,
+  };
+
   try {
     const { operations, sourceFileName, targetFileName } = req.body;
     let copyOperations;
@@ -61,6 +69,14 @@ export async function copyFiles(req, res, options = {}) {
     // Parse copy operations from different formats
     if (operations) {
       if (!Array.isArray(operations)) {
+        if (config.asMiddleware && next) {
+          req[MIDDLEWARE_RESULT.COPY] = {
+            success: false,
+            error:
+              'Operations must be an array of {sourceFileName, targetFileName} objects',
+          };
+          return next();
+        }
         return res.status(400).json({
           success: false,
           error:
@@ -72,6 +88,14 @@ export async function copyFiles(req, res, options = {}) {
       // Convert single copy to batch format
       copyOperations = [{ sourceFileName, targetFileName }];
     } else {
+      if (config.asMiddleware && next) {
+        req[MIDDLEWARE_RESULT.COPY] = {
+          success: false,
+          error:
+            'Either operations array or sourceFileName/targetFileName pair is required',
+        };
+        return next();
+      }
       return res.status(400).json({
         success: false,
         error:
@@ -135,9 +159,23 @@ export async function copyFiles(req, res, options = {}) {
       };
     }
 
+    // Middleware mode: store result and call next
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.COPY] = result;
+      return next();
+    }
+
     res.json(result);
   } catch (error) {
     console.error('Copy error:', error);
+    if (config.asMiddleware && next) {
+      req[MIDDLEWARE_RESULT.COPY] = {
+        success: false,
+        error: 'Copy failed',
+        details: error.message,
+      };
+      return next();
+    }
     return res.status(500).json({
       success: false,
       error: 'Copy failed',

@@ -214,31 +214,22 @@ export const updateUserProfile = createAsyncThunk(
 
 /**
  * Upload user avatar
+ * Uses consolidated /api/profile/avatar endpoint which handles upload and link in one step
  */
 export const uploadUserAvatar = createAsyncThunk(
   'user/uploadAvatar',
   async (file, { extra: { fetch }, rejectWithValue }) => {
     try {
       const formData = new FormData();
-      formData.append('files', file);
+      formData.append('avatar', file);
 
-      const { data } = await fetch('/api/fs/upload', {
+      const { data } = await fetch('/api/profile/avatar', {
         method: 'POST',
         body: formData,
       });
 
-      if (data && data.successful.length > 0) {
-        const uploadedFile = data.successful[0];
-
-        // Link avatar to user profile
-        const linkResponse = await fetch('/api/profile/avatar', {
-          method: 'PUT',
-          body: { fileName: uploadedFile.data.fileName },
-        });
-
-        if (linkResponse.data) {
-          return { picture: linkResponse.data.profile.picture };
-        }
+      if (data && data.profile) {
+        return { picture: data.profile.picture };
       }
 
       return rejectWithValue('Upload failed');

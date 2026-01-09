@@ -12,8 +12,6 @@ import {
   deleteAccountFormSchema,
   updateProfileFormSchema,
   updatePreferencesFormSchema,
-  avatarUploadFormSchema,
-  linkAvatarFormSchema,
 } from '../../../../shared/validator/features/auth';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
@@ -125,6 +123,8 @@ export async function updateProfile(req, res) {
 /**
  * Upload user avatar image
  *
+ * Uses fs engine's uploadMiddleware internally - no direct multer import.
+ *
  * @route   POST /api/profile/avatar
  * @access  Private (requires authentication)
  * @param {Object} req - Express request object
@@ -132,25 +132,46 @@ export async function updateProfile(req, res) {
  */
 export async function uploadAvatar(req, res) {
   const http = req.app.get('http');
+  const fs = req.app.get('fs');
+  const models = req.app.get('models');
+
   try {
-    if (!req.file) {
+    // Use fs engine's uploadFiles with asMiddleware option (handles multer internally)
+    const fsControllers = fs.createControllers();
+    const upload = fsControllers.uploadFiles({
+      maxFiles: 1,
+      maxFileSize: 10 * 1024 * 1024, // 10MB for user avatars
+      fileFieldName: 'avatar',
+      asMiddleware: true, // Store result in req[UPLOAD] and call next()
+    });
+
+    // Run upload as middleware
+    await new Promise((resolve, reject) => {
+      upload(req, res, err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // Check upload result using Symbol
+    const uploadResult = req[fs.MIDDLEWARE_RESULT.UPLOAD];
+    if (!uploadResult || !uploadResult.success) {
+      const errorMsg =
+        (uploadResult && uploadResult.error) || 'No file uploaded';
+      return http.sendValidationError(res, { avatar: errorMsg });
+    }
+
+    // Get the uploaded file name from the result
+    const uploadedFiles = uploadResult.data && uploadResult.data.successful;
+    if (!uploadedFiles || uploadedFiles.length === 0) {
       return http.sendValidationError(res, {
         avatar: i18n.t('zod:profile.AVATAR_REQUIRED'),
       });
     }
 
-    // Validate file metadata using Zod schema
-    const [isValid, validationErrors] = validateForm(avatarUploadFormSchema, {
-      file: req.file,
-    });
-    if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
-    }
-
-    const fs = req.app.get('fs');
-    const models = req.app.get('models');
-
-    const user = await profileService.uploadUserAvatar(req.user.id, req.file, {
+    // Link the uploaded file as avatar
+    const { fileName } = uploadedFiles[0].data;
+    const user = await profileService.linkUserAvatar(req.user.id, fileName, {
       models,
       fs,
     });
@@ -164,79 +185,14 @@ export async function uploadAvatar(req, res) {
       },
     });
   } catch (error) {
-    if (error.name === 'INVALID_FILE_TYPE') {
-      return http.sendValidationError(res, {
-        avatar: i18n.t('zod:profile.AVATAR_INVALID_TYPE'),
-      });
-    }
-
-    if (error.code === 'LIMIT_FILE_SIZE') {
-      return http.sendValidationError(res, {
-        avatar: i18n.t('zod:profile.AVATAR_TOO_LARGE'),
-      });
-    }
-
-    if (error.name === 'LIMIT_FILE_COUNT') {
-      return http.sendValidationError(res, {
-        avatar: 'File count exceeds limit',
-      });
-    }
-
     return http.sendServerError(res, 'Failed to upload avatar');
   }
 }
 
 /**
- * Link uploaded file as user avatar
- *
- * @route   PUT /api/profile/avatar
- * @access  Private (requires authentication)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function linkAvatar(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { fileName } = req.body;
-
-    // Validate input using shared schema
-    const [isValid, validationErrors] = validateForm(linkAvatarFormSchema, {
-      fileName,
-    });
-    if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
-    }
-
-    const fs = req.app.get('fs');
-    const models = req.app.get('models');
-
-    const fileExists = await fs.actions.fileExists(fileName);
-    if (!fileExists) {
-      return http.sendValidationError(res, {
-        fileName: 'File not found. Please upload the file first.',
-      });
-    }
-
-    const user = await profileService.linkUserAvatar(req.user.id, fileName, {
-      models,
-      fs,
-    });
-
-    return http.sendSuccess(res, {
-      message: 'Avatar linked successfully',
-      profile: {
-        id: user.id,
-        email: user.email,
-        picture: (user.profile && user.profile.picture) || null,
-      },
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to link avatar');
-  }
-}
-
-/**
  * Remove user avatar
+ *
+ * Uses fs engine's deleteFiles with asMiddleware option.
  *
  * @route   DELETE /api/profile/avatar
  * @access  Private (requires authentication)
@@ -245,14 +201,58 @@ export async function linkAvatar(req, res) {
  */
 export async function removeAvatar(req, res) {
   const http = req.app.get('http');
-  try {
-    const fs = req.app.get('fs');
-    const models = req.app.get('models');
+  const fs = req.app.get('fs');
+  const models = req.app.get('models');
+  const { User, UserProfile } = models;
 
-    const user = await profileService.removeUserAvatar(req.user.id, {
-      models,
-      fs,
+  try {
+    // Get user with profile to find current avatar
+    const user = await User.findByPk(req.user.id, {
+      include: [{ model: UserProfile, as: 'profile' }],
     });
+
+    if (!user) {
+      return http.sendNotFound(res, 'User not found');
+    }
+
+    if (!user.profile || !user.profile.picture) {
+      return http.sendValidationError(res, {
+        avatar: 'No avatar to remove',
+      });
+    }
+
+    const avatarFileName = user.profile.picture;
+
+    // Use fs engine's deleteFiles with asMiddleware option
+    const fsControllers = fs.createControllers();
+
+    // Inject fileName into request body for deleteFiles controller
+    req.body = { fileName: avatarFileName };
+
+    const deleteMiddleware = fsControllers.deleteFiles({
+      asMiddleware: true, // Store result in req[DELETE] and call next()
+    });
+
+    // Run delete as middleware
+    await new Promise((resolve, reject) => {
+      deleteMiddleware(req, res, err => {
+        if (err) reject(err);
+        else resolve();
+      });
+    });
+
+    // Check delete result using Symbol
+    const deleteResult = req[fs.MIDDLEWARE_RESULT.DELETE];
+    if (!deleteResult || !deleteResult.success) {
+      // Log warning but continue - file may already be deleted
+      console.warn(
+        'Failed to delete avatar file:',
+        deleteResult && deleteResult.error,
+      );
+    }
+
+    // Update profile to remove avatar reference
+    await user.profile.update({ picture: null });
 
     return http.sendSuccess(res, {
       message: 'Avatar removed successfully',

@@ -9,8 +9,10 @@ import 'source-map-support/register';
 import 'url-polyfill';
 import 'dotenv-flow/config';
 import path from 'path';
+import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import express from 'express';
+import rateLimit from 'express-rate-limit';
 import createProxy from 'express-http-proxy';
 import expressRequestLanguage from 'express-request-language';
 import { ChunkExtractor } from '@loadable/server';
@@ -104,7 +106,7 @@ function setupGracefulShutdown(httpServer, wsServer) {
     setTimeout(() => {
       console.error('⚠️ Forced shutdown');
       process.exit(1);
-    }, 30000);
+    }, 30_000);
   };
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
@@ -147,30 +149,19 @@ function getInnerHTML(element) {
   );
 }
 
-async function createReduxStore(req, { fetch, history }, locale) {
-  // Initialize user state with null data
+async function createReduxStore({ fetch, history }, locale) {
   const store = configureStore(
     { user: { data: null } },
     { fetch, history, i18n },
   );
 
-  // Try to restore authenticated user from cookies via /api/me
-  // The fetch instance forwards cookies from the SSR request,
-  // so if user has valid auth cookies, they'll be authenticated.
-  //
-  // Important: SSR auth is opportunistic - if it fails, the client will retry.
-  // This handles cases like transient network errors or token refresh issues.
-  // The client has retry logic and can recover the session if cookies are valid.
+  // Try SSR auth - client will retry if this fails
   try {
     await store.dispatch(me()).unwrap();
-  } catch (error) {
-    // SSR auth failed - expected for unauthenticated users, continue as guest
-    if (__DEV__) {
-      console.log('⚠️ SSR auth skipped:', error.message || 'Unknown error');
-    }
+  } catch {
+    // Expected for unauthenticated users
   }
 
-  // Set runtime variables
   await store.dispatch(
     setRuntimeVariable({
       initialNow: Date.now(),
@@ -179,9 +170,7 @@ async function createReduxStore(req, { fetch, history }, locale) {
     }),
   );
 
-  // Set locale
   await store.dispatch(setLocale(locale));
-
   return store;
 }
 
@@ -255,21 +244,21 @@ function createPageMetadata(page, req) {
 // =============================================================================
 
 function setupApiProxy(app) {
-  const apiProxyUrl = process.env.RSK_API_PROXY_URL;
-  if (!apiProxyUrl) return;
+  const proxyUrl = process.env.RSK_API_PROXY_URL;
+  if (!proxyUrl) return; // No proxy configured
 
   try {
-    new URL(apiProxyUrl);
+    new URL(proxyUrl);
   } catch {
-    console.error('❌ Invalid RSK_API_PROXY_URL:', apiProxyUrl);
+    console.error('❌ Invalid RSK_API_PROXY_URL:', proxyUrl);
     return;
   }
 
-  console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${apiProxyUrl}`);
+  console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${proxyUrl}`);
 
   app.use(
     config.apiPrefix,
-    createProxy(apiProxyUrl, {
+    createProxy(proxyUrl, {
       proxyReqPathResolver: req =>
         req.url.replace(new RegExp(`^${config.apiPrefix}`), ''),
       proxyErrorHandler: (err, res, next) => {
@@ -288,7 +277,7 @@ function setupApiProxy(app) {
         delete headers['content-security-policy'];
         return headers;
       },
-      timeout: 30000,
+      timeout: 30_000,
     }),
   );
 }
@@ -385,8 +374,10 @@ async function main(app, staticPath) {
   app.set('trust proxy', config.trustProxy);
   app.disable('x-powered-by');
 
-  // Security headers
+  // Security headers + Request ID
   app.use((req, res, next) => {
+    req.id = crypto.randomUUID();
+    res.setHeader('X-Request-Id', req.id);
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
@@ -432,6 +423,26 @@ async function main(app, staticPath) {
     }),
   );
 
+  // Rate limiter for API routes
+  const rateLimiter = rateLimit({
+    windowMs: __DEV__
+      ? 60_000
+      : parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
+    max: __DEV__ ? 100 : parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
+    standardHeaders: true,
+    legacyHeaders: false,
+    handler: (req, res, _next, rateLimitInfo) => {
+      res.status(rateLimitInfo.statusCode).json({
+        success: false,
+        error: 'Too many requests from this IP, please try again later.',
+        retryAfter: Math.ceil(rateLimitInfo.windowMs / 60_000) + ' minutes',
+        limit: rateLimitInfo.max,
+        current: req.rateLimit.used,
+      });
+    },
+  });
+  app.use(config.apiPrefix, rateLimiter);
+
   // API routes
   await import('./api').then(api => api.default(app, config));
   setupApiProxy(app);
@@ -440,13 +451,11 @@ async function main(app, staticPath) {
   app.get('*', async (req, res, next) => {
     const startTime = Date.now();
     try {
-      // Create memory history for this SSR request (isolated per-request)
       const history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
         initialIndex: 0,
       });
 
-      // Create fetch instance for this SSR request
       const fetch = createFetch(nodeFetch, {
         defaults: {
           baseUrl: getBaseUrl({ host: config.host, port: config.port }),
@@ -457,13 +466,9 @@ async function main(app, staticPath) {
         },
       });
 
-      // Get locale from request
       const locale = req.language || DEFAULT_LOCALE;
+      const store = await createReduxStore({ fetch, history }, locale);
 
-      // Create Redux store
-      const store = await createReduxStore(req, { fetch, history }, locale);
-
-      // Create context for rendering
       const context = {
         fetch,
         store,
@@ -523,6 +528,16 @@ async function main(app, staticPath) {
       message: err.message,
       path: req.path,
     });
+
+    // Handle JWT errors
+    if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
+      return res.status(401).json({
+        success: false,
+        error:
+          err.name === 'JsonWebTokenError' ? 'Invalid token' : 'Token expired',
+        code: err.name,
+      });
+    }
 
     try {
       const youch = new Youch(err, {
