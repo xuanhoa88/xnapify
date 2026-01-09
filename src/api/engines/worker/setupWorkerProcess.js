@@ -6,62 +6,12 @@
  */
 
 /**
- * Worker Utilities - Shared helpers for worker implementations
- *
- * These utilities support hybrid execution:
- * - Same-process execution (faster, no IPC overhead)
- * - Child process execution via fork (more robust, isolated)
- */
-
-/**
- * Create a worker function wrapper for same-process execution
- * @param {Function} processFunction - The processing function
- * @param {string} expectedType - Expected message type
- * @returns {Function} Worker function
- */
-export function createWorker(processFunction, expectedType) {
-  return async function workerFunction(message) {
-    const { id, type, data } = message;
-
-    if (type !== expectedType) {
-      return {
-        id,
-        success: false,
-        error: {
-          message: `Unexpected message type: ${type}`,
-          code: 'UNEXPECTED_TYPE',
-        },
-      };
-    }
-
-    try {
-      const result = await processFunction(data);
-      return {
-        id,
-        success: true,
-        result,
-      };
-    } catch (error) {
-      return {
-        id,
-        success: false,
-        error: {
-          message: error.message,
-          code: error.code || 'WORKER_ERROR',
-          stack: error.stack,
-        },
-      };
-    }
-  };
-}
-
-/**
  * Setup fork mode execution for child process workers
  * @param {Function} processFunction - The processing function
  * @param {string} expectedType - Expected message type
  * @param {string} workerName - Name for logging
  */
-export function setupForkMode(processFunction, expectedType, workerName) {
+export function setupWorkerProcess(processFunction, expectedType, workerName) {
   // Only setup if running as child process
   if (typeof process.send !== 'function') {
     return;

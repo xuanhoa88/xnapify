@@ -1,29 +1,28 @@
 /**
- * Info Actions - File information and preview operations
+ * Info Operations
  */
 
 import {
   FilesystemError,
+  createResponse,
   getMimeType,
   getFileCategory,
   getFileExtension,
   formatFileSize,
-  createResponse,
 } from '../utils';
-import { FilesystemManager } from '../manager';
 
 /**
- * Get file information and metadata
- * @param {string} fileName - Name of file to get info for
+ * Get file info/metadata
+ * @param {Object} manager - FilesystemManager instance (this)
+ * @param {string} fileName - File name
  * @param {Object} options - Options
- * @returns {Promise<Object>} File information result
+ * @returns {Promise<Object>} File info result
  */
-export async function getFileInfo(fileName, options = {}) {
+export async function info(manager, fileName, options = {}) {
   try {
-    const manager = new FilesystemManager(options);
+    const provider = manager.getProvider(options.provider);
 
-    // Check if file exists
-    const exists = await manager.exists(fileName);
+    const exists = await provider.exists(fileName);
     if (!exists) {
       throw new FilesystemError(
         `File not found: ${fileName}`,
@@ -32,8 +31,7 @@ export async function getFileInfo(fileName, options = {}) {
       );
     }
 
-    // Get file metadata
-    const metadata = await manager.getMetadata(fileName);
+    const metadata = await provider.getMetadata(fileName);
     const mimeType = metadata.mimeType || getMimeType(fileName);
     const category = getFileCategory(fileName);
 
@@ -54,7 +52,7 @@ export async function getFileInfo(fileName, options = {}) {
         downloadUrl: `/download?fileName=${encodeURIComponent(fileName)}`,
         previewUrl: `/preview?fileName=${encodeURIComponent(fileName)}`,
       },
-      'File information retrieved successfully',
+      'File information retrieved',
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
@@ -63,23 +61,8 @@ export async function getFileInfo(fileName, options = {}) {
     return createResponse(
       false,
       null,
-      'Get file info failed',
-      new FilesystemError(error.message, 'GET_FILE_INFO_FAILED', 500),
+      'Get info failed',
+      new FilesystemError(error.message, 'GET_INFO_FAILED', 500),
     );
-  }
-}
-
-/**
- * Check if file exists
- * @param {string} fileName - Name of file to check
- * @param {Object} options - Options
- * @returns {Promise<boolean>} True if file exists
- */
-export async function fileExists(fileName, options = {}) {
-  try {
-    const manager = new FilesystemManager(options);
-    return await manager.exists(fileName);
-  } catch (error) {
-    return false;
   }
 }

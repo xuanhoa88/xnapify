@@ -138,23 +138,6 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
   return factory;
 }
 
-// Singleton state
-const channels = new Map();
-const adapters = new Map([['memory', MemoryQueue]]);
-
-/**
- * Queue Factory
- *
- * Creates or retrieves channel instances for pub/sub messaging.
- *
- * @param {string} name - Channel name
- * @param {Object} options - Channel options
- * @param {string} [options.type='memory'] - Queue adapter type
- * @param {number} [options.concurrency=1] - Concurrent workers
- * @returns {Channel|null} Channel instance
- */
-const queueFactory = buildFactory(channels, adapters, DEFAULT_OPTIONS);
-
 /**
  * Create a new isolated factory instance
  * @param {Object} options - Default options for this factory
@@ -166,6 +149,3 @@ export function createFactory(options = {}) {
     ...options,
   });
 }
-
-// Export default singleton factory
-export default queueFactory;

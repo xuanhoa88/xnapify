@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { synchronizeFiles, synchronizeFile } from '../actions/sync';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,7 +13,8 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Sync result
  */
 async function processSync(data) {
-  const { type, operations, options } = data;
+  const { type, operations, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'SYNC_SINGLE': {
@@ -21,12 +22,12 @@ async function processSync(data) {
       const singleOperation = Array.isArray(operations)
         ? operations[0]
         : operations;
-      return await synchronizeFile(singleOperation, options);
+      return await fs.sync(singleOperation, options);
     }
 
     case 'SYNC_BATCH':
       // For batch sync, operations is an array of sync operations
-      return await synchronizeFiles(operations, options);
+      return await fs.sync(operations, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown sync type: ${type}`);
@@ -34,7 +35,7 @@ async function processSync(data) {
 }
 
 // Create standardized worker function using helper
-const workerFunction = createWorker(processSync, 'SYNC_FILES');
+const workerFunction = createWorkerHandler(processSync, 'SYNC_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -44,4 +45,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processSync, 'SYNC_FILES', 'Sync');
+setupWorkerProcess(processSync, 'SYNC_FILES', 'Sync');

@@ -8,30 +8,49 @@
 /**
  * Queue Engine - Channel-based pub/sub for background jobs
  *
- * @example <caption>Basic Usage</caption>
- * // Setup
- * app.set('queue', queueFactory);
+ * @example
+ * // Access singleton instance
+ * const manager = queue.default;
  *
- * // Consumer - Register handlers
- * const queue = app.get('queue');
- * const zalo = queue('zalo', { concurrency: 5 });
+ * // Create/get a channel (consumer)
+ * const zalo = queue.default('zalo', { concurrency: 5 });
  * zalo.on('chat', async (job) => { console.log(job.data); });
  *
- * // Producer - Emit events
- * queue.channel('zalo').emit('chat', { message: 'Hello' });
+ * // Emit event (producer)
+ * queue.default.channel('zalo').emit('chat', { message: 'Hello' });
  *
- * @example <caption>Custom Adapter</caption>
- * // Register adapter and use
- * queue.registerAdapter('redis', RedisQueue);
- * const channel = queue('notifications', { type: 'redis' });
+ * @example
+ * // Create isolated instance (for testing)
+ * const testQueue = queue.createFactory({ type: 'memory' });
+ * const channel = testQueue('test-channel');
+ * channel.on('event', async (job) => { ... });
+ *
+ * @example
+ * // Register custom adapter (cannot override existing)
+ * class RedisQueue {
+ *   constructor(options) { ... }
+ *   add(event, data, opts) { ... }
+ *   process(event, handler) { ... }
+ *   close() { ... }
+ * }
+ *
+ * queue.default.registerAdapter('redis', RedisQueue);
+ * const channel = queue.default('notifications', { type: 'redis' });
  * channel.on('send', async (job) => { ... });
  */
+
+import { createFactory } from './factory';
 
 // Constants
 export { JOB_STATUS } from './utils/constants';
 
-// Factory
-export { default as queueFactory, createFactory } from './factory';
+// Export factory for creating instances
+export { createFactory };
 
-// Default export is the singleton factory
-export { default } from './factory';
+/**
+ * Singleton instance of QueueFactory
+ * Used by the application via queue.default
+ */
+const queue = createFactory();
+
+export default queue;

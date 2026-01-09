@@ -3,9 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { getFileInfo } from '../actions/info';
-import { previewFile } from '../actions/preview';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -14,14 +13,15 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Info result
  */
 async function processInfo(data) {
-  const { type, fileName, options } = data;
+  const { type, fileName, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'GET_FILE_INFO':
-      return await getFileInfo(fileName, options);
+      return await fs.info(fileName, options);
 
     case 'PREVIEW_FILE':
-      return await previewFile(fileName, options);
+      return await fs.preview(fileName, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown info type: ${type}`);
@@ -29,7 +29,7 @@ async function processInfo(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processInfo, 'FILE_INFO');
+const workerFunction = createWorkerHandler(processInfo, 'FILE_INFO');
 
 // Export for same-process execution
 export default workerFunction;
@@ -39,4 +39,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processInfo, 'FILE_INFO', 'Info');
+setupWorkerProcess(processInfo, 'FILE_INFO', 'Info');

@@ -29,8 +29,12 @@ export default function profileRoutes(deps, userMiddlewares, app) {
   // Create requireAuth middleware
   const requireAuth = auth.middlewares.requireAuth();
 
-  // Create fs controller for preview
-  const fsControllers = fs.createControllers();
+  // Create upload middleware for avatar
+  const avatarUpload = fs.default.useUploadMiddleware({
+    fieldName: 'avatar',
+    maxFiles: 1,
+    maxFileSize: parseInt(process.env.RSK_AVATAR_MAX_SIZE) || 10 * 1024 * 1024, // 10MB
+  });
 
   /**
    * @route   GET /
@@ -53,15 +57,27 @@ export default function profileRoutes(deps, userMiddlewares, app) {
    * @access  Private (requires authentication)
    * @query   { fileName }
    */
-  router.get('/avatar', requireAuth, fsControllers.previewFile());
+  router.get('/avatar', requireAuth, profileController.previewAvatar);
 
   /**
    * @route   POST /avatar
-   * @desc    Upload and link user avatar (handles multer internally)
+   * @desc    Upload and link user avatar
    * @access  Private (requires authentication)
    * @body    multipart/form-data with 'avatar' field
    */
-  router.post('/avatar', requireAuth, profileController.uploadAvatar);
+  router.post(
+    '/avatar',
+    requireAuth,
+    avatarUpload,
+    profileController.uploadAvatar,
+  );
+
+  /**
+   * @route   DELETE /avatar
+   * @desc    Remove user avatar
+   * @access  Private (requires authentication)
+   */
+  router.delete('/avatar', requireAuth, profileController.removeAvatar);
 
   /**
    * @route   PUT /password

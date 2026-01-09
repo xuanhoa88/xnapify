@@ -15,6 +15,42 @@ import { DEFAULT_ROLE } from '../constants/rbac';
 import { collectUserRBACData, isAdmin } from '../utils/rbac/collector';
 
 // ========================================================================
+// HELPERS
+// ========================================================================
+
+/**
+ * Format user data for API response
+ *
+ * @param {Object} user - User model instance
+ * @param {Object} [rbacData] - Pre-collected RBAC data (optional)
+ * @returns {Object} Formatted user object
+ */
+function formatUserData(user, rbacData = null) {
+  // Collect RBAC data if not provided
+  const rbac = rbacData || collectUserRBACData(user);
+
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    bio: (user.profile && user.profile.bio) || null,
+    location: (user.profile && user.profile.location) || null,
+    website: (user.profile && user.profile.website) || null,
+    is_admin: isAdmin({ roles: rbac.roles }),
+    roles: rbac.roles,
+    permissions: rbac.permissions,
+    groups: rbac.groups,
+  };
+}
+
+// ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
 
@@ -90,33 +126,13 @@ export async function getCurrentUser(userId, models) {
     throw error;
   }
 
-  // Use shared RBAC data collector
-  const rbacData = collectUserRBACData(user);
-
-  // Return formatted user object
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    bio: (user.profile && user.profile.bio) || null,
-    location: (user.profile && user.profile.location) || null,
-    website: (user.profile && user.profile.website) || null,
-    is_admin: isAdmin({ roles: rbacData.roles }),
-    roles: rbacData.roles,
-    permissions: rbacData.permissions,
-    groups: rbacData.groups,
-  };
+  return formatUserData(user);
 }
 
 /**
  * Register a new user
+ *
+ * Returns complete user data with RBAC information.
  *
  * @param {Object} userData - User registration data
  * @param {string} userData.email - User email
@@ -124,7 +140,7 @@ export async function getCurrentUser(userId, models) {
  * @param {string} userData.display_name - User display name (optional)
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @returns {Promise<Object>} Created user with profile
+ * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If user already exists or creation fails
  */
 export async function registerUser(userData, { models }) {
@@ -164,29 +180,77 @@ export async function registerUser(userData, { models }) {
     await user.addRole(defaultRole);
   }
 
-  return user;
+  // Return formatted user data with default RBAC for new user
+  return formatUserData(user, {
+    roles: [DEFAULT_ROLE],
+    permissions: [],
+    groups: [],
+  });
 }
 
 /**
  * Authenticate user with email and password
  *
+ * Returns complete user data with RBAC information in a single query.
+ *
  * @param {string} email - User email
  * @param {string} password - User password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @returns {Promise<Object>} User with profile
+ * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If credentials are invalid
  */
 export async function authenticateUser(email, password, { models }) {
-  const { User, UserProfile } = models;
+  const { User, UserProfile, Role, Permission, Group } = models;
 
-  // Find user with password (need to verify it)
+  // Find user with password and full RBAC data in ONE query
   const user = await User.scope('withPassword').findOne({
     where: { email },
     include: [
       {
         model: UserProfile,
         as: 'profile',
+      },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['name'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
+            through: { attributes: [] },
+          },
+        ],
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['name'],
+        required: false,
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
       },
     ],
   });
@@ -243,7 +307,7 @@ export async function authenticateUser(email, password, { models }) {
     models,
   );
 
-  return user;
+  return formatUserData(user);
 }
 
 /**

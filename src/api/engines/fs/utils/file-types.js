@@ -209,14 +209,6 @@ export function hasFileTypeCategory(category) {
 }
 
 /**
- * Get comprehensive file type information
- * @returns {Object} Complete file type structure
- */
-export function getFileTypeInfo() {
-  return FILE_TYPES;
-}
-
-/**
  * Get supported extensions for a category
  * @param {string} category - File category
  * @returns {Array} Array of extensions

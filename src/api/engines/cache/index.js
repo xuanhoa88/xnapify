@@ -9,10 +9,32 @@ import MemoryCache from './adapters/memory';
 import FileCache from './adapters/file';
 
 /**
- * Cache Factory
+ * Cache Engine
  *
  * Creates cache instances based on configuration.
  * Supports multiple adapters: memory (default), file.
+ *
+ * @example
+ * // Access singleton factory
+ * const cacheInstance = cache.default({ type: 'memory', maxSize: 1000 });
+ *
+ * // Basic usage
+ * await cacheInstance.set('key', 'value', 60000); // 60s TTL
+ * const value = await cacheInstance.get('key');
+ * await cacheInstance.delete('key');
+ *
+ * @example
+ * // Create namespaced cache
+ * const userCache = cache.default.withNamespace('users', cacheInstance);
+ * await userCache.set('123', userData);
+ *
+ * @example
+ * // File-based cache
+ * const fileCache = cache.default({ type: 'file', directory: '/tmp/cache' });
+ */
+
+/**
+ * Cache Factory
  *
  * @param {Object} options
  * @param {string} [options.type='memory'] - Cache type ('memory', 'file')
@@ -21,7 +43,7 @@ import FileCache from './adapters/file';
  * @param {number} [options.ttl=300000] - Default TTL in ms (5 min)
  * @returns {Object} Cache instance
  */
-function cacheFactory(options = {}) {
+function createFactory(options = {}) {
   const { type = 'memory', ...config } = options;
 
   switch (type) {
@@ -43,7 +65,7 @@ function cacheFactory(options = {}) {
  * @param {Object} baseCache - Base cache instance
  * @returns {Object} Namespaced cache wrapper
  */
-cacheFactory.withNamespace = function (namespace, baseCache) {
+createFactory.withNamespace = function (namespace, baseCache) {
   const prefix = `${namespace}:`;
 
   return {
@@ -61,5 +83,8 @@ cacheFactory.withNamespace = function (namespace, baseCache) {
   };
 };
 
-// Export default cache factory
-export default cacheFactory;
+// Export factory
+export { createFactory };
+
+// Default export is the factory function
+export default createFactory;

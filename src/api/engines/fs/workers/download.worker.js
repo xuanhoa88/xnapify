@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { downloadFile, downloadFiles } from '../actions/download';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,14 +13,15 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Download result
  */
 async function processDownload(data) {
-  const { type, fileNames, options } = data;
+  const { type, fileNames, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'DOWNLOAD_SINGLE':
-      return await downloadFile(fileNames[0], options);
+      return await fs.download(fileNames[0], options);
 
     case 'DOWNLOAD_BATCH':
-      return await downloadFiles(fileNames, options);
+      return await fs.download(fileNames, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown download type: ${type}`);
@@ -28,7 +29,7 @@ async function processDownload(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processDownload, 'DOWNLOAD_FILES');
+const workerFunction = createWorkerHandler(processDownload, 'DOWNLOAD_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -38,4 +39,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processDownload, 'DOWNLOAD_FILES', 'Download');
+setupWorkerProcess(processDownload, 'DOWNLOAD_FILES', 'Download');

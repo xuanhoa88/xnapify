@@ -9,8 +9,8 @@
  * Error Handling and Response Utilities
  */
 
-import { ERROR_CODES } from './constants';
 import { WorkerError } from '../../worker';
+import { ERROR_CODES } from './constants';
 
 /**
  * Custom filesystem error class

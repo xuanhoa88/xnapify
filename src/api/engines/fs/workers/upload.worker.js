@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { uploadFile, uploadFiles } from '../actions/upload';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,15 +13,15 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Upload result
  */
 async function processUpload(data) {
-  const { type, filesData } = data;
+  const { type, filesData, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'UPLOAD_SINGLE':
-      // filesData is an array, so we need the first element for single upload
-      return await uploadFile(filesData[0] || filesData);
+      return await fs.upload(filesData[0] || filesData, options);
 
     case 'UPLOAD_BATCH':
-      return await uploadFiles(filesData);
+      return await fs.upload(filesData, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown upload type: ${type}`);
@@ -29,7 +29,7 @@ async function processUpload(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processUpload, 'UPLOAD_FILES');
+const workerFunction = createWorkerHandler(processUpload, 'UPLOAD_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -39,4 +39,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processUpload, 'UPLOAD_FILES', 'Upload');
+setupWorkerProcess(processUpload, 'UPLOAD_FILES', 'Upload');

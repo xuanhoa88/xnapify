@@ -70,7 +70,7 @@ function makeSendDecision(emails, options = {}) {
 class EmailManager {
   constructor(config = {}) {
     this.providers = new Map();
-    this.defaultProvider = 'smtp';
+    this.defaultProvider = config.provider || 'smtp';
     this.config = config;
 
     // Initialize default providers
@@ -247,16 +247,6 @@ class EmailManager {
   }
 }
 
-// =============================================================================
-// SINGLETON & FACTORY
-// =============================================================================
-
-/**
- * Singleton instance of EmailManager
- * Used by the application via app.get('email')
- */
-const emailFactory = new EmailManager();
-
 /**
  * Create a new isolated EmailManager instance
  * Useful for testing or isolated email contexts
@@ -267,5 +257,3 @@ const emailFactory = new EmailManager();
 export function createFactory(config = {}) {
   return new EmailManager(config);
 }
-
-export default emailFactory;

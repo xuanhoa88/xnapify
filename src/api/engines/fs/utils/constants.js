@@ -53,27 +53,3 @@ export const ERROR_CODES = Object.freeze({
   PERMISSION_DENIED: 'PERMISSION_DENIED',
   STORAGE_FULL: 'STORAGE_FULL',
 });
-
-/**
- * Middleware Result Symbols
- *
- * Unique symbols for storing controller results on the request object.
- * Using Symbols avoids property name collisions with other middleware.
- *
- * @example
- * // Controller stores result:
- * req[MIDDLEWARE_RESULT.UPLOAD] = result;
- *
- * // Next middleware reads result:
- * const uploadResult = req[MIDDLEWARE_RESULT.UPLOAD];
- */
-export const MIDDLEWARE_RESULT = Object.freeze({
-  UPLOAD: Symbol('__rsk.fsUpload__'),
-  DOWNLOAD: Symbol('__rsk.fsDownload__'),
-  DELETE: Symbol('__rsk.fsDelete__'),
-  COPY: Symbol('__rsk.fsCopy__'),
-  RENAME: Symbol('__rsk.fsRename__'),
-  SYNC: Symbol('__rsk.fsSync__'),
-  INFO: Symbol('__rsk.fsInfo__'),
-  PREVIEW: Symbol('__rsk.fsPreview__'),
-});

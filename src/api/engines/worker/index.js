@@ -6,33 +6,42 @@
  */
 
 /**
- * Worker Engine - Centralized Worker Management
+ * Worker Engine - Centralized Worker Pool Management
  *
  * Provides reusable worker infrastructure for background task processing.
  * Used by email, filesystem, and other engines that need worker pool management.
  *
- * @example <caption>Creating a Worker Service</caption>
+ * @example
+ * // Create a worker pool for an engine
  * const workersContext = require.context('./workers', false, /\.worker\.js$/);
- * const workerService = createWorkerService(workersContext, {
+ * const workerPool = worker.createWorkerPool(workersContext, {
  *   engineName: 'Email',
  *   maxWorkers: 4,
  * });
  *
- * @example <caption>Sending a Request</caption>
- * const result = await workerService.sendRequest('send', 'SEND_EMAIL', emailData);
+ * // Send request to worker
+ * const result = await workerPool.sendRequest('send', 'SEND_EMAIL', emailData);
  *
- * @example <caption>Creating a Worker File</caption>
- * // In workers/send.worker.js
+ * @example
+ * // Creating a worker file (workers/send.worker.js)
+ *
  * const processEmail = async (data) => { ... };
- * export default createWorker(processEmail, 'SEND_EMAIL');
- * setupForkMode(processEmail, 'SEND_EMAIL', 'Email');
+ *
+ * // Same-process handler (default)
+ * export default createWorkerHandler(processEmail, 'SEND_EMAIL');
+ *
+ * // Fork mode handler (fallback)
+ * setupWorkerProcess(processEmail, 'SEND_EMAIL', 'Email');
  */
 
-// Worker utilities
-export { createWorker, setupForkMode } from './utils';
+// Worker pool factory
+export { createWorkerPool } from './createWorkerPool';
 
-// Worker service factory
-export { createWorkerService } from './factory';
+// Worker handler creator
+export { createWorkerHandler } from './createWorkerHandler';
+
+// Fork mode setup
+export { setupWorkerProcess } from './setupWorkerProcess';
 
 // Error class
 export { WorkerError } from './errors';

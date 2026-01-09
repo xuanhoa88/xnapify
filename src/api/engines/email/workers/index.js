@@ -16,7 +16,7 @@
  * - Comprehensive error handling and recovery
  */
 
-import { createWorkerService } from '../../worker';
+import { createWorkerPool } from '../../worker';
 import { EmailWorkerError } from '../utils';
 
 // Worker configuration
@@ -31,7 +31,7 @@ const WORKER_CONFIG = Object.freeze({
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Create worker service with email-specific configuration
-const workerService = createWorkerService(workersContext, {
+const workerService = createWorkerPool(workersContext, {
   ErrorHandler: EmailWorkerError,
   engineName: '📧 Email',
   maxWorkers: WORKER_CONFIG.maxWorkers,

@@ -3,7 +3,7 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createZip, extractZip, FilesystemWorkerError } from '../utils';
 
 /**
@@ -35,7 +35,7 @@ async function processZip(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processZip, 'ZIP_FILES');
+const workerFunction = createWorkerHandler(processZip, 'ZIP_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -45,4 +45,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processZip, 'ZIP_FILES', 'ZIP');
+setupWorkerProcess(processZip, 'ZIP_FILES', 'ZIP');

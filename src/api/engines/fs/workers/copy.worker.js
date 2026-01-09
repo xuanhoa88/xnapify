@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { copyFile, copyFiles } from '../actions/copy';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,7 +13,8 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Copy result
  */
 async function processCopy(data) {
-  const { type, operations, options } = data;
+  const { type, operations, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'COPY_SINGLE': {
@@ -22,15 +23,14 @@ async function processCopy(data) {
         targetFileName,
         options: singleOptions,
       } = operations;
-      return await copyFile(
-        sourceFileName,
-        targetFileName,
+      return await fs.copy(
+        { source: sourceFileName, target: targetFileName },
         singleOptions || options,
       );
     }
 
     case 'COPY_BATCH':
-      return await copyFiles(operations, options);
+      return await fs.copy(operations, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown copy type: ${type}`);
@@ -38,7 +38,7 @@ async function processCopy(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processCopy, 'COPY_FILES');
+const workerFunction = createWorkerHandler(processCopy, 'COPY_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -48,4 +48,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processCopy, 'COPY_FILES', 'Copy');
+setupWorkerProcess(processCopy, 'COPY_FILES', 'Copy');

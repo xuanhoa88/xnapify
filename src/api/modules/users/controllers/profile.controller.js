@@ -6,7 +6,6 @@
  */
 
 import { validateForm } from '../../../../shared/validator';
-import i18n from '../../../../shared/i18n';
 import {
   changePasswordFormSchema,
   deleteAccountFormSchema,
@@ -123,7 +122,7 @@ export async function updateProfile(req, res) {
 /**
  * Upload user avatar image
  *
- * Uses fs engine's uploadMiddleware internally - no direct multer import.
+ * Middleware runs in routes via fs.useUploadMiddleware()
  *
  * @route   POST /api/profile/avatar
  * @access  Private (requires authentication)
@@ -134,68 +133,52 @@ export async function uploadAvatar(req, res) {
   const http = req.app.get('http');
   const fs = req.app.get('fs');
   const models = req.app.get('models');
+  const { UserProfile } = models;
 
   try {
-    // Use fs engine's uploadFiles with asMiddleware option (handles multer internally)
-    const fsControllers = fs.createControllers();
-    const upload = fsControllers.uploadFiles({
-      maxFiles: 1,
-      maxFileSize: 10 * 1024 * 1024, // 10MB for user avatars
-      fieldName: 'avatar',
-      asMiddleware: true, // Store result in req[UPLOAD] and call next()
-    });
-
-    // Run upload as middleware
-    await new Promise((resolve, reject) => {
-      upload(req, res, err => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    // Check upload result using Symbol
-    const uploadResult = req[fs.MIDDLEWARE_RESULT.UPLOAD];
+    // Check upload result from middleware (runs in routes)
+    const uploadResult = req[fs.default.MIDDLEWARES.UPLOAD];
     if (!uploadResult || !uploadResult.success) {
       const errorMsg =
         (uploadResult && uploadResult.error) || 'No file uploaded';
       return http.sendValidationError(res, { avatar: errorMsg });
     }
 
-    // Get the uploaded file name from the result
-    // Handle both single upload (data.fileName) and batch upload (data.successful[]) formats
-    let fileName;
-    if (
-      uploadResult.data.successful &&
-      uploadResult.data.successful.length > 0
-    ) {
-      // Batch upload format
-      fileName =
-        uploadResult.data.successful[0].data &&
-        (uploadResult.data.successful[0].data.fileName ||
-          uploadResult.data.successful[0].data);
-    } else if (uploadResult.data.fileName) {
-      // Single upload format - data contains fileName directly
-      fileName = uploadResult.data.fileName;
-    }
-
+    const { fileName } = uploadResult.data;
     if (!fileName) {
       return http.sendValidationError(res, {
-        avatar: i18n.t('zod:profile.AVATAR_REQUIRED'),
+        avatar: 'Avatar is required',
       });
     }
 
-    // Link the uploaded file as avatar
-    const user = await profileService.linkUserAvatar(req.user.id, fileName, {
-      models,
-      fs,
-    });
+    // Get user with profile
+    const user = await profileService.getUserWithProfile(req.user.id, models);
+
+    // Store old avatar for cleanup
+    const oldAvatarPath = user.profile && user.profile.picture;
+
+    // Update profile with new avatar
+    if (user.profile) {
+      await user.profile.update({ picture: fileName });
+    } else {
+      await UserProfile.create({ user_id: req.user.id, picture: fileName });
+    }
+
+    // Delete old avatar if different
+    if (oldAvatarPath && oldAvatarPath !== fileName) {
+      try {
+        await fs.default.remove(oldAvatarPath);
+      } catch (error) {
+        console.warn('Failed to delete old avatar:', error.message);
+      }
+    }
 
     return http.sendSuccess(res, {
       message: 'Avatar uploaded successfully',
       profile: {
         id: user.id,
         email: user.email,
-        picture: (user.profile && user.profile.picture) || null,
+        picture: fileName,
       },
     });
   } catch (error) {
@@ -204,9 +187,75 @@ export async function uploadAvatar(req, res) {
 }
 
 /**
- * Remove user avatar
+ * Preview user avatar
  *
- * Uses fs engine's deleteFiles with asMiddleware option.
+ * Uses picture from auth token if available to avoid DB query.
+ * If avatar is an external URL, redirects to it.
+ * Returns default avatar on any error (for img tag compatibility).
+ *
+ * @route   GET /api/profile/avatar
+ * @access  Private (requires authentication)
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function previewAvatar(req, res) {
+  const fs = req.app.get('fs');
+
+  // Default avatar URL (can be configured via env)
+  const defaultAvatar =
+    process.env.RSK_DEFAULT_AVATAR_URL ||
+    'https://ui-avatars.com/api/?background=random&name=User';
+
+  // Safe redirect helper - never throws
+  const safeRedirect = url => {
+    try {
+      if (!res.headersSent) {
+        res.redirect(url);
+      }
+    } catch (e) {
+      // Last resort - send empty response
+      if (!res.headersSent) {
+        res.status(204).end();
+      }
+    }
+  };
+
+  try {
+    // Get avatar path from query param (for updated avatar) or from auth token
+    const avatarPath = req.query.fileName || req.user.picture;
+
+    // No avatar - redirect to default
+    if (typeof avatarPath !== 'string' || avatarPath.trim().length === 0) {
+      return safeRedirect(defaultAvatar);
+    }
+
+    // Check if avatar is an external URL (e.g., from OAuth/social login)
+    if (/^https?:\/\//i.test(avatarPath)) {
+      return safeRedirect(avatarPath);
+    }
+
+    // Local file - stream from fs
+    const result = await fs.default.preview(avatarPath);
+
+    if (!result.success) {
+      // File not found - redirect to default
+      return safeRedirect(defaultAvatar);
+    }
+
+    // Set headers and pipe stream
+    Object.entries(result.data.headers).forEach(([key, value]) => {
+      res.setHeader(key, value);
+    });
+
+    result.data.stream.pipe(res);
+  } catch (error) {
+    // Any error - redirect to default avatar
+    return safeRedirect(defaultAvatar);
+  }
+}
+
+/**
+ * Remove user avatar
  *
  * @route   DELETE /api/profile/avatar
  * @access  Private (requires authentication)
@@ -217,13 +266,10 @@ export async function removeAvatar(req, res) {
   const http = req.app.get('http');
   const fs = req.app.get('fs');
   const models = req.app.get('models');
-  const { User, UserProfile } = models;
 
   try {
     // Get user with profile to find current avatar
-    const user = await User.findByPk(req.user.id, {
-      include: [{ model: UserProfile, as: 'profile' }],
-    });
+    const user = await profileService.getUserWithProfile(req.user.id, models);
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
@@ -235,34 +281,14 @@ export async function removeAvatar(req, res) {
       });
     }
 
-    const avatarFileName = user.profile.picture;
-
-    // Use fs engine's deleteFiles with asMiddleware option
-    const fsControllers = fs.createControllers();
-
-    // Inject fileName into request body for deleteFiles controller
-    req.body = { fileName: avatarFileName };
-
-    const deleteMiddleware = fsControllers.deleteFiles({
-      asMiddleware: true, // Store result in req[DELETE] and call next()
-    });
-
-    // Run delete as middleware
-    await new Promise((resolve, reject) => {
-      deleteMiddleware(req, res, err => {
-        if (err) reject(err);
-        else resolve();
-      });
-    });
-
-    // Check delete result using Symbol
-    const deleteResult = req[fs.MIDDLEWARE_RESULT.DELETE];
-    if (!deleteResult || !deleteResult.success) {
+    // Delete the avatar file using fs.remove()
+    try {
+      if (user.profile.picture) {
+        await fs.default.remove(user.profile.picture);
+      }
+    } catch (error) {
       // Log warning but continue - file may already be deleted
-      console.warn(
-        'Failed to delete avatar file:',
-        deleteResult && deleteResult.error,
-      );
+      console.warn('Failed to delete avatar file:', error.message);
     }
 
     // Update profile to remove avatar reference

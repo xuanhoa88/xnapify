@@ -45,7 +45,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
  * @param {number} options.maxRequestsPerWorker - Max requests per worker before restart
  * @returns {WorkerService} Worker service instance
  */
-export function createWorkerService(workersContext, options = {}) {
+export function createWorkerPool(workersContext, options = {}) {
   const {
     ErrorHandler = WorkerError,
     engineName = 'Worker',
@@ -468,4 +468,4 @@ export function createWorkerService(workersContext, options = {}) {
 }
 
 // Default options
-createWorkerService.options = DEFAULT_WORKER_CONFIG;
+createWorkerPool.options = DEFAULT_WORKER_CONFIG;

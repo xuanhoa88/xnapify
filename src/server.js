@@ -117,16 +117,24 @@ function setupGracefulShutdown(httpServer, wsServer) {
 // HELPERS
 // =============================================================================
 
+// Localhost IP addresses (for normalization and internal request detection)
+const LOCALHOST_IPS = [
+  '0.0.0.0',
+  '127.0.0.1',
+  '::1',
+  '::',
+  '::ffff:127.0.0.1',
+  'localhost',
+];
+
+function isLocalhost(ip) {
+  return LOCALHOST_IPS.includes(ip);
+}
+
 function getBaseUrl({ host, port }) {
   const isHttps = process.env.RSK_HTTPS === 'true' || nodeEnv === 'production';
   const protocol = isHttps ? 'https' : 'http';
-
-  const normalizedHost = ['0.0.0.0', '127.0.0.1', '::', 'localhost'].includes(
-    host,
-  )
-    ? 'localhost'
-    : host;
-
+  const normalizedHost = isLocalhost(host) ? 'localhost' : host;
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
@@ -431,6 +439,11 @@ async function main(app, staticPath) {
     max: __DEV__ ? 100 : parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
     standardHeaders: true,
     legacyHeaders: false,
+    // Skip rate limiting for internal SSR requests (server fetching its own API)
+    skip: req => {
+      const ip = req.ip || req.socket.remoteAddress || '';
+      return !req.headers['x-forwarded-for'] && isLocalhost(ip);
+    },
     handler: (req, res, _next, rateLimitInfo) => {
       res.status(rateLimitInfo.statusCode).json({
         success: false,

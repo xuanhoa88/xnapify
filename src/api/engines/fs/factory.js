@@ -1,0 +1,182 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { LocalFilesystemProvider } from './providers/local';
+import { MemoryFilesystemProvider } from './providers/memory';
+import { SelfHostFilesystemProvider } from './providers/selfhost';
+import { FilesystemError } from './utils';
+import { upload as uploadOp } from './operations/upload';
+import { download as downloadOp } from './operations/download';
+import { remove as removeOp } from './operations/remove';
+import { copy as copyOp } from './operations/copy';
+import { rename as renameOp } from './operations/rename';
+import { info as infoOp } from './operations/info';
+import { preview as previewOp } from './operations/preview';
+import { sync as syncOp } from './operations/sync';
+import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
+
+/**
+ * Filesystem Manager
+ *
+ * Manages multiple filesystem providers and provides a unified interface.
+ * Supports upload, download, delete, copy, rename, info, preview, and sync operations.
+ */
+class FilesystemManager {
+  constructor(config = {}) {
+    this.providers = new Map();
+    this.defaultProvider = config.provider || 'local';
+    this.config = config;
+
+    // Initialize default providers
+    this.initializeDefaultProviders();
+  }
+
+  /**
+   * Initialize default filesystem providers
+   * @private
+   */
+  initializeDefaultProviders() {
+    // Local filesystem provider
+    this.providers.set(
+      'local',
+      new LocalFilesystemProvider(this.config.local || {}),
+    );
+
+    // Memory filesystem provider (for testing)
+    this.providers.set(
+      'memory',
+      new MemoryFilesystemProvider(this.config.memory || {}),
+    );
+
+    // Self-host filesystem provider (when configured)
+    if (this.config.selfhost && this.config.selfhost.baseUrl) {
+      this.providers.set(
+        'selfhost',
+        new SelfHostFilesystemProvider(this.config.selfhost),
+      );
+    }
+  }
+
+  /**
+   * Add a custom provider (cannot override existing)
+   * @param {string} name - Provider name
+   * @param {Object} provider - Provider instance
+   * @returns {boolean} True if added, false if already exists
+   */
+  addProvider(name, provider) {
+    if (this.providers.has(name)) {
+      console.warn(
+        `Filesystem provider "${name}" already exists. Cannot override.`,
+      );
+      return false;
+    }
+    this.providers.set(name, provider);
+    return true;
+  }
+
+  /**
+   * Get a filesystem provider
+   * @param {string} name - Provider name (optional, uses default if not specified)
+   * @returns {Object} Provider instance
+   */
+  getProvider(name = null) {
+    const providerName = name || this.defaultProvider;
+    const provider = this.providers.get(providerName);
+
+    if (!provider) {
+      throw new FilesystemError(
+        `Filesystem provider not found: ${providerName}`,
+        'PROVIDER_NOT_FOUND',
+        404,
+      );
+    }
+
+    return provider;
+  }
+
+  // =============================================================================
+  // OPERATIONS (delegated to separate files)
+  // =============================================================================
+
+  async upload(files, options = {}) {
+    return uploadOp(this, files, options);
+  }
+
+  async download(fileNames, options = {}) {
+    return downloadOp(this, fileNames, options);
+  }
+
+  async remove(fileNames, options = {}) {
+    return removeOp(this, fileNames, options);
+  }
+
+  async copy(ops, options = {}) {
+    return copyOp(this, ops, options);
+  }
+
+  async rename(ops, options = {}) {
+    return renameOp(this, ops, options);
+  }
+
+  async info(fileName, options = {}) {
+    return infoOp(this, fileName, options);
+  }
+
+  async preview(fileName, options = {}) {
+    return previewOp(this, fileName, options);
+  }
+
+  async sync(ops, options = {}) {
+    return syncOp(this, ops, options);
+  }
+
+  // =============================================================================
+  // MIDDLEWARE HELPERS
+  // =============================================================================
+
+  /**
+   * Create upload middleware for Express routes
+   * @param {Object} options - Multer options (fieldName, maxFiles, maxFileSize, allowedMimeTypes, provider)
+   * @returns {Function} Express middleware
+   */
+  useUploadMiddleware(options = {}) {
+    const provider = this.getProvider(options.provider);
+    return createUploadMiddleware(provider, options);
+  }
+
+  // =============================================================================
+  // LOW-LEVEL PROVIDER METHODS
+  // =============================================================================
+
+  async exists(fileName, options = {}) {
+    const provider = this.getProvider(options.provider);
+    return await provider.exists(fileName);
+  }
+
+  async getMetadata(fileName, options = {}) {
+    const provider = this.getProvider(options.provider);
+    return await provider.getMetadata(fileName);
+  }
+
+  async list(directory = '', options = {}) {
+    const provider = this.getProvider(options.provider);
+    return await provider.list(directory, options);
+  }
+}
+
+/**
+ * Create a new isolated FilesystemManager instance
+ * Useful for testing or isolated filesystem contexts
+ *
+ * @param {Object} config - Filesystem manager configuration
+ * @returns {FilesystemManager} New manager instance
+ */
+export function createFactory(config = {}) {
+  const instance = new FilesystemManager(config);
+  instance.MIDDLEWARES = MIDDLEWARES;
+  return instance;
+}

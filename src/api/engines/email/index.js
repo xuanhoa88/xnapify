@@ -12,21 +12,19 @@
  * (SMTP, SendGrid, Mailgun, Memory). Automatically handles validation,
  * template rendering, and offloads to background workers for batch operations.
  *
- * @module engines/email
- *
  * @example
- * // 1. Via app provider (recommended)
- * const email = app.get('email');
+ * // Access singleton instance
+ * const manager = email.default;
  *
  * // Single email
- * await email.send({
+ * await email.default.send({
  *   to: 'user@example.com',
  *   subject: 'Welcome',
  *   html: '<p>Hello!</p>'
  * });
  *
  * // With template placeholders (LiquidJS)
- * await email.send({
+ * await email.default.send({
  *   to: 'user@example.com',
  *   subject: 'Hi {{name}}',
  *   html: '<p>Hello {{name}}</p>',
@@ -34,24 +32,18 @@
  * });
  *
  * // Bulk emails (auto-offloads to worker for 5+ emails)
- * await email.send([
+ * await email.default.send([
  *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
  *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
  * ]);
  *
  * @example
- * // 2. Direct import
- * await emailFactory.send({ to, subject, html });
- *
- * @example
- * // 3. Create isolated instance (for testing)
- * const testEmail = createFactory({ defaultProvider: 'memory' });
+ * // Create isolated instance (for testing)
+ * const testEmail = email.createFactory({ provider: 'memory' });
  * await testEmail.send({ to, subject, html });
  *
  * @example
- * // 4. Add custom provider (cannot override existing)
- * const email = app.get('email');
- *
+ * // Add custom provider (cannot override existing)
  * class ResendProvider {
  *   async send(emailData) {
  *     // Custom send logic
@@ -59,8 +51,19 @@
  *   }
  * }
  *
- * email.addProvider('resend', new ResendProvider());
- * await email.send({ to, subject, html }, { provider: 'resend' });
+ * email.default.addProvider('resend', new ResendProvider());
+ * await email.default.send({ to, subject, html }, { provider: 'resend' });
  */
 
-export { default as emailFactory, createFactory } from './factory';
+import { createFactory } from './factory';
+
+// Export factory for creating instances
+export { createFactory };
+
+/**
+ * Singleton instance of EmailManager
+ * Used by the application via email.default
+ */
+const email = createFactory();
+
+export default email;

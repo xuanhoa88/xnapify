@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { deleteFile, deleteFiles } from '../actions/delete';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,14 +13,15 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Delete result
  */
 async function processDelete(data) {
-  const { type, fileNames } = data;
+  const { type, fileNames, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'DELETE_SINGLE':
-      return await deleteFile(fileNames);
+      return await fs.remove(fileNames, options);
 
     case 'DELETE_BATCH':
-      return await deleteFiles(fileNames);
+      return await fs.remove(fileNames, options);
 
     default:
       throw new FilesystemWorkerError(`Unknown delete type: ${type}`);
@@ -28,7 +29,7 @@ async function processDelete(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processDelete, 'DELETE_FILES');
+const workerFunction = createWorkerHandler(processDelete, 'DELETE_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -38,4 +39,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processDelete, 'DELETE_FILES', 'Delete');
+setupWorkerProcess(processDelete, 'DELETE_FILES', 'Delete');

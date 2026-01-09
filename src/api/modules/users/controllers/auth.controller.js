@@ -48,8 +48,8 @@ export async function register(req, res) {
     const models = req.app.get('models');
     const auth = req.app.get('auth');
 
-    // Register user
-    const user = await authService.registerUser(
+    // Register user - returns complete user data with RBAC
+    const userData = await authService.registerUser(
       {
         email,
         password,
@@ -57,12 +57,13 @@ export async function register(req, res) {
       { models, auth },
     );
 
-    // Get complete user data with RBAC information
-    const userData = await authService.getCurrentUser(user.id, models);
-
     // Generate token pair using configured JWT instance
     const jwt = req.app.get('jwt');
-    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
+    const tokens = jwt.generateTokenPair({
+      id: userData.id,
+      email: userData.email,
+      picture: userData.picture || null,
+    });
 
     // Set token cookies
     auth.setTokenCookie(res, tokens.accessToken);
@@ -112,18 +113,19 @@ export async function login(req, res) {
     const models = req.app.get('models');
     const auth = req.app.get('auth');
 
-    // Authenticate user
-    const user = await authService.authenticateUser(email, password, {
+    // Authenticate user - returns complete user data with RBAC in one query
+    const userData = await authService.authenticateUser(email, password, {
       models,
       auth,
     });
 
-    // Get complete user data with RBAC information
-    const userData = await authService.getCurrentUser(user.id, models);
-
     // Generate token pair using configured JWT instance
     const jwt = req.app.get('jwt');
-    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
+    const tokens = jwt.generateTokenPair({
+      id: userData.id,
+      email: userData.email,
+      picture: userData.picture || null,
+    });
 
     // Set cookie options based on rememberMe
     // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
@@ -288,7 +290,11 @@ export async function emailVerification(req, res) {
     // Generate token pair using configured JWT instance
     const jwt = req.app.get('jwt');
     const auth = req.app.get('auth');
-    const tokens = jwt.generateTokenPair({ id: user.id, email: user.email });
+    const tokens = jwt.generateTokenPair({
+      id: user.id,
+      email: user.email,
+      picture: userData.picture || null,
+    });
 
     // Set token cookies
     auth.setTokenCookie(res, tokens.accessToken);

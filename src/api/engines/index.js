@@ -23,8 +23,8 @@ export * as cache from './cache';
 // Email engine
 export * as email from './email';
 
-// Worker engine (shared worker infrastructure)
+// Worker engine
 export * as worker from './worker';
 
-// Queue engine (job queue management)
+// Queue engine
 export * as queue from './queue';

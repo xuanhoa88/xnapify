@@ -93,19 +93,22 @@ function getInstance(app) {
   const appCache = app && app.get('cache');
   if (!appCache) return null;
 
-  // If appCache is a function (factory), call it
-  if (typeof appCache === 'function') {
+  // Handle namespace object pattern (cache.default is the factory)
+  const factory = appCache.default || appCache;
+
+  // If factory is a function, call it to create instance
+  if (typeof factory === 'function') {
     const config = customConfig || DEFAULT_OPTIONS;
-    const baseCache = appCache(config);
+    const baseCache = factory(config);
     instance =
-      typeof appCache.withNamespace === 'function'
-        ? appCache.withNamespace('rbac', baseCache)
+      typeof factory.withNamespace === 'function'
+        ? factory.withNamespace('rbac', baseCache)
         : baseCache;
     return instance;
   }
 
-  // If appCache is already an instance, use it directly
-  instance = appCache;
+  // If factory is already an instance, use it directly
+  instance = factory;
   return instance;
 }
 

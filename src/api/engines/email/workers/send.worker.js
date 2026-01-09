@@ -10,7 +10,7 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { EmailError, processEmails } from '../utils';
 
 /**
@@ -34,7 +34,7 @@ async function processSend(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processSend, 'SEND_EMAIL');
+const workerFunction = createWorkerHandler(processSend, 'SEND_EMAIL');
 
 // Export for same-process execution
 export default workerFunction;
@@ -44,4 +44,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processSend, 'SEND_EMAIL', 'Email');
+setupWorkerProcess(processSend, 'SEND_EMAIL', 'Email');

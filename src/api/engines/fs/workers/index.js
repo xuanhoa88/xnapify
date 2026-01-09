@@ -16,14 +16,14 @@
  * - Comprehensive error handling and recovery
  */
 
-import { createWorkerService } from '../../worker';
+import { createWorkerPool } from '../../worker';
 import { FilesystemWorkerError } from '../utils';
 
 // Use require.context to dynamically import worker files
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Create worker service with filesystem-specific configuration
-const workerService = createWorkerService(workersContext, {
+const workerService = createWorkerPool(workersContext, {
   ErrorHandler: FilesystemWorkerError,
   engineName: '📁 Filesystem',
 });

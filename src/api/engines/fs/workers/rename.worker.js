@@ -3,8 +3,8 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorker, setupForkMode } from '../../worker';
-import { renameFile, renameFiles } from '../actions/rename';
+import { createWorkerHandler, setupWorkerProcess } from '../../worker';
+import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
 /**
@@ -13,16 +13,17 @@ import { FilesystemWorkerError } from '../utils';
  * @returns {Promise<Object>} Rename result
  */
 async function processRename(data) {
-  const { type, operations } = data;
+  const { type, operations, options = {} } = data;
+  const fs = createFactory(options);
 
   switch (type) {
     case 'RENAME_SINGLE': {
-      const { oldName, newName, options } = operations;
-      return await renameFile(oldName, newName, options);
+      const { oldName, newName, options: singleOptions } = operations;
+      return await fs.rename({ oldName, newName }, singleOptions || options);
     }
 
     case 'RENAME_BATCH':
-      return await renameFiles(operations.renameOperations, operations.options);
+      return await fs.rename(operations.renameOperations, operations.options);
 
     default:
       throw new FilesystemWorkerError(`Unknown rename type: ${type}`);
@@ -30,7 +31,7 @@ async function processRename(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorker(processRename, 'RENAME_FILES');
+const workerFunction = createWorkerHandler(processRename, 'RENAME_FILES');
 
 // Export for same-process execution
 export default workerFunction;
@@ -40,4 +41,4 @@ export default workerFunction;
 // =============================================================================
 
 // Setup fork mode execution using helper
-setupForkMode(processRename, 'RENAME_FILES', 'Rename');
+setupWorkerProcess(processRename, 'RENAME_FILES', 'Rename');

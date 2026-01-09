@@ -12,7 +12,7 @@
 
 import { Liquid } from 'liquidjs';
 import { createResponse } from './errors';
-import { EmailManager } from '../factory';
+import { createFactory } from '../factory';
 
 // Create a reusable Liquid engine instance
 const liquid = new Liquid();
@@ -71,7 +71,7 @@ export async function processSingleEmail(emailData, manager, options) {
  * @returns {Promise<Object>} Send result
  */
 export async function processEmails(emailList, options = {}) {
-  const manager = new EmailManager(options);
+  const manager = createFactory(options);
 
   // Single email
   if (emailList.length === 1) {
