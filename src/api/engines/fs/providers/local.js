@@ -74,10 +74,58 @@ export class LocalFilesystemProvider {
         );
       }
 
+      // Ensure fileBuffer is a real Buffer (handle IPC serialization)
+      let buffer = fileBuffer;
+      if (!Buffer.isBuffer(fileBuffer)) {
+        // Buffer was serialized through IPC - reconstruct it
+        if (
+          fileBuffer &&
+          fileBuffer.type === 'Buffer' &&
+          Array.isArray(fileBuffer.data)
+        ) {
+          // Standard Buffer JSON serialization format: { type: 'Buffer', data: [...] }
+          buffer = Buffer.from(fileBuffer.data);
+        } else if (fileBuffer && Array.isArray(fileBuffer)) {
+          // Plain array of bytes
+          buffer = Buffer.from(fileBuffer);
+        } else if (
+          fileBuffer &&
+          typeof fileBuffer === 'object' &&
+          fileBuffer.data
+        ) {
+          // Object with data property (other serialization formats)
+          buffer = Buffer.from(fileBuffer.data);
+        } else if (fileBuffer && typeof fileBuffer === 'object') {
+          // Try to create buffer from object values (numeric keys)
+          const values = Object.values(fileBuffer);
+          if (values.length > 0 && typeof values[0] === 'number') {
+            buffer = Buffer.from(values);
+          } else {
+            console.error('[LocalFilesystemProvider] Invalid buffer format:', {
+              type: typeof fileBuffer,
+              isNull: fileBuffer === null,
+              isUndefined: fileBuffer === undefined,
+              keys: fileBuffer ? Object.keys(fileBuffer).slice(0, 5) : [],
+            });
+            throw new FilesystemError(
+              'Invalid file buffer provided - unable to reconstruct from serialized data',
+            );
+          }
+        } else {
+          console.error(
+            '[LocalFilesystemProvider] Buffer is null/undefined:',
+            fileBuffer,
+          );
+          throw new FilesystemError(
+            'Invalid file buffer provided - buffer is null or undefined',
+          );
+        }
+      }
+
       // Validate file size
-      if (fileBuffer.length > this.maxFileSize) {
+      if (buffer.length > this.maxFileSize) {
         throw new FilesystemError(
-          `File size exceeds limit: ${fileBuffer.length} > ${this.maxFileSize}`,
+          `File size exceeds limit: ${buffer.length} > ${this.maxFileSize}`,
         );
       }
 
@@ -87,7 +135,7 @@ export class LocalFilesystemProvider {
       await this.ensureDir(directory);
 
       // Write file
-      await fs.writeFile(filePath, fileBuffer);
+      await fs.writeFile(filePath, buffer);
 
       // Return file metadata
       const stats = await fs.stat(filePath);

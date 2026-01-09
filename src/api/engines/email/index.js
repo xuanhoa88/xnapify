@@ -5,17 +5,48 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/** @namespace Email controller for HTTP handling */
-export * from './controllers';
+/**
+ * Email Engine
+ *
+ * Provides email sending capabilities with multiple provider support
+ * (SMTP, SendGrid, Mailgun, Memory). Automatically handles validation,
+ * template rendering, and offloads to background workers for batch operations.
+ *
+ * @module engines/email
+ *
+ * @example
+ * // 1. Via app provider (recommended)
+ * const email = app.get('email');
+ *
+ * // Single email
+ * await email.send({
+ *   to: 'user@example.com',
+ *   subject: 'Welcome',
+ *   html: '<p>Hello!</p>'
+ * });
+ *
+ * // With template placeholders (LiquidJS)
+ * await email.send({
+ *   to: 'user@example.com',
+ *   subject: 'Hi {{name}}',
+ *   html: '<p>Hello {{name}}</p>',
+ *   templateData: { name: 'John' }
+ * });
+ *
+ * // Bulk emails (auto-offloads to worker for 5+ emails)
+ * await email.send([
+ *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
+ *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
+ * ]);
+ *
+ * @example
+ * // 2. Direct import
+ * await emailFactory.send({ to, subject, html });
+ *
+ * @example
+ * // 3. Create isolated instance (for testing)
+ * const testEmail = createFactory({ defaultProvider: 'memory' });
+ * await testEmail.send({ to, subject, html });
+ */
 
-/** @namespace Email action functions */
-export { send } from './send';
-
-/** @namespace Email manager class */
-export { EmailManager } from './manager';
-
-/** @namespace Email providers */
-export { SmtpEmailProvider } from './providers/smtp';
-export { SendGridEmailProvider } from './providers/sendgrid';
-export { MailgunEmailProvider } from './providers/mailgun';
-export { MemoryEmailProvider } from './providers/memory';
+export { default as emailFactory, createFactory } from './manager';

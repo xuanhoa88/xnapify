@@ -9,7 +9,7 @@ import { Router } from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import { fs, http, auth, db, cache, email, worker } from './engines';
+import { fs, http, auth, db, cache, email, worker, queue } from './engines';
 
 // Module-scoped Symbol for allowing provider writes (shared across all guards)
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
@@ -20,13 +20,14 @@ const APP_PROVIDERS = new Set([
   'jwt', // JWT utilities
   'ws', // WebSocket server instance
   'db', // Database ORM instance
+  'models', // Database models
+  'cache', // Cache engine
   'worker', // Worker pool management
+  'queue', // Queue engine for background jobs
   'fs', // Filesystem utilities
   'http', // HTTP utilities
   'auth', // Authentication engine
-  'cache', // Cache engine
   'email', // Email engine
-  'models', // Database models
 ]);
 
 /**
@@ -251,6 +252,9 @@ function registerAppProviders(app) {
 
   // Register worker provider
   app.set('worker', worker);
+
+  // Register queue provider
+  app.set('queue', queue);
 }
 
 /**

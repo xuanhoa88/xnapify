@@ -14,7 +14,14 @@ import { FilesystemManager } from '../manager';
 export async function uploadFile(fileData, options = {}) {
   try {
     const manager = new FilesystemManager(options);
-    const result = await manager.store(fileData.fileName, fileData.buffer, {
+
+    // Reconstruct buffer if it was serialized for IPC (base64 encoded)
+    let { buffer } = fileData;
+    if (fileData.bufferEncoding === 'base64' && typeof buffer === 'string') {
+      buffer = Buffer.from(buffer, 'base64');
+    }
+
+    const result = await manager.store(fileData.fileName, buffer, {
       originalName: fileData.originalName,
       mimeType: fileData.mimeType,
       size: fileData.size,

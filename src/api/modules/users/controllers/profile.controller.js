@@ -141,7 +141,7 @@ export async function uploadAvatar(req, res) {
     const upload = fsControllers.uploadFiles({
       maxFiles: 1,
       maxFileSize: 10 * 1024 * 1024, // 10MB for user avatars
-      fileFieldName: 'avatar',
+      fieldName: 'avatar',
       asMiddleware: true, // Store result in req[UPLOAD] and call next()
     });
 
@@ -162,15 +162,29 @@ export async function uploadAvatar(req, res) {
     }
 
     // Get the uploaded file name from the result
-    const uploadedFiles = uploadResult.data && uploadResult.data.successful;
-    if (!uploadedFiles || uploadedFiles.length === 0) {
+    // Handle both single upload (data.fileName) and batch upload (data.successful[]) formats
+    let fileName;
+    if (
+      uploadResult.data.successful &&
+      uploadResult.data.successful.length > 0
+    ) {
+      // Batch upload format
+      fileName =
+        uploadResult.data.successful[0].data &&
+        (uploadResult.data.successful[0].data.fileName ||
+          uploadResult.data.successful[0].data);
+    } else if (uploadResult.data.fileName) {
+      // Single upload format - data contains fileName directly
+      fileName = uploadResult.data.fileName;
+    }
+
+    if (!fileName) {
       return http.sendValidationError(res, {
         avatar: i18n.t('zod:profile.AVATAR_REQUIRED'),
       });
     }
 
     // Link the uploaded file as avatar
-    const { fileName } = uploadedFiles[0].data;
     const user = await profileService.linkUserAvatar(req.user.id, fileName, {
       models,
       fs,

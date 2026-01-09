@@ -25,11 +25,12 @@ import { WorkerError } from './errors';
 /**
  * Default worker configuration
  */
-export const DEFAULT_WORKER_CONFIG = Object.freeze({
+const DEFAULT_WORKER_CONFIG = Object.freeze({
   maxWorkers: Math.min(os.cpus().length, 4),
   workerTimeout: 60000, // 60 seconds
   maxRequestsPerWorker: 100,
   workerCreationTimeout: 10000, // 10 seconds
+  forceFork: false, // Force fork mode (skip same-process execution)
 });
 
 /**
@@ -52,6 +53,7 @@ export function createWorkerService(workersContext, options = {}) {
     workerTimeout = DEFAULT_WORKER_CONFIG.workerTimeout,
     maxRequestsPerWorker = DEFAULT_WORKER_CONFIG.maxRequestsPerWorker,
     workerCreationTimeout = DEFAULT_WORKER_CONFIG.workerCreationTimeout,
+    forceFork = DEFAULT_WORKER_CONFIG.forceFork,
   } = options;
 
   // Cache for imported worker modules
@@ -155,7 +157,7 @@ export function createWorkerService(workersContext, options = {}) {
      */
     async getWorker(workerType) {
       if (!this.workerPools[workerType]) {
-        throw new ErrorClass(`Unknown worker type: ${workerType}`);
+        throw new ErrorHandler(`Unknown worker type: ${workerType}`);
       }
 
       const pool = this.workerPools[workerType];
@@ -263,27 +265,34 @@ export function createWorkerService(workersContext, options = {}) {
      * @param {string} workerType - Type of worker
      * @param {string} messageType - Message type for the worker
      * @param {Object} data - Request data to process
+     * @param {Object} requestOptions - Request-specific options
+     * @param {boolean} requestOptions.forceFork - Force fork for this request
      * @returns {Promise<Object>} Worker response
      */
-    async sendRequest(workerType, messageType, data) {
-      const workerModule = tryImportWorkerModule(workerType);
+    async sendRequest(workerType, messageType, data, requestOptions = {}) {
+      // Check if we should force fork (from config or per-request)
+      const shouldForceFork = requestOptions.forceFork || forceFork;
 
-      if (workerModule && typeof workerModule.default === 'function') {
-        try {
-          const result = await workerModule.default({
-            id: ++this.requestId,
-            type: messageType,
-            data,
-          });
+      if (!shouldForceFork) {
+        const workerModule = tryImportWorkerModule(workerType);
 
-          if (result && result.success != null) {
-            return result;
+        if (workerModule && typeof workerModule.default === 'function') {
+          try {
+            const result = await workerModule.default({
+              id: ++this.requestId,
+              type: messageType,
+              data,
+            });
+
+            if (result && result.success != null) {
+              return result;
+            }
+          } catch (error) {
+            console.warn(
+              `Same-process worker '${workerType}' failed, falling back to fork:`,
+              error.message,
+            );
           }
-        } catch (error) {
-          console.warn(
-            `Same-process worker '${workerType}' failed, falling back to fork:`,
-            error.message,
-          );
         }
       }
 
@@ -457,3 +466,6 @@ export function createWorkerService(workersContext, options = {}) {
 
   return workerService;
 }
+
+// Default options
+createWorkerService.options = DEFAULT_WORKER_CONFIG;

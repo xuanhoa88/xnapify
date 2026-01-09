@@ -28,20 +28,20 @@ function makeCopyDecision(operations, options = {}) {
 
   if (!Array.isArray(operations)) {
     return {
-      shouldUseWorker: false,
+      useWorker: false,
       reason: 'Invalid operations data',
       operation: 'copy',
       timestamp: new Date().toISOString(),
     };
   }
 
-  const shouldUseWorker = operations.length >= thresholds.batchCopyThreshold;
-  const reason = shouldUseWorker
+  const useWorker = operations.length >= thresholds.batchCopyThreshold;
+  const reason = useWorker
     ? `Batch copy (${operations.length} operations)`
     : 'Few operations, main process sufficient';
 
   return {
-    shouldUseWorker,
+    useWorker,
     reason,
     operation: 'copy',
     timestamp: new Date().toISOString(),
@@ -107,10 +107,12 @@ export async function copyFiles(req, res, options = {}, next = null) {
     const decision = makeCopyDecision(copyOperations, options);
 
     let result;
-    if (decision.shouldUseWorker) {
+    // Use worker if decision says so OR if useWorker is explicitly set
+    if (decision.useWorker || config.useWorker) {
       // Use worker service for batch copy
       result = await workerService.processCopy(copyOperations, {
         overwrite: req.body.overwrite || false,
+        forceFork: config.useWorker,
       });
     } else {
       // Use main process for few operations

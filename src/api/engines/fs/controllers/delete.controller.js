@@ -28,20 +28,20 @@ function makeDeleteDecision(fileNames, options = {}) {
 
   if (!Array.isArray(fileNames)) {
     return {
-      shouldUseWorker: false,
+      useWorker: false,
       reason: 'Invalid file names data',
       operation: 'delete',
       timestamp: new Date().toISOString(),
     };
   }
 
-  const shouldUseWorker = fileNames.length >= thresholds.batchDeleteThreshold;
-  const reason = shouldUseWorker
+  const useWorker = fileNames.length >= thresholds.batchDeleteThreshold;
+  const reason = useWorker
     ? `Batch delete (${fileNames.length} files)`
     : 'Few files, main process sufficient';
 
   return {
-    shouldUseWorker,
+    useWorker,
     reason,
     operation: 'delete',
     timestamp: new Date().toISOString(),
@@ -89,9 +89,12 @@ export async function deleteFiles(req, res, options = {}, next = null) {
     const decision = makeDeleteDecision(fileNames, options);
 
     let result;
-    if (decision.shouldUseWorker) {
+    // Use worker if decision says so OR if useWorker is explicitly set
+    if (decision.useWorker || config.useWorker) {
       // Use worker service for batch delete
-      result = await workerService.processDelete(fileNames);
+      result = await workerService.processDelete(fileNames, {
+        forceFork: config.useWorker,
+      });
     } else {
       // Use main process for few files
       const results = await Promise.allSettled(

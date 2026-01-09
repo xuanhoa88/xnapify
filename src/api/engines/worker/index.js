@@ -10,13 +10,29 @@
  *
  * Provides reusable worker infrastructure for background task processing.
  * Used by email, filesystem, and other engines that need worker pool management.
+ *
+ * @example <caption>Creating a Worker Service</caption>
+ * const workersContext = require.context('./workers', false, /\.worker\.js$/);
+ * const workerService = createWorkerService(workersContext, {
+ *   engineName: 'Email',
+ *   maxWorkers: 4,
+ * });
+ *
+ * @example <caption>Sending a Request</caption>
+ * const result = await workerService.sendRequest('send', 'SEND_EMAIL', emailData);
+ *
+ * @example <caption>Creating a Worker File</caption>
+ * // In workers/send.worker.js
+ * const processEmail = async (data) => { ... };
+ * export default createWorker(processEmail, 'SEND_EMAIL');
+ * setupForkMode(processEmail, 'SEND_EMAIL', 'Email');
  */
 
-// Error classes
-export { WorkerError, createWorkerErrorClass } from './errors';
-
 // Worker utilities
-export { createWorker, setupForkMode } from './worker-utils';
+export { createWorker, setupForkMode } from './utils';
 
 // Worker service factory
-export { createWorkerService, DEFAULT_WORKER_CONFIG } from './WorkerService';
+export { createWorkerService } from './factory';
+
+// Error class
+export { WorkerError } from './errors';

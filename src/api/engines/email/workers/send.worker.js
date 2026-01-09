@@ -11,8 +11,7 @@
  */
 
 import { createWorker, setupForkMode } from '../../worker';
-import { send } from '../send';
-import { EmailWorkerError } from '../utils';
+import { EmailError, processEmails } from '../utils';
 
 /**
  * Process email send operations
@@ -20,15 +19,18 @@ import { EmailWorkerError } from '../utils';
  * @returns {Promise<Object>} Send result
  */
 async function processSend(data) {
-  const { type, emails, options } = data;
+  const { emails, options } = data;
+  const emailList = Array.isArray(emails) ? emails : [emails];
 
-  switch (type) {
-    case 'SEND_EMAIL':
-      return await send(emails, options);
-
-    default:
-      throw new EmailWorkerError(`Unknown send type: ${type}`);
+  if (emailList.length === 0) {
+    throw new EmailError(
+      'At least one email is required',
+      'INVALID_INPUT',
+      400,
+    );
   }
+
+  return processEmails(emailList, options);
 }
 
 // Create worker function using helper

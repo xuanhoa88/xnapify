@@ -28,20 +28,20 @@ function makeRenameDecision(operations, options = {}) {
 
   if (!Array.isArray(operations)) {
     return {
-      shouldUseWorker: false,
+      useWorker: false,
       reason: 'Invalid operations data',
       operation: 'rename',
       timestamp: new Date().toISOString(),
     };
   }
 
-  const shouldUseWorker = operations.length >= thresholds.batchRenameThreshold;
-  const reason = shouldUseWorker
+  const useWorker = operations.length >= thresholds.batchRenameThreshold;
+  const reason = useWorker
     ? `Batch rename (${operations.length} operations)`
     : 'Few operations, main process sufficient';
 
   return {
-    shouldUseWorker,
+    useWorker,
     reason,
     operation: 'rename',
     timestamp: new Date().toISOString(),
@@ -103,9 +103,12 @@ export async function renameFiles(req, res, options = {}, next = null) {
     const decision = makeRenameDecision(renameOperations, options);
 
     let result;
-    if (decision.shouldUseWorker) {
+    // Use worker if decision says so OR if useWorker is explicitly set
+    if (decision.useWorker || config.useWorker) {
       // Use worker service for batch rename
-      result = await workerService.processRename(renameOperations);
+      result = await workerService.processRename(renameOperations, {
+        forceFork: config.useWorker,
+      });
     } else {
       // Use main process for few operations
       const results = await Promise.allSettled(

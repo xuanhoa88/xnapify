@@ -10,6 +10,7 @@
  */
 
 import { ERROR_CODES } from './constants';
+import { WorkerError } from '../../worker';
 
 /**
  * Custom filesystem error class
@@ -32,18 +33,10 @@ export class FilesystemError extends Error {
 /**
  * Custom filesystem worker error class
  */
-export class FilesystemWorkerError extends Error {
+export class FilesystemWorkerError extends WorkerError {
   constructor(message, code = ERROR_CODES.WORKER_ERROR, statusCode = 500) {
-    super(message);
+    super(message, code, statusCode);
     this.name = 'FilesystemWorkerError';
-    this.code = code;
-    this.statusCode = statusCode;
-    this.timestamp = new Date().toISOString();
-
-    // Maintain proper stack trace for where our error was thrown
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, FilesystemWorkerError);
-    }
   }
 }
 

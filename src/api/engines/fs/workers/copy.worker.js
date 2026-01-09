@@ -17,8 +17,16 @@ async function processCopy(data) {
 
   switch (type) {
     case 'COPY_SINGLE': {
-      const { sourceFileName, targetFileName, options } = operations;
-      return await copyFile(sourceFileName, targetFileName, options);
+      const {
+        sourceFileName,
+        targetFileName,
+        options: singleOptions,
+      } = operations;
+      return await copyFile(
+        sourceFileName,
+        targetFileName,
+        singleOptions || options,
+      );
     }
 
     case 'COPY_BATCH':

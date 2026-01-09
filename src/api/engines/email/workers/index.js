@@ -17,7 +17,15 @@
  */
 
 import { createWorkerService } from '../../worker';
-import { EmailWorkerError, WORKER_CONFIG } from '../utils';
+import { EmailWorkerError } from '../utils';
+
+// Worker configuration
+const WORKER_CONFIG = Object.freeze({
+  maxWorkers: parseInt(process.env.RSK_EMAIL_MAX_WORKERS, 10) || 4,
+  workerTimeout: parseInt(process.env.RSK_EMAIL_WORKER_TIMEOUT, 10) || 60000,
+  maxRequestsPerWorker:
+    parseInt(process.env.RSK_EMAIL_MAX_REQUESTS_PER_WORKER, 10) || 100,
+});
 
 // Use require.context to dynamically import worker files
 const workersContext = require.context('./', false, /\.worker\.js$/);
@@ -39,14 +47,21 @@ const workerService = createWorkerService(workersContext, {
  * Process email send (single or bulk)
  * @param {Array|Object} emails - Email(s) to send
  * @param {Object} options - Send options
+ * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Send result
  */
 workerService.processSend = async function processSend(emails, options = {}) {
-  return await this.sendRequest('send', 'SEND_EMAIL', {
-    type: 'SEND_EMAIL',
-    emails,
-    options,
-  });
+  const { forceFork, ...sendOptions } = options;
+  return await this.sendRequest(
+    'send',
+    'SEND_EMAIL',
+    {
+      type: 'SEND_EMAIL',
+      emails,
+      options: sendOptions,
+    },
+    { forceFork },
+  );
 };
 
 // =============================================================================

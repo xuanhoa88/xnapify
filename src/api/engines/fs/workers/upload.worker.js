@@ -17,7 +17,8 @@ async function processUpload(data) {
 
   switch (type) {
     case 'UPLOAD_SINGLE':
-      return await uploadFile(filesData);
+      // filesData is an array, so we need the first element for single upload
+      return await uploadFile(filesData[0] || filesData);
 
     case 'UPLOAD_BATCH':
       return await uploadFiles(filesData);

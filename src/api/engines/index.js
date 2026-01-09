@@ -25,3 +25,6 @@ export * as email from './email';
 
 // Worker engine (shared worker infrastructure)
 export * as worker from './worker';
+
+// Queue engine (job queue management)
+export * as queue from './queue';

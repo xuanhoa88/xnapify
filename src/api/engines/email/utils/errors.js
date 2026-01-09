@@ -9,13 +9,13 @@
  * Email Error Handling and Response Utilities
  */
 
-import { ERROR_CODES } from './constants';
+import { WorkerError } from '../../worker';
 
 /**
  * Custom email error class
  */
 export class EmailError extends Error {
-  constructor(message, code = ERROR_CODES.PROVIDER_ERROR, statusCode = 500) {
+  constructor(message, code = 'PROVIDER_ERROR', statusCode = 500) {
     super(message);
     this.name = 'EmailError';
     this.code = code;
@@ -32,18 +32,10 @@ export class EmailError extends Error {
 /**
  * Custom email worker error class
  */
-export class EmailWorkerError extends Error {
-  constructor(message, code = ERROR_CODES.WORKER_ERROR, statusCode = 500) {
-    super(message);
+export class EmailWorkerError extends WorkerError {
+  constructor(message, code = 'WORKER_ERROR', statusCode = 500) {
+    super(message, code, statusCode);
     this.name = 'EmailWorkerError';
-    this.code = code;
-    this.statusCode = statusCode;
-    this.timestamp = new Date().toISOString();
-
-    // Maintain proper stack trace for where our error was thrown
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, EmailWorkerError);
-    }
   }
 }
 
@@ -72,7 +64,7 @@ export function createResponse(
   if (error) {
     response.error = {
       message: error.message,
-      code: error.code || ERROR_CODES.PROVIDER_ERROR,
+      code: error.code || 'PROVIDER_ERROR',
       statusCode: error.statusCode || 500,
     };
 

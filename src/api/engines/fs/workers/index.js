@@ -76,21 +76,28 @@ workerService.extractZip = async function extractZip(
  * Process upload operation
  * @param {Array} filesData - Files to upload
  * @param {Object} options - Upload options
+ * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Upload result
  */
 workerService.processUpload = async function processUpload(
   filesData,
   options = {},
 ) {
+  const { forceFork, ...uploadOptions } = options;
   const type =
     Array.isArray(filesData) && filesData.length > 1
       ? 'UPLOAD_BATCH'
       : 'UPLOAD_SINGLE';
-  return await this.sendRequest('upload', 'UPLOAD_FILES', {
-    type,
-    filesData,
-    options,
-  });
+  return await this.sendRequest(
+    'upload',
+    'UPLOAD_FILES',
+    {
+      type,
+      filesData,
+      options: uploadOptions,
+    },
+    { forceFork },
+  );
 };
 
 /**
@@ -118,63 +125,84 @@ workerService.processDownload = async function processDownload(
  * Process delete operation
  * @param {Array} fileNames - Files to delete
  * @param {Object} options - Delete options
+ * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Delete result
  */
 workerService.processDelete = async function processDelete(
   fileNames,
   options = {},
 ) {
+  const { forceFork, ...deleteOptions } = options;
   const type =
     Array.isArray(fileNames) && fileNames.length > 1
       ? 'DELETE_BATCH'
       : 'DELETE_SINGLE';
-  return await this.sendRequest('delete', 'DELETE_FILES', {
-    type,
-    fileNames,
-    options,
-  });
+  return await this.sendRequest(
+    'delete',
+    'DELETE_FILES',
+    {
+      type,
+      fileNames,
+      options: deleteOptions,
+    },
+    { forceFork },
+  );
 };
 
 /**
  * Process rename operation
  * @param {Array} operations - Rename operations
  * @param {Object} options - Rename options
+ * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Rename result
  */
 workerService.processRename = async function processRename(
   operations,
   options = {},
 ) {
+  const { forceFork, ...renameOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'RENAME_BATCH'
       : 'RENAME_SINGLE';
-  return await this.sendRequest('rename', 'RENAME_FILES', {
-    type,
-    operations,
-    options,
-  });
+  return await this.sendRequest(
+    'rename',
+    'RENAME_FILES',
+    {
+      type,
+      operations,
+      options: renameOptions,
+    },
+    { forceFork },
+  );
 };
 
 /**
  * Process copy operation
  * @param {Array} operations - Copy operations
  * @param {Object} options - Copy options
+ * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Copy result
  */
 workerService.processCopy = async function processCopy(
   operations,
   options = {},
 ) {
+  const { forceFork, ...copyOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'COPY_BATCH'
       : 'COPY_SINGLE';
-  return await this.sendRequest('copy', 'COPY_FILES', {
-    type,
-    operations,
-    options,
-  });
+  return await this.sendRequest(
+    'copy',
+    'COPY_FILES',
+    {
+      type,
+      operations,
+      options: copyOptions,
+    },
+    { forceFork },
+  );
 };
 
 /**

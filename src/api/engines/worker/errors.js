@@ -25,17 +25,3 @@ export class WorkerError extends Error {
     }
   }
 }
-
-/**
- * Create a custom worker error class for a specific engine
- * @param {string} name - Error class name
- * @returns {class} Custom error class
- */
-export function createWorkerErrorClass(name) {
-  return class extends WorkerError {
-    constructor(message, code = 'WORKER_ERROR', statusCode = 500) {
-      super(message, code, statusCode);
-      this.name = name;
-    }
-  };
-}

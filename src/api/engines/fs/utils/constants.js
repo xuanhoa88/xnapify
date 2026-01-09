@@ -38,18 +38,6 @@ export const ALLOWED_EXTENSIONS = process.env.RSK_FS_ALLOWED_EXTENSIONS
   ? process.env.RSK_FS_ALLOWED_EXTENSIONS.split(',').map(ext => ext.trim())
   : null;
 
-export const ENABLE_COMPRESSION =
-  process.env.RSK_FS_ENABLE_COMPRESSION === 'true';
-
-export const ORGANIZE_BY_DATE = process.env.RSK_FS_ORGANIZE_BY_DATE === 'true';
-
-export const ORGANIZE_BY_CATEGORY =
-  process.env.RSK_FS_ORGANIZE_BY_CATEGORY === 'true';
-
-export const ORGANIZE_BY_USER = process.env.RSK_FS_ORGANIZE_BY_USER === 'true';
-
-export const DEFAULT_PROVIDER = process.env.RSK_FS_DEFAULT_PROVIDER || 'local';
-
 // Error codes
 export const ERROR_CODES = Object.freeze({
   FILE_NOT_FOUND: 'FILE_NOT_FOUND',

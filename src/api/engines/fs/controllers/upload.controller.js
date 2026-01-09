@@ -30,29 +30,29 @@ function makeUploadDecision(filesData, options = {}) {
 
   if (!Array.isArray(filesData)) {
     return {
-      shouldUseWorker: false,
+      useWorker: false,
       reason: 'Invalid files data',
       operation: 'upload',
       timestamp: new Date().toISOString(),
     };
   }
 
-  let shouldUseWorker = false;
+  let useWorker = false;
   let reason = 'Small files, main process sufficient';
 
   // Use worker if multiple files
   if (filesData.length >= thresholds.batchUploadThreshold) {
-    shouldUseWorker = true;
+    useWorker = true;
     reason = `Large batch (${filesData.length} files)`;
   }
   // Use worker if any file is large
   else if (filesData.some(file => file.size >= thresholds.largeFileSize)) {
-    shouldUseWorker = true;
+    useWorker = true;
     reason = `Large files detected`;
   }
 
   return {
-    shouldUseWorker,
+    useWorker,
     reason,
     operation: 'upload',
     timestamp: new Date().toISOString(),
@@ -105,7 +105,7 @@ export async function uploadFiles(req, res, options = {}, next = null) {
     maxFiles: 10,
     maxFileSize: 50 * 1024 * 1024, // 50MB default
     allowedMimeTypes: null, // null = allow all
-    fileFieldName: 'files', // Default field name for file uploads
+    fieldName: 'files', // Default field name for file uploads
     asMiddleware: false, // Default: send response
     ...options,
   };
@@ -115,11 +115,11 @@ export async function uploadFiles(req, res, options = {}, next = null) {
 
   try {
     // Get field name from query params, body, or use default
-    const fileFieldName =
-      req.query.fileFieldName || req.body.fileFieldName || config.fileFieldName;
+    const fieldName =
+      req.query.fieldName || req.body.fieldName || config.fieldName;
 
     // Use pre-configured multer with dynamic field name
-    const upload = multer(multerConfig).array(fileFieldName, config.maxFiles);
+    const upload = multer(multerConfig).array(fieldName, config.maxFiles);
 
     // Promisify multer upload
     await new Promise((resolve, reject) => {
@@ -157,9 +157,20 @@ export async function uploadFiles(req, res, options = {}, next = null) {
     const decision = makeUploadDecision(req.files, options);
 
     let result;
-    if (decision.shouldUseWorker) {
+    // Use worker if decision says so OR if useWorker is explicitly set
+    if (decision.useWorker || config.useWorker) {
+      // Convert Buffers to base64 for IPC serialization (fork mode)
+      // Node.js IPC cannot directly serialize Buffer objects
+      const serializableFilesData = filesData.map(file => ({
+        ...file,
+        buffer: file.buffer ? file.buffer.toString('base64') : null,
+        bufferEncoding: 'base64', // Mark as base64 encoded
+      }));
+
       // Use worker service for large/multiple files
-      result = await workerService.processUpload(filesData);
+      result = await workerService.processUpload(serializableFilesData, {
+        forceFork: config.useWorker,
+      });
     } else {
       // Use main process for small files
       result = await filesystemActions.uploadFiles(filesData);
