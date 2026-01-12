@@ -14,6 +14,7 @@ export const HTTP_STATUS = Object.freeze({
   CREATED: 201,
   ACCEPTED: 202,
   NO_CONTENT: 204,
+  PARTIAL_CONTENT: 206,
 
   // Redirection
   MOVED_PERMANENTLY: 301,
@@ -27,6 +28,8 @@ export const HTTP_STATUS = Object.freeze({
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
   CONFLICT: 409,
+  GONE: 410,
+  PAYLOAD_TOO_LARGE: 413,
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
 
@@ -152,6 +155,16 @@ export function sendError(
   }
 
   return res.status(statusCode).json(response);
+}
+
+/**
+ * Send bad request error response (400)
+ * @param {Object} res - Express response object
+ * @param {string} message - Error message
+ * @param {Object} errors - Validation/request errors (optional)
+ */
+export function sendBadRequest(res, message = 'Bad request', errors = null) {
+  return sendError(res, message, HTTP_STATUS.BAD_REQUEST, errors);
 }
 
 /**
@@ -291,13 +304,30 @@ export function sendPaginated(
  * @param {string} filePath - Path to file
  * @param {string} fileName - Download filename
  * @param {Object} options - Additional options
+ * @param {Function} onError - Error callback (optional)
  */
-export function sendFile(res, filePath, fileName = null, options = {}) {
+export function sendFile(
+  res,
+  filePath,
+  fileName = null,
+  options = {},
+  onError = null,
+) {
   if (fileName) {
-    res.set('Content-Disposition', `attachment; filename="${fileName}"`);
+    // Sanitize filename to prevent header injection
+    const sanitized = fileName.replace(/["\r\n]/g, '');
+    res.set('Content-Disposition', `attachment; filename="${sanitized}"`);
   }
 
-  return res.sendFile(filePath, options);
+  return res.sendFile(filePath, options, err => {
+    if (err) {
+      if (onError) {
+        onError(err);
+      } else if (!res.headersSent) {
+        sendServerError(res, 'File not found or inaccessible');
+      }
+    }
+  });
 }
 
 /**
@@ -332,18 +362,31 @@ export function sendJson(res, data, headers = {}, statusCode = HTTP_STATUS.OK) {
  * @param {Stream} stream - Readable stream
  * @param {string} contentType - Content type
  * @param {Object} headers - Additional headers
+ * @param {Function} onError - Error callback (optional)
  */
 export function sendStream(
   res,
   stream,
   contentType = 'application/octet-stream',
   headers = {},
+  onError = null,
 ) {
   res.set('Content-Type', contentType);
 
   // Set additional headers
   Object.entries(headers).forEach(([key, value]) => {
     res.set(key, value);
+  });
+
+  // Handle stream errors
+  stream.on('error', err => {
+    if (onError) {
+      onError(err);
+    } else if (!res.headersSent) {
+      res
+        .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
+        .json(createResponse(false, null, 'Stream error occurred'));
+    }
   });
 
   return stream.pipe(res);

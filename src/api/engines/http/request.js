@@ -26,65 +26,16 @@ export function getPagination(
 }
 
 /**
- * Extract sorting parameters from request query
- * @param {Object} req - Express request object
- * @param {Array} allowedFields - Allowed fields for sorting
- * @param {string} defaultSort - Default sort field
- * @param {string} defaultOrder - Default sort order (asc/desc)
- * @returns {Object} Sort parameters
- */
-export function getSorting(
-  req,
-  allowedFields = [],
-  defaultSort = 'id',
-  defaultOrder = 'asc',
-) {
-  const sortBy = req.query.sortBy || defaultSort;
-  const sortOrder = req.query.sortOrder || defaultOrder;
-
-  // Validate sort field
-  const field = allowedFields.includes(sortBy) ? sortBy : defaultSort;
-  const order = ['asc', 'desc'].includes(sortOrder.toLowerCase())
-    ? sortOrder.toLowerCase()
-    : defaultOrder;
-
-  return { field, order };
-}
-
-/**
- * Extract filtering parameters from request query
- * @param {Object} req - Express request object
- * @param {Array} allowedFilters - Allowed filter fields
- * @returns {Object} Filter parameters
- */
-export function getFilters(req, allowedFilters = []) {
-  const filters = {};
-
-  allowedFilters.forEach(field => {
-    if (req.query[field] != null) {
-      filters[field] = req.query[field];
-    }
-  });
-
-  return filters;
-}
-
-/**
- * Extract search parameters from request query
- * @param {Object} req - Express request object
- * @returns {string} Search query
- */
-export function getSearch(req) {
-  const query = req.query.search || req.query.q || '';
-  return query.trim();
-}
-
-/**
- * Get client IP address
+ * Get client IP address (proxy-aware)
  * @param {Object} req - Express request object
  * @returns {string} Client IP address
  */
 export function getClientIP(req) {
+  // Check X-Forwarded-For header for proxied requests
+  const forwarded = req.get('X-Forwarded-For');
+  if (forwarded) {
+    return forwarded.split(',')[0].trim();
+  }
   return req.ip || (req.socket && req.socket.remoteAddress) || '0.0.0.0';
 }
 
@@ -112,9 +63,7 @@ export function isAjax(req) {
  * @returns {boolean} True if JSON request
  */
 export function isJson(req) {
-  return (
-    req.is('application/json') || req.get('Content-Type') === 'application/json'
-  );
+  return req.is('application/json') || false;
 }
 
 /**
@@ -123,14 +72,45 @@ export function isJson(req) {
  * @returns {string} Protocol
  */
 export function getProtocol(req) {
-  return req.protocol || (req.secure ? 'https' : 'http');
+  return req.protocol || 'http';
 }
 
 /**
- * Get full request URL
+ * Get base URL for generating absolute URLs
  * @param {Object} req - Express request object
- * @returns {string} Full URL
+ * @returns {string} Base URL (e.g., "https://example.com")
  */
-export function getFullUrl(req) {
-  return `${getProtocol(req)}://${req.get('host')}${req.originalUrl}`;
+export function getBaseUrl(req) {
+  const protocol = getProtocol(req);
+  const host = req.get('Host') || req.hostname || 'localhost';
+  return `${protocol}://${host}`;
+}
+
+/**
+ * Get Origin header for CORS validation
+ * @param {Object} req - Express request object
+ * @returns {string|null} Origin header value or null
+ */
+export function getOrigin(req) {
+  return req.get('Origin') || null;
+}
+
+/**
+ * Extract Authorization token from request
+ * @param {Object} req - Express request object
+ * @param {string} scheme - Authorization scheme (default: 'Bearer')
+ * @returns {string|null} Token or null if not present/invalid
+ */
+export function getAuthorization(req, scheme = 'Bearer') {
+  const header = req.get('Authorization');
+  if (!header) {
+    return null;
+  }
+
+  const parts = header.split(' ');
+  if (parts.length !== 2 || parts[0] !== scheme) {
+    return null;
+  }
+
+  return parts[1];
 }
