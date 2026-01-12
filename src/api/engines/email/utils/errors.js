@@ -40,15 +40,15 @@ export class EmailWorkerError extends WorkerError {
 }
 
 /**
- * Create standardized response object
+ * Create standardized operation result object
  *
  * @param {boolean} success - Success status
  * @param {*} data - Response data
  * @param {string} message - Response message
  * @param {Error} error - Error object (optional)
- * @returns {Object} Standardized response
+ * @returns {Object} Standardized operation result
  */
-export function createResponse(
+export function createOperationResult(
   success,
   data = null,
   message = '',

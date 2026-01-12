@@ -9,7 +9,7 @@ import { Router } from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import morgan from 'morgan';
-import { fs, http, auth, db, cache, email, worker, queue } from './engines';
+import * as engines from './engines';
 
 // Module-scoped Symbol for allowing provider writes (shared across all guards)
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
@@ -28,6 +28,7 @@ const APP_PROVIDERS = new Set([
   'http', // HTTP utilities
   'auth', // Authentication engine
   'email', // Email engine
+  'webhook', // Webhook engine
 ]);
 
 /**
@@ -90,17 +91,16 @@ function processFiles(context, typeName, processor) {
  * Each module receives dependencies via dependency injection.
  *
  * @param {Object} app - Express app instance (for accessing app-level settings)
- * @param {Object} db - Sequelize instance for database operations
  * @returns {Object} Discovery result
  * @returns {Object} .models - All discovered models from all modules
  * @returns {Router} .apiRoutes - Express router with all module routes mounted
  */
-async function discoverModules(app, db) {
+async function discoverModules(app) {
   // Step 1: Discover and initialize models
   const modelsContext = require.context(
     './modules',
     true,
-    /^\.\/[^/]+\/models\/index\.(js|ts)$/,
+    /^\.\/[^/]+\/models\/index\.js$/,
   );
   const models = await processFiles(
     modelsContext,
@@ -119,7 +119,7 @@ async function discoverModules(app, db) {
 
           try {
             // Support both sync and async factories
-            const modelSet = await Promise.resolve(factory(db, app));
+            const modelSet = await Promise.resolve(factory(engines.db, app));
 
             if (!modelSet || typeof modelSet !== 'object') {
               console.warn(
@@ -158,13 +158,13 @@ async function discoverModules(app, db) {
   );
 
   // Step 2: Discover and mount API modules with models as dependency
-  const modulesContext = require.context(
+  const routeContext = require.context(
     './modules',
     true,
-    /^\.\/[^/]+\/index\.(js|ts)$/,
+    /^\.\/[^/]+\/index\.js$/,
   );
   const routes = await processFiles(
-    modulesContext,
+    routeContext,
     'modules',
     async (ctx, paths) => {
       const routes = Router();
@@ -185,7 +185,7 @@ async function discoverModules(app, db) {
             // Support both sync and async factories
             // Pass the shared guarded app to prevent modules from modifying critical dependencies
             const moduleRouter = await Promise.resolve(
-              factory({ db, models, Router }, guardedApp),
+              factory({ db: engines.db, models, Router }, guardedApp),
             );
 
             if (!moduleRouter) {
@@ -233,28 +233,31 @@ async function discoverModules(app, db) {
  */
 function registerAppProviders(app) {
   // Register database provider
-  app.set('db', db);
+  app.set('db', engines.db);
 
   // Register filesystem provider (already read-only)
-  app.set('fs', fs);
+  app.set('fs', engines.fs);
 
   // Register HTTP utilities provider
-  app.set('http', http);
+  app.set('http', engines.http);
 
   // Register authentication provider
-  app.set('auth', auth);
+  app.set('auth', engines.auth);
 
   // Register cache provider
-  app.set('cache', cache);
+  app.set('cache', engines.cache);
 
   // Register email provider
-  app.set('email', email);
+  app.set('email', engines.email);
 
   // Register worker provider
-  app.set('worker', worker);
+  app.set('worker', engines.worker);
 
   // Register queue provider
-  app.set('queue', queue);
+  app.set('queue', engines.queue);
+
+  // Register webhook provider
+  app.set('webhook', engines.webhook);
 }
 
 /**
@@ -482,10 +485,13 @@ export default async function main(app, config = {}) {
     registerAppProviders(app);
 
     // Initialize database migrations
-    await db.runMigrations(null, db.connection);
+    await engines.db.runMigrations(null, engines.db.connection);
 
     // Initialize database seeds
-    await db.runSeeds(null, db.connection);
+    await engines.db.runSeeds(null, engines.db.connection);
+
+    // Configure webhook database (adapter + worker) with current connection
+    engines.webhook.default.setDbConnection(engines.db.connection);
 
     // Apply global middleware (order matters!)
     app.use(createLoggingMiddleware(config)); // Log all requests first
@@ -493,7 +499,7 @@ export default async function main(app, config = {}) {
     app.use(createCompressionMiddleware(config)); // Response compression
 
     // Discover and initialize modules
-    const { apiModels, apiRoutes } = await discoverModules(app, db);
+    const { apiModels, apiRoutes } = await discoverModules(app);
 
     // Store models in app settings
     app.set('models', apiModels);
@@ -505,17 +511,17 @@ export default async function main(app, config = {}) {
     const jwt = app.get('jwt');
     if (jwt) {
       // Auto-refresh token if expiring (Dual-Token Strategy) - runs first
-      apiMiddlewares.push(auth.middlewares.refreshToken());
+      apiMiddlewares.push(engines.auth.middlewares.refreshToken());
 
       // Populate req.user from JWT cookies if present
-      apiMiddlewares.push(auth.middlewares.optionalAuth());
+      apiMiddlewares.push(engines.auth.middlewares.optionalAuth());
     }
 
     // Mount API routes with middleware stack
     app.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);
 
     // Setup enhanced error handler for API routes
-    app.use(config.apiPrefix, http.errorHandler);
+    app.use(config.apiPrefix, engines.http.errorHandler);
 
     console.info('✅ API bootstrap completed successfully');
   } catch (error) {

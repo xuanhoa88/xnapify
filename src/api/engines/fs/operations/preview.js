@@ -4,7 +4,7 @@
 
 import {
   FilesystemError,
-  createResponse,
+  createOperationResult,
   getMimeType,
   getFileCategory,
   getFileExtension,
@@ -38,7 +38,7 @@ export async function preview(manager, fileName, options = {}) {
       ? `inline; filename="${metadata.name || fileName}"`
       : `attachment; filename="${metadata.name || fileName}"`;
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         fileName,
@@ -68,9 +68,9 @@ export async function preview(manager, fileName, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Preview failed',

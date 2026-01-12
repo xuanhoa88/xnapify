@@ -7,16 +7,20 @@
 
 import { DEFAULT_ROLE } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
+import { logUserActivity } from '../../utils/activity';
 
 /**
  * Create a new user
  *
  * @param {Object} userData - User data
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Created user
  * @throws {Error} If UserAlreadyExistsError
  */
-export async function createUser(userData, models) {
+export async function createUser(userData, { models, webhook, actorId }) {
   const { User, UserProfile, Role, Group } = models;
   const {
     email,
@@ -80,7 +84,7 @@ export async function createUser(userData, models) {
   }
 
   // Reload with associations
-  return user.reload({
+  await user.reload({
     include: [
       { model: UserProfile, as: 'profile' },
       {
@@ -105,6 +109,11 @@ export async function createUser(userData, models) {
       },
     ],
   });
+
+  // Log activity
+  await logUserActivity(webhook, 'created', user.id, { email }, actorId);
+
+  return user;
 }
 
 /**
@@ -275,11 +284,18 @@ export async function getUserById(user_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {Object} userData - User data to update
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError or UserAlreadyExistsError
  */
-export async function updateUserById(user_id, userData, models) {
+export async function updateUserById(
+  user_id,
+  userData,
+  { models, webhook, actorId },
+) {
   const { User, UserProfile, Role, Group } = models;
 
   const { sequelize } = User;
@@ -415,44 +431,14 @@ export async function updateUserById(user_id, userData, models) {
     ],
   });
 
-  return user;
-}
-
-/**
- * Update user lock status
- *
- * @param {string} user_id - User ID
- * @param {boolean} is_locked - Lock status
- * @param {string} reason - Lock reason (optional)
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated user
- * @throws {Error} If UserNotFoundError
- */
-export async function updateUserLockStatus(user_id, is_locked, reason, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  const updates = {
-    is_locked,
-    lockReason: is_locked ? reason : null,
-  };
-
-  // Reset failed login attempts when unlocking
-  if (!is_locked) {
-    updates.failed_login_attempts = 0;
-  }
-
-  await user.update(updates);
-
-  // Invalidate RBAC cache (lock status affects access)
-  rbacCache.invalidateUser(user_id);
+  // Log activity
+  await logUserActivity(
+    webhook,
+    'updated',
+    user_id,
+    { email: user.email },
+    actorId,
+  );
 
   return user;
 }
@@ -569,10 +555,17 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
  *
  * @param {string[]} ids - Array of user IDs
  * @param {boolean} is_active - New status
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated users
  */
-export async function bulkUpdateStatus(ids, is_active, models) {
+export async function bulkUpdateStatus(
+  ids,
+  is_active,
+  { models, webhook, actorId },
+) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -585,8 +578,19 @@ export async function bulkUpdateStatus(ids, is_active, models) {
     where: { id: { [Op.in]: ids } },
   });
 
-  // Invalidate RBAC cache for all updated users
-  users.forEach(user => rbacCache.invalidateUser(user.id));
+  // Log activity for each user
+  const action = is_active ? 'activated' : 'deactivated';
+  for (const user of users) {
+    await logUserActivity(
+      webhook,
+      action,
+      user.id,
+      { email: user.email },
+      actorId,
+    );
+    // Invalidate RBAC cache
+    rbacCache.invalidateUser(user.id);
+  }
 
   return {
     users,
@@ -598,10 +602,13 @@ export async function bulkUpdateStatus(ids, is_active, models) {
  * Bulk delete users
  *
  * @param {string[]} ids - Array of user IDs to delete
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Result with deleted count
  */
-export async function bulkDelete(ids, models) {
+export async function bulkDelete(ids, { models, webhook, actorId }) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -612,6 +619,7 @@ export async function bulkDelete(ids, models) {
   });
 
   const deletedIds = usersToDelete.map(u => u.id);
+  const deletedEmails = usersToDelete.map(u => u.email);
 
   // Delete users
   if (deletedIds.length > 0) {
@@ -619,8 +627,18 @@ export async function bulkDelete(ids, models) {
       where: { id: { [Op.in]: deletedIds } },
     });
 
-    // Invalidate RBAC cache
-    deletedIds.forEach(id => rbacCache.invalidateUser(id));
+    // Log activity for each deleted user
+    for (let i = 0; i < deletedIds.length; i++) {
+      await logUserActivity(
+        webhook,
+        'deleted',
+        deletedIds[i],
+        { email: deletedEmails[i] },
+        actorId,
+      );
+      // Invalidate RBAC cache
+      rbacCache.invalidateUser(deletedIds[i]);
+    }
   }
 
   return {

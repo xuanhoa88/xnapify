@@ -13,6 +13,7 @@ import {
 } from '../utils/password';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import { collectUserRBACData, isAdmin } from '../utils/rbac/collector';
+import { logActivity } from '../utils/activity';
 
 // ========================================================================
 // HELPERS
@@ -140,10 +141,11 @@ export async function getCurrentUser(userId, models) {
  * @param {string} userData.display_name - User display name (optional)
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If user already exists or creation fails
  */
-export async function registerUser(userData, { models }) {
+export async function registerUser(userData, { models, webhook }) {
   const { email, password } = userData;
   const { User, UserProfile, Role } = models;
 
@@ -180,11 +182,37 @@ export async function registerUser(userData, { models }) {
     await user.addRole(defaultRole);
   }
 
+  // Log registration activity
+  await logActivity(webhook, {
+    event: 'user.registered',
+    entityType: 'user',
+    entityId: user.id,
+    action: 'registered',
+    data: { email },
+  });
+
   // Return formatted user data with default RBAC for new user
   return formatUserData(user, {
     roles: [DEFAULT_ROLE],
     permissions: [],
     groups: [],
+  });
+}
+
+/**
+ * Log user logout activity
+ *
+ * @param {string} userId - User ID
+ * @param {Object} options - Options object
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @returns {Promise<void>}
+ */
+export async function logoutUser(userId, { webhook }) {
+  await logActivity(webhook, {
+    event: 'user.logout',
+    entityType: 'user',
+    entityId: userId,
+    action: 'logout',
   });
 }
 
@@ -197,10 +225,16 @@ export async function registerUser(userData, { models }) {
  * @param {string} password - User password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} options.webhook - Webhook engine instance (optional)
+ * @param {Object} options.activityData - Activity data (optional)
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If credentials are invalid
  */
-export async function authenticateUser(email, password, { models }) {
+export async function authenticateUser(
+  email,
+  password,
+  { models, webhook, activityData },
+) {
   const { User, UserProfile, Role, Permission, Group } = models;
 
   // Find user with password and full RBAC data in ONE query
@@ -300,12 +334,20 @@ export async function authenticateUser(email, password, { models }) {
     await user.update({ failed_login_attempts: 0 });
   }
 
-  // Log successful login
-  await updateLastLogin(
-    user.id,
-    { ip_address: null, user_agent: null },
-    models,
-  );
+  // Update user's last login
+  await User.update({ last_login_at: new Date() }, { where: { id: user.id } });
+
+  // Log login activity
+  await logActivity(webhook, {
+    event: 'user.login',
+    entityType: 'user',
+    entityId: user.id,
+    action: 'login',
+    data: {
+      ...activityData,
+      success: true,
+    },
+  });
 
   return formatUserData(user);
 }
@@ -314,11 +356,13 @@ export async function authenticateUser(email, password, { models }) {
  * Verify email address with token
  *
  * @param {string} token - Email verification token
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid or expired
  */
-export async function verifyEmail(token, models) {
+export async function verifyEmail(token, { models, webhook }) {
   const { User } = models;
 
   // In a real implementation, you would decode and verify the JWT token
@@ -345,6 +389,15 @@ export async function verifyEmail(token, models) {
     // Update email confirmation status
     await user.update({ email_confirmed: true });
 
+    // Log email verified activity
+    await logActivity(webhook, {
+      event: 'email.verified',
+      entityType: 'user',
+      entityId: user.id,
+      action: 'verified',
+      data: { email: user.email },
+    });
+
     return user;
   } catch (error) {
     error.name = 'InvalidTokenError';
@@ -360,10 +413,12 @@ export async function verifyEmail(token, models) {
  * and returns the raw token for sending via email.
  *
  * @param {string} email - User email
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Reset token info (token for email, message)
  */
-export async function resetPasswordRequest(email, models) {
+export async function resetPasswordRequest(email, { models, webhook }) {
   const { User, PasswordResetToken } = models;
 
   const user = await User.findOne({ where: { email } });
@@ -394,6 +449,15 @@ export async function resetPasswordRequest(email, models) {
     used_at: null,
   });
 
+  // Log password reset request activity
+  await logActivity(webhook, {
+    event: 'password.reset_requested',
+    entityType: 'user',
+    entityId: user.id,
+    action: 'reset_requested',
+    data: { email },
+  });
+
   // Return the raw token (to be sent via email)
   // In production, you would send this via email instead of returning it
   return {
@@ -414,13 +478,14 @@ export async function resetPasswordRequest(email, models) {
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid, expired, or already used
  */
 export async function resetPasswordConfirmation(
   token,
   newPassword,
-  { models },
+  { models, webhook },
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -472,73 +537,12 @@ export async function resetPasswordConfirmation(
   // Mark token as used (single-use enforcement)
   await tokenRecord.update({ used_at: new Date() });
 
-  return user;
-}
-
-/**
- * Update user's last login timestamp
- *
- * @param {string} user_id - User ID
- * @param {Object} loginData - Login data (IP, user agent, etc.)
- * @param {Object} models - Database models
- * @returns {Promise<void>}
- */
-export async function updateLastLogin(user_id, loginData, models) {
-  const { User, UserLogin } = models;
-
-  // Update user's last login
-  await User.update({ last_login_at: new Date() }, { where: { id: user_id } });
-
-  // Create login record
-  await UserLogin.create({
-    user_id,
-    name: 'local',
-    key: user_id,
-    ip_address: loginData.ip_address,
-    user_agent: loginData.user_agent,
-    login_at: new Date(),
-    success: true,
-  });
-}
-
-/**
- * Check if user account is locked
- *
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<boolean>} True if account is locked
- */
-export async function isAccountLocked(user_id, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id, {
-    attributes: ['is_locked', 'failed_login_attempts'],
-  });
-
-  return user ? user.is_locked : false;
-}
-
-/**
- * Unlock user account
- *
- * @param {string} user_id - User ID
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Updated user
- */
-export async function unlockAccount(user_id, models) {
-  const { User } = models;
-
-  const user = await User.findByPk(user_id);
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  await user.update({
-    is_locked: false,
-    failed_login_attempts: 0,
+  // Log password reset completed activity
+  await logActivity(webhook, {
+    event: 'password.reset_completed',
+    entityType: 'user',
+    entityId: user.id,
+    action: 'reset_completed',
   });
 
   return user;

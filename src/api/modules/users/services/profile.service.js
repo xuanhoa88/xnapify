@@ -6,6 +6,7 @@
  */
 
 import { verifyPassword } from '../utils/password';
+import { logUserActivity } from '../utils/activity';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -63,11 +64,17 @@ export async function getUserWithProfile(user_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {Object} profileData - Profile data to update
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError
  */
-export async function updateUserProfile(user_id, profileData, models) {
+export async function updateUserProfile(
+  user_id,
+  profileData,
+  { models, webhook },
+) {
   const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -114,6 +121,9 @@ export async function updateUserProfile(user_id, profileData, models) {
     });
   }
 
+  // Log activity
+  await logUserActivity(webhook, 'profile_updated', user_id);
+
   // Reload user with updated profile
   await user.reload({
     include: [{ model: UserProfile, as: 'profile' }],
@@ -128,7 +138,9 @@ export async function updateUserProfile(user_id, profileData, models) {
  * @param {string} user_id - User ID
  * @param {string} currentPassword - Current password
  * @param {string} newPassword - New password
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
@@ -136,7 +148,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models },
+  { models, webhook },
 ) {
   const { User } = models;
 
@@ -160,51 +172,10 @@ export async function changeUserPassword(
   // Update password (hashed automatically by model hook)
   await user.update({ password: newPassword });
 
+  // Log activity
+  await logUserActivity(webhook, 'password_changed', user_id);
+
   return true;
-}
-
-/**
- * Get user activities
- *
- * @param {string} user_id - User ID
- * @param {Object} options - Query options
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Activity log with pagination
- */
-export async function getUserActivities(user_id, options, models) {
-  const { page = 1, limit = 10 } = options;
-  const offset = (page - 1) * limit;
-  const { UserLogin } = models;
-
-  if (!UserLogin) {
-    return {
-      activities: [],
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: 0,
-        pages: 0,
-      },
-    };
-  }
-
-  const { count, rows: activities } = await UserLogin.findAndCountAll({
-    where: { user_id },
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [['login_at', 'DESC']],
-    attributes: ['id', 'ip_address', 'user_agent', 'login_at', 'success'],
-  });
-
-  return {
-    activities,
-    pagination: {
-      page: parseInt(page),
-      limit: parseInt(limit),
-      total: count,
-      pages: Math.ceil(count / limit),
-    },
-  };
 }
 
 /**
@@ -212,10 +183,16 @@ export async function getUserActivities(user_id, options, models) {
  *
  * @param {string} user_id - User ID
  * @param {Object} preferences - User preferences
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Updated preferences
  */
-export async function updateUserPreferences(user_id, preferences, models) {
+export async function updateUserPreferences(
+  user_id,
+  preferences,
+  { models, webhook },
+) {
   const { UserProfile } = models;
 
   // Find or create user profile
@@ -233,6 +210,9 @@ export async function updateUserPreferences(user_id, preferences, models) {
 
     await profile.update({ preferences: updatedPreferences });
   }
+
+  // Log activity
+  await logUserActivity(webhook, 'preferences_updated', user_id);
 
   return profile.preferences;
 }
@@ -271,11 +251,17 @@ export async function getUserPreferences(user_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {string} password - User password for confirmation
- * @param {Object} {models, auth} - Database models and authentication engine
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
-export async function deleteUserAccount(user_id, password, { models }) {
+export async function deleteUserAccount(
+  user_id,
+  password,
+  { models, webhook },
+) {
   const { User, UserProfile } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);
@@ -295,11 +281,18 @@ export async function deleteUserAccount(user_id, password, { models }) {
     throw error;
   }
 
+  const userEmail = user.email;
+
   // Delete user profile first (if exists)
   await UserProfile.destroy({ where: { user_id } });
 
   // Delete user (this will cascade to related records)
   await user.destroy();
+
+  // Log activity
+  await logUserActivity(webhook, 'account_deleted', user_id, {
+    email: userEmail,
+  });
 
   return true;
 }

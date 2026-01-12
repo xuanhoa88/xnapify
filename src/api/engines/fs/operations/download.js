@@ -4,7 +4,7 @@
 
 import {
   FilesystemError,
-  createResponse,
+  createOperationResult,
   createZip,
   UPLOAD_DIR,
 } from '../utils';
@@ -34,7 +34,7 @@ export async function download(manager, fileNames, options = {}) {
       const fileName = fileList[0];
       const { stream, metadata } = await provider.retrieve(fileName);
 
-      return createResponse(
+      return createOperationResult(
         true,
         {
           fileName,
@@ -87,7 +87,7 @@ export async function download(manager, fileNames, options = {}) {
       zipName: options.zipName || 'files.zip',
     });
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         type: 'zip',
@@ -105,9 +105,9 @@ export async function download(manager, fileNames, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Download failed',

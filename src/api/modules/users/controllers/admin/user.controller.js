@@ -10,7 +10,6 @@ import {
   updateUserFormSchema,
   createUserFormSchema,
   bulkUpdateUserStatusFormSchema,
-  updateUserLockStatusFormSchema,
   bulkDeleteUserFormSchema,
 } from '../../../../../shared/validator/features/admin';
 import * as userAdminService from '../../services/admin/user.service';
@@ -305,64 +304,6 @@ export async function updateUserById(req, res) {
 }
 
 /**
- * Lock/unlock user account
- *
- * @route   PUT /api/users/:id/lock
- * @access  Admin
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function updateUserLockStatus(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const { is_locked, reason } = req.body;
-
-    // Validate with Zod schema
-    const [isValid, errors] = validateForm(updateUserLockStatusFormSchema, {
-      is_locked,
-      reason,
-    });
-
-    if (!isValid) {
-      return http.sendValidationError(res, errors);
-    }
-
-    // Prevent admin from locking themselves
-    if (req.user.id === id && is_locked) {
-      return http.sendError(res, 'Cannot lock your own account', 400);
-    }
-
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Update user lock status
-    const user = await userAdminService.updateUserLockStatus(
-      id,
-      is_locked,
-      reason,
-      models,
-    );
-
-    return http.sendSuccess(res, {
-      message: `User account ${is_locked ? 'locked' : 'unlocked'} successfully`,
-      user: {
-        id: user.id,
-        email: user.email,
-        is_locked: user.is_locked,
-        failed_login_attempts: user.failed_login_attempts,
-      },
-    });
-  } catch (error) {
-    if (error.name === 'UserNotFoundError') {
-      return http.sendNotFound(res, error.message);
-    }
-
-    return http.sendServerError(res, 'Failed to update user lock status');
-  }
-}
-
-/**
  * Bulk update user status
  *
  * @route   PATCH /api/admin/users/status
@@ -390,14 +331,19 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendError(res, 'Cannot deactivate your own account', 400);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Bulk update status
+    // Bulk update status (activity logged in service)
     const result = await userAdminService.bulkUpdateStatus(
       ids,
       state === 'active',
-      models,
+      {
+        models,
+        webhook,
+        actorId: req.user.id,
+      },
     );
 
     return http.sendSuccess(res, {
@@ -441,11 +387,16 @@ export async function bulkDelete(req, res) {
       return http.sendError(res, 'Cannot delete your own account', 400);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Bulk delete users
-    const result = await userAdminService.bulkDelete(ids, models);
+    // Bulk delete users (activity logged in service)
+    const result = await userAdminService.bulkDelete(ids, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Deleted ${result.deleted} user(s)`,

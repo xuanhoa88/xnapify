@@ -48,13 +48,16 @@ export async function register(req, res) {
     const models = req.app.get('models');
     const auth = req.app.get('auth');
 
+    // Get webhook engine for activity tracking
+    const webhook = req.app.get('webhook');
+
     // Register user - returns complete user data with RBAC
     const userData = await authService.registerUser(
       {
         email,
         password,
       },
-      { models, auth },
+      { models, auth, webhook },
     );
 
     // Generate token pair using configured JWT instance
@@ -109,14 +112,20 @@ export async function login(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    // Get models and auth utilities from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const auth = req.app.get('auth');
+
+    // Get webhook engine for activity tracking
+    const webhook = req.app.get('webhook');
 
     // Authenticate user - returns complete user data with RBAC in one query
     const userData = await authService.authenticateUser(email, password, {
+      activityData: {
+        ip_address: http.getIpAddress(req),
+        user_agent: http.getUserAgent(req),
+      },
       models,
-      auth,
+      webhook,
     });
 
     // Generate token pair using configured JWT instance
@@ -131,7 +140,7 @@ export async function login(req, res) {
     // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
     // If rememberMe is true, use default maxAge from cookie config
     const cookieOptions = rememberMe ? {} : { maxAge: null };
-
+    const auth = req.app.get('auth');
     auth.setTokenCookie(res, tokens.accessToken, cookieOptions);
     auth.setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
 
@@ -173,6 +182,12 @@ export async function logout(req, res) {
   const http = req.app.get('http');
   try {
     const auth = req.app.get('auth');
+    const webhook = req.app.get('webhook');
+
+    // Log logout activity via service (if user is authenticated)
+    if (req.user) {
+      await authService.logoutUser(req.user.id, { webhook });
+    }
 
     // Clear token cookies
     auth.clearAllAuthCookies(res);
@@ -278,11 +293,12 @@ export async function emailVerification(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Verify email with token
-    const user = await authService.verifyEmail(token, models);
+    // Verify email with token (activity logged in service)
+    const user = await authService.verifyEmail(token, { models, webhook });
 
     // Get complete user data with RBAC information
     const userData = await authService.getCurrentUser(user.id, models);
@@ -349,11 +365,12 @@ export async function resetPasswordRequest(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Request password reset
-    await authService.resetPasswordRequest(email, models);
+    // Request password reset (activity logged in service)
+    await authService.resetPasswordRequest(email, { models, webhook });
 
     // Always return success for security (don't reveal if email exists)
     return http.sendSuccess(res, {
@@ -393,14 +410,16 @@ export async function resetPasswordConfirmation(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    // Get models and auth utilities from app context
+    // Get models, auth, and webhook from app context
     const models = req.app.get('models');
     const auth = req.app.get('auth');
+    const webhook = req.app.get('webhook');
 
-    // Confirm reset password with token
+    // Confirm reset password with token (activity logged in service)
     await authService.resetPasswordConfirmation(token, password, {
       models,
       auth,
+      webhook,
     });
 
     return http.sendSuccess(res, {

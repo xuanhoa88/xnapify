@@ -2,7 +2,7 @@
  * Remove (Delete) Operations
  */
 
-import { FilesystemError, createResponse } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils';
 
 /**
  * Delete file(s)
@@ -36,7 +36,7 @@ export async function remove(manager, fileNames, options = {}) {
       }
     }
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         successful: results,
@@ -49,9 +49,9 @@ export async function remove(manager, fileNames, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Delete failed',

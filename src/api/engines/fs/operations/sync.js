@@ -2,7 +2,7 @@
  * Sync Operations
  */
 
-import { FilesystemError, createResponse } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils';
 
 /**
  * Sync file(s) between providers
@@ -59,7 +59,7 @@ export async function sync(manager, operations, options = {}) {
       }
     }
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         successful: results,
@@ -72,9 +72,9 @@ export async function sync(manager, operations, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Sync failed',

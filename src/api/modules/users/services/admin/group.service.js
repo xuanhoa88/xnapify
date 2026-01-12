@@ -6,6 +6,7 @@
  */
 
 import { DEFAULT_ROLE, SYSTEM_GROUPS } from '../../constants/rbac';
+import { logGroupActivity } from '../../utils/activity';
 
 // ========================================================================
 // GROUP MANAGEMENT SERVICES
@@ -19,10 +20,13 @@ import { DEFAULT_ROLE, SYSTEM_GROUPS } from '../../constants/rbac';
  * @param {string} groupData.description - Group description
  * @param {string} groupData.category - Group category (optional)
  * @param {string} groupData.type - Group type (optional)
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Created group
  */
-export async function createGroup(groupData, models) {
+export async function createGroup(groupData, { models, webhook, actorId }) {
   const { Group, Role, User, UserProfile } = models;
   const { name, description, category, type, roles } = groupData;
 
@@ -82,6 +86,9 @@ export async function createGroup(groupData, models) {
       },
     ],
   });
+
+  // Log activity
+  await logGroupActivity(webhook, 'created', group.id, { name }, actorId);
 
   return group;
 }
@@ -226,10 +233,17 @@ export async function getGroupById(group_id, models) {
  *
  * @param {string} group_id - Group ID
  * @param {Object} updateData - Data to update
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated group
  */
-export async function updateGroupById(group_id, groupData, models) {
+export async function updateGroupById(
+  group_id,
+  groupData,
+  { models, webhook, actorId },
+) {
   const { Group, Role, User, UserProfile } = models;
 
   const { roles, ...groupUpdates } = groupData;
@@ -297,6 +311,15 @@ export async function updateGroupById(group_id, groupData, models) {
     ],
   });
 
+  // Log activity
+  await logGroupActivity(
+    webhook,
+    'updated',
+    group_id,
+    { name: group.name },
+    actorId,
+  );
+
   return group;
 }
 
@@ -304,10 +327,13 @@ export async function updateGroupById(group_id, groupData, models) {
  * Delete group
  *
  * @param {string} group_id - Group ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteGroup(group_id, models) {
+export async function deleteGroup(group_id, { models, webhook, actorId }) {
   const { Group } = models;
 
   const group = await Group.findByPk(group_id);
@@ -326,7 +352,18 @@ export async function deleteGroup(group_id, models) {
     throw error;
   }
 
+  const groupName = group.name;
   await group.destroy();
+
+  // Log activity
+  await logGroupActivity(
+    webhook,
+    'deleted',
+    group_id,
+    { name: groupName },
+    actorId,
+  );
+
   return true;
 }
 

@@ -28,3 +28,6 @@ export * as worker from './worker';
 
 // Queue engine
 export * as queue from './queue';
+
+// Webhook engine
+export * as webhook from './webhook';

@@ -187,8 +187,9 @@ export async function deleteRole(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Fetch role first to check if user has this role
     const existingRole = await roleService.getRoleById(id, models);
@@ -199,7 +200,12 @@ export async function deleteRole(req, res) {
       return http.sendError(res, 'Cannot delete a role you have', 400);
     }
 
-    await roleService.deleteRole(id, models);
+    // Delete role (activity logged in service)
+    await roleService.deleteRole(id, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Role deleted successfully`,

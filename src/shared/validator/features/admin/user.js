@@ -143,30 +143,6 @@ export const bulkUpdateUserStatusFormSchema = ({ i18n, z }) =>
   });
 
 /**
- * Update user lock status schema - callable factory function
- *
- * Used by:
- * - Backend: PUT /api/admin/users/:id/lock
- */
-export const updateUserLockStatusFormSchema = ({ i18n, z }) =>
-  z.object({
-    is_locked: z.boolean({
-      required_error: i18n.t(
-        'zod:admin.user.IS_LOCKED_REQUIRED',
-        'Lock status is required',
-      ),
-      invalid_type_error: i18n.t(
-        'zod:admin.user.IS_LOCKED_INVALID',
-        'Lock status must be true or false',
-      ),
-    }),
-    reason: z
-      .string()
-      .max(500, i18n.t('zod:admin.user.REASON_MAX', 'Reason is too long'))
-      .optional(),
-  });
-
-/**
  * Bulk delete users schema - callable factory function
  *
  * Used by:

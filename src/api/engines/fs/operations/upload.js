@@ -2,7 +2,7 @@
  * Upload Operations
  */
 
-import { FilesystemError, createResponse } from '../utils';
+import { FilesystemError, createOperationResult } from '../utils';
 
 /**
  * Upload file(s)
@@ -61,7 +61,7 @@ export async function upload(manager, files, options = {}) {
       }
     }
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         successful: results,
@@ -74,9 +74,9 @@ export async function upload(manager, files, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Upload failed',

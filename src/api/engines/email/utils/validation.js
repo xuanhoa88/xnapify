@@ -5,12 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { z } from 'zod';
+
 /**
  * Email Validation - Zod Schema
  */
 
 // Rate limiting and batch sizes
-const EMAIL_LIMITS = Object.freeze({
+export const EMAIL_LIMITS = Object.freeze({
   MAX_RECIPIENTS: 50, // Max recipients per email
   MAX_BATCH_SIZE: 100, // Max emails per batch
   MAX_ATTACHMENTS: 10, // Max attachments per email
@@ -20,102 +22,104 @@ const EMAIL_LIMITS = Object.freeze({
 /**
  * Common email address validation
  */
-const emailAddressSchema = ({ z }) => z.string().min(1).email();
+const emailAddressSchema = z.string().min(1).email();
 
 /**
  * Recipients field - can be string or array of strings
  */
-const recipientsSchema = ({ z }) =>
-  z.union([
-    emailAddressSchema({ z }),
-    z.array(emailAddressSchema({ z })).min(1).max(EMAIL_LIMITS.MAX_RECIPIENTS),
-  ]);
+const recipientsSchema = z.union([
+  emailAddressSchema,
+  z.array(emailAddressSchema).min(1).max(EMAIL_LIMITS.MAX_RECIPIENTS),
+]);
 
 /**
  * Optional recipients field
  */
-const optionalRecipientsSchema = ({ z }) =>
-  z
-    .union([
-      emailAddressSchema({ z }),
-      z.array(emailAddressSchema({ z })).max(EMAIL_LIMITS.MAX_RECIPIENTS),
-    ])
-    .optional();
+const optionalRecipientsSchema = z
+  .union([
+    emailAddressSchema,
+    z.array(emailAddressSchema).max(EMAIL_LIMITS.MAX_RECIPIENTS),
+  ])
+  .optional();
 
 /**
  * Attachment schema
  */
-const attachmentSchema = ({ z }) =>
-  z.object({
-    filename: z.string().min(1),
-    content: z.any(), // Buffer or base64 string
-    contentType: z.string().optional(),
-    disposition: z.enum(['attachment', 'inline']).optional(),
-  });
+const attachmentSchema = z.object({
+  filename: z.string().min(1),
+  content: z.any(), // Buffer or base64 string
+  contentType: z.string().optional(),
+  disposition: z.enum(['attachment', 'inline']).optional(),
+});
 
 /**
  * Single email item schema
  */
-const emailItemSchema = ({ i18n, z }) =>
-  z
-    .object({
-      // Recipients
-      to: recipientsSchema({ z }),
-      cc: optionalRecipientsSchema({ z }),
-      bcc: optionalRecipientsSchema({ z }),
+const emailItemSchema = z
+  .object({
+    // Recipients
+    to: recipientsSchema,
+    cc: optionalRecipientsSchema,
+    bcc: optionalRecipientsSchema,
 
-      // Subject (required unless using provider template)
-      subject: z.string().max(998).optional(),
+    // Subject (required unless using provider template)
+    subject: z.string().max(998).optional(),
 
-      // Raw HTML/text content
-      html: z.string().max(EMAIL_LIMITS.MAX_BODY_SIZE).optional(),
-      text: z.string().max(EMAIL_LIMITS.MAX_BODY_SIZE).optional(),
+    // Raw HTML/text content
+    html: z.string().max(EMAIL_LIMITS.MAX_BODY_SIZE).optional(),
+    text: z.string().max(EMAIL_LIMITS.MAX_BODY_SIZE).optional(),
 
-      // Template data for {{placeholder}} substitution in html/text/subject
-      templateData: z.record(z.any()).optional(),
+    // Template data for {{placeholder}} substitution in html/text/subject
+    templateData: z.record(z.any()).optional(),
 
-      // Provider template ID (SendGrid/Mailgun)
-      templateId: z.string().optional(),
+    // Provider template ID (SendGrid/Mailgun)
+    templateId: z.string().optional(),
 
-      // Sender
-      from: emailAddressSchema({ z }).optional(),
-      fromName: z.string().max(255).optional(),
-      replyTo: emailAddressSchema({ z }).optional(),
+    // Sender
+    from: emailAddressSchema.optional(),
+    fromName: z.string().max(255).optional(),
+    replyTo: emailAddressSchema.optional(),
 
-      // Attachments
-      attachments: z
-        .array(attachmentSchema({ z }))
-        .max(EMAIL_LIMITS.MAX_ATTACHMENTS)
-        .optional(),
+    // Attachments
+    attachments: z
+      .array(attachmentSchema)
+      .max(EMAIL_LIMITS.MAX_ATTACHMENTS)
+      .optional(),
 
-      // Custom headers
-      headers: z.record(z.string()).optional(),
+    // Custom headers
+    headers: z.record(z.string()).optional(),
 
-      // Priority
-      priority: z.enum(['high', 'normal', 'low']).optional(),
-    })
-    .refine(
-      data => {
-        // Must have content: html, text, or templateId
-        return !!(data.html || data.text || data.templateId);
-      },
-      {
-        message: i18n.t('zod:email.CONTENT_REQUIRED'),
-        path: ['html'],
-      },
-    );
+    // Priority
+    priority: z.enum(['high', 'normal', 'low']).optional(),
+  })
+  .refine(
+    data => {
+      // Must have content: html, text, or templateId
+      return !!(data.html || data.text || data.templateId);
+    },
+    {
+      message: 'Email must have html, text, or templateId content',
+      path: ['html'],
+    },
+  );
 
 /**
- * Send emails form schema - Always an array
+ * Send emails schema - Always an array
  * Single: [{ to, subject, html }]
  * Bulk: [{ to, subject, html }, { to, subject, html }, ...]
  */
-export const sendEmailsFormSchema = ({ i18n, z }) =>
-  z
-    .array(emailItemSchema({ i18n, z }))
-    .min(1, { message: i18n.t('zod:email.EMAILS_REQUIRED') })
-    .max(EMAIL_LIMITS.MAX_BATCH_SIZE, {
-      message: i18n.t('zod:email.BATCH_SIZE_EXCEEDED', {
-        max: EMAIL_LIMITS.MAX_BATCH_SIZE,
-      }),
-    });
+export const sendEmailsSchema = z
+  .array(emailItemSchema)
+  .min(1, { message: 'At least one email is required' })
+  .max(EMAIL_LIMITS.MAX_BATCH_SIZE, {
+    message: `Maximum ${EMAIL_LIMITS.MAX_BATCH_SIZE} emails per batch`,
+  });
+
+/**
+ * Validate email data
+ * @param {Array} data - Email data to validate
+ * @returns {{ success: boolean, data?: Array, error?: Object }} Validation result
+ */
+export function validateEmails(data) {
+  return sendEmailsSchema.safeParse(data);
+}

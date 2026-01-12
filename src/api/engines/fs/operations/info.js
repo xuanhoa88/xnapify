@@ -4,7 +4,7 @@
 
 import {
   FilesystemError,
-  createResponse,
+  createOperationResult,
   getMimeType,
   getFileCategory,
   getFileExtension,
@@ -26,7 +26,7 @@ export async function info(manager, fileName, options = {}) {
     const mimeType = metadata.mimeType || getMimeType(fileName);
     const category = getFileCategory(fileName);
 
-    return createResponse(
+    return createOperationResult(
       true,
       {
         fileName,
@@ -47,9 +47,9 @@ export async function info(manager, fileName, options = {}) {
     );
   } catch (error) {
     if (error instanceof FilesystemError) {
-      return createResponse(false, null, error.message, error);
+      return createOperationResult(false, null, error.message, error);
     }
-    return createResponse(
+    return createOperationResult(
       false,
       null,
       'Get info failed',

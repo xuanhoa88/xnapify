@@ -209,14 +209,19 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Bulk update permissions
+    // Bulk update permissions (activity logged in service)
     const permissions = await permissionService.bulkUpdateStatus(
       ids,
       state === 'active',
-      models,
+      {
+        models,
+        webhook,
+        actorId: req.user.id,
+      },
     );
 
     return http.sendSuccess(res, {
@@ -250,11 +255,16 @@ export async function deletePermissions(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
-    // Delete permissions
-    const result = await permissionService.bulkDelete(ids, models);
+    // Delete permissions (activity logged in service)
+    const result = await permissionService.bulkDelete(ids, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Deleted ${result.deleted} permission(s)`,

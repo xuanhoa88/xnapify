@@ -5,16 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../shared/validator';
 import { SmtpEmailProvider } from './providers/smtp';
 import { SendGridEmailProvider } from './providers/sendgrid';
 import { MailgunEmailProvider } from './providers/mailgun';
 import { MemoryEmailProvider } from './providers/memory';
 import {
   EmailError,
-  createResponse,
+  createOperationResult,
   processEmails,
-  sendEmailsFormSchema,
+  validateEmails,
 } from './utils';
 import workerPool from './workers';
 
@@ -207,17 +206,14 @@ class EmailManager {
   async send(emails, options = {}) {
     try {
       // Validate using Zod schema
-      const [isValid, validationErrors] = validateForm(
-        sendEmailsFormSchema,
-        emails,
-      );
-      if (!isValid) {
-        return createResponse(
+      const result = validateEmails(emails);
+      if (!result.success) {
+        return createOperationResult(
           false,
           null,
           'Validation failed',
           new EmailError(
-            JSON.stringify(validationErrors),
+            JSON.stringify(result.error.flatten()),
             'VALIDATION_ERROR',
             400,
           ),
@@ -246,9 +242,9 @@ class EmailManager {
       return processEmails(emails, options);
     } catch (error) {
       if (error instanceof EmailError) {
-        return createResponse(false, null, error.message, error);
+        return createOperationResult(false, null, error.message, error);
       }
-      return createResponse(
+      return createOperationResult(
         false,
         null,
         'Failed to send email',

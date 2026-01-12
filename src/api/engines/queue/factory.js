@@ -113,7 +113,7 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
     if (channel) {
       try {
         await channel.close();
-      } catch (_) {
+      } catch {
         // Ignore close errors
       }
       return channelsMap.delete(String(name).trim());
@@ -128,7 +128,7 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
     for (const channel of channelsMap.values()) {
       try {
         await channel.close();
-      } catch (_) {
+      } catch {
         // Ignore close errors
       }
     }

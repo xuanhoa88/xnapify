@@ -45,7 +45,7 @@ export class Channel {
   off(eventName) {
     try {
       this.handlers.delete(eventName);
-    } catch (_) {
+    } catch {
       // Ignore errors
     }
     return this;

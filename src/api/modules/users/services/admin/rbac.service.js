@@ -19,6 +19,35 @@ import {
 } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
 import { collectUserRBACData } from '../../utils/rbac/collector';
+import { logActivity } from '../../utils/activity';
+
+/**
+ * Log RBAC activity
+ *
+ * @param {Object} webhook - Webhook engine
+ * @param {string} event - Event name (e.g., 'role_assigned', 'group_assigned')
+ * @param {string} entityType - Entity type ('user', 'group', 'role')
+ * @param {string} entityId - Entity ID
+ * @param {Object} data - Additional data
+ * @param {string} [actorId] - Actor performing the action
+ */
+async function logRbacActivity(
+  webhook,
+  event,
+  entityType,
+  entityId,
+  data = {},
+  actorId,
+) {
+  await logActivity(webhook, {
+    event: `rbac.${event}`,
+    entityType,
+    entityId,
+    action: event,
+    data,
+    actorId,
+  });
+}
 
 /**
  * Create default groups
@@ -253,10 +282,17 @@ export async function initializeDefault(models) {
  *
  * @param {string} user_id - User ID
  * @param {string[]} role_names - Array of role names
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} User with roles
  */
-export async function assignRolesToUser(user_id, role_names, models) {
+export async function assignRolesToUser(
+  user_id,
+  role_names,
+  { models, webhook, actorId },
+) {
   const { User, Role } = models;
 
   const user = await User.findByPk(user_id);
@@ -287,6 +323,16 @@ export async function assignRolesToUser(user_id, role_names, models) {
     await user.setRoles([]);
   }
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'roles_assigned',
+    'user',
+    user_id,
+    { roles: role_names },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
@@ -308,10 +354,17 @@ export async function assignRolesToUser(user_id, role_names, models) {
  *
  * @param {string} user_id - User ID
  * @param {string[]} group_ids - Array of group IDs
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} User with groups
  */
-export async function assignGroupsToUser(user_id, group_ids, models) {
+export async function assignGroupsToUser(
+  user_id,
+  group_ids,
+  { models, webhook, actorId },
+) {
   const { User, Group } = models;
 
   const user = await User.findByPk(user_id);
@@ -342,6 +395,16 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
     await user.setGroups([]);
   }
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'groups_assigned',
+    'user',
+    user_id,
+    { groups: group_ids },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
@@ -363,10 +426,17 @@ export async function assignGroupsToUser(user_id, group_ids, models) {
  *
  * @param {string} user_id - User ID
  * @param {string} role_id - Role ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated user
  */
-export async function addRoleToUser(user_id, role_id, models) {
+export async function addRoleToUser(
+  user_id,
+  role_id,
+  { models, webhook, actorId },
+) {
   const { User, Role } = models;
 
   const user = await User.findByPk(user_id);
@@ -387,6 +457,16 @@ export async function addRoleToUser(user_id, role_id, models) {
 
   await user.addRole(role);
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'role_added',
+    'user',
+    user_id,
+    { role_id, role_name: role.name },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
@@ -398,10 +478,17 @@ export async function addRoleToUser(user_id, role_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {string} role_id - Role ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated user
  */
-export async function removeRoleFromUser(user_id, role_id, models) {
+export async function removeRoleFromUser(
+  user_id,
+  role_id,
+  { models, webhook, actorId },
+) {
   const { User, Role } = models;
 
   const user = await User.findByPk(user_id);
@@ -422,6 +509,16 @@ export async function removeRoleFromUser(user_id, role_id, models) {
 
   await user.removeRole(role);
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'role_removed',
+    'user',
+    user_id,
+    { role_id, role_name: role.name },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
@@ -433,10 +530,17 @@ export async function removeRoleFromUser(user_id, role_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {string} group_id - Group ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated user
  */
-export async function addGroupToUser(user_id, group_id, models) {
+export async function addGroupToUser(
+  user_id,
+  group_id,
+  { models, webhook, actorId },
+) {
   const { User, Group } = models;
 
   const user = await User.findByPk(user_id);
@@ -457,6 +561,16 @@ export async function addGroupToUser(user_id, group_id, models) {
 
   await user.addGroup(group);
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'group_added',
+    'user',
+    user_id,
+    { group_id, group_name: group.name },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
@@ -468,10 +582,17 @@ export async function addGroupToUser(user_id, group_id, models) {
  *
  * @param {string} user_id - User ID
  * @param {string} group_id - Group ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated user
  */
-export async function removeGroupFromUser(user_id, group_id, models) {
+export async function removeGroupFromUser(
+  user_id,
+  group_id,
+  { models, webhook, actorId },
+) {
   const { User, Group } = models;
 
   const user = await User.findByPk(user_id);
@@ -491,6 +612,16 @@ export async function removeGroupFromUser(user_id, group_id, models) {
   }
 
   await user.removeGroup(group);
+
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'group_removed',
+    'user',
+    user_id,
+    { group_id, group_name: group.name },
+    actorId,
+  );
 
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
@@ -927,10 +1058,17 @@ export async function getGroupRoles(group_id, models) {
  *
  * @param {string} group_id - Group ID
  * @param {string[]} role_names - Array of role names
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Group with updated roles
  */
-export async function assignRolesToGroup(group_id, role_names, models) {
+export async function assignRolesToGroup(
+  group_id,
+  role_names,
+  { models, webhook, actorId },
+) {
   const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -954,12 +1092,22 @@ export async function assignRolesToGroup(group_id, role_names, models) {
       throw error;
     }
 
-    // Set roles for user (replaces existing)
+    // Set roles for group (replaces existing)
     await group.setRoles(roles.map(role => role.id));
   } else {
     // Clear all roles
     await group.setRoles([]);
   }
+
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'roles_assigned',
+    'group',
+    group_id,
+    { roles: role_names, group_name: group.name },
+    actorId,
+  );
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
@@ -990,10 +1138,17 @@ export async function assignRolesToGroup(group_id, role_names, models) {
  *
  * @param {string} group_id - Group ID
  * @param {string} role_id - Role ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated group
  */
-export async function addRoleToGroup(group_id, role_id, models) {
+export async function addRoleToGroup(
+  group_id,
+  role_id,
+  { models, webhook, actorId },
+) {
   const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1013,6 +1168,16 @@ export async function addRoleToGroup(group_id, role_id, models) {
   }
 
   await group.addRole(role);
+
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'role_added',
+    'group',
+    group_id,
+    { role_id, role_name: role.name, group_name: group.name },
+    actorId,
+  );
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
@@ -1034,10 +1199,17 @@ export async function addRoleToGroup(group_id, role_id, models) {
  *
  * @param {string} group_id - Group ID
  * @param {string} role_id - Role ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated group
  */
-export async function removeRoleFromGroup(group_id, role_id, models) {
+export async function removeRoleFromGroup(
+  group_id,
+  role_id,
+  { models, webhook, actorId },
+) {
   const { Group, Role, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1057,6 +1229,16 @@ export async function removeRoleFromGroup(group_id, role_id, models) {
   }
 
   await group.removeRole(role);
+
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'role_removed',
+    'group',
+    group_id,
+    { role_id, role_name: role.name, group_name: group.name },
+    actorId,
+  );
 
   // Invalidate RBAC cache for all users in this group
   const groupWithUsers = await Group.findByPk(group_id, {
@@ -1082,10 +1264,17 @@ export async function removeRoleFromGroup(group_id, role_id, models) {
  *
  * @param {string} group_id - Group ID
  * @param {string} user_id - User ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated group
  */
-export async function addUserToGroup(group_id, user_id, models) {
+export async function addUserToGroup(
+  group_id,
+  user_id,
+  { models, webhook, actorId },
+) {
   const { Group, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1106,6 +1295,16 @@ export async function addUserToGroup(group_id, user_id, models) {
 
   await group.addUser(user);
 
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'user_added',
+    'group',
+    group_id,
+    { user_id, group_name: group.name },
+    actorId,
+  );
+
   // Invalidate RBAC cache for this user (they now inherit group's roles)
   rbacCache.invalidateUser(user_id);
 
@@ -1117,10 +1316,17 @@ export async function addUserToGroup(group_id, user_id, models) {
  *
  * @param {string} group_id - Group ID
  * @param {string} user_id - User ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated group
  */
-export async function removeUserFromGroup(group_id, user_id, models) {
+export async function removeUserFromGroup(
+  group_id,
+  user_id,
+  { models, webhook, actorId },
+) {
   const { Group, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1140,6 +1346,16 @@ export async function removeUserFromGroup(group_id, user_id, models) {
   }
 
   await group.removeUser(user);
+
+  // Log activity
+  await logRbacActivity(
+    webhook,
+    'user_removed',
+    'group',
+    group_id,
+    { user_id, group_name: group.name },
+    actorId,
+  );
 
   // Invalidate RBAC cache for this user (they no longer inherit group's roles)
   rbacCache.invalidateUser(user_id);

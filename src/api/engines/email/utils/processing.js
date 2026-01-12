@@ -11,7 +11,7 @@
  */
 
 import { Liquid } from 'liquidjs';
-import { createResponse } from './errors';
+import { createOperationResult } from './errors';
 import { createFactory } from '../factory';
 
 // Create a reusable Liquid engine instance
@@ -76,7 +76,7 @@ export async function processEmails(emailList, options = {}) {
   // Single email
   if (emailList.length === 1) {
     const result = await processSingleEmail(emailList[0], manager, options);
-    return createResponse(
+    return createOperationResult(
       true,
       {
         messageId: result.messageId,
@@ -109,7 +109,7 @@ export async function processEmails(emailList, options = {}) {
     }
   }
 
-  return createResponse(
+  return createOperationResult(
     true,
     {
       successful: results.successful,

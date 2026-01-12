@@ -105,10 +105,11 @@ export async function updateProfile(req, res) {
     }
 
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
     const user = await profileService.updateUserProfile(
       req.user.id,
       { display_name, first_name, last_name, bio, location, website },
-      models,
+      { models, webhook },
     );
 
     return http.sendSuccess(res, {
@@ -334,7 +335,7 @@ export async function changePassword(req, res) {
       req.user.id,
       currentPassword,
       newPassword,
-      { models: req.app.get('models'), auth: req.app.get('auth') },
+      { models: req.app.get('models'), webhook: req.app.get('webhook') },
     );
 
     return http.sendSuccess(res, {
@@ -348,32 +349,6 @@ export async function changePassword(req, res) {
     }
 
     return http.sendServerError(res, 'Failed to change password');
-  }
-}
-
-/**
- * Get user activities
- *
- * @route   GET /api/profile/activities
- * @access  Private (requires authentication)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getUserActivities(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { page, limit } = http.getPagination(req);
-    const models = req.app.get('models');
-
-    const result = await profileService.getUserActivities(
-      req.user.id,
-      { page, limit },
-      models,
-    );
-
-    return http.sendSuccess(res, result);
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get user activity');
   }
 }
 
@@ -405,10 +380,11 @@ export async function updatePreferences(req, res) {
     }
 
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
     const preferences = await profileService.updateUserPreferences(
       req.user.id,
       { language, timezone, notifications, theme },
-      models,
+      { models, webhook },
     );
 
     return http.sendSuccess(res, {
@@ -467,7 +443,7 @@ export async function deleteAccount(req, res) {
 
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
-      auth: req.app.get('auth'),
+      webhook: req.app.get('webhook'),
     });
 
     req.app.get('auth').clearAllAuthCookies(res);

@@ -12,6 +12,7 @@ import {
 } from '../../constants/rbac';
 import { manageRolePermissions } from './rbac.service';
 import * as rbacCache from '../../utils/rbac/cache';
+import { logRoleActivity } from '../../utils/activity';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES
@@ -24,10 +25,13 @@ import * as rbacCache from '../../utils/rbac/cache';
  * @param {string} roleData.name - Role name
  * @param {string} roleData.description - Role description
  * @param {Array<string>} roleData.permissions - Role permissions
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Created role
  */
-export async function createRole(roleData, models) {
+export async function createRole(roleData, { models, webhook, actorId }) {
   const { Role } = models;
   const { name, description, permissions } = roleData;
 
@@ -53,6 +57,9 @@ export async function createRole(roleData, models) {
     // Reload with permissions
     role.reload();
   }
+
+  // Log activity
+  await logRoleActivity(webhook, 'created', role.id, { name }, actorId);
 
   return role;
 }
@@ -242,10 +249,17 @@ export async function getRoleById(role_id, models) {
  *
  * @param {string} role_id - Role ID
  * @param {Object} updateData - Data to update
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated role
  */
-export async function updateRole(role_id, updateData, models) {
+export async function updateRole(
+  role_id,
+  updateData,
+  { models, webhook, actorId },
+) {
   const { Role } = models;
 
   const role = await Role.findByPk(role_id);
@@ -282,6 +296,15 @@ export async function updateRole(role_id, updateData, models) {
     role.reload();
   }
 
+  // Log activity
+  await logRoleActivity(
+    webhook,
+    'updated',
+    role_id,
+    { name: role.name },
+    actorId,
+  );
+
   return role;
 }
 
@@ -289,10 +312,13 @@ export async function updateRole(role_id, updateData, models) {
  * Delete role
  *
  * @param {string} role_id - Role ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteRole(role_id, models) {
+export async function deleteRole(role_id, { models, webhook, actorId }) {
   const { Role, User } = models;
 
   const role = await Role.findByPk(role_id);
@@ -317,7 +343,17 @@ export async function deleteRole(role_id, models) {
     attributes: ['id'],
   });
 
+  const roleName = role.name;
   await role.destroy();
+
+  // Log activity
+  await logRoleActivity(
+    webhook,
+    'deleted',
+    role_id,
+    { name: roleName },
+    actorId,
+  );
 
   // Invalidate RBAC cache for affected users
   if (usersWithRole.length > 0) {
