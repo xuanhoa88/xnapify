@@ -16,12 +16,24 @@
  * // Access singleton instance
  * const manager = email.default;
  *
- * // Single email
+ * // Single email (auto-decides, usually direct processing)
  * await email.default.send({
  *   to: 'user@example.com',
  *   subject: 'Welcome',
  *   html: '<p>Hello!</p>'
  * });
+ *
+ * // Force worker processing
+ * await email.default.send({ to, subject, html }, { useWorker: true });
+ *
+ * // Force direct processing (bypass worker even for batch)
+ * await email.default.send(emailList, { useWorker: false });
+ *
+ * // Bulk emails (auto-offloads to worker for 5+ emails)
+ * await email.default.send([
+ *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
+ *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
+ * ]);
  *
  * // With template placeholders (LiquidJS)
  * await email.default.send({
@@ -30,12 +42,6 @@
  *   html: '<p>Hello {{name}}</p>',
  *   templateData: { name: 'John' }
  * });
- *
- * // Bulk emails (auto-offloads to worker for 5+ emails)
- * await email.default.send([
- *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
- *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
- * ]);
  *
  * @example
  * // Create isolated instance (for testing)
@@ -46,7 +52,6 @@
  * // Add custom provider (cannot override existing)
  * class ResendProvider {
  *   async send(emailData) {
- *     // Custom send logic
  *     return { messageId: 'xxx', provider: 'resend' };
  *   }
  * }

@@ -34,7 +34,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 });
 
 /**
- * Create a WorkerService instance for a specific engine
+ * Create a WorkerPool instance for a specific engine
  *
  * @param {Object} workersContext - webpack require.context for worker files
  * @param {Object} options - Configuration options
@@ -43,7 +43,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
  * @param {number} options.maxWorkers - Maximum workers per type
  * @param {number} options.workerTimeout - Worker timeout in milliseconds
  * @param {number} options.maxRequestsPerWorker - Max requests per worker before restart
- * @returns {WorkerService} Worker service instance
+ * @returns {WorkerPool} Worker service instance
  */
 export function createWorkerPool(workersContext, options = {}) {
   const {
@@ -123,7 +123,7 @@ export function createWorkerPool(workersContext, options = {}) {
   /**
    * Worker Service Class
    */
-  class WorkerService {
+  class WorkerPool {
     constructor() {
       this.workers = new Map();
       this.pendingRequests = new Map();
@@ -405,6 +405,44 @@ export function createWorkerPool(workersContext, options = {}) {
     }
 
     /**
+     * Unregister a worker type completely
+     * Removes all workers of the specified type and clears the module cache
+     * @param {string} workerType - Type of worker to unregister
+     * @returns {boolean} True if worker type was unregistered
+     */
+    unregisterWorker(workerType) {
+      if (!this.workerPools[workerType]) {
+        return false;
+      }
+
+      // Cancel any pending requests for this worker type
+      for (const [id, request] of this.pendingRequests) {
+        if (request.worker && request.worker.type === workerType) {
+          request.reject(new Error(`Worker type '${workerType}' unregistered`));
+          this.pendingRequests.delete(id);
+        }
+      }
+
+      // Remove all workers of this type
+      const pool = this.workerPools[workerType];
+      for (const worker of [...pool]) {
+        this.removeWorker(worker);
+      }
+
+      // Clear from worker pools
+      delete this.workerPools[workerType];
+
+      // Clear from module cache
+      workerModuleCache.delete(workerType);
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`${engineName} unregistered worker type: ${workerType}`);
+      }
+
+      return true;
+    }
+
+    /**
      * Cleanup all workers
      */
     async cleanup() {
@@ -447,24 +485,24 @@ export function createWorkerPool(workersContext, options = {}) {
   }
 
   // Create singleton instance
-  const workerService = new WorkerService();
+  const workerPool = new WorkerPool();
 
   // Setup process lifecycle management
   process.on('exit', () => {
-    workerService.cleanup();
+    workerPool.cleanup();
   });
 
   process.on('SIGINT', () => {
-    workerService.cleanup();
+    workerPool.cleanup();
     process.exit(0);
   });
 
   process.on('SIGTERM', () => {
-    workerService.cleanup();
+    workerPool.cleanup();
     process.exit(0);
   });
 
-  return workerService;
+  return workerPool;
 }
 
 // Default options

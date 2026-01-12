@@ -3,7 +3,7 @@
  */
 
 import { sync as syncOperation } from '../operations/sync';
-import workerService from '../workers';
+import workerPool from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -27,11 +27,27 @@ function shouldUseWorker(options = {}, opCount = 1) {
 
 /**
  * Sync file(s) with optional worker processing
+ *
  * @param {Object} manager - FilesystemManager instance
  * @param {Object|Array} syncOperations - Sync operation(s)
  * @param {Object} options - Sync options
- * @param {boolean} options.useWorker - Force worker usage (true/false/undefined for auto)
+ * @param {boolean} [options.useWorker] - Worker control:
+ *   - `true`: Force worker processing
+ *   - `false`: Force direct processing (bypass worker)
+ *   - `undefined`: Auto-decide (worker for 3+ operations)
  * @returns {Promise<Object>} Sync result
+ *
+ * @example
+ * // Auto-decide (default)
+ * await fs.sync(manager, { source: 'a.txt', target: 'b.txt' });
+ *
+ * @example
+ * // Force worker processing
+ * await fs.sync(manager, op, { useWorker: true });
+ *
+ * @example
+ * // Force direct processing (bypass worker for batch)
+ * await fs.sync(manager, operations, { useWorker: false });
  */
 export async function sync(manager, syncOperations, options = {}) {
   const opList = Array.isArray(syncOperations)
@@ -39,7 +55,7 @@ export async function sync(manager, syncOperations, options = {}) {
     : [syncOperations];
 
   if (shouldUseWorker(options, opList.length)) {
-    return await workerService.processSync(opList, options);
+    return await workerPool.processSync(opList, options);
   }
 
   return await syncOperation(manager, syncOperations, options);

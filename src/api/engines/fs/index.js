@@ -8,86 +8,40 @@
 /**
  * Filesystem Engine
  *
- * Provides filesystem operations with multiple provider support
- * (Local, Memory, SelfHost). Handles upload, download, delete, copy,
- * rename, info, preview, and sync operations.
+ * Streaming file operations with multiple provider support.
+ * Worker processing auto-enabled for batch operations.
  *
  * @example
- * // Access singleton instance
- * const manager = fs.default;
+ * // Upload
+ * await fs.upload({ fileName: 'photo.jpg', buffer, mimeType: 'image/jpeg' });
  *
- * // Upload file(s)
- * await fs.default.upload({ fileName: 'photo.jpg', buffer, mimeType: 'image/jpeg' });
+ * // Download (returns stream)
+ * const result = await fs.download('photo.jpg');
+ * result.data.stream.pipe(res);
  *
- * // Download file
- * const result = await fs.default.download('photo.jpg');
+ * // Other operations
+ * await fs.remove('photo.jpg');
+ * await fs.copy({ source: 'a.jpg', target: 'b.jpg' });
+ * await fs.rename({ oldName: 'a.jpg', newName: 'b.jpg' });
+ * await fs.info('photo.jpg');
+ * await fs.preview('photo.jpg');
  *
- * // Delete file(s)
- * await fs.default.remove('photo.jpg');
- * await fs.default.remove(['file1.jpg', 'file2.jpg']); // bulk
+ * // Worker control (default: auto-decides)
+ * await fs.upload(files, { useWorker: true });
  *
- * // Copy file
- * await fs.default.copy({ source: 'photo.jpg', target: 'photo-copy.jpg' });
- *
- * // Rename file
- * await fs.default.rename({ oldName: 'photo.jpg', newName: 'renamed.jpg' });
- *
- * // Get file info
- * const info = await fs.default.info('photo.jpg');
- *
- * // Preview file
- * const preview = await fs.default.preview('photo.jpg');
- *
- * @example
- * // Upload middleware usage
- * const avatarUpload = fs.default.useUploadMiddleware({
- *   fieldName: 'avatar',
- *   maxFiles: 1,
- *   maxFileSize: 10 * 1024 * 1024, // 10MB
+ * // Middleware
+ * const upload = fs.useUploadMiddleware({ fieldName: 'avatar', maxFiles: 1 });
+ * router.post('/avatar', upload, (req, res) => {
+ *   const result = req[fs.MIDDLEWARES.UPLOAD];
  * });
  *
- * // In routes
- * router.post('/avatar', requireAuth, avatarUpload, controller.uploadAvatar);
- *
- * // Access upload result in controller
- * const uploadResult = req[fs.default.MIDDLEWARES.UPLOAD];
- *
- * @example
- * // Create isolated instance (for testing)
- * const testFs = fs.createFactory({ provider: 'memory' });
- * await testFs.upload({ fileName, buffer });
- *
- * @example
- * // Use services with worker support
- * await fs.services.upload(manager, files, { useWorker: true });
- *
- * @example
- * // Add custom provider (cannot override existing)
- * class S3Provider {
- *   async store(fileName, buffer, options) { ... }
- *   async retrieve(fileName) { ... }
- *   async delete(fileName) { ... }
- *   async exists(fileName) { ... }
- *   async getMetadata(fileName) { ... }
- *   async getStream(fileName) { ... }
- * }
- *
- * fs.default.addProvider('s3', new S3Provider());
- * await fs.default.upload({ fileName, buffer }, { provider: 's3' });
+ * // Isolated instance for testing
+ * const testFs = createFactory({ provider: 'memory' });
  */
 
 import { createFactory } from './factory';
 
-// Export factory for creating instances
 export { createFactory };
 
-// Export services for direct usage with worker support
-export * as services from './services';
-
-/**
- * Singleton instance of FilesystemManager
- * Used by the application via fs.default
- */
 const fs = createFactory();
-
 export default fs;

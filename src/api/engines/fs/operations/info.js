@@ -22,15 +22,6 @@ export async function info(manager, fileName, options = {}) {
   try {
     const provider = manager.getProvider(options.provider);
 
-    const exists = await provider.exists(fileName);
-    if (!exists) {
-      throw new FilesystemError(
-        `File not found: ${fileName}`,
-        'FILE_NOT_FOUND',
-        404,
-      );
-    }
-
     const metadata = await provider.getMetadata(fileName);
     const mimeType = metadata.mimeType || getMimeType(fileName);
     const category = getFileCategory(fileName);

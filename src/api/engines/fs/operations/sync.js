@@ -37,11 +37,11 @@ export async function sync(manager, operations, options = {}) {
           continue;
         }
 
-        // Get file from source and store in target
-        const { buffer, metadata } = await sourceProvider.retrieve(op.source);
+        // Get stream from source and store in target (streaming - no full buffer)
+        const { stream, metadata } = await sourceProvider.retrieve(op.source);
         const targetPath = op.target || op.source;
 
-        await targetProvider.store(targetPath, buffer, {
+        await targetProvider.store(targetPath, stream, {
           mimeType: metadata.mimeType,
           ...options,
         });
@@ -51,6 +51,7 @@ export async function sync(manager, operations, options = {}) {
           target: targetPath,
           sourceProvider: op.sourceProvider,
           targetProvider: op.targetProvider,
+          size: metadata.size,
           syncedAt: new Date().toISOString(),
         });
       } catch (error) {

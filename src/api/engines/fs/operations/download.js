@@ -14,7 +14,7 @@ import {
  * @param {Object} manager - FilesystemManager instance (this)
  * @param {string|Array} fileNames - Single file name or array of file names
  * @param {Object} options - Download options
- * @returns {Promise<Object>} Download result with stream or ZIP buffer
+ * @returns {Promise<Object>} Download result with stream
  */
 export async function download(manager, fileNames, options = {}) {
   try {
@@ -32,17 +32,7 @@ export async function download(manager, fileNames, options = {}) {
     // Single file download
     if (fileList.length === 1) {
       const fileName = fileList[0];
-      const exists = await provider.exists(fileName);
-      if (!exists) {
-        throw new FilesystemError(
-          `File not found: ${fileName}`,
-          'FILE_NOT_FOUND',
-          404,
-        );
-      }
-
-      const metadata = await provider.getMetadata(fileName);
-      const stream = await provider.getStream(fileName);
+      const { stream, metadata } = await provider.retrieve(fileName);
 
       return createResponse(
         true,
@@ -64,17 +54,12 @@ export async function download(manager, fileNames, options = {}) {
       );
     }
 
-    // Multiple files - create ZIP
+    // Multiple files - create streaming ZIP
     const fileInfos = [];
     const errors = [];
 
     for (const fileName of fileList) {
       try {
-        const exists = await provider.exists(fileName);
-        if (!exists) {
-          errors.push({ fileName, error: 'FILE_NOT_FOUND' });
-          continue;
-        }
         const metadata = await provider.getMetadata(fileName);
         fileInfos.push({
           fileName,
@@ -95,22 +80,28 @@ export async function download(manager, fileNames, options = {}) {
       );
     }
 
+    // Use streaming ZIP creation (no full file buffering)
     const zipResult = await createZip(fileInfos, {
       basePath: UPLOAD_DIR,
       compressionLevel: options.compressionLevel || 6,
+      zipName: options.zipName || 'files.zip',
     });
 
     return createResponse(
       true,
       {
         type: 'zip',
-        buffer: zipResult.buffer,
+        stream: zipResult.stream, // Readable stream - pipe to HTTP response
         fileCount: zipResult.fileCount,
         totalSize: zipResult.totalSize,
-        errors,
-        zipName: options.zipName || 'files.zip',
+        errors: [...errors, ...zipResult.errors],
+        zipName: zipResult.zipName,
+        headers: {
+          'Content-Type': 'application/zip',
+          'Content-Disposition': `attachment; filename="${zipResult.zipName}"`,
+        },
       },
-      `Created ZIP archive with ${zipResult.fileCount} files`,
+      `Created streaming ZIP archive with ${zipResult.fileCount} files`,
     );
   } catch (error) {
     if (error instanceof FilesystemError) {

@@ -29,11 +29,6 @@ export async function remove(manager, fileNames, options = {}) {
 
     for (const fileName of fileList) {
       try {
-        const exists = await provider.exists(fileName);
-        if (!exists) {
-          errors.push({ fileName, error: 'FILE_NOT_FOUND' });
-          continue;
-        }
         await provider.delete(fileName);
         results.push({ fileName, deletedAt: new Date().toISOString() });
       } catch (error) {

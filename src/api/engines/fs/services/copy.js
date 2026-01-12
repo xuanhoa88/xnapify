@@ -3,7 +3,7 @@
  */
 
 import { copy as copyOperation } from '../operations/copy';
-import workerService from '../workers';
+import workerPool from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -27,11 +27,27 @@ function shouldUseWorker(options = {}, opCount = 1) {
 
 /**
  * Copy file(s) with optional worker processing
+ *
  * @param {Object} manager - FilesystemManager instance
  * @param {Object|Array} copyOperations - Single copy op or array of {source, target}
  * @param {Object} options - Copy options
- * @param {boolean} options.useWorker - Force worker usage (true/false/undefined for auto)
+ * @param {boolean} [options.useWorker] - Worker control:
+ *   - `true`: Force worker processing
+ *   - `false`: Force direct processing (bypass worker)
+ *   - `undefined`: Auto-decide (worker for 3+ operations)
  * @returns {Promise<Object>} Copy result
+ *
+ * @example
+ * // Auto-decide (default)
+ * await fs.copy(manager, { source: 'a.txt', target: 'b.txt' });
+ *
+ * @example
+ * // Force worker processing
+ * await fs.copy(manager, op, { useWorker: true });
+ *
+ * @example
+ * // Force direct processing (bypass worker for batch)
+ * await fs.copy(manager, operations, { useWorker: false });
  */
 export async function copy(manager, copyOperations, options = {}) {
   const opList = Array.isArray(copyOperations)
@@ -39,7 +55,7 @@ export async function copy(manager, copyOperations, options = {}) {
     : [copyOperations];
 
   if (shouldUseWorker(options, opList.length)) {
-    return await workerService.processCopy(opList, options);
+    return await workerPool.processCopy(opList, options);
   }
 
   return await copyOperation(manager, copyOperations, options);

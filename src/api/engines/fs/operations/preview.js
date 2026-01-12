@@ -23,16 +23,7 @@ export async function preview(manager, fileName, options = {}) {
   try {
     const provider = manager.getProvider(options.provider);
 
-    const exists = await provider.exists(fileName);
-    if (!exists) {
-      throw new FilesystemError(
-        `File not found: ${fileName}`,
-        'FILE_NOT_FOUND',
-        404,
-      );
-    }
-
-    const metadata = await provider.getMetadata(fileName);
+    const { stream, metadata } = await provider.retrieve(fileName);
     const mimeType = metadata.mimeType || getMimeType(fileName);
     const category = getFileCategory(fileName);
     const isImage = isImageFile(fileName);
@@ -42,9 +33,6 @@ export async function preview(manager, fileName, options = {}) {
     const isAudio = category === 'audio';
     const isDirectlyPreviewable =
       isImage || isText || isPdf || isVideo || isAudio;
-
-    const streamResult = await provider.getStream(fileName);
-    const stream = streamResult.stream || streamResult;
 
     const contentDisposition = isDirectlyPreviewable
       ? `inline; filename="${metadata.name || fileName}"`

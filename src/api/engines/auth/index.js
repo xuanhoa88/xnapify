@@ -12,4 +12,4 @@ export * from './cookies';
 export * as oauth from './oauth';
 
 // Authentication middleware
-export * as middlewares from './middleware';
+export * as middlewares from './middlewares';

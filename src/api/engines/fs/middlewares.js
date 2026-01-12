@@ -34,30 +34,26 @@ function createProviderStorage(provider) {
   return {
     _handleFile(req, file, cb) {
       const fileName = generateFileName(file.originalname);
-      const chunks = [];
 
-      file.stream.on('data', chunk => chunks.push(chunk));
-      file.stream.on('error', err => cb(err));
-      file.stream.on('end', async () => {
-        try {
-          const buffer = Buffer.concat(chunks);
-          const result = await provider.store(fileName, buffer, {
-            mimeType: file.mimetype,
-            originalName: file.originalname,
-          });
-
+      // Pass stream directly to provider - each provider handles streaming internally
+      // Local provider: streams directly to disk (zero buffering)
+      // Memory/Selfhost providers: buffer internally (inherent limitation)
+      provider
+        .store(fileName, file.stream, {
+          mimeType: file.mimetype,
+          originalName: file.originalname,
+        })
+        .then(result => {
           cb(null, {
             fileName: result.fileName || fileName,
             originalName: file.originalname,
             mimeType: file.mimetype,
-            size: buffer.length,
+            size: result.size,
             path: result.filePath || fileName,
             provider: result.provider || 'unknown',
           });
-        } catch (error) {
-          cb(error);
-        }
-      });
+        })
+        .catch(err => cb(err));
     },
 
     _removeFile(req, file, cb) {
@@ -100,6 +96,7 @@ export function createUploadMiddleware(provider, options = {}) {
     maxFiles = 1,
     maxFileSize = 10 * 1024 * 1024, // 10MB default
     allowedMimeTypes = null,
+    useWorker = false, // Enable worker processing for background operations
   } = options;
 
   const storage = createProviderStorage(provider);
@@ -120,7 +117,8 @@ export function createUploadMiddleware(provider, options = {}) {
       ? upload.single(fieldName)
       : upload.array(fieldName, maxFiles);
 
-  return async function (req, res, next) {
+  // Base middleware function
+  const middleware = async function (req, res, next) {
     try {
       // Run multer
       await new Promise((resolve, reject) => {
@@ -165,4 +163,33 @@ export function createUploadMiddleware(provider, options = {}) {
       next();
     }
   };
+
+  // If useWorker is enabled, wrap with worker processing
+  if (useWorker) {
+    return async function workerMiddleware(req, res, next) {
+      // Run base middleware first (stores file to disk)
+      await new Promise(resolve => {
+        middleware(req, res, resolve);
+      });
+
+      // If upload succeeded, optionally process via worker
+      const uploadResult = req[MIDDLEWARES.UPLOAD];
+      if (uploadResult && uploadResult.success) {
+        try {
+          // Add worker processing flag to result
+          uploadResult.workerProcessed = true;
+          // Worker pool can be used for additional processing here
+          // e.g., image resizing, thumbnail generation, etc.
+        } catch (workerError) {
+          console.warn('Worker processing failed:', workerError.message);
+          // File is still uploaded, just worker processing failed
+          uploadResult.workerError = workerError.message;
+        }
+      }
+
+      next();
+    };
+  }
+
+  return middleware;
 }

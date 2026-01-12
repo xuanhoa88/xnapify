@@ -9,14 +9,16 @@ import { LocalFilesystemProvider } from './providers/local';
 import { MemoryFilesystemProvider } from './providers/memory';
 import { SelfHostFilesystemProvider } from './providers/selfhost';
 import { FilesystemError } from './utils';
-import { upload as uploadOp } from './operations/upload';
-import { download as downloadOp } from './operations/download';
-import { remove as removeOp } from './operations/remove';
-import { copy as copyOp } from './operations/copy';
-import { rename as renameOp } from './operations/rename';
-import { info as infoOp } from './operations/info';
-import { preview as previewOp } from './operations/preview';
-import { sync as syncOp } from './operations/sync';
+import {
+  upload as uploadService,
+  download as downloadService,
+  remove as removeService,
+  copy as copyService,
+  rename as renameService,
+  info as infoService,
+  preview as previewService,
+  sync as syncService,
+} from './services';
 import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
 
 /**
@@ -103,35 +105,35 @@ class FilesystemManager {
   // =============================================================================
 
   async upload(files, options = {}) {
-    return uploadOp(this, files, options);
+    return uploadService(this, files, options);
   }
 
   async download(fileNames, options = {}) {
-    return downloadOp(this, fileNames, options);
+    return downloadService(this, fileNames, options);
   }
 
   async remove(fileNames, options = {}) {
-    return removeOp(this, fileNames, options);
+    return removeService(this, fileNames, options);
   }
 
   async copy(ops, options = {}) {
-    return copyOp(this, ops, options);
+    return copyService(this, ops, options);
   }
 
   async rename(ops, options = {}) {
-    return renameOp(this, ops, options);
+    return renameService(this, ops, options);
   }
 
   async info(fileName, options = {}) {
-    return infoOp(this, fileName, options);
+    return infoService(this, fileName, options);
   }
 
   async preview(fileName, options = {}) {
-    return previewOp(this, fileName, options);
+    return previewService(this, fileName, options);
   }
 
   async sync(ops, options = {}) {
-    return syncOp(this, ops, options);
+    return syncService(this, ops, options);
   }
 
   // =============================================================================

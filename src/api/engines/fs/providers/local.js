@@ -63,9 +63,13 @@ export class LocalFilesystemProvider {
   }
 
   /**
-   * Store a file
+   * Store a file (accepts Buffer or Readable Stream)
+   * @param {string} fileName - Target file name
+   * @param {Buffer|Stream} fileData - File content as Buffer or Readable Stream
+   * @param {Object} options - Storage options
+   * @returns {Promise<Object>} File metadata
    */
-  async store(fileName, fileBuffer, options = {}) {
+  async store(fileName, fileData, options = {}) {
     try {
       // Validate extension
       if (!this.validateExtension(fileName)) {
@@ -74,38 +78,70 @@ export class LocalFilesystemProvider {
         );
       }
 
-      // Ensure fileBuffer is a real Buffer (handle IPC serialization)
-      let buffer = fileBuffer;
-      if (!Buffer.isBuffer(fileBuffer)) {
+      // Ensure directory exists
+      const filePath = this.getFilePath(fileName);
+      const directory = path.dirname(filePath);
+      await this.ensureDir(directory);
+
+      // Detect if fileData is a stream (has pipe method and readable property)
+      const isStream =
+        fileData &&
+        typeof fileData.pipe === 'function' &&
+        typeof fileData.on === 'function';
+
+      if (isStream) {
+        // Stream mode: pipe directly to disk (zero buffering)
+        const writeStream = createWriteStream(filePath);
+        await pipeline(fileData, writeStream);
+
+        // Validate file size after writing
+        const stats = await fs.stat(filePath);
+        if (stats.size > this.maxFileSize) {
+          await this.delete(fileName); // Clean up
+          throw new FilesystemError(
+            `File size exceeds limit: ${stats.size} > ${this.maxFileSize}`,
+          );
+        }
+
+        return {
+          fileName,
+          filePath,
+          size: stats.size,
+          mimeType: options.mimeType || 'application/octet-stream',
+          createdAt: stats.birthtime,
+          modifiedAt: stats.mtime,
+          provider: 'local',
+        };
+      }
+
+      // Buffer mode: ensure fileData is a real Buffer (handle IPC serialization)
+      let buffer = fileData;
+      if (!Buffer.isBuffer(fileData)) {
         // Buffer was serialized through IPC - reconstruct it
         if (
-          fileBuffer &&
-          fileBuffer.type === 'Buffer' &&
-          Array.isArray(fileBuffer.data)
+          fileData &&
+          fileData.type === 'Buffer' &&
+          Array.isArray(fileData.data)
         ) {
           // Standard Buffer JSON serialization format: { type: 'Buffer', data: [...] }
-          buffer = Buffer.from(fileBuffer.data);
-        } else if (fileBuffer && Array.isArray(fileBuffer)) {
+          buffer = Buffer.from(fileData.data);
+        } else if (fileData && Array.isArray(fileData)) {
           // Plain array of bytes
-          buffer = Buffer.from(fileBuffer);
-        } else if (
-          fileBuffer &&
-          typeof fileBuffer === 'object' &&
-          fileBuffer.data
-        ) {
+          buffer = Buffer.from(fileData);
+        } else if (fileData && typeof fileData === 'object' && fileData.data) {
           // Object with data property (other serialization formats)
-          buffer = Buffer.from(fileBuffer.data);
-        } else if (fileBuffer && typeof fileBuffer === 'object') {
+          buffer = Buffer.from(fileData.data);
+        } else if (fileData && typeof fileData === 'object') {
           // Try to create buffer from object values (numeric keys)
-          const values = Object.values(fileBuffer);
+          const values = Object.values(fileData);
           if (values.length > 0 && typeof values[0] === 'number') {
             buffer = Buffer.from(values);
           } else {
             console.error('[LocalFilesystemProvider] Invalid buffer format:', {
-              type: typeof fileBuffer,
-              isNull: fileBuffer === null,
-              isUndefined: fileBuffer === undefined,
-              keys: fileBuffer ? Object.keys(fileBuffer).slice(0, 5) : [],
+              type: typeof fileData,
+              isNull: fileData === null,
+              isUndefined: fileData === undefined,
+              keys: fileData ? Object.keys(fileData).slice(0, 5) : [],
             });
             throw new FilesystemError(
               'Invalid file buffer provided - unable to reconstruct from serialized data',
@@ -114,7 +150,7 @@ export class LocalFilesystemProvider {
         } else {
           console.error(
             '[LocalFilesystemProvider] Buffer is null/undefined:',
-            fileBuffer,
+            fileData,
           );
           throw new FilesystemError(
             'Invalid file buffer provided - buffer is null or undefined',
@@ -128,11 +164,6 @@ export class LocalFilesystemProvider {
           `File size exceeds limit: ${buffer.length} > ${this.maxFileSize}`,
         );
       }
-
-      // Ensure directory exists
-      const filePath = this.getFilePath(fileName);
-      const directory = path.dirname(filePath);
-      await this.ensureDir(directory);
 
       // Write file
       await fs.writeFile(filePath, buffer);
@@ -149,90 +180,15 @@ export class LocalFilesystemProvider {
         provider: 'local',
       };
     } catch (error) {
+      if (error instanceof FilesystemError) throw error;
       throw new FilesystemError(`Failed to store file: ${error.message}`);
-    }
-  }
-
-  /**
-   * Store a file from stream
-   */
-  async storeStream(fileName, readableStream, options = {}) {
-    try {
-      // Validate extension
-      if (!this.validateExtension(fileName)) {
-        throw new FilesystemError(
-          `File extension not allowed: ${path.extname(fileName)}`,
-        );
-      }
-
-      // Ensure directory exists
-      const filePath = this.getFilePath(fileName);
-      const directory = path.dirname(filePath);
-      await this.ensureDir(directory);
-
-      // Create write stream and pipe
-      const writeStream = createWriteStream(filePath);
-      await pipeline(readableStream, writeStream);
-
-      // Return file metadata
-      const stats = await fs.stat(filePath);
-
-      // Validate file size after writing
-      if (stats.size > this.maxFileSize) {
-        await this.delete(fileName); // Clean up
-        throw new FilesystemError(
-          `File size exceeds limit: ${stats.size} > ${this.maxFileSize}`,
-        );
-      }
-
-      return {
-        fileName,
-        filePath,
-        size: stats.size,
-        mimeType: options.mimeType || 'application/octet-stream',
-        createdAt: stats.birthtime,
-        modifiedAt: stats.mtime,
-        provider: 'local',
-      };
-    } catch (error) {
-      throw new FilesystemError(
-        `Failed to store file from stream: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Retrieve a file as buffer
-   */
-  async retrieve(fileName) {
-    try {
-      const filePath = this.getFilePath(fileName);
-      const buffer = await fs.readFile(filePath);
-
-      const stats = await fs.stat(filePath);
-      return {
-        buffer,
-        metadata: {
-          fileName,
-          filePath,
-          size: stats.size,
-          createdAt: stats.birthtime,
-          modifiedAt: stats.mtime,
-          provider: 'local',
-        },
-      };
-    } catch (error) {
-      if (error.code === 'ENOENT') {
-        throw new FilesystemError(`File not found: ${fileName}`);
-      }
-      throw new FilesystemError(`Failed to retrieve file: ${error.message}`);
     }
   }
 
   /**
    * Get a readable stream for a file
    */
-  async getStream(fileName) {
+  async retrieve(fileName) {
     try {
       const filePath = this.getFilePath(fileName);
 
@@ -285,7 +241,7 @@ export class LocalFilesystemProvider {
       const filePath = this.getFilePath(fileName);
       await fs.access(filePath);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }

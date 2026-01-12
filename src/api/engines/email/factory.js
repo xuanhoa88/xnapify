@@ -16,7 +16,7 @@ import {
   processEmails,
   sendEmailsFormSchema,
 } from './utils';
-import workerService from './workers';
+import workerPool from './workers';
 
 /**
  * Decision logic for whether to use background worker
@@ -168,44 +168,48 @@ class EmailManager {
    * @param {Object|Array} emails - Single email object or array of emails
    * @param {Object} options - Send options
    * @param {string} [options.provider] - Specific provider to use
-   * @param {boolean} [options.useWorker] - Override worker decision
+   * @param {boolean} [options.useWorker] - Worker control:
+   *   - `true`: Force worker processing
+   *   - `false`: Force direct processing (bypass worker)
+   *   - `undefined`: Auto-decide based on thresholds
+   * @param {number} [options.batchThreshold=5] - Number of emails to trigger worker
+   * @param {number} [options.largeBodyThreshold=102400] - Body size (bytes) to trigger worker
    * @returns {Promise<Object>} Send result
    *
    * @example
-   * // Single email
+   * // Single email (auto-decides, usually direct)
    * await email.send({ to: 'user@example.com', subject: 'Hi', html: '<p>Hello</p>' });
    *
-   * // With template placeholders
-   * await email.send({
-   *   to: 'user@example.com',
-   *   subject: 'Hi {{name}}',
-   *   html: '<p>Hello {{name}}</p>',
-   *   templateData: { name: 'John' }
+   * @example
+   * // Force worker processing
+   * await email.send({ to: 'user@example.com', subject: 'Hi', html: '<p>Hello</p>' }, {
+   *   useWorker: true
    * });
    *
-   * // Bulk emails
+   * @example
+   * // Force direct processing (bypass worker even for batch)
+   * await email.send(largeEmailList, { useWorker: false });
+   *
+   * @example
+   * // Bulk emails (auto-offloads to worker for 5+ emails)
    * await email.send([
    *   { to: 'user1@example.com', subject: 'Hi', html: '<p>Hello 1</p>' },
    *   { to: 'user2@example.com', subject: 'Hi', html: '<p>Hello 2</p>' }
    * ]);
+   *
+   * @example
+   * // Custom thresholds
+   * await email.send(emailList, {
+   *   batchThreshold: 3,        // Use worker for 3+ emails
+   *   largeBodyThreshold: 50000 // Use worker for 50KB+ bodies
+   * });
    */
   async send(emails, options = {}) {
     try {
-      // Normalize to array
-      const emailList = Array.isArray(emails) ? emails : [emails];
-
-      if (emailList.length === 0) {
-        throw new EmailError(
-          'At least one email is required',
-          'INVALID_INPUT',
-          400,
-        );
-      }
-
       // Validate using Zod schema
       const [isValid, validationErrors] = validateForm(
         sendEmailsFormSchema,
-        emailList,
+        emails,
       );
       if (!isValid) {
         return createResponse(
@@ -221,18 +225,25 @@ class EmailManager {
       }
 
       // Use hybrid decision service to determine processing method
-      const decision = makeSendDecision(emailList, options);
+      const decision = makeSendDecision(emails, options);
 
-      // Use worker if decision says so OR if useWorker is explicitly set
-      if (decision.useWorker || options.useWorker) {
-        return workerService.processSend(emailList, {
+      // Determine worker usage:
+      // - useWorker === true: Force worker
+      // - useWorker === false: Force direct (bypass worker)
+      // - useWorker === undefined: Auto-decide based on thresholds
+      const shouldUseWorker =
+        options.useWorker === true ||
+        (options.useWorker !== false && decision.useWorker);
+
+      if (shouldUseWorker) {
+        return workerPool.processSend(emails, {
           ...options,
-          forceFork: options.useWorker,
+          forceFork: options.useWorker === true,
         });
       }
 
       // Process directly
-      return processEmails(emailList, options);
+      return processEmails(emails, options);
     } catch (error) {
       if (error instanceof EmailError) {
         return createResponse(false, null, error.message, error);

@@ -32,16 +32,13 @@ export async function copy(manager, operations, options = {}) {
       const target = op.target || op.targetFileName;
 
       try {
-        const exists = await provider.exists(source);
-        if (!exists) {
-          errors.push({ source, target, error: 'SOURCE_NOT_FOUND' });
-          continue;
-        }
-
-        const targetExists = await provider.exists(target);
-        if (targetExists && !options.overwrite) {
-          errors.push({ source, target, error: 'TARGET_EXISTS' });
-          continue;
+        // Check target exists for overwrite protection
+        if (!options.overwrite) {
+          const targetExists = await provider.exists(target);
+          if (targetExists) {
+            errors.push({ source, target, error: 'TARGET_EXISTS' });
+            continue;
+          }
         }
 
         await provider.copy(source, target);

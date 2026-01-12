@@ -35,13 +35,13 @@
  */
 
 // Worker pool factory
-export { createWorkerPool } from './createWorkerPool';
+export * from './createWorkerPool';
 
 // Worker handler creator
-export { createWorkerHandler } from './createWorkerHandler';
+export * from './createWorkerHandler';
 
 // Fork mode setup
-export { setupWorkerProcess } from './setupWorkerProcess';
+export * from './setupWorkerProcess';
 
 // Error class
-export { WorkerError } from './errors';
+export * from './errors';

@@ -6,7 +6,7 @@
  */
 
 /**
- * Filesystem Worker Service - Manages filesystem operations
+ * Filesystem Worker Pool - Manages filesystem operations
  * Uses the shared worker engine for worker pool management
  *
  * Features:
@@ -22,8 +22,8 @@ import { FilesystemWorkerError } from '../utils';
 // Use require.context to dynamically import worker files
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
-// Create worker service with filesystem-specific configuration
-const workerService = createWorkerPool(workersContext, {
+// Create worker pool with filesystem-specific configuration
+const workerPool = createWorkerPool(workersContext, {
   ErrorHandler: FilesystemWorkerError,
   engineName: '📁 Filesystem',
 });
@@ -39,7 +39,7 @@ const workerService = createWorkerPool(workersContext, {
  * @param {Object} options - ZIP creation options
  * @returns {Promise<Object>} ZIP result
  */
-workerService.createZipFile = async function createZipFile(
+workerPool.createZipFile = async function createZipFile(
   fileInfos,
   outputPath,
   options = {},
@@ -59,7 +59,7 @@ workerService.createZipFile = async function createZipFile(
  * @param {Object} options - Extraction options
  * @returns {Promise<Object>} Extraction result
  */
-workerService.extractZip = async function extractZip(
+workerPool.extractZip = async function extractZip(
   zipSource,
   extractPath,
   options = {},
@@ -79,7 +79,7 @@ workerService.extractZip = async function extractZip(
  * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Upload result
  */
-workerService.processUpload = async function processUpload(
+workerPool.processUpload = async function processUpload(
   filesData,
   options = {},
 ) {
@@ -106,7 +106,7 @@ workerService.processUpload = async function processUpload(
  * @param {Object} options - Download options
  * @returns {Promise<Object>} Download result
  */
-workerService.processDownload = async function processDownload(
+workerPool.processDownload = async function processDownload(
   fileNames,
   options = {},
 ) {
@@ -128,7 +128,7 @@ workerService.processDownload = async function processDownload(
  * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Delete result
  */
-workerService.processDelete = async function processDelete(
+workerPool.processDelete = async function processDelete(
   fileNames,
   options = {},
 ) {
@@ -156,7 +156,7 @@ workerService.processDelete = async function processDelete(
  * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Rename result
  */
-workerService.processRename = async function processRename(
+workerPool.processRename = async function processRename(
   operations,
   options = {},
 ) {
@@ -184,10 +184,7 @@ workerService.processRename = async function processRename(
  * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Copy result
  */
-workerService.processCopy = async function processCopy(
-  operations,
-  options = {},
-) {
+workerPool.processCopy = async function processCopy(operations, options = {}) {
   const { forceFork, ...copyOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
@@ -211,10 +208,7 @@ workerService.processCopy = async function processCopy(
  * @param {Object} options - Sync options
  * @returns {Promise<Object>} Sync result
  */
-workerService.processSync = async function processSync(
-  operations,
-  options = {},
-) {
+workerPool.processSync = async function processSync(operations, options = {}) {
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'SYNC_BATCH'
@@ -232,7 +226,7 @@ workerService.processSync = async function processSync(
  * @param {Object} options - Info options
  * @returns {Promise<Object>} Info result
  */
-workerService.processInfo = async function processInfo(fileName, options = {}) {
+workerPool.processInfo = async function processInfo(fileName, options = {}) {
   return await this.sendRequest('info', 'FILE_INFO', {
     type: 'GET_FILE_INFO',
     fileName,
@@ -246,7 +240,7 @@ workerService.processInfo = async function processInfo(fileName, options = {}) {
  * @param {Object} options - Preview options
  * @returns {Promise<Object>} Preview result
  */
-workerService.processPreview = async function processPreview(
+workerPool.processPreview = async function processPreview(
   fileName,
   options = {},
 ) {
@@ -257,8 +251,85 @@ workerService.processPreview = async function processPreview(
   });
 };
 
+// ==========================================================================
+// UNREGISTER OPERATIONS
+// ==========================================================================
+
+/**
+ * Unregister a specific worker type
+ * @param {string} workerType - Worker type to unregister
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregister = function unregister(workerType) {
+  return this.unregisterWorker(workerType);
+};
+
+/**
+ * Unregister the zip worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterZip = function unregisterZip() {
+  return this.unregisterWorker('zip');
+};
+
+/**
+ * Unregister the upload worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterUpload = function unregisterUpload() {
+  return this.unregisterWorker('upload');
+};
+
+/**
+ * Unregister the download worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterDownload = function unregisterDownload() {
+  return this.unregisterWorker('download');
+};
+
+/**
+ * Unregister the delete worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterDelete = function unregisterDelete() {
+  return this.unregisterWorker('delete');
+};
+
+/**
+ * Unregister the rename worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterRename = function unregisterRename() {
+  return this.unregisterWorker('rename');
+};
+
+/**
+ * Unregister the copy worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterCopy = function unregisterCopy() {
+  return this.unregisterWorker('copy');
+};
+
+/**
+ * Unregister the sync worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterSync = function unregisterSync() {
+  return this.unregisterWorker('sync');
+};
+
+/**
+ * Unregister the info worker
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterInfo = function unregisterInfo() {
+  return this.unregisterWorker('info');
+};
+
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
-export default workerService;
+export default workerPool;

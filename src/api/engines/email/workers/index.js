@@ -6,7 +6,7 @@
  */
 
 /**
- * Email Worker Service - Manages email operations
+ * Email Worker Pool - Manages email operations
  * Uses the shared worker engine for worker pool management
  *
  * Features:
@@ -30,8 +30,8 @@ const WORKER_CONFIG = Object.freeze({
 // Use require.context to dynamically import worker files
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
-// Create worker service with email-specific configuration
-const workerService = createWorkerPool(workersContext, {
+// Create worker pool with email-specific configuration
+const workerPool = createWorkerPool(workersContext, {
   ErrorHandler: EmailWorkerError,
   engineName: '📧 Email',
   maxWorkers: WORKER_CONFIG.maxWorkers,
@@ -50,7 +50,7 @@ const workerService = createWorkerPool(workersContext, {
  * @param {boolean} options.forceFork - Force fork mode for this request
  * @returns {Promise<Object>} Send result
  */
-workerService.processSend = async function processSend(emails, options = {}) {
+workerPool.processSend = async function processSend(emails, options = {}) {
   const { forceFork, ...sendOptions } = options;
   return await this.sendRequest(
     'send',
@@ -64,8 +64,17 @@ workerService.processSend = async function processSend(emails, options = {}) {
   );
 };
 
+/**
+ * Unregister the send worker
+ * Removes worker from pool and clears module cache
+ * @returns {boolean} True if worker was unregistered
+ */
+workerPool.unregisterSend = function unregisterSend() {
+  return this.unregisterWorker('send');
+};
+
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
-export default workerService;
+export default workerPool;

@@ -33,21 +33,18 @@ export class MemoryFilesystemProvider {
   }
 
   /**
-   * Store a file
+   * Store a file (accepts Buffer or Readable Stream)
+   * @param {string} fileName - Target file name
+   * @param {Buffer|Stream} fileData - File content as Buffer or Readable Stream
+   * @param {Object} options - Storage options
+   * @returns {Promise<Object>} File metadata
    */
-  async store(fileName, fileBuffer, options = {}) {
+  async store(fileName, fileData, options = {}) {
     try {
       // Validate extension
       if (!this.validateExtension(fileName)) {
         const ext = fileName.split('.').pop();
         throw new FilesystemError(`File extension not allowed: .${ext}`);
-      }
-
-      // Validate file size
-      if (fileBuffer.length > this.maxFileSize) {
-        throw new FilesystemError(
-          `File size exceeds limit: ${fileBuffer.length} > ${this.maxFileSize}`,
-        );
       }
 
       // Check max files limit
@@ -57,11 +54,49 @@ export class MemoryFilesystemProvider {
         );
       }
 
+      // Detect if fileData is a stream (has pipe method and readable property)
+      const isStream =
+        fileData &&
+        typeof fileData.pipe === 'function' &&
+        typeof fileData.on === 'function';
+
+      let buffer;
+      if (isStream) {
+        // Stream mode: collect chunks into buffer (memory provider must buffer)
+        const chunks = [];
+        let totalSize = 0;
+
+        for await (const chunk of fileData) {
+          totalSize += chunk.length;
+
+          // Check size limit during streaming
+          if (totalSize > this.maxFileSize) {
+            throw new FilesystemError(
+              `File size exceeds limit: ${totalSize} > ${this.maxFileSize}`,
+            );
+          }
+
+          chunks.push(chunk);
+        }
+
+        buffer = Buffer.concat(chunks);
+      } else {
+        // Buffer mode
+        buffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData);
+
+        // Validate file size
+        if (buffer.length > this.maxFileSize) {
+          throw new FilesystemError(
+            `File size exceeds limit: ${buffer.length} > ${this.maxFileSize}`,
+          );
+        }
+      }
+
       // Store file in memory
       const now = new Date();
       const metadata = {
         fileName,
-        size: fileBuffer.length,
+        size: buffer.length,
         mimeType: options.mimeType || 'application/octet-stream',
         createdAt: now,
         modifiedAt: now,
@@ -69,84 +104,21 @@ export class MemoryFilesystemProvider {
       };
 
       this.files.set(fileName, {
-        buffer: Buffer.from(fileBuffer),
+        buffer,
         metadata,
       });
 
       return metadata;
     } catch (error) {
+      if (error instanceof FilesystemError) throw error;
       throw new FilesystemError(`Failed to store file: ${error.message}`);
-    }
-  }
-
-  /**
-   * Store a file from stream
-   */
-  async storeStream(fileName, readableStream, options = {}) {
-    try {
-      // Validate extension
-      if (!this.validateExtension(fileName)) {
-        const ext = fileName.split('.').pop();
-        throw new FilesystemError(`File extension not allowed: .${ext}`);
-      }
-
-      // Check max files limit
-      if (this.files.size >= this.maxFiles && !this.files.has(fileName)) {
-        throw new FilesystemError(
-          `Maximum number of files reached: ${this.maxFiles}`,
-        );
-      }
-
-      // Read stream into buffer
-      const chunks = [];
-      let totalSize = 0;
-
-      for await (const chunk of readableStream) {
-        totalSize += chunk.length;
-
-        // Check size limit during streaming
-        if (totalSize > this.maxFileSize) {
-          throw new FilesystemError(
-            `File size exceeds limit: ${totalSize} > ${this.maxFileSize}`,
-          );
-        }
-
-        chunks.push(chunk);
-      }
-
-      const fileBuffer = Buffer.concat(chunks);
-      return await this.store(fileName, fileBuffer, options);
-    } catch (error) {
-      throw new FilesystemError(
-        `Failed to store file from stream: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Retrieve a file as buffer
-   */
-  async retrieve(fileName) {
-    try {
-      const fileData = this.files.get(fileName);
-
-      if (!fileData) {
-        throw new FilesystemError(`File not found: ${fileName}`);
-      }
-
-      return {
-        buffer: fileData.buffer,
-        metadata: { ...fileData.metadata },
-      };
-    } catch (error) {
-      throw new FilesystemError(`Failed to retrieve file: ${error.message}`);
     }
   }
 
   /**
    * Get a readable stream for a file
    */
-  async getStream(fileName) {
+  async retrieve(fileName) {
     try {
       const fileData = this.files.get(fileName);
 

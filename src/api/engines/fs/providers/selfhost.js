@@ -210,9 +210,13 @@ export class SelfHostFilesystemProvider {
   }
 
   /**
-   * Store a file
+   * Store a file (accepts Buffer or Readable Stream)
+   * @param {string} fileName - Target file name
+   * @param {Buffer|Stream} fileData - File content as Buffer or Readable Stream
+   * @param {Object} options - Storage options
+   * @returns {Promise<Object>} File metadata
    */
-  async store(fileName, fileBuffer, options = {}) {
+  async store(fileName, fileData, options = {}) {
     try {
       // Validate extension
       if (!this.validateExtension(fileName)) {
@@ -220,11 +224,42 @@ export class SelfHostFilesystemProvider {
         throw new FilesystemError(`File extension not allowed: .${ext}`);
       }
 
-      // Validate file size
-      if (fileBuffer.length > this.maxFileSize) {
-        throw new FilesystemError(
-          `File size exceeds limit: ${fileBuffer.length} > ${this.maxFileSize}`,
-        );
+      // Detect if fileData is a stream (has pipe method and readable property)
+      const isStream =
+        fileData &&
+        typeof fileData.pipe === 'function' &&
+        typeof fileData.on === 'function';
+
+      let buffer;
+      if (isStream) {
+        // Stream mode: collect chunks into buffer (needed for HTTP Content-Length)
+        const chunks = [];
+        let totalSize = 0;
+
+        for await (const chunk of fileData) {
+          totalSize += chunk.length;
+
+          // Check size limit during streaming
+          if (totalSize > this.maxFileSize) {
+            throw new FilesystemError(
+              `File size exceeds limit: ${totalSize} > ${this.maxFileSize}`,
+            );
+          }
+
+          chunks.push(chunk);
+        }
+
+        buffer = Buffer.concat(chunks);
+      } else {
+        // Buffer mode
+        buffer = Buffer.isBuffer(fileData) ? fileData : Buffer.from(fileData);
+
+        // Validate file size
+        if (buffer.length > this.maxFileSize) {
+          throw new FilesystemError(
+            `File size exceeds limit: ${buffer.length} > ${this.maxFileSize}`,
+          );
+        }
       }
 
       const context = { fileName };
@@ -233,16 +268,16 @@ export class SelfHostFilesystemProvider {
         method: this.getMethod('upload', context),
         headers: {
           'Content-Type': options.mimeType || 'application/octet-stream',
-          'Content-Length': fileBuffer.length.toString(),
+          'Content-Length': buffer.length.toString(),
         },
-        body: fileBuffer,
+        body: buffer,
       });
 
       const result = await response.json().catch(() => ({}));
 
       return {
         fileName,
-        size: fileBuffer.length,
+        size: buffer.length,
         mimeType: options.mimeType || 'application/octet-stream',
         createdAt: new Date(),
         provider: 'selfhost',
@@ -255,74 +290,9 @@ export class SelfHostFilesystemProvider {
   }
 
   /**
-   * Store a file from stream
-   */
-  async storeStream(fileName, readableStream, options = {}) {
-    try {
-      // Validate extension
-      if (!this.validateExtension(fileName)) {
-        const ext = fileName.split('.').pop();
-        throw new FilesystemError(`File extension not allowed: .${ext}`);
-      }
-
-      // Collect stream into buffer (needed for size validation)
-      const chunks = [];
-      let totalSize = 0;
-
-      for await (const chunk of readableStream) {
-        totalSize += chunk.length;
-        if (totalSize > this.maxFileSize) {
-          throw new FilesystemError(
-            `File size exceeds limit: ${totalSize} > ${this.maxFileSize}`,
-          );
-        }
-        chunks.push(chunk);
-      }
-
-      const buffer = Buffer.concat(chunks);
-      return await this.store(fileName, buffer, options);
-    } catch (error) {
-      if (error instanceof FilesystemError) throw error;
-      throw new FilesystemError(
-        `Failed to store file from stream: ${error.message}`,
-      );
-    }
-  }
-
-  /**
-   * Retrieve a file as buffer
-   */
-  async retrieve(fileName) {
-    try {
-      const context = { fileName };
-      const url = this.buildUrl('download', context);
-      const response = await this.makeRequest(url, {
-        method: this.getMethod('download', context),
-      });
-
-      const arrayBuffer = await response.arrayBuffer();
-      const buffer = Buffer.from(arrayBuffer);
-
-      return {
-        buffer,
-        metadata: {
-          fileName,
-          size: buffer.length,
-          mimeType:
-            response.headers.get('content-type') || 'application/octet-stream',
-          provider: 'selfhost',
-        },
-      };
-    } catch (error) {
-      if (error instanceof FilesystemError) throw error;
-      throw new FilesystemError(`Failed to retrieve file: ${error.message}`);
-    }
-  }
-
-  /**
    * Get a readable stream for a file
    */
-  async getStream(fileName) {
+  async retrieve(fileName) {
     try {
       const context = { fileName };
       const url = this.buildUrl('download', context);
@@ -388,11 +358,8 @@ export class SelfHostFilesystemProvider {
         method: this.getMethod('exists', context),
       });
       return true;
-    } catch (error) {
-      if (error instanceof FilesystemError && error.statusCode === 404) {
-        return false;
-      }
-      throw error;
+    } catch {
+      return false;
     }
   }
 

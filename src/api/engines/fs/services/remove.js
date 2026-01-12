@@ -3,7 +3,7 @@
  */
 
 import { remove as removeOperation } from '../operations/remove';
-import workerService from '../workers';
+import workerPool from '../workers';
 
 /**
  * Thresholds for auto-detection of worker usage
@@ -27,17 +27,33 @@ function shouldUseWorker(options = {}, fileCount = 1) {
 
 /**
  * Remove file(s) with optional worker processing
+ *
  * @param {Object} manager - FilesystemManager instance
  * @param {string|Array} fileNames - Single file name or array of file names
  * @param {Object} options - Remove options
- * @param {boolean} options.useWorker - Force worker usage (true/false/undefined for auto)
+ * @param {boolean} [options.useWorker] - Worker control:
+ *   - `true`: Force worker processing
+ *   - `false`: Force direct processing (bypass worker)
+ *   - `undefined`: Auto-decide (worker for 3+ files)
  * @returns {Promise<Object>} Remove result
+ *
+ * @example
+ * // Auto-decide (default)
+ * await fs.remove(manager, 'file.txt');
+ *
+ * @example
+ * // Force worker processing
+ * await fs.remove(manager, 'file.txt', { useWorker: true });
+ *
+ * @example
+ * // Force direct processing (bypass worker for batch)
+ * await fs.remove(manager, files, { useWorker: false });
  */
 export async function remove(manager, fileNames, options = {}) {
   const fileList = Array.isArray(fileNames) ? fileNames : [fileNames];
 
   if (shouldUseWorker(options, fileList.length)) {
-    return await workerService.processDelete(fileList, options);
+    return await workerPool.processDelete(fileList, options);
   }
 
   return await removeOperation(manager, fileNames, options);

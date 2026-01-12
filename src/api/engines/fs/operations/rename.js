@@ -32,16 +32,13 @@ export async function rename(manager, operations, options = {}) {
       const newName = op.newName || op.newFileName;
 
       try {
-        const exists = await provider.exists(oldName);
-        if (!exists) {
-          errors.push({ oldName, newName, error: 'FILE_NOT_FOUND' });
-          continue;
-        }
-
-        const targetExists = await provider.exists(newName);
-        if (targetExists && !options.overwrite) {
-          errors.push({ oldName, newName, error: 'TARGET_EXISTS' });
-          continue;
+        // Check target exists for overwrite protection
+        if (!options.overwrite) {
+          const targetExists = await provider.exists(newName);
+          if (targetExists) {
+            errors.push({ oldName, newName, error: 'TARGET_EXISTS' });
+            continue;
+          }
         }
 
         await provider.move(oldName, newName);
