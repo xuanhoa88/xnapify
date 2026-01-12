@@ -76,7 +76,8 @@ export async function createRole(req, res) {
 export async function getRoles(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10, search = '' } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -220,7 +221,8 @@ export async function getRoleUsers(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10, search = '' } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -252,7 +254,8 @@ export async function getRoleGroups(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10, search = '' } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');

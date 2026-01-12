@@ -85,7 +85,8 @@ export async function createGroup(req, res) {
 export async function getGroups(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10, search = '', role = '' } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '', role = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -242,8 +243,8 @@ export async function getGroupUsers(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const { page = 1, limit = 10, search = '' } = req.query;
-    const offset = (page - 1) * limit;
+    const { page, limit, offset } = http.getPagination(req);
+    const { search = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');

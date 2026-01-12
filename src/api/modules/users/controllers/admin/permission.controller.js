@@ -73,7 +73,8 @@ export async function createPermission(req, res) {
 export async function getPermissions(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10, search = '', status = '' } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '', status = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');
@@ -102,7 +103,8 @@ export async function getPermissionsByResource(req, res) {
   const http = req.app.get('http');
   try {
     const { resource } = req.params;
-    const { search, page = 1, limit = 10 } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '' } = req.query;
     const models = req.app.get('models');
     const result = await permissionService.getPermissionsByResource(
       resource,

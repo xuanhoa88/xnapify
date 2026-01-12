@@ -115,14 +115,8 @@ export async function createUser(req, res) {
 export async function getUserList(req, res) {
   const http = req.app.get('http');
   try {
-    const {
-      page = 1,
-      limit = 10,
-      search = '',
-      role = '',
-      status = '',
-      group = '',
-    } = req.query;
+    const { page, limit } = http.getPagination(req);
+    const { search = '', role = '', status = '', group = '' } = req.query;
 
     // Get models from app context
     const models = req.app.get('models');

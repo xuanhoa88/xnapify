@@ -362,7 +362,7 @@ export async function changePassword(req, res) {
 export async function getUserActivities(req, res) {
   const http = req.app.get('http');
   try {
-    const { page = 1, limit = 10 } = req.query;
+    const { page, limit } = http.getPagination(req);
     const models = req.app.get('models');
 
     const result = await profileService.getUserActivities(
