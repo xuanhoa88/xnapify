@@ -28,6 +28,7 @@ const WORKER_CONFIG = Object.freeze({
 });
 
 // Use require.context to dynamically import worker files
+// Explicit require.context needed for Webpack static analysis
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Create worker pool with email-specific configuration

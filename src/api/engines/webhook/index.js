@@ -40,138 +40,83 @@
  * ---
  *
  * @example <caption>Basic Usage - Send a single webhook</caption>
- * await webhook.send({
- *   event: 'user.created', data: { id: '123' }
- * }, {
+ * await webhook.send({ event: 'user.created', data: { id: '123' } }, {
  *   url: 'https://api.example.com/hook'
  * });
  *
- * @example <caption>With HMAC Signature</caption>
- * await webhook.send({
- *   event: 'order.completed'
- * }, {
+ * @example <caption>Advanced Usage - HMAC Signature & Retry Config</caption>
+ * await webhook.send({ event: 'order.completed' }, {
  *   url: 'https://api.example.com/hook',
  *   secret: 'my-secret-key',
- *   algorithm: 'sha256'
- * });
- *
- * @example <caption>With Retry Options</caption>
- * await webhook.send({
- *   event: 'order.completed'
- * }, {
- *   url: 'https://api.example.com/hook',
+ *   algorithm: 'sha256',
  *   retries: 5,
- *   timeout: 10000,
- *   retryDelay: 1000
+ *   timeout: 10000
  * });
  *
- * @example <caption>Batch Send (auto-offloads to worker for 5+ webhooks)</caption>
+ * @example <caption>Batch Send (Auto-offloads to worker)</caption>
  * await webhook.send([
  *   { event: 'order.completed' },
  *   { event: 'order.updated' }
  * ], {
- *   url: 'https://api.example.com/hook',
- *   retries: 5,
- *   timeout: 10000,
- *   retryDelay: 1000
+ *   url: 'https://api.example.com/hook'
  * });
  *
- * @example <caption>Force Worker Processing</caption>
+ * @example <caption>Worker Control</caption>
  * // Force background worker
- * await webhook.send({ event: 'order.completed' }, { useWorker: true });
+ * await webhook.send({ event: 'test' }, { useWorker: true });
  *
- * // Force direct processing (bypass worker)
- * await webhook.send({ event: 'order.completed' }, { useWorker: false });
+ * // Force direct processing
+ * await webhook.send({ event: 'test' }, { useWorker: false });
  *
- * @example <caption>Database Connection Setup</caption>
- * // Auto-configures both adapter and worker
- * webhook.setDbConnection(engines.db.connection);
+ * @example <caption>Database Integration</caption>
+ * // Setup connection for persistence
+ * webhook.setDbConnection(sequelize);
  *
- * // For fork mode workers
- * webhook.setConnectionFactory(() => createConnection());
- *
- * @example <caption>Direct Adapter Access</caption>
- * // Get specific adapter
- * const httpAdapter = webhook.getAdapter('http');
- * const memoryAdapter = webhook.getAdapter('memory');
- * const dbAdapter = webhook.getAdapter('database');
- *
- * @example <caption>Database Adapter - Persistence & Tracking</caption>
+ * // Database adapter usage
  * const db = webhook.getAdapter('database');
+ * await db.getWebhooks({ status: 'delivered' });
+ * await db.getStats();
  *
- * // Store webhook (pending status)
- * const result = await db.send({ event: 'user.created' });
- *
- * // Query webhook history
- * const history = await db.getWebhooks({
- *   status: 'delivered',
- *   limit: 20
- * });
- *
- * // Get delivery statistics
- * const stats = await db.getStats();
- * // => { total: 100, pending: 5, delivered: 90, failed: 5 }
- *
- * // Update status after delivery
- * await db.updateStatus(webhookId, {
- *   success: true,
- *   statusCode: 200,
- *   attempts: 1
- * });
- *
- * // Get pending retries
- * const pending = await db.getPendingRetries({ limit: 50 });
- *
- * // Cleanup old webhooks (30+ days old)
- * const deleted = await db.cleanup({ olderThan: 30 });
- *
- * @example <caption>Memory Adapter - Testing</caption>
- * const memory = webhook.getAdapter('memory');
- *
- * // Send webhook (stored in memory)
- * await memory.send({ event: 'test' });
- *
- * // Get all webhooks
- * const result = await memory.getWebhooks();
- * const allHooks = result.data;
- *
- * // Clear all stored webhooks
- * memory.clear();
- *
- * @example <caption>Worker Pool - Background Processing</caption>
- * // HTTP-only (no database)
+ * @example <caption>Worker Pool Operations</caption>
+ * // Process send queue
  * await workerPool.processSend([{ event: 'created' }]);
  *
- * // Database-only (no HTTP)
- * await workerPool.processPersist({
- *   operation: 'store',
- *   webhooks: [{ event: 'created' }]
- * });
- *
- * // Combined: Store → Send → Update status
+ * // Process persistence
  * await workerPool.processSendWithDb([{ event: 'created' }]);
  *
- * @example <caption>Create Isolated Instance (for testing)</caption>
- * const testWebhook = createFactory({ adapter: 'memory' });
- * await testWebhook.send({ event: 'created' });
- *
- * @example <caption>Error Monitoring (Sentry Integration)</caption>
- * const Sentry = require('@sentry/node');
- *
- * try {
- *   const result = await webhook.send(
- *     { event: 'user.created', data: { id: 1 } },
- *     { url: 'https://example.com/webhook' }
- *   );
- *
- *   if (!result.success) {
- *     Sentry.captureException(new Error(result.message), {
- *       tags: { webhook_id: result.webhookId },
- *       extra: { details: result.details },
+ * @example <caption>Custom Adapter Implementation</caption>
+ * // 1. Define Adapter
+ * class SlackAdapter {
+ *   async send(data, options) {
+ *     const response = await fetch(options.url, {
+ *       method: 'POST',
+ *       body: JSON.stringify({ text: data.message })
  *     });
+ *     return {
+ *       success: response.ok,
+ *       message: response.statusText,
+ *       timestamp: new Date().toISOString()
+ *     };
  *   }
+ * }
+ *
+ * // 2. Register
+ * webhook.addAdapter('slack', new SlackAdapter());
+ *
+ * // 3. Use
+ * await webhook.send(
+ *   { message: 'System online' },
+ *   { adapter: 'slack', url: 'https://hooks.slack.com/...' }
+ * );
+ *
+ * @example <caption>Error Handling</caption>
+ * try {
+ *   await webhook.send({...}, {...});
  * } catch (error) {
- *   Sentry.captureException(error);
+ *   if (error instanceof WebhookValidationError) {
+ *     // Handle validation error
+ *   }
+ *   // Log to monitoring service
  * }
  */
 

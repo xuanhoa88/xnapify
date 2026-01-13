@@ -20,6 +20,7 @@ import { createWorkerPool } from '../../worker';
 import { FilesystemWorkerError } from '../utils';
 
 // Use require.context to dynamically import worker files
+// Explicit require.context needed for Webpack static analysis
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Create worker pool with filesystem-specific configuration
