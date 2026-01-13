@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
@@ -65,18 +65,24 @@ function Dashboard() {
   const pagination = useSelector(getActivitiesPagination);
   const loading = useSelector(isDashboardLoading);
   const error = useSelector(getDashboardError);
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     dispatch(fetchDashboard({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   const handlePageChange = page => {
-    dispatch(fetchDashboard({ page, limit: 20 }));
+    dispatch(fetchDashboard({ page, limit: 20, search }));
+  };
+
+  const handleSearch = value => {
+    setSearch(value);
+    dispatch(fetchDashboard({ page: 1, limit: 20, search: value }));
   };
 
   const renderContent = () => {
     // Loading state
-    if (loading) {
+    if (loading && !activities) {
       return <Loader variant='cards' message='Loading activities...' />;
     }
 
@@ -101,6 +107,14 @@ function Dashboard() {
             </h3>
           </Card.Header>
           <Card.Body className={s.tableCardBody}>
+            <div className={s.tableToolbar}>
+              <Table.SearchBar
+                value={search}
+                onChange={handleSearch}
+                placeholder='Search events or metadata...'
+                className={s.searchBar}
+              />
+            </div>
             {activities && activities.length > 0 ? (
               <table className={s.table}>
                 <thead>

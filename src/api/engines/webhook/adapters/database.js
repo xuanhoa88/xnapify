@@ -52,6 +52,7 @@ const getWebhooksSchema = z.object({
   toDate: z.date().optional(),
   limit: z.number().int().min(1).max(100).optional().default(20),
   offset: z.number().int().min(0).optional().default(0),
+  search: z.string().optional(),
 });
 
 // Cleanup options schema
@@ -367,7 +368,14 @@ export class DatabaseWebhookAdapter {
     const Webhook = this.getModel();
 
     const where = {};
-    const { limit, offset } = validatedResult;
+    const { limit, offset, search } = validatedResult;
+
+    if (search) {
+      where[Op.or] = [
+        { event: { [Op.like]: `%${search}%` } },
+        { metadata: { [Op.like]: `%${search}%` } },
+      ];
+    }
 
     if (validatedResult.status) {
       where.status = validatedResult.status;

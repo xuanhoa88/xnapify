@@ -44,6 +44,18 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Table Toolbar */
+.tableToolbar {
+  padding: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.searchBar {
+  max-width: 300px;
+}
+
 /* Table Card Body */
 .tableCardBody {
   padding: 0;

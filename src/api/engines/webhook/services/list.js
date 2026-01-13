@@ -23,6 +23,7 @@ export async function list(manager, options = {}) {
       toDate,
       limit = 20,
       offset = 0,
+      search,
     } = options;
 
     const storageAdapter = manager.getAdapter(adapterName);
@@ -48,6 +49,7 @@ export async function list(manager, options = {}) {
       toDate: toDate ? new Date(toDate) : undefined,
       limit,
       offset,
+      search,
     });
 
     return createOperationResult(

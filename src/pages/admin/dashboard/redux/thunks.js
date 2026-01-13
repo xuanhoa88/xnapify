@@ -25,11 +25,14 @@ export const fetchDashboard = createAsyncThunk(
   'admin/dashboard/fetchDashboard',
   async (options = {}, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { page = 1, limit = 20 } = options;
+      const { page = 1, limit = 20, search = '' } = options;
       const offset = (page - 1) * limit;
 
+      const query = { limit, offset };
+      if (search) query.search = search;
+
       const { data } = await fetch('/api/activities', {
-        query: { limit, offset },
+        query,
       });
 
       // Extract data from standard response format
