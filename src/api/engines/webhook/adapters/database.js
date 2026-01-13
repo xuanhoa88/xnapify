@@ -9,54 +9,45 @@ import { z } from 'zod';
 import { fn, col, DataTypes, Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
 import { WEBHOOK_STATUS } from '../utils/constants';
+import {
+  createValidationErrorResponse,
+  createSuccessResponse,
+  createErrorResponse,
+} from '../utils/adapter-responses';
+import {
+  eventSchema,
+  metadataSchema,
+  retriesSchema,
+  statusSchema,
+} from '../utils/adapter-schemas';
 
 /**
- * Zod Validation Schemas for Database Adapter
+ * Database Adapter Options Schema
  */
-
-// Send webhook input schema
-const sendInputSchema = z.object({
-  payload: z
-    .object({
-      url: z.string().min(1).max(2048).url(),
-    })
-    .passthrough(),
-  options: z
-    .object({
-      event: z.string().max(1024).optional(),
-      retries: z.number().int().min(0).max(10).optional(),
-      secret: z.string().optional(),
-      headers: z.record(z.string()).optional(),
-      metadata: z.record(z.any()).optional(),
-    })
-    .optional()
-    .default({}),
+const databaseOptionsSchema = z.object({
+  event: eventSchema,
+  retries: retriesSchema.optional(),
+  metadata: metadataSchema,
+  status: statusSchema.optional(),
 });
+
+const sendInputSchema = databaseOptionsSchema.passthrough();
+// validateInput is no longer needed as we validate directly in send()
 
 // Update status input schema
 const updateStatusSchema = z.object({
   webhookId: z.string().uuid(),
   result: z.object({
     success: z.boolean(),
-    statusCode: z.number().int().optional(),
-    responseBody: z.any().optional(),
-    error: z
-      .object({
-        message: z.string().optional(),
-        code: z.string().optional(),
-      })
-      .optional(),
     attempts: z.number().int().min(1).optional(),
-    duration: z.number().int().optional(),
     nextRetryAt: z.date().optional(),
   }),
 });
 
 // Get webhooks query schema
 const getWebhooksSchema = z.object({
-  status: z.enum(['pending', 'processing', 'delivered', 'failed']).optional(),
+  status: statusSchema.optional(),
   event: z.string().max(1024).optional(),
-  url: z.string().max(2048).optional(),
   fromDate: z.date().optional(),
   toDate: z.date().optional(),
   limit: z.number().int().min(1).max(100).optional().default(20),
@@ -82,8 +73,8 @@ const connectionSchema = z
  * Define the Webhook model if not already defined
  * @private
  */
-function defineModel(db) {
-  return db.define(
+function defineModel(connection) {
+  return connection.define(
     'Webhook',
     {
       id: {
@@ -91,114 +82,51 @@ function defineModel(db) {
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
       },
-      url: {
-        type: DataTypes.STRING(2048),
-        allowNull: false,
-      },
-      payload: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        get() {
-          const value = this.getDataValue('payload');
-          return value ? JSON.parse(value) : null;
-        },
-        set(value) {
-          this.setDataValue('payload', value ? JSON.stringify(value) : null);
-        },
-      },
       event: {
-        type: DataTypes.STRING(128),
+        type: DataTypes.STRING(1024),
         allowNull: true,
       },
       status: {
-        type: DataTypes.ENUM('pending', 'processing', 'delivered', 'failed'),
+        type: DataTypes.ENUM('pending', 'delivered', 'failed'),
         defaultValue: 'pending',
-      },
-      statusCode: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'status_code',
-      },
-      responseBody: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        field: 'response_body',
-        get() {
-          const value = this.getDataValue('responseBody');
-          if (!value) return null;
-          try {
-            return JSON.parse(value);
-          } catch {
-            return value;
-          }
-        },
-        set(value) {
-          this.setDataValue(
-            'responseBody',
-            typeof value === 'object' ? JSON.stringify(value) : value,
-          );
-        },
-      },
-      errorMessage: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        field: 'error_message',
-      },
-      errorCode: {
-        type: DataTypes.STRING(64),
-        allowNull: true,
-        field: 'error_code',
       },
       attempts: {
         type: DataTypes.INTEGER,
         defaultValue: 0,
       },
-      maxRetries: {
+      max_retries: {
         type: DataTypes.INTEGER,
         defaultValue: 3,
-        field: 'max_retries',
       },
-      nextRetryAt: {
+      next_retry_at: {
         type: DataTypes.DATE,
         allowNull: true,
-        field: 'next_retry_at',
-      },
-      durationMs: {
-        type: DataTypes.INTEGER,
-        allowNull: true,
-        field: 'duration_ms',
-      },
-      hasSignature: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        field: 'has_signature',
-      },
-      headers: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        get() {
-          const value = this.getDataValue('headers');
-          return value ? JSON.parse(value) : null;
-        },
-        set(value) {
-          this.setDataValue('headers', value ? JSON.stringify(value) : null);
-        },
       },
       metadata: {
         type: DataTypes.TEXT,
         allowNull: true,
         get() {
-          const value = this.getDataValue('metadata');
-          return value ? JSON.parse(value) : null;
+          try {
+            const value = this.getDataValue('metadata');
+            if (!value) return null;
+            return JSON.parse(value);
+          } catch {
+            return null;
+          }
         },
         set(value) {
           this.setDataValue('metadata', value ? JSON.stringify(value) : null);
         },
       },
-      deliveredAt: {
+      created_at: {
         type: DataTypes.DATE,
-        allowNull: true,
-        field: 'delivered_at',
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updated_at: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
       },
     },
     {
@@ -260,7 +188,7 @@ export class DatabaseWebhookAdapter {
    */
   hasConnection() {
     // eslint-disable-next-line no-underscore-dangle
-    return this._connection !== null || this._connection !== undefined;
+    return this._connection != null;
   }
 
   /**
@@ -285,8 +213,8 @@ export class DatabaseWebhookAdapter {
    * @private
    */
   getModel() {
-    const db = this.getDb();
-    return db.models.Webhook || defineModel(db);
+    const connection = this.getDb();
+    return connection.models.Webhook || defineModel(connection);
   }
 
   /**
@@ -294,31 +222,21 @@ export class DatabaseWebhookAdapter {
    * Note: This adapter only stores the webhook, actual HTTP delivery
    * should be handled by the HTTP adapter or worker
    *
-   * @param {Object} payload - Payload (must include url property)
-   * @param {string} payload.url - Webhook URL
+   * @param {any} data - Data to store
    * @param {Object} options - Options
    * @returns {Promise<Object>} Result with webhook record
    */
-  async send(payload, options = {}) {
-    // Validate input
-    const validation = sendInputSchema.safeParse({ payload, options });
+  async send(data, options = {}) {
+    // In this flat adapter model, 'data' contains everything.
+    // 'options' is kept for backward compatibility but merged if provided.
+    const input = { ...data, ...options };
+    const validation = sendInputSchema.safeParse(input);
+
     if (!validation.success) {
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: validation.error.message,
-          code: 'VALIDATION_ERROR',
-          details: validation.error.flatten(),
-        },
-        timestamp: new Date().toISOString(),
-        adapter: 'database',
-      };
+      return createValidationErrorResponse('database', validation.error);
     }
 
-    const { options: validatedOptions } = validation.data;
-    // Extract url from payload, rest becomes stored data
-    const { url, ...data } = payload;
+    const { event, status, retries, ...metadata } = validation.data;
     const startTime = Date.now();
     const webhookId = uuidv4();
 
@@ -327,39 +245,30 @@ export class DatabaseWebhookAdapter {
 
       const record = await Webhook.create({
         id: webhookId,
-        url,
-        payload: data,
-        event: validatedOptions.event || null,
-        status: WEBHOOK_STATUS.PENDING,
-        maxRetries: validatedOptions.retries || 3,
-        hasSignature: Boolean(validatedOptions.secret),
-        headers: validatedOptions.headers || null,
-        metadata: validatedOptions.metadata || null,
+        event,
+        status: status || WEBHOOK_STATUS.DELIVERED,
+        max_retries: retries || 3,
+        metadata,
       });
 
-      return {
-        success: true,
-        status: WEBHOOK_STATUS.PENDING,
+      return createSuccessResponse('database', {
         webhookId: record.id,
-        url,
-        timestamp: record.createdAt.toISOString(),
         duration: Date.now() - startTime,
-        adapter: 'database',
         record: record.toJSON(),
-      };
+      });
     } catch (error) {
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        webhookId,
-        url,
-        error: {
-          message: error.message,
-          code: 'DATABASE_ERROR',
+      const errorResponse = {
+        message: error.message,
+        details: error.details || {
+          name: error.name,
+          stack: error.stack, // Optional: might be too verbose but useful
+          errors: error.errors, // Common in Sequelize
         },
-        timestamp: new Date().toISOString(),
-        adapter: 'database',
       };
+
+      return createErrorResponse('database', errorResponse, 'DATABASE_ERROR', {
+        webhookId,
+      });
     }
   }
 
@@ -380,26 +289,19 @@ export class DatabaseWebhookAdapter {
     }
 
     const Webhook = this.getModel();
-    const { result: validatedResult } = validation.data;
+    const validatedResult = validation.data;
 
     const updates = {
       status: validatedResult.success
         ? WEBHOOK_STATUS.DELIVERED
         : WEBHOOK_STATUS.FAILED,
-      statusCode: validatedResult.statusCode || null,
-      responseBody: validatedResult.responseBody || null,
-      errorMessage:
-        (validatedResult.error && validatedResult.error.message) || null,
-      errorCode: (validatedResult.error && validatedResult.error.code) || null,
       attempts: validatedResult.attempts || 1,
-      durationMs: validatedResult.duration || null,
     };
 
     if (validatedResult.success) {
-      updates.deliveredAt = new Date();
-      updates.nextRetryAt = null;
+      updates.next_retry_at = null;
     } else if (validatedResult.nextRetryAt) {
-      updates.nextRetryAt = validatedResult.nextRetryAt;
+      updates.next_retry_at = validatedResult.nextRetryAt;
     }
 
     const [affectedCount] = await Webhook.update(updates, {
@@ -427,10 +329,10 @@ export class DatabaseWebhookAdapter {
     return Webhook.findAll({
       where: {
         status: { [Op.in]: [WEBHOOK_STATUS.PENDING, WEBHOOK_STATUS.FAILED] },
-        nextRetryAt: { [Op.lte]: new Date() },
+        next_retry_at: { [Op.lte]: new Date() },
         attempts: { [Op.lt]: col('max_retries') },
       },
-      order: [['nextRetryAt', 'ASC']],
+      order: [['next_retry_at', 'ASC']],
       limit,
     });
   }
@@ -461,38 +363,34 @@ export class DatabaseWebhookAdapter {
       );
     }
 
-    const validatedOptions = validation.data;
+    const validatedResult = validation.data;
     const Webhook = this.getModel();
 
     const where = {};
-    const { limit, offset } = validatedOptions;
+    const { limit, offset } = validatedResult;
 
-    if (validatedOptions.status) {
-      where.status = validatedOptions.status;
+    if (validatedResult.status) {
+      where.status = validatedResult.status;
     }
 
-    if (validatedOptions.event) {
-      where.event = validatedOptions.event;
+    if (validatedResult.event) {
+      where.event = validatedResult.event;
     }
 
-    if (validatedOptions.url) {
-      where.url = { [Op.like]: `%${validatedOptions.url}%` };
+    if (validatedResult.fromDate) {
+      where.created_at = { [Op.gte]: validatedResult.fromDate };
     }
 
-    if (validatedOptions.fromDate) {
-      where.createdAt = { [Op.gte]: validatedOptions.fromDate };
-    }
-
-    if (validatedOptions.toDate) {
-      where.createdAt = {
-        ...where.createdAt,
-        [Op.lte]: validatedOptions.toDate,
+    if (validatedResult.toDate) {
+      where.created_at = {
+        ...where.created_at,
+        [Op.lte]: validatedResult.toDate,
       };
     }
 
     const { count, rows } = await Webhook.findAndCountAll({
       where,
-      order: [['createdAt', 'DESC']],
+      order: [['created_at', 'DESC']],
       limit,
       offset,
     });
@@ -524,7 +422,6 @@ export class DatabaseWebhookAdapter {
       adapter: 'database',
       total: 0,
       pending: 0,
-      processing: 0,
       delivered: 0,
       failed: 0,
     };
@@ -552,18 +449,18 @@ export class DatabaseWebhookAdapter {
       );
     }
 
-    const validatedOptions = validation.data;
+    const validatedResult = validation.data;
     const Webhook = this.getModel();
 
     const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - validatedOptions.olderThan);
+    cutoffDate.setDate(cutoffDate.getDate() - validatedResult.olderThan);
 
     const where = {
-      createdAt: { [Op.lt]: cutoffDate },
+      created_at: { [Op.lt]: cutoffDate },
     };
 
     // Only delete delivered webhooks by default
-    if (!validatedOptions.includeAll) {
+    if (!validatedResult.includeAll) {
       where.status = WEBHOOK_STATUS.DELIVERED;
     }
 

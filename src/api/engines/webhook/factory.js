@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { z } from 'zod';
 import {
   HttpWebhookAdapter,
   MemoryWebhookAdapter,
@@ -12,44 +13,42 @@ import {
 } from './adapters';
 import { WebhookError, WebhookValidationError } from './errors';
 import { DEFAULTS, WEBHOOK_STATUS } from './utils/constants';
-import { validateWebhook } from './utils/validation';
-import workerPool from './workers';
+import workerPool, {
+  setPersistDbConnection,
+  setPersistConnectionFactory,
+} from './workers';
+
+// Webhook validation schema (accepts any data - validation at adapter level)
+const sendWebhookSchema = z.any();
 
 // Symbol for private method
-const deliver = Symbol('__rsk.webhookDeliver__');
+const DELIVER = Symbol('__rsk.webhookDeliver__');
 
 /**
  * Decision logic for whether to use background worker
  * @private
- * @param {Array} webhooks - Array of webhook objects
+ * @param {any} data - Data to send
  * @param {Object} options - Decision options
  * @returns {Object} Decision result
  */
-function makeSendDecision(webhooks, options = {}) {
+function makeSendDecision(data, options = {}) {
   const thresholds = {
-    batchThreshold: options.batchThreshold || 5,
     largePayloadThreshold: options.largePayloadThreshold || 100 * 1024, // 100KB
   };
 
   let useWorker = false;
-  let reason = 'Simple webhook(s), main process sufficient';
+  let reason = 'Simple data, main process sufficient';
 
-  // Check if this is a batch operation
-  if (webhooks.length >= thresholds.batchThreshold) {
-    useWorker = true;
-    reason = `Batch send (${webhooks.length} webhooks)`;
-  }
-  // Check for large payload in any webhook
-  else if (
-    webhooks.some(
-      webhook =>
-        webhook.payload &&
-        JSON.stringify(webhook.payload).length >=
-          thresholds.largePayloadThreshold,
-    )
-  ) {
-    useWorker = true;
-    reason = 'Large payload';
+  // Check for large payload
+  try {
+    const dataSize = JSON.stringify(data).length;
+    if (dataSize >= thresholds.largePayloadThreshold) {
+      useWorker = true;
+      reason = `Large payload (${Math.round(dataSize / 1024)}KB)`;
+    }
+  } catch (error) {
+    // If data can't be serialized, don't use worker
+    reason = 'Data serialization error, using main process';
   }
 
   return { useWorker, reason };
@@ -111,6 +110,8 @@ class WebhookManager {
 
     // HTTP adapter
     this.adapters.set('http', new HttpWebhookAdapter(this.config.http || {}));
+
+    // Workers are initialized automatically by the worker pool
   }
 
   /**
@@ -159,10 +160,8 @@ class WebhookManager {
       dbAdapter.setConnection(connection);
     }
 
-    // Set connection on worker pool
-    if (workerPool && workerPool.setDbConnection) {
-      workerPool.setDbConnection(connection);
-    }
+    // Set connection on worker
+    setPersistDbConnection(connection);
 
     return true;
   }
@@ -172,29 +171,24 @@ class WebhookManager {
    * @param {Function} factory - Function that returns a Sequelize connection
    */
   setConnectionFactory(factory) {
-    if (workerPool && workerPool.setConnectionFactory) {
-      workerPool.setConnectionFactory(factory);
-    }
+    setPersistConnectionFactory(factory);
   }
 
   /**
    * Validate webhook data using Zod schema
    * @private
-   * @param {Object|Array} webhooks - Webhook(s) to validate
+   * @param {any} data - Data to validate
    * @throws {WebhookValidationError} If validation fails
    */
-  validate(webhooks) {
-    const result = validateWebhook(webhooks);
+  validate(data) {
+    const result = sendWebhookSchema.safeParse(data);
     if (!result.success) {
       const errors = result.error.flatten();
       throw new WebhookValidationError(JSON.stringify(errors), 'data');
     }
   }
 
-  async [deliver](payload, options = {}) {
-    // Extract url for error reporting
-    const url = payload && payload.url;
-
+  async [DELIVER](data, options = {}) {
     try {
       // Get adapter
       const adapterName = options.adapter || this.defaultAdapter;
@@ -214,7 +208,7 @@ class WebhookManager {
       // Attempt delivery with retries
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         try {
-          const result = await adapter.send(payload, options);
+          const result = await adapter.send(data, options);
           return {
             ...result,
             attempts: attempt + 1,
@@ -239,7 +233,6 @@ class WebhookManager {
       return {
         success: false,
         status: WEBHOOK_STATUS.FAILED,
-        url,
         error: {
           message: lastError.message,
           code: lastError.code || 'DELIVERY_FAILED',
@@ -252,7 +245,6 @@ class WebhookManager {
         return {
           success: false,
           status: WEBHOOK_STATUS.FAILED,
-          url,
           error: {
             message: error.message,
             code: error.code,
@@ -264,7 +256,6 @@ class WebhookManager {
       return {
         success: false,
         status: WEBHOOK_STATUS.FAILED,
-        url,
         error: {
           message: error.message,
           code: 'UNKNOWN_ERROR',
@@ -275,51 +266,33 @@ class WebhookManager {
   }
 
   /**
-   * Send webhook(s)
-   * Handles single webhook or array of webhooks.
+   * Send webhook data
    *
-   * @param {Object|Array} webhooks - Single webhook or array of webhooks
-   * @param {string} webhooks.url - Destination URL (for single)
-   * @param {Object} webhooks.payload - Payload (for single)
+   * @param {any} data - Data to send (any type)
    * @param {Object} [options] - Send options
-   * @param {string} [options.adapter] - Adapter to use (default: 'http')
+   * @param {string} [options.adapter] - Adapter to use (default: 'database')
+   * @param {string} [options.url] - URL for HTTP adapter
    * @param {string} [options.secret] - Secret for signature generation
    * @param {string} [options.event] - Event type header
    * @param {number} [options.retries] - Max retry attempts (default: 3)
    * @param {number} [options.timeout] - Request timeout in ms
-   * @param {number} [options.concurrency] - Concurrent requests for batch (default: 5)
-   * @param {Object} [options.headers] - Additional headers
    * @returns {Promise<Object>} Delivery result
    *
    * @example
-   * // Single webhook (object with url and payload)
-   * await webhook.send({
-   *   url: 'https://api.example.com/hook',
-   *   payload: { event: 'user.created', data: { id: '123' } }
+   * // Send data with HTTP adapter
+   * await webhook.send({ event: 'user.created', data: { id: '123' } }, {
+   *   adapter: 'http',
+   *   url: 'https://api.example.com/hook'
    * });
    *
    * @example
-   * // With options
-   * await webhook.send({
-   *   url: 'https://api.example.com/hook',
-   *   payload: { event: 'order.completed' }
-   * }, {
-   *   secret: 'my-secret',
-   *   retries: 5,
-   *   timeout: 10000
-   * });
-   *
-   * @example
-   * // Batch send (array)
-   * await webhook.send([
-   *   { url: 'https://a.com/hook', payload: { event: 'created' } },
-   *   { url: 'https://b.com/hook', payload: { event: 'updated' } }
-   * ]);
+   * // Send data with database adapter (stores for later delivery)
+   * await webhook.send({ event: 'order.completed', data: {...} });
    */
-  async send(webhooks, options = {}) {
+  async send(data, options = {}) {
     // Validate input using Zod
     try {
-      this.validate(webhooks);
+      this.validate(data);
     } catch (error) {
       return {
         success: false,
@@ -332,11 +305,8 @@ class WebhookManager {
       };
     }
 
-    // Normalize to array for decision making
-    const webhookList = Array.isArray(webhooks) ? webhooks : [webhooks];
-
     // Use worker decision logic
-    const decision = makeSendDecision(webhookList, options);
+    const decision = makeSendDecision(data, options);
 
     // Determine worker usage:
     // - useWorker === true: Force worker
@@ -347,76 +317,30 @@ class WebhookManager {
       (options.useWorker !== false && decision.useWorker);
 
     if (shouldUseWorker) {
-      return workerPool.processSend(webhooks, {
-        ...options,
-        forceFork: options.useWorker === true,
-      });
-    }
+      const adapterName = options.adapter || this.defaultAdapter;
 
-    // Handle array (batch) - direct processing
-    if (Array.isArray(webhooks)) {
-      const results = {
-        successful: [],
-        failed: [],
-        total: webhooks.length,
-      };
-
-      // Execute in parallel with limit
-      const concurrency = options.concurrency || 5;
-      const chunks = [];
-
-      for (let i = 0; i < webhooks.length; i += concurrency) {
-        chunks.push(webhooks.slice(i, i + concurrency));
+      try {
+        if (adapterName === 'http') {
+          return workerPool.processSend([data], options);
+        }
+        if (adapterName === 'database') {
+          return workerPool.processPersist({
+            operation: 'store',
+            webhooks: [data],
+            options,
+          });
+        }
+      } catch (error) {
+        // Fallback to direct delivery if worker fails or not initialized
+        console.warn(
+          `Worker delivery failed for adapter ${adapterName}, falling back to main process:`,
+          error.message,
+        );
       }
-
-      for (const chunk of chunks) {
-        const promises = chunk.map(async webhook => {
-          const webhookOptions = { ...options, ...webhook.options };
-          const result = await this[deliver](webhook.payload, webhookOptions);
-
-          if (result.success) {
-            results.successful.push({
-              url: webhook.payload.url,
-              webhookId: result.webhookId,
-              statusCode: result.statusCode,
-            });
-          } else {
-            results.failed.push({
-              url: webhook.payload.url,
-              error: result.error,
-            });
-          }
-
-          return result;
-        });
-
-        await Promise.all(promises);
-      }
-
-      return {
-        success: results.failed.length === 0,
-        ...results,
-        successCount: results.successful.length,
-        failCount: results.failed.length,
-        timestamp: new Date().toISOString(),
-      };
     }
 
-    // Handle single webhook object
-    if (webhooks && typeof webhooks === 'object') {
-      return this[deliver](webhooks.payload, options);
-    }
-
-    // Invalid input
-    return {
-      success: false,
-      status: WEBHOOK_STATUS.FAILED,
-      error: {
-        message: 'Invalid webhook input: expected object or array',
-        code: 'VALIDATION_ERROR',
-      },
-      timestamp: new Date().toISOString(),
-    };
+    // Direct processing - pass data to adapter
+    return this[DELIVER](data, options);
   }
 
   /**

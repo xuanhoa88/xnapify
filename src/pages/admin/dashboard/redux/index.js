@@ -12,7 +12,7 @@ export * from './thunks';
 export * from './selector';
 
 // Public API - Actions
-export { clearDashboardError, SLICE_NAME } from './slice';
+export { clearDashboardError, resetDashboardState, SLICE_NAME } from './slice';
 
 // Public API - Reducer
 export { default } from './slice';

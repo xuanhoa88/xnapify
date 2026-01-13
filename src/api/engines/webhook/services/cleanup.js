@@ -6,6 +6,7 @@
  */
 
 import { WebhookError, createOperationResult } from '../errors';
+import workerPool from '../workers';
 
 /**
  * Cleanup old webhooks
@@ -17,17 +18,51 @@ import { WebhookError, createOperationResult } from '../errors';
  */
 export async function cleanup(manager, options = {}) {
   try {
-    const { olderThan = 30, status } = options;
+    const {
+      olderThan = 30,
+      status,
+      useWorker = true,
+      adapter = 'database',
+    } = options;
 
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
-      throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+    // 1. Worker Execution (Default)
+    if (useWorker !== false) {
+      const result = await workerPool.processPersist({
+        operation: 'cleanup',
+        options: {
+          olderThan,
+          status,
+        },
+      });
+
+      if (!result.success) {
+        throw new Error(result.error || 'Cleanup failed');
+      }
+
+      return createOperationResult(
+        true,
+        { deleted: result.deleted },
+        `Deleted ${result.deleted} old webhook(s)`,
       );
     }
 
-    const deleted = await dbAdapter.cleanup({
+    // 2. Direct Execution (Main Process)
+    const storageAdapter = manager.getAdapter(adapter);
+    if (!storageAdapter) {
+      throw new WebhookError(
+        `Adapter '${adapter}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
+      );
+    }
+
+    if (!storageAdapter.cleanup) {
+      throw new WebhookError(
+        `Adapter '${adapter}' does not support cleanup operation`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    const deleted = await storageAdapter.cleanup({
       olderThan,
       status,
     });

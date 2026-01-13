@@ -41,19 +41,25 @@
  *
  * @example <caption>Basic Usage - Send a single webhook</caption>
  * await webhook.send({
- *   payload: { url: 'https://api.example.com/hook', event: 'user.created', data: { id: '123' } }
+ *   event: 'user.created', data: { id: '123' }
+ * }, {
+ *   url: 'https://api.example.com/hook'
  * });
  *
  * @example <caption>With HMAC Signature</caption>
  * await webhook.send({
- *   payload: { url: 'https://api.example.com/hook', event: 'order.completed' }
+ *   event: 'order.completed'
  * }, {
+ *   url: 'https://api.example.com/hook',
  *   secret: 'my-secret-key',
  *   algorithm: 'sha256'
  * });
  *
  * @example <caption>With Retry Options</caption>
- * await webhook.send({ payload: { url, ...data } }, {
+ * await webhook.send({
+ *   event: 'order.completed'
+ * }, {
+ *   url: 'https://api.example.com/hook',
  *   retries: 5,
  *   timeout: 10000,
  *   retryDelay: 1000
@@ -61,16 +67,21 @@
  *
  * @example <caption>Batch Send (auto-offloads to worker for 5+ webhooks)</caption>
  * await webhook.send([
- *   { payload: { url: 'https://a.com/hook', event: 'created' } },
- *   { payload: { url: 'https://b.com/hook', event: 'updated' } }
- * ]);
+ *   { event: 'order.completed' },
+ *   { event: 'order.updated' }
+ * ], {
+ *   url: 'https://api.example.com/hook',
+ *   retries: 5,
+ *   timeout: 10000,
+ *   retryDelay: 1000
+ * });
  *
  * @example <caption>Force Worker Processing</caption>
  * // Force background worker
- * await webhook.send({ payload: { url, ...data } }, { useWorker: true });
+ * await webhook.send({ event: 'order.completed' }, { useWorker: true });
  *
  * // Force direct processing (bypass worker)
- * await webhook.send(webhooks, { useWorker: false });
+ * await webhook.send({ event: 'order.completed' }, { useWorker: false });
  *
  * @example <caption>Database Connection Setup</caption>
  * // Auto-configures both adapter and worker
@@ -89,7 +100,7 @@
  * const db = webhook.getAdapter('database');
  *
  * // Store webhook (pending status)
- * const result = await db.send({ url: 'https://api.example.com/hook', event: 'user.created' });
+ * const result = await db.send({ event: 'user.created' });
  *
  * // Query webhook history
  * const history = await db.getWebhooks({
@@ -118,37 +129,53 @@
  * const memory = webhook.getAdapter('memory');
  *
  * // Send webhook (stored in memory)
- * await memory.send({ url: 'https://api.example.com/hook', event: 'test' });
+ * await memory.send({ event: 'test' });
  *
- * // Get all sent webhooks
- * const sent = memory.getSentWebhooks();
- *
- * // Get last webhook
- * const last = memory.getLastWebhook();
+ * // Get all webhooks
+ * const result = await memory.getWebhooks();
+ * const allHooks = result.data;
  *
  * // Clear all stored webhooks
  * memory.clear();
  *
  * @example <caption>Worker Pool - Background Processing</caption>
  * // HTTP-only (no database)
- * await workerPool.processSend([{ payload: { url, event: 'created' } }]);
+ * await workerPool.processSend([{ event: 'created' }]);
  *
  * // Database-only (no HTTP)
- * await workerPool.processStore([{ payload: { url, event: 'created' } }]);
+ * await workerPool.processPersist({
+ *   operation: 'store',
+ *   webhooks: [{ event: 'created' }]
+ * });
  *
  * // Combined: Store → Send → Update status
- * await workerPool.processSendWithDb([{ payload: { url, event: 'created' } }]);
+ * await workerPool.processSendWithDb([{ event: 'created' }]);
  *
  * @example <caption>Create Isolated Instance (for testing)</caption>
  * const testWebhook = createFactory({ adapter: 'memory' });
- * await testWebhook.send({ payload: { url, event: 'created' } });
- * console.log(testWebhook.getAdapter('memory').getLastWebhook());
+ * await testWebhook.send({ event: 'created' });
+ *
+ * @example <caption>Error Monitoring (Sentry Integration)</caption>
+ * const Sentry = require('@sentry/node');
+ *
+ * try {
+ *   const result = await webhook.send(
+ *     { event: 'user.created', data: { id: 1 } },
+ *     { url: 'https://example.com/webhook' }
+ *   );
+ *
+ *   if (!result.success) {
+ *     Sentry.captureException(new Error(result.message), {
+ *       tags: { webhook_id: result.webhookId },
+ *       extra: { details: result.details },
+ *     });
+ *   }
+ * } catch (error) {
+ *   Sentry.captureException(error);
+ * }
  */
 
 import { createFactory } from './factory';
-
-// Export worker pool
-export { default as workerPool } from './workers';
 
 // Export errors
 export * from './errors';
@@ -159,14 +186,11 @@ export * from './utils/constants';
 // Export signature utilities
 export * from './utils/signature';
 
-// Export adapters
-export * from './adapters';
-
 // Export controllers
 export * from './controller';
 
 // Export services
-export * as services from './services';
+export * from './services';
 
 // Export factory creator
 export { createFactory };

@@ -3,6 +3,9 @@
  *
  * This migration creates the webhooks table for storing
  * webhook delivery history, status tracking, and retry support.
+ *
+ * Schema is simplified - additional data (status_code, response_body,
+ * error, headers, duration_ms, has_signature) stored in metadata JSON.
  */
 
 /**
@@ -19,46 +22,16 @@ export async function up({ context, Sequelize }) {
       primaryKey: true,
       comment: 'Unique webhook identifier',
     },
-    url: {
-      type: DataTypes.STRING(2048),
-      allowNull: false,
-      comment: 'Destination URL for the webhook',
-    },
-    payload: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'JSON serialized payload',
-    },
     event: {
-      type: DataTypes.STRING(128),
+      type: DataTypes.STRING(64),
       allowNull: true,
       comment: 'Event type (e.g., user.created, order.completed)',
     },
     status: {
-      type: DataTypes.ENUM('pending', 'processing', 'delivered', 'failed'),
+      type: DataTypes.ENUM('pending', 'delivered', 'failed'),
       defaultValue: 'pending',
       allowNull: false,
       comment: 'Current delivery status',
-    },
-    status_code: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: 'HTTP response status code',
-    },
-    response_body: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Response body from the webhook endpoint',
-    },
-    error_message: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Error message if delivery failed',
-    },
-    error_code: {
-      type: DataTypes.STRING(64),
-      allowNull: true,
-      comment: 'Error code for categorization',
     },
     attempts: {
       type: DataTypes.INTEGER,
@@ -77,31 +50,11 @@ export async function up({ context, Sequelize }) {
       allowNull: true,
       comment: 'Scheduled time for next retry attempt',
     },
-    duration_ms: {
-      type: DataTypes.INTEGER,
-      allowNull: true,
-      comment: 'Request duration in milliseconds',
-    },
-    has_signature: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      allowNull: false,
-      comment: 'Whether the webhook was signed',
-    },
-    headers: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'JSON serialized custom headers',
-    },
     metadata: {
       type: DataTypes.TEXT,
       allowNull: true,
-      comment: 'JSON serialized additional metadata',
-    },
-    delivered_at: {
-      type: DataTypes.DATE,
-      allowNull: true,
-      comment: 'Timestamp when successfully delivered',
+      comment:
+        'JSON: status_code, response_body, error, headers, duration_ms, has_signature, etc.',
     },
     created_at: {
       type: DataTypes.DATE,
@@ -118,7 +71,6 @@ export async function up({ context, Sequelize }) {
   // Add indexes for better query performance
   await queryInterface.addIndex('webhooks', ['status']);
   await queryInterface.addIndex('webhooks', ['event']);
-  await queryInterface.addIndex('webhooks', ['url']);
   await queryInterface.addIndex('webhooks', ['created_at']);
   await queryInterface.addIndex('webhooks', ['next_retry_at']);
   await queryInterface.addIndex('webhooks', ['status', 'next_retry_at'], {

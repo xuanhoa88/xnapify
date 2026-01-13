@@ -13,7 +13,7 @@ import {
 } from '../utils/password';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import { collectUserRBACData, isAdmin } from '../utils/rbac/collector';
-import { logActivity } from '../utils/activity';
+import { logUserActivity } from '../utils/activity';
 
 // ========================================================================
 // HELPERS
@@ -183,12 +183,8 @@ export async function registerUser(userData, { models, webhook }) {
   }
 
   // Log registration activity
-  await logActivity(webhook, {
-    event: 'user.registered',
-    entityType: 'user',
-    entityId: user.id,
-    action: 'registered',
-    data: { email },
+  await logUserActivity(webhook, 'registered', user.id, { email }, null, {
+    useWorker: true,
   });
 
   // Return formatted user data with default RBAC for new user
@@ -208,11 +204,8 @@ export async function registerUser(userData, { models, webhook }) {
  * @returns {Promise<void>}
  */
 export async function logoutUser(userId, { webhook }) {
-  await logActivity(webhook, {
-    event: 'user.logout',
-    entityType: 'user',
-    entityId: userId,
-    action: 'logout',
+  await logUserActivity(webhook, 'logout', userId, {}, null, {
+    useWorker: true,
   });
 }
 
@@ -338,16 +331,14 @@ export async function authenticateUser(
   await User.update({ last_login_at: new Date() }, { where: { id: user.id } });
 
   // Log login activity
-  await logActivity(webhook, {
-    event: 'user.login',
-    entityType: 'user',
-    entityId: user.id,
-    action: 'login',
-    data: {
-      ...activityData,
-      success: true,
-    },
-  });
+  await logUserActivity(
+    webhook,
+    'login',
+    user.id,
+    { ...activityData, success: true },
+    null,
+    { useWorker: true },
+  );
 
   return formatUserData(user);
 }
@@ -390,13 +381,14 @@ export async function verifyEmail(token, { models, webhook }) {
     await user.update({ email_confirmed: true });
 
     // Log email verified activity
-    await logActivity(webhook, {
-      event: 'email.verified',
-      entityType: 'user',
-      entityId: user.id,
-      action: 'verified',
-      data: { email: user.email },
-    });
+    await logUserActivity(
+      webhook,
+      'email_verified',
+      user.id,
+      { email: user.email },
+      null,
+      { useWorker: true },
+    );
 
     return user;
   } catch (error) {
@@ -450,13 +442,14 @@ export async function resetPasswordRequest(email, { models, webhook }) {
   });
 
   // Log password reset request activity
-  await logActivity(webhook, {
-    event: 'password.reset_requested',
-    entityType: 'user',
-    entityId: user.id,
-    action: 'reset_requested',
-    data: { email },
-  });
+  await logUserActivity(
+    webhook,
+    'password_reset_requested',
+    user.id,
+    { email },
+    null,
+    { useWorker: true },
+  );
 
   // Return the raw token (to be sent via email)
   // In production, you would send this via email instead of returning it
@@ -538,12 +531,14 @@ export async function resetPasswordConfirmation(
   await tokenRecord.update({ used_at: new Date() });
 
   // Log password reset completed activity
-  await logActivity(webhook, {
-    event: 'password.reset_completed',
-    entityType: 'user',
-    entityId: user.id,
-    action: 'reset_completed',
-  });
+  await logUserActivity(
+    webhook,
+    'password_reset_completed',
+    user.id,
+    {},
+    null,
+    { useWorker: true },
+  );
 
   return user;
 }

@@ -8,7 +8,6 @@
 /**
  * HTTP Send Worker - Handles webhook delivery via HTTP
  * Focuses only on HTTP delivery with retries and exponential backoff.
- * No database logic - this is a pure HTTP delivery worker.
  */
 
 import { createWorkerHandler, setupWorkerProcess } from '../../worker';
@@ -21,7 +20,6 @@ const httpAdapter = new HttpWebhookAdapter();
 
 /**
  * Calculate retry delay with exponential backoff
- * @private
  */
 function getRetryDelay(attempt, options = {}) {
   const baseDelay = options.retryDelay || DEFAULTS.RETRY_DELAY;
@@ -34,7 +32,6 @@ function getRetryDelay(attempt, options = {}) {
 
 /**
  * Sleep helper
- * @private
  */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -42,22 +39,15 @@ function sleep(ms) {
 
 /**
  * Deliver single webhook with retries
- * @private
  */
-async function deliverWebhook(webhook, options = {}) {
-  const { payload } = webhook;
-  const url = payload && payload.url;
-  const webhookOptions = { ...options, ...webhook.options };
+async function deliverWebhook(data, options = {}) {
   const maxRetries =
-    webhookOptions.retries != null
-      ? webhookOptions.retries
-      : DEFAULTS.MAX_RETRIES;
-
+    options.retries != null ? options.retries : DEFAULTS.MAX_RETRIES;
   let lastError = null;
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      const result = await httpAdapter.send(payload, webhookOptions);
+      const result = await httpAdapter.send(data, options);
       return {
         ...result,
         attempts: attempt + 1,
@@ -66,7 +56,7 @@ async function deliverWebhook(webhook, options = {}) {
       lastError = error;
 
       if (attempt < maxRetries) {
-        const delay = getRetryDelay(attempt, webhookOptions);
+        const delay = getRetryDelay(attempt, options);
         await sleep(delay);
       }
     }
@@ -75,7 +65,6 @@ async function deliverWebhook(webhook, options = {}) {
   return {
     success: false,
     status: WEBHOOK_STATUS.FAILED,
-    url,
     error: {
       message: lastError.message,
       code: lastError.code || 'DELIVERY_FAILED',
@@ -87,8 +76,6 @@ async function deliverWebhook(webhook, options = {}) {
 
 /**
  * Process HTTP send operations
- * @param {Object} data - Send data
- * @returns {Promise<Object>} Send result
  */
 async function processSend(data) {
   const { webhooks, options = {} } = data;
@@ -117,18 +104,22 @@ async function processSend(data) {
 
   for (const chunk of chunks) {
     const promises = chunk.map(async webhook => {
-      const result = await deliverWebhook(webhook, options);
+      const result = await deliverWebhook(webhook, {
+        ...options,
+        ...webhook.options,
+      });
+
+      // Use input ID for tracking if available, otherwise use adapter generated ID
+      const trackingId = webhook.id || webhook.webhookId || result.webhookId;
 
       if (result.success) {
         results.successful.push({
-          url: webhook.payload.url,
-          webhookId: result.webhookId,
-          statusCode: result.statusCode,
+          webhookId: trackingId,
           attempts: result.attempts,
         });
       } else {
         results.failed.push({
-          url: webhook.payload.url,
+          webhookId: trackingId,
           error: result.error,
           attempts: result.attempts,
         });
@@ -149,15 +140,11 @@ async function processSend(data) {
   };
 }
 
-// Create worker function using helper
+// Create worker function
 const workerFunction = createWorkerHandler(processSend, 'SEND_WEBHOOK');
 
 // Export for same-process execution
 export default workerFunction;
 
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
+// Setup fork mode execution
 setupWorkerProcess(processSend, 'SEND_WEBHOOK', 'Webhook HTTP');

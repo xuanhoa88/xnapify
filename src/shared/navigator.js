@@ -24,12 +24,12 @@ const PATH = Object.freeze({
 });
 
 /** Symbol keys for private class properties. */
-const NAV_INDEX = Symbol('__rsk.navigatorIndex__');
-const NAV_INDEX_BUILD = Symbol('__rsk.navigatorIndexBuild__');
-const NAV_INDEX_REBUILD = Symbol('__rsk.navigatorIndexRebuild__');
+const INDEX = Symbol('__rsk.navigatorIndex__');
+const INDEX_BUILD = Symbol('__rsk.navigatorIndexBuild__');
+const INDEX_REBUILD = Symbol('__rsk.navigatorIndexRebuild__');
 
 /** Symbol key for tracking initialized views. */
-const NAV_INITIALIZED = Symbol('__rsk.navigatorInitialized__');
+const INITIALIZED = Symbol('__rsk.navigatorInitialized__');
 
 /** WeakMap cache for view match functions. */
 let viewMatcherCache = new WeakMap();
@@ -304,7 +304,7 @@ async function bootView(view, ctx) {
     if (!view || typeof view.boot !== 'function') return;
 
     // Track initialization per view to prevent double execution
-    if (!view[NAV_INITIALIZED]) view[NAV_INITIALIZED] = await view.boot(ctx);
+    if (!view[INITIALIZED]) view[INITIALIZED] = await view.boot(ctx);
   } catch (error) {
     console.error(
       `[Navigator] Error running boot hook for view "${view.path || '(no path)'}":`,
@@ -408,36 +408,36 @@ export default class IsomorphicNavigator {
       : views;
 
     linkViewParents(this.root, null);
-    this[NAV_INDEX] = new Map();
-    this[NAV_INDEX_BUILD](this.root);
+    this[INDEX] = new Map();
+    this[INDEX_BUILD](this.root);
   }
 
   /** @private */
-  [NAV_INDEX_BUILD](view) {
+  [INDEX_BUILD](view) {
     if (view.path) {
-      this[NAV_INDEX].set(view.path, view);
+      this[INDEX].set(view.path, view);
     }
     if (Array.isArray(view.children)) {
-      view.children.forEach(this[NAV_INDEX_BUILD].bind(this));
+      view.children.forEach(this[INDEX_BUILD].bind(this));
     }
   }
 
   /** @private */
-  [NAV_INDEX_REBUILD](subtree) {
+  [INDEX_REBUILD](subtree) {
     if (subtree) {
       const removeFromIndex = view => {
         if (view.path) {
-          this[NAV_INDEX].delete(view.path);
+          this[INDEX].delete(view.path);
         }
         if (Array.isArray(view.children)) {
           view.children.forEach(removeFromIndex);
         }
       };
       removeFromIndex(subtree);
-      this[NAV_INDEX_BUILD](subtree);
+      this[INDEX_BUILD](subtree);
     } else {
-      this[NAV_INDEX].clear();
-      this[NAV_INDEX_BUILD](this.root);
+      this[INDEX].clear();
+      this[INDEX_BUILD](this.root);
     }
   }
 
@@ -450,7 +450,7 @@ export default class IsomorphicNavigator {
   add(view, parentPath) {
     validateViewConfig(view);
 
-    if (view.path && this[NAV_INDEX].has(view.path)) {
+    if (view.path && this[INDEX].has(view.path)) {
       throw createError(
         `Cannot add view: path "${view.path}" already exists`,
         HTTP_STATUS.BAD_REQUEST,
@@ -487,7 +487,7 @@ export default class IsomorphicNavigator {
 
     linkViewParents(view, parent);
     targetViews.push(view);
-    this[NAV_INDEX_BUILD](view);
+    this[INDEX_BUILD](view);
     clearViewMatcherCache();
 
     return true;
@@ -508,7 +508,7 @@ export default class IsomorphicNavigator {
     const index = parent.children.indexOf(view);
     if (index > -1) {
       parent.children.splice(index, 1);
-      this[NAV_INDEX_REBUILD]();
+      this[INDEX_REBUILD]();
       clearViewMatcherCache();
       return true;
     }
@@ -526,7 +526,7 @@ export default class IsomorphicNavigator {
     if (!view) return false;
 
     if (updates.path && updates.path !== path) {
-      if (this[NAV_INDEX].has(updates.path)) {
+      if (this[INDEX].has(updates.path)) {
         throw createError(
           `Cannot update view: path "${updates.path}" already exists`,
           HTTP_STATUS.BAD_REQUEST,
@@ -540,7 +540,7 @@ export default class IsomorphicNavigator {
       linkViewParents(view, view.parent);
     }
     if (updates.path) {
-      this[NAV_INDEX_REBUILD]();
+      this[INDEX_REBUILD]();
     }
     clearViewMatcherCache();
 
@@ -554,8 +554,8 @@ export default class IsomorphicNavigator {
    * @returns {Object|null}
    */
   find(path, searchRoot) {
-    if (!searchRoot && this[NAV_INDEX].has(path)) {
-      return this[NAV_INDEX].get(path);
+    if (!searchRoot && this[INDEX].has(path)) {
+      return this[INDEX].get(path);
     }
 
     const root = searchRoot || this.root;
@@ -748,7 +748,7 @@ export default class IsomorphicNavigator {
 
     printNode(this.root);
     console.log('━'.repeat(60));
-    console.log(`[Navigator] Total views indexed: ${this[NAV_INDEX].size}`);
+    console.log(`[Navigator] Total views indexed: ${this[INDEX].size}`);
   }
 }
 

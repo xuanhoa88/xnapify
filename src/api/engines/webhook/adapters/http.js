@@ -7,36 +7,45 @@
 
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULTS, WEBHOOK_STATUS } from '../utils/constants';
+import fetch from 'node-fetch';
+import { DEFAULTS } from '../utils/constants';
 import { createSignatureHeader } from '../utils/signature';
-import { WebhookDeliveryError, WebhookTimeoutError } from '../errors';
+import {
+  createValidationErrorResponse,
+  createSuccessResponse,
+  createErrorResponse,
+} from '../utils/adapter-responses';
+import {
+  urlSchema,
+  eventSchema,
+  secretSchema,
+  algorithmSchema,
+  timeoutSchema,
+  headersSchema,
+} from '../utils/adapter-schemas';
 
 /**
- * Zod Validation Schema for HTTP Adapter
+ * HTTP Adapter Options Schema
  */
-const sendInputSchema = z.object({
-  payload: z
-    .object({
-      url: z.string().min(1).max(2048).url(),
-    })
-    .passthrough(),
-  options: z
-    .object({
-      event: z.string().max(1024).optional(),
-      secret: z.string().optional(),
-      algorithm: z.string().optional(),
-      timeout: z.number().int().min(1000).max(60000).optional(),
-      headers: z.record(z.string()).optional(),
-    })
-    .optional()
-    .default({}),
+const httpOptionsSchema = z.object({
+  url: urlSchema.optional(),
+  event: eventSchema,
+  secret: secretSchema.optional(),
+  algorithm: algorithmSchema,
+  timeout: timeoutSchema.optional(),
+  headers: headersSchema.optional(),
 });
+
+const sendInputSchema = httpOptionsSchema.passthrough();
+// validateInput is no longer needed
 
 /**
  * HTTP Adapter for sending webhooks via fetch
+ * URL can be configured in constructor or passed in options
  */
 export class HttpWebhookAdapter {
   constructor(config = {}) {
+    this.url = config.url || null;
     this.timeout = config.timeout || DEFAULTS.TIMEOUT;
     this.defaultHeaders = {
       'Content-Type': DEFAULTS.CONTENT_TYPE,
@@ -54,58 +63,65 @@ export class HttpWebhookAdapter {
   /**
    * Send a webhook request
    *
-   * @param {Object} payload - Payload to send (must include url property)
-   * @param {string} payload.url - Webhook destination URL
+   * @param {any} data - Data to send
    * @param {Object} options - Send options
+   * @param {string} options.url - URL override (optional if configured in constructor)
    * @returns {Promise<Object>} Delivery result
    */
-  async send(payload, options = {}) {
-    // Validate input
-    const validation = sendInputSchema.safeParse({ payload, options });
+  async send(data, options = {}) {
+    // In this flat adapter model, 'data' contains everything.
+    // 'options' is kept for backward compatibility but merged if provided.
+    const input = { ...data, ...options };
+    const validation = sendInputSchema.safeParse(input);
+
     if (!validation.success) {
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: validation.error.message,
-          code: 'VALIDATION_ERROR',
-          details: validation.error.flatten(),
-        },
-        timestamp: new Date().toISOString(),
-        adapter: 'http',
-      };
+      return createValidationErrorResponse('http', validation.error);
     }
 
-    const { options: validatedOptions } = validation.data;
-    // Extract url from payload, rest becomes the body
-    const { url, ...data } = payload;
-    const timeout = validatedOptions.timeout || this.timeout;
+    const {
+      url: optionsUrl,
+      timeout: optionsTimeout,
+      headers: optionsHeaders,
+      event,
+      secret,
+      algorithm,
+      ...payload
+    } = validation.data;
+
+    const url = optionsUrl || this.url;
+
+    if (!url) {
+      return createValidationErrorResponse('http', {
+        message:
+          'URL is required (configure in constructor or pass in options)',
+        flatten: () => ({ fieldErrors: { url: ['Required'] } }),
+      });
+    }
+
+    const timeout = optionsTimeout || this.timeout;
     const timestamp = Date.now();
-    const body = JSON.stringify(data);
+    const body = JSON.stringify(payload);
     const webhookId = uuidv4();
 
     // Build headers
     const headers = {
       ...this.defaultHeaders,
-      ...validatedOptions.headers,
+      ...optionsHeaders,
       [DEFAULTS.TIMESTAMP_HEADER]: String(timestamp),
     };
 
-    // Add event header if provided
-    if (validatedOptions.event) {
-      headers[DEFAULTS.EVENT_HEADER] = validatedOptions.event;
+    if (event) {
+      headers[DEFAULTS.EVENT_HEADER] = event;
     }
 
-    // Add signature if secret is provided
-    if (validatedOptions.secret) {
+    if (secret) {
       headers[DEFAULTS.SIGNATURE_HEADER] = createSignatureHeader(
         body,
-        validatedOptions.secret,
-        validatedOptions.algorithm,
+        secret,
+        algorithm,
       );
     }
 
-    // Create abort controller for timeout
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -123,40 +139,48 @@ export class HttpWebhookAdapter {
 
       if (!response.ok) {
         this.stats.failed++;
-        throw new WebhookDeliveryError(
+        return createErrorResponse(
+          'http',
           `HTTP ${response.status}: ${response.statusText}`,
-          url,
-          response.status,
+          'HTTP_ERROR',
+          {
+            webhookId,
+            url,
+            statusCode: response.status,
+            responseBody,
+            duration: Date.now() - timestamp,
+          },
         );
       }
 
       this.stats.sent++;
       this.stats.lastSentAt = new Date().toISOString();
 
-      return {
-        success: true,
-        status: WEBHOOK_STATUS.DELIVERED,
+      return createSuccessResponse('http', {
         webhookId,
         url,
         statusCode: response.status,
         responseBody,
-        timestamp: new Date(timestamp).toISOString(),
         duration: Date.now() - timestamp,
-        adapter: 'http',
-      };
+      });
     } catch (error) {
       clearTimeout(timeoutId);
       this.stats.failed++;
 
+      let code = 'DELIVERY_FAILED';
+      let { message } = error;
+
       if (error.name === 'AbortError') {
-        throw new WebhookTimeoutError(url, timeout);
+        code = 'TIMEOUT';
+        message = `Request timed out after ${timeout}ms`;
       }
 
-      if (error instanceof WebhookDeliveryError) {
-        throw error;
-      }
-
-      throw new WebhookDeliveryError(error.message, url, null, error);
+      return createErrorResponse('http', message, code, {
+        webhookId,
+        url,
+        duration: Date.now() - timestamp,
+        details: error,
+      });
     }
   }
 
@@ -184,8 +208,29 @@ export class HttpWebhookAdapter {
   getStats() {
     return {
       adapter: 'http',
+      total: this.stats.sent + this.stats.failed,
+      delivered: this.stats.sent,
+      failed: this.stats.failed,
+      pending: 0,
       timeout: this.timeout,
-      ...this.stats,
+      lastSentAt: this.stats.lastSentAt,
+    };
+  }
+
+  /**
+   * Get webhooks (not supported - HTTP adapter doesn't store webhooks)
+   * Returns empty pagination result for interface compatibility
+   * @param {Object} options
+   * @returns {Promise<Object>} Empty pagination result
+   */
+  async getWebhooks(options = {}) {
+    const { limit = 20, offset = 0 } = options;
+    return {
+      data: [],
+      total: 0,
+      limit,
+      offset,
+      hasMore: false,
     };
   }
 
@@ -195,6 +240,26 @@ export class HttpWebhookAdapter {
    * @returns {null} Always returns null
    */
   getById(_webhookId) {
+    return null;
+  }
+
+  /**
+   * Cleanup old webhooks (not supported - HTTP adapter doesn't store webhooks)
+   * Returns 0 for interface compatibility
+   * @returns {Promise<number>} Number of deleted records (always 0)
+   */
+  async cleanup() {
+    return 0;
+  }
+
+  /**
+   * Update webhook status (not supported - HTTP adapter doesn't store webhooks)
+   * Returns null for interface compatibility
+   * @param {string} _webhookId - Webhook ID (unused)
+   * @param {Object} _result - Delivery result (unused)
+   * @returns {Promise<Object|null>} Always returns null
+   */
+  async updateStatus(_webhookId, _result) {
     return null;
   }
 }

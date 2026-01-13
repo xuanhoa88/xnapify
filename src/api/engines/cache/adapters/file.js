@@ -18,6 +18,17 @@ import crypto from 'crypto';
  * - Atomic writes (temp file + rename)
  * - In-memory lock to prevent race conditions
  * - Max size limit with LRU-like eviction
+ *
+ * Common Cache Interface:
+ * - get(key): Get value from cache
+ * - set(key, value, ttl): Store value in cache
+ * - delete(key): Remove value from cache
+ * - has(key): Check if key exists
+ * - clear(): Remove all entries
+ * - stats(): Get cache statistics
+ * - cleanup(): Remove expired entries
+ * - keys(): Get all cache keys
+ * - size: Get number of entries
  */
 export default class FileCache {
   /**

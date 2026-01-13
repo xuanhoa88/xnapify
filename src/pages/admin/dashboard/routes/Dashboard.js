@@ -11,14 +11,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import {
   fetchDashboard,
-  getDashboardStats,
+  getActivities,
+  getActivitiesTotal,
+  getActivitiesPagination,
   isDashboardLoading,
   getDashboardError,
-  getDashboardRecentActivities,
 } from '../redux';
 import { Box, Icon, Loader, Table } from '../../../../components/Admin';
 import Card from '../../../../components/Card';
-import Avatar from '../../../../components/Avatar';
 import s from './Dashboard.css';
 
 /**
@@ -42,29 +42,49 @@ const formatRelativeTime = dateString => {
   return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
 };
 
+/**
+ * Get status badge style
+ */
+const getStatusBadge = status => {
+  switch (status) {
+    case 'delivered':
+      return { className: s.badgeSuccess, label: 'Delivered' };
+    case 'failed':
+      return { className: s.badgeError, label: 'Failed' };
+    case 'pending':
+    default:
+      return { className: s.badgeWarning, label: 'Pending' };
+  }
+};
+
 function Dashboard() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
-  const stats = useSelector(getDashboardStats);
+  const activities = useSelector(getActivities);
+  const total = useSelector(getActivitiesTotal);
+  const pagination = useSelector(getActivitiesPagination);
   const loading = useSelector(isDashboardLoading);
   const error = useSelector(getDashboardError);
-  const recentActivities = useSelector(getDashboardRecentActivities);
 
   useEffect(() => {
-    dispatch(fetchDashboard());
+    dispatch(fetchDashboard({ page: 1, limit: 20 }));
   }, [dispatch]);
+
+  const handlePageChange = page => {
+    dispatch(fetchDashboard({ page, limit: 20 }));
+  };
 
   const renderContent = () => {
     // Loading state
     if (loading) {
-      return <Loader variant='cards' message='Loading dashboard...' />;
+      return <Loader variant='cards' message='Loading activities...' />;
     }
 
     // Error state
     if (error) {
       return (
         <Table.Error
-          title={t('dashboard.errorLoading', 'Error loading dashboard')}
+          title={t('dashboard.errorLoading', 'Error loading activities')}
           error={error}
           onRetry={() => dispatch(fetchDashboard())}
         />
@@ -73,121 +93,62 @@ function Dashboard() {
 
     return (
       <div className={s.dashboardGrid}>
-        {/* Stats Cards */}
-        <Card variant='default' className={s.statsCard}>
-          <Card.Header
-            className={s.statsCardHeader}
-            actions={<Icon name='users' size={24} className={s.cardIcon} />}
-          >
-            <h3 className={s.cardTitle}>Total Users</h3>
-          </Card.Header>
-          <Card.Body className={s.statsCardBody}>
-            <div className={s.cardValue}>{stats.totalUsers || 0}</div>
-            <div className={s.cardTrend}>
-              {stats.activeUsers || 0} active users
-            </div>
-          </Card.Body>
-        </Card>
-
-        <Card variant='default' className={s.statsCard}>
-          <Card.Header
-            className={s.statsCardHeader}
-            actions={<Icon name='shield' size={24} className={s.cardIcon} />}
-          >
-            <h3 className={s.cardTitle}>Total Roles</h3>
-          </Card.Header>
-          <Card.Body className={s.statsCardBody}>
-            <div className={s.cardValue}>{stats.totalRoles || 0}</div>
-            <div className={s.cardTrend}>
-              {stats.activeRoles || 0} active roles
-            </div>
-          </Card.Body>
-        </Card>
-
-        <Card variant='default' className={s.statsCard}>
-          <Card.Header
-            className={s.statsCardHeader}
-            actions={<Icon name='folder' size={24} className={s.cardIcon} />}
-          >
-            <h3 className={s.cardTitle}>Total Groups</h3>
-          </Card.Header>
-          <Card.Body className={s.statsCardBody}>
-            <div className={s.cardValue}>{stats.totalGroups || 0}</div>
-            <div className={s.cardTrend}>
-              {stats.activeGroups || 0} active groups
-            </div>
-          </Card.Body>
-        </Card>
-
-        <Card variant='default' className={s.statsCard}>
-          <Card.Header
-            className={s.statsCardHeader}
-            actions={
-              <Icon name='check-circle' size={24} className={s.cardIcon} />
-            }
-          >
-            <h3 className={s.cardTitle}>System Status</h3>
-          </Card.Header>
-          <Card.Body className={s.statsCardBody}>
-            <div className={s.cardValue}>
-              {stats.systemStatus || t('common.unknown', 'Unknown')}
-            </div>
-            <div className={s.cardTrend}>Uptime: {stats.uptime || 'N/A'}</div>
-          </Card.Body>
-        </Card>
-
-        {/* Recent Activities Table */}
+        {/* Activities Table */}
         <Card variant='default' className={s.fullWidthCard}>
           <Card.Header className={s.tableCardHeader}>
-            <h3 className={s.cardTitle}>Recent Activities</h3>
+            <h3 className={s.cardTitle}>
+              Recent Activities {total > 0 && <span>({total})</span>}
+            </h3>
           </Card.Header>
           <Card.Body className={s.tableCardBody}>
-            {recentActivities && recentActivities.length > 0 ? (
+            {activities && activities.length > 0 ? (
               <table className={s.table}>
                 <thead>
                   <tr>
-                    <th>User</th>
+                    <th>Event</th>
+                    <th>Entity</th>
                     <th>Action</th>
-                    <th>Date</th>
                     <th>Status</th>
+                    <th>Time</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentActivities.map(activity => (
-                    <tr key={activity.id}>
-                      <td>
-                        <div className={s.userCell}>
-                          <Avatar
-                            name={activity.user && activity.user.display_name}
-                            size='small'
-                          />
-                          <div>
-                            <div className={s.userName}>
-                              {(activity.user && activity.user.display_name) ||
-                                t('common.unknown', 'Unknown')}
-                            </div>
-                            <div className={s.userEmail}>
-                              {(activity.user && activity.user.email) || 'N/A'}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>{activity.action}</td>
-                      <td>{formatRelativeTime(activity.date)}</td>
-                      <td>
-                        <span
-                          className={clsx(
-                            s.badge,
-                            activity.status === 'success'
-                              ? s.badgeSuccess
-                              : s.badgeWarning,
+                  {activities.map(activity => {
+                    const metadata = activity.metadata || {};
+                    const statusBadge = getStatusBadge(activity.status);
+                    return (
+                      <tr key={activity.id}>
+                        <td>
+                          <code className={s.eventCode}>
+                            {metadata.event || activity.event || 'N/A'}
+                          </code>
+                        </td>
+                        <td>
+                          {metadata.entity_type && metadata.entity_id ? (
+                            <span className={s.entityCell}>
+                              <span className={s.entityType}>
+                                {metadata.entity_type}
+                              </span>
+                              <span className={s.entityId}>
+                                {metadata.entity_id}
+                              </span>
+                            </span>
+                          ) : (
+                            'N/A'
                           )}
-                        >
-                          {activity.status === 'success' ? 'Success' : 'Failed'}
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td>{metadata.action || 'N/A'}</td>
+                        <td>
+                          <span
+                            className={clsx(s.badge, statusBadge.className)}
+                          >
+                            {statusBadge.label}
+                          </span>
+                        </td>
+                        <td>{formatRelativeTime(activity.created_at)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             ) : (
@@ -198,6 +159,16 @@ function Dashboard() {
               />
             )}
           </Card.Body>
+          {pagination && pagination.total > pagination.limit && (
+            <Card.Footer className={s.tableCardFooter}>
+              <Table.Pagination
+                currentPage={pagination.page}
+                totalPages={Math.ceil(pagination.total / pagination.limit)}
+                totalItems={pagination.total}
+                onPageChange={handlePageChange}
+              />
+            </Card.Footer>
+          )}
         </Card>
       </div>
     );

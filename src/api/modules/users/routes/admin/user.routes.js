@@ -7,7 +7,6 @@
 
 import * as userController from '../../controllers/admin/user.controller';
 import * as rbacController from '../../controllers/admin/rbac.controller';
-import * as dashboardController from '../../controllers/admin/dashboard.controller';
 
 /**
  * User Administration Routes
@@ -27,17 +26,6 @@ export default function userRoutes(deps, userMiddlewares) {
   const { requireAdmin, requirePermission, requireAnyPermission } =
     userMiddlewares;
   const router = deps.Router();
-
-  // ========================================================================
-  // DASHBOARD ROUTES
-  // ========================================================================
-
-  /**
-   * @route   GET /dashboard
-   * @desc    Get dashboard statistics and recent activity
-   * @access  Admin only
-   */
-  router.get('/dashboard', requireAdmin, dashboardController.getDashboard);
 
   // ========================================================================
   // USER CRUD ROUTES

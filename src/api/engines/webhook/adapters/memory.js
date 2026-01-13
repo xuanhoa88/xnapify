@@ -7,26 +7,24 @@
 
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import {
+  createValidationErrorResponse,
+  createSuccessResponse,
+  createErrorResponse,
+} from '../utils/adapter-responses';
+import { eventSchema, metadataSchema } from '../utils/adapter-schemas';
 import { WEBHOOK_STATUS } from '../utils/constants';
 
 /**
- * Zod Validation Schema for Memory Adapter
+ * Memory Adapter Options Schema
  */
-const sendInputSchema = z.object({
-  payload: z
-    .object({
-      url: z.string().min(1).max(2048).url(),
-    })
-    .passthrough(),
-  options: z
-    .object({
-      event: z.string().max(1024).optional(),
-      secret: z.string().optional(),
-      headers: z.record(z.string()).optional(),
-    })
-    .optional()
-    .default({}),
+const memoryOptionsSchema = z.object({
+  event: eventSchema,
+  metadata: metadataSchema,
 });
+
+const sendInputSchema = memoryOptionsSchema.passthrough();
+// validateInput is no longer needed
 
 /**
  * Memory Adapter for testing webhooks
@@ -39,8 +37,7 @@ export class MemoryWebhookAdapter {
     this.maxStoredWebhooks = config.maxStoredWebhooks || 1000;
 
     // Storage
-    this.sentWebhooks = [];
-    this.failedWebhooks = [];
+    this.webhooks = [];
 
     // Statistics
     this.stats = {
@@ -71,107 +68,70 @@ export class MemoryWebhookAdapter {
   /**
    * Send a webhook (stores in memory)
    *
-   * @param {Object} payload - Payload (must include url property)
-   * @param {string} payload.url - Webhook URL
+   * @param {any} data - Data to store
    * @param {Object} options - Options
    * @returns {Promise<Object>} Result
    */
-  async send(payload, options = {}) {
-    // Validate input
-    const validation = sendInputSchema.safeParse({ payload, options });
+  async send(data, options = {}) {
+    // In this flat adapter model, 'data' contains everything.
+    // 'options' is kept for backward compatibility but merged if provided.
+    const input = { ...data, ...options };
+    const validation = sendInputSchema.safeParse(input);
+
     if (!validation.success) {
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: validation.error.message,
-          code: 'VALIDATION_ERROR',
-          details: validation.error.flatten(),
-        },
-        timestamp: new Date().toISOString(),
-        adapter: 'memory',
-      };
+      return createValidationErrorResponse('memory', validation.error);
     }
 
-    const { options: validatedOptions } = validation.data;
-    // Extract url from payload, rest becomes stored data
-    const { url, ...data } = payload;
+    const { event, ...metadata } = validation.data;
     await this.delay();
 
     const timestamp = new Date().toISOString();
     const webhookId = uuidv4();
 
+    const webhook = {
+      id: webhookId,
+      metadata,
+      event,
+      created_at: timestamp,
+      updated_at: timestamp,
+    };
+
     // Simulate failure
     if (this.shouldFail()) {
       this.stats.failed++;
-      const failedWebhook = {
-        id: webhookId,
-        url,
-        payload: data,
-        options: validatedOptions,
-        error: 'Simulated failure',
-        failedAt: timestamp,
-      };
-      this.failedWebhooks.push(failedWebhook);
+      webhook.status = WEBHOOK_STATUS.FAILED;
 
-      const error = new Error('Simulated webhook failure');
-      error.code = 'SIMULATED_FAILURE';
-      throw error;
+      // Store failed webhook
+      this.webhooks.push(webhook);
+
+      return createErrorResponse(
+        'memory',
+        'Simulated webhook failure',
+        'SIMULATED_FAILURE',
+        {
+          webhookId,
+          duration: this.simulateDelay,
+        },
+      );
     }
 
-    const storedWebhook = {
-      id: webhookId,
-      url,
-      payload: data,
-      event: validatedOptions.event,
-      headers: validatedOptions.headers,
-      hasSignature: Boolean(validatedOptions.secret),
-      sentAt: timestamp,
-    };
+    webhook.status = WEBHOOK_STATUS.DELIVERED;
 
     // Add to storage with limit
-    this.sentWebhooks.push(storedWebhook);
-    if (this.sentWebhooks.length > this.maxStoredWebhooks) {
-      this.sentWebhooks.shift();
+    this.webhooks.push(webhook);
+    if (this.webhooks.length > this.maxStoredWebhooks) {
+      this.webhooks.shift();
     }
 
     this.stats.sent++;
     this.stats.lastSentAt = timestamp;
 
-    return {
-      success: true,
-      status: WEBHOOK_STATUS.DELIVERED,
+    return createSuccessResponse('memory', {
       webhookId,
-      url,
       statusCode: 200,
       responseBody: { received: true },
-      timestamp,
       duration: this.simulateDelay,
-      adapter: 'memory',
-    };
-  }
-
-  /**
-   * Get all sent webhooks
-   * @param {Object} options - Filter options
-   * @returns {Array} Sent webhooks
-   */
-  getSentWebhooks(options = {}) {
-    let webhooks = [...this.sentWebhooks];
-
-    if (options.url) {
-      webhooks = webhooks.filter(w => w.url.includes(options.url));
-    }
-
-    if (options.event) {
-      webhooks = webhooks.filter(w => w.event === options.event);
-    }
-
-    if (options.limit) {
-      webhooks = webhooks.slice(-options.limit);
-    }
-
-    return webhooks;
+    });
   }
 
   /**
@@ -180,33 +140,14 @@ export class MemoryWebhookAdapter {
    * @returns {Object|null} Webhook or null
    */
   getById(webhookId) {
-    return this.sentWebhooks.find(w => w.id === webhookId) || null;
-  }
-
-  /**
-   * Get the last sent webhook
-   * @returns {Object|null} Last webhook or null
-   */
-  getLastWebhook() {
-    return this.sentWebhooks.length > 0
-      ? this.sentWebhooks[this.sentWebhooks.length - 1]
-      : null;
-  }
-
-  /**
-   * Get failed webhooks
-   * @returns {Array} Failed webhooks
-   */
-  getFailedWebhooks() {
-    return [...this.failedWebhooks];
+    return this.webhooks.find(w => w.id === webhookId) || null;
   }
 
   /**
    * Clear all stored webhooks
    */
   clear() {
-    this.sentWebhooks = [];
-    this.failedWebhooks = [];
+    this.webhooks = [];
     this.stats = {
       sent: 0,
       failed: 0,
@@ -221,11 +162,96 @@ export class MemoryWebhookAdapter {
   getStats() {
     return {
       adapter: 'memory',
-      storedWebhooks: this.sentWebhooks.length,
+      total: this.stats.sent + this.stats.failed,
+      delivered: this.stats.sent,
+      failed: this.stats.failed,
+      pending: 0,
+      lastSentAt: this.stats.lastSentAt,
+      // Memory specific
+      storedWebhooks: this.webhooks.length,
       maxStoredWebhooks: this.maxStoredWebhooks,
       simulateDelay: this.simulateDelay,
       failureRate: this.failureRate,
-      ...this.stats,
     };
+  }
+
+  /**
+   * Update webhook status (mock implementation)
+   */
+  async updateStatus(webhookId, result) {
+    const webhook = this.webhooks.find(w => w.id === webhookId);
+    if (!webhook) return null;
+
+    webhook.status = result.success
+      ? WEBHOOK_STATUS.DELIVERED
+      : WEBHOOK_STATUS.FAILED;
+    webhook.attempts = (webhook.attempts || 0) + 1;
+
+    if (result.nextRetryAt) {
+      webhook.next_retry_at = result.nextRetryAt;
+    }
+
+    return webhook;
+  }
+
+  /**
+   * Get pending retries (mock implementation)
+   */
+  async getPendingRetries(options = {}) {
+    const limit = options.limit || 100;
+    const now = new Date();
+
+    return this.webhooks
+      .filter(w => {
+        return (
+          w.status === WEBHOOK_STATUS.FAILED &&
+          w.next_retry_at &&
+          new Date(w.next_retry_at) <= now
+        );
+      })
+      .slice(0, limit);
+  }
+
+  /**
+   * Get webhooks with pagination (mock implementation)
+   */
+  async getWebhooks(options = {}) {
+    let hooks = [...this.webhooks].reverse(); // Newest first
+
+    if (options.status) {
+      hooks = hooks.filter(w => w.status === options.status);
+    }
+    if (options.event) {
+      hooks = hooks.filter(w => w.event === options.event);
+    }
+
+    const total = hooks.length;
+    const offset = options.offset || 0;
+    const limit = options.limit || 20;
+
+    return {
+      data: hooks.slice(offset, offset + limit),
+      total,
+      limit,
+      offset,
+      hasMore: offset + limit < total,
+    };
+  }
+
+  /**
+   * Cleanup old webhooks (mock implementation)
+   */
+  async cleanup(options = {}) {
+    const { olderThan = 30 } = options;
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - olderThan);
+
+    const initialCount = this.webhooks.length;
+    this.webhooks = this.webhooks.filter(w => {
+      const sentAt = new Date(w.sentAt || w.failedAt || Date.now());
+      return sentAt >= cutoff;
+    });
+
+    return initialCount - this.webhooks.length;
   }
 }

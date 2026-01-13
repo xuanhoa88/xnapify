@@ -6,6 +6,7 @@
  */
 
 import { WebhookError, createOperationResult } from '../errors';
+import workerPool from '../workers';
 
 /**
  * Retry a failed webhook
@@ -14,18 +15,28 @@ import { WebhookError, createOperationResult } from '../errors';
  * @param {Object} options - Retry options
  * @returns {Promise<Object>} Retry result
  */
-export async function retry(manager, webhookId, _options = {}) {
+export async function retry(manager, webhookId, options = {}) {
   try {
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
+    const { adapter: adapterName = 'database', useWorker = true } = options;
+    const storageAdapter = manager.getAdapter(adapterName);
+
+    if (!storageAdapter) {
       throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+        `Adapter '${adapterName}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
       );
     }
 
-    // Get the webhook record
-    const record = await dbAdapter.getById(webhookId);
+    // Check if adapter supports required methods
+    if (!storageAdapter.getById || !storageAdapter.updateStatus) {
+      throw new WebhookError(
+        `Adapter '${adapterName}' does not support retry operations`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    // Get the webhook record (Always direct read for consistency)
+    const record = await storageAdapter.getById(webhookId);
     if (!record) {
       throw new WebhookError('Webhook not found', 'NOT_FOUND');
     }
@@ -38,28 +49,47 @@ export async function retry(manager, webhookId, _options = {}) {
       );
     }
 
-    // Re-send the webhook
-    const result = await manager.send({
-      payload: {
-        url: record.url,
+    // Re-send the webhook using new API
+    // Pass useWorker option so manager decides whether to use send worker
+    const result = await manager.send(
+      {
         event: record.event,
         ...record.payload,
       },
-    });
+      {
+        adapter: 'http',
+        useWorker,
+      },
+    );
 
     // Update the original record status
-    await dbAdapter.updateStatus(webhookId, {
-      success: result.success,
-      statusCode: result.statusCode,
-      attempts: record.attempts + 1,
-    });
+    if (useWorker !== false) {
+      // Offload status update to worker
+      await workerPool.processPersist({
+        operation: 'updateStatus',
+        updates: [
+          {
+            webhookId,
+            result: {
+              success: result.success,
+              attempts: record.attempts + 1,
+            },
+          },
+        ],
+      });
+    } else {
+      // Direct update
+      await storageAdapter.updateStatus(webhookId, {
+        success: result.success,
+        attempts: record.attempts + 1,
+      });
+    }
 
     return createOperationResult(
       true,
       {
         webhookId,
         success: result.success,
-        statusCode: result.statusCode,
       },
       result.success ? 'Webhook retry successful' : 'Webhook retry failed',
     );

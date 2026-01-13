@@ -16,27 +16,34 @@ import { WebhookError, createOperationResult } from '../errors';
 export async function list(manager, options = {}) {
   try {
     const {
+      adapter: adapterName = 'database',
       status,
       event,
-      url,
       fromDate,
       toDate,
       limit = 20,
       offset = 0,
     } = options;
 
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
+    const storageAdapter = manager.getAdapter(adapterName);
+    if (!storageAdapter) {
       throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+        `Adapter '${adapterName}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
       );
     }
 
-    const result = await dbAdapter.getWebhooks({
+    // Check if adapter supports getWebhooks
+    if (!storageAdapter.getWebhooks) {
+      throw new WebhookError(
+        `Adapter '${adapterName}' does not support list operations`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    const result = await storageAdapter.getWebhooks({
       status,
       event,
-      url,
       fromDate: fromDate ? new Date(fromDate) : undefined,
       toDate: toDate ? new Date(toDate) : undefined,
       limit,
@@ -71,17 +78,27 @@ export async function list(manager, options = {}) {
  * @param {Object} options - Options
  * @returns {Promise<Object>} Webhook result
  */
-export async function getById(manager, webhookId, _options = {}) {
+export async function getById(manager, webhookId, options = {}) {
   try {
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
+    const { adapter: adapterName = 'database' } = options;
+
+    const storageAdapter = manager.getAdapter(adapterName);
+    if (!storageAdapter) {
       throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+        `Adapter '${adapterName}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
       );
     }
 
-    const record = await dbAdapter.getById(webhookId);
+    // Check if adapter supports getById
+    if (!storageAdapter.getById) {
+      throw new WebhookError(
+        `Adapter '${adapterName}' does not support getById operation`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    const record = await storageAdapter.getById(webhookId);
     if (!record) {
       throw new WebhookError('Webhook not found', 'NOT_FOUND');
     }

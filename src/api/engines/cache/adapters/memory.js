@@ -12,6 +12,17 @@
  * - Max size limit to prevent memory leaks
  * - TTL-based expiration
  * - Automatic LRU eviction when limit reached
+ *
+ * Common Cache Interface:
+ * - get(key): Get value from cache
+ * - set(key, value, ttl): Store value in cache
+ * - delete(key): Remove value from cache
+ * - has(key): Check if key exists
+ * - clear(): Remove all entries
+ * - stats(): Get cache statistics
+ * - cleanup(): Remove expired entries
+ * - keys(): Get all cache keys
+ * - size: Get number of entries
  */
 export default class MemoryCache {
   /**

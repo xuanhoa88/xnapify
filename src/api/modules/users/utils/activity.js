@@ -23,53 +23,56 @@
  * @param {string} activity.action - Action performed (create, update, delete)
  * @param {Object} activity.data - Additional activity data
  * @param {string} [activity.actorId] - ID of user performing the action
+ * @param {Object} [options] - Additional send options (e.g. { useWorker: true })
  * @returns {Promise<Object|null>} Activity result or null if webhook unavailable
  */
-export async function logActivity(webhook, activity) {
-  if (!webhook) {
-    return null;
-  }
-
-  const dbAdapter = webhook.getAdapter('database');
-  if (!dbAdapter || !dbAdapter.hasConnection()) {
-    return null;
-  }
-
-  const {
-    event,
-    entityType,
-    entityId,
-    action,
-    data = {},
-    actorId = null,
-  } = activity;
-
+export async function logActivity(webhook, activity, options = {}) {
   try {
-    const result = await dbAdapter.send(
+    // webhook is the module, access the default instance
+    const manager = webhook && (webhook.default || webhook);
+    if (!manager) {
+      console.warn('Activity Logger: No webhook manager instance provided');
+      return null;
+    }
+
+    const {
+      event,
+      entityType,
+      entityId,
+      actorId = null,
+      ...payload
+    } = activity;
+
+    // Use manager.send to allow for worker processing if configured
+    const result = await manager.send(
       {
-        url: `activity://${event}`,
+        ...payload,
+        event,
+        status: 'delivered', // Activity logs are audit records, not webhooks to send
         entity_type: entityType,
         entity_id: entityId,
-        action,
         actor_id: actorId,
         timestamp: new Date().toISOString(),
-        ...data,
+        type: 'user_activity',
       },
       {
-        event,
-        metadata: {
-          type: 'user_activity',
-          entity_type: entityType,
-          entity_id: entityId,
-          action,
-          actor_id: actorId,
-        },
+        adapter: 'database',
+        ...options, // Pass through options like useWorker
       },
     );
 
+    if (!result.success) {
+      console.error(
+        'Activity Logger: Failed to store activity',
+        JSON.stringify(result.error),
+      );
+    }
+
     return result;
   } catch (error) {
-    console.error(`Failed to log activity: ${event}`, error.message);
+    // Silently fail - activity logging should never block auth operations
+    console.error('Failed to log activity:', error.message);
+    console.error(error.stack);
     return null;
   }
 }
@@ -81,17 +84,28 @@ export async function logActivity(webhook, activity) {
  * @param {string} action - Action (created, updated, deleted)
  * @param {string} userId - User ID
  * @param {Object} data - Additional data
- * @param {string} [actorId] - Actor ID
+ * @param {Object} [options] - Additional send options
  */
-export function logUserActivity(webhook, action, userId, data = {}, actorId) {
-  return logActivity(webhook, {
-    event: `user.${action}`,
-    entityType: 'user',
-    entityId: userId,
-    action,
-    data,
-    actorId,
-  });
+export function logUserActivity(
+  webhook,
+  action,
+  userId,
+  data = {},
+  actorId,
+  options = {},
+) {
+  return logActivity(
+    webhook,
+    {
+      ...data,
+      event: `user.${action}`,
+      entityType: 'user',
+      entityId: userId,
+      action,
+      actorId,
+    },
+    options,
+  );
 }
 
 /**
@@ -101,17 +115,28 @@ export function logUserActivity(webhook, action, userId, data = {}, actorId) {
  * @param {string} action - Action (created, updated, deleted)
  * @param {string} groupId - Group ID
  * @param {Object} data - Additional data
- * @param {string} [actorId] - Actor ID
+ * @param {Object} [options] - Additional send options
  */
-export function logGroupActivity(webhook, action, groupId, data = {}, actorId) {
-  return logActivity(webhook, {
-    event: `group.${action}`,
-    entityType: 'group',
-    entityId: groupId,
-    action,
-    data,
-    actorId,
-  });
+export function logGroupActivity(
+  webhook,
+  action,
+  groupId,
+  data = {},
+  actorId,
+  options = {},
+) {
+  return logActivity(
+    webhook,
+    {
+      ...data,
+      event: `group.${action}`,
+      entityType: 'group',
+      entityId: groupId,
+      action,
+      actorId,
+    },
+    options,
+  );
 }
 
 /**
@@ -121,17 +146,28 @@ export function logGroupActivity(webhook, action, groupId, data = {}, actorId) {
  * @param {string} action - Action (created, updated, deleted)
  * @param {string} roleId - Role ID
  * @param {Object} data - Additional data
- * @param {string} [actorId] - Actor ID
+ * @param {Object} [options] - Additional send options
  */
-export function logRoleActivity(webhook, action, roleId, data = {}, actorId) {
-  return logActivity(webhook, {
-    event: `role.${action}`,
-    entityType: 'role',
-    entityId: roleId,
-    action,
-    data,
-    actorId,
-  });
+export function logRoleActivity(
+  webhook,
+  action,
+  roleId,
+  data = {},
+  actorId,
+  options = {},
+) {
+  return logActivity(
+    webhook,
+    {
+      ...data,
+      event: `role.${action}`,
+      entityType: 'role',
+      entityId: roleId,
+      action,
+      actorId,
+    },
+    options,
+  );
 }
 
 /**
@@ -141,7 +177,7 @@ export function logRoleActivity(webhook, action, roleId, data = {}, actorId) {
  * @param {string} action - Action (created, updated, deleted)
  * @param {string} permissionId - Permission ID
  * @param {Object} data - Additional data
- * @param {string} [actorId] - Actor ID
+ * @param {Object} [options] - Additional send options
  */
 export function logPermissionActivity(
   webhook,
@@ -149,13 +185,18 @@ export function logPermissionActivity(
   permissionId,
   data = {},
   actorId,
+  options = {},
 ) {
-  return logActivity(webhook, {
-    event: `permission.${action}`,
-    entityType: 'permission',
-    entityId: permissionId,
-    action,
-    data,
-    actorId,
-  });
+  return logActivity(
+    webhook,
+    {
+      ...data,
+      event: `permission.${action}`,
+      entityType: 'permission',
+      entityId: permissionId,
+      action,
+      actorId,
+    },
+    options,
+  );
 }

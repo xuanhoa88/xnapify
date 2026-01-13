@@ -121,7 +121,7 @@ export async function login(req, res) {
     // Authenticate user - returns complete user data with RBAC in one query
     const userData = await authService.authenticateUser(email, password, {
       activityData: {
-        ip_address: http.getIpAddress(req),
+        ip_address: http.getClientIP(req),
         user_agent: http.getUserAgent(req),
       },
       models,

@@ -13,17 +13,27 @@ import { WebhookError, createOperationResult } from '../errors';
  * @param {Object} options - Options
  * @returns {Promise<Object>} Statistics result
  */
-export async function stats(manager, _options = {}) {
+export async function stats(manager, options = {}) {
   try {
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
+    const { adapter: adapterName = 'database' } = options;
+
+    const storageAdapter = manager.getAdapter(adapterName);
+    if (!storageAdapter) {
       throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+        `Adapter '${adapterName}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
       );
     }
 
-    const result = await dbAdapter.getStats();
+    // Check if adapter supports getStats
+    if (!storageAdapter.getStats) {
+      throw new WebhookError(
+        `Adapter '${adapterName}' does not support stats operation`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    const result = await storageAdapter.getStats();
 
     return createOperationResult(
       true,
@@ -51,17 +61,25 @@ export async function stats(manager, _options = {}) {
  */
 export async function pending(manager, options = {}) {
   try {
-    const { limit = 50 } = options;
+    const { adapter: adapterName = 'database', limit = 50 } = options;
 
-    const dbAdapter = manager.getAdapter('database');
-    if (!dbAdapter || !dbAdapter.hasConnection()) {
+    const storageAdapter = manager.getAdapter(adapterName);
+    if (!storageAdapter) {
       throw new WebhookError(
-        'Webhook database not configured',
-        'DB_NOT_CONFIGURED',
+        `Adapter '${adapterName}' not configured`,
+        'ADAPTER_NOT_CONFIGURED',
       );
     }
 
-    const webhooks = await dbAdapter.getPendingRetries({ limit });
+    // Check if adapter supports getPendingRetries
+    if (!storageAdapter.getPendingRetries) {
+      throw new WebhookError(
+        `Adapter '${adapterName}' does not support pending operation`,
+        'ADAPTER_NOT_SUPPORTED',
+      );
+    }
+
+    const webhooks = await storageAdapter.getPendingRetries({ limit });
 
     return createOperationResult(
       true,

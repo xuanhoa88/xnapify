@@ -11,6 +11,9 @@ import { normalizeState, SLICE_NAME } from './slice';
 // HELPER FUNCTIONS
 // =============================================================================
 
+/**
+ * Get dashboard data from state
+ */
 const getDashboardState = state => {
   const normalized = normalizeState(state && state[SLICE_NAME]);
   return normalized.data;
@@ -27,19 +30,27 @@ const getOperationState = (state, operationKey) => {
 // =============================================================================
 
 /**
- * Get dashboard stats
+ * Get all activities
  */
-export const getDashboardStats = state => {
+export const getActivities = state => {
   const data = getDashboardState(state);
-  return data && data.stats;
+  return (data && data.activities) || [];
 };
 
 /**
- * Get recent activities
+ * Get activities total count
  */
-export const getDashboardRecentActivities = state => {
+export const getActivitiesTotal = state => {
   const data = getDashboardState(state);
-  return (data && data.recentActivities) || [];
+  return (data && data.total) || 0;
+};
+
+/**
+ * Check if dashboard has been fetched at least once
+ */
+export const isDashboardInitialized = state => {
+  const data = getDashboardState(state);
+  return !!(data && data.initialized && data.initialized.fetch);
 };
 
 // =============================================================================
@@ -54,4 +65,12 @@ export const isDashboardLoading = state => {
 export const getDashboardError = state => {
   const op = getOperationState(state, 'fetch');
   return (op && op.error) || null;
+};
+
+/**
+ * Get activities pagination metadata
+ */
+export const getActivitiesPagination = state => {
+  const data = getDashboardState(state);
+  return (data && data.pagination) || null;
 };

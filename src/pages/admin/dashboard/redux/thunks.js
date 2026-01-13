@@ -14,17 +14,41 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
 /**
  * Fetch dashboard statistics and recent activity
  *
- * Retrieves system-wide statistics including user counts, role counts,
- * system status, and recent user activity.
+ * Retrieves webhook activity logs with pagination support.
+ *
+ * @param {Object} options - Fetch options
+ * @param {number} options.page - Page number (1-indexed)
+ * @param {number} options.limit - Items per page
+ * @returns {Promise<Object>} Activity data with pagination
  */
 export const fetchDashboard = createAsyncThunk(
   'admin/dashboard/fetchDashboard',
-  async (_, { extra: { fetch }, rejectWithValue }) => {
+  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/admin/users/dashboard');
-      return data;
+      const { page = 1, limit = 20 } = options;
+      const offset = (page - 1) * limit;
+
+      const { data } = await fetch('/api/activities', {
+        query: { limit, offset },
+      });
+
+      // Extract data from standard response format
+      // Response: { success: true, data: { webhooks: [], total: 100 } }
+      const { webhooks = [], total = 0 } = data || {};
+
+      // Calculate pagination metadata
+      const hasMore = offset + limit < total;
+
+      return {
+        data: webhooks,
+        total,
+        page,
+        limit,
+        offset,
+        hasMore,
+      };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.message || 'Failed to fetch dashboard data');
     }
   },
 );

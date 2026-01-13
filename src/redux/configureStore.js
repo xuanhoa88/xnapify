@@ -12,6 +12,12 @@ import {
 import rootReducer from './rootReducer';
 
 /**
+ * Symbol to mark identity reducers created for SSR state preservation
+ * @private
+ */
+const IDENTITY_REDUCER = Symbol('__rsk.identityReducer__');
+
+/**
  * Configure and create Redux store using Redux Toolkit
  * @param {Object} initialState - Initial Redux state
  * @param {Object} helpersConfig - Extra argument for thunk middleware
@@ -88,16 +94,37 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
   /**
    * Injects a reducer into the store dynamically.
    * Used by modules to register their Redux slices at runtime.
-   * Restores any pending SSR state for the injected reducer.
+   * Allows replacing identity reducers (created for SSR state) with real reducers.
    * @param {string} key - Reducer key in state
    * @param {Function} reducer - Reducer function
+   * @param {Object} options - Injection options
+   * @param {boolean} options.force - Force re-injection even if reducer exists
    */
-  store.injectReducer = (key, reducer) => {
-    if (injectedReducers[key]) {
-      // Already injected, skip to prevent duplicate registration
+  store.injectReducer = (key, reducer, options = {}) => {
+    if (!key || typeof key !== 'string') {
+      throw new Error('[Redux] injectReducer: key must be a non-empty string');
+    }
+
+    if (typeof reducer !== 'function') {
+      throw new Error('[Redux] injectReducer: reducer must be a function');
+    }
+
+    const existingReducer = injectedReducers[key];
+    const isIdentityReducer =
+      existingReducer && existingReducer[IDENTITY_REDUCER] === true;
+
+    // Skip injection if:
+    // 1. Reducer already exists
+    // 2. It's not an identity reducer
+    // 3. Force option is not set
+    if (existingReducer && !isIdentityReducer && !options.force) {
+      if (__DEV__) {
+        console.log(`[Redux] Reducer already injected: ${key}`);
+      }
       return;
     }
 
+    // Inject the reducer
     injectedReducers[key] = reducer;
 
     // Rebuild the root reducer with injected reducers
@@ -109,16 +136,29 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
     store.replaceReducer(newRootReducer);
 
     if (__DEV__) {
-      console.log(`[Redux] Injected reducer: ${key}`);
+      let action = 'Injected';
+      if (isIdentityReducer) action = 'Replaced identity';
+      else if (options.force) action = 'Force re-injected';
+      console.log(`[Redux] ${action} reducer: ${key}`);
     }
+  };
+
+  /**
+   * Creates an identity reducer that preserves SSR state.
+   * Marked with IDENTITY_REDUCER symbol for later detection.
+   * @private
+   */
+  const createIdentityReducer = ssrState => {
+    const identityReducer = (state = ssrState) => state;
+    // Mark as identity reducer for detection during injection
+    identityReducer[IDENTITY_REDUCER] = true;
+    return identityReducer;
   };
 
   // Pre-populate injected reducers with identity reducers for pending SSR state
   // This allows dynamic reducers to seamlessly take over the SSR state
   Object.keys(pendingDynamicState).forEach(key => {
-    const ssrState = pendingDynamicState[key];
-    // Create an identity reducer that preserves SSR state until real reducer is injected
-    injectedReducers[key] = (state = ssrState) => state;
+    injectedReducers[key] = createIdentityReducer(pendingDynamicState[key]);
   });
 
   // If there's pending dynamic state, immediately replace the reducer to include it
@@ -142,6 +182,23 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
    * @returns {string[]} Array of injected reducer keys
    */
   store.getInjectedReducers = () => Object.keys(injectedReducers);
+
+  /**
+   * Checks if a reducer is injected.
+   * @param {string} key - Reducer key
+   * @returns {boolean} True if reducer is injected
+   */
+  store.hasReducer = key => key in injectedReducers;
+
+  /**
+   * Checks if a reducer is an identity reducer.
+   * @param {string} key - Reducer key
+   * @returns {boolean} True if reducer is an identity reducer
+   */
+  store.isIdentityReducer = key => {
+    const reducer = injectedReducers[key];
+    return reducer && reducer[IDENTITY_REDUCER] === true;
+  };
 
   return store;
 }

@@ -8,24 +8,18 @@
 /**
  * Database Persist Worker - Handles webhook persistence to database
  * Focuses only on database operations: store, update status, cleanup.
- * No HTTP logic - this is a pure database worker.
- *
- * Note: Database connection must be set externally via setDbConnection()
- * or setConnectionFactory(). The worker does not auto-connect.
  */
 
 import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { WebhookError } from '../errors';
 import { DatabaseWebhookAdapter } from '../adapters';
 
-// Database adapter instance (connection set externally)
+// Database adapter instance
 let dbAdapter = null;
 let connectionFactory = null;
 
 /**
  * Get database adapter for worker
- * Returns null if no connection is configured
- * @private
  */
 function getDbAdapter() {
   if (!dbAdapter) {
@@ -43,7 +37,6 @@ function getDbAdapter() {
     }
   }
 
-  // If still no connection, return null
   if (!dbAdapter.hasConnection()) {
     return null;
   }
@@ -52,8 +45,7 @@ function getDbAdapter() {
 }
 
 /**
- * Ensure adapter is available, throw if not
- * @private
+ * Ensure adapter is available
  */
 function requireAdapter() {
   const adapter = getDbAdapter();
@@ -69,7 +61,6 @@ function requireAdapter() {
 
 /**
  * Set database connection from main process
- * @param {Object} connection - Sequelize connection
  */
 export function setDbConnection(connection) {
   if (!dbAdapter) {
@@ -79,16 +70,14 @@ export function setDbConnection(connection) {
 }
 
 /**
- * Set connection factory for fork mode
- * @param {Function} factory - Function that returns a Sequelize connection
+ * Set connection factory for lazy initialization
  */
 export function setConnectionFactory(factory) {
   connectionFactory = factory;
 }
 
 /**
- * Store webhooks to database with pending status
- * @private
+ * Store webhooks in batch
  */
 async function storeWebhooks(webhooks, options = {}) {
   const adapter = requireAdapter();
@@ -101,7 +90,7 @@ async function storeWebhooks(webhooks, options = {}) {
 
   for (const webhook of webhooks) {
     try {
-      const result = await adapter.send(webhook.payload, {
+      const result = await adapter.send(webhook, {
         ...options,
         ...webhook.options,
       });
@@ -109,17 +98,14 @@ async function storeWebhooks(webhooks, options = {}) {
       if (result.success) {
         results.stored.push({
           webhookId: result.webhookId,
-          url: webhook.payload.url,
         });
       } else {
         results.failed.push({
-          url: webhook.payload.url,
           error: result.error,
         });
       }
     } catch (error) {
       results.failed.push({
-        url: webhook.payload.url,
         error: { message: error.message, code: error.code || 'STORE_ERROR' },
       });
     }
@@ -130,7 +116,6 @@ async function storeWebhooks(webhooks, options = {}) {
 
 /**
  * Update webhook statuses in batch
- * @private
  */
 async function updateStatuses(updates) {
   const adapter = requireAdapter();
@@ -167,96 +152,29 @@ async function updateStatuses(updates) {
 }
 
 /**
- * Get pending webhooks
- * @private
- */
-async function getPendingWebhooks(options) {
-  const adapter = requireAdapter();
-  const pending = await adapter.getPendingRetries(options);
-  return {
-    operation: 'GET_PENDING',
-    webhooks: pending.map(w => w.toJSON()),
-    count: pending.length,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/**
- * Cleanup old webhooks
- * @private
- */
-async function cleanupWebhooks(options) {
-  const adapter = requireAdapter();
-  const deleted = await adapter.cleanup(options);
-  return {
-    operation: 'CLEANUP',
-    deleted,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/**
- * Get webhook stats
- * @private
- */
-async function getWebhookStats() {
-  const adapter = requireAdapter();
-  const stats = await adapter.getStats();
-  return {
-    operation: 'GET_STATS',
-    stats,
-    timestamp: new Date().toISOString(),
-  };
-}
-
-/**
- * Process database persist operations
- * @param {Object} data - Operation data
- * @returns {Promise<Object>} Result
+ * Process database operations
  */
 async function processPersist(data) {
-  const { operation, webhooks, updates, options = {} } = data;
+  const { operation, ...params } = data;
 
   switch (operation) {
-    case 'STORE':
-      if (!webhooks || webhooks.length === 0) {
-        throw new WebhookError(
-          'At least one webhook is required for STORE',
-          'INVALID_INPUT',
-          400,
-        );
-      }
-      return {
-        operation: 'STORE',
-        ...(await storeWebhooks(
-          Array.isArray(webhooks) ? webhooks : [webhooks],
-          options,
-        )),
-        timestamp: new Date().toISOString(),
-      };
+    case 'store':
+      return storeWebhooks(params.webhooks, params.options);
 
-    case 'UPDATE_STATUS':
-      if (!updates || updates.length === 0) {
-        throw new WebhookError(
-          'At least one update is required for UPDATE_STATUS',
-          'INVALID_INPUT',
-          400,
-        );
-      }
-      return {
-        operation: 'UPDATE_STATUS',
-        ...(await updateStatuses(Array.isArray(updates) ? updates : [updates])),
-        timestamp: new Date().toISOString(),
-      };
+    case 'updateStatus':
+      return updateStatuses(params.updates);
 
-    case 'GET_PENDING':
-      return getPendingWebhooks(options);
+    case 'cleanup': {
+      const adapter = requireAdapter();
+      const deleted = await adapter.cleanup(params.options);
+      return { deleted, success: true };
+    }
 
-    case 'CLEANUP':
-      return cleanupWebhooks(options);
-
-    case 'GET_STATS':
-      return getWebhookStats();
+    case 'getStats': {
+      const adapter = requireAdapter();
+      const stats = await adapter.getStats();
+      return { stats, success: true };
+    }
 
     default:
       throw new WebhookError(
@@ -267,15 +185,11 @@ async function processPersist(data) {
   }
 }
 
-// Create worker function using helper
+// Create worker function
 const workerFunction = createWorkerHandler(processPersist, 'PERSIST_WEBHOOK');
 
 // Export for same-process execution
 export default workerFunction;
 
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processPersist, 'PERSIST_WEBHOOK', 'Webhook DB');
+// Setup fork mode execution
+setupWorkerProcess(processPersist, 'PERSIST_WEBHOOK', 'Webhook Database');
