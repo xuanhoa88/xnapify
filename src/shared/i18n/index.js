@@ -79,13 +79,13 @@ export function getTranslations(translationContext) {
  */
 function getDefaultLocales() {
   // Get translations from the translations directory
-  const translations = getTranslations(
+  const translationsContext = getTranslations(
     require.context('./translations', false, /\.json$/i),
   );
 
   // Map translations to configs with display names
   const configs = Object.fromEntries(
-    Object.entries(translations).map(([locale, translation]) => [
+    Object.entries(translationsContext).map(([locale, translation]) => [
       locale,
       {
         name: getLocaleDisplayName(locale),

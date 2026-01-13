@@ -13,7 +13,7 @@ import * as engines from './engines';
 
 // Module-scoped Symbol for allowing provider writes (shared across all guards)
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
-const ALLOW_PROVIDER_WRITES = Symbol.for('rsk.allowProviderWrites');
+const ALLOW_PROVIDER_WRITES = Symbol.for('__rsk.allowProviderWrites__');
 
 // Core app providers - these are registered at startup and protected from modification
 const APP_PROVIDERS = new Set([
@@ -158,13 +158,13 @@ async function discoverModules(app) {
   );
 
   // Step 2: Discover and mount API modules with models as dependency
-  const routeContext = require.context(
+  const routesContext = require.context(
     './modules',
     true,
     /^\.\/[^/]+\/index\.js$/,
   );
   const routes = await processFiles(
-    routeContext,
+    routesContext,
     'modules',
     async (ctx, paths) => {
       const routes = Router();

@@ -464,8 +464,8 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchValue={roleSearch}
             onSearch={setRoleSearch}
             searchPlaceholder='Search roles...'
-            itemKey='name'
-            itemLabel='name'
+            valueKey='name'
+            labelKey='name'
             itemDescription='description'
             emptyMessage='No roles found'
             loadingMessage='Loading roles...'
@@ -486,8 +486,8 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchValue={groupSearch}
             onSearch={setGroupSearch}
             searchPlaceholder='Search groups...'
-            itemKey='id'
-            itemLabel='name'
+            valueKey='id'
+            labelKey='name'
             itemDescription='description'
             emptyMessage='No groups found'
             loadingMessage='Loading groups...'

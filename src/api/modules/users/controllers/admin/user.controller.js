@@ -59,8 +59,9 @@ export async function createUser(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Create user
     const user = await userAdminService.createUser(
@@ -74,7 +75,7 @@ export async function createUser(req, res) {
         groups,
         is_active,
       },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, {
@@ -245,8 +246,9 @@ export async function updateUserById(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Build update data - only include password if provided
     const updateData = {
@@ -264,7 +266,11 @@ export async function updateUserById(req, res) {
     }
 
     // Update user
-    const user = await userAdminService.updateUserById(id, updateData, models);
+    const user = await userAdminService.updateUserById(id, updateData, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       user: {
@@ -299,7 +305,10 @@ export async function updateUserById(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to update user');
+    return http.sendServerError(
+      res,
+      `Failed to update user: ${error.message} - ${error.stack}`,
+    );
   }
 }
 

@@ -43,13 +43,14 @@ export async function createGroup(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Create group
     const group = await groupService.createGroup(
       { name, description, category, type, roles },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(
@@ -173,12 +174,13 @@ export async function updateGroupById(req, res) {
 
     // Get models from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Update group
     const group = await groupService.updateGroupById(
       id,
       { name, description, category, type, roles },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, {

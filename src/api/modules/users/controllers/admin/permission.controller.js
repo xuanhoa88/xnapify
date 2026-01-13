@@ -43,13 +43,14 @@ export async function createPermission(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Create permission
     const permission = await permissionService.createPermission(
       { resource, action, description, is_active },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, { permission }, 201);
@@ -154,6 +155,7 @@ export async function updatePermission(req, res) {
     const { id } = req.params;
     const { resource, action, description, is_active } = req.body;
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Validate with Zod schema
     const [isValid, errors] = validateForm(updatePermissionFormSchema, {
@@ -170,7 +172,7 @@ export async function updatePermission(req, res) {
     const updatedPermission = await permissionService.updatePermission(
       id,
       { resource, action, description, is_active },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, { permission: updatedPermission });

@@ -40,13 +40,14 @@ export async function createRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Create role
     let role = await roleService.createRole(
       { name, description, permissions },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, { role }, 201);
@@ -140,8 +141,9 @@ export async function updateRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models from app context
+    // Get models and webhook from app context
     const models = req.app.get('models');
+    const webhook = req.app.get('webhook');
 
     // Fetch role first to check if user has this role
     const existingRole = await roleService.getRoleById(id, models);
@@ -155,7 +157,7 @@ export async function updateRole(req, res) {
     const role = await roleService.updateRole(
       id,
       { name, description, permissions },
-      models,
+      { models, webhook, actorId: req.user.id },
     );
 
     return http.sendSuccess(res, { role });

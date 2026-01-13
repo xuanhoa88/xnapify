@@ -13,17 +13,13 @@ import { Umzug, SequelizeStorage } from 'umzug';
  * Load migrations using require.context (for bundled migrations)
  * This works in Webpack-bundled environments
  */
-const builtInMigrationsContext = require.context(
-  './migrations',
-  false,
-  /\.js$/,
-);
+const migrationsContext = require.context('./migrations', false, /\.js$/);
 
 /**
  * Load seeds using require.context (for bundled seeds)
  * This works in Webpack-bundled environments
  */
-const builtInSeedsContext = require.context('./seeds', false, /\.js$/);
+const seedsContext = require.context('./seeds', false, /\.js$/);
 
 /**
  * Extract clean filename from require.context key
@@ -211,7 +207,7 @@ function createMigrationUmzug(migrations, connection, logger = console) {
 
   if (migrations == null) {
     // Use built-in bundled migrations
-    migrationsConfig = contextToMigrations(builtInMigrationsContext);
+    migrationsConfig = contextToMigrations(migrationsContext);
   } else if (Array.isArray(migrations)) {
     // Array of {context, prefix} objects
     migrationsConfig = mergeMigrations(migrations);
@@ -254,7 +250,7 @@ function createSeedUmzug(seeds, connection, logger = console) {
 
   if (seeds == null) {
     // Use built-in bundled seeds
-    seedsConfig = contextToMigrations(builtInSeedsContext);
+    seedsConfig = contextToMigrations(seedsContext);
   } else if (Array.isArray(seeds)) {
     // Array of {context, prefix} objects
     seedsConfig = mergeMigrations(seeds);
