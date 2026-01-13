@@ -31,3 +31,6 @@ export * as queue from './queue';
 
 // Webhook engine
 export * as webhook from './webhook';
+
+// Schedule engine
+export * as schedule from './schedule';
