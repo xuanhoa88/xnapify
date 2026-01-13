@@ -20,20 +20,35 @@ export class Channel {
 
   /**
    * Register an event handler
+   * @param {string} eventName - Event name
+   * @param {Function} handler - Event handler function
+   * @returns {Channel} This channel for chaining
    */
   on(eventName, handler) {
-    if (!eventName || typeof handler !== 'function') {
+    // Validate inputs
+    if (!eventName || typeof eventName !== 'string') {
+      console.error(
+        `Channel '${this.name}': Event name must be a non-empty string`,
+      );
+      return this;
+    }
+
+    if (typeof handler !== 'function') {
+      console.error(`Channel '${this.name}': Handler must be a function`);
       return this;
     }
 
     try {
       this.handlers.set(eventName, handler);
+      console.info(
+        `✅ Channel '${this.name}': Registered handler for '${eventName}'`,
+      );
 
       if (!this.isProcessing) {
         this.startProcessing();
       }
     } catch (error) {
-      console.error(`Channel '${this.name}': on() failed:`, error.message);
+      console.error(`❌ Channel '${this.name}': on() failed:`, error.message);
     }
 
     return this;
@@ -41,10 +56,17 @@ export class Channel {
 
   /**
    * Remove an event handler
+   * @param {string} eventName - Event name
+   * @returns {Channel} This channel for chaining
    */
   off(eventName) {
     try {
-      this.handlers.delete(eventName);
+      const deleted = this.handlers.delete(eventName);
+      if (deleted) {
+        console.info(
+          `✅ Channel '${this.name}': Removed handler for '${eventName}'`,
+        );
+      }
     } catch {
       // Ignore errors
     }
@@ -115,13 +137,33 @@ export class Channel {
   }
 
   /**
+   * Check if a handler exists for an event
+   * @param {string} eventName - Event name
+   * @returns {boolean} True if handler exists
+   */
+  hasHandler(eventName) {
+    return this.handlers.has(eventName);
+  }
+
+  /**
+   * Get number of registered handlers
+   * @returns {number} Number of handlers
+   */
+  getHandlerCount() {
+    return this.handlers.size;
+  }
+
+  /**
    * Get channel stats
+   * @returns {Object} Channel statistics
    */
   getStats() {
     try {
       return {
         name: this.name,
         handlers: Array.from(this.handlers.keys()),
+        handlerCount: this.handlers.size,
+        isProcessing: this.isProcessing,
         queue: this.queue && this.queue.getStats ? this.queue.getStats() : null,
       };
     } catch (error) {
@@ -134,17 +176,20 @@ export class Channel {
 
   /**
    * Close the channel
+   * @returns {Promise<void>}
    */
   async close() {
     try {
+      console.info(`🧹 Closing channel '${this.name}'...`);
       this.handlers.clear();
       this.isProcessing = false;
 
       if (this.queue && typeof this.queue.close === 'function') {
         await this.queue.close();
       }
+      console.info(`✅ Channel '${this.name}' closed`);
     } catch (error) {
-      console.error(`Channel '${this.name}': close failed:`, error.message);
+      console.error(`❌ Channel '${this.name}': close failed:`, error.message);
     }
   }
 }

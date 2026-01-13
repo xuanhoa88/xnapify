@@ -186,7 +186,10 @@ module.exports = {
    * An array of regexp pattern strings that are matched against all source file paths
    * before transformation. If the file path matches any of the patterns, it will not be transformed.
    */
-  transformIgnorePatterns: ['/node_modules/(?!(identity-obj-proxy)/)'],
+  transformIgnorePatterns: [
+    '/node_modules/(?!(identity-obj-proxy)/)',
+    '/node_modules/node-cron/',
+  ],
 
   /**
    * A list of paths to modules that run some code to configure or set up the testing

@@ -23,6 +23,14 @@
  *     └── persist  - Database-only background worker
  * ```
  *
+ * ## Features
+ *
+ * - **Multiple Adapters**: HTTP, Memory, Database for different use cases
+ * - **Retry Logic**: Exponential backoff with configurable attempts
+ * - **HMAC Signatures**: Secure webhook signing with various algorithms
+ * - **Worker Support**: Background processing for large payloads
+ * - **Graceful Shutdown**: Automatic cleanup on process termination
+ *
  * ## Adapters
  *
  * | Adapter | Purpose | Storage |
@@ -76,6 +84,59 @@
  * const db = webhook.getAdapter('database');
  * await db.getWebhooks({ status: 'delivered' });
  * await db.getStats();
+ *
+ * @example <caption>Lifecycle Management</caption>
+ * // Get all registered adapters
+ * const adapters = webhook.getAdapterNames();
+ * // ['database', 'memory', 'http']
+ *
+ * // Check if adapter exists
+ * if (webhook.hasAdapter('http')) {
+ *   console.log('HTTP adapter available');
+ * }
+ *
+ * // Get stats from all adapters
+ * const stats = webhook.getAllStats();
+ * // {
+ * //   database: { total: 100, delivered: 95, failed: 5 },
+ * //   memory: { total: 10, delivered: 10, failed: 0 },
+ * //   http: { available: false }
+ * // }
+ *
+ * // Cleanup (automatically called on process termination)
+ * await webhook.cleanup();
+ *
+ * @example <caption>Integration with Schedule Engine</caption>
+ * import schedule from 'src/api/engines/schedule';
+ * import webhook from 'src/api/engines/webhook';
+ *
+ * // Send daily summary webhooks
+ * schedule.register('daily-webhooks', '0 9 * * *', async () => {
+ *   const summary = await generateDailySummary();
+ *
+ *   await webhook.send(summary, {
+ *     url: 'https://api.example.com/daily-summary',
+ *     secret: process.env.WEBHOOK_SECRET,
+ *     retries: 3
+ *   });
+ * });
+ *
+ * @example <caption>Integration with Queue Engine</caption>
+ * import queue from 'src/api/engines/queue';
+ * import webhook from 'src/api/engines/webhook';
+ *
+ * // Create a webhook delivery channel
+ * const webhooks = queue('webhooks', { concurrency: 5 });
+ *
+ * webhooks.on('deliver', async (job) => {
+ *   await webhook.send(job.data.payload, job.data.options);
+ * });
+ *
+ * // Queue webhook for delivery
+ * queue.channel('webhooks').emit('deliver', {
+ *   payload: { event: 'user.updated' },
+ *   options: { url: 'https://api.example.com/hook' }
+ * });
  *
  * @example <caption>Worker Pool Operations</caption>
  * // Process send queue

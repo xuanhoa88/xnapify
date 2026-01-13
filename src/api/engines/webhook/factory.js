@@ -123,11 +123,12 @@ class WebhookManager {
   addAdapter(name, adapter) {
     if (this.adapters.has(name)) {
       console.warn(
-        `Webhook adapter "${name}" already exists. Cannot override.`,
+        `⚠️ Webhook adapter "${name}" already exists. Cannot override.`,
       );
       return false;
     }
     this.adapters.set(name, adapter);
+    console.info(`✅ Registered webhook adapter: ${name}`);
     return true;
   }
 
@@ -344,12 +345,77 @@ class WebhookManager {
   }
 
   /**
-   * Get statistics (from memory adapter)
+   * Get list of registered adapter names
+   * @returns {Array<string>} Array of adapter names
+   */
+  getAdapterNames() {
+    return Array.from(this.adapters.keys());
+  }
+
+  /**
+   * Check if adapter exists
+   * @param {string} name - Adapter name
+   * @returns {boolean} True if adapter exists
+   */
+  hasAdapter(name) {
+    return this.adapters.has(name);
+  }
+
+  /**
+   * Get statistics from all adapters
+   * @returns {Object} Stats object keyed by adapter name
+   */
+  getAllStats() {
+    const stats = {};
+    for (const [name, adapter] of this.adapters) {
+      try {
+        if (adapter.getStats && typeof adapter.getStats === 'function') {
+          stats[name] = adapter.getStats();
+        } else {
+          stats[name] = { available: false };
+        }
+      } catch (error) {
+        // Handle errors gracefully (e.g., database not configured)
+        stats[name] = {
+          available: false,
+          error: error.message,
+        };
+      }
+    }
+    return stats;
+  }
+
+  /**
+   * Get statistics (from memory adapter) - Legacy method
+   * @deprecated Use getAllStats() instead
    * @returns {Object} Stats
    */
   getStats() {
     const memoryAdapter = this.adapters.get('memory');
     return memoryAdapter ? memoryAdapter.getStats() : null;
+  }
+
+  /**
+   * Cleanup - close all adapters
+   * Called automatically on process termination
+   * @returns {Promise<void>}
+   */
+  async cleanup() {
+    console.info('🧹 Cleaning up webhook engine...');
+
+    for (const [name, adapter] of this.adapters) {
+      try {
+        if (adapter.close && typeof adapter.close === 'function') {
+          await adapter.close();
+          console.info(`✅ Closed webhook adapter: ${name}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to close adapter ${name}:`, error.message);
+      }
+    }
+
+    this.adapters.clear();
+    console.info('✅ Webhook engine cleanup complete');
   }
 }
 
@@ -357,8 +423,60 @@ class WebhookManager {
  * Create a new isolated WebhookManager instance
  *
  * @param {Object} config - Configuration
+ * @param {string} [config.adapter='memory'] - Default adapter
+ * @param {Object} [config.database] - Database adapter config
+ * @param {Object} [config.memory] - Memory adapter config
+ * @param {Object} [config.http] - HTTP adapter config
  * @returns {WebhookManager} New manager instance
  */
 export function createFactory(config = {}) {
-  return new WebhookManager(config);
+  const manager = new WebhookManager(config);
+
+  // Setup process lifecycle management for cleanup
+  let cleanupExecuted = false;
+
+  const exitHandler = () => {
+    // Note: async operations won't complete in 'exit' handler
+    // But we call it for consistency
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      manager.cleanup();
+    }
+  };
+
+  const sigintHandler = async () => {
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      await manager.cleanup();
+    }
+    process.exit(0);
+  };
+
+  const sigtermHandler = async () => {
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      await manager.cleanup();
+    }
+    process.exit(0);
+  };
+
+  process.on('exit', exitHandler);
+  process.on('SIGINT', sigintHandler);
+  process.on('SIGTERM', sigtermHandler);
+
+  // Store handlers so they can be removed (for cleanup)
+  manager.cleanupHandlers = {
+    exit: exitHandler,
+    sigint: sigintHandler,
+    sigterm: sigtermHandler,
+  };
+
+  // Add method to remove handlers (useful for testing)
+  manager.removeCleanupHandlers = () => {
+    process.removeListener('exit', exitHandler);
+    process.removeListener('SIGINT', sigintHandler);
+    process.removeListener('SIGTERM', sigtermHandler);
+  };
+
+  return manager;
 }

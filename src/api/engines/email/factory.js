@@ -152,11 +152,83 @@ class EmailManager {
    */
   addProvider(name, provider) {
     if (this.providers.has(name)) {
-      console.warn(`Email provider "${name}" already exists. Cannot override.`);
+      console.warn(
+        `⚠️ Email provider "${name}" already exists. Cannot override.`,
+      );
       return false;
     }
     this.providers.set(name, provider);
+    console.info(`✅ Registered email provider: ${name}`);
     return true;
+  }
+
+  /**
+   * Get provider by name
+   * @param {string} name - Provider name
+   * @returns {Object|null} Provider instance or null
+   */
+  getProvider(name) {
+    return this.providers.get(name) || null;
+  }
+
+  /**
+   * Get list of registered provider names
+   * @returns {Array<string>} Array of provider names
+   */
+  getProviderNames() {
+    return Array.from(this.providers.keys());
+  }
+
+  /**
+   * Check if provider exists
+   * @param {string} name - Provider name
+   * @returns {boolean} True if provider exists
+   */
+  hasProvider(name) {
+    return this.providers.has(name);
+  }
+
+  /**
+   * Get statistics from all providers
+   * @returns {Object} Stats object keyed by provider name
+   */
+  getAllStats() {
+    const stats = {};
+    for (const [name, provider] of this.providers) {
+      try {
+        if (provider.getStats && typeof provider.getStats === 'function') {
+          stats[name] = provider.getStats();
+        } else {
+          stats[name] = { available: false };
+        }
+      } catch (error) {
+        stats[name] = { error: error.message };
+      }
+    }
+    return stats;
+  }
+
+  /**
+   * Cleanup - close all providers
+   * Called automatically on process termination
+   * @returns {Promise<void>}
+   */
+  async cleanup() {
+    console.info('🧹 Cleaning up email engine...');
+
+    for (const [name, provider] of this.providers) {
+      try {
+        if (provider.close && typeof provider.close === 'function') {
+          await provider.close();
+          console.info(`✅ Closed email provider: ${name}`);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to close provider ${name}:`, error.message);
+      }
+    }
+
+    this.providers.clear();
+    console.info('✅ Email engine cleanup complete');
   }
 
   /**
@@ -259,8 +331,61 @@ class EmailManager {
  * Useful for testing or isolated email contexts
  *
  * @param {Object} config - Email manager configuration
+ * @param {string} [config.provider='smtp'] - Default provider
+ * @param {Object} [config.smtp] - SMTP configuration
+ * @param {Object} [config.sendgrid] - SendGrid configuration
+ * @param {Object} [config.mailgun] - Mailgun configuration
+ * @param {Object} [config.memory] - Memory provider configuration
  * @returns {EmailManager} New manager instance
  */
 export function createFactory(config = {}) {
-  return new EmailManager(config);
+  const manager = new EmailManager(config);
+
+  // Setup process lifecycle management for cleanup
+  let cleanupExecuted = false;
+
+  const exitHandler = () => {
+    // Note: async operations won't complete in 'exit' handler
+    // But we call it for consistency
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      manager.cleanup();
+    }
+  };
+
+  const sigintHandler = async () => {
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      await manager.cleanup();
+    }
+    process.exit(0);
+  };
+
+  const sigtermHandler = async () => {
+    if (!cleanupExecuted) {
+      cleanupExecuted = true;
+      await manager.cleanup();
+    }
+    process.exit(0);
+  };
+
+  process.on('exit', exitHandler);
+  process.on('SIGINT', sigintHandler);
+  process.on('SIGTERM', sigtermHandler);
+
+  // Store handlers so they can be removed (for cleanup)
+  manager.cleanupHandlers = {
+    exit: exitHandler,
+    sigint: sigintHandler,
+    sigterm: sigtermHandler,
+  };
+
+  // Add method to remove handlers (useful for testing)
+  manager.removeCleanupHandlers = () => {
+    process.removeListener('exit', exitHandler);
+    process.removeListener('SIGINT', sigintHandler);
+    process.removeListener('SIGTERM', sigtermHandler);
+  };
+
+  return manager;
 }

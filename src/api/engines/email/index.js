@@ -12,7 +12,17 @@
  * (SMTP, SendGrid, Mailgun, Memory). Automatically handles validation,
  * template rendering, and offloads to background workers for batch operations.
  *
- * @example
+ * ## Features
+ *
+ * - **Multiple Providers**: SMTP, SendGrid, Mailgun, Memory with easy registration
+ * - **Smart Worker Integration**: Auto-offload based on batch size, body size, attachments
+ * - **Template Support**: LiquidJS templating for dynamic content
+ * - **Validation**: Zod-based email validation
+ * - **Graceful Shutdown**: Automatic cleanup on process termination
+ *
+ * ---
+ *
+ * @example <caption>Single Email</caption>
  * // Access singleton instance
  * const manager = email.default;
  *
@@ -23,18 +33,21 @@
  *   html: '<p>Hello!</p>'
  * });
  *
+ * @example <caption>Worker Control</caption>
  * // Force worker processing
  * await email.default.send({ to, subject, html }, { useWorker: true });
  *
  * // Force direct processing (bypass worker even for batch)
  * await email.default.send(emailList, { useWorker: false });
  *
+ * @example <caption>Bulk Emails</caption>
  * // Bulk emails (auto-offloads to worker for 5+ emails)
  * await email.default.send([
  *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
  *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
  * ]);
  *
+ * @example <caption>Templates with LiquidJS</caption>
  * // With template placeholders (LiquidJS)
  * await email.default.send({
  *   to: 'user@example.com',
@@ -43,12 +56,12 @@
  *   templateData: { name: 'John' }
  * });
  *
- * @example
+ * @example <caption>Create Isolated Instance</caption>
  * // Create isolated instance (for testing)
  * const testEmail = email.createFactory({ provider: 'memory' });
  * await testEmail.send({ to, subject, html });
  *
- * @example
+ * @example <caption>Custom Provider</caption>
  * // Add custom provider (cannot override existing)
  * class ResendProvider {
  *   async send(emailData) {
@@ -58,6 +71,65 @@
  *
  * email.default.addProvider('resend', new ResendProvider());
  * await email.default.send({ to, subject, html }, { provider: 'resend' });
+ *
+ * @example <caption>Lifecycle Management</caption>
+ * // Get all registered providers
+ * const providers = email.default.getProviderNames();
+ * // ['memory', 'smtp', 'sendgrid', 'mailgun']
+ *
+ * // Check if provider exists
+ * if (email.default.hasProvider('smtp')) {
+ *   console.log('SMTP provider available');
+ * }
+ *
+ * // Get provider instance
+ * const smtpProvider = email.default.getProvider('smtp');
+ *
+ * // Get stats from all providers
+ * const stats = email.default.getAllStats();
+ * // {
+ * //   memory: { sent: 10, failed: 0 },
+ * //   smtp: { available: false },
+ * //   ...
+ * // }
+ *
+ * // Cleanup (automatically called on process termination)
+ * await email.default.cleanup();
+ *
+ * @example <caption>Integration with Schedule Engine</caption>
+ * import schedule from 'src/api/engines/schedule';
+ * import email from 'src/api/engines/email';
+ *
+ * // Send weekly newsletter
+ * schedule.register('weekly-newsletter', '0 9 * * 1', async () => {
+ *   const subscribers = await getSubscribers();
+ *
+ *   await email.send(
+ *     subscribers.map(user => ({
+ *       to: user.email,
+ *       subject: 'Weekly Newsletter',
+ *       html: '<p>This week in...</p>',
+ *       templateData: { name: user.name }
+ *     }))
+ *   );
+ * });
+ *
+ * @example <caption>Integration with Queue Engine</caption>
+ * import queue from 'src/api/engines/queue';
+ * import email from 'src/api/engines/email';
+ *
+ * // Create an email delivery channel
+ * const emails = queue('emails', { concurrency: 3 });
+ *
+ * emails.on('send', async (job) => {
+ *   await email.send(job.data.emailData, job.data.options);
+ * });
+ *
+ * // Queue email for delivery
+ * queue.channel('emails').emit('send', {
+ *   emailData: { to: 'user@example.com', subject: 'Hi', html: '<p>Hello</p>' },
+ *   options: { provider: 'sendgrid' }
+ * });
  */
 
 import { createFactory } from './factory';

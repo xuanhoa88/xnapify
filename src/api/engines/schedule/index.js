@@ -6,6 +6,13 @@
  */
 
 /**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
  * Schedule Engine - Provides cron-based task scheduling capabilities.
  * Wraps `node-cron` to allow modules to register and manage recurring tasks.
  *
@@ -20,8 +27,9 @@
  * ## Features
  *
  * - **Dynamic Registration**: Register/unregister tasks at runtime.
- * - **Graceful Shutdown**: Stops all tasks when the engine stops.
+ * - **Graceful Shutdown**: Automatically stops all tasks on process termination.
  * - **Auto-start**: Tasks can start automatically upon registration.
+ * - **Statistics**: Monitor registered tasks and their status.
  *
  * ---
  *
@@ -48,11 +56,26 @@
  * // Stop a specific task
  * schedule.unregister('daily-report');
  *
+ * // Get all registered tasks
+ * const tasks = schedule.getAllTasks(); // ['daily-report', 'morning-alert']
+ *
+ * // Check if a task is running
+ * if (schedule.isTaskRunning('daily-report')) {
+ *   console.log('Daily report task is active');
+ * }
+ *
+ * // Get statistics
+ * const stats = schedule.getStats();
+ * // { total: 2, running: 1, stopped: 1, tasks: {...} }
+ *
  * // Stop all tasks
  * schedule.stop();
  *
  * // Start all tasks (if stopped or autoStart was false)
  * schedule.start();
+ *
+ * // Cleanup (automatically called on process termination)
+ * schedule.cleanup();
  */
 
 import { createFactory } from './factory';
@@ -61,11 +84,10 @@ import { createFactory } from './factory';
 export { createFactory };
 
 // Export Manager class for type referencing and extension if needed
-export { default as ScheduleManager } from './manager';
+export { ScheduleManager } from './factory';
 
 /**
  * Default singleton instance of ScheduleManager
- * @type {import('./manager').default}
  */
 const schedule = createFactory();
 

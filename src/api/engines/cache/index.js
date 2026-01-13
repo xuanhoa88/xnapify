@@ -11,26 +11,24 @@ import FileCache from './adapters/file';
 /**
  * Cache Engine
  *
- * Creates cache instances based on configuration.
- * Supports multiple adapters: memory (default), file.
+ * Provides caching with multiple adapters: memory (default), file.
+ * Default export is a singleton memory cache instance.
  *
  * @example
- * // Access singleton factory
- * const cacheInstance = cache.default({ type: 'memory', maxSize: 1000 });
+ * // Use default singleton instance directly
+ * await cache.set('key', 'value', 60000); // 60s TTL
+ * const value = await cache.get('key');
+ * await cache.delete('key');
  *
- * // Basic usage
- * await cacheInstance.set('key', 'value', 60000); // 60s TTL
- * const value = await cacheInstance.get('key');
- * await cacheInstance.delete('key');
+ * @example
+ * // Create custom instance with different config
+ * const fileCache = cache.createFactory({ type: 'file', directory: '/tmp/cache' });
+ * await fileCache.set('key', 'value');
  *
  * @example
  * // Create namespaced cache
- * const userCache = cache.default.withNamespace('users', cacheInstance);
+ * const userCache = cache.withNamespace('users');
  * await userCache.set('123', userData);
- *
- * @example
- * // File-based cache
- * const fileCache = cache.default({ type: 'file', directory: '/tmp/cache' });
  */
 
 /**
@@ -43,7 +41,7 @@ import FileCache from './adapters/file';
  * @param {number} [options.ttl=300000] - Default TTL in ms (5 min)
  * @returns {Object} Cache instance
  */
-function createFactory(options = {}) {
+export function createFactory(options = {}) {
   const { type = 'memory', ...config } = options;
 
   switch (type) {
@@ -57,34 +55,45 @@ function createFactory(options = {}) {
 }
 
 /**
- * Create a namespaced cache
+ * Create a namespaced cache from a base cache
  *
  * Creates a cache instance with key prefixing for isolation.
  *
  * @param {string} namespace - Namespace prefix for keys
- * @param {Object} baseCache - Base cache instance
+ * @param {Object} [baseCache] - Base cache instance (uses default if not provided)
  * @returns {Object} Namespaced cache wrapper
  */
-createFactory.withNamespace = function (namespace, baseCache) {
+export function withNamespace(namespace, baseCache) {
+  const base = baseCache || defaultCache;
   const prefix = `${namespace}:`;
 
   return {
-    get: key => baseCache.get(`${prefix}${key}`),
-    set: (key, value, ttl) => baseCache.set(`${prefix}${key}`, value, ttl),
-    delete: key => baseCache.delete(`${prefix}${key}`),
-    has: key => baseCache.has(`${prefix}${key}`),
+    get: key => base.get(`${prefix}${key}`),
+    set: (key, value, ttl) => base.set(`${prefix}${key}`, value, ttl),
+    delete: key => base.delete(`${prefix}${key}`),
+    has: key => base.has(`${prefix}${key}`),
     clear: () => {
       // Only clear keys with this namespace prefix
-      const keys = baseCache.keys ? baseCache.keys() : [];
-      keys.filter(k => k.startsWith(prefix)).forEach(k => baseCache.delete(k));
+      const keys = base.keys ? base.keys() : [];
+      keys.filter(k => k.startsWith(prefix)).forEach(k => base.delete(k));
     },
-    stats: () => baseCache.stats(),
-    cleanup: () => baseCache.cleanup(),
+    stats: () => base.stats(),
+    cleanup: () => base.cleanup(),
   };
-};
+}
 
-// Export factory
-export { createFactory };
+/**
+ * Default singleton memory cache instance
+ */
+const defaultCache = createFactory({
+  type: 'memory',
+  maxSize: 1000,
+  ttl: 5 * 60 * 1000, // 5 minutes
+});
 
-// Default export is the factory function
-export default createFactory;
+// Attach namespace creator to default cache for convenience
+defaultCache.withNamespace = namespace =>
+  withNamespace(namespace, defaultCache);
+
+// Default export is the singleton instance
+export default defaultCache;
