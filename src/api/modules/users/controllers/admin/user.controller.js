@@ -335,9 +335,11 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Prevent admin from deactivating themselves
-    if (ids.includes(req.user.id) && !(state === 'active')) {
-      return http.sendError(res, 'Cannot deactivate your own account', 400);
+    // Filter out current user's ID to prevent self-status change
+    const filteredIds = ids.filter(id => id !== req.user.id);
+
+    if (filteredIds.length === 0) {
+      return http.sendError(res, 'Cannot change your own account status', 400);
     }
 
     // Get models and webhook from app context
@@ -346,7 +348,7 @@ export async function bulkUpdateStatus(req, res) {
 
     // Bulk update status (activity logged in service)
     const result = await userAdminService.bulkUpdateStatus(
-      ids,
+      filteredIds,
       state === 'active',
       {
         models,

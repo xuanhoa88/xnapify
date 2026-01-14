@@ -166,6 +166,22 @@ function Users() {
       });
   }, [selectedUsers]);
 
+  const handleActivate = useCallback(user => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
+        ids: [user.id],
+        isActive: true,
+      });
+  }, []);
+
+  const handleDeactivate = useCallback(user => {
+    changeStatusModalRef.current &&
+      changeStatusModalRef.current.open({
+        ids: [user.id],
+        isActive: false,
+      });
+  }, []);
+
   // Filter handlers
   const handleSearchChange = useCallback(value => {
     setSearch(value);
@@ -448,7 +464,7 @@ function Users() {
                   </Tag.List>
                 </td>
                 <td>
-                  <Tag variant={user.is_active ? 'success' : 'neutral'}>
+                  <Tag variant={user.is_active ? 'success' : 'danger'}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Tag>
                 </td>
@@ -494,6 +510,8 @@ function Users() {
                       onManageRoles={openRolesModal}
                       onManageGroups={openGroupsModal}
                       onViewPermissions={openPermissionsModal}
+                      onActivate={handleActivate}
+                      onDeactivate={handleDeactivate}
                     />
                   </div>
                 </td>

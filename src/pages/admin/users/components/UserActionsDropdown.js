@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
+import { useSelector } from 'react-redux';
+import { getUserId } from '../../../../redux';
 import { Icon, Table } from '../../../../components/Admin';
 
 const { ActionsDropdown } = Table;
@@ -25,10 +27,19 @@ function UserActionsDropdown({
   onManageRoles,
   onManageGroups,
   onViewPermissions,
+  onActivate,
+  onDeactivate,
 }) {
+  const currentUserId = useSelector(getUserId);
+
   const handleToggle = useCallback(() => {
     onToggle(isOpen ? null : user.id);
   }, [isOpen, user.id, onToggle]);
+
+  const isCurrentUser = useMemo(
+    () => currentUserId === user.id,
+    [currentUserId, user.id],
+  );
 
   return (
     <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
@@ -55,6 +66,27 @@ function UserActionsDropdown({
         >
           View Permissions
         </ActionsDropdown.Item>
+        {!isCurrentUser && (
+          <>
+            <ActionsDropdown.Divider />
+            {user.is_active ? (
+              <ActionsDropdown.Item
+                onClick={() => onDeactivate(user)}
+                icon={<Icon name='close' size={16} />}
+                variant='danger'
+              >
+                Deactivate
+              </ActionsDropdown.Item>
+            ) : (
+              <ActionsDropdown.Item
+                onClick={() => onActivate(user)}
+                icon={<Icon name='check' size={16} />}
+              >
+                Activate
+              </ActionsDropdown.Item>
+            )}
+          </>
+        )}
       </ActionsDropdown.Menu>
     </ActionsDropdown>
   );
@@ -67,6 +99,8 @@ UserActionsDropdown.propTypes = {
   onManageRoles: PropTypes.func.isRequired,
   onManageGroups: PropTypes.func.isRequired,
   onViewPermissions: PropTypes.func.isRequired,
+  onActivate: PropTypes.func.isRequired,
+  onDeactivate: PropTypes.func.isRequired,
 };
 
 export default UserActionsDropdown;

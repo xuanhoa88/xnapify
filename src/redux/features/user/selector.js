@@ -48,6 +48,14 @@ export const getUserProfile = state => {
 };
 
 /**
+ * Get user ID
+ */
+export const getUserId = state => {
+  const user = getUserState(state);
+  return (user && user.id) || null;
+};
+
+/**
  * Get user email
  */
 export const getUserEmail = state => {
