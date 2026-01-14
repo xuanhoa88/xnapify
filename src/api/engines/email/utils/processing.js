@@ -11,8 +11,7 @@
  */
 
 import { Liquid } from 'liquidjs';
-import { createOperationResult } from './errors';
-import { createFactory } from '../factory';
+import { createOperationResult, EmailError } from './errors';
 
 // Create a reusable Liquid engine instance
 const liquid = new Liquid();
@@ -20,31 +19,96 @@ const liquid = new Liquid();
 /**
  * Render template using LiquidJS
  * Supports {{ variable }}, {% loops %}, {% if %}, filters, etc.
+ * Safely handles template rendering errors without breaking email sending.
  * @param {string} content - Template string
  * @param {Object} data - Variables to substitute
- * @returns {Promise<string>} Rendered content
+ * @returns {Promise<string>} Rendered content or original content if rendering fails
  */
-export async function renderTemplate(content, data) {
+async function renderTemplate(content, data) {
   if (!content || !data) return content;
-  return liquid.parseAndRender(content, data);
+
+  try {
+    return await liquid.parseAndRender(content, data);
+  } catch (error) {
+    // Log the error but don't break email sending
+    console.warn(
+      `⚠️ Template rendering failed: ${error.message}. Using original content.`,
+    );
+    // Return original content as fallback
+    return content;
+  }
 }
 
 /**
  * Process a single email
  * @param {Object} emailData - Email data (already validated by Zod schema)
- * @param {EmailManager} manager - Email manager instance
+ * @param {Object} provider - Email provider instance
  * @param {Object} options - Send options
  * @returns {Promise<Object>} Send result
  */
-export async function processSingleEmail(emailData, manager, options) {
+/**
+ * Send email with retry logic (exponential backoff)
+ * @param {Function} sendFn - Function that performs the send
+ * @param {number} maxRetries - Maximum retry attempts
+ * @returns {Promise<Object>} Send result
+ */
+async function sendWithRetry(sendFn, maxRetries = 3) {
+  let lastError;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await sendFn();
+    } catch (error) {
+      lastError = error;
+
+      // Don't retry on validation errors (4xx)
+      if (
+        error.statusCode &&
+        error.statusCode >= 400 &&
+        error.statusCode < 500
+      ) {
+        throw error;
+      }
+
+      // Retry on network/server errors (5xx)
+      if (attempt < maxRetries - 1) {
+        const delay = Math.pow(2, attempt) * 1000; // 1s, 2s, 4s
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError;
+}
+
+/**
+ * Process a single email
+ * @param {Object} emailData - Email data (already validated by Zod schema)
+ * @param {Object} provider - Email provider instance
+ * @param {Object} options - Send options
+ * @returns {Promise<Object>} Send result
+ */
+async function processSingleEmail(emailData, provider, options) {
   const { templateData, templateId, ...restData } = emailData;
 
-  // Provider template (SendGrid/Mailgun)
+  // Provider template (SendGrid/Mailgun) - not supported in all providers
   if (templateId) {
-    return manager.sendTemplate(templateId, templateData || {}, restData.to, {
-      ...options,
-      ...restData,
-    });
+    if (provider.sendTemplate && typeof provider.sendTemplate === 'function') {
+      return provider.sendTemplate(
+        templateId,
+        templateData || {},
+        restData.to,
+        {
+          ...options,
+          ...restData,
+        },
+      );
+    }
+    throw new EmailError(
+      'Provider does not support template sending',
+      'TEMPLATE_NOT_SUPPORTED',
+      400,
+    );
   }
 
   // Render templates using LiquidJS if templateData provided
@@ -60,22 +124,35 @@ export async function processSingleEmail(emailData, manager, options) {
     }
   }
 
-  // Send (data already validated by Zod in send.js)
-  return manager.send(restData, options);
+  // Send via provider directly
+  if (typeof provider.send === 'function') {
+    return provider.send(restData);
+  }
+
+  throw new EmailError(
+    'Provider does not support sending emails',
+    'SEND_NOT_SUPPORTED',
+    400,
+  );
 }
 
 /**
  * Process emails directly (shared by main process and worker)
- * @param {Array} emailList - Array of emails
+ * @param {Object} provider - Email provider instance
+ * @param {Array|string} emails - Array of emails or single email
  * @param {Object} options - Send options
  * @returns {Promise<Object>} Send result
  */
-export async function processEmails(emailList, options = {}) {
-  const manager = createFactory(options);
+export async function processEmails(provider, emails, options = {}) {
+  if (!provider) {
+    throw new Error('Email provider is required');
+  }
+
+  const emailList = Array.isArray(emails) ? emails : [emails];
 
   // Single email
   if (emailList.length === 1) {
-    const result = await processSingleEmail(emailList[0], manager, options);
+    const result = await processSingleEmail(emailList[0], provider, options);
     return createOperationResult(
       true,
       {
@@ -94,9 +171,15 @@ export async function processEmails(emailList, options = {}) {
     failed: [],
   };
 
+  const maxRetries = options.maxRetries || 3;
+
   for (const emailData of emailList) {
     try {
-      const result = await processSingleEmail(emailData, manager, options);
+      // Use retry logic for bulk sends
+      const result = await sendWithRetry(
+        () => processSingleEmail(emailData, provider, options),
+        maxRetries,
+      );
       results.successful.push({
         to: emailData.to,
         messageId: result.messageId,
@@ -105,6 +188,7 @@ export async function processEmails(emailList, options = {}) {
       results.failed.push({
         to: emailData.to,
         error: error.message,
+        retries: maxRetries - 1,
       });
     }
   }
@@ -117,7 +201,7 @@ export async function processEmails(emailList, options = {}) {
       totalEmails: emailList.length,
       successCount: results.successful.length,
       failCount: results.failed.length,
-      provider: options.provider || 'default',
+      provider: provider.name || provider.constructor.name || 'unknown',
     },
     `Sent ${results.successful.length} of ${emailList.length} emails`,
   );

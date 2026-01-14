@@ -6,7 +6,7 @@
  */
 
 import fetch from 'node-fetch';
-import { EmailError } from '../utils';
+import { EmailError } from '../utils/errors';
 
 /**
  * Mailgun Email Provider
@@ -16,6 +16,7 @@ import { EmailError } from '../utils';
  */
 export class MailgunEmailProvider {
   constructor(config = {}) {
+    this.name = 'mailgun';
     this.apiKey = config.apiKey;
     this.domain = config.domain;
     this.region = config.region || 'us'; // 'us' or 'eu'

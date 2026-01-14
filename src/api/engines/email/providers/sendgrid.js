@@ -6,7 +6,7 @@
  */
 
 import fetch from 'node-fetch';
-import { EmailError } from '../utils';
+import { EmailError } from '../utils/errors';
 
 /**
  * SendGrid Email Provider
@@ -16,6 +16,7 @@ import { EmailError } from '../utils';
  */
 export class SendGridEmailProvider {
   constructor(config = {}) {
+    this.name = 'sendgrid';
     this.apiKey = config.apiKey;
     this.apiUrl = config.apiUrl || 'https://api.sendgrid.com/v3/mail/send';
     this.defaultFrom = config.defaultFrom || null;

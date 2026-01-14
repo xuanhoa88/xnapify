@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import cache, { createFactory, withNamespace } from './index';
+import cache, { createFactory, withNamespace } from '.';
 
 describe('Cache Engine', () => {
   describe('Default Instance', () => {

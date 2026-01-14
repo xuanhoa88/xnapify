@@ -6,7 +6,7 @@
  */
 
 import nodemailer from 'nodemailer';
-import { EmailError } from '../utils';
+import { EmailError } from '../utils/errors';
 
 /**
  * SMTP Email Provider
@@ -16,6 +16,7 @@ import { EmailError } from '../utils';
  */
 export class SmtpEmailProvider {
   constructor(config = {}) {
+    this.name = 'smtp';
     this.host = config.host || 'localhost';
     this.port = config.port || 587;
     this.secure = config.secure !== undefined ? config.secure : false;

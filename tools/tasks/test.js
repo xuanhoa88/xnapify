@@ -31,7 +31,7 @@ function runJest(options = {}) {
     const jestArgs = [];
 
     // Add configuration
-    jestArgs.push('--config', path.join(__dirname, '..', 'jest.config.js'));
+    jestArgs.push('--config', path.join(__dirname, '..', 'jest', 'config.js'));
 
     // Add mode-specific flags
     if (options.watch) {
@@ -180,7 +180,7 @@ export default async function main() {
       errorMessage += '\n\n💡 Troubleshooting:';
       errorMessage += '\n   1. Check test files for syntax errors';
       errorMessage += '\n   2. Run: npm install';
-      errorMessage += '\n   3. Check jest.config.js configuration';
+      errorMessage += '\n   3. Check tools/jest/config.js configuration';
 
       logError(errorMessage);
     }

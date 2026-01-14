@@ -9,56 +9,7 @@ import { SmtpEmailProvider } from './providers/smtp';
 import { SendGridEmailProvider } from './providers/sendgrid';
 import { MailgunEmailProvider } from './providers/mailgun';
 import { MemoryEmailProvider } from './providers/memory';
-import {
-  EmailError,
-  createOperationResult,
-  processEmails,
-  validateEmails,
-} from './utils';
-import workerPool from './workers';
-
-/**
- * Decision logic for whether to use background worker
- * @private
- * @param {Array} emails - Array of email objects
- * @param {Object} options - Decision options
- * @returns {Object} Decision result
- */
-function makeSendDecision(emails, options = {}) {
-  const thresholds = {
-    batchThreshold: options.batchThreshold || 5,
-    largeBodyThreshold: options.largeBodyThreshold || 100 * 1024, // 100KB
-  };
-
-  let useWorker = false;
-  let reason = 'Simple email(s), main process sufficient';
-
-  // Check if this is a batch operation
-  if (emails.length >= thresholds.batchThreshold) {
-    useWorker = true;
-    reason = `Batch send (${emails.length} emails)`;
-  }
-  // Check for large email content in any email
-  else if (
-    emails.some(
-      email =>
-        (email.html && email.html.length >= thresholds.largeBodyThreshold) ||
-        (email.text && email.text.length >= thresholds.largeBodyThreshold),
-    )
-  ) {
-    useWorker = true;
-    reason = 'Large email body';
-  }
-  // Check for attachments in any email
-  else if (
-    emails.some(email => email.attachments && email.attachments.length > 0)
-  ) {
-    useWorker = true;
-    reason = 'Has attachment(s)';
-  }
-
-  return { useWorker, reason };
-}
+import { send } from './services';
 
 /**
  * Email Manager
@@ -66,11 +17,18 @@ function makeSendDecision(emails, options = {}) {
  * Manages multiple email providers and provides a unified send interface.
  * Handles validation, worker decisions, and response formatting.
  */
-class EmailManager {
+export class EmailManager {
   constructor(config = {}) {
     this.providers = new Map();
     this.defaultProvider = config.provider || 'smtp';
     this.config = config;
+
+    // Worker thresholds (can be overridden globally)
+    this.workerThresholds = {
+      batchSize: 5,
+      largeBodySize: 100 * 1024,
+      ...config.workerThresholds,
+    };
 
     // Initialize default providers
     this.initializeDefaultProviders();
@@ -233,8 +191,7 @@ class EmailManager {
 
   /**
    * Send email(s)
-   * Handles single email, bulk emails, and templates.
-   * Automatically offloads to worker for large/batch operations.
+   * Delegates to send service which handles validation, worker decisions, and processing.
    *
    * @param {Object|Array} emails - Single email object or array of emails
    * @param {Object} options - Send options
@@ -276,53 +233,7 @@ class EmailManager {
    * });
    */
   async send(emails, options = {}) {
-    try {
-      // Validate using Zod schema
-      const result = validateEmails(emails);
-      if (!result.success) {
-        return createOperationResult(
-          false,
-          null,
-          'Validation failed',
-          new EmailError(
-            JSON.stringify(result.error.flatten()),
-            'VALIDATION_ERROR',
-            400,
-          ),
-        );
-      }
-
-      // Use hybrid decision service to determine processing method
-      const decision = makeSendDecision(emails, options);
-
-      // Determine worker usage:
-      // - useWorker === true: Force worker
-      // - useWorker === false: Force direct (bypass worker)
-      // - useWorker === undefined: Auto-decide based on thresholds
-      const shouldUseWorker =
-        options.useWorker === true ||
-        (options.useWorker !== false && decision.useWorker);
-
-      if (shouldUseWorker) {
-        return workerPool.processSend(emails, {
-          ...options,
-          forceFork: options.useWorker === true,
-        });
-      }
-
-      // Process directly
-      return processEmails(emails, options);
-    } catch (error) {
-      if (error instanceof EmailError) {
-        return createOperationResult(false, null, error.message, error);
-      }
-      return createOperationResult(
-        false,
-        null,
-        'Failed to send email',
-        new EmailError(error.message, 'SEND_FAILED', 500),
-      );
-    }
+    return send(this, emails, options);
   }
 }
 

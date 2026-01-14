@@ -17,7 +17,7 @@
  */
 
 import { createWorkerPool } from '../../worker';
-import { EmailWorkerError } from '../utils';
+import { EmailWorkerError } from '../utils/errors';
 
 // Worker configuration
 const WORKER_CONFIG = Object.freeze({

@@ -134,7 +134,10 @@
 
 import { createFactory } from './factory';
 
-// Export factory for creating instances
+// Export services
+export * as services from './services';
+
+// Export the class and factory for external use
 export { createFactory };
 
 /**
