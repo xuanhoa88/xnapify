@@ -36,7 +36,10 @@ export async function cleanup(manager, options = {}) {
       });
 
       if (!result.success) {
-        throw new Error(result.error || 'Cleanup failed');
+        throw new WebhookError(
+          result.error || 'Cleanup failed',
+          'CLEANUP_FAILED',
+        );
       }
 
       return createOperationResult(

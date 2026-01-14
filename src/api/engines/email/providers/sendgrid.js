@@ -155,7 +155,11 @@ export class SendGridEmailProvider {
           errorData.errors && errorData.errors[0]
             ? errorData.errors[0].message
             : `HTTP ${response.status}`;
-        throw new Error(errorMessage);
+        throw new EmailError(
+          errorMessage,
+          'SENDGRID_SEND_ERROR',
+          response.status,
+        );
       }
 
       this.stats.sent++;
@@ -166,12 +170,13 @@ export class SendGridEmailProvider {
         messageId: response.headers.get('x-message-id'),
         provider: 'sendgrid',
       };
-    } catch (error) {
+    } catch (err) {
       this.stats.failed++;
-      throw new EmailError(
-        `SendGrid send failed: ${error.message}`,
+      const error = new EmailError(
+        `SendGrid send failed: ${err.message}`,
         'SEND_FAILED',
       );
+      throw error;
     }
   }
 
@@ -249,7 +254,11 @@ export class SendGridEmailProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new EmailError(
+          `HTTP ${response.status}`,
+          'CONNECTION_FAILED',
+          response.status,
+        );
       }
 
       return {

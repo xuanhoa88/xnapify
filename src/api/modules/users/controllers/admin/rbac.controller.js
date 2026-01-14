@@ -96,39 +96,6 @@ export async function assignRolesToUser(req, res) {
 }
 
 /**
- * Get user roles
- *
- * @route   GET /api/users/:id/roles
- * @access  Admin (requires 'users:read' permission) or Self
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getUserRoles(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-
-    const models = req.app.get('models');
-
-    const user = await rbacService.getUserRoles(id, models);
-
-    return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        display_name: (user.profile && user.profile.display_name) || null,
-      },
-      roles:
-        Array.isArray(user.roles) && user.roles.length > 0
-          ? user.roles.map(role => role.name)
-          : [],
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get user roles');
-  }
-}
-
-/**
  * Assign groups to a user
  *
  * @route   PUT /api/users/:id/groups
@@ -175,35 +142,6 @@ export async function assignGroupsToUser(req, res) {
     }
 
     return http.sendServerError(res, 'Failed to assign groups to user');
-  }
-}
-
-/**
- * Get user groups
- *
- * @route   GET /api/users/:id/groups
- * @access  Admin (requires 'users:read' permission) or Self
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function getUserGroups(req, res) {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const models = req.app.get('models');
-
-    const user = await rbacService.getUserGroups(id, models);
-
-    return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        display_name: (user.profile && user.profile.display_name) || null,
-      },
-      groups: user.groups,
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get user groups');
   }
 }
 

@@ -167,24 +167,6 @@ export const fetchUserPermissions = createAsyncThunk(
 );
 
 /**
- * Fetch user's roles
- */
-export const fetchUserRoles = createAsyncThunk(
-  'admin/users/fetchUserRoles',
-  async (userId, { extra: { fetch }, rejectWithValue }) => {
-    try {
-      const { data } = await fetch(`/api/admin/users/${userId}/roles`);
-      return {
-        user: data.user,
-        roles: data.roles || [],
-      };
-    } catch (error) {
-      return rejectWithValue(error.message);
-    }
-  },
-);
-
-/**
  * Bulk update user status
  */
 export const bulkUpdateUserStatus = createAsyncThunk(

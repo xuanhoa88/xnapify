@@ -175,9 +175,12 @@ export class DatabaseWebhookAdapter {
     // Validate connection using Zod
     const validation = connectionSchema.safeParse(connection);
     if (!validation.success) {
-      throw new Error(
+      const error = new Error(
         `DatabaseWebhookAdapter: Invalid connection - ${validation.error.message}`,
       );
+      error.name = 'DatabaseWebhookAdapterError';
+      error.code = 'DATABASE_WEBHOOK_ADAPTER_ERROR';
+      throw error;
     }
     // eslint-disable-next-line no-underscore-dangle
     this._connection = connection;
@@ -200,10 +203,13 @@ export class DatabaseWebhookAdapter {
   getDb() {
     // eslint-disable-next-line no-underscore-dangle
     if (!this._connection) {
-      throw new Error(
+      const error = new Error(
         'DatabaseWebhookAdapter: No database connection configured. ' +
           'Set connection via constructor config or setConnection() method.',
       );
+      error.name = 'DatabaseWebhookAdapterError';
+      error.code = 'DATABASE_WEBHOOK_ADAPTER_ERROR';
+      throw error;
     }
     // eslint-disable-next-line no-underscore-dangle
     return this._connection;
@@ -284,9 +290,12 @@ export class DatabaseWebhookAdapter {
     // Validate input
     const validation = updateStatusSchema.safeParse({ webhookId, result });
     if (!validation.success) {
-      throw new Error(
+      const error = new Error(
         `Validation error: ${validation.error.flatten().fieldErrors}`,
       );
+      error.name = 'DatabaseWebhookAdapterError';
+      error.code = 'DATABASE_WEBHOOK_ADAPTER_ERROR';
+      throw error;
     }
 
     const Webhook = this.getModel();
@@ -359,9 +368,12 @@ export class DatabaseWebhookAdapter {
     // Validate input
     const validation = getWebhooksSchema.safeParse(options);
     if (!validation.success) {
-      throw new Error(
+      const error = new Error(
         `Validation error: ${JSON.stringify(validation.error.flatten().fieldErrors)}`,
       );
+      error.name = 'DatabaseWebhookAdapterError';
+      error.code = 'DATABASE_WEBHOOK_ADAPTER_ERROR';
+      throw error;
     }
 
     const validatedResult = validation.data;
@@ -452,9 +464,12 @@ export class DatabaseWebhookAdapter {
     // Validate input
     const validation = cleanupSchema.safeParse(options);
     if (!validation.success) {
-      throw new Error(
+      const error = new Error(
         `Validation error: ${JSON.stringify(validation.error.flatten().fieldErrors)}`,
       );
+      error.name = 'DatabaseWebhookAdapterError';
+      error.code = 'DATABASE_WEBHOOK_ADAPTER_ERROR';
+      throw error;
     }
 
     const validatedResult = validation.data;

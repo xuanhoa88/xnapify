@@ -170,7 +170,11 @@ export class MailgunEmailProvider {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
+        throw new EmailError(
+          errorData.message || `HTTP ${response.status}`,
+          'MAILGUN_SEND_ERROR',
+          response.status,
+        );
       }
 
       const result = await response.json();
@@ -267,7 +271,11 @@ export class MailgunEmailProvider {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new EmailError(
+          `HTTP ${response.status}`,
+          'MAILGUN_VERIFY_ERROR',
+          response.status,
+        );
       }
 
       return {

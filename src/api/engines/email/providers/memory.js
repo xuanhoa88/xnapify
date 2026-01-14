@@ -6,6 +6,7 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import { EmailError } from '../utils/errors';
 
 /**
  * Memory Email Provider
@@ -84,9 +85,7 @@ export class MemoryEmailProvider {
       };
       this.failedEmails.push(failedEmail);
 
-      const error = new Error('Simulated email failure');
-      error.code = 'SIMULATED_FAILURE';
-      throw error;
+      throw new EmailError('Simulated email failure', 'SIMULATED_FAILURE', 500);
     }
 
     const messageId = `memory-${uuidv4()}`;

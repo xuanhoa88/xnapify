@@ -145,7 +145,11 @@ async function processSingleEmail(emailData, provider, options) {
  */
 export async function processEmails(provider, emails, options = {}) {
   if (!provider) {
-    throw new Error('Email provider is required');
+    throw new EmailError(
+      'Email provider is required',
+      'EMAIL_PROVIDER_REQUIRED',
+      400,
+    );
   }
 
   const emailList = Array.isArray(emails) ? emails : [emails];

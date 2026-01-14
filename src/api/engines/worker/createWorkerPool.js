@@ -230,7 +230,13 @@ export function createWorkerPool(workersContext, options = {}) {
         setTimeout(() => {
           if (!this.workerPools[workerType].includes(workerInstance)) {
             worker.kill();
-            reject(new Error('Worker creation timeout'));
+            reject(
+              new WorkerError(
+                'Worker creation timeout',
+                'WORKER_CREATION_TIMEOUT',
+                500,
+              ),
+            );
           }
         }, this.workerCreationTimeout);
       });
@@ -329,7 +335,11 @@ export function createWorkerPool(workersContext, options = {}) {
             this.pendingRequests.delete(requestId);
             this.releaseWorker(worker);
             reject(
-              new Error(`Worker request timeout: ${workerType}:${messageType}`),
+              new WorkerError(
+                `Worker request timeout: ${workerType}:${messageType}`,
+                'WORKER_REQUEST_TIMEOUT',
+                500,
+              ),
             );
           }
         }, this.workerTimeout);
@@ -355,7 +365,11 @@ export function createWorkerPool(workersContext, options = {}) {
       if (success) {
         pendingRequest.resolve(result);
       } else {
-        const workerError = new Error(error.message);
+        const workerError = new WorkerError(
+          error.message,
+          error.code,
+          error.status,
+        );
         workerError.stack = error.stack;
         pendingRequest.reject(workerError);
       }
@@ -418,7 +432,13 @@ export function createWorkerPool(workersContext, options = {}) {
       // Cancel any pending requests for this worker type
       for (const [id, request] of this.pendingRequests) {
         if (request.worker && request.worker.type === workerType) {
-          request.reject(new Error(`Worker type '${workerType}' unregistered`));
+          request.reject(
+            new WorkerError(
+              `Worker type '${workerType}' unregistered`,
+              'WORKER_UNREGISTERED',
+              500,
+            ),
+          );
           this.pendingRequests.delete(id);
         }
       }
@@ -447,7 +467,13 @@ export function createWorkerPool(workersContext, options = {}) {
      */
     async cleanup() {
       for (const [id, request] of this.pendingRequests) {
-        request.reject(new Error('Service shutting down'));
+        request.reject(
+          new WorkerError(
+            'Service shutting down',
+            'SERVICE_SHUTTING_DOWN',
+            500,
+          ),
+        );
         this.pendingRequests.delete(id);
       }
 

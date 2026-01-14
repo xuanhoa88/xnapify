@@ -78,6 +78,7 @@ export function requireAuth(options = {}) {
       const token = extractToken(req, { sources });
       if (!token) {
         const error = new Error('Authentication token required');
+        error.name = 'TokenRequiredError';
         error.status = 401;
         error.code = 'TOKEN_REQUIRED';
         throw error;

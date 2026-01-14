@@ -31,15 +31,27 @@ class ScheduleManager {
   register(name, cronExpression, handler, options = {}) {
     // Validate inputs
     if (!name || typeof name !== 'string') {
-      throw new Error('Task name must be a non-empty string');
+      const error = new Error('Task name must be a non-empty string');
+      error.name = 'ScheduleManagerError';
+      error.code = 'INVALID_TASK_NAME';
+      error.status = 400;
+      throw error;
     }
 
     if (!cronExpression || typeof cronExpression !== 'string') {
-      throw new Error('Cron expression must be a non-empty string');
+      const error = new Error('Cron expression must be a non-empty string');
+      error.name = 'ScheduleManagerError';
+      error.code = 'INVALID_CRON_EXPRESSION';
+      error.status = 400;
+      throw error;
     }
 
     if (typeof handler !== 'function') {
-      throw new Error('Handler must be a function');
+      const error = new Error('Handler must be a function');
+      error.name = 'ScheduleManagerError';
+      error.code = 'INVALID_HANDLER';
+      error.status = 400;
+      throw error;
     }
 
     // Warn if overwriting existing task
@@ -50,9 +62,13 @@ class ScheduleManager {
 
     try {
       if (!cron.validate(cronExpression)) {
-        throw new Error(
+        const error = new Error(
           `Invalid cron expression for task '${name}': ${cronExpression}`,
         );
+        error.name = 'ScheduleManagerError';
+        error.code = 'INVALID_CRON_EXPRESSION';
+        error.status = 400;
+        throw error;
       }
 
       const task = cron.schedule(

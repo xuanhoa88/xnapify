@@ -6,8 +6,7 @@
  */
 
 import { ADMIN_ROLE, SYSTEM_ROLES, MODERATOR_ROLE } from '../constants/rbac';
-import * as rbacCache from '../utils/rbac/cache';
-import { collectUserRBACData } from '../utils/rbac/collector';
+import { getUserRBACData } from '../utils/rbac/middleware';
 
 // ========================================================================
 // ROLE-BASED ACCESS CONTROL (RBAC) MIDDLEWARE
@@ -19,90 +18,8 @@ import { collectUserRBACData } from '../utils/rbac/collector';
  * @param {Object} req - Express request object
  * @returns {Promise<string[]>} User's role names
  */
-async function getUserRolesWithCache(req) {
-  const userId = req.user.id;
-  const { app } = req;
-
-  // Check cache first
-  const cached = rbacCache.getUser(userId, app);
-  if (cached) {
-    // Attach cached data to request
-    req.user = {
-      ...req.user,
-      ...cached,
-    };
-    return cached.roles;
-  }
-
-  // Get models from app context
-  const models = app.get('models');
-  if (!models) {
-    throw new Error('Database models not available');
-  }
-
-  const { User, Role, Group, Permission } = models;
-
-  // Fetch from database with full RBAC associations
-  const user = await User.findByPk(userId, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  // Collect and cache RBAC data
-  const rbacData = collectUserRBACData(user);
-  rbacCache.setUser(userId, rbacData, app);
-
-  // Attach to request
-  req.user = {
-    ...req.user,
-    ...rbacData,
-  };
-
+async function getUserRoles(req) {
+  const rbacData = await getUserRBACData(req);
   return rbacData.roles;
 }
 
@@ -127,7 +44,7 @@ export function requireRole(requiredRole) {
     }
 
     try {
-      const userRoles = await getUserRolesWithCache(req);
+      const userRoles = await getUserRoles(req);
 
       if (!userRoles.includes(requiredRole)) {
         return http.sendForbidden(
@@ -166,7 +83,7 @@ export function requireAnyRole(allowedRoles) {
     }
 
     try {
-      const userRoles = await getUserRolesWithCache(req);
+      const userRoles = await getUserRoles(req);
       const hasRole = userRoles.some(role => allowedRoles.includes(role));
 
       if (!hasRole) {
@@ -244,7 +161,7 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
     }
 
     try {
-      const userRoles = await getUserRolesWithCache(req);
+      const userRoles = await getUserRoles(req);
 
       const userRoleLevels = userRoles
         .map(role => roleHierarchy.indexOf(role))

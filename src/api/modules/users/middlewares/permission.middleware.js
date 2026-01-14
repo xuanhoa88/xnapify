@@ -6,8 +6,7 @@
  */
 
 import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from '../constants/rbac';
-import * as rbacCache from '../utils/rbac/cache';
-import { collectUserRBACData } from '../utils/rbac/collector';
+import { getUserRBACData } from '../utils/rbac/middleware';
 
 // ========================================================================
 // PERMISSION-BASED AUTHORIZATION MIDDLEWARES
@@ -19,90 +18,8 @@ import { collectUserRBACData } from '../utils/rbac/collector';
  * @param {Object} req - Express request object
  * @returns {Promise<string[]>} User's permission names
  */
-async function getUserPermissionsWithCache(req) {
-  const userId = req.user.id;
-  const { app } = req;
-
-  // Check cache first
-  const cached = rbacCache.getUser(userId, app);
-  if (cached) {
-    // Attach cached data to request
-    req.user = {
-      ...req.user,
-      ...cached,
-    };
-    return cached.permissions;
-  }
-
-  // Get models from app context
-  const models = app.get('models');
-  if (!models) {
-    throw new Error('Database models not available');
-  }
-
-  const { User, Role, Group, Permission } = models;
-
-  // Fetch from database with full RBAC associations
-  const user = await User.findByPk(userId, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!user) {
-    throw new Error('User not found');
-  }
-
-  // Collect and cache RBAC data
-  const rbacData = collectUserRBACData(user);
-  rbacCache.setUser(userId, rbacData, app);
-
-  // Attach to request
-  req.user = {
-    ...req.user,
-    ...rbacData,
-  };
-
+async function getUserPermissions(req) {
+  const rbacData = await getUserRBACData(req);
   return rbacData.permissions;
 }
 
@@ -191,7 +108,7 @@ export function requirePermission(permission) {
     }
 
     try {
-      const userPermissions = await getUserPermissionsWithCache(req);
+      const userPermissions = await getUserPermissions(req);
 
       if (!hasPermission(userPermissions, permission)) {
         return http.sendForbidden(
@@ -230,7 +147,7 @@ export function requirePermissions(permissions) {
     }
 
     try {
-      const userPermissions = await getUserPermissionsWithCache(req);
+      const userPermissions = await getUserPermissions(req);
 
       // Check if user has all required permissions (with wildcard support)
       const missingPermissions = permissions.filter(
@@ -274,7 +191,7 @@ export function requireAnyPermission(permissions) {
     }
 
     try {
-      const userPermissions = await getUserPermissionsWithCache(req);
+      const userPermissions = await getUserPermissions(req);
 
       // Check if user has any of the required permissions (with wildcard support)
       const hasAnyPerm = permissions.some(perm =>

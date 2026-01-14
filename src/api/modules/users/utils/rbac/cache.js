@@ -43,7 +43,11 @@ const DEFAULT_OPTIONS = Object.freeze({
  */
 export function configure(factory, options = {}) {
   if (!factory || typeof factory !== 'function') {
-    throw new Error('Invalid cache factory provided.');
+    const error = new Error('Invalid cache factory provided.');
+    error.name = 'InvalidCacheFactoryError';
+    error.code = 'INVALID_CACHE_FACTORY';
+    error.status = 500;
+    throw error;
   }
 
   customFactory = factory;
