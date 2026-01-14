@@ -10,7 +10,7 @@
  * Uses the shared worker engine for worker pool management
  *
  * Features:
- * - Dynamic worker discovery via require.context
+ * - Build-time worker discovery via webpack require.context
  * - Hybrid execution: same-process first, fork fallback
  * - Worker pool management with automatic scaling
  * - Comprehensive error handling and recovery
@@ -27,8 +27,7 @@ const WORKER_CONFIG = Object.freeze({
     parseInt(process.env.RSK_EMAIL_MAX_REQUESTS_PER_WORKER, 10) || 100,
 });
 
-// Use require.context to dynamically import worker files
-// Explicit require.context needed for Webpack static analysis
+// Auto-load workers via webpack require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Create worker pool with email-specific configuration

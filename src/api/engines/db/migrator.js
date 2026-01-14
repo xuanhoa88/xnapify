@@ -9,23 +9,14 @@ import path from 'path';
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 
-/**
- * Load migrations using require.context (for bundled migrations)
- * This works in Webpack-bundled environments
- */
+// Auto-load migrations via webpack require.context
 const migrationsContext = require.context('./migrations', false, /\.js$/);
 
-/**
- * Load seeds using require.context (for bundled seeds)
- * This works in Webpack-bundled environments
- */
+// Auto-load seeds via webpack require.context
 const seedsContext = require.context('./seeds', false, /\.js$/);
 
 /**
- * Extract clean filename from require.context key
- *
- * @param {string} key - Original key from require.context
- * @returns {string} Clean filename without path or extension
+ * Extract filename from require.context key: './filename.js' -> 'filename'
  */
 function extractFileName(key) {
   return key
@@ -37,10 +28,6 @@ function extractFileName(key) {
 
 /**
  * Resolve absolute path from require.context
- *
- * @param {Function} context - Webpack require.context function
- * @param {string} key - Key from context.keys()
- * @returns {string} Absolute file path
  */
 function resolveAbsolutePath(context, key) {
   // Method 1: Use context.resolve() if available (webpack provides this)
@@ -69,12 +56,7 @@ function resolveAbsolutePath(context, key) {
 }
 
 /**
- * Convert require.context to umzug migrations format
- * Automatically deduplicates by filename
- *
- * @param {Function} context - Webpack require.context function
- * @param {string} prefix - Module identifier to prevent name collisions (e.g., 'users', 'posts')
- * @returns {Array} Array of unique migration objects
+ * Convert require.context to umzug migrations (auto-deduplicated by filename)
  */
 function contextToMigrations(context, prefix) {
   const allKeys = context.keys();
@@ -134,7 +116,7 @@ function mergeMigrations(migrationSources) {
 
     if (!source.context || typeof source.context !== 'function') {
       const error = new Error(
-        'Each migration source must have a valid context (require.context function)',
+        'Each migration source must have a valid context (webpack require.context function)',
       );
       error.name = 'InvalidMigrationSourceContextError';
       error.status = 400;

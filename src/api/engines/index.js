@@ -5,32 +5,40 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Database engine
-export * as db from './db';
+/**
+ * Auto-load all engines from subdirectories using webpack require.context
+ * Scans for ./engineName/index.js files at build time
+ */
+const enginesContext = require.context(
+  './', // Base directory (current folder)
+  true, // Include subdirectories
+  /^\.\/[^/]+\/index\.js$/, // Regex: ./name/index.js only
+);
 
-// HTTP engine
-export * as http from './http';
+/**
+ * Build engines object from discovered modules
+ * Maps engine directory names to their exported modules
+ */
+const engines = {};
 
-// Filesystems engine
-export * as fs from './fs';
+enginesContext.keys().forEach(modulePath => {
+  // Extract engine name: './db/index.js' -> 'db'
+  const engineName = modulePath.match(/^\.\/([^/]+)\//)[1];
 
-// Authentication utilities
-export * as auth from './auth';
+  // Load the engine module
+  engines[engineName] = enginesContext(modulePath);
+});
 
-// Cache engine
-export * as cache from './cache';
-
-// Email engine
-export * as email from './email';
-
-// Worker engine
-export * as worker from './worker';
-
-// Queue engine
-export * as queue from './queue';
-
-// Webhook engine
-export * as webhook from './webhook';
-
-// Schedule engine
-export * as schedule from './schedule';
+// Re-export all engines as named exports for import compatibility
+// Supports: import { db, cache, email } from './engines'
+// Also supports: import * as engines from './engines'
+export const { db } = engines;
+export const { http } = engines;
+export const { fs } = engines;
+export const { auth } = engines;
+export const { cache } = engines;
+export const { email } = engines;
+export const { worker } = engines;
+export const { queue } = engines;
+export const { webhook } = engines;
+export const { schedule } = engines;

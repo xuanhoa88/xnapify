@@ -13,8 +13,7 @@
 import { createWorkerPool } from '../../worker';
 import { WebhookError } from '../errors';
 
-// Use require.context to dynamically import worker files
-// Explicit require.context needed for Webpack static analysis
+// Auto-load workers via webpack require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.js$/);
 
 // Worker configuration (can be overridden by options)

@@ -33,12 +33,7 @@ const APP_PROVIDERS = new Set([
 ]);
 
 /**
- * Load and validate a factory function from a webpack module
- *
- * @param {Function} context - Webpack require.context function
- * @param {string} path - Module path relative to context
- * @param {string} type - Type name for logging (e.g., 'models', 'module')
- * @returns {Function|null} Factory function or null if invalid/failed
+ * Load and validate factory from webpack require.context module
  */
 function loadFactory(context, path, type) {
   try {
@@ -69,12 +64,7 @@ function loadFactory(context, path, type) {
 }
 
 /**
- * Process discovered files with consistent logging and error handling
- *
- * @param {Function} context - Webpack require.context function
- * @param {string} typeName - Type name for logging (e.g., 'models', 'modules')
- * @param {Function} processor - Async function to process all discovered files
- * @returns {Promise<*>} Result from processor function
+ * Process files discovered by webpack require.context
  */
 function processFiles(context, typeName, processor) {
   const paths = context.keys();
