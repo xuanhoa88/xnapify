@@ -15,21 +15,13 @@ import * as engines from './engines';
 // Using Symbol.for() ensures the same Symbol is used even across HMR reloads
 const ALLOW_PROVIDER_WRITES = Symbol.for('__rsk.allowProviderWrites__');
 
-// Core app providers - these are registered at startup and protected from modification
+// Core app providers - derived from engines + runtime providers (jwt, ws, models)
+// These are registered at startup and protected from modification
 const APP_PROVIDERS = new Set([
-  'jwt', // JWT utilities
-  'ws', // WebSocket server instance
-  'db', // Database ORM instance
-  'models', // Database models
-  'cache', // Cache engine
-  'worker', // Worker pool management
-  'queue', // Queue engine for background jobs
-  'fs', // Filesystem utilities
-  'http', // HTTP utilities
-  'auth', // Authentication engine
-  'email', // Email engine
-  'webhook', // Webhook engine
-  'schedule', // Schedule engine
+  ...Object.keys(engines), // All discovered engines (db, cache, http, auth, etc.)
+  'jwt', // JWT utilities (registered by server.js)
+  'ws', // WebSocket server instance (registered by server.js)
+  'models', // Database models (registered after module discovery)
 ]);
 
 /**
@@ -173,44 +165,6 @@ async function discoverModules(app) {
   );
 
   return { apiModels, apiRoutes };
-}
-
-/**
- * Register core app providers in Express app settings.
- * These providers are protected from modification by createProviderGuard.
- *
- * @param {Object} app - Express app
- */
-function registerAppProviders(app) {
-  // Register database provider
-  app.set('db', engines.db);
-
-  // Register filesystem provider (already read-only)
-  app.set('fs', engines.fs);
-
-  // Register HTTP utilities provider
-  app.set('http', engines.http);
-
-  // Register authentication provider
-  app.set('auth', engines.auth);
-
-  // Register cache provider
-  app.set('cache', engines.cache);
-
-  // Register email provider
-  app.set('email', engines.email);
-
-  // Register worker provider
-  app.set('worker', engines.worker);
-
-  // Register queue provider
-  app.set('queue', engines.queue);
-
-  // Register webhook provider
-  app.set('webhook', engines.webhook);
-
-  // Register schedule provider
-  app.set('schedule', engines.schedule);
 }
 
 /**
@@ -416,8 +370,8 @@ function createCompressionMiddleware(_options) {
  */
 function createLoggingMiddleware(_options) {
   const format = __DEV__
-    ? 'combined' // Apache combined log format for production
-    : 'dev'; // Colored output for development
+    ? 'dev' // Colored concise output for development
+    : 'combined'; // Apache combined log format for production
 
   return morgan(format);
 }
@@ -434,8 +388,10 @@ function createLoggingMiddleware(_options) {
  */
 export default async function main(app, config = {}) {
   try {
-    // Setup app dependencies for dependency injection
-    registerAppProviders(app);
+    // Dynamically register all discovered engines as app providers
+    Object.entries(engines).forEach(([name, engine]) => {
+      app.set(name, engine);
+    });
 
     // Initialize database migrations
     await engines.db.runMigrations(null, engines.db.connection);
