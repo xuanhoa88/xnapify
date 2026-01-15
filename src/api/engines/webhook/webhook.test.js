@@ -695,9 +695,7 @@ describe('Webhook Engine', () => {
     });
 
     afterEach(() => {
-      if (testWebhook.removeCleanupHandlers) {
-        testWebhook.removeCleanupHandlers();
-      }
+      // Cleanup test instance
     });
 
     it('should send single webhook with memory adapter', async () => {
@@ -916,9 +914,7 @@ describe('Webhook Engine', () => {
     });
 
     afterEach(() => {
-      if (testWebhook.removeCleanupHandlers) {
-        testWebhook.removeCleanupHandlers();
-      }
+      // Cleanup test instance
     });
 
     it('should send and retrieve webhook', async () => {
@@ -1000,22 +996,16 @@ describe('Webhook Engine', () => {
 
       // Cleanup should not throw
       expect(true).toBe(true);
-
-      if (instance.removeCleanupHandlers) {
-        instance.removeCleanupHandlers();
-      }
     });
 
-    it('should have cleanup handlers', () => {
+    it('should have cleanup method', () => {
       const instance = createFactory({
         adapter: 'memory',
         database: { skipInit: true },
       });
 
-      expect(instance.removeCleanupHandlers).toBeDefined();
-      expect(typeof instance.removeCleanupHandlers).toBe('function');
-
-      instance.removeCleanupHandlers();
+      expect(instance.cleanup).toBeDefined();
+      expect(typeof instance.cleanup).toBe('function');
     });
 
     it('should allow multiple cleanup calls', async () => {
@@ -1028,10 +1018,6 @@ describe('Webhook Engine', () => {
       await instance.cleanup(); // Should not throw
 
       expect(true).toBe(true);
-
-      if (instance.removeCleanupHandlers) {
-        instance.removeCleanupHandlers();
-      }
     });
   });
 });

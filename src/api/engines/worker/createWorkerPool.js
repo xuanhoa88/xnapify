@@ -466,6 +466,7 @@ export function createWorkerPool(workersContext, options = {}) {
      * Cleanup all workers
      */
     async cleanup() {
+      console.info('🧹 Cleaning up worker pool...');
       for (const [id, request] of this.pendingRequests) {
         request.reject(
           new WorkerError(
@@ -513,20 +514,7 @@ export function createWorkerPool(workersContext, options = {}) {
   // Create singleton instance
   const workerPool = new WorkerPool();
 
-  // Setup process lifecycle management
-  process.on('exit', () => {
-    workerPool.cleanup();
-  });
-
-  process.on('SIGINT', () => {
-    workerPool.cleanup();
-    process.exit(0);
-  });
-
-  process.on('SIGTERM', () => {
-    workerPool.cleanup();
-    process.exit(0);
-  });
+  // Register cleanup with global coordinator
 
   return workerPool;
 }

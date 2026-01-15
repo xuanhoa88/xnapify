@@ -9,11 +9,11 @@ import path from 'path';
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 
-// Auto-load migrations via webpack require.context
-const migrationsContext = require.context('./migrations', false, /\.js$/);
+// Auto-load migrations via require.context
+const migrationsContext = require.context('./migrations', false, /\.(js|ts)$/);
 
-// Auto-load seeds via webpack require.context
-const seedsContext = require.context('./seeds', false, /\.js$/);
+// Auto-load seeds via require.context
+const seedsContext = require.context('./seeds', false, /\.(js|ts)$/);
 
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'

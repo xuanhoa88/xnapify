@@ -27,8 +27,8 @@ const WORKER_CONFIG = Object.freeze({
     parseInt(process.env.RSK_EMAIL_MAX_REQUESTS_PER_WORKER, 10) || 100,
 });
 
-// Auto-load workers via webpack require.context (*.worker.js)
-const workersContext = require.context('./', false, /\.worker\.js$/);
+// Auto-load workers via require.context (*.worker.js or *.worker.ts)
+const workersContext = require.context('./', false, /\.worker\.(js|ts)$/);
 
 // Create worker pool with email-specific configuration
 const workerPool = createWorkerPool(workersContext, {

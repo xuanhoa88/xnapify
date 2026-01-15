@@ -13,8 +13,8 @@
 import { createWorkerPool } from '../../worker';
 import { WebhookError } from '../errors';
 
-// Auto-load workers via webpack require.context (*.worker.js)
-const workersContext = require.context('./', false, /\.worker\.js$/);
+// Auto-load workers via require.context (*.worker.js or *.worker.ts)
+const workersContext = require.context('./', false, /\.worker\.(js|ts)$/);
 
 // Worker configuration (can be overridden by options)
 const DEFAULT_CONFIG = {

@@ -78,7 +78,7 @@ export function getTranslations(translationContext) {
  * @returns {Object} Frozen object mapping locale codes to { name, translation }
  */
 function getDefaultLocales() {
-  // Get translations from the translations directory
+  // Auto-load translations via require.context
   const translationsContext = getTranslations(
     require.context('./translations', false, /\.json$/i),
   );

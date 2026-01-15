@@ -152,7 +152,7 @@ function buildFactory(channelsMap, adaptersMap, baseOptions) {
    * Called automatically on process termination
    * @returns {Promise<void>}
    */
-  factory.closeAll = async function () {
+  factory.cleanup = async function () {
     console.info('🧹 Closing all queue channels...');
     for (const [name, channel] of channelsMap) {
       try {
@@ -182,31 +182,7 @@ export function createFactory(options = {}) {
     ...options,
   });
 
-  // Setup process lifecycle management for cleanup
-  let cleanupExecuted = false;
-
-  const performCleanup = async () => {
-    if (!cleanupExecuted) {
-      cleanupExecuted = true;
-      await factory.closeAll();
-    }
-  };
-
-  process.on('exit', () => {
-    // Note: async operations won't complete in 'exit' handler
-    // But we call it for consistency
-    performCleanup();
-  });
-
-  process.on('SIGINT', async () => {
-    await performCleanup();
-    process.exit(0);
-  });
-
-  process.on('SIGTERM', async () => {
-    await performCleanup();
-    process.exit(0);
-  });
+  // Register cleanup with global coordinator
 
   return factory;
 }

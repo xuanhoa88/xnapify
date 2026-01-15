@@ -33,9 +33,14 @@ const APP_PROVIDERS = new Set([
 ]);
 
 /**
- * Load and validate factory from webpack require.context module
+ * Load and validate a factory function from webpack require.context
+ *
+ * @param {Function} context - Webpack require.context function
+ * @param {string} path - Module path to load
+ * @param {string} type - Type descriptor for logging ('model' or 'router')
+ * @returns {Function|null} Factory function or null if invalid
  */
-function loadFactory(context, path, type) {
+function loadModuleFactory(context, path, type) {
   try {
     const mod = context(path);
     // eslint-disable-next-line no-underscore-dangle
@@ -58,20 +63,8 @@ function loadFactory(context, path, type) {
     return factory;
   } catch (error) {
     console.error(`❌ Failed to load ${type} "${path}":`, error.message);
-    console.error(error.stack);
     return null;
   }
-}
-
-/**
- * Process files discovered by webpack require.context
- */
-function processFiles(context, typeName, processor) {
-  const paths = context.keys();
-  console.info(
-    `🔍 Discovering ${typeName}... Found ${paths.length} ${typeName}`,
-  );
-  return processor(context, paths);
 }
 
 /**
@@ -81,139 +74,105 @@ function processFiles(context, typeName, processor) {
  * First discovers and initializes models, then mounts module routers.
  * Each module receives dependencies via dependency injection.
  *
- * @param {Object} app - Express app instance (for accessing app-level settings)
- * @returns {Object} Discovery result
- * @returns {Object} .models - All discovered models from all modules
- * @returns {Router} .apiRoutes - Express router with all module routes mounted
+ * @param {import('express').Express} app - Express app instance
+ * @returns {Promise<{apiModels: Object, apiRoutes: Router}>} Discovery result
  */
 async function discoverModules(app) {
-  // Step 1: Discover and initialize models
-  const modelsContext = require.context(
-    './modules',
-    true,
-    /^\.\/[^/]+\/models\/index\.js$/,
+  const guardedApp = createProviderGuard(app);
+  const context = require.context('./modules', true, /\/index\.(js|ts)$/);
+  const modulePaths = context.keys();
+
+  // Matches: ./users/models/index.js or ./users/models/index.ts
+  const modelPaths = modulePaths.filter(p =>
+    /^\.\/(\w+)\/models\/index\.(js|ts)$/.test(p),
   );
-  const models = await processFiles(
-    modelsContext,
-    'models',
-    async (ctx, paths) => {
-      const allModels = {};
-      let successCount = 0;
-
-      // Process all model factories in parallel (supports both sync and async)
-      await Promise.all(
-        paths.map(async path => {
-          console.info(`📦 Loading models: ${path}`);
-
-          const factory = loadFactory(ctx, path, 'models');
-          if (!factory) return;
-
-          try {
-            // Support both sync and async factories
-            const modelSet = await Promise.resolve(factory(engines.db, app));
-
-            if (!modelSet || typeof modelSet !== 'object') {
-              console.warn(
-                `⚠️ Models factory did not return an object: ${path}`,
-              );
-              return;
-            }
-
-            const modelCount = Object.keys(modelSet).length;
-            if (modelCount === 0) {
-              console.warn(`⚠️ Models factory returned empty object: ${path}`);
-              return;
-            }
-
-            Object.assign(allModels, modelSet);
-            successCount++;
-            console.info(
-              `✅ Models initialized: ${path} (${modelCount} models)`,
-            );
-          } catch (error) {
-            console.error(
-              `❌ Failed to initialize models "${path}":`,
-              error.message,
-            );
-            console.error(error.stack);
-          }
-        }),
-      );
-
-      console.info(
-        `✅ Model discovery complete. Initialized ${Object.keys(allModels).length} models from ${successCount}/${paths.length} modules`,
-      );
-
-      return allModels;
-    },
+  // Matches: ./users/index.js or ./users/index.ts
+  const routerPaths = modulePaths.filter(p =>
+    /^\.\/(\w+)\/index\.(js|ts)$/.test(p),
   );
 
-  // Step 2: Discover and mount API modules with models as dependency
-  const routesContext = require.context(
-    './modules',
-    true,
-    /^\.\/[^/]+\/index\.js$/,
-  );
-  const routes = await processFiles(
-    routesContext,
-    'modules',
-    async (ctx, paths) => {
-      const routes = Router();
-      let successCount = 0;
-
-      // Create app guard once for all modules (optimization)
-      const guardedApp = createProviderGuard(app);
-
-      // Process all module factories in parallel (supports both sync and async)
-      await Promise.all(
-        paths.map(async path => {
-          console.info(`📦 Loading module: ${path}`);
-
-          const factory = loadFactory(ctx, path, 'module');
-          if (!factory) return;
-
-          try {
-            // Support both sync and async factories
-            // Pass the shared guarded app to prevent modules from modifying critical dependencies
-            const moduleRouter = await Promise.resolve(
-              factory({ db: engines.db, models, Router }, guardedApp),
-            );
-
-            if (!moduleRouter) {
-              console.warn(
-                `⚠️ Module factory returned null/undefined: ${path}`,
-              );
-              return;
-            }
-
-            // Use duck typing instead of instanceof to avoid webpack module issues
-            if (typeof moduleRouter.use !== 'function') {
-              console.warn(`⚠️ Module did not return a Router: ${path}`);
-              return;
-            }
-
-            routes.use(moduleRouter);
-            successCount++;
-            console.info(`✅ Module mounted: ${path}`);
-          } catch (error) {
-            console.error(
-              `❌ Failed to mount module "${path}":`,
-              error.message,
-            );
-            console.error(error.stack);
-          }
-        }),
-      );
-
-      console.info(
-        `✅ Module discovery complete. Mounted ${successCount}/${paths.length} modules`,
-      );
-
-      return routes;
-    },
+  console.info(
+    `🔍 Discovered ${modelPaths.length} model(s), ${routerPaths.length} router(s)`,
   );
 
-  return { apiModels: models, apiRoutes: routes };
+  // Phase 1: Load all models sequentially to avoid race conditions
+  const apiModels = {};
+  const modelErrors = [];
+
+  for (const path of modelPaths) {
+    const factory = loadModuleFactory(context, path, 'model');
+    if (!factory) continue;
+
+    try {
+      const models = await factory(engines.db, guardedApp);
+
+      if (!models || typeof models !== 'object') {
+        console.warn(`⚠️ Model factory did not return an object: ${path}`);
+        continue;
+      }
+
+      const modelNames = Object.keys(models);
+      if (modelNames.length === 0) {
+        console.warn(`⚠️ Model factory returned empty object: ${path}`);
+        continue;
+      }
+
+      // Check for duplicate model names
+      const duplicates = modelNames.filter(name => name in apiModels);
+      if (duplicates.length > 0) {
+        console.warn(
+          `⚠️ Duplicate model name(s) from ${path}: ${duplicates.join(', ')}`,
+        );
+      }
+
+      Object.assign(apiModels, models);
+      console.info(`✅ Loaded ${modelNames.length} model(s) from ${path}`);
+    } catch (error) {
+      modelErrors.push({ path, error });
+      console.error(`❌ Failed to load models from "${path}":`, error.message);
+    }
+  }
+
+  console.info(
+    `📦 Models: ${Object.keys(apiModels).length} total, ${modelErrors.length} error(s)`,
+  );
+
+  // Phase 2: Load and mount all routers sequentially for predictable order
+  const apiRoutes = Router();
+  const routerErrors = [];
+  let mountedCount = 0;
+
+  for (const path of routerPaths) {
+    const factory = loadModuleFactory(context, path, 'router');
+    if (!factory) continue;
+
+    try {
+      const router = await factory({ Router }, guardedApp);
+
+      if (!router) {
+        console.warn(`⚠️ Router factory returned null/undefined: ${path}`);
+        continue;
+      }
+
+      // Duck typing check for Express Router
+      if (typeof router.use !== 'function') {
+        console.warn(`⚠️ Factory did not return a valid Router: ${path}`);
+        continue;
+      }
+
+      apiRoutes.use(router);
+      mountedCount++;
+    } catch (error) {
+      routerErrors.push({ path, error });
+      console.error(`❌ Failed to mount router "${path}":`, error.message);
+    }
+  }
+
+  console.info(
+    `🚀 Routers: ${mountedCount} mounted, ${routerErrors.length} error(s)`,
+  );
+
+  return { apiModels, apiRoutes };
 }
 
 /**

@@ -57,21 +57,6 @@ export function setupWorkerProcess(processFunction, expectedType, workerName) {
     }
   };
 
-  // Signal handlers
-  const sigtermHandler = () => {
-    console.log(
-      `${workerName} worker received SIGTERM, shutting down gracefully`,
-    );
-    process.exit(0);
-  };
-
-  const sigintHandler = () => {
-    console.log(
-      `${workerName} worker received SIGINT, shutting down gracefully`,
-    );
-    process.exit(0);
-  };
-
   const uncaughtHandler = error => {
     console.error(`${workerName} Worker uncaught exception:`, error);
     process.exit(1);
@@ -84,16 +69,12 @@ export function setupWorkerProcess(processFunction, expectedType, workerName) {
 
   // Register handlers
   process.on('message', messageHandler);
-  process.on('SIGTERM', sigtermHandler);
-  process.on('SIGINT', sigintHandler);
   process.on('uncaughtException', uncaughtHandler);
   process.on('unhandledRejection', unhandledHandler);
 
   // Store handlers for cleanup
   const handlers = {
     message: messageHandler,
-    SIGTERM: sigtermHandler,
-    SIGINT: sigintHandler,
     uncaughtException: uncaughtHandler,
     unhandledRejection: unhandledHandler,
   };
@@ -120,8 +101,6 @@ export function unregisterWorkerProcess(workerName) {
 
   // Remove all handlers
   process.off('message', handlers.message);
-  process.off('SIGTERM', handlers.SIGTERM);
-  process.off('SIGINT', handlers.SIGINT);
   process.off('uncaughtException', handlers.uncaughtException);
   process.off('unhandledRejection', handlers.unhandledRejection);
 

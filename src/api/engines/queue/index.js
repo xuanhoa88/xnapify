@@ -75,7 +75,7 @@
  * await queue.default.remove('zalo');
  *
  * // Close all channels (automatically called on process termination)
- * await queue.default.closeAll();
+ * await queue.default.cleanup();
  *
  * @example <caption>Integration with Schedule Engine</caption>
  * import schedule from 'src/api/engines/schedule';

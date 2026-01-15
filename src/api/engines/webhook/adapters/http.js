@@ -249,6 +249,7 @@ export class HttpWebhookAdapter {
    * @returns {Promise<number>} Number of deleted records (always 0)
    */
   async cleanup() {
+    console.info('🧹 Cleaning up expired HTTP webhook entries...');
     return 0;
   }
 

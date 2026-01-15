@@ -5,14 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Auto-load all engines from subdirectories using webpack require.context
- * Scans for ./engineName/index.js files at build time
- */
+// Auto-load engines via require.context
 const enginesContext = require.context(
-  './', // Base directory (current folder)
-  true, // Include subdirectories
-  /^\.\/[^/]+\/index\.js$/, // Regex: ./name/index.js only
+  './',
+  true,
+  /^\.\/[^/]+\/index\.(js|ts)$/,
 );
 
 /**
@@ -29,16 +26,13 @@ enginesContext.keys().forEach(modulePath => {
   engines[engineName] = enginesContext(modulePath);
 });
 
-// Re-export all engines as named exports for import compatibility
-// Supports: import { db, cache, email } from './engines'
-// Also supports: import * as engines from './engines'
-export const { db } = engines;
-export const { http } = engines;
-export const { fs } = engines;
-export const { auth } = engines;
-export const { cache } = engines;
-export const { email } = engines;
-export const { worker } = engines;
-export const { queue } = engines;
-export const { webhook } = engines;
-export const { schedule } = engines;
+// Automatically export all discovered engines as named exports
+// This allows: import { db, cache, email } from './engines'
+// And also: import * as engines from './engines'
+Object.keys(engines).forEach(engineName => {
+  // Use Object.defineProperty to create named exports dynamically
+  Object.defineProperty(exports, engineName, {
+    enumerable: true,
+    get: () => engines[engineName],
+  });
+});

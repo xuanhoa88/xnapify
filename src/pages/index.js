@@ -279,11 +279,12 @@ async function createPages(ctx) {
   return loadedPages.map(item => item.pageConfig);
 }
 
-/**
- * Load all page modules using require.context
- * This creates a webpack context that includes all index.js files in subdirectories
- */
-const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
+// Auto-load pages via require.context
+const pagesContext = require.context(
+  './',
+  true,
+  /^\.\/[^/]+\/index\.(jsx?|tsx?)$/,
+);
 
 /**
  * Create and configure the navigator with async page loading

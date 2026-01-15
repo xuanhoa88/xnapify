@@ -156,6 +156,7 @@ export default class MemoryCache {
    * @returns {number} Number of entries removed
    */
   cleanup() {
+    console.info('🧹 Cleaning up expired memory cache entries...');
     const now = Date.now();
     let removed = 0;
 

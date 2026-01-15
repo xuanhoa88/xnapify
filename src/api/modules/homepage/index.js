@@ -27,7 +27,7 @@ export default function homepageModule({ Router }, app) {
   const requireAuth = auth.middlewares.requireAuth();
 
   // Full path will be: /api/news (when mounted by API bootstrap)
-  router.use('/news', newsRoutes);
+  router.use('/news', newsRoutes({ Router }));
 
   // Full path will be: /api/activities (when mounted by API bootstrap)
   router.use(

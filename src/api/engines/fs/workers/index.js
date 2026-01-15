@@ -19,8 +19,8 @@
 import { createWorkerPool } from '../../worker';
 import { FilesystemWorkerError } from '../utils';
 
-// Auto-load workers via webpack require.context (*.worker.js)
-const workersContext = require.context('./', false, /\.worker\.js$/);
+// Auto-load workers via require.context (*.worker.js or *.worker.ts)
+const workersContext = require.context('./', false, /\.worker\.(js|ts)$/);
 
 // Create worker pool with filesystem-specific configuration
 const workerPool = createWorkerPool(workersContext, {

@@ -461,6 +461,7 @@ export class DatabaseWebhookAdapter {
    * @returns {Promise<number>} Number of deleted records
    */
   async cleanup(options = {}) {
+    console.info('🧹 Cleaning up expired database webhook entries...');
     // Validate input
     const validation = cleanupSchema.safeParse(options);
     if (!validation.success) {

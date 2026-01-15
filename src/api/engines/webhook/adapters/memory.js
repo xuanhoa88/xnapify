@@ -242,6 +242,7 @@ export class MemoryWebhookAdapter {
    * Cleanup old webhooks (mock implementation)
    */
   async cleanup(options = {}) {
+    console.info('🧹 Cleaning up expired memory webhook entries...');
     const { olderThan = 30 } = options;
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - olderThan);

@@ -339,6 +339,7 @@ export default class FileCache {
    * @returns {number} Number of entries removed
    */
   cleanup() {
+    console.info('🧹 Cleaning up expired file cache entries...');
     try {
       const files = this.getCacheFiles();
       const now = Date.now();

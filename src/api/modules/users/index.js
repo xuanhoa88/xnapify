@@ -13,15 +13,15 @@ import roleRoutes from './routes/admin/role.routes';
 import permissionRoutes from './routes/admin/permission.routes';
 import groupRoutes from './routes/admin/group.routes';
 
-// Auto-load migrations via webpack require.context
+// Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
   false,
-  /\.js$/,
+  /\.(js|ts)$/,
 );
 
-// Auto-load seeds via webpack require.context
-const seedsContext = require.context('./database/seeds', false, /\.js$/);
+// Auto-load seeds via require.context
+const seedsContext = require.context('./database/seeds', false, /\.(js|ts)$/);
 
 /**
  * User Module Factory

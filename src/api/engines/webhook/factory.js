@@ -432,51 +432,7 @@ class WebhookManager {
 export function createFactory(config = {}) {
   const manager = new WebhookManager(config);
 
-  // Setup process lifecycle management for cleanup
-  let cleanupExecuted = false;
-
-  const exitHandler = () => {
-    // Note: async operations won't complete in 'exit' handler
-    // But we call it for consistency
-    if (!cleanupExecuted) {
-      cleanupExecuted = true;
-      manager.cleanup();
-    }
-  };
-
-  const sigintHandler = async () => {
-    if (!cleanupExecuted) {
-      cleanupExecuted = true;
-      await manager.cleanup();
-    }
-    process.exit(0);
-  };
-
-  const sigtermHandler = async () => {
-    if (!cleanupExecuted) {
-      cleanupExecuted = true;
-      await manager.cleanup();
-    }
-    process.exit(0);
-  };
-
-  process.on('exit', exitHandler);
-  process.on('SIGINT', sigintHandler);
-  process.on('SIGTERM', sigtermHandler);
-
-  // Store handlers so they can be removed (for cleanup)
-  manager.cleanupHandlers = {
-    exit: exitHandler,
-    sigint: sigintHandler,
-    sigterm: sigtermHandler,
-  };
-
-  // Add method to remove handlers (useful for testing)
-  manager.removeCleanupHandlers = () => {
-    process.removeListener('exit', exitHandler);
-    process.removeListener('SIGINT', sigintHandler);
-    process.removeListener('SIGTERM', sigtermHandler);
-  };
+  // Register cleanup with global coordinator
 
   return manager;
 }

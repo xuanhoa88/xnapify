@@ -269,8 +269,8 @@ describe('Worker Engine', () => {
 
       expect(handlers).toBeDefined();
       expect(handlers).toHaveProperty('message');
-      expect(handlers).toHaveProperty('SIGTERM');
-      expect(handlers).toHaveProperty('SIGINT');
+      expect(handlers).toHaveProperty('uncaughtException');
+      expect(handlers).toHaveProperty('unhandledRejection');
 
       unregisterWorkerProcess('TestWorker');
 

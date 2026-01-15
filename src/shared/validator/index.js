@@ -9,7 +9,7 @@ import { z } from 'zod';
 import i18n, { addNamespace, getTranslations } from '../i18n';
 import { formatZodErrorToObject } from './formatter';
 
-// Register validator translations with the i18n system
+// Auto-load validator translations via require.context
 addNamespace(
   'zod',
   getTranslations(require.context('./translations', false, /\.json$/i)),

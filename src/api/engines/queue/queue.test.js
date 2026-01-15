@@ -22,7 +22,7 @@ describe('Queue Engine', () => {
   afterEach(async () => {
     // Cleanup after each test
     if (queue) {
-      await queue.closeAll();
+      await queue.cleanup();
     }
   });
 
@@ -161,19 +161,19 @@ describe('Queue Engine', () => {
       });
     });
 
-    describe('closeAll()', () => {
+    describe('cleanup()', () => {
       it('should close all channels', async () => {
         queue('channel-1');
         queue('channel-2');
         queue('channel-3');
 
-        await queue.closeAll();
+        await queue.cleanup();
 
         expect(queue.getChannelNames()).toHaveLength(0);
       });
 
-      it('should handle closeAll on empty queue', async () => {
-        await expect(queue.closeAll()).resolves.not.toThrow();
+      it('should handle cleanup on empty queue', async () => {
+        await expect(queue.cleanup()).resolves.not.toThrow();
       });
     });
 

@@ -8,8 +8,12 @@
 import AdminLayout from '../../components/Admin';
 import { isAuthenticated, setBreadcrumbs, addBreadcrumb } from '../../redux';
 
-// Lazy load children pages context
-const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
+// Auto-load admin pages via require.context
+const pagesContext = require.context(
+  './',
+  true,
+  /^\.\/[^/]+\/index\.(jsx?|tsx?)$/,
+);
 
 /**
  * Collects breadcrumbs from navigator's metadata and action result

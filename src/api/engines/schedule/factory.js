@@ -239,25 +239,7 @@ export function createFactory(config = {}) {
     schedule.start();
   }
 
-  // Setup process lifecycle management for cleanup
-  let cleanupExecuted = false;
-
-  const performCleanup = () => {
-    if (!cleanupExecuted) {
-      cleanupExecuted = true;
-      schedule.cleanup();
-    }
-  };
-
-  process.on('exit', performCleanup);
-  process.on('SIGINT', () => {
-    performCleanup();
-    process.exit(0);
-  });
-  process.on('SIGTERM', () => {
-    performCleanup();
-    process.exit(0);
-  });
+  // Register cleanup with global coordinator
 
   return schedule;
 }
