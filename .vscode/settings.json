@@ -38,7 +38,8 @@
     "**/.cache": true,
     "**/__snapshots__": true,
     "**/coverage": true,
-    "**/build": true
+    "**/build": true,
+    "**/release": true
   },
   // Language-specific settings
   "[css]": {

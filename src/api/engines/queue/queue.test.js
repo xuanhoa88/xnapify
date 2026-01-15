@@ -95,7 +95,7 @@ describe('Queue Engine', () => {
         expect(queue.has('non-existing')).toBe(false);
       });
 
-      it('should handle invalid input', () => {
+      it('should return false for invalid channel names', () => {
         expect(queue.has('')).toBe(false);
         expect(queue.has(null)).toBe(false);
       });
@@ -155,7 +155,7 @@ describe('Queue Engine', () => {
         expect(result).toBe(false);
       });
 
-      it('should handle invalid input', async () => {
+      it('should return false when removing invalid channel names', async () => {
         expect(await queue.remove('')).toBe(false);
         expect(await queue.remove(null)).toBe(false);
       });
@@ -314,7 +314,7 @@ describe('Queue Engine', () => {
         expect(job.data).toEqual({ message: 'Hello' });
       });
 
-      it('should handle invalid input', () => {
+      it('should return null for invalid event names', () => {
         expect(channel.emit('')).toBeNull();
         expect(channel.emit(null)).toBeNull();
       });
@@ -334,7 +334,7 @@ describe('Queue Engine', () => {
         expect(jobs).toHaveLength(3);
       });
 
-      it('should handle invalid input', () => {
+      it('should return empty array for invalid bulk input', () => {
         expect(channel.emitBulk(null)).toEqual([]);
         expect(channel.emitBulk('not-an-array')).toEqual([]);
       });

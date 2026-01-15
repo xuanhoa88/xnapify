@@ -37,9 +37,12 @@ module.exports = {
     '!src/**/__tests__/**',
     '!src/**/__mocks__/**',
     '!**/node_modules/**',
+    '!**/tools/**',
     '!**/vendor/**',
     '!**/coverage/**',
     '!**/build/**',
+    '!**/release/**',
+    '!**/out/**',
   ],
 
   /**
@@ -49,15 +52,10 @@ module.exports = {
 
   /**
    * An array of regexp pattern strings used to skip coverage collection.
+   * Note: Most exclusions are handled by collectCoverageFrom patterns.
+   * This only needs to exclude node_modules which is outside the src directory.
    */
-  coveragePathIgnorePatterns: [
-    '/node_modules/',
-    '/coverage/',
-    '/build/',
-    '/tools/',
-    '\\.test\\.(js|jsx)$',
-    '\\.spec\\.(js|jsx)$',
-  ],
+  coveragePathIgnorePatterns: ['/node_modules/'],
 
   /**
    * A list of reporter names that Jest uses when writing coverage reports.
@@ -102,11 +100,11 @@ module.exports = {
 
   /**
    * Global variables available in all test environments.
+   * Note: NODE_ENV is automatically set to 'test' by Jest.
    */
   globals: {
     __DEV__: true,
     __TEST__: true,
-    NODE_ENV: 'test',
   },
 
   /**
@@ -142,18 +140,14 @@ module.exports = {
   },
 
   /**
-   * An array of regexp pattern strings that are matched against all module paths
-   * before those paths are to be considered 'visible' to the module loader.
-   */
-  modulePathIgnorePatterns: ['<rootDir>/build/', '<rootDir>/coverage/'],
-
-  /**
    * The root directory that Jest should scan for tests and modules within.
    */
   rootDir: process.env.CWD || process.cwd(),
 
   /**
    * A list of paths to directories that Jest should use to search for files in.
+   * This limits Jest to only look in the src directory, automatically excluding
+   * tools, build, release, out, and coverage directories.
    */
   roots: ['<rootDir>/src'],
 
@@ -168,9 +162,11 @@ module.exports = {
    */
   testPathIgnorePatterns: [
     '/node_modules/',
-    '/build/',
-    '/coverage/',
     '/tools/',
+    '/build/',
+    '/release/',
+    '/out/',
+    '/coverage/',
   ],
 
   /**
@@ -185,11 +181,12 @@ module.exports = {
   /**
    * An array of regexp pattern strings that are matched against all source file paths
    * before transformation. If the file path matches any of the patterns, it will not be transformed.
+   *
+   * By default, Jest doesn't transform node_modules. However, some packages ship ES6+ code
+   * that needs to be transformed. The pattern below ignores all node_modules EXCEPT
+   * identity-obj-proxy (which needs transformation for CSS module mocking).
    */
-  transformIgnorePatterns: [
-    '/node_modules/(?!(identity-obj-proxy)/)',
-    '/node_modules/node-cron/',
-  ],
+  transformIgnorePatterns: ['/node_modules/(?!(identity-obj-proxy)/)'],
 
   /**
    * A list of paths to modules that run some code to configure or set up the testing
@@ -296,17 +293,26 @@ module.exports = {
 
   /**
    * Watch plugins to enhance the watch mode experience.
+   * - filename: Filter tests by file name pattern
+   * - testname: Filter tests by test name pattern
    */
-  // watchPlugins: [
-  //   'jest-watch-typeahead/filename',
-  //   'jest-watch-typeahead/testname',
-  // ],
+  watchPlugins: [
+    'jest-watch-typeahead/filename',
+    'jest-watch-typeahead/testname',
+  ],
 
   /**
    * An array of regexp pattern strings that are matched against all source file paths
    * before re-running tests in watch mode.
    */
-  watchPathIgnorePatterns: ['/node_modules/', '/build/', '/coverage/'],
+  watchPathIgnorePatterns: [
+    '/node_modules/',
+    '/tools/',
+    '/build/',
+    '/out/',
+    '/release/',
+    '/coverage/',
+  ],
 
   /**
    * Automatically clear mock calls and instances before every test.

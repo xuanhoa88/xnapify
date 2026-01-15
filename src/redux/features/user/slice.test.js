@@ -192,13 +192,13 @@ describe('[user] slice.js', () => {
   });
 
   describe('Login Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on login pending', () => {
       const state = reducer(undefined, login.pending('requestId', {}));
       expect(state.operations.auth.loading).toBe(true);
       expect(state.operations.auth.error).toBeNull();
     });
 
-    it('should set user data on fulfilled', () => {
+    it('should set user data on login fulfilled', () => {
       const user = { id: 1, email: 'test@example.com', display_name: 'Test' };
       const state = reducer(
         undefined,
@@ -209,7 +209,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.auth.error).toBeNull();
     });
 
-    it('should set error on rejected', () => {
+    it('should set error on login rejected', () => {
       const state = reducer(
         undefined,
         login.rejected(
@@ -225,12 +225,12 @@ describe('[user] slice.js', () => {
   });
 
   describe('Register Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on register pending', () => {
       const state = reducer(undefined, register.pending('requestId', {}));
       expect(state.operations.auth.loading).toBe(true);
     });
 
-    it('should set user data on fulfilled', () => {
+    it('should set user data on register fulfilled', () => {
       const user = { id: 2, email: 'new@example.com' };
       const state = reducer(
         undefined,
@@ -240,7 +240,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.auth.loading).toBe(false);
     });
 
-    it('should set error on rejected', () => {
+    it('should set error on register rejected', () => {
       const state = reducer(
         undefined,
         register.rejected(
@@ -273,7 +273,7 @@ describe('[user] slice.js', () => {
       };
     });
 
-    it('should set loading on pending', () => {
+    it('should set loading on logout pending', () => {
       const newState = reducer(state, logout.pending('requestId'));
       expect(newState.operations.auth.loading).toBe(true);
     });
@@ -294,12 +294,12 @@ describe('[user] slice.js', () => {
   });
 
   describe('Me Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on me pending', () => {
       const state = reducer(undefined, me.pending('requestId'));
       expect(state.operations.auth.loading).toBe(true);
     });
 
-    it('should set user data on fulfilled', () => {
+    it('should set user data on me fulfilled', () => {
       const user = { id: 1, email: 'test@example.com' };
       const state = reducer(undefined, me.fulfilled({ user }, 'requestId'));
       expect(state.data).toEqual(user);
@@ -323,7 +323,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.auth.error).toBeNull();
     });
 
-    it('should update user data on fulfilled', () => {
+    it('should update user data on refresh token fulfilled', () => {
       const user = { id: 1, email: 'test@example.com' };
       const state = reducer(
         undefined,
@@ -332,7 +332,7 @@ describe('[user] slice.js', () => {
       expect(state.data).toEqual(user);
     });
 
-    it('should set error on rejected', () => {
+    it('should set error on refresh token rejected', () => {
       const state = reducer(
         undefined,
         refreshToken.rejected(
@@ -347,7 +347,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Reset Password Request Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on reset password request pending', () => {
       const state = reducer(
         undefined,
         resetPasswordRequest.pending('requestId', {}),
@@ -364,7 +364,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.resetPassword.error).toBeNull();
     });
 
-    it('should set error on rejected', () => {
+    it('should set error on reset password request rejected', () => {
       const state = reducer(
         undefined,
         resetPasswordRequest.rejected(
@@ -379,7 +379,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Reset Password Confirmation Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on reset password confirmation pending', () => {
       const state = reducer(
         undefined,
         resetPasswordConfirmation.pending('requestId', {}),
@@ -397,7 +397,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Email Verification Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on email verification pending', () => {
       const state = reducer(
         undefined,
         emailVerification.pending('requestId', {}),
@@ -405,7 +405,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.emailVerification.loading).toBe(true);
     });
 
-    it('should update user data on fulfilled', () => {
+    it('should update user data on email verification fulfilled', () => {
       const user = { id: 1, email: 'test@example.com', email_verified: true };
       const state = reducer(
         undefined,
@@ -415,7 +415,7 @@ describe('[user] slice.js', () => {
       expect(state.operations.emailVerification.loading).toBe(false);
     });
 
-    it('should set error on rejected', () => {
+    it('should set error on email verification rejected', () => {
       const state = reducer(
         undefined,
         emailVerification.rejected(
@@ -430,7 +430,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Update Profile Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on update profile pending', () => {
       const state = reducer(
         undefined,
         updateUserProfile.pending('requestId', {}),
@@ -473,7 +473,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Upload Avatar Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on upload avatar pending', () => {
       const state = reducer(
         undefined,
         uploadUserAvatar.pending('requestId', {}),
@@ -506,7 +506,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Change Password Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on change password pending', () => {
       const state = reducer(
         undefined,
         changeUserPassword.pending('requestId', {}),
@@ -538,7 +538,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Delete User Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on delete user pending', () => {
       const state = reducer(undefined, deleteUser.pending('requestId'));
       expect(state.operations.delete.loading).toBe(true);
     });
@@ -566,7 +566,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Get Preferences Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on get preferences pending', () => {
       const state = reducer(undefined, getUserPreferences.pending('requestId'));
       expect(state.operations.preferences.loading).toBe(true);
     });
@@ -596,7 +596,7 @@ describe('[user] slice.js', () => {
   });
 
   describe('Update Preferences Thunk', () => {
-    it('should set loading on pending', () => {
+    it('should set loading on update preferences pending', () => {
       const state = reducer(
         undefined,
         updateUserPreferences.pending('requestId', {}),

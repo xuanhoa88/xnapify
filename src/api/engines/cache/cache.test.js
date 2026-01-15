@@ -117,7 +117,7 @@ describe('Cache Engine', () => {
         expect(cache.has('key')).toBe(true);
       });
 
-      it('should return false for non-existent key', () => {
+      it('should return false when checking non-existent key', () => {
         expect(cache.has('non-existent')).toBe(false);
       });
 
