@@ -9,7 +9,7 @@
 export * from './cookies';
 
 // OAuth utilities
-export * as oauth from './oauth';
+export * from './oauth';
 
 // Authentication middleware
-export * as middlewares from './middlewares';
+export * from './middlewares';

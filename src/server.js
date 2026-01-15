@@ -79,7 +79,15 @@ process.on('uncaughtException', err => {
 });
 
 function setupGracefulShutdown(httpServer, wsServer) {
+  let isShuttingDown = false;
+
   const shutdown = async signal => {
+    // Prevent multiple shutdown executions
+    if (isShuttingDown) {
+      return;
+    }
+    isShuttingDown = true;
+
     console.log(`\n${signal} received, shutting down...`);
 
     // Stop WebSocket server first

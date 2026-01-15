@@ -12,7 +12,7 @@
 
 import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { WebhookError } from '../errors';
-import { HttpWebhookAdapter } from '../adapters';
+import { HttpWebhookAdapter } from '../adapters/http';
 import { DEFAULTS, WEBHOOK_STATUS } from '../utils/constants';
 
 // Create HTTP adapter for worker

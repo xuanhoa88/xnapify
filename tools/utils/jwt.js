@@ -7,6 +7,7 @@
 
 const crypto = require('crypto');
 const path = require('path');
+const dotenvFlow = require('dotenv-flow');
 const { pathExists, readFile, writeFile } = require('./fs');
 const { logInfo, logWarn, logDebug } = require('./logger');
 
@@ -104,17 +105,22 @@ function updateEnvContent(lines, existingKeys, jwtConfig) {
  *    - Generates a new secure random JWT secret automatically
  * 4. Updates RSK_JWT_SECRET and RSK_JWT_EXPIRES_IN
  * 5. Writes back to .env file
+ * 6. For production builds (when buildDir is provided):
+ *    - Copies the .env file to the build directory
  *
  * @param {string} cwd - Current working directory
- * @param {string} nodeEnv - Environment name for logging ('development', 'production', etc.)
+ * @param {Object} options - Optional configuration
+ * @param {string} options.buildDir - Build directory path (for production builds)
  * @returns {Promise<void>}
  */
-async function generateJWT(cwd, nodeEnv = 'default') {
+async function generateJWT(cwd, buildDir) {
   try {
-    logInfo(`🔐 Checking JWT configuration for ${nodeEnv}...`);
+    logInfo(
+      `🔐 Checking JWT configuration for ${process.env.NODE_ENV || 'development'}...`,
+    );
 
     // Determine source and target paths
-    const envPath = path.resolve(cwd, '.env');
+    const envPath = path.resolve(buildDir || cwd, '.env');
     const envDefaultsPath = path.resolve(cwd, '.env.rsk');
 
     let envContent = '';
@@ -199,6 +205,9 @@ async function generateJWT(cwd, nodeEnv = 'default') {
     if (jwtSecret) {
       logInfo(`   ⏰ Token expires: ${jwtConfig.RSK_JWT_EXPIRES_IN}`);
     }
+
+    // Reload environment variables to pick up the newly generated JWT secret
+    dotenvFlow.config({ silent: true });
   } catch (error) {
     throw new Error(`Failed to generate JWT configuration: ${error.message}`);
   }

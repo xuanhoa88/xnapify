@@ -24,7 +24,7 @@ export function generateOAuthState(length = 32) {
  * @returns {string} returns.codeVerifier - Code verifier for PKCE
  * @returns {string} returns.codeChallenge - Code challenge for PKCE
  */
-export function generatePKCE() {
+export function generateOAuthPKCE() {
   const codeVerifier = crypto.randomBytes(32).toString('base64url');
   const codeChallenge = crypto
     .createHash('sha256')
@@ -50,7 +50,7 @@ export function generatePKCE() {
  * @param {Object} [config.additionalParams] - Additional parameters
  * @returns {string} Authorization URL
  */
-export function buildAuthUrl(config) {
+export function buildOAuthUrl(config) {
   const {
     authUrl,
     clientId,

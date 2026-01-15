@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const dotenvFlow = require('dotenv-flow');
 const path = require('path');
 const webpack = require('webpack');
 const config = require('../config');
@@ -88,11 +87,8 @@ async function copyFiles() {
       logDebug('Copied public directory');
     }
 
-    // 4. Generate JWT and reload environment
-    await generateJWT(config.CWD, 'production');
-
-    // Reload environment variables to pick up the newly generated JWT secret
-    dotenvFlow.config({ silent: true });
+    // 4. Generate JWT and copy .env to build directory
+    await generateJWT(config.CWD, config.BUILD_DIR);
 
     logInfo('✅ Static files copied');
   } catch (error) {

@@ -23,16 +23,13 @@ export default function homepageModule({ Router }, app) {
   const webhook = app.get('webhook');
   const router = Router();
 
-  // Create requireAuth middleware
-  const requireAuth = auth.middlewares.requireAuth();
-
   // Full path will be: /api/news (when mounted by API bootstrap)
   router.use('/news', newsRoutes({ Router }));
 
   // Full path will be: /api/activities (when mounted by API bootstrap)
   router.use(
     '/activities',
-    requireAuth,
+    auth.requireAuthMiddleware(),
     webhook.createControllers(webhook.default),
   );
 

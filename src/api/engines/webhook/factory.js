@@ -6,11 +6,9 @@
  */
 
 import { z } from 'zod';
-import {
-  HttpWebhookAdapter,
-  MemoryWebhookAdapter,
-  DatabaseWebhookAdapter,
-} from './adapters';
+import { HttpWebhookAdapter } from './adapters/http';
+import { MemoryWebhookAdapter } from './adapters/memory';
+import { DatabaseWebhookAdapter } from './adapters/database';
 import { WebhookError, WebhookValidationError } from './errors';
 import { DEFAULTS, WEBHOOK_STATUS } from './utils/constants';
 import workerPool, {

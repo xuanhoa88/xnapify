@@ -420,10 +420,10 @@ export default async function main(app, config = {}) {
     const jwt = app.get('jwt');
     if (jwt) {
       // Auto-refresh token if expiring (Dual-Token Strategy) - runs first
-      apiMiddlewares.push(engines.auth.middlewares.refreshToken());
+      apiMiddlewares.push(engines.auth.refreshTokenMiddleware());
 
       // Populate req.user from JWT cookies if present
-      apiMiddlewares.push(engines.auth.middlewares.optionalAuth());
+      apiMiddlewares.push(engines.auth.optionalAuthMiddleware());
     }
 
     // Mount API routes with middleware stack

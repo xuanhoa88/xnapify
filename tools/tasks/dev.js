@@ -7,7 +7,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const dotenvFlow = require('dotenv-flow');
 const express = require('express');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
@@ -449,10 +448,7 @@ async function main() {
   await clean();
 
   // Generate JWT
-  await generateJWT(config.CWD, 'development');
-
-  // This ensures the newly generated JWT secret is available in process.env
-  dotenvFlow.config({ silent: true });
+  await generateJWT(config.CWD);
 
   // Get port and host from environment variables
   const port = parseInt(process.env.RSK_PORT, 10) || 1337;

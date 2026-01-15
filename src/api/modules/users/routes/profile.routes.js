@@ -27,7 +27,7 @@ export default function profileRoutes(deps, userMiddlewares, app) {
   const fs = app.get('fs');
 
   // Create requireAuth middleware
-  const requireAuth = auth.middlewares.requireAuth();
+  const requireAuth = auth.requireAuthMiddleware();
 
   // Create upload middleware for avatar
   const avatarUpload = fs.default.useUploadMiddleware({

@@ -65,7 +65,7 @@ function extractToken(req, options = {}) {
  * @param {Object} [options] - Middleware options
  * @returns {Function} Express middleware
  */
-export function requireAuth(options = {}) {
+export function requireAuthMiddleware(options = {}) {
   const {
     tokenType = 'access',
     sources = ['cookie', 'header'],
@@ -125,7 +125,7 @@ export function requireAuth(options = {}) {
  * @param {Object} [options] - Middleware options
  * @returns {Function} Express middleware
  */
-export function optionalAuth(options = {}) {
+export function optionalAuthMiddleware(options = {}) {
   const {
     tokenType = 'access',
     sources = ['cookie', 'header'],
@@ -167,7 +167,7 @@ export function optionalAuth(options = {}) {
  * @param {Object} [options] - Refresh options
  * @returns {Function} Express middleware
  */
-export function refreshToken(options = {}) {
+export function refreshTokenMiddleware(options = {}) {
   const {
     refreshThreshold = 5 * 60, // 5 minutes in seconds
     autoRefresh = true,

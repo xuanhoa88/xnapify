@@ -12,7 +12,7 @@
 
 import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { WebhookError } from '../errors';
-import { DatabaseWebhookAdapter } from '../adapters';
+import { DatabaseWebhookAdapter } from '../adapters/database';
 
 // Database adapter instance
 let dbAdapter = null;
