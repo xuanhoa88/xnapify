@@ -5,13 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
-import { merge } from 'webpack-merge';
-import nodeExternals from 'webpack-node-externals';
-import TerserPlugin from 'terser-webpack-plugin';
-import config from '../config';
-import { isVerbose } from '../lib/logger';
-import {
+const path = require('path');
+const webpack = require('webpack');
+const { merge } = require('webpack-merge');
+const nodeExternals = require('webpack-node-externals');
+const TerserPlugin = require('terser-webpack-plugin');
+const config = require('../config');
+const { isVerbose } = require('../utils/logger');
+const {
   createBaseConfig,
   createCSSRule,
   createDefinePluginConfig,
@@ -20,8 +21,8 @@ import {
   reFont,
   reSvg,
   isDebug,
-} from './base.config';
-import { createDotenvDefinitions } from './dotenv.plugin';
+} = require('./base.config');
+const { createDotenvDefinitions } = require('./dotenv.plugin');
 
 const verbose = isVerbose(); // Cache verbose check
 
@@ -35,13 +36,13 @@ const verbose = isVerbose(); // Cache verbose check
 // output.filename: '[name].js'
 // entry.server: [...]
 // Result: build/server.js (require without extension)
-export const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
+const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
 
 /**
  * Configuration for the server-side bundle (server.js)
  * Targets Node.js environment with CommonJS output
  */
-export default merge(createBaseConfig(), {
+const webpackServerConfig = merge(createBaseConfig(), {
   // Configuration name for multi-compiler mode (used in webpack logs)
   name: 'server',
 
@@ -131,6 +132,18 @@ export default merge(createBaseConfig(), {
       ...createDotenvDefinitions({ prefix: 'RSK_', verbose }),
     }),
 
+    // Inject source-map-support at the top of the bundle (development only)
+    // This provides better stack traces for debugging without requiring manual imports
+    ...(isDebug
+      ? [
+          new webpack.BannerPlugin({
+            banner: 'require("source-map-support").install();',
+            raw: true,
+            entryOnly: false,
+          }),
+        ]
+      : []),
+
     // Note: Worker files are now imported directly via require.context
     // No separate bundling needed since they run in the same process
   ].filter(Boolean),
@@ -144,3 +157,8 @@ export default merge(createBaseConfig(), {
     global: false,
   },
 });
+
+module.exports = {
+  webpackServerConfig,
+  SERVER_BUNDLE_PATH,
+};

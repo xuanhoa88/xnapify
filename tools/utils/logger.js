@@ -45,14 +45,7 @@ function determineLogLevel() {
 }
 
 // Cache the log level at startup (it doesn't change during execution)
-export const CURRENT_LOG_LEVEL = determineLogLevel();
-
-/**
- * Get the current logging level
- */
-export function getLogLevel() {
-  return CURRENT_LOG_LEVEL;
-}
+const CURRENT_LOG_LEVEL = determineLogLevel();
 
 /**
  * Check if a log level should be shown
@@ -61,18 +54,18 @@ function shouldLog(level) {
   return LOG_LEVELS[level] <= LOG_LEVELS[CURRENT_LOG_LEVEL];
 }
 
-export function isSilent() {
+function isSilent() {
   return CURRENT_LOG_LEVEL === 'silent';
 }
 
-export function isVerbose() {
+function isVerbose() {
   return CURRENT_LOG_LEVEL === 'verbose' || CURRENT_LOG_LEVEL === 'debug';
 }
 
 /**
  * Log error messages (always shown unless silent)
  */
-export function logError(message, ...args) {
+function logError(message, ...args) {
   if (shouldLog('error')) {
     console.error(message, ...args);
   }
@@ -81,7 +74,7 @@ export function logError(message, ...args) {
 /**
  * Log warning messages
  */
-export function logWarn(message, ...args) {
+function logWarn(message, ...args) {
   if (shouldLog('warn')) {
     console.warn(message, ...args);
   }
@@ -90,7 +83,7 @@ export function logWarn(message, ...args) {
 /**
  * Log info messages
  */
-export function logInfo(message, ...args) {
+function logInfo(message, ...args) {
   if (shouldLog('info')) {
     console.info(message, ...args);
   }
@@ -99,7 +92,7 @@ export function logInfo(message, ...args) {
 /**
  * Log verbose messages
  */
-export function logVerbose(message, ...args) {
+function logVerbose(message, ...args) {
   if (shouldLog('verbose')) {
     console.info(message, ...args);
   }
@@ -108,7 +101,7 @@ export function logVerbose(message, ...args) {
 /**
  * Log debug messages
  */
-export function logDebug(message, ...args) {
+function logDebug(message, ...args) {
   if (shouldLog('debug')) {
     console.info(message, ...args);
   }
@@ -117,7 +110,7 @@ export function logDebug(message, ...args) {
 /**
  * Format bytes to human-readable format
  */
-export function formatBytes(bytes) {
+function formatBytes(bytes) {
   if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
@@ -128,10 +121,22 @@ export function formatBytes(bytes) {
 /**
  * Format duration in human-readable format
  */
-export function formatDuration(ms) {
+function formatDuration(ms) {
   if (ms < 1000) return `${Math.round(ms)}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   const minutes = Math.floor(ms / 60000);
   const seconds = Math.round((ms % 60000) / 1000);
   return `${minutes}m ${seconds}s`;
 }
+
+module.exports = {
+  isSilent,
+  isVerbose,
+  logError,
+  logWarn,
+  logInfo,
+  logVerbose,
+  logDebug,
+  formatBytes,
+  formatDuration,
+};

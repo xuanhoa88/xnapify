@@ -7,15 +7,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
-import config from '../config';
-import {
-  BuildError,
-  logDetailedError,
-  withFileSystemRetry,
-} from '../lib/errorHandler';
-import { cleanDir, getFileInfo, readDir } from '../lib/fs';
-import {
+const path = require('path');
+const config = require('../config');
+const { withRetryFileSystem } = require('../utils/retry');
+const { BuildError, logDetailedError } = require('../utils/error');
+const { cleanDir, getFileInfo, readDir } = require('../utils/fs');
+const {
   formatBytes,
   formatDuration,
   isVerbose,
@@ -23,7 +20,7 @@ import {
   logInfo,
   logVerbose,
   logWarn,
-} from '../lib/logger';
+} = require('../utils/logger');
 
 // Enhanced state management
 const state = {
@@ -143,50 +140,39 @@ async function enhancedCleanDir(targetPath, options = {}) {
   try {
     logDebug(`Cleaning directory: ${targetPath}`);
 
-    // Check if this is a glob pattern (contains *, ?, [, etc.)
-    const isGlobPattern = /[*?[]/.test(targetPath);
-
-    // Initialize variables outside the if block for proper scoping
-    let pathInfo = null;
-    let sizeInfo = { totalSize: 0, fileCount: 0, dirCount: 0 };
-
-    // For glob patterns, skip existence check and let rimraf handle it
-    if (!isGlobPattern) {
-      pathInfo = await getFileInfo(targetPath);
-      if (!pathInfo.exists) {
-        logDebug(`Path does not exist: ${targetPath}`);
-        return { skipped: true, reason: 'Path does not exist' };
-      }
-
-      // Check if path should be preserved
-      const preserveCheck = shouldPreservePath(targetPath, pathInfo, {
-        preserveGit,
-        maxAge,
-      });
-      if (preserveCheck.preserve) {
-        state.preservedPaths.add(targetPath);
-        // eslint-disable-next-line no-plusplus
-        state.stats.preservedItems++;
-        logDebug(`Preserved ${targetPath}: ${preserveCheck.reason}`);
-        return { preserved: true, reason: preserveCheck.reason };
-      }
-
-      // Calculate size before deletion for statistics
-      if (pathInfo.isDirectory) {
-        sizeInfo = await calculateDirectorySize(targetPath);
-        state.stats.totalDirectories += sizeInfo.dirCount;
-        state.stats.totalFiles += sizeInfo.fileCount;
-      } else {
-        sizeInfo.totalSize = pathInfo.size;
-        // eslint-disable-next-line no-plusplus
-        state.stats.totalFiles++;
-      }
-
-      state.stats.totalSize += sizeInfo.totalSize;
-    } else {
-      // For glob patterns, we can't calculate size beforehand
-      logDebug(`Using glob pattern: ${targetPath}`);
+    // Get path info
+    const pathInfo = await getFileInfo(targetPath);
+    if (!pathInfo.exists) {
+      logDebug(`Path does not exist: ${targetPath}`);
+      return { skipped: true, reason: 'Path does not exist' };
     }
+
+    // Check if path should be preserved
+    const preserveCheck = shouldPreservePath(targetPath, pathInfo, {
+      preserveGit,
+      maxAge,
+    });
+    if (preserveCheck.preserve) {
+      state.preservedPaths.add(targetPath);
+      // eslint-disable-next-line no-plusplus
+      state.stats.preservedItems++;
+      logDebug(`Preserved ${targetPath}: ${preserveCheck.reason}`);
+      return { preserved: true, reason: preserveCheck.reason };
+    }
+
+    // Calculate size before deletion for statistics
+    let sizeInfo = { totalSize: 0, fileCount: 0, dirCount: 0 };
+    if (pathInfo.isDirectory) {
+      sizeInfo = await calculateDirectorySize(targetPath);
+      state.stats.totalDirectories += sizeInfo.dirCount;
+      state.stats.totalFiles += sizeInfo.fileCount;
+    } else {
+      sizeInfo.totalSize = pathInfo.size;
+      // eslint-disable-next-line no-plusplus
+      state.stats.totalFiles++;
+    }
+
+    state.stats.totalSize += sizeInfo.totalSize;
 
     // Perform cleaning (or dry run)
     if (isDryRun) {
@@ -198,25 +184,20 @@ async function enhancedCleanDir(targetPath, options = {}) {
       return { dryRun: true, size: sizeInfo.totalSize, ...sizeInfo };
     }
 
-    await cleanDir(targetPath, {
-      nosort: true,
-      dot: true,
-      ...cleanOptions,
-    });
+    await cleanDir(targetPath, cleanOptions);
 
     const duration = Date.now() - startTime;
     state.cleanedPaths.add(targetPath);
     state.stats.freedSpace += sizeInfo.totalSize;
 
     // Update stats based on what was cleaned
-    if (pathInfo && pathInfo.isDirectory) {
+    if (pathInfo.isDirectory) {
       // eslint-disable-next-line no-plusplus
       state.stats.deletedDirectories++;
-    } else if (pathInfo && pathInfo.isFile) {
+    } else if (pathInfo.isFile) {
       // eslint-disable-next-line no-plusplus
       state.stats.deletedFiles++;
     }
-    // For glob patterns (pathInfo is null), stats are already updated from sizeInfo
 
     logVerbose(
       `Cleaned ${targetPath} (${formatBytes(
@@ -272,7 +253,7 @@ function getCleanStats() {
 /**
  * Enhanced clean operation with comprehensive error handling and performance monitoring
  */
-export default async function main() {
+async function main() {
   state.stats.startTime = new Date();
 
   // Deep clean is enabled by default
@@ -323,6 +304,14 @@ export default async function main() {
         description: 'Remove temporary files and directories',
         condition: () => enableDeepClean,
       },
+      {
+        name: 'Test coverage directory',
+        path: path.resolve(config.CWD, 'coverage'),
+        priority: 4,
+        options: {},
+        description: 'Remove test coverage directory',
+        condition: () => enableDeepClean,
+      },
     ];
 
     // Filter targets based on conditions
@@ -345,7 +334,7 @@ export default async function main() {
         logDebug(`Starting: ${target.name} (${target.path})`);
 
         // eslint-disable-next-line no-await-in-loop
-        const result = await withFileSystemRetry(
+        const result = await withRetryFileSystem(
           () =>
             enhancedCleanDir(target.path, {
               ...target.options,
@@ -502,3 +491,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

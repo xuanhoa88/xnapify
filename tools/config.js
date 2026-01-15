@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
+const path = require('path');
 
 // Get environment variable with default fallback
 const env = (key, defaultValue) => {
@@ -37,7 +37,7 @@ const APP_DIR = getDirFromEnv('APP_DIR', 'src');
 const PUBLIC_DIR = getDirFromEnv('PUBLIC_DIR', 'public');
 const NODE_MODULES_DIR = getDirFromEnv('NODE_MODULES_DIR', 'node_modules');
 
-export default {
+module.exports = {
   // Helpers
   env,
   resolve,

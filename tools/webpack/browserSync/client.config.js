@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { logInfo, logWarn, logError, logDebug } from '../../lib/logger';
+const { logInfo, logWarn, logError, logDebug } = require('../../utils/logger');
 
 // Configuration
 const CONFIG = Object.freeze({

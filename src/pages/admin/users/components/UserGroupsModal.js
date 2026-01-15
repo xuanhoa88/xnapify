@@ -12,6 +12,7 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -291,7 +292,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
 UserGroupsModal.displayName = 'UserGroupsModal';
 
 UserGroupsModal.propTypes = {
-  onSuccess: require('prop-types').func,
+  onSuccess: PropTypes.func,
 };
 
 export default UserGroupsModal;

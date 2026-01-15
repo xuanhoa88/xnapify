@@ -5,20 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fs from 'fs';
-import path from 'path';
-import { performance } from 'perf_hooks';
-import webpack from 'webpack';
-import pkg from '../../package.json';
-import config from '../config';
-import {
+const path = require('path');
+const webpack = require('webpack');
+const config = require('../config');
+const { withBuildRetry } = require('../utils/retry');
+const {
   BuildError,
   logDetailedError,
   setupGracefulShutdown,
-  withBuildRetry,
-} from '../lib/errorHandler';
-import { copyDir, copyFile, writeFile } from '../lib/fs';
-import {
+} = require('../utils/error');
+const {
+  copyDir,
+  copyFile,
+  ensureDir,
+  pathExists,
+  readFile,
+  writeFile,
+} = require('../utils/fs');
+const {
   formatBytes,
   formatDuration,
   isSilent,
@@ -27,11 +31,10 @@ import {
   logInfo,
   logVerbose,
   logWarn,
-} from '../lib/logger';
-import { webpackClientConfig, webpackServerConfig } from '../webpack';
-import clean from './clean';
-import messages from './i18n';
-import generateJWT from './jwt';
+} = require('../utils/logger');
+const { webpackClientConfig, webpackServerConfig } = require('../webpack');
+const clean = require('./clean');
+const generateJWT = require('./jwt');
 
 // Build configuration
 const BUNDLE_REPORT_PATH = config.env(
@@ -39,21 +42,7 @@ const BUNDLE_REPORT_PATH = config.env(
   path.join(config.BUILD_DIR, 'bundle-report.json'),
 );
 const BUILD_GENERATE_REPORT = config.env('BUILD_REPORT') !== 'false';
-
-/**
- * Generate package.json for build directory
- * Contains only engines and dependencies - no scripts needed
- * Users run the server directly with: node server.js
- */
-function generateBuildPackageJson() {
-  const buildPackage = {
-    private: true,
-    engines: pkg.engines,
-    dependencies: pkg.dependencies,
-  };
-
-  return JSON.stringify(buildPackage, null, 2);
-}
+const BUILD_TIMESTAMP = Date.now();
 
 /**
  * Copy static files to build directory
@@ -64,35 +53,44 @@ async function copyFiles() {
 
   try {
     // 1. Generate package.json
-    const packageJson = generateBuildPackageJson();
-    await writeFile(path.join(config.BUILD_DIR, 'package.json'), packageJson);
+    const manifest = await readFile(
+      path.join(config.CWD, 'package.json'),
+      'utf-8',
+    );
+    const pkg = JSON.parse(manifest);
+    await writeFile(
+      path.join(config.BUILD_DIR, 'package.json'),
+      JSON.stringify(
+        {
+          private: true,
+          name: pkg.name || `rsk-${BUILD_TIMESTAMP}`,
+          version: pkg.version || `0.0.1-${BUILD_TIMESTAMP}`,
+          engines: pkg.engines,
+          dependencies: pkg.dependencies,
+        },
+        null,
+        2,
+      ),
+    );
     logDebug('Generated package.json');
 
     // 2. Copy LICENSE.txt if it exists
-    if (fs.existsSync('LICENSE.txt')) {
-      await copyFile('LICENSE.txt', path.join(config.BUILD_DIR, 'LICENSE.txt'));
+    const licensePath = path.join(config.CWD, 'LICENSE.txt');
+    if (await pathExists(licensePath)) {
+      await copyFile(licensePath, path.join(config.BUILD_DIR, 'LICENSE.txt'));
       logDebug('Copied LICENSE.txt');
     }
 
     // 3. Copy public directory if it exists
-    if (fs.existsSync(config.PUBLIC_DIR)) {
+    if (await pathExists(config.PUBLIC_DIR)) {
       await copyDir(config.PUBLIC_DIR, path.join(config.BUILD_DIR, 'public'));
       logDebug('Copied public directory');
     }
 
-    // 4. Copy i18n translations if they exist
-    const i18nSource = path.join(config.APP_DIR, 'i18n', 'translations');
-    if (fs.existsSync(i18nSource)) {
-      await copyDir(
-        i18nSource,
-        path.join(config.BUILD_DIR, 'i18n', 'translations'),
-      );
-      logDebug('Copied i18n translations');
-    }
-
-    // 5. Copy .env.production
-    if (fs.existsSync('.env.production')) {
-      await copyFile('.env.production', path.join(config.BUILD_DIR, '.env'));
+    // 4. Copy .env.production
+    const envPath = path.join(config.CWD, '.env.production');
+    if (await pathExists(envPath)) {
+      await copyFile(envPath, path.join(config.BUILD_DIR, '.env'));
       logDebug('Copied .env.production');
     }
 
@@ -107,12 +105,12 @@ async function copyFiles() {
 /**
  * Validate build prerequisites
  */
-function validatePrerequisites() {
-  if (!fs.existsSync(config.APP_DIR)) {
+async function validatePrerequisites() {
+  if (!(await pathExists(config.APP_DIR))) {
     throw new BuildError('src directory not found');
   }
 
-  if (!fs.existsSync(config.NODE_MODULES_DIR)) {
+  if (!(await pathExists(config.NODE_MODULES_DIR))) {
     throw new BuildError('node_modules not found - run npm install');
   }
 
@@ -171,14 +169,14 @@ function analyzeStats(stats) {
  * Generate bundle report
  * Saves comprehensive webpack stats to file for analysis
  */
-function generateBundleReport(analysis, duration) {
+async function generateBundleReport(analysis, duration) {
   if (!config.bundleAnalyze && !BUILD_GENERATE_REPORT) {
     return;
   }
 
   // Create comprehensive report using webpack's built-in stats
   const report = {
-    timestamp: new Date().toISOString(),
+    timestamp: new Date(BUILD_TIMESTAMP).toISOString(),
     duration,
     webpack: {
       version: webpack.version,
@@ -207,11 +205,8 @@ function generateBundleReport(analysis, duration) {
   // Save report
   if (BUNDLE_REPORT_PATH) {
     try {
-      const reportDir = path.dirname(BUNDLE_REPORT_PATH);
-      if (!fs.existsSync(reportDir)) {
-        fs.mkdirSync(reportDir, { recursive: true });
-      }
-      fs.writeFileSync(BUNDLE_REPORT_PATH, JSON.stringify(report, null, 2));
+      await ensureDir(path.dirname(BUNDLE_REPORT_PATH));
+      await writeFile(BUNDLE_REPORT_PATH, JSON.stringify(report, null, 2));
       logDebug(`📄 Bundle report saved to ${BUNDLE_REPORT_PATH}`);
       logDebug(`   Report includes full webpack stats for analysis`);
     } catch (error) {
@@ -283,7 +278,7 @@ function createBundle() {
 
     const compiler = webpack([webpackClientConfig, webpackServerConfig]);
 
-    compiler.run((err, stats) => {
+    compiler.run(async (err, stats) => {
       const duration = Date.now() - startTime;
 
       // Handle errors
@@ -315,7 +310,7 @@ function createBundle() {
       // Analyze and report
       const analysis = analyzeStats(stats);
       logBundleResults(analysis, duration);
-      generateBundleReport(analysis, duration);
+      await generateBundleReport(analysis, duration);
 
       // Close and resolve
       compiler.close(closeErr => {
@@ -332,7 +327,7 @@ function createBundle() {
  * Execute a build step with timing and error handling
  */
 async function executeStep(step, index, total, silent) {
-  const start = performance.now();
+  const start = Date.now();
 
   if (!silent) {
     logInfo(`[${index + 1}/${total}] ${step.description}...`);
@@ -342,13 +337,13 @@ async function executeStep(step, index, total, silent) {
     // Execute the step's task function
     await step.task();
 
-    const duration = performance.now() - start;
+    const duration = Date.now() - start;
 
     if (isVerbose()) {
       logInfo(`   ${step.name} completed (${formatDuration(duration)})`);
     }
   } catch (error) {
-    const duration = performance.now() - start;
+    const duration = Date.now() - start;
     throw new BuildError(`Step '${step.name}' failed: ${error.message}`, {
       step: step.name,
       duration,
@@ -361,7 +356,7 @@ async function executeStep(step, index, total, silent) {
  * Compiles the project from source files into a distributable
  * format and copies it to the output (build) folder.
  */
-export default async function main() {
+async function main() {
   const startTime = Date.now();
   const silent = isSilent(); // Cache silent check
 
@@ -371,7 +366,7 @@ export default async function main() {
 
   try {
     // Validate prerequisites
-    validatePrerequisites();
+    await validatePrerequisites();
 
     // Setup graceful shutdown
     setupGracefulShutdown(() => {
@@ -392,11 +387,6 @@ export default async function main() {
         name: 'generate:jwt',
         task: () => generateJWT('production'),
         description: 'Generating JWT options',
-      },
-      {
-        name: 'messages',
-        task: messages,
-        description: 'Extracting i18n messages',
       },
       {
         name: 'copy',
@@ -510,3 +500,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

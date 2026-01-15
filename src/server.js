@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import 'source-map-support/register';
 import 'url-polyfill';
 import 'dotenv-flow/config';
 import path from 'path';
@@ -16,7 +15,6 @@ import rateLimit from 'express-rate-limit';
 import createProxy from 'express-http-proxy';
 import expressRequestLanguage from 'express-request-language';
 import { ChunkExtractor } from '@loadable/server';
-import Youch from 'youch';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
@@ -44,7 +42,7 @@ const config = Object.freeze({
   nodeEnv,
 
   // Server Configuration
-  port: parseInt(process.env.RSK_PORT, 10) || 3000,
+  port: parseInt(process.env.RSK_PORT, 10) || 1337,
   host: process.env.RSK_HOST || '0.0.0.0',
   trustProxy: nodeEnv === 'production' ? 1 : 'loopback',
 
@@ -132,8 +130,7 @@ function isLocalhost(ip) {
 }
 
 function getBaseUrl({ host, port }) {
-  const isHttps = process.env.RSK_HTTPS === 'true' || nodeEnv === 'production';
-  const protocol = isHttps ? 'https' : 'http';
+  const protocol = process.env.RSK_HTTPS === 'true' ? 'https' : 'http';
   const normalizedHost = isLocalhost(host) ? 'localhost' : host;
   return `${protocol}://${normalizedHost}:${port}`;
 }
@@ -535,13 +532,6 @@ async function main(app, staticPath) {
   app.use(async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
-    const status = err.status || 500;
-    console.error('❌ Error:', {
-      status,
-      message: err.message,
-      path: req.path,
-    });
-
     // Handle JWT errors
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(401).json({
@@ -552,17 +542,47 @@ async function main(app, staticPath) {
       });
     }
 
-    try {
-      const youch = new Youch(err, {
-        method: req.method,
-        url: req.url,
-        httpVersion: req.httpVersion,
-        headers: { 'content-type': 'text/html', accept: '*/*' },
-      });
-      res.status(status).send(await youch.toHTML());
-    } catch {
-      res.status(status).json({ error: err.message, status });
+    // Get error status
+    const status = err.status || 500;
+
+    // Log error details (both dev and production)
+    console.error('❌ Error:', {
+      status,
+      message: err.message,
+      path: req.path,
+      ...(err.stack && __DEV__ ? { stack: err.stack } : {}),
+    });
+
+    // Development: Show pretty error page with stack trace
+    // Production: Return clean JSON error (don't expose internals)
+    if (__DEV__) {
+      try {
+        const Youch = require('youch');
+        const youch = new Youch(err, {
+          method: req.method,
+          url: req.url,
+          httpVersion: req.httpVersion,
+          headers: { 'content-type': 'text/html', accept: '*/*' },
+        });
+        return res.status(status).send(await youch.toHTML());
+      } catch (youchError) {
+        console.error('⚠️ Youch rendering failed:', youchError.message);
+        // Fallback to JSON with stack trace in development
+        return res.status(status).json({
+          success: false,
+          error: err.message,
+          status,
+          stack: err.stack,
+        });
+      }
     }
+
+    // Production: minimal error info (don't expose stack traces)
+    res.status(status).json({
+      success: false,
+      error: status === 500 ? 'Internal Server Error' : err.message,
+      status,
+    });
   });
 
   return app;

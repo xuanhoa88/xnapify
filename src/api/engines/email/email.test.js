@@ -83,7 +83,7 @@ describe('Email Engine', () => {
 
     it('should add custom provider', () => {
       const customProvider = {
-        async send(emailData) {
+        async send() {
           return {
             success: true,
             messageId: 'custom-123',

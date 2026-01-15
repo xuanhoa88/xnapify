@@ -5,9 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as webpackClientConfig } from './client.config';
-export {
-  SERVER_BUNDLE_PATH as WEBPACK_SERVER_BUNDLE_PATH,
-  default as webpackServerConfig,
-} from './server.config';
-export * from './browserSync/server.config';
+const webpackClientConfig = require('./client.config');
+const {
+  webpackServerConfig,
+  SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
+} = require('./server.config');
+const browserSyncServer = require('./browserSync/server.config');
+
+module.exports = {
+  webpackClientConfig,
+  webpackServerConfig,
+  WEBPACK_SERVER_BUNDLE_PATH,
+  ...browserSyncServer,
+};

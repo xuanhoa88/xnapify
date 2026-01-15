@@ -5,17 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
-import webpack from 'webpack';
-import { merge } from 'webpack-merge';
-import { BundleAnalyzerPlugin } from 'webpack-bundle-analyzer';
-import LoadablePlugin from '@loadable/webpack-plugin';
-import MiniCssExtractPlugin from 'mini-css-extract-plugin';
-import TerserPlugin from 'terser-webpack-plugin';
-import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
-import config from '../config';
-import { isVerbose } from '../lib/logger';
-import {
+const path = require('path');
+const webpack = require('webpack');
+const { merge } = require('webpack-merge');
+const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
+const LoadablePlugin = require('@loadable/webpack-plugin');
+const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const TerserPlugin = require('terser-webpack-plugin');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const config = require('../config');
+const { isVerbose } = require('../utils/logger');
+const {
   createBaseConfig,
   createCSSRule,
   createDefinePluginConfig,
@@ -23,7 +23,7 @@ import {
   isDebug,
   isProfile,
   reScript,
-} from './base.config';
+} = require('./base.config');
 
 const verbose = isVerbose(); // Cache verbose check
 
@@ -55,20 +55,19 @@ if (isDebug) {
           // Only modify babel-loader configurations
           if (loader === 'babel-loader') {
             // Ensure we're working with an object configuration
-            const config =
-              typeof loaderConfig === 'object' ? loaderConfig : null;
-            if (!config) return;
+            const cfg = typeof loaderConfig === 'object' ? loaderConfig : null;
+            if (!cfg) return;
 
-            config.options = config.options || {};
-            config.options.plugins = config.options.plugins || [];
+            cfg.options = cfg.options || {};
+            cfg.options.plugins = cfg.options.plugins || [];
 
             // Add the plugin if not already present (check by resolved path)
-            const pluginExists = config.options.plugins.some(
+            const pluginExists = cfg.options.plugins.some(
               p => p === plugin || (Array.isArray(p) && p[0] === plugin),
             );
 
             if (!pluginExists) {
-              config.options.plugins.push(plugin);
+              cfg.options.plugins.push(plugin);
             }
           }
         });
@@ -96,7 +95,7 @@ if (isDebug) {
  * Configuration for the client-side bundle (client.js)
  * Targets web browsers with optimizations for production
  */
-export default merge(baseConfig, {
+module.exports = merge(baseConfig, {
   // Configuration name for multi-compiler mode (used in webpack logs)
   name: 'client',
 

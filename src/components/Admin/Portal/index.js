@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import 'normalize.css';
 import PropTypes from 'prop-types';
 import Footer from '../Footer';
 import Drawer from '../Drawer';

@@ -7,181 +7,174 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Stylelint CSS Linting Script
- *
- * This script reads file patterns from .stylelintrc.js and runs stylelint.
- * Features:
- * - Centralized pattern configuration
- * - Automatic fixing with --fix flag
- * - Pattern-specific linting (all, css, scss, sass)
- * - Performance tracking
- * - Enhanced error reporting
- * - Verbose mode support
- *
- * Usage:
- *   babel-node tools/tasks/stylelint              # Lint all CSS files
- *   babel-node tools/tasks/stylelint --fix        # Lint and fix CSS files
- *   babel-node tools/tasks/stylelint scss         # Lint only SCSS files
- *   babel-node tools/tasks/stylelint css --fix    # Lint and fix only CSS files
- *   LOG_LEVEL=verbose babel-node tools/tasks/stylelint  # Verbose output
- */
-
-import { performance } from 'perf_hooks';
-import stylelint from 'stylelint';
-import stylelintConfig from '../../.stylelintrc';
-import { BuildError, logDetailedError } from '../lib/errorHandler';
-import {
+const stylelint = require('stylelint');
+const stylelintConfig = require('../../.stylelintrc');
+const { BuildError } = require('../utils/error');
+const {
   formatDuration,
+  isSilent,
   isVerbose,
+  logDebug,
   logError,
   logInfo,
-  logVerbose,
   logWarn,
-} from '../lib/logger';
+} = require('../utils/logger');
+
+// Default patterns to lint
+const DEFAULT_PATTERNS = [
+  'src/**/*.css',
+  'src/**/*.scss',
+  'src/**/*.sass',
+  'src/**/*.less',
+];
 
 /**
- * Main linting function
- * Export as default for task runner compatibility
+ * Format stylelint warning for display
+ * @param {Object} warning - Stylelint warning object
+ * @returns {string} - Formatted warning string
  */
-export default async function main() {
-  const startTime = performance.now();
+function formatWarning(warning) {
+  const severity = warning.severity === 'error' ? '❌' : '⚠️';
+  return `${severity} ${warning.line}:${warning.column} - ${warning.text} (${warning.rule})`;
+}
+
+/**
+ * Main stylelint task
+ */
+async function main() {
+  const startTime = Date.now();
+  const silent = isSilent();
+  const verbose = isVerbose();
+
+  if (!silent) {
+    logInfo('🎨 Running Stylelint...');
+  }
 
   try {
     // Parse command line arguments
-    // When run via 'babel-node tools/run stylelint', process.argv includes:
-    // [node, tools/run, stylelint, ...actual args]
-    // We need to filter out 'stylelint' (the task name) from the arguments
-    const args = process.argv.slice(2).filter(arg => arg !== 'stylelint');
-    const isFix = args.includes('--fix');
-    const isQuiet = args.includes('--quiet');
-    const patternName = args.find(arg => !arg.startsWith('--')) || 'all';
+    const args = process.argv.slice(2);
+    const shouldFix = args.includes('--fix');
+    const patterns = args.filter(arg => !arg.startsWith('--'));
 
-    // Validate pattern exists
-    if (!stylelintConfig.patterns) {
-      throw new BuildError('No patterns found in .stylelintrc.js', {
-        suggestion:
-          'Add a patterns object to your .stylelintrc.js configuration',
-      });
-    }
+    // Use provided patterns or defaults
+    const filesToLint = patterns.length > 0 ? patterns : DEFAULT_PATTERNS;
 
-    // Get the pattern to use
-    const pattern = stylelintConfig.patterns[patternName];
-    if (!pattern) {
-      const availablePatterns = Object.keys(stylelintConfig.patterns).join(
-        ', ',
-      );
-      throw new BuildError(
-        `Pattern '${patternName}' not found in .stylelintrc.js`,
-        {
-          availablePatterns,
-          suggestion: `Use one of: ${availablePatterns}`,
-        },
-      );
-    }
-
-    // Log what we're doing
-    logInfo(
-      `🎨 ${isFix ? 'Linting and fixing' : 'Linting'} CSS files: ${pattern}`,
-    );
-    if (isVerbose()) {
-      logVerbose(
-        `   Pattern type: ${patternName}\n` +
-          `   Fix mode: ${isFix}\n` +
-          `   Quiet mode: ${isQuiet}`,
-      );
+    if (verbose) {
+      logInfo(`📂 Linting patterns: ${filesToLint.join(', ')}`);
+      if (shouldFix) {
+        logInfo('🔧 Fix mode enabled');
+      }
     }
 
     // Run stylelint
     const result = await stylelint.lint({
-      files: pattern,
+      files: filesToLint,
       config: stylelintConfig,
-      fix: isFix,
+      fix: shouldFix,
+      formatter: 'string',
     });
 
-    const { errored, results } = result;
-    const duration = performance.now() - startTime;
+    // Process results
+    const { results } = result;
+    let errorCount = 0;
+    let warningCount = 0;
+    let fixedCount = 0;
 
-    // Count issues
-    const errorCount = results.reduce(
-      (sum, file) =>
-        sum + file.warnings.filter(w => w.severity === 'error').length,
-      0,
-    );
-    const warningCount = results.reduce(
-      (sum, file) =>
-        sum + file.warnings.filter(w => w.severity === 'warning').length,
-      0,
-    );
-    const filesWithIssues = results.filter(f => f.warnings.length > 0).length;
+    for (const fileResult of results) {
+      const fileWarnings = fileResult.warnings || [];
+      const fileErrors = fileWarnings.filter(w => w.severity === 'error');
+      const fileWarningsOnly = fileWarnings.filter(
+        w => w.severity === 'warning',
+      );
 
-    // Display results (unless quiet mode)
-    if (!isQuiet) {
-      results.forEach(file => {
-        if (file.warnings.length > 0) {
-          logInfo(`\n${file.source}:`);
-          file.warnings.forEach(warning => {
-            const icon = warning.severity === 'error' ? '❌' : '⚠️ ';
-            const severity = warning.severity === 'error' ? 'error' : 'warning';
-            logInfo(
-              `  ${icon} ${warning.line}:${warning.column}  ${warning.text}  [${warning.rule}] (${severity})`,
-            );
-          });
-        }
-      });
-    }
+      errorCount += fileErrors.length;
+      warningCount += fileWarningsOnly.length;
 
-    // Summary
-    logInfo(`\n📊 Linting summary:`);
-    logInfo(`   Files checked: ${results.length}`);
-    logInfo(`   Files with issues: ${filesWithIssues}`);
-    logInfo(`   Errors: ${errorCount}`);
-    logInfo(`   Warnings: ${warningCount}`);
-    logInfo(`   Duration: ${formatDuration(duration)}`);
-
-    if (isFix && (errorCount > 0 || warningCount > 0)) {
-      logInfo(`   🔧 Auto-fixed issues where possible`);
-    }
-
-    // Exit with appropriate status
-    if (errored) {
-      throw new Error(`CSS linting failed with ${errorCount} errors`);
-    }
-
-    if (warningCount > 0) {
-      logWarn(`\n⚠️ Found ${warningCount} warnings`);
-    }
-
-    logInfo(
-      `\n✅ CSS linting completed${isFix ? ' and fixed' : ''} successfully!`,
-    );
-  } catch (error) {
-    const duration = performance.now() - startTime;
-
-    if (error instanceof BuildError) {
-      logDetailedError(error, {
-        operation: 'stylelint',
-        duration: formatDuration(duration),
-      });
-    } else {
-      const verbose = isVerbose();
-      let errorMessage = `❌ Error running stylelint: ${error.message}`;
-
-      if (verbose && error.stack) {
-        errorMessage += `\n\n   Stack trace:\n${error.stack}`;
+      // Log file issues
+      if (fileWarnings.length > 0 && verbose) {
+        logDebug(`\n${fileResult.source}:`);
+        fileWarnings.forEach(warning => {
+          logDebug(`  ${formatWarning(warning)}`);
+        });
       }
 
-      logError(errorMessage);
+      // Count fixed issues if in fix mode
+      if (
+        shouldFix &&
+        // eslint-disable-next-line no-underscore-dangle
+        fileResult._postcssResult &&
+        // eslint-disable-next-line no-underscore-dangle
+        fileResult._postcssResult.stylelint
+      ) {
+        // eslint-disable-next-line no-underscore-dangle
+        const { stylelint: meta } = fileResult._postcssResult;
+        if (meta.fixed) {
+          fixedCount++;
+        }
+      }
     }
 
-    throw error;
+    // Calculate duration
+    const duration = Date.now() - startTime;
+
+    // Report results
+    if (!silent) {
+      logInfo(`✅ Stylelint completed in ${formatDuration(duration)}`);
+      logInfo(`   📁 Files checked: ${results.length}`);
+
+      if (errorCount > 0) {
+        logError(`   ❌ Errors: ${errorCount}`);
+      }
+
+      if (warningCount > 0) {
+        logWarn(`   ⚠️ Warnings: ${warningCount}`);
+      }
+
+      if (shouldFix && fixedCount > 0) {
+        logInfo(`   🔧 Files fixed: ${fixedCount}`);
+      }
+
+      if (errorCount === 0 && warningCount === 0) {
+        logInfo('   ✨ No issues found');
+      }
+    }
+
+    // Exit with error if there are errors
+    if (errorCount > 0) {
+      if (result.output) {
+        console.log(result.output);
+      }
+      throw new BuildError(`Stylelint found ${errorCount} error(s)`, {
+        errorCount,
+        warningCount,
+      });
+    }
+
+    return {
+      success: true,
+      filesChecked: results.length,
+      errors: errorCount,
+      warnings: warningCount,
+      fixed: fixedCount,
+      duration,
+    };
+  } catch (error) {
+    if (error instanceof BuildError) {
+      throw error;
+    }
+
+    throw new BuildError(`Stylelint failed: ${error.message}`, {
+      originalError: error.message,
+    });
   }
 }
 
 // Execute if called directly (as child process)
 if (require.main === module) {
   main().catch(error => {
-    console.error(error);
+    console.error(error.message);
     process.exit(1);
   });
 }
+
+module.exports = main;

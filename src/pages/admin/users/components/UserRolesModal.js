@@ -12,6 +12,7 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
@@ -290,7 +291,7 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
 UserRolesModal.displayName = 'UserRolesModal';
 
 UserRolesModal.propTypes = {
-  onSuccess: require('prop-types').func,
+  onSuccess: PropTypes.func,
 };
 
 export default UserRolesModal;

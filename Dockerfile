@@ -36,7 +36,7 @@ RUN npm install --production && \
 ENV NODE_ENV=production
 
 # Expose port
-EXPOSE 3000
+EXPOSE 1337
 
 # Run as non-root user
 USER node

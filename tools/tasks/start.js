@@ -7,44 +7,47 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fs from 'fs';
-import path from 'path';
-import express from 'express';
-import webpack from 'webpack';
-import webpackDevMiddleware from 'webpack-dev-middleware';
-import webpackHotMiddleware from 'webpack-hot-middleware';
-import ReactRefreshWebpackPlugin from '@pmmmwh/react-refresh-webpack-plugin';
-import config from '../config';
-import { BuildError, setupGracefulShutdown } from '../lib/errorHandler';
-import {
+const fs = require('fs');
+const path = require('path');
+const express = require('express');
+const webpack = require('webpack');
+const webpackDevMiddleware = require('webpack-dev-middleware');
+const webpackHotMiddleware = require('webpack-hot-middleware');
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const config = require('../config');
+const { BuildError, setupGracefulShutdown } = require('../utils/error');
+const {
   isSilent,
   isVerbose,
   logError,
   logInfo,
   logDebug,
-} from '../lib/logger';
-import { copyFile } from '../lib/fs';
-import {
+} = require('../utils/logger');
+const { copyFile } = require('../utils/fs');
+const {
   WEBPACK_SERVER_BUNDLE_PATH,
   webpackClientConfig,
   webpackServerConfig,
-  start as startBrowserSync,
-  shutdown as shutdownBrowserSync,
-  notifyRestart as notifyBrowserSyncRestart,
-  notifyReady as notifyBrowserSyncReady,
-  onClientConnected as onBrowserSyncClientConnected,
-} from '../webpack';
-import clean from './clean';
-import generateJWT from './jwt';
+  start: startBrowserSync,
+  shutdown: shutdownBrowserSync,
+  notifyRestart: notifyBrowserSyncRestart,
+  notifyReady: notifyBrowserSyncReady,
+  onClientConnected: onBrowserSyncClientConnected,
+} = require('../webpack');
+const clean = require('./clean');
+const generateJWT = require('./jwt');
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
+
+// Webpack HMR plugin
+const { HotModuleReplacementPlugin } = webpack;
 
 const silent = isSilent(); // Cache silent check
 
 // Uses environment variables loaded by dotenv above
 const DEV_CONFIG = {
-  port: parseInt(process.env.RSK_PORT, 10) || 3000,
+  port: parseInt(process.env.RSK_PORT, 10) || 1337,
   host: process.env.RSK_HOST || 'localhost',
   https: process.env.RSK_HTTPS === 'true',
   open: !silent && !process.env.CI,
@@ -94,36 +97,33 @@ function createCompilationPromise(name, compiler) {
 /**
  * Configure webpack config for development with HMR
  *
- * @param {Object} config - Webpack configuration object
+ * @param {Object} cfg - Webpack configuration object
  * @param {boolean} isClient - True for client bundle, false for server bundle
  * @returns {Object} Modified webpack config
  */
-function configureWebpackForDev(config, isClient = true) {
+function configureWebpackForDev(cfg, isClient = true) {
   // Replace chunkhash with hash for HMR compatibility
   // HMR requires deterministic hashes, chunkhash changes on every build
-  if (config.output.filename) {
-    config.output.filename = config.output.filename.replace(
-      'chunkhash',
-      'hash',
-    );
+  if (cfg.output.filename) {
+    cfg.output.filename = cfg.output.filename.replace('chunkhash', 'hash');
   }
-  if (config.output.chunkFilename) {
-    config.output.chunkFilename = config.output.chunkFilename.replace(
+  if (cfg.output.chunkFilename) {
+    cfg.output.chunkFilename = cfg.output.chunkFilename.replace(
       'chunkhash',
       'hash',
     );
   }
 
   // Add HotModuleReplacementPlugin (required for both client and server)
-  config.plugins.push(new webpack.HotModuleReplacementPlugin());
+  cfg.plugins.push(new HotModuleReplacementPlugin());
 
   // Client-specific HMR configuration
   if (isClient) {
     // Initialize plugins array if it doesn't exist
-    config.plugins = config.plugins || [];
+    cfg.plugins = cfg.plugins || [];
 
     // Add React Refresh Webpack Plugin with overlay configuration
-    config.plugins.push(
+    cfg.plugins.push(
       new ReactRefreshWebpackPlugin({
         overlay: { sockIntegration: 'whm', sockPath: '/~/__webpack_hmr' },
       }),
@@ -131,20 +131,20 @@ function configureWebpackForDev(config, isClient = true) {
 
     // Use shared HMR client to ensure singleton connection
     const whm = require.resolve('../webpack/hotClient');
-    Object.keys(config.entry).forEach(name => {
-      if (Array.isArray(config.entry[name])) {
-        config.entry[name] = [whm, ...config.entry[name]];
+    Object.keys(cfg.entry).forEach(name => {
+      if (Array.isArray(cfg.entry[name])) {
+        cfg.entry[name] = [whm, ...cfg.entry[name]];
       }
     });
   }
   // Server-specific HMR configuration
   else {
     // Configure hot update file paths for server bundle
-    config.output.hotUpdateMainFilename = 'updates/[hash].hot-update.json';
-    config.output.hotUpdateChunkFilename = 'updates/[id].[hash].hot-update.js';
+    cfg.output.hotUpdateMainFilename = 'updates/[hash].hot-update.json';
+    cfg.output.hotUpdateChunkFilename = 'updates/[id].[hash].hot-update.js';
   }
 
-  return config;
+  return cfg;
 }
 
 /**
@@ -430,7 +430,7 @@ function setupServerBundleWatcher(serverCompiler) {
  * Main development server function
  * This is a long-running task that keeps the process alive
  */
-export default async function main() {
+async function main() {
   if (app) {
     logInfo('Development server already running');
     return app;
@@ -545,3 +545,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

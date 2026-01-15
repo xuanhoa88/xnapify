@@ -5,23 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { spawn } from 'child_process';
-import path from 'path';
-import config from './config';
-import { BuildError } from './lib/errorHandler';
-import {
+const { spawn } = require('child_process');
+const path = require('path');
+const config = require('./config');
+const { BuildError } = require('./utils/error');
+const {
   formatDuration,
   isSilent,
   isVerbose,
   logDebug,
   logError,
   logInfo,
-} from './lib/logger';
+  logWarn,
+} = require('./utils/logger');
 
 /**
  * Simple task runner - executes a task function and handles errors
  */
-export default function main(fn, options) {
+function main(fn, options) {
   const task = typeof fn.default === 'undefined' ? fn : fn.default;
   const taskName = task.name || 'anonymous';
   const startTime = Date.now();
@@ -104,10 +105,6 @@ const AVAILABLE_TASKS = [
     processEnv: { NODE_ENV: 'test' },
   },
   {
-    name: 'i18n',
-    description: 'Extract i18n messages',
-  },
-  {
     name: 'prettier',
     description: 'Format code with Prettier',
   },
@@ -129,7 +126,7 @@ function showHelp() {
   AVAILABLE_TASKS.forEach(({ name, description }) => {
     logInfo(`   ${name.padEnd(12)} ${description}`);
   });
-  logInfo('\n💡 Usage: babel-node tools/run <task> [options]');
+  logInfo('\n💡 Usage: node tools/run <task> [options]');
   logInfo('   Options:');
   logInfo('     --verbose     Show detailed output');
   logInfo('     --silent      Suppress all output');
@@ -142,9 +139,6 @@ function showHelp() {
  */
 function executeTask(taskName) {
   return new Promise((resolve, reject) => {
-    const toolsDir = path.resolve(__dirname, 'tasks');
-    const taskPath = path.join(toolsDir, `${taskName}.js`);
-
     logDebug(`Spawning task: ${taskName}`);
 
     // Get task-specific environment variables (if any)
@@ -160,17 +154,22 @@ function executeTask(taskName) {
     // Get additional arguments to forward to task (everything after task name)
     const taskArgs = process.argv.slice(3); // Skip node, script, and task name
 
-    // Spawn task in child process using babel-node
-    // Forward any additional arguments to the task
-    const taskProcess = spawn(
-      'babel-node',
-      ['-r', 'dotenv-flow/config', taskPath, ...taskArgs],
-      {
-        stdio: 'inherit', // Inherit stdin, stdout, stderr
-        env: processEnv,
-        cwd: config.ROOT_DIR,
-      },
-    );
+    // Add task path to arguments
+    taskArgs.unshift(path.resolve(__dirname, 'tasks', `${taskName}.js`));
+
+    // -r dotenv-flow/config loads environment variables before task execution
+    try {
+      taskArgs.unshift('-r', require.resolve('dotenv-flow/config'));
+    } catch {
+      logWarn(`'dotenv-flow' not found`);
+    }
+
+    // Spawn task in child process using node
+    const taskProcess = spawn('node', taskArgs, {
+      stdio: 'inherit', // Inherit stdin, stdout, stderr
+      env: processEnv,
+      cwd: config.CWD,
+    });
 
     // Handle task process exit
     taskProcess.on('exit', (code, signal) => {
@@ -211,11 +210,8 @@ if (require.main === module) {
   executeTask(taskName).catch(error => {
     // Task file not found or spawn failed
     if (error.message.includes('Failed to spawn')) {
-      const taskList = AVAILABLE_TASKS.map(t => t.name).join(', ');
-      logError(
-        `\n🚫 Task '${taskName}' not found\n📋 Available tasks: ${taskList}`,
-      );
-      logInfo('\n💡 Run "babel-node tools/run help" for more information');
+      showHelp();
+      logError(error.message);
     } else {
       // Task execution failed
       const verbose = isVerbose();
@@ -230,3 +226,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

@@ -7,192 +7,102 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { spawn } from 'child_process';
-import path from 'path';
-import config from '../config';
-import { BuildError } from '../lib/errorHandler';
-import { isSilent, isVerbose, logError, logInfo } from '../lib/logger';
-
-const silent = isSilent();
-const verbose = isVerbose();
+const { spawn } = require('child_process');
+const config = require('../config');
+const { BuildError } = require('../utils/error');
+const { isSilent, isVerbose, logDebug, logInfo } = require('../utils/logger');
 
 /**
- * Run Jest tests with appropriate configuration
- *
- * @param {Object} options - Test options
- * @param {boolean} options.watch - Run tests in watch mode
- * @param {boolean} options.coverage - Generate coverage report
- * @param {boolean} options.ci - Run in CI mode
- * @param {string[]} options.args - Additional Jest arguments
- * @returns {Promise<void>}
+ * Run Jest tests
  */
-function runJest(options = {}) {
+async function main() {
+  const silent = isSilent();
+  const verbose = isVerbose();
+
+  if (!silent) {
+    logInfo('🧪 Running tests...');
+  }
+
   return new Promise((resolve, reject) => {
-    const jestArgs = [];
+    // Parse command line arguments
+    const args = process.argv.slice(2);
 
-    // Add configuration
-    jestArgs.push('--config', path.join(__dirname, '..', 'jest', 'config.js'));
+    // Check for common flags
+    const isWatch = args.includes('--watch') || args.includes('-w');
+    const isCoverage = args.includes('--coverage');
+    const isCI = process.env.CI === 'true';
 
-    // Add mode-specific flags
-    if (options.watch) {
-      jestArgs.push('--watch');
+    // Build Jest arguments
+    const jestArgs = [
+      // Config file
+      '--config',
+      require.resolve('../jest'),
+
+      // Pass through user arguments
+      ...args,
+    ];
+
+    // Add CI-specific options
+    if (isCI && !args.includes('--ci')) {
+      jestArgs.push('--ci');
     }
 
-    if (options.coverage) {
-      jestArgs.push('--coverage');
-    }
-
-    if (options.ci) {
-      jestArgs.push('--ci', '--coverage', '--maxWorkers=2');
-    }
-
-    // Add verbosity flags
-    if (verbose) {
+    // Add verbose if enabled and not already specified
+    if (verbose && !args.includes('--verbose')) {
       jestArgs.push('--verbose');
     }
 
-    if (silent) {
-      jestArgs.push('--silent');
-    }
-
-    // Add any additional arguments passed from CLI
-    if (options.args && options.args.length > 0) {
-      jestArgs.push(...options.args);
-    }
-
-    if (!silent) {
-      const mode = options.watch
-        ? 'watch mode'
-        : options.ci
-          ? 'CI mode'
-          : options.coverage
-            ? 'with coverage'
-            : 'standard mode';
-      logInfo(`🧪 Running tests (${mode})...`);
-    }
+    // Log jest command in debug mode
+    logDebug(`Running: npx jest ${jestArgs.join(' ')}`);
 
     // Spawn Jest process
-    const jestProcess = spawn('jest', jestArgs, {
+    const jestProcess = spawn('npx', ['jest', ...jestArgs], {
       stdio: 'inherit',
       env: {
         ...process.env,
         NODE_ENV: 'test',
-        CI: options.ci ? 'true' : process.env.CI,
+        CWD: config.CWD,
+        // Enable coverage if flag is set
+        ...(isCoverage && { COVERAGE: 'true' }),
+        // Enable watch mode flag
+        ...(isWatch && { JEST_WATCH: 'true' }),
       },
       cwd: config.CWD,
     });
 
-    // Handle process exit
-    jestProcess.on('exit', (code, signal) => {
-      if (signal) {
-        reject(
-          new BuildError(`Jest killed by signal ${signal}`, {
-            task: 'test',
-            signal,
-          }),
-        );
-      } else if (code !== 0) {
+    // Handle process completion
+    jestProcess.on('close', code => {
+      if (code === 0) {
+        if (!silent) {
+          logInfo('✅ Tests passed');
+        }
+        resolve({ success: true, exitCode: code });
+      } else {
         reject(
           new BuildError(`Tests failed with exit code ${code}`, {
-            task: 'test',
             exitCode: code,
           }),
         );
-      } else {
-        if (!silent) {
-          logInfo('✅ All tests passed');
-        }
-        resolve();
       }
     });
 
     // Handle process errors
     jestProcess.on('error', error => {
       reject(
-        new BuildError(`Failed to run Jest: ${error.message}`, {
-          task: 'test',
+        new BuildError(`Failed to run tests: ${error.message}`, {
           originalError: error.message,
-          suggestion: 'Make sure Jest is installed: npm install',
         }),
       );
     });
   });
 }
 
-/**
- * Main test task function
- * Parses CLI arguments and runs Jest with appropriate options
- */
-export default async function main() {
-  const startTime = Date.now();
-
-  try {
-    // Parse CLI arguments
-    const args = process.argv.slice(2);
-    const options = {
-      watch: args.includes('--watch') || args.includes('-w'),
-      coverage: args.includes('--coverage') || args.includes('--cov'),
-      ci: args.includes('--ci'),
-      args: args.filter(
-        arg =>
-          ![
-            '--watch',
-            '-w',
-            '--coverage',
-            '--cov',
-            '--ci',
-            '--verbose',
-            '--silent',
-          ].includes(arg),
-      ),
-    };
-
-    // Run Jest
-    await runJest(options);
-
-    // Log completion (unless in watch mode or silent)
-    if (!options.watch && !silent) {
-      const duration = Date.now() - startTime;
-      logInfo(`\n✅ Tests completed in ${Math.round(duration / 1000)}s`);
-
-      // Show coverage location if generated
-      if (options.coverage || options.ci) {
-        const coverageDir = path.join(config.CWD, 'coverage');
-        logInfo(`📊 Coverage report: ${coverageDir}/lcov-report/index.html`);
-      }
-    }
-  } catch (error) {
-    const testError =
-      error instanceof BuildError
-        ? error
-        : new BuildError(`Test task failed: ${error.message}`, {
-            task: 'test',
-            originalError: error.message,
-          });
-
-    if (!silent) {
-      let errorMessage = `\n❌ ${testError.message}`;
-
-      if (verbose && testError.stack) {
-        errorMessage += `\n\nStack trace:\n${testError.stack}`;
-      }
-
-      errorMessage += '\n\n💡 Troubleshooting:';
-      errorMessage += '\n   1. Check test files for syntax errors';
-      errorMessage += '\n   2. Run: npm install';
-      errorMessage += '\n   3. Check tools/jest/config.js configuration';
-
-      logError(errorMessage);
-    }
-
-    throw testError;
-  }
-}
-
 // Execute if called directly (as child process)
 if (require.main === module) {
   main().catch(error => {
-    console.error(error);
+    console.error(error.message);
     process.exit(1);
   });
 }
+
+module.exports = main;

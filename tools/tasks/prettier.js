@@ -7,111 +7,244 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const fs = require('fs');
+const { format: prettierFormatter } = require('prettier');
+const prettierConfig = require('../../.prettierrc');
+const config = require('../config');
+const { readDir, writeFile } = require('../utils/fs');
+const {
+  formatDuration,
+  isSilent,
+  isVerbose,
+  logDebug,
+  logInfo,
+  logWarn,
+} = require('../utils/logger');
+
+// File extensions to format
+const FORMATTABLE_EXTENSIONS = [
+  '.js',
+  '.jsx',
+  '.ts',
+  '.tsx',
+  '.json',
+  '.css',
+  '.scss',
+  '.md',
+];
+
+// Directories to exclude
+const EXCLUDED_DIRS = ['node_modules', 'build', 'coverage', '.git', '.cache'];
+
 /**
- * Prettier Formatting Script
- *
- * This script reads file patterns from .prettierrc.js and runs prettier.
- * This allows patterns to be centralized in the config file instead of
- * being hardcoded in package.json.
- *
- * Usage:
- *   node tools/prettier              # Format all files
- *   node tools/prettier --check      # Check formatting
- *   node tools/prettier code         # Format only code files
- *   node tools/prettier styles       # Format only style files
+ * Recursively find files to format
+ * @param {string} dir - Directory to scan
+ * @returns {Promise<string[]>} - Array of file paths
  */
+async function findFiles(dir) {
+  const files = [];
+  const entries = await readDir(dir, { withFileTypes: true });
 
-import fs from 'fs';
-import { format as prettierFormatter } from 'prettier';
-import prettierConfig from '../../.prettierrc';
-import config from '../config';
-import { readDir } from '../lib/fs';
-import { logError, logInfo, logWarn } from '../lib/logger';
+  for (const entry of entries) {
+    const fullPath = `${dir}/${entry.name}`;
 
-/**
- * Main prettier formatting function
- * Export as default for task runner compatibility
- */
-export default async function main() {
-  // Parse command line arguments
-  const args = process.argv.slice(2);
-  const isCheck = args.includes('--check');
-  const patternName = args.find(arg => !arg.startsWith('--')) || 'all';
-
-  // Get the pattern to use
-  const pattern =
-    prettierConfig.patterns[patternName] || prettierConfig.patterns.all;
-
-  // Log what we're doing
-  logInfo(`📝 ${isCheck ? 'Checking' : 'Formatting'} files: ${pattern}`);
-
-  // Get all files matching the pattern
-  const files = await readDir(pattern, {
-    cwd: config.CWD,
-  });
-
-  if (files.length === 0) {
-    logWarn('⚠️ No files found matching pattern');
-    return;
+    if (entry.isDirectory()) {
+      if (!EXCLUDED_DIRS.includes(entry.name)) {
+        // eslint-disable-next-line no-await-in-loop
+        const subFiles = await findFiles(fullPath);
+        files.push(...subFiles);
+      }
+    } else if (entry.isFile()) {
+      const ext = entry.name.substring(entry.name.lastIndexOf('.'));
+      if (FORMATTABLE_EXTENSIONS.includes(ext)) {
+        files.push(fullPath);
+      }
+    }
   }
 
-  logInfo(`Found ${files.length} files to ${isCheck ? 'check' : 'format'}`);
+  return files;
+}
 
-  let hasErrors = false;
-  let formattedCount = 0;
-  let unchangedCount = 0;
+/**
+ * Get parser for file extension
+ * @param {string} ext - File extension
+ * @returns {string} - Prettier parser name
+ */
+function getParser(ext) {
+  const parsers = {
+    '.js': 'babel',
+    '.jsx': 'babel',
+    '.ts': 'typescript',
+    '.tsx': 'typescript',
+    '.json': 'json',
+    '.css': 'css',
+    '.scss': 'scss',
+    '.md': 'markdown',
+  };
+  return parsers[ext] || 'babel';
+}
 
-  // Process each file
-  files.forEach(file => {
-    const filePath = config.resolve(file);
-    const fileContent = fs.readFileSync(filePath, 'utf8');
+/**
+ * Format a single file
+ * @param {string} filePath - Path to file
+ * @param {Object} options - Prettier options
+ * @returns {Promise<{path: string, formatted: boolean, error?: string}>}
+ */
+async function formatFile(filePath, options) {
+  try {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const ext = filePath.substring(filePath.lastIndexOf('.'));
+    const parser = getParser(ext);
 
-    try {
-      // Check if file is formatted
-      const formatted = prettierFormatter(fileContent, {
-        ...prettierConfig,
-        filepath: filePath,
-      });
+    const formatted = await prettierFormatter(content, {
+      ...options,
+      parser,
+      filepath: filePath,
+    });
 
-      if (isCheck) {
-        // Check mode: verify if file is already formatted
-        if (fileContent !== formatted) {
-          logError(`❌ ${file}`);
-          hasErrors = true;
-        } else {
-          unchangedCount += 1;
+    if (content !== formatted) {
+      await writeFile(filePath, formatted);
+      logDebug(`Formatted: ${filePath}`);
+      return { path: filePath, formatted: true };
+    }
+
+    return { path: filePath, formatted: false };
+  } catch (error) {
+    return { path: filePath, formatted: false, error: error.message };
+  }
+}
+
+/**
+ * Main prettier task
+ */
+async function main() {
+  const startTime = Date.now();
+  const silent = isSilent();
+  const verbose = isVerbose();
+
+  if (!silent) {
+    logInfo('💅 Running Prettier...');
+  }
+
+  try {
+    // Get target directory or pattern from args
+    const targetArg = process.argv[2];
+    const targetDir = targetArg || config.APP_DIR;
+
+    // Check if it's a --check mode (no modifications)
+    const checkOnly = process.argv.includes('--check');
+
+    if (checkOnly) {
+      logInfo('🔍 Check mode: No files will be modified');
+    }
+
+    // Find all formattable files
+    const files = await findFiles(targetDir);
+
+    if (verbose) {
+      logInfo(`📂 Found ${files.length} files to process`);
+    }
+
+    // Format files
+    const results = [];
+    for (const filePath of files) {
+      if (checkOnly) {
+        // In check mode, just verify formatting
+        try {
+          const content = fs.readFileSync(filePath, 'utf8');
+          const ext = filePath.substring(filePath.lastIndexOf('.'));
+          const parser = getParser(ext);
+
+          // eslint-disable-next-line no-await-in-loop
+          const formatted = await prettierFormatter(content, {
+            ...prettierConfig,
+            parser,
+            filepath: filePath,
+          });
+
+          if (content !== formatted) {
+            results.push({
+              path: filePath,
+              formatted: false,
+              needsFormatting: true,
+            });
+          } else {
+            results.push({ path: filePath, formatted: true });
+          }
+        } catch (error) {
+          results.push({
+            path: filePath,
+            formatted: false,
+            error: error.message,
+          });
         }
       } else {
-        // Write mode: format the file
-        // eslint-disable-next-line no-lonely-if
-        if (fileContent !== formatted) {
-          fs.writeFileSync(filePath, formatted, 'utf8');
-          logInfo(`✅ ${file}`);
-          formattedCount += 1;
+        // eslint-disable-next-line no-await-in-loop
+        const result = await formatFile(filePath, prettierConfig);
+        results.push(result);
+      }
+    }
+
+    // Collect stats
+    const changedCount = results.filter(
+      r => r.formatted === true && checkOnly !== true,
+    ).length;
+    const needsFormattingCount = results.filter(r => r.needsFormatting).length;
+    const errorCount = results.filter(r => r.error).length;
+
+    // Report results
+    const duration = Date.now() - startTime;
+
+    if (!silent) {
+      logInfo(`✅ Prettier completed in ${formatDuration(duration)}`);
+      logInfo(`   📁 Files processed: ${files.length}`);
+
+      if (checkOnly) {
+        if (needsFormattingCount > 0) {
+          logWarn(`   ⚠️ Files need formatting: ${needsFormattingCount}`);
+          if (verbose) {
+            results
+              .filter(r => r.needsFormatting)
+              .slice(0, 10)
+              .forEach(r => logWarn(`      • ${r.path}`));
+            if (needsFormattingCount > 10) {
+              logWarn(`      ... and ${needsFormattingCount - 10} more`);
+            }
+          }
         } else {
-          unchangedCount += 1;
+          logInfo(`   ✨ All files are properly formatted`);
+        }
+      } else {
+        logInfo(`   ✨ Files formatted: ${changedCount}`);
+      }
+
+      if (errorCount > 0) {
+        logWarn(`   ❌ Errors: ${errorCount}`);
+        if (verbose) {
+          results
+            .filter(r => r.error)
+            .forEach(r => logWarn(`      • ${r.path}: ${r.error}`));
         }
       }
-    } catch (error) {
-      logError(`❌ Error processing ${file}: ${error.message}`);
-      hasErrors = true;
     }
-  });
 
-  // Summary
-  if (isCheck) {
-    if (hasErrors) {
-      throw new Error('Format check failed! Some files need formatting.');
+    // Exit with error in check mode if files need formatting
+    if (checkOnly && needsFormattingCount > 0) {
+      process.exitCode = 1;
     }
-    logInfo(`✅ All ${files.length} files are properly formatted!`);
-    return;
-  }
 
-  // Write mode summary
-  logInfo(`✅ Formatted ${formattedCount} files, ${unchangedCount} unchanged`);
-
-  if (hasErrors) {
-    throw new Error('Prettier formatting failed');
+    return {
+      success:
+        errorCount === 0 && (checkOnly ? needsFormattingCount === 0 : true),
+      filesProcessed: files.length,
+      filesFormatted: changedCount,
+      filesNeedFormatting: needsFormattingCount,
+      errors: errorCount,
+      duration,
+    };
+  } catch (error) {
+    logWarn(`❌ Prettier failed: ${error.message}`);
+    throw error;
   }
 }
 
@@ -122,3 +255,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

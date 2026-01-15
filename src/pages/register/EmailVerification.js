@@ -56,7 +56,7 @@ function EmailVerification({ token: initialToken }) {
         // Redirect to home after short delay to show success message
         setTimeout(() => {
           history.replace('/');
-        }, 3000); // 3 seconds delay for user to read success message
+        }, 1337); // 3 seconds delay for user to read success message
       } catch {
         // Error is handled by Redux state
       }

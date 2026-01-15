@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import open from 'open';
-import { logInfo, logWarn, logError } from '../../lib/logger';
+const open = require('open');
+const { logInfo, logWarn, logError } = require('../../utils/logger');
 
 // Configuration
 const CONFIG = Object.freeze({
@@ -236,7 +236,7 @@ const initialize = middleware => {
  * Notify clients about server restart
  * @returns {Promise<boolean>}
  */
-export const notifyRestart = async () => {
+const notifyRestart = async () => {
   if (isShuttingDown) {
     logWarn('[BrowserSync] Cannot notify restart: server is shutting down');
     return false;
@@ -260,7 +260,7 @@ export const notifyRestart = async () => {
  * @param {boolean} reload - Whether to reload clients
  * @returns {Promise<boolean>}
  */
-export const notifyReady = async (reload = true) => {
+const notifyReady = async (reload = true) => {
   if (isShuttingDown) {
     logWarn('[BrowserSync] Cannot notify ready: server is shutting down');
     return false;
@@ -284,7 +284,7 @@ export const notifyReady = async (reload = true) => {
  * Force reload all clients
  * @returns {Promise<boolean>}
  */
-export const reloadClients = async () => {
+const reloadClients = async () => {
   if (isShuttingDown) {
     logWarn('[BrowserSync] Cannot reload: server is shutting down');
     return false;
@@ -304,7 +304,7 @@ export const reloadClients = async () => {
 /**
  * Cancel pending browser open (called when client connects)
  */
-export const onClientConnected = () => {
+const onClientConnected = () => {
   if (pendingBrowserOpen) {
     clearTimeout(pendingBrowserOpen);
     pendingBrowserOpen = null;
@@ -319,7 +319,7 @@ export const onClientConnected = () => {
  * @param {object} middleware - Webpack HMR middleware
  * @returns {Promise<boolean>}
  */
-export const start = async (server, middleware) => {
+const start = async (server, middleware) => {
   if (isShuttingDown) {
     logError('[BrowserSync] Cannot start: server is shutting down');
     return false;
@@ -362,7 +362,7 @@ export const start = async (server, middleware) => {
  * @param {object} middleware - Webpack HMR middleware (optional)
  * @returns {Promise<boolean>}
  */
-export const restart = async (server, middleware) => {
+const restart = async (server, middleware) => {
   if (isShuttingDown) {
     logError('[BrowserSync] Cannot restart: server is shutting down');
     return false;
@@ -402,7 +402,7 @@ export const restart = async (server, middleware) => {
  * Graceful shutdown with proper async handling
  * @returns {Promise<void>}
  */
-export const shutdown = async () => {
+const shutdown = async () => {
   if (isShuttingDown) {
     logWarn('[BrowserSync] Shutdown already in progress');
     return;
@@ -439,10 +439,21 @@ export const shutdown = async () => {
  * Get current state for debugging
  * @returns {object}
  */
-export const getState = () => ({
+const getState = () => ({
   hasHotMiddleware: !!hotMiddleware,
   isRestarting,
   isShuttingDown,
   hasBrowserProcess: !!browserProcess,
   browserPid: (browserProcess && browserProcess.pid) || null,
 });
+
+module.exports = {
+  notifyRestart,
+  notifyReady,
+  reloadClients,
+  onClientConnected,
+  start,
+  restart,
+  shutdown,
+  getState,
+};

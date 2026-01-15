@@ -23,7 +23,7 @@ cp .env.defaults .env
 npm start
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:1337](http://localhost:1337)
 
 ## Scripts
 
@@ -57,7 +57,7 @@ Key variables in `.env`:
 
 ```bash
 # Server
-RSK_PORT=3000
+RSK_PORT=1337
 RSK_HOST=localhost
 
 # Database
@@ -86,7 +86,7 @@ NODE_ENV=production node server.js
 
 ```bash
 docker build -t rapid-rsk .
-docker run -p 3000:3000 -e NODE_ENV=production -e RSK_JWT_SECRET=secret rapid-rsk
+docker run -p 1337:1337 -e NODE_ENV=production -e RSK_JWT_SECRET=secret rapid-rsk
 ```
 
 ## License

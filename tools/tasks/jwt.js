@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
@@ -5,91 +7,82 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import fs from 'fs';
-import crypto from 'crypto';
-import path from 'path';
-import { logInfo } from '../lib/logger';
+const crypto = require('crypto');
+const path = require('path');
+const { readFile, writeFile } = require('../utils/fs');
+const { logInfo } = require('../utils/logger');
 
 /**
- * Checks if a value is invalid (empty, whitespace only, or missing)
- */
-function isInvalidValue(value) {
-  return !value || value.trim() === '';
-}
-
-/**
- * Generates a new JWT secret and updates the .env file
+ * Generate JWT config options and update .env file
+ * @param {string} nodeEnv - Environment to generate for ('development', 'production', etc.)
+ * @returns {Promise<void>}
  */
 async function main(nodeEnv = process.env.NODE_ENV) {
-  const envPath = path.resolve(
-    process.cwd(),
-    `.env.${nodeEnv || 'development'}`,
-  );
-  const envDefaultsPath = path.resolve(process.cwd(), '.env.defaults');
+  // Determine which .env file to update
+  const envFile = nodeEnv ? `.env.${nodeEnv}` : '.env';
+  const envPath = path.resolve(process.cwd(), envFile);
 
-  // Check if .env exists, if not copy from .env.defaults
-  if (!fs.existsSync(envPath)) {
-    if (fs.existsSync(envDefaultsPath)) {
-      logInfo('🔄 Creating .env file from .env.defaults...');
-      fs.copyFileSync(envDefaultsPath, envPath);
-    } else {
-      throw new Error('.env file not found and .env.defaults is missing');
-    }
+  logInfo(`🔐 Generating JWT configuration for ${nodeEnv || 'default'}...`);
+
+  // Generate secure random secret (256 bits = 32 bytes)
+  const jwtSecret = crypto.randomBytes(32).toString('base64url');
+
+  // Default expiration times
+  const jwtExpiresIn = '7d';
+  const jwtRefreshExpiresIn = '30d';
+
+  // JWT configuration to add/update
+  const jwtConfig = {
+    JWT_SECRET: jwtSecret,
+    JWT_EXPIRES_IN: jwtExpiresIn,
+    JWT_REFRESH_EXPIRES_IN: jwtRefreshExpiresIn,
+  };
+
+  // Read existing .env file or create empty
+  let envContent = '';
+  try {
+    envContent = await readFile(envPath, { encoding: 'utf8' });
+  } catch {
+    // File doesn't exist, will be created
   }
 
-  // Read .env file
-  let envContent = fs.readFileSync(envPath, 'utf8');
+  // Parse existing content
+  const lines = envContent.split('\n');
+  const existingKeys = new Set();
 
-  // Handle RSK_JWT_SECRET
-  const secretKey = 'RSK_JWT_SECRET';
-  const secretRegex = new RegExp(`^${secretKey}=(.*)`, 'm');
-  const secretMatch = envContent.match(secretRegex);
-  const secret = crypto.randomBytes(32).toString('hex');
+  // Update existing keys or add new ones
+  const updatedLines = lines.map(line => {
+    const trimmed = line.trim();
 
-  if (!secretMatch || isInvalidValue(secretMatch[1])) {
-    if (secretMatch) {
-      // Exists but invalid - replace it
-      envContent = envContent.replace(secretRegex, `${secretKey}=${secret}`);
-      logInfo('✅ Updated invalid RSK_JWT_SECRET in .env');
-    } else {
-      // Doesn't exist - append it
-      if (envContent.length > 0 && !envContent.endsWith('\n')) {
-        envContent += '\n';
-      }
-      envContent += `${secretKey}=${secret}\n`;
-      logInfo('✅ Appended RSK_JWT_SECRET to .env');
+    // Skip empty lines and comments
+    if (!trimmed || trimmed.startsWith('#')) {
+      return line;
     }
-  }
 
-  // Handle RSK_JWT_EXPIRES_IN
-  const expiresKey = 'RSK_JWT_EXPIRES_IN';
-  const expiresRegex = new RegExp(`^${expiresKey}=(.*)`, 'm');
-  const expiresMatch = envContent.match(expiresRegex);
-  const defaultExpires = '7d';
-
-  if (!expiresMatch || isInvalidValue(expiresMatch[1])) {
-    if (expiresMatch) {
-      // Exists but invalid - replace it
-      envContent = envContent.replace(
-        expiresRegex,
-        `${expiresKey}=${defaultExpires}`,
-      );
-      logInfo('✅ Updated invalid RSK_JWT_EXPIRES_IN to 7d in .env');
-    } else {
-      // Doesn't exist - append it
-      if (envContent.length > 0 && !envContent.endsWith('\n')) {
-        envContent += '\n';
-      }
-      envContent += `${expiresKey}=${defaultExpires}\n`;
-      logInfo('✅ Appended RSK_JWT_EXPIRES_IN to .env');
+    const [key] = trimmed.split('=');
+    if (key && jwtConfig[key] !== undefined) {
+      existingKeys.add(key);
+      return `${key}=${jwtConfig[key]}`;
     }
-  }
 
-  // Write back to .env
-  fs.writeFileSync(envPath, envContent, 'utf8');
+    return line;
+  });
+
+  // Add new keys that didn't exist
+  Object.entries(jwtConfig).forEach(([key, value]) => {
+    if (!existingKeys.has(key)) {
+      updatedLines.push(`${key}=${value}`);
+    }
+  });
+
+  // Write updated content
+  await writeFile(envPath, updatedLines.join('\n'));
+
+  logInfo(`✅ JWT configuration updated in ${envFile}`);
+  logInfo(`   🔑 Secret: ${jwtSecret.substring(0, 8)}...`);
+  logInfo(`   ⏰ Token expires: ${jwtExpiresIn}`);
+  logInfo(`   🔄 Refresh expires: ${jwtRefreshExpiresIn}`);
 }
-
-export default main;
 
 // Execute if called directly (as child process)
 if (require.main === module) {
@@ -98,3 +91,5 @@ if (require.main === module) {
     process.exit(1);
   });
 }
+
+module.exports = main;

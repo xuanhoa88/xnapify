@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { logInfo, logWarn } from '../lib/logger';
+const { logInfo, logWarn } = require('../utils/logger');
 
 /**
  * Webpack plugin to load environment variables with RSK_ prefix
@@ -29,7 +29,7 @@ import { logInfo, logWarn } from '../lib/logger';
  * @param {boolean} options.verbose - Enable verbose logging (default: false)
  * @returns {Object} Webpack DefinePlugin definitions
  */
-export function createDotenvDefinitions(options = {}) {
+function createDotenvDefinitions(options = {}) {
   const { prefix = 'RSK_', verbose = false } = options;
 
   // Find all environment variables with the specified prefix
@@ -61,3 +61,7 @@ export function createDotenvDefinitions(options = {}) {
 
   return envVars;
 }
+
+module.exports = {
+  createDotenvDefinitions,
+};

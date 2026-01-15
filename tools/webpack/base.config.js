@@ -5,54 +5,54 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
-import webpack from 'webpack';
-import config from '../config';
+const path = require('path');
+const webpack = require('webpack');
+const config = require('../config');
 
 // Base webpack configuration
-export const nodeEnv = process.env.NODE_ENV || 'development';
-export const isDebug = nodeEnv !== 'production';
+const nodeEnv = process.env.NODE_ENV || 'development';
+const isDebug = nodeEnv !== 'production';
 
 // Enable bundle analyze
-export const isAnalyze =
+const isAnalyze =
   process.argv.includes('--analyze') ||
   process.argv.includes('--analyse') ||
   config.env('BUNDLE_ANALYZE') === 'true';
 
 // Enable bundle profile
-export const isProfile =
+const isProfile =
   process.argv.includes('--profile') || config.env('BUNDLE_PROFILE') === 'true';
 
 // JavaScript/TypeScript files (including ES modules and CommonJS)
-export const reScript = /\.(c|m)?(j|t)sx?$/i; // .cjs, .mjs, .cts, .mts
+const reScript = /\.(c|m)?(j|t)sx?$/i; // .cjs, .mjs, .cts, .mts
 
 // Stylesheet files (CSS, SCSS, SASS, LESS, Stylus, SugarSS)
-export const reStyle = /\.(css|s[ac]ss|less|styl|sss)$/i;
+const reStyle = /\.(css|s[ac]ss|less|styl|sss)$/i;
 
 // Image files (with optional query string for cache busting)
-export const reImage = /\.(?:ico|gif|png|jpe?g|webp|bmp|avif)(?:\?.*)?$/i;
+const reImage = /\.(?:ico|gif|png|jpe?g|webp|bmp|avif)(?:\?.*)?$/i;
 
 // Font files (with optional query string for cache busting)
-export const reFont = /\.(?:woff2?|eot|ttf|otf)(?:\?.*)?$/i;
+const reFont = /\.(?:woff2?|eot|ttf|otf)(?:\?.*)?$/i;
 
 // SVG files (handled separately for React component conversion)
-export const reSvg = /\.svg(?:\?.*)?$/i;
+const reSvg = /\.svg(?:\?.*)?$/i;
 
 // HTML files
-export const reHtml = /\.html?$/i;
+const reHtml = /\.html?$/i;
 
 // Markup files
-export const reMarkdown = /\.(?:md|markdown)$/i;
+const reMarkdown = /\.(?:md|markdown)$/i;
 
 // Text files
-export const reText = /\.txt$/i;
+const reText = /\.txt$/i;
 
 // Media files
-export const reAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac)$/i;
-export const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)$/i;
+const reAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac)$/i;
+const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)$/i;
 
 // Data files
-export const reData = /\.(?:json|xml|csv|ya?ml)$/i;
+const reData = /\.(?:json|xml|csv|ya?ml)$/i;
 
 /**
  * Get file naming pattern based on environment
@@ -69,7 +69,7 @@ const getFileNamePattern = (hashType = 'hash') =>
  * @param {any} options.extractLoader - MiniCssExtractPlugin.loader for client (optional)
  * @returns {Object} Webpack rule configuration
  */
-export const createCSSRule = ({ isClient, extractLoader }) => {
+const createCSSRule = ({ isClient, extractLoader }) => {
   // Common CSS loader options
   const cssLoaderOptions = {
     importLoaders: 1, // Will be dynamically adjusted per preprocessor
@@ -178,7 +178,7 @@ export const createCSSRule = ({ isClient, extractLoader }) => {
  * @param {Object} extraDefinitions - Additional definitions to merge (optional)
  * @returns {webpack.DefinePlugin} DefinePlugin instance
  */
-export const createDefinePluginConfig = extraDefinitions =>
+const createDefinePluginConfig = extraDefinitions =>
   new webpack.DefinePlugin({
     // Development flag - used for dev-only code (logging, debugging, etc.)
     __DEV__: !!isDebug,
@@ -190,7 +190,7 @@ export const createDefinePluginConfig = extraDefinitions =>
  * Common configuration chunk to be used for both
  * client-side (client.js) and server-side (server.js) bundles
  */
-export function createBaseConfig() {
+function createBaseConfig() {
   return {
     // Set webpack mode based on environment
     mode: nodeEnv,
@@ -435,3 +435,24 @@ export function createBaseConfig() {
     ],
   };
 }
+
+module.exports = {
+  nodeEnv,
+  isDebug,
+  isAnalyze,
+  isProfile,
+  reScript,
+  reStyle,
+  reImage,
+  reFont,
+  reSvg,
+  reHtml,
+  reMarkdown,
+  reText,
+  reAudio,
+  reVideo,
+  reData,
+  createCSSRule,
+  createDefinePluginConfig,
+  createBaseConfig,
+};

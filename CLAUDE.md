@@ -76,7 +76,7 @@ react-starter-kit/
 
 ```bash
 # Development
-npm start                      # Start dev server with HMR (http://localhost:3000)
+npm start                      # Start dev server with HMR (http://localhost:1337)
 npm run build                  # Build for production
 npm run clean                  # Clean build directory
 
@@ -271,7 +271,7 @@ Key environment variables (see .env.defaults):
 
 ```bash
 # Server
-PORT=3000
+PORT=1337
 NODE_ENV=development
 
 # Authentication
@@ -320,5 +320,5 @@ node server.js
 
 # Or use Docker
 docker build -t react-app .
-docker run -p 3000:3000 react-app
+docker run -p 1337:1337 react-app
 ```

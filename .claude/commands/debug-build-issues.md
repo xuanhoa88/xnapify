@@ -9,8 +9,8 @@ npm run clean && rm -rf node_modules package-lock.json && npm install
 # Clear webpack cache
 rm -rf node_modules/.cache
 
-# Kill port 3000 if in use
-npx kill-port -p 3000
+# Kill port 1337 if in use
+npx kill-port -p 1337
 ```
 
 ## Build Issues
@@ -112,5 +112,5 @@ Use preconfigured launch configurations:
 | Error                | Fix                     |
 | -------------------- | ----------------------- |
 | `Cannot find module` | `npm install`           |
-| `Port 3000 in use`   | `npx kill-port -p 3000` |
+| `Port 1337 in use`   | `npx kill-port -p 1337` |
 | `ENOSPC` (Linux)     | Increase file watchers  |
