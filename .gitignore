@@ -85,7 +85,7 @@ web_modules/
 # Environment variables
 .env
 .env.*
-!.env.defaults
+!.env.rsk
 
 # Performance logs
 .rts2_cache/

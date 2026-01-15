@@ -41,7 +41,7 @@ Thumbs.db
 # Environment files
 .env
 .env.*
-!.env.defaults
+!.env.rsk
 
 # Lock files
 package-lock.json

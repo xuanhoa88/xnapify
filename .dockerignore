@@ -45,7 +45,7 @@ docs/
 # Environment
 .env
 .env.*
-!.env.defaults
+!.env.rsk
 
 # Logs
 logs/

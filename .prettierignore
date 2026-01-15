@@ -32,7 +32,7 @@ pnpm-lock.yaml
 # Environment files
 .env
 .env.*
-!.env.defaults
+!.env.rsk
 
 # Configuration files that shouldn't be formatted
 .gitignore

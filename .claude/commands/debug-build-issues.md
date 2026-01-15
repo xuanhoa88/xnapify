@@ -41,7 +41,7 @@ npm install --save-dev babel-loader css-loader
 ### HMR not working
 
 - Check browser console for `[HMR] connected`
-- Restart dev server: `npm start`
+- Restart dev server: `npm run dev`
 
 ### SSR hydration mismatch
 
@@ -90,7 +90,7 @@ app.use((req, res, next) => {
 
 ```bash
 # Verbose logging
-LOG_LEVEL=debug npm start
+LOG_LEVEL=debug npm run dev
 
 # Check versions
 node --version  # >= 16.0.0

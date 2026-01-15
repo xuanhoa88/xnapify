@@ -9,7 +9,7 @@ cd rapid-rsk
 
 # Install and run
 npm install
-npm start
+npm run dev
 
 # Create branch
 git checkout -b feature/your-feature
@@ -18,10 +18,10 @@ git checkout -b feature/your-feature
 ## Development
 
 ```bash
-npm start          # Dev server with HMR
-npm test           # Run tests
-npm run lint       # Check code style
-npm run fix        # Auto-fix issues
+npm run dev          # Dev server with HMR
+npm run test         # Run tests
+npm run lint         # Check code style
+npm run fix          # Auto-fix issues
 ```
 
 ## Commit Messages

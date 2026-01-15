@@ -7,8 +7,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const fs = require('fs');
-const path = require('path');
+const dotenvFlow = require('dotenv-flow');
 const express = require('express');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
@@ -16,14 +15,8 @@ const webpackHotMiddleware = require('webpack-hot-middleware');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const config = require('../config');
 const { BuildError, setupGracefulShutdown } = require('../utils/error');
-const {
-  isSilent,
-  isVerbose,
-  logError,
-  logInfo,
-  logDebug,
-} = require('../utils/logger');
-const { copyFile } = require('../utils/fs');
+const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
+const { generateJWT } = require('../utils/jwt');
 const {
   WEBPACK_SERVER_BUNDLE_PATH,
   webpackClientConfig,
@@ -35,7 +28,6 @@ const {
   onClientConnected: onBrowserSyncClientConnected,
 } = require('../webpack');
 const clean = require('./clean');
-const generateJWT = require('./jwt');
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
@@ -44,14 +36,6 @@ const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
 const { HotModuleReplacementPlugin } = webpack;
 
 const silent = isSilent(); // Cache silent check
-
-// Uses environment variables loaded by dotenv above
-const DEV_CONFIG = {
-  port: parseInt(process.env.RSK_PORT, 10) || 1337,
-  host: process.env.RSK_HOST || 'localhost',
-  https: process.env.RSK_HTTPS === 'true',
-  open: !silent && !process.env.CI,
-};
 
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance
@@ -461,19 +445,20 @@ async function main() {
       });
   });
 
+  // Clean build directory
+  await clean();
+
+  // Generate JWT
+  await generateJWT(config.CWD, 'development');
+
+  // This ensures the newly generated JWT secret is available in process.env
+  dotenvFlow.config({ silent: true });
+
+  // Get port and host from environment variables
+  const port = parseInt(process.env.RSK_PORT, 10) || 1337;
+  const host = process.env.RSK_HOST || 'localhost';
+
   try {
-    // Clean build directory
-    await clean();
-
-    // Generate JWT
-    await generateJWT('development');
-
-    // Copy .env.development
-    if (fs.existsSync('.env.development')) {
-      await copyFile('.env.development', path.join(config.BUILD_DIR, '.env'));
-      logDebug('Copied .env.development');
-    }
-
     // Create Express server instance
     app = express();
 
@@ -498,11 +483,7 @@ async function main() {
     await serverModule.initializeApp(app, config.PUBLIC_DIR);
 
     // Start the HTTP server
-    const server = await serverModule.startServer(
-      app,
-      DEV_CONFIG.port,
-      DEV_CONFIG.host,
-    );
+    const server = await serverModule.startServer(app, port, host);
 
     // Initialize BrowserSync WebSocket server for live reload and HMR
     // This will also open the browser automatically if no clients are connected
@@ -526,7 +507,7 @@ async function main() {
     const errorMessage = [
       `❌ ${devError.message}`,
       `💡 Troubleshooting:`,
-      `   1. Check if port ${DEV_CONFIG.port} is available`,
+      `   1. Check if port ${port} is available`,
       `   2. Run: npm install`,
       `   3. Run: npm run clean`,
     ].join('');

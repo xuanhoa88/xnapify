@@ -16,7 +16,6 @@ const {
   logDebug,
   logError,
   logInfo,
-  logWarn,
 } = require('./utils/logger');
 
 /**
@@ -95,7 +94,7 @@ const AVAILABLE_TASKS = [
     description: 'Clean build directory',
   },
   {
-    name: 'start',
+    name: 'dev',
     description: 'Start the project for development',
     processEnv: { NODE_ENV: 'development' },
   },
@@ -111,10 +110,6 @@ const AVAILABLE_TASKS = [
   {
     name: 'stylelint',
     description: 'Lint CSS files with Stylelint',
-  },
-  {
-    name: 'jwt',
-    description: 'Generate a new JWT options and update .env',
   },
 ];
 
@@ -156,13 +151,6 @@ function executeTask(taskName) {
 
     // Add task path to arguments
     taskArgs.unshift(path.resolve(__dirname, 'tasks', `${taskName}.js`));
-
-    // -r dotenv-flow/config loads environment variables before task execution
-    try {
-      taskArgs.unshift('-r', require.resolve('dotenv-flow/config'));
-    } catch {
-      logWarn(`'dotenv-flow' not found`);
-    }
 
     // Spawn task in child process using node
     const taskProcess = spawn('node', taskArgs, {

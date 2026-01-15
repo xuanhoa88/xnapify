@@ -60,7 +60,7 @@ __mocks__/
 # Environment files
 .env
 .env.*
-!.env.defaults
+!.env.rsk
 
 # Misc
 .cache/

@@ -42,8 +42,7 @@
     "test:ci": "node tools/run test --ci",
     "clean": "node tools/run clean",
     "build": "node tools/run build",
-    "start": "node tools/run start",
-    "generate:jwt": "node tools/run jwt"
+    "dev": "node tools/run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",

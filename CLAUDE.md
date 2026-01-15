@@ -18,7 +18,7 @@ react-starter-kit/
 │   ├── config.js          # Application configuration
 │   └── createFetch.js     # Universal HTTP client
 ├── tools/                 # Build tools and tasks
-│   ├── tasks/             # Build tasks (build, start, clean, etc.)
+│   ├── tasks/             # Build tasks (build, dev, clean, etc.)
 │   ├── webpack/           # Webpack configurations (client, server)
 │   ├── lib/               # Shared utilities (fs, logger, errorHandler)
 │   ├── config.js          # Build configuration
@@ -76,12 +76,12 @@ react-starter-kit/
 
 ```bash
 # Development
-npm start                      # Start dev server with HMR (http://localhost:1337)
+npm run dev                    # Start dev server with HMR (http://localhost:1337)
 npm run build                  # Build for production
 npm run clean                  # Clean build directory
 
 # Testing
-npm test                       # Run all tests
+npm run test                   # Run all tests
 npm run test:watch             # Run tests in watch mode
 npm run test:coverage          # Run tests with coverage
 npm run test:ci                # Run tests in CI mode
@@ -130,7 +130,7 @@ npm run i18n                   # Extract i18n messages
 ### 5. Build System
 
 - Centralized configuration in tools/config.js
-- Task-based architecture (build, start, clean, i18n)
+- Task-based architecture (build, dev, clean, etc.)
 - Metadata-driven task runner (keepAlive for long-running tasks)
 - Comprehensive error handling with BuildError class
 
@@ -267,7 +267,7 @@ Refer to these docs for detailed information:
 
 ## Environment Variables
 
-Key environment variables (see .env.defaults):
+Key environment variables (see .env.rsk):
 
 ```bash
 # Server
@@ -292,10 +292,10 @@ LOG_LEVEL=info
 
 ## Development Workflow
 
-1. **Start development:** `npm start`
+1. **Start development:** `npm run dev`
 2. **Make changes:** Edit files in src/
 3. **See updates:** HMR updates browser automatically
-4. **Run tests:** `npm test` or `npm run test:watch`
+4. **Run tests:** `npm run test` or `npm run test:watch`
 5. **Lint code:** `npm run lint` or `npm run fix`
 6. **Build production:** `npm run build`
 7. **Deploy:** Use Docker or PM2 for production
@@ -311,7 +311,7 @@ cd build
 npm install --production
 
 # Start with PM2
-pm2 start server.js --name react-app
+pm2 start server.js --name rsk
 
 # Or run directly
 export NODE_ENV=production
@@ -319,6 +319,6 @@ export RSK_JWT_SECRET=$(openssl rand -base64 32)
 node server.js
 
 # Or use Docker
-docker build -t react-app .
-docker run -p 1337:1337 react-app
+docker build -t rsk .
+docker run -p 1337:1337 rsk
 ```

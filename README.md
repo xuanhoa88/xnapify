@@ -17,10 +17,10 @@ Modern React SSR application with Express backend, Redux state management, and c
 npm install
 
 # Configure environment
-cp .env.defaults .env
+cp .env.rsk .env
 
 # Start development server
-npm start
+npm run dev
 ```
 
 Open [http://localhost:1337](http://localhost:1337)
@@ -29,9 +29,9 @@ Open [http://localhost:1337](http://localhost:1337)
 
 | Command          | Description                 |
 | ---------------- | --------------------------- |
-| `npm start`      | Development server with HMR |
+| `npm run dev`    | Development server with HMR |
 | `npm run build`  | Production build            |
-| `npm test`       | Run tests                   |
+| `npm run test`   | Run tests                   |
 | `npm run lint`   | Lint JS and CSS             |
 | `npm run fix`    | Auto-fix linting issues     |
 | `npm run format` | Format with Prettier        |
@@ -68,7 +68,7 @@ RSK_JWT_SECRET=your-secret-key
 RSK_JWT_EXPIRES_IN=1d
 ```
 
-See `.env.defaults` for all available options.
+See `.env.rsk` for all available options.
 
 ## Production
 

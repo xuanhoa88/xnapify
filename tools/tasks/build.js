@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const dotenvFlow = require('dotenv-flow');
 const path = require('path');
 const webpack = require('webpack');
 const config = require('../config');
@@ -32,9 +33,9 @@ const {
   logVerbose,
   logWarn,
 } = require('../utils/logger');
+const { generateJWT } = require('../utils/jwt');
 const { webpackClientConfig, webpackServerConfig } = require('../webpack');
 const clean = require('./clean');
-const generateJWT = require('./jwt');
 
 // Build configuration
 const BUNDLE_REPORT_PATH = config.env(
@@ -87,12 +88,11 @@ async function copyFiles() {
       logDebug('Copied public directory');
     }
 
-    // 4. Copy .env.production
-    const envPath = path.join(config.CWD, '.env.production');
-    if (await pathExists(envPath)) {
-      await copyFile(envPath, path.join(config.BUILD_DIR, '.env'));
-      logDebug('Copied .env.production');
-    }
+    // 4. Generate JWT and reload environment
+    await generateJWT(config.CWD, 'production');
+
+    // Reload environment variables to pick up the newly generated JWT secret
+    dotenvFlow.config({ silent: true });
 
     logInfo('✅ Static files copied');
   } catch (error) {
@@ -382,11 +382,6 @@ async function main() {
         name: 'clean',
         task: clean,
         description: 'Cleaning build directory',
-      },
-      {
-        name: 'generate:jwt',
-        task: () => generateJWT('production'),
-        description: 'Generating JWT options',
       },
       {
         name: 'copy',
