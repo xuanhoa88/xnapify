@@ -15,7 +15,7 @@ import {
   isResetPasswordLoading,
   getResetPasswordError,
   clearResetPasswordError,
-} from '../../redux';
+} from '../../shared/renderer/redux';
 import { Link } from '../../components/History';
 import Button from '../../components/Button';
 import Form, { useFormContext } from '../../components/Form';

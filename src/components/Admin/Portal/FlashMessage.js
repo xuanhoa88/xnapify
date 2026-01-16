@@ -7,7 +7,10 @@
 
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getFlashMessage, clearFlashMessage } from '../../../redux';
+import {
+  getFlashMessage,
+  clearFlashMessage,
+} from '../../../shared/renderer/redux';
 import Toast from '../../Toast';
 
 function FlashMessage() {

@@ -76,11 +76,11 @@ async function discoverModules(app) {
 
   // Matches: ./users/models/index.js or ./users/models/index.ts
   const modelPaths = modulePaths.filter(p =>
-    /^\.\/(\w+)\/models\/index\.(js|ts)$/.test(p),
+    /^\.\/([\w-]+)\/models\/index\.(js|ts)$/.test(p),
   );
   // Matches: ./users/index.js or ./users/index.ts
   const routerPaths = modulePaths.filter(p =>
-    /^\.\/(\w+)\/index\.(js|ts)$/.test(p),
+    /^\.\/([\w-]+)\/index\.(js|ts)$/.test(p),
   );
 
   console.info(

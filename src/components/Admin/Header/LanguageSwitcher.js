@@ -8,7 +8,11 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
-import { getLocale, setLocale, getAvailableLocales } from '../../../redux';
+import {
+  getLocale,
+  setLocale,
+  getAvailableLocales,
+} from '../../../shared/renderer/redux';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import s from './LanguageSwitcher.css';

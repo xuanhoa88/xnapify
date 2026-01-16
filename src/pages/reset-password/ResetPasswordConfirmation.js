@@ -19,7 +19,7 @@ import {
   showSuccessMessage,
   getFlashMessage,
   clearFlashMessage,
-} from '../../redux';
+} from '../../shared/renderer/redux';
 import Toast from '../../components/Toast';
 import Icon from '../../components/Icon';
 import { Link } from '../../components/History';

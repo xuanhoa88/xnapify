@@ -15,7 +15,7 @@ import {
   isAvatarLoading,
   getAvatarError,
   clearAvatarError,
-} from '../../../redux';
+} from '../../../shared/renderer/redux';
 import Icon from '../../../components/Icon';
 import s from './ProfileHeader.css';
 

@@ -4,11 +4,24 @@ Modern React SSR application with Express backend, Redux state management, and c
 
 ## Tech Stack
 
-| Frontend      | Backend           | Build     |
-| ------------- | ----------------- | --------- |
-| React 18      | Express 4         | Webpack 5 |
-| Redux Toolkit | Sequelize 6       | Babel 7   |
-| react-i18next | SQLite/PostgreSQL | PostCSS   |
+| Frontend        | Backend           | Build     |
+| --------------- | ----------------- | --------- |
+| React 18        | Express 4         | Webpack 5 |
+| Redux Toolkit   | Sequelize 6       | Babel 7   |
+| React Hook Form | SQLite/PostgreSQL | PostCSS   |
+
+## Features
+
+- ✨ **Server-Side Rendering (SSR)** - Fast initial page loads with React 18
+- 🔐 **Role-Based Access Control (RBAC)** - Comprehensive permissions, roles, and groups system
+- 🔌 **WebSocket Support** - Real-time bidirectional communication
+- 🎨 **Node-RED Integration** - Visual flow-based programming for automation
+- 📦 **Code Splitting** - Automatic route-based code splitting with Loadable Components
+- 🔄 **Hot Module Replacement** - Fast development with instant updates
+- 🧪 **Testing Ready** - Jest configured with React Testing Library
+- 🎯 **Form Validation** - React Hook Form with Zod schema validation
+- 📧 **Email Support** - Nodemailer integration for transactional emails
+- ⏰ **Scheduled Tasks** - Node-cron for background jobs
 
 ## Quick Start
 
@@ -41,14 +54,23 @@ Open [http://localhost:1337](http://localhost:1337)
 ```
 src/
 ├── api/              # Express routes and Sequelize models
-│   ├── engines/      # Core API infrastructure
-│   └── modules/      # Feature modules (users, auth, etc.)
+│   ├── engines/      # Core API infrastructure (auth, db, workers, ws)
+│   └── modules/      # Feature modules (users, auth, groups, roles, etc.)
 ├── components/       # Reusable React components
 ├── pages/            # Page components (routes)
-├── redux/            # Redux store, slices, and thunks
-├── shared/           # Shared utilities (fetch, ws, navigator)
+│   └── admin/        # Admin panel routes
+├── shared/           # Shared utilities
+│   ├── renderer/     # SSR utilities and Redux store
+│   ├── fetch/        # API client
+│   ├── ws/           # WebSocket client
+│   ├── i18n/         # i18n utilities
+│   └── validator/    # SSR validator utilities
 ├── client.js         # Client entry point
 └── server.js         # Server entry point
+
+tools/
+├── tasks/            # Build tasks (build, clean, dev, etc.)
+└── utils/            # Build utilities
 ```
 
 ## Environment Variables
@@ -56,38 +78,114 @@ src/
 Key variables in `.env`:
 
 ```bash
-# Server
+# Server Configuration
 RSK_PORT=1337
 RSK_HOST=localhost
+RSK_HTTPS=false
+
+# Application Metadata
+RSK_APP_NAME="React Starter Kit"
+RSK_APP_DESCRIPTION="Boilerplate for React.js web applications"
+
+# API Gateway
+RSK_API_BASE_URL=              # Leave empty for relative URLs
+RSK_API_PROXY_URL=             # Optional external API proxy
 
 # Database
 RSK_DATABASE_URL=sqlite:database.sqlite
+# PostgreSQL example: postgresql://user:password@localhost:5432/dbname
 
 # Authentication
-RSK_JWT_SECRET=your-secret-key
-RSK_JWT_EXPIRES_IN=1d
+RSK_JWT_SECRET=your-secret-key  # Auto-generated on first run
+RSK_JWT_EXPIRES_IN=7d
+
+# Node-RED (Optional)
+RSK_NODE_RED_URL=http://localhost:1880
 ```
 
-See `.env.rsk` for all available options.
+See `.env.rsk` for all available options and detailed documentation.
 
 ## Production
 
 ```bash
-# Build
+# Build for production
 npm run build
 
-# Run from build directory
+# Navigate to build directory
 cd build
+
+# Install production dependencies only
 npm install --production
+
+# Start production server
 NODE_ENV=production node server.js
 ```
 
+> **Note**: The JWT secret is auto-generated during the build process if not already set in `.env`.
+
 ### Docker
 
+Build and run with Docker:
+
 ```bash
+# Build image
 docker build -t rapid-rsk .
-docker run -p 1337:1337 -e NODE_ENV=production -e RSK_JWT_SECRET=secret rapid-rsk
+
+# Run with environment variables
+docker run -p 1337:1337 \
+  -e NODE_ENV=production \
+  -e RSK_JWT_SECRET=your-secure-secret \
+  -e RSK_DATABASE_URL=postgresql://user:pass@host:5432/db \
+  rapid-rsk
+
+# Run with persistent database (SQLite)
+docker run -p 1337:1337 \
+  -v $(pwd)/data:/app/data \
+  -e RSK_DATABASE_URL=sqlite:data/database.sqlite \
+  rapid-rsk
 ```
+
+For production deployments, consider:
+
+- Using PostgreSQL instead of SQLite for better concurrency
+- Setting up reverse proxy (nginx) for SSL/TLS termination
+- Configuring proper logging and monitoring
+- Using environment-specific `.env` files (never commit `.env` to git)
+
+## Development
+
+### Module System
+
+The application uses an auto-discovery module system. Place new modules in `src/api/modules/`:
+
+```
+src/api/modules/your-module/
+├── index.js           # Module entry point
+├── model.js           # Sequelize model (optional)
+├── controller.js      # Route handlers
+├── service.js         # Business logic
+└── routes.js          # Express routes
+```
+
+Modules are automatically discovered and loaded at startup.
+
+### WebSocket Integration
+
+WebSocket server runs alongside the Express server. Connect from client:
+
+```javascript
+import { createWebSocketClient } from '@/shared/ws';
+
+const ws = createWebSocketClient();
+ws.on('message', data => console.log(data));
+```
+
+### Node-RED Access
+
+When Node-RED is enabled, access the visual editor at:
+
+- Development: `http://localhost:1880`
+- Production: Configure `RSK_NODE_RED_URL` in your environment
 
 ## License
 

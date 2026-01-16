@@ -16,8 +16,8 @@ Components that use Redux, i18n, or History need the full `App` context:
 // src/components/MyComponent/MyComponent.test.js
 import renderer, { act } from 'react-test-renderer';
 import configureStore from 'redux-mock-store';
-import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '../../shared/i18n';
-import App from '../App';
+import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '@/shared/i18n';
+import App from '@/shared/renderer/App';
 import MyComponent from './index';
 
 // =============================================================================
@@ -122,8 +122,8 @@ describe('Button', () => {
 
 ```javascript
 // Mock module
-jest.mock('../../redux', () => ({
-  ...jest.requireActual('../../redux'),
+jest.mock('@/shared/renderer/redux/features/user/selector', () => ({
+  ...jest.requireActual('@/shared/renderer/redux/features/user/selector'),
   isAuthenticated: jest.fn(() => true),
 }));
 

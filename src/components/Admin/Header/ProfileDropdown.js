@@ -10,7 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
 import { Link, useHistory } from '../../History';
-import { getUserDisplayName, getUserAvatarUrl, logout } from '../../../redux';
+import {
+  getUserDisplayName,
+  getUserAvatarUrl,
+  logout,
+} from '../../../shared/renderer/redux';
 import { useWebSocket } from '../../../shared/ws/client';
 import Icon from '../../Icon';
 import Button from '../../Button';

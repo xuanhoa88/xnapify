@@ -19,7 +19,7 @@ import {
   isPreferencesLoading,
   getPreferencesError,
   clearPreferencesError,
-} from '../../../redux';
+} from '../../../shared/renderer/redux';
 import { updatePreferencesFormSchema } from '../../../shared/validator/features/auth';
 import Icon from '../../../components/Icon';
 import Button from '../../../components/Button';

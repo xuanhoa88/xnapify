@@ -6,7 +6,7 @@
  */
 
 import Layout from '../../components/Layout';
-import { isAuthenticated } from '../../redux';
+import { isAuthenticated } from '../../shared/renderer/redux';
 import Profile from './Profile';
 
 /**

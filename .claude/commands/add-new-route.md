@@ -49,7 +49,7 @@ export default MyPage;
 
 ```javascript
 // src/pages/my-page/index.js
-import Layout from '../../components/Layout';
+import Layout from '@/components/Layout';
 import MyPage from './MyPage';
 
 /**
@@ -81,7 +81,7 @@ export default [route, action];
 ## 4. Add Navigation Link
 
 ```javascript
-import { Link } from '../../components/History';
+import { Link } from '@/components/History/Link';
 
 <Link to='/my-page'>My Page</Link>;
 ```
@@ -90,6 +90,9 @@ import { Link } from '../../components/History';
 
 ```javascript
 // src/pages/users/:id/index.js
+import Layout from '@/components/Layout';
+import UserProfile from './UserProfile';
+
 const route = {
   path: '/users/:id',
 };
@@ -114,7 +117,9 @@ export default [route, action];
 
 ```javascript
 // src/pages/dashboard/index.js
-import { isAuthenticated } from '../../redux';
+import Layout from '@/components/Layout';
+import Dashboard from './Dashboard';
+import { isAuthenticated } from '@/shared/renderer/redux/features/user/selector';
 
 const route = { path: '/dashboard' };
 
@@ -139,10 +144,88 @@ function action(context) {
 export default [route, action];
 ```
 
+## Routes with Form Validation
+
+```javascript
+// src/pages/contact/index.js
+import Layout from '@/components/Layout';
+import ContactForm from './ContactForm';
+
+const route = { path: '/contact' };
+
+function action(context) {
+  return {
+    title: 'Contact Us',
+    description: 'Get in touch with us',
+    component: (
+      <Layout>
+        <ContactForm />
+      </Layout>
+    ),
+  };
+}
+
+export default [route, action];
+```
+
+```javascript
+// src/pages/contact/ContactForm.js
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+
+const schema = z.object({
+  name: z.string().min(2, 'Name must be at least 2 characters'),
+  email: z.string().email('Invalid email address'),
+  message: z.string().min(10, 'Message must be at least 10 characters'),
+});
+
+function ContactForm() {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm({
+    resolver: zodResolver(schema),
+  });
+
+  const onSubmit = async data => {
+    // Handle form submission
+    console.log(data);
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div>
+        <input {...register('name')} placeholder='Name' />
+        {errors.name && <span>{errors.name.message}</span>}
+      </div>
+
+      <div>
+        <input {...register('email')} placeholder='Email' />
+        {errors.email && <span>{errors.email.message}</span>}
+      </div>
+
+      <div>
+        <textarea {...register('message')} placeholder='Message' />
+        {errors.message && <span>{errors.message.message}</span>}
+      </div>
+
+      <button type='submit'>Send</button>
+    </form>
+  );
+}
+
+export default ContactForm;
+```
+
 ## Parent Routes with Children
 
 ```javascript
 // src/pages/admin/index.js
+import Layout from '@/components/Layout';
+import { isAuthenticated } from '@/shared/renderer/redux/features/user/selector';
+
 const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
 
 const route = async buildPages => {

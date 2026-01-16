@@ -10,7 +10,12 @@ import 'whatwg-fetch';
 import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
 import { createFetch } from './shared/fetch';
-import { configureStore, refreshToken, logout, isAuthenticated } from './redux';
+import {
+  configureStore,
+  refreshToken,
+  logout,
+  isAuthenticated,
+} from './shared/renderer/redux';
 import i18n, { DEFAULT_LOCALE } from './shared/i18n';
 import {
   createWebSocketClient,

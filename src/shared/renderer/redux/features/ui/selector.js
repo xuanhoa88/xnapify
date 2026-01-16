@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { normalizeState } from './slice';
+import { normalizeState } from './utils';
 
 // =============================================================================
 // HELPER FUNCTIONS

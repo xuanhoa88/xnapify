@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeState } from './utils';
 import reducer, {
-  normalizeState,
   clearAuthError,
   clearEmailVerificationError,
   clearResetPasswordError,

@@ -15,7 +15,7 @@ import {
   generatePassword,
   getUserProfile,
   showSuccessMessage,
-} from '../../../../../redux';
+} from '../../../../../shared/renderer/redux';
 import { useDebounce } from '../../../../../components/InfiniteScroll';
 import {
   Box,

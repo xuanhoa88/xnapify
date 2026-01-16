@@ -10,7 +10,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
 import Modal from '../../../../components/Modal';
 import { bulkUpdateUserStatus } from '../redux';
-import { getUserProfile } from '../../../../redux';
+import { getUserProfile } from '../../../../shared/renderer/redux';
 
 /**
  * ChangeStatusUserModal - Self-contained modal for changing user status

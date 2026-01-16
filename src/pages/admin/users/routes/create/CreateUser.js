@@ -11,7 +11,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../components/History';
 import { createUserFormSchema } from '../../../../../shared/validator/features/admin';
-import { generatePassword, showSuccessMessage } from '../../../../../redux';
+import {
+  generatePassword,
+  showSuccessMessage,
+} from '../../../../../shared/renderer/redux';
 import { useDebounce } from '../../../../../components/InfiniteScroll';
 import { Box, Icon, ConfirmModal } from '../../../../../components/Admin';
 import Button from '../../../../../components/Button';

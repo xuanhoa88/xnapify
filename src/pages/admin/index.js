@@ -6,7 +6,11 @@
  */
 
 import AdminLayout from '../../components/Admin';
-import { isAuthenticated, setBreadcrumbs, addBreadcrumb } from '../../redux';
+import {
+  isAuthenticated,
+  setBreadcrumbs,
+  addBreadcrumb,
+} from '../../shared/renderer/redux';
 
 // Auto-load admin pages via require.context
 const pagesContext = require.context(

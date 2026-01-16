@@ -18,7 +18,12 @@ import { ChunkExtractor } from '@loadable/server';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
-import { configureStore, setRuntimeVariable, setLocale, me } from './redux';
+import {
+  configureStore,
+  setRuntimeVariable,
+  setLocale,
+  me,
+} from './shared/renderer/redux';
 import i18n, {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
@@ -62,7 +67,7 @@ const config = Object.freeze({
     process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '10mb',
 });
 
-let cachedNavigator = null;
+let navigator = null;
 
 // =============================================================================
 // ERROR HANDLERS
@@ -78,45 +83,64 @@ process.on('uncaughtException', err => {
   process.exit(1);
 });
 
-function setupGracefulShutdown(httpServer, wsServer) {
+/**
+ * Register graceful shutdown handlers
+ * @param {Object} httpServer - HTTP server instance
+ * @param {Object} wsServer - WebSocket server instance
+ */
+function registerShutdownHandlers(httpServer, wsServer) {
   let isShuttingDown = false;
 
-  const shutdown = async signal => {
+  const handleShutdown = async signal => {
     // Prevent multiple shutdown executions
-    if (isShuttingDown) {
-      return;
-    }
+    if (isShuttingDown) return;
     isShuttingDown = true;
 
-    console.log(`\n${signal} received, shutting down...`);
+    console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
+    const shutdownStart = Date.now();
 
-    // Stop WebSocket server first
-    if (wsServer) {
-      try {
+    try {
+      // 1. Stop accepting new WebSocket connections & close existing ones
+      if (wsServer) {
+        console.info('   Closing WebSocket server...');
         await wsServer.stop();
-        console.log('✅ WebSocket server closed');
-      } catch (err) {
-        console.error('❌ WebSocket shutdown error:', err);
+        console.info('   ✔ WebSocket server closed');
       }
-    }
 
-    httpServer.close(err => {
-      if (err) {
-        console.error('❌ Shutdown error:', err);
-        process.exit(1);
-      }
-      console.log('✅ Server closed');
+      // 2. Stop accepting new HTTP requests
+      await new Promise((resolve, reject) => {
+        console.info('   Closing HTTP server...');
+        httpServer.close(err => {
+          if (err) return reject(err);
+          console.info('   ✔ HTTP server closed');
+          resolve();
+        });
+      });
+
+      const duration = Date.now() - shutdownStart;
+      console.info(`✅ Graceful shutdown completed in ${duration}ms`);
       process.exit(0);
-    });
-
-    setTimeout(() => {
-      console.error('⚠️ Forced shutdown');
+    } catch (err) {
+      console.error('❌ Shutdown error:', err);
       process.exit(1);
-    }, 30_000);
+    }
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  // Force shutdown if graceful shutdown hangs
+  const forceShutdown = () => {
+    console.error('⚠️ Forced shutdown after timeout');
+    process.exit(1);
+  };
+
+  // Handle signals
+  const handleSignal = signal => {
+    // Set a safety timeout
+    setTimeout(forceShutdown, 30_000).unref();
+    handleShutdown(signal);
+  };
+
+  process.on('SIGTERM', () => handleSignal('SIGTERM'));
+  process.on('SIGINT', () => handleSignal('SIGINT'));
 }
 
 // =============================================================================
@@ -143,12 +167,12 @@ function getBaseUrl({ host, port }) {
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
-async function getNavigator() {
-  if (!cachedNavigator) {
-    cachedNavigator = await import('./pages').then(m => m.default());
+async function loadNavigator() {
+  if (!navigator) {
+    navigator = await import('./pages').then(m => m.default());
     if (__DEV__) console.log('✅ Navigator initialized');
   }
-  return cachedNavigator;
+  return navigator;
 }
 
 function getInnerHTML(element) {
@@ -162,7 +186,7 @@ function getInnerHTML(element) {
   );
 }
 
-async function createReduxStore({ fetch, history }, locale) {
+async function initStore({ fetch, history }, locale) {
   const store = configureStore(
     { user: { data: null } },
     { fetch, history, i18n },
@@ -191,7 +215,7 @@ async function createReduxStore({ fetch, history }, locale) {
 // RENDERING
 // =============================================================================
 
-async function renderPageToHtml({ context, component, metadata = {} }) {
+async function render({ context, component, metadata = {} }) {
   const statsPath = path.resolve(__dirname, 'loadable-stats.json');
   const extractor = new ChunkExtractor({
     statsFile: statsPath,
@@ -240,7 +264,7 @@ async function renderPageToHtml({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-function createPageMetadata(page, req) {
+function getMetadata(page, req) {
   const protocol = req.protocol || 'http';
   const host = req.get('host') || 'localhost';
   return {
@@ -256,7 +280,7 @@ function createPageMetadata(page, req) {
 // SERVER SETUP
 // =============================================================================
 
-function setupApiProxy(app) {
+function applyApiProxy(app) {
   const proxyUrl = process.env.RSK_API_PROXY_URL;
   if (!proxyUrl) return; // No proxy configured
 
@@ -295,7 +319,67 @@ function setupApiProxy(app) {
   );
 }
 
-export function startServer(app, port = config.port, host = config.host) {
+/**
+ * Verify WebSocket authentication token
+ * @param {Object} jwt - JWT service instance
+ * @param {string} token - Token to verify
+ * @returns {Object} User payload (id, email)
+ */
+function verifyWsToken(jwt, token) {
+  if (!token) {
+    const error = new Error('Token required');
+    error.code = 'E_TOKEN_REQUIRED';
+    throw error;
+  }
+
+  if (!jwt) {
+    const error = new Error('JWT not configured');
+    error.code = 'E_CONFIG_ERROR';
+    throw error;
+  }
+
+  const decoded = jwt.verifyTypedToken(token, 'access');
+  return { id: decoded.id, email: decoded.email };
+}
+
+/**
+ * Initialize WebSocket server attached to HTTP server
+ * @param {Object} httpServer - HTTP server instance
+ * @param {Object} jwt - JWT service instance
+ * @returns {Object} WebSocket server instance
+ */
+function initWebSocket(httpServer, jwt) {
+  return createWebSocketServer(
+    {
+      path: config.wsPath,
+      enableLogging: !__DEV__,
+      onAuthentication: token => verifyWsToken(jwt, token),
+    },
+    httpServer,
+  );
+}
+
+/**
+ * Log server startup information
+ * @param {Object} options - Server options
+ * @param {string} options.host - Server host
+ * @param {number} options.port - Server port
+ */
+function logStartup({ host, port }) {
+  const serverUrl = getBaseUrl({ host, port });
+  const wsProtocol = serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
+  const wsUrl =
+    wsProtocol + serverUrl.replace(/^https?:\/\//, '') + config.wsPath;
+
+  console.info('='.repeat(50));
+  console.info(`🚀 Server started`);
+  console.info(`   URL: ${serverUrl}/`);
+  console.info(`   WebSocket: ${wsUrl}`);
+  console.info(`   Environment: ${nodeEnv}`);
+  console.info('='.repeat(50));
+}
+
+export function serve(app, port = config.port, host = config.host) {
   return new Promise((resolve, reject) => {
     const httpServer = app.listen(port, host, err => {
       if (err) {
@@ -303,57 +387,11 @@ export function startServer(app, port = config.port, host = config.host) {
         return reject(err);
       }
 
-      // Initialize WebSocket server
-      const jwt = app.get('jwt');
-      const wsServer = createWebSocketServer(
-        {
-          path: config.wsPath,
-          enableLogging: !__DEV__,
-          onAuthentication: async token => {
-            if (!token) {
-              const error = new Error('Token required');
-              error.code = 'E_TOKEN_REQUIRED';
-              throw error;
-            }
-
-            if (!jwt) {
-              const error = new Error('JWT not configured');
-              error.code = 'E_CONFIG_ERROR';
-              throw error;
-            }
-
-            // Verify token using the configured JWT instance
-            const decoded = jwt.verifyTypedToken(token, 'access');
-
-            // Return user payload (id, email, etc.)
-            return {
-              id: decoded.id,
-              email: decoded.email,
-            };
-          },
-        },
-        httpServer,
-      );
-
-      // Expose wsServer to API routes
+      const wsServer = initWebSocket(httpServer, app.get('jwt'));
       app.set('ws', wsServer);
 
-      setupGracefulShutdown(httpServer, wsServer);
-
-      // Server URL
-      const serverUrl = getBaseUrl({ host, port });
-
-      // WebSocket URL
-      const wsProtocol = serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
-      const wsUrl =
-        wsProtocol + serverUrl.replace(/^https?:\/\//, '') + config.wsPath;
-
-      console.info('='.repeat(50));
-      console.info(`🚀 Server started`);
-      console.info(`   URL: ${serverUrl}/`);
-      console.info(`   WebSocket: ${wsUrl}`);
-      console.info(`   Environment: ${nodeEnv}`);
-      console.info('='.repeat(50));
+      registerShutdownHandlers(httpServer, wsServer);
+      logStartup({ host, port });
 
       resolve(httpServer);
     });
@@ -373,7 +411,7 @@ export function startServer(app, port = config.port, host = config.host) {
 // MAIN APPLICATION
 // =============================================================================
 
-async function main(app, staticPath) {
+async function main(app, publicDir) {
   // JWT Configuration
   configureJwt(app);
 
@@ -381,7 +419,7 @@ async function main(app, staticPath) {
   app.set('i18n', i18n);
 
   // Initialize SSR navigator
-  const navigator = await getNavigator();
+  const nav = await loadNavigator();
 
   // Express configuration
   app.set('trust proxy', config.trustProxy);
@@ -428,7 +466,7 @@ async function main(app, staticPath) {
 
   // Static files
   app.use(
-    express.static(staticPath || path.resolve('public'), {
+    express.static(publicDir || path.resolve('public'), {
       maxAge: __DEV__ ? 0 : '1y',
       etag: true,
       lastModified: true,
@@ -463,7 +501,7 @@ async function main(app, staticPath) {
 
   // API routes
   await import('./api').then(api => api.default(app, config));
-  setupApiProxy(app);
+  applyApiProxy(app);
 
   // SSR handler
   app.get('*', async (req, res, next) => {
@@ -485,7 +523,7 @@ async function main(app, staticPath) {
       });
 
       const locale = req.language || DEFAULT_LOCALE;
-      const store = await createReduxStore({ fetch, history }, locale);
+      const store = await initStore({ fetch, history }, locale);
 
       const context = {
         fetch,
@@ -501,9 +539,10 @@ async function main(app, staticPath) {
         new URLSearchParams(history.location.search),
       );
 
-      const page = await navigator.resolve(context);
+      const page = await nav.resolve(context);
       if (!page) {
         const err = new Error(`Page ${req.path} not found`);
+        err.name = 'PageNotFound';
         err.status = 404;
         throw err;
       }
@@ -514,14 +553,15 @@ async function main(app, staticPath) {
 
       if (!page.component) {
         const err = new Error(`Page ${req.path} has no component`);
+        err.name = 'PageHasNoComponent';
         err.status = 500;
         throw err;
       }
 
-      const html = await renderPageToHtml({
+      const html = await render({
         context,
         component: page.component,
-        metadata: createPageMetadata(page, req),
+        metadata: getMetadata(page, req),
       });
 
       const renderTime = Date.now() - startTime;
@@ -606,14 +646,15 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    cachedNavigator = null;
+    navigator = null;
   });
   main.hot = module.hot;
 } else {
   (async () => {
     try {
-      const app = await main(express());
-      await startServer(app);
+      const app = express();
+      await main(app);
+      await serve(app);
     } catch (err) {
       console.error('❌ Startup failed:', err);
       process.exit(1);

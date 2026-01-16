@@ -14,7 +14,7 @@ import {
   useRef,
 } from 'react';
 import { match as matchPath, compile as compilePath } from 'path-to-regexp';
-import HistoryContext from './Provider';
+import { HistoryContext } from '../../shared/renderer/Providers';
 
 /**
  * Hook to access history instance from context

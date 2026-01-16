@@ -6,17 +6,10 @@
  */
 
 // Public API - Selectors
-export {
-  // Typed selectors for known runtime variables
-  getAppName,
-  getAppDescription,
-  getInitialNow,
-  // Generic selector for custom variables
-  getRuntimeVariable,
-} from './selector';
+export * from './selector';
 
 // Public API - Actions (from slice)
-export { setRuntimeVariable, resetRuntimeState } from './slice';
+export * from './slice';
 
 // Public API - Reducer
 export { default } from './slice';

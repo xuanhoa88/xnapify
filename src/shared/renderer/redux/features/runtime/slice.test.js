@@ -5,11 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, {
-  normalizeState,
-  setRuntimeVariable,
-  resetRuntimeState,
-} from './slice';
+import { normalizeState } from './utils';
+import reducer, { setRuntimeVariable, resetRuntimeState } from './slice';
 
 describe('[runtime] slice.js', () => {
   describe('normalizeState', () => {

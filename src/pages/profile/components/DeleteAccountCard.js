@@ -14,7 +14,7 @@ import {
   isDeleteLoading,
   getDeleteError,
   clearDeleteError,
-} from '../../../redux';
+} from '../../../shared/renderer/redux';
 import { deleteAccountFormSchema } from '../../../shared/validator/features/auth';
 import { useHistory } from '../../../components/History';
 import Icon from '../../../components/Icon';

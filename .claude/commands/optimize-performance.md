@@ -105,3 +105,101 @@ app.use('/public', express.static('public', { maxAge: '1y' }));
 - [ ] Set cache headers
 - [ ] Lazy load images
 - [ ] Debounce search inputs
+
+## Worker Process Optimization
+
+```javascript
+// Offload heavy tasks to workers
+import workerPool from '@/api/engines/worker';
+
+// Instead of blocking the request
+export async function generateReport(req, res) {
+  // ❌ Bad: Blocks the request
+  const report = await heavyProcessing();
+  res.json(report);
+}
+
+// ✅ Good: Dispatch to worker
+export async function generateReport(req, res) {
+  workerPool
+    .sendRequest('report', 'GENERATE_REPORT', req.body)
+    .catch(console.error);
+  res.json({ message: 'Report generation started' });
+}
+
+// Configure worker pool concurrency
+const workerPool = createWorkerPool(workersContext, {
+  maxWorkers: 4, // Adjust based on CPU cores
+});
+```
+
+## WebSocket Optimization
+
+```javascript
+// Throttle frequent updates
+import { throttle } from 'lodash';
+
+const sendUpdate = throttle((ws, data) => {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(data));
+  }
+}, 100); // Max 10 updates per second
+
+// Use binary data for large payloads
+const buffer = Buffer.from(JSON.stringify(largeData));
+ws.send(buffer);
+
+// Clean up inactive connections
+setInterval(() => {
+  wss.clients.forEach(ws => {
+    if (ws.isAlive === false) {
+      ws.terminate();
+    }
+    ws.isAlive = false;
+    ws.ping();
+  });
+}, 30000);
+```
+
+## Redux Optimization
+
+```javascript
+// Memoize selectors
+import { createSelector } from '@reduxjs/toolkit';
+
+const getUsers = state => state.users.items;
+const getFilter = state => state.users.filter;
+
+// ✅ Good: Memoized selector
+export const getFilteredUsers = createSelector(
+  [getUsers, getFilter],
+  (users, filter) => users.filter(u => u.name.includes(filter)),
+);
+
+// Normalize state for large lists
+const usersSlice = createSlice({
+  name: 'users',
+  initialState: {
+    byId: {},
+    allIds: [],
+  },
+  reducers: {
+    setUsers: (state, action) => {
+      state.byId = action.payload.reduce((acc, user) => {
+        acc[user.id] = user;
+        return acc;
+      }, {});
+      state.allIds = action.payload.map(u => u.id);
+    },
+  },
+});
+
+// Batch Redux updates
+import { batch } from 'react-redux';
+
+batch(() => {
+  dispatch(action1());
+  dispatch(action2());
+  dispatch(action3());
+});
+```

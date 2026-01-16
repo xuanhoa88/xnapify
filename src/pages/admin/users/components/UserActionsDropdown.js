@@ -8,7 +8,7 @@
 import { useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
-import { getUserId } from '../../../../redux';
+import { getUserId } from '../../../../shared/renderer/redux';
 import { Icon, Table } from '../../../../components/Admin';
 
 const { ActionsDropdown } = Table;

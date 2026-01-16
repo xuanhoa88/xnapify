@@ -15,7 +15,7 @@ import {
   isAuthLoading,
   getAuthError,
   clearAuthError,
-} from '../../redux';
+} from '../../shared/renderer/redux';
 import { Link, useHistory, useQuery } from '../../components/History';
 import { useWebSocket } from '../../shared/ws/client';
 import Button from '../../components/Button';

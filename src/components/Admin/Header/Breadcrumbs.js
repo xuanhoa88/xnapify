@@ -9,7 +9,7 @@ import { Fragment } from 'react';
 import { useSelector } from 'react-redux';
 import { Link } from '../../History';
 import Icon from '../../Icon';
-import { getBreadcrumbs } from '../../../redux';
+import { getBreadcrumbs } from '../../../shared/renderer/redux';
 import s from './Breadcrumbs.css';
 
 /**

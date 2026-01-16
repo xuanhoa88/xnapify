@@ -5,11 +5,49 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/**
+ * HTML Document Template Module
+ *
+ * Provides the complete HTML document structure for server-side rendering (SSR).
+ * This component is responsible for:
+ * - Rendering the HTML shell with proper meta tags
+ * - Injecting critical CSS and JavaScript
+ * - Setting up Open Graph tags for social media
+ * - Hydrating client-side state (Redux, Loadable components)
+ * - Optimizing for SEO and performance
+ *
+ * @example
+ * const html = renderToString(
+ *   <Html
+ *     title="My App"
+ *     description="A React application"
+ *     locale="en-US"
+ *     scripts={['/client.js']}
+ *     styleLinks={['/styles.css']}
+ *     appState={{ redux: store.getState() }}
+ *   >
+ *     {appHtml}
+ *   </Html>
+ * );
+ */
+
 import PropTypes from 'prop-types';
 import serialize from 'serialize-javascript';
 
+// =============================================================================
+// SUB-COMPONENTS
+// =============================================================================
+
 /**
  * Renders Open Graph meta tags for social media sharing
+ *
+ * @param {Object} props
+ * @param {string} props.title - Page title for social sharing
+ * @param {string} props.description - Page description for social sharing
+ * @param {string} props.type - Open Graph type (e.g., 'website', 'article')
+ * @param {string} [props.url] - Canonical URL for the page
+ * @param {string} [props.image] - Image URL for social sharing preview
+ * @returns {React.ReactElement} Open Graph meta tags
  */
 function OpenGraphMeta({ title, description, type, url, image }) {
   return (
@@ -23,6 +61,9 @@ function OpenGraphMeta({ title, description, type, url, image }) {
   );
 }
 
+/**
+ * PropTypes for the OpenGraphMeta component
+ */
 OpenGraphMeta.propTypes = {
   title: PropTypes.string.isRequired,
   description: PropTypes.string.isRequired,
@@ -32,8 +73,15 @@ OpenGraphMeta.propTypes = {
 };
 
 /**
- * Renders loadable component state scripts
- * Required for @loadable/component SSR hydration
+ * Renders loadable component state scripts for SSR hydration
+ *
+ * Required for @loadable/component to properly hydrate code-split chunks
+ * on the client side. These scripts must be rendered before the app state.
+ *
+ * @param {Object} props
+ * @param {string} [props.requiredChunks] - JSON string of required chunks
+ * @param {string} [props.namedChunks] - JSON string of named chunks
+ * @returns {React.ReactElement|null} Loadable state scripts or null
  */
 function LoadableStateScripts({ requiredChunks, namedChunks }) {
   if (!requiredChunks && !namedChunks) return null;
@@ -58,14 +106,26 @@ function LoadableStateScripts({ requiredChunks, namedChunks }) {
   );
 }
 
+/**
+ * PropTypes for the LoadableStateScripts component
+ */
 LoadableStateScripts.propTypes = {
   requiredChunks: PropTypes.string,
   namedChunks: PropTypes.string,
 };
 
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
+
 /**
- * HTML document template component
- * Renders the complete HTML structure for server-side rendering
+ * HTML document template component for server-side rendering
+ *
+ * Renders the complete HTML structure including:
+ * - Meta tags for SEO and social sharing
+ * - CSS and JavaScript resources
+ * - Serialized application state for hydration
+ * - Loadable component state for code splitting
  *
  * @param {Object} props - Component props
  * @param {string} props.title - Page title
@@ -80,8 +140,9 @@ LoadableStateScripts.propTypes = {
  * @param {Object} [props.loadableState] - Loadable component state for SSR
  * @param {Object} props.appState - Application state (contains Redux state)
  * @param {string} props.children - Rendered React app HTML
+ * @returns {React.ReactElement} Complete HTML document
  */
-function Html({
+export default function Html({
   title,
   description,
   image = null,
@@ -173,28 +234,41 @@ function Html({
   );
 }
 
+/**
+ * PropTypes for the Html component
+ */
 Html.propTypes = {
+  /** Page title (appears in browser tab and search results) */
   title: PropTypes.string.isRequired,
+  /** Page description (for SEO and social sharing) */
   description: PropTypes.string.isRequired,
+  /** Open Graph image URL for social media previews */
   image: PropTypes.string,
+  /** Canonical URL for the page (for SEO) */
   url: PropTypes.string,
+  /** Open Graph type (e.g., 'website', 'article', 'product') */
   type: PropTypes.string,
+  /** Document locale (e.g., 'en-US', 'fr-FR') */
   locale: PropTypes.string,
+  /** Inline CSS styles from @loadable/component */
   styles: PropTypes.arrayOf(
     PropTypes.shape({
       cssText: PropTypes.string.isRequired,
     }),
   ),
+  /** CSS file URLs to link in the document head */
   styleLinks: PropTypes.arrayOf(PropTypes.string),
+  /** JavaScript file URLs to load */
   scripts: PropTypes.arrayOf(PropTypes.string),
+  /** Loadable component state for SSR hydration */
   loadableState: PropTypes.shape({
     requiredChunks: PropTypes.string,
     namedChunks: PropTypes.string,
   }),
+  /** Application state for client-side hydration */
   appState: PropTypes.shape({
     redux: PropTypes.object.isRequired,
   }).isRequired,
+  /** Rendered React app HTML string */
   children: PropTypes.string.isRequired,
 };
-
-export default Html;

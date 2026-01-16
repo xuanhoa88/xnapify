@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated } from '../../redux';
+import { isAuthenticated } from '../../shared/renderer/redux';
 import ResetPasswordRequest from './ResetPasswordRequest';
 import ResetPasswordConfirmation from './ResetPasswordConfirmation';
 

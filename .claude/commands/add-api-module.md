@@ -276,3 +276,171 @@ export async function down({ context: queryInterface }) {
 4. **Routes**: Inject `deps`, `middlewares`, and `app` for flexibility
 5. **Migrations**: Use `require.context` for auto-discovery
 6. **Auth**: Use `app.get('auth').middlewares.requireAuth()` for protected routes
+
+## RBAC Integration
+
+### Protected Routes with Permissions
+
+```javascript
+// src/api/modules/{module}/routes/post.routes.js
+import * as postController from '../controllers/post.controller';
+
+export default function postRoutes(deps, middlewares, app) {
+  const auth = app.get('auth');
+  const requireAuth = auth.middlewares.requireAuth();
+  const requirePermission = auth.middlewares.requirePermission;
+  const router = deps.Router();
+
+  // Public routes
+  router.get('/', postController.getAll);
+  router.get('/:id', postController.getById);
+
+  // Protected routes - require authentication
+  router.post('/', requireAuth, postController.create);
+
+  // Protected routes - require specific permission
+  router.put(
+    '/:id',
+    requireAuth,
+    requirePermission('posts:update'),
+    postController.update,
+  );
+  router.delete(
+    '/:id',
+    requireAuth,
+    requirePermission('posts:delete'),
+    postController.destroy,
+  );
+
+  // Admin only
+  router.post(
+    '/bulk-delete',
+    requireAuth,
+    requirePermission('posts:admin'),
+    postController.bulkDelete,
+  );
+
+  return router;
+}
+```
+
+### Check Permissions in Controller
+
+```javascript
+// src/api/modules/{module}/controllers/post.controller.js
+export async function update(req, res) {
+  const http = req.app.get('http');
+  const auth = req.app.get('auth');
+
+  try {
+    const models = req.app.get('models');
+    const post = await models.Post.findByPk(req.params.id);
+
+    if (!post) {
+      return http.sendNotFound(res, 'Post not found');
+    }
+
+    // Check ownership or admin permission
+    const isOwner = post.user_id === req.user.id;
+    const hasAdminPermission = await auth.helpers.hasPermission(
+      req.user.id,
+      'posts:admin',
+    );
+
+    if (!isOwner && !hasAdminPermission) {
+      return http.sendForbidden(
+        res,
+        'You do not have permission to update this post',
+      );
+    }
+
+    const updated = await post.update(req.body);
+    return http.sendSuccess(res, { data: updated });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to update post');
+  }
+}
+```
+
+## Validation with Zod
+
+```javascript
+// src/api/modules/{module}/utils/validation.js
+import { z } from 'zod';
+
+export const createPostSchema = z.object({
+  title: z.string().min(3).max(255),
+  content: z.string().min(10),
+  published: z.boolean().optional().default(false),
+  tags: z.array(z.string()).optional(),
+});
+
+export const updatePostSchema = createPostSchema.partial();
+
+// Validation middleware
+export function validateBody(schema) {
+  return (req, res, next) => {
+    try {
+      req.body = schema.parse(req.body);
+      next();
+    } catch (error) {
+      const http = req.app.get('http');
+      return http.sendBadRequest(res, 'Validation failed', {
+        errors: error.errors,
+      });
+    }
+  };
+}
+```
+
+```javascript
+// Use in routes
+import {
+  validateBody,
+  createPostSchema,
+  updatePostSchema,
+} from '../utils/validation';
+
+router.post(
+  '/',
+  requireAuth,
+  validateBody(createPostSchema),
+  postController.create,
+);
+router.put(
+  '/:id',
+  requireAuth,
+  validateBody(updatePostSchema),
+  postController.update,
+);
+```
+
+## Worker Integration
+
+For heavy tasks, dispatch to worker instead of blocking the request:
+
+```javascript
+// src/api/modules/{module}/controllers/post.controller.js
+import workerPool from '../workers';
+
+export async function generateReport(req, res) {
+  const http = req.app.get('http');
+
+  try {
+    // Dispatch to worker (non-blocking)
+    workerPool
+      .sendRequest('generate-report', 'GENERATE_REPORT', {
+        startDate: req.query.startDate,
+        endDate: req.query.endDate,
+      })
+      .catch(console.error);
+
+    // Return immediately
+    return http.sendSuccess(res, {
+      message: 'Report generation started',
+    });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to start report generation');
+  }
+}
+```

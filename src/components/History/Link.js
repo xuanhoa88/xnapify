@@ -33,7 +33,7 @@ const shouldNavigate = event =>
  * @param {Function} [props.onClick] - Optional click handler
  * @param {React.ReactNode} [props.children] - Link content
  */
-function Link({ to, replace = false, children, onClick, ...props }) {
+export function Link({ to, replace = false, children, onClick, ...props }) {
   const history = useHistory();
 
   const handleClick = useCallback(
@@ -75,5 +75,3 @@ Link.propTypes = {
   onClick: PropTypes.func,
   children: PropTypes.node,
 };
-
-export default Link;

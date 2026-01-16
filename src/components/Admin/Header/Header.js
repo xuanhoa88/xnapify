@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { isAuthenticated, toggleDrawer } from '../../../redux';
+import { isAuthenticated, toggleDrawer } from '../../../shared/renderer/redux';
 import Icon from '../../Icon';
 import Button from '../../Button';
 import LanguageSwitcher from './LanguageSwitcher';

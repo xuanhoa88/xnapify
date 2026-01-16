@@ -16,7 +16,7 @@ import {
   clearPasswordError,
   generatePassword,
   showSuccessMessage,
-} from '../../../redux';
+} from '../../../shared/renderer/redux';
 import { changePasswordFormSchema } from '../../../shared/validator/features/auth';
 import Icon from '../../../components/Icon';
 import Button from '../../../components/Button';

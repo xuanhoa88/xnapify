@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { getAppName, getAppDescription } from '../redux';
-import IsomorphicNavigator from '../shared/navigator';
+import { getAppName, getAppDescription } from '../shared/renderer/redux';
+import IsomorphicNavigator from '../shared/renderer/Navigator';
 
 /**
  * Checks if value is a plain object (created by Object constructor or Object.create(null))

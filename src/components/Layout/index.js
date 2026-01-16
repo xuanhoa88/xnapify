@@ -8,7 +8,10 @@
 import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
-import { getFlashMessage, clearFlashMessage } from '../../redux';
+import {
+  getFlashMessage,
+  clearFlashMessage,
+} from '../../shared/renderer/redux';
 import Toast from '../Toast';
 import Footer from './Footer';
 import Header from './Header';

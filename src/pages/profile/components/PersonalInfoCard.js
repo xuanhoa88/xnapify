@@ -15,7 +15,7 @@ import {
   isProfileLoading,
   getProfileError,
   clearProfileError,
-} from '../../../redux';
+} from '../../../shared/renderer/redux';
 import { updateProfileFormSchema } from '../../../shared/validator/features/auth';
 import Icon from '../../../components/Icon';
 import Button from '../../../components/Button';

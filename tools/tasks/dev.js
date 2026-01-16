@@ -135,8 +135,8 @@ function configureWebpackForDev(cfg, isClient = true) {
  * Clears the require cache to ensure fresh module loading on each call.
  *
  * @returns {Object} Server module with initialization methods
- * @property {Function} initializeApp - Function to initialize the Express application
- * @property {Function} startServer - Function to start the HTTP server
+ * @property {Function} init - Function to initialize the Express application
+ * @property {Function} serve - Function to start the HTTP server
  */
 function loadServerBundle() {
   // Clear require cache to ensure we get a fresh bundle
@@ -144,15 +144,15 @@ function loadServerBundle() {
 
   try {
     // Load the server bundle
-    const serverBundle = require(WEBPACK_SERVER_BUNDLE_PATH);
+    const bundle = require(WEBPACK_SERVER_BUNDLE_PATH);
 
     // Set up HMR if available (for development)
-    hmr = serverBundle.default.hot;
+    hmr = bundle.default.hot;
 
     // Return a clean API surface
     return {
-      initializeApp: serverBundle.default,
-      startServer: serverBundle.startServer, // This is the renamed function
+      init: bundle.default,
+      serve: bundle.serve,
     };
   } catch (error) {
     logError('❌ Failed to load server bundle');
@@ -206,7 +206,7 @@ async function reinitializeServerAndMiddlewares() {
     const serverBundle = loadServerBundle();
 
     // Re-initialize app with the new server bundle and routes
-    await serverBundle.initializeApp(app);
+    await serverBundle.init(app);
 
     logInfo('✅ Server bundle and middlewares reinitialized successfully');
 
@@ -475,11 +475,11 @@ async function main() {
     ]);
 
     // Load and initialize SSR app (after compilation)
-    const serverModule = loadServerBundle();
-    await serverModule.initializeApp(app, config.PUBLIC_DIR);
+    const bundle = loadServerBundle();
+    await bundle.init(app, config.PUBLIC_DIR);
 
     // Start the HTTP server
-    const server = await serverModule.startServer(app, port, host);
+    const server = await bundle.serve(app, port, host);
 
     // Initialize BrowserSync WebSocket server for live reload and HMR
     // This will also open the browser automatically if no clients are connected

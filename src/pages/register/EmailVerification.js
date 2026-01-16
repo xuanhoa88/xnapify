@@ -15,7 +15,7 @@ import {
   isEmailVerificationLoading,
   getEmailVerificationError,
   clearEmailVerificationError,
-} from '../../redux';
+} from '../../shared/renderer/redux';
 import { useWebSocket } from '../../shared/ws/client';
 import { Link, useHistory } from '../../components/History';
 import Button from '../../components/Button';

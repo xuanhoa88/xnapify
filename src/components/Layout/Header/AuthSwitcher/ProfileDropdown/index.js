@@ -14,7 +14,7 @@ import {
   getUserEmail,
   getUserAvatarUrl,
   logout,
-} from '../../../../../redux';
+} from '../../../../../shared/renderer/redux';
 import { Link, useHistory } from '../../../../History';
 import { useWebSocket } from '../../../../../shared/ws/client';
 import Icon from '../../../../Icon';

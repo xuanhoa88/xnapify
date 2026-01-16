@@ -5,42 +5,99 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/**
+ * Root Application Component
+ *
+ * Composes all application-level providers and renders the application tree.
+ * This component sets up the core infrastructure including:
+ * - Redux store for state management
+ * - i18next for internationalization
+ * - History for client-side routing
+ *
+ * @example
+ * const context = {
+ *   store: configureStore(),
+ *   i18n: i18nextInstance,
+ *   history: createBrowserHistory(),
+ *   fetch: customFetch,
+ *   locale: 'en',
+ *   pathname: '/',
+ *   query: {}
+ * };
+ *
+ * ReactDOM.render(
+ *   <App context={context}>
+ *     <Routes />
+ *   </App>,
+ *   document.getElementById('root')
+ * );
+ */
+
 import PropTypes from 'prop-types';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
-import { HistoryProvider } from '../../components/History';
+import { HistoryProvider } from './Providers';
 
+// =============================================================================
+// PROP TYPES
+// =============================================================================
+
+/**
+ * Shape of the context object passed to App
+ */
+const contextPropTypes = PropTypes.shape({
+  /** Universal HTTP client for making API requests */
+  fetch: PropTypes.func.isRequired,
+  /** Redux store instance */
+  store: PropTypes.object.isRequired,
+  /** History instance for client-side routing */
+  history: PropTypes.object.isRequired,
+  /** i18next instance for internationalization */
+  i18n: PropTypes.object.isRequired,
+  /** Current locale (e.g., 'en', 'fr') */
+  locale: PropTypes.string.isRequired,
+  /** Current pathname */
+  pathname: PropTypes.string.isRequired,
+  /** Query parameters object */
+  query: PropTypes.object,
+}).isRequired;
+
+// =============================================================================
+// COMPONENT
+// =============================================================================
+
+/**
+ * Root application component that composes all providers
+ *
+ * @param {Object} props
+ * @param {Object} props.context - Application context containing store, i18n, history, etc.
+ * @param {React.ReactNode} props.children - Application content to render
+ * @returns {React.ReactElement} Composed provider tree
+ */
 export default function App({ context, children }) {
-  return (
-    <ReduxProvider store={context.store}>
-      <I18nextProvider i18n={context.i18n}>
-        <HistoryProvider history={context.history}>
-          {React.Children.only(children)}
-        </HistoryProvider>
-      </I18nextProvider>
-    </ReduxProvider>
+  // Memoize the provider composition to prevent unnecessary re-renders
+  const providers = useMemo(
+    () => (
+      <ReduxProvider store={context.store}>
+        <I18nextProvider i18n={context.i18n}>
+          <HistoryProvider history={context.history}>
+            {React.Children.only(children)}
+          </HistoryProvider>
+        </I18nextProvider>
+      </ReduxProvider>
+    ),
+    [context.store, context.i18n, context.history, children],
   );
+
+  return providers;
 }
 
-const ContextTypes = {
-  // Universal HTTP client
-  fetch: PropTypes.func.isRequired,
-  // Redux store
-  store: PropTypes.object.isRequired,
-  // History instance
-  history: PropTypes.object.isRequired,
-  // I18next instance
-  i18n: PropTypes.object.isRequired,
-  // Current locale
-  locale: PropTypes.string.isRequired,
-  // Current pathname
-  pathname: PropTypes.string.isRequired,
-  // Query parameters
-  query: PropTypes.object,
-};
+// =============================================================================
+// PROP VALIDATION
+// =============================================================================
 
 App.propTypes = {
-  context: PropTypes.shape(ContextTypes).isRequired,
+  context: contextPropTypes,
   children: PropTypes.node.isRequired,
 };
