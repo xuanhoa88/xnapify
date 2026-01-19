@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../../shared/validator';
+import { validateForm } from '../../../../shared/validator';
 import {
   createRoleFormSchema,
   updateRoleFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../../shared/validator/features/admin';
 import * as roleService from '../../services/admin/role.service';
 
 // ========================================================================

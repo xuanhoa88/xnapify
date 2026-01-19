@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Dashboard from './routes/Dashboard';
 import reducer, { SLICE_NAME } from './redux';
+import Dashboard from './routes/Dashboard';
 
 /**
  * Route configuration

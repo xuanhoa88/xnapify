@@ -5,12 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../../shared/validator';
+import { validateForm } from '../../../../shared/validator';
 import {
   createGroupFormSchema,
   updateGroupFormSchema,
-} from '../../../../../shared/validator/features/admin';
-import { DEFAULT_ROLE } from '../../constants/rbac';
+} from '../../../../shared/validator/features/admin';
 import * as groupService from '../../services/admin/group.service';
 
 // ========================================================================
@@ -56,13 +55,7 @@ export async function createGroup(req, res) {
     return http.sendSuccess(
       res,
       {
-        group: {
-          ...group.toJSON(),
-          roles:
-            Array.isArray(group.roles) && group.roles.length > 0
-              ? group.roles.map(r => r.name)
-              : [DEFAULT_ROLE],
-        },
+        group,
       },
       201,
     );
@@ -126,13 +119,7 @@ export async function getGroupById(req, res) {
     }
 
     return http.sendSuccess(res, {
-      group: {
-        ...group.toJSON(),
-        roles:
-          Array.isArray(group.roles) && group.roles.length > 0
-            ? group.roles.map(r => r.name)
-            : [DEFAULT_ROLE],
-      },
+      group,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get group');
@@ -184,13 +171,7 @@ export async function updateGroupById(req, res) {
     );
 
     return http.sendSuccess(res, {
-      group: {
-        ...group.toJSON(),
-        roles:
-          Array.isArray(group.roles) && group.roles.length > 0
-            ? group.roles.map(r => r.name)
-            : [DEFAULT_ROLE],
-      },
+      group,
     });
   } catch (error) {
     if (error.name === 'GroupAlreadyExistsError') {

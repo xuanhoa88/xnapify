@@ -6,10 +6,10 @@
  */
 
 import Layout from '../../components/Layout';
+import { featuresData } from './data';
 import Home from './Home';
 import Features from './Features';
 import FeatureDetails from './FeatureDetails';
-import { featuresData } from './data';
 
 /**
  * Route configuration

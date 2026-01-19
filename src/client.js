@@ -191,7 +191,7 @@ function buildWebSocketUrl(path = '/ws') {
 // NAVIGATOR
 // =============================================================================
 
-async function getNavigator() {
+async function loadNavigator() {
   if (!cachedNavigator) {
     cachedNavigator = await import('./pages').then(m => m.default());
     if (__DEV__) console.log('✅ Navigator initialized');
@@ -338,7 +338,7 @@ async function handlePageChange(location, action) {
     context.locale =
       (currentState.intl && currentState.intl.locale) || context.locale;
 
-    const navigator = await getNavigator();
+    const navigator = await loadNavigator();
     const page = await navigator.resolve(context);
     if (!page) {
       const err = new Error(`Page ${location.pathname} not found`);

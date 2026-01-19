@@ -23,7 +23,10 @@ enginesContext.keys().forEach(modulePath => {
   const engineName = modulePath.match(/^\.\/([^/]+)\//)[1];
 
   // Load the engine module
-  engines[engineName] = enginesContext(modulePath);
+  const mod = enginesContext(modulePath);
+
+  // Store the full module namespace to preserve both default and named exports
+  engines[engineName] = mod;
 });
 
 // Automatically export all discovered engines as named exports

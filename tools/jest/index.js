@@ -5,12 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const path = require('path');
+const config = require('../config');
+
 // Environment-based configuration
 const isCI = process.env.CI === 'true';
 const isCoverage = process.env.COVERAGE === 'true';
 const isWatch = process.env.JEST_WATCH === 'true';
 const isVerbose = process.env.JEST_VERBOSE !== 'false';
 const maxWorkers = process.env.JEST_MAX_WORKERS || (isCI ? 2 : '50%');
+
+// Relative path to app directory
+const appDir = path.relative(config.CWD, config.APP_DIR);
 
 module.exports = {
   /**
@@ -30,12 +36,12 @@ module.exports = {
    * information should be collected.
    */
   collectCoverageFrom: [
-    'src/**/*.{js,jsx}',
+    `${appDir}/**/*.{js,jsx}`,
     // Exclude common non-testable files
-    '!src/**/*.test.{js,jsx}',
-    '!src/**/*.spec.{js,jsx}',
-    '!src/**/__tests__/**',
-    '!src/**/__mocks__/**',
+    `!${appDir}/**/*.test.{js,jsx}`,
+    `!${appDir}/**/*.spec.{js,jsx}`,
+    `!${appDir}/**/__tests__/**`,
+    `!${appDir}/**/__mocks__/**`,
     '!**/node_modules/**',
     '!**/tools/**',
     '!**/vendor/**',
@@ -124,7 +130,7 @@ module.exports = {
   /**
    * An array of directory names to be searched recursively up from the requiring module's location.
    */
-  moduleDirectories: ['node_modules', 'src'],
+  moduleDirectories: ['node_modules', config.APP_DIR],
 
   /**
    * A map from regular expressions to module names that allow to stub out resources
@@ -149,7 +155,7 @@ module.exports = {
    * This limits Jest to only look in the src directory, automatically excluding
    * tools, build, release, out, and coverage directories.
    */
-  roots: ['<rootDir>/src'],
+  roots: [config.APP_DIR],
 
   /**
    * The glob patterns Jest uses to detect test files.

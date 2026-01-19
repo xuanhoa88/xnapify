@@ -336,17 +336,12 @@ export async function assignRolesToUser(
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
-  // Reload user with roles
-  await user.reload({
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        through: { attributes: [] },
-      },
-    ],
-  });
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    roles: role_names,
+    groups: user.groups || [],
+  };
 }
 
 /**
@@ -408,17 +403,15 @@ export async function assignGroupsToUser(
   // Invalidate RBAC cache for this user
   rbacCache.invalidateUser(user_id);
 
-  // Reload user with groups
-  await user.reload({
-    include: [
-      {
-        model: Group,
-        as: 'groups',
-        through: { attributes: [] },
-      },
-    ],
-  });
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  };
 }
 
 /**
@@ -1046,7 +1039,8 @@ export async function assignRolesToGroup(
   }
 
   // Return group with roles
-  return await Group.findByPk(group_id, {
+  // Reload group with roles
+  await group.reload({
     include: [
       {
         model: Role,
@@ -1055,6 +1049,16 @@ export async function assignRolesToGroup(
       },
     ],
   });
+
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [],
+  };
 }
 
 /**
@@ -1115,7 +1119,26 @@ export async function addRoleToGroup(
     rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
   }
 
-  return group;
+  // Reload group with roles
+  await group.reload({
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [],
+  };
 }
 
 /**
@@ -1176,7 +1199,26 @@ export async function removeRoleFromGroup(
     rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
   }
 
-  return group;
+  // Reload group with roles
+  await group.reload({
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+      },
+    ],
+  });
+
+  return {
+    id: group.id,
+    name: group.name,
+    description: group.description,
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [],
+  };
 }
 
 // ========================================================================

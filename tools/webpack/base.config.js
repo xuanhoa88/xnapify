@@ -24,35 +24,35 @@ const isProfile =
   process.argv.includes('--profile') || config.env('BUNDLE_PROFILE') === 'true';
 
 // JavaScript/TypeScript files (including ES modules and CommonJS)
-const reScript = /\.(c|m)?(j|t)sx?$/i; // .cjs, .mjs, .cts, .mts
+const reScript = /\.[cm]?[jt]sx?$/i;
 
-// Stylesheet files (CSS, SCSS, SASS, LESS, Stylus, SugarSS)
-const reStyle = /\.(css|s[ac]ss|less|styl|sss)$/i;
+// Styles
+const reStyle = /\.(?:css|s[ac]ss|less|styl|sss)(?:\?.*)?$/i;
 
-// Image files (with optional query string for cache busting)
+// Images
 const reImage = /\.(?:ico|gif|png|jpe?g|webp|bmp|avif)(?:\?.*)?$/i;
 
-// Font files (with optional query string for cache busting)
+// Fonts
 const reFont = /\.(?:woff2?|eot|ttf|otf)(?:\?.*)?$/i;
 
-// SVG files (handled separately for React component conversion)
+// SVG (handled separately)
 const reSvg = /\.svg(?:\?.*)?$/i;
 
-// HTML files
-const reHtml = /\.html?$/i;
+// HTML
+const reHtml = /\.(?:html?|htm)(?:\?.*)?$/i;
 
-// Markup files
-const reMarkdown = /\.(?:md|markdown)$/i;
+// Markdown
+const reMarkdown = /\.(?:md|markdown)(?:\?.*)?$/i;
 
-// Text files
-const reText = /\.txt$/i;
+// Text
+const reText = /\.txt(?:\?.*)?$/i;
 
-// Media files
-const reAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac)$/i;
-const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)$/i;
+// Media
+const reAudio = /\.(?:mp3|wav|ogg|m4a|aac|flac)(?:\?.*)?$/i;
+const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)(?:\?.*)?$/i;
 
-// Data files
-const reData = /\.(?:json|xml|csv|ya?ml)$/i;
+// Data
+const reData = /\.(?:json|xml|csv|ya?ml)(?:\?.*)?$/i;
 
 /**
  * Get file naming pattern based on environment
@@ -323,7 +323,7 @@ function createBaseConfig() {
             // Import as React component: import { ReactComponent as Icon } from './icon.svg'
             // or default import: import Icon from './icon.svg'
             {
-              issuer: /\.[jt]sx?$/i,
+              issuer: reScript,
               resourceQuery: { not: [/url/i] }, // Exclude *.svg?url
               use: [
                 {

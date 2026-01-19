@@ -4,18 +4,25 @@
 
 **Rapid RSK** is a production-ready, full-stack React application with server-side rendering (SSR), built on React 18, Express 4, and Webpack 5. This is a **single-repository** application with comprehensive tooling, RBAC, WebSocket support, and Node-RED integration for modern web development.
 
-**Repository:** https://github.com/xuanhoa88/rapid-rsk
-
 ## Project Structure
 
 ```
 react-starter-kit/
 ├── src/                          # Application source code
-│   ├── api/                      # Backend API
-│   │   ├── engines/              # Core infrastructure (auth, db, worker, ws, etc.)
-│   │   ├── modules/              # Business logic modules (users, homepage, node-red)
-│   │   ├── index.js              # Module auto-discovery and API initialization
-│   │   └── GUIDELINES.md         # API architecture patterns
+│   ├── bootstrap/                # API bootstrap logic
+│   ├── engines/                  # Core API infrastructure
+│   │   ├── auth/                 # Authentication & JWT
+│   │   ├── cache/                # Caching layer
+│   │   ├── db/                   # Database & Sequelize
+│   │   ├── email/                # Email service
+│   │   ├── fs/                   # File system utilities
+│   │   ├── http/                 # HTTP response helpers
+│   │   ├── queue/                # Job queue
+│   │   ├── schedule/             # Cron jobs
+│   │   ├── webhook/              # Webhook handling
+│   │   └── worker/               # Background workers
+│   ├── modules/                  # Business logic modules
+│   │   ├── users/                # User management, auth, RBAC
 │   ├── components/               # Reusable React components
 │   ├── pages/                    # Page components (auto-discovered routes)
 │   │   ├── admin/                # Admin panel pages
@@ -23,12 +30,11 @@ react-starter-kit/
 │   ├── shared/                   # Shared utilities
 │   │   ├── renderer/             # SSR components (App, Html, Navigator, Redux)
 │   │   ├── fetch/                # Universal HTTP client
-│   │   ├── ws/                   # WebSocket client
-│   │   └── i18n/                 # i18n utilities
+│   │   ├── ws/                   # WebSocket client/server
+│   │   ├── i18n/                 # i18n utilities
 │   │   └── validator/            # SSR validator utilities
 │   ├── client.js                 # Client-side entry point
-│   ├── server.js                 # Server-side entry point (Express)
-│   └── jwt.js                    # JWT utilities
+│   └── server.js                 # Server-side entry point (Express)
 ├── tools/                        # Build tools and tasks
 │   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
 │   ├── utils/                    # Build utilities (fs, logger, etc.)
@@ -37,6 +43,8 @@ react-starter-kit/
 │   └── run.js                    # Task runner
 ├── build/                        # Production build output
 ├── public/                       # Static assets
+├── .claude/                      # AI assistant command guides
+│   └── commands/                 # Development command documentation
 └── .env.rsk                      # Environment variable template
 ```
 
@@ -66,7 +74,6 @@ react-starter-kit/
 - **WebSocket:** ws 8.18.3
 - **Email:** Nodemailer 7.0.12
 - **Scheduling:** node-cron 4.2.1
-- **Node-RED:** @node-red/runtime 3.1.15
 - **Middleware:** compression, cookie-parser, cors, express-rate-limit
 
 ### Build Tools
@@ -120,9 +127,9 @@ npm run format:check           # Check code formatting
 
 The application uses an auto-discovery system for both API modules and page components.
 
-**API Modules** (`src/api/index.js`):
+**API Modules** (`src/bootstrap/index.js`):
 
-- Automatically discovers modules in `src/api/modules/`
+- Automatically discovers modules in `src/modules/`
 - Each module can export models, routes, and initialization logic
 - Modules are loaded in two phases: models first, then routes
 
@@ -134,15 +141,15 @@ The application uses an auto-discovery system for both API modules and page comp
 
 ### 2. Engines vs Modules
 
-**Engines** (`src/api/engines/`):
+**Engines** (`src/engines/`):
 
 - Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`
 - Provide reusable capabilities for modules
 - Should not contain business logic
 
-**Modules** (`src/api/modules/`):
+**Modules** (`src/modules/`):
 
-- Business domains: `users`, `homepage`, `_node-red`
+- Business domains: `users`, `homepage`
 - Consume engines to implement features
 - Each module can have: `index.js`, `model.js`, `controller.js`, `service.js`, `routes.js`
 
@@ -165,7 +172,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 - **JWT-based authentication** with HTTP-only cookies
 - **RBAC system:** Users, Roles, Groups, Permissions
-- **Middleware:** `src/api/engines/auth/middleware.js`
+- **Middleware:** `src/engines/auth/middleware.js`
 - **Protected routes:** Use `requireAuth` middleware
 - **API endpoints:** `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/register`
 
@@ -182,7 +189,9 @@ For heavy processing, use the Worker Engine:
 
 ```javascript
 // 1. Define worker
-import { createWorkerHandler } from '@/api/engines/worker';
+import { createWorkerHandler } from '@/engines/worker';
+// ... (omitting lines for brevity in tool call, standardizing on contiguous blocks is better but small edits are fine) with context:
+// wait, I need exact match.
 
 const myTaskLogic = async payload => {
   // Heavy processing
@@ -192,7 +201,7 @@ const myTaskLogic = async payload => {
 export default createWorkerHandler(myTaskLogic, 'MY_TASK_TYPE');
 
 // 2. Create worker pool
-import { createWorkerPool } from '@/api/engines/worker';
+import { createWorkerPool } from '@/engines/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
 const workerPool = createWorkerPool(workersContext, {
@@ -302,7 +311,7 @@ export default {
 ### 5. API Module Structure
 
 ```javascript
-// src/api/modules/my-module/index.js
+// src/modules/my-module/index.js
 export default function initMyModule(app, { db, auth }) {
   // Module initialization
   const router = require('./routes').default;
@@ -482,13 +491,6 @@ docker run -p 1337:1337 \
 - Automatic reconnection handling
 - Client API in `src/shared/ws/`
 
-### Node-RED Integration
-
-- Visual flow-based programming for automation
-- Integrated editor at `/node-red`
-- Custom settings and theme
-- API endpoints for flow management
-
 ### Worker Processes
 
 - Background job processing
@@ -522,7 +524,7 @@ export default {
 ### Protected Routes
 
 ```javascript
-import { requireAuth } from '@/api/engines/auth/middleware';
+import { requireAuth } from '@/engines/auth/middleware';
 
 router.get('/protected', requireAuth, (req, res) => {
   // req.user is available
@@ -533,7 +535,7 @@ router.get('/protected', requireAuth, (req, res) => {
 ### Scheduled Tasks
 
 ```javascript
-import schedule from '@/api/engines/schedule';
+import schedule from '@/engines/schedule';
 
 schedule.register('daily-cleanup', '0 0 * * *', async () => {
   // Lightweight task or dispatch to worker
@@ -544,7 +546,7 @@ schedule.register('daily-cleanup', '0 0 * * *', async () => {
 ### Database Models
 
 ```javascript
-// src/api/modules/my-module/model.js
+// src/modules/my-module/model.js
 export default function defineModel(sequelize, DataTypes) {
   const MyModel = sequelize.define('MyModel', {
     name: {
@@ -591,14 +593,14 @@ describe('myFeature slice', () => {
 2. **Auto-discovery:** Both API modules and pages are auto-discovered. Follow naming conventions.
 3. **RSK\_ prefix:** All custom environment variables use the `RSK_` prefix.
 4. **JWT auto-generation:** JWT secret is auto-generated during build if not set.
-5. **Module naming:** Prefix module names with `_` (e.g., `_node-red`) to control load order.
+5. **Module naming:** Prefix module names with alphanumeric characters and underscores to control load order.
 6. **CSS Modules:** Use `.module.css` extension for CSS Modules, or plain `.css` for global styles.
 7. **Barrel exports:** Avoid circular dependencies by using direct imports when possible.
 
 ## Documentation
 
 - **README.md** - Quick start and overview
-- **src/api/GUIDELINES.md** - API architecture patterns
+- **src/bootstrap/GUIDELINES.md** - API architecture patterns
 - **.env.rsk** - Environment variable documentation
 - **Conversation history** - Recent refactorings and decisions
 

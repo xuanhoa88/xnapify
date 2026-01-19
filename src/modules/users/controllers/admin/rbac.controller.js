@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../../shared/validator';
+import { validateForm } from '../../../../shared/validator';
 import {
   assignRolesToUserFormSchema,
   assignGroupsToUserFormSchema,
   assignRolesToGroupFormSchema,
   manageRolePermissionsFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../../shared/validator/features/admin';
 import * as rbacService from '../../services/admin/rbac.service';
 import * as roleService from '../../services/admin/role.service';
 
@@ -77,7 +77,12 @@ export async function assignRolesToUser(req, res) {
     const models = req.app.get('models');
 
     // Assign roles
-    const user = await rbacService.assignRolesToUser(id, role_names, models);
+    const webhook = req.app.get('webhook');
+    const user = await rbacService.assignRolesToUser(id, role_names, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, { user });
   } catch (error) {
@@ -127,7 +132,12 @@ export async function assignGroupsToUser(req, res) {
     const models = req.app.get('models');
 
     // Assign groups
-    const user = await rbacService.assignGroupsToUser(id, group_ids, models);
+    const webhook = req.app.get('webhook');
+    const user = await rbacService.assignGroupsToUser(id, group_ids, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, { user });
   } catch (error) {
@@ -240,7 +250,12 @@ export async function removeRoleFromUser(req, res) {
     // Get models from app context
     const models = req.app.get('models');
 
-    await rbacService.removeRoleFromUser(id, role_id, models);
+    const webhook = req.app.get('webhook');
+    await rbacService.removeRoleFromUser(id, role_id, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Role '${role_id}' removed from user successfully`,
@@ -271,7 +286,12 @@ export async function removeGroupFromUser(req, res) {
     // Get models from app context
     const models = req.app.get('models');
 
-    await rbacService.removeGroupFromUser(id, group_id, models);
+    const webhook = req.app.get('webhook');
+    await rbacService.removeGroupFromUser(id, group_id, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Group '${group_id}' removed from user successfully`,
@@ -379,11 +399,12 @@ export async function assignRolesToGroup(req, res) {
     // Get models from app context
     const models = req.app.get('models');
 
-    const updatedGroup = await rbacService.assignRolesToGroup(
-      id,
-      role_names,
+    const webhook = req.app.get('webhook');
+    const updatedGroup = await rbacService.assignRolesToGroup(id, role_names, {
       models,
-    );
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, { group: updatedGroup });
   } catch (error) {
@@ -424,7 +445,12 @@ export async function addRoleToGroup(req, res) {
 
     const models = req.app.get('models');
 
-    await rbacService.addRoleToGroup(id, role_id, models);
+    const webhook = req.app.get('webhook');
+    await rbacService.addRoleToGroup(id, role_id, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Role added to group successfully`,
@@ -465,7 +491,12 @@ export async function removeRoleFromGroup(req, res) {
 
     const models = req.app.get('models');
 
-    await rbacService.removeRoleFromGroup(id, role_id, models);
+    const webhook = req.app.get('webhook');
+    await rbacService.removeRoleFromGroup(id, role_id, {
+      models,
+      webhook,
+      actorId: req.user.id,
+    });
 
     return http.sendSuccess(res, {
       message: `Role removed from group successfully`,

@@ -5,18 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import AdminLayout from '../../components/Admin';
 import {
   isAuthenticated,
   setBreadcrumbs,
   addBreadcrumb,
 } from '../../shared/renderer/redux';
+import AdminLayout from '../../components/Admin';
 
 // Auto-load admin pages via require.context
 const pagesContext = require.context(
   './',
   true,
-  /^\.\/[^/]+\/index\.(jsx?|tsx?)$/,
+  /^\.\/[^/]+\/index\.[cm]?[jt]sx?$/i,
 );
 
 /**

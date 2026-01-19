@@ -5,15 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../../shared/validator';
+import { validateForm } from '../../../../shared/validator';
 import {
   updateUserFormSchema,
   createUserFormSchema,
   bulkUpdateUserStatusFormSchema,
   bulkDeleteUserFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../../shared/validator/features/admin';
 import * as userAdminService from '../../services/admin/user.service';
-import { DEFAULT_ROLE } from '../../constants/rbac';
 
 // ========================================================================
 // USER ADMINISTRATION CONTROLLERS (Admin Only)
@@ -80,19 +79,7 @@ export async function createUser(req, res) {
 
     return http.sendSuccess(res, {
       message: 'User created successfully',
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles.map(r => r.name)
-            : [DEFAULT_ROLE],
-        groups: user.groups || [],
-      },
+      user,
     });
   } catch (error) {
     if (error.name === 'UserAlreadyExistsError') {
@@ -128,28 +115,9 @@ export async function getUserList(req, res) {
     );
 
     // Format users to include roles and groups arrays
-    const formattedUsers = result.users.map(user => ({
-      id: user.id,
-      email: user.email,
-      email_confirmed: user.email_confirmed,
-      is_active: user.is_active,
-      is_locked: user.is_locked,
-      failed_login_attempts: user.failed_login_attempts,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      display_name: (user.profile && user.profile.display_name) || null,
-      first_name: (user.profile && user.profile.first_name) || null,
-      last_name: (user.profile && user.profile.last_name) || null,
-      picture: (user.profile && user.profile.picture) || null,
-      roles:
-        Array.isArray(user.roles) && user.roles.length > 0
-          ? user.roles.map(r => r.name)
-          : [DEFAULT_ROLE],
-      groups: user.groups || [],
-    }));
 
     return http.sendSuccess(res, {
-      users: formattedUsers,
+      users: result.users,
       pagination: result.pagination,
     });
   } catch (error) {
@@ -177,28 +145,7 @@ export async function getUserById(req, res) {
     const user = await userAdminService.getUserById(id, models);
 
     return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        is_locked: user.is_locked,
-        failed_login_attempts: user.failed_login_attempts,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles.map(r => r.name)
-            : [DEFAULT_ROLE],
-        groups: user.groups || [],
-      },
+      user,
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user');
@@ -273,26 +220,8 @@ export async function updateUserById(req, res) {
     });
 
     return http.sendSuccess(res, {
-      user: {
-        id: user.id,
-        email: user.email,
-        email_confirmed: user.email_confirmed,
-        is_active: user.is_active,
-        created_at: user.created_at,
-        updated_at: user.updated_at,
-        display_name: (user.profile && user.profile.display_name) || null,
-        first_name: (user.profile && user.profile.first_name) || null,
-        last_name: (user.profile && user.profile.last_name) || null,
-        picture: (user.profile && user.profile.picture) || null,
-        bio: (user.profile && user.profile.bio) || null,
-        location: (user.profile && user.profile.location) || null,
-        website: (user.profile && user.profile.website) || null,
-        roles:
-          Array.isArray(user.roles) && user.roles.length > 0
-            ? user.roles.map(r => r.name)
-            : [DEFAULT_ROLE],
-        groups: user.groups || [],
-      },
+      message: 'User updated successfully',
+      user,
     });
   } catch (error) {
     if (error.name === 'UserNotFoundError') {

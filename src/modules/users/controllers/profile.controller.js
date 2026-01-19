@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../shared/validator';
+import { validateForm } from '../../../shared/validator';
 import {
   changePasswordFormSchema,
   deleteAccountFormSchema,
   updateProfileFormSchema,
   updatePreferencesFormSchema,
-} from '../../../../shared/validator/features/auth';
+} from '../../../shared/validator/features/auth';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
 

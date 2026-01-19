@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import reducer, { SLICE_NAME } from './redux';
 import Groups from './routes/Groups';
 import CreateGroup from './routes/create/CreateGroup';
 import EditGroup from './routes/edit/EditGroup';
-import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration with child routes

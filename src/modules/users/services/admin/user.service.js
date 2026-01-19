@@ -113,7 +113,19 @@ export async function createUser(userData, { models, webhook, actorId }) {
   // Log activity
   await logUserActivity(webhook, 'created', user.id, { email }, actorId);
 
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  };
 }
 
 /**
@@ -218,8 +230,28 @@ export async function getUserList(options, models) {
     order: [['created_at', 'DESC']],
   });
 
+  const formattedUsers = users.map(user => ({
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    is_locked: user.is_locked,
+    failed_login_attempts: user.failed_login_attempts,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  }));
+
   return {
-    users,
+    users: formattedUsers,
     pagination: {
       page: parseInt(page),
       limit: parseInt(limit),
@@ -276,7 +308,28 @@ export async function getUserById(user_id, models) {
     throw error;
   }
 
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    is_locked: user.is_locked,
+    failed_login_attempts: user.failed_login_attempts,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    bio: (user.profile && user.profile.bio) || null,
+    location: (user.profile && user.profile.location) || null,
+    website: (user.profile && user.profile.website) || null,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  };
 }
 
 /**
@@ -440,7 +493,26 @@ export async function updateUserById(
     actorId,
   );
 
-  return user;
+  return {
+    id: user.id,
+    email: user.email,
+    email_confirmed: user.email_confirmed,
+    is_active: user.is_active,
+    created_at: user.created_at,
+    updated_at: user.updated_at,
+    display_name: (user.profile && user.profile.display_name) || null,
+    first_name: (user.profile && user.profile.first_name) || null,
+    last_name: (user.profile && user.profile.last_name) || null,
+    picture: (user.profile && user.profile.picture) || null,
+    bio: (user.profile && user.profile.bio) || null,
+    location: (user.profile && user.profile.location) || null,
+    website: (user.profile && user.profile.website) || null,
+    roles:
+      Array.isArray(user.roles) && user.roles.length > 0
+        ? user.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+    groups: user.groups || [],
+  };
 }
 
 /**

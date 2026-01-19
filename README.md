@@ -29,9 +29,6 @@ Modern React SSR application with Express backend, Redux state management, and c
 # Install dependencies
 npm install
 
-# Configure environment
-cp .env.rsk .env
-
 # Start development server
 npm run dev
 ```
@@ -53,9 +50,20 @@ Open [http://localhost:1337](http://localhost:1337)
 
 ```
 src/
-├── api/              # Express routes and Sequelize models
-│   ├── engines/      # Core API infrastructure (auth, db, workers, ws)
-│   └── modules/      # Feature modules (users, auth, groups, roles, etc.)
+├── bootstrap/        # API bootstrap logic
+├── engines/          # Core API infrastructure
+│   ├── auth/         # Authentication & JWT
+│   ├── cache/        # Caching layer
+│   ├── db/           # Database & Sequelize
+│   ├── email/        # Email service
+│   ├── fs/           # File system utilities
+│   ├── http/         # HTTP response helpers
+│   ├── queue/        # Job queue
+│   ├── schedule/     # Cron jobs
+│   ├── webhook/      # Webhook handling
+│   └── worker/       # Background workers
+├── modules/          # Business logic modules
+│   ├── users/        # User management, auth, RBAC
 ├── components/       # Reusable React components
 ├── pages/            # Page components (routes)
 │   └── admin/        # Admin panel routes
@@ -67,10 +75,11 @@ src/
 │   └── validator/    # SSR validator utilities
 ├── client.js         # Client entry point
 └── server.js         # Server entry point
-
 tools/
 ├── tasks/            # Build tasks (build, clean, dev, etc.)
-└── utils/            # Build utilities
+├── utils/            # Build utilities
+├── jest/             # Jest configuration
+└── webpack/          # Webpack configurations
 ```
 
 ## Environment Variables
@@ -154,20 +163,53 @@ For production deployments, consider:
 
 ## Development
 
+### API Architecture
+
+The API is structured into **Engines** and **Modules**:
+
+**Engines** (`src/engines/`):
+
+- Core infrastructure components: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`
+- Provide reusable capabilities for modules
+- Should not contain business logic
+
+**Modules** (`src/modules/`):
+
+- Business logic domains: `users`, `homepage`
+- Consume engines to implement features
+- Auto-discovered and loaded at startup
+
+**Key Pattern - Schedule + Worker + Queue:**
+
+For heavy processing tasks, never run logic directly in scheduled callbacks. Instead:
+
+1. **Schedule Engine** triggers the job
+2. **Worker Pool** queues the request
+3. **Worker Process** executes the heavy task
+
+This pattern ensures:
+
+- Non-blocking main process
+- Controlled concurrency
+- Automatic queueing
+- Fault isolation
+
+See [`.claude/commands/add-worker.md`](.claude/commands/add-worker.md) for detailed implementation.
+
 ### Module System
 
-The application uses an auto-discovery module system. Place new modules in `src/api/modules/`:
+The application uses an auto-discovery module system. Place new modules in `src/modules/`:
 
 ```
-src/api/modules/your-module/
+src/modules/your-module/
 ├── index.js           # Module entry point
-├── model.js           # Sequelize model (optional)
-├── controller.js      # Route handlers
-├── service.js         # Business logic
-└── routes.js          # Express routes
+├── models/            # Sequelize models
+├── controllers/       # Route handlers
+├── services/          # Business logic
+└── routes/            # Express routes
 ```
 
-Modules are automatically discovered and loaded at startup.
+Modules are automatically discovered and loaded at startup by `src/bootstrap/index.js`.
 
 ### WebSocket Integration
 

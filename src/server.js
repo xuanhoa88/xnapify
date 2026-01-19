@@ -18,6 +18,7 @@ import { ChunkExtractor } from '@loadable/server';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
+import { configureJwt } from './engines/auth/jwt';
 import {
   configureStore,
   setRuntimeVariable,
@@ -34,145 +35,46 @@ import { createFetch } from './shared/fetch';
 import Html from './shared/renderer/Html';
 import App from './shared/renderer/App';
 import { createWebSocketServer } from './shared/ws/server';
-import { configureJwt } from './jwt';
+import initializeAPI from './bootstrap';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
-const nodeEnv = process.env.NODE_ENV || 'development';
-
 const config = Object.freeze({
-  // Node Environment
-  nodeEnv,
-
-  // Server Configuration
+  nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.RSK_PORT, 10) || 1337,
   host: process.env.RSK_HOST || '0.0.0.0',
-  trustProxy: nodeEnv === 'production' ? 1 : 'loopback',
-
-  // Application Configuration
-  appName: process.env.RSK_APP_NAME || 'React Starter Kit',
-  appDescription:
-    process.env.RSK_APP_DESCRIPTION ||
-    'Boilerplate for React.js web applications',
-
-  // WebSocket Configuration
-  wsPath: process.env.RSK_WS_PATH || '/ws',
-
-  // API Configuration
   apiPrefix: process.env.RSK_API_PREFIX || '/api',
-  apiJsonRequestLimit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb',
-  apiUrlEncodedRequestLimit:
-    process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '10mb',
 });
 
-let navigator = null;
+let cachedNavigator = null;
 
 // =============================================================================
-// ERROR HANDLERS
+// HELPER FUNCTIONS
 // =============================================================================
 
-process.on('unhandledRejection', reason => {
-  console.error('❌ Unhandled Rejection:', reason);
-  if (!__DEV__) process.exit(1);
-});
-
-process.on('uncaughtException', err => {
-  console.error('❌ Uncaught Exception:', err);
-  process.exit(1);
-});
-
-/**
- * Register graceful shutdown handlers
- * @param {Object} httpServer - HTTP server instance
- * @param {Object} wsServer - WebSocket server instance
- */
-function registerShutdownHandlers(httpServer, wsServer) {
-  let isShuttingDown = false;
-
-  const handleShutdown = async signal => {
-    // Prevent multiple shutdown executions
-    if (isShuttingDown) return;
-    isShuttingDown = true;
-
-    console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
-    const shutdownStart = Date.now();
-
-    try {
-      // 1. Stop accepting new WebSocket connections & close existing ones
-      if (wsServer) {
-        console.info('   Closing WebSocket server...');
-        await wsServer.stop();
-        console.info('   ✔ WebSocket server closed');
-      }
-
-      // 2. Stop accepting new HTTP requests
-      await new Promise((resolve, reject) => {
-        console.info('   Closing HTTP server...');
-        httpServer.close(err => {
-          if (err) return reject(err);
-          console.info('   ✔ HTTP server closed');
-          resolve();
-        });
-      });
-
-      const duration = Date.now() - shutdownStart;
-      console.info(`✅ Graceful shutdown completed in ${duration}ms`);
-      process.exit(0);
-    } catch (err) {
-      console.error('❌ Shutdown error:', err);
-      process.exit(1);
-    }
-  };
-
-  // Force shutdown if graceful shutdown hangs
-  const forceShutdown = () => {
-    console.error('⚠️ Forced shutdown after timeout');
-    process.exit(1);
-  };
-
-  // Handle signals
-  const handleSignal = signal => {
-    // Set a safety timeout
-    setTimeout(forceShutdown, 30_000).unref();
-    handleShutdown(signal);
-  };
-
-  process.on('SIGTERM', () => handleSignal('SIGTERM'));
-  process.on('SIGINT', () => handleSignal('SIGINT'));
-}
-
-// =============================================================================
-// HELPERS
-// =============================================================================
-
-// Localhost IP addresses (for normalization and internal request detection)
-const LOCALHOST_IPS = [
+const LOCALHOST_IPS = new Set([
   '0.0.0.0',
   '127.0.0.1',
   '::1',
   '::',
   '::ffff:127.0.0.1',
   'localhost',
-];
-
-function isLocalhost(ip) {
-  return LOCALHOST_IPS.includes(ip);
-}
+]);
 
 function getBaseUrl({ host, port }) {
   const protocol = process.env.RSK_HTTPS === 'true' ? 'https' : 'http';
-  const normalizedHost = isLocalhost(host) ? 'localhost' : host;
+  const normalizedHost = LOCALHOST_IPS.has(host) ? 'localhost' : host;
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
 async function loadNavigator() {
-  if (!navigator) {
-    navigator = await import('./pages').then(m => m.default());
+  if (!cachedNavigator) {
+    cachedNavigator = await import('./pages').then(m => m.default());
     if (__DEV__) console.log('✅ Navigator initialized');
   }
-  return navigator;
+  return cachedNavigator;
 }
 
 function getInnerHTML(element) {
@@ -202,8 +104,10 @@ async function initStore({ fetch, history }, locale) {
   await store.dispatch(
     setRuntimeVariable({
       initialNow: Date.now(),
-      appName: config.appName,
-      appDescription: config.appDescription,
+      appName: process.env.RSK_APP_NAME || 'React Starter Kit',
+      appDescription:
+        process.env.RSK_APP_DESCRIPTION ||
+        'Boilerplate for React.js web applications',
     }),
   );
 
@@ -211,8 +115,81 @@ async function initStore({ fetch, history }, locale) {
   return store;
 }
 
+function getMetadata(page, req) {
+  const protocol = req.protocol || 'http';
+  const host = req.get('host') || 'localhost';
+  return {
+    title: page.title,
+    description: page.description,
+    image: page.image || null,
+    url: `${protocol}://${host}${req.path}`,
+    type: page.type || 'website',
+  };
+}
+
 // =============================================================================
-// RENDERING
+// PROCESS ERROR HANDLERS
+// =============================================================================
+
+process.on('unhandledRejection', reason => {
+  console.error('❌ Unhandled Rejection:', reason);
+  if (!__DEV__) process.exit(1);
+});
+
+process.on('uncaughtException', err => {
+  console.error('❌ Uncaught Exception:', err);
+  process.exit(1);
+});
+
+function registerShutdownHandlers(httpServer, wsServer) {
+  let isShuttingDown = false;
+
+  const handleShutdown = async signal => {
+    if (isShuttingDown) return;
+    isShuttingDown = true;
+
+    console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
+    const shutdownStart = Date.now();
+
+    try {
+      if (wsServer) {
+        console.info('   Closing WebSocket server...');
+        await wsServer.stop();
+        console.info('   ✔ WebSocket server closed');
+      }
+
+      await new Promise((resolve, reject) => {
+        console.info('   Closing HTTP server...');
+        httpServer.close(err => {
+          if (err) return reject(err);
+          console.info('   ✔ HTTP server closed');
+          resolve();
+        });
+      });
+
+      const duration = Date.now() - shutdownStart;
+      console.info(`✅ Graceful shutdown completed in ${duration}ms`);
+      process.exit(0);
+    } catch (err) {
+      console.error('❌ Shutdown error:', err);
+      process.exit(1);
+    }
+  };
+
+  const handleSignal = signal => {
+    setTimeout(() => {
+      console.error('⚠️ Forced shutdown after timeout');
+      process.exit(1);
+    }, 30_000).unref();
+    handleShutdown(signal);
+  };
+
+  process.on('SIGTERM', () => handleSignal('SIGTERM'));
+  process.on('SIGINT', () => handleSignal('SIGINT'));
+}
+
+// =============================================================================
+// SSR RENDERING
 // =============================================================================
 
 async function render({ context, component, metadata = {} }) {
@@ -264,247 +241,8 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-function getMetadata(page, req) {
-  const protocol = req.protocol || 'http';
-  const host = req.get('host') || 'localhost';
-  return {
-    title: page.title || config.appName,
-    description: page.description || config.appDescription,
-    image: page.image || null,
-    url: `${protocol}://${host}${req.path}`,
-    type: page.type || 'website',
-  };
-}
-
-// =============================================================================
-// SERVER SETUP
-// =============================================================================
-
-function applyApiProxy(app) {
-  const proxyUrl = process.env.RSK_API_PROXY_URL;
-  if (!proxyUrl) return; // No proxy configured
-
-  try {
-    new URL(proxyUrl);
-  } catch {
-    console.error('❌ Invalid RSK_API_PROXY_URL:', proxyUrl);
-    return;
-  }
-
-  console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${proxyUrl}`);
-
-  app.use(
-    config.apiPrefix,
-    createProxy(proxyUrl, {
-      proxyReqPathResolver: req =>
-        req.url.replace(new RegExp(`^${config.apiPrefix}`), ''),
-      proxyErrorHandler: (err, res, next) => {
-        console.error('❌ Proxy Error:', err.message);
-        if (!res.headersSent) {
-          res.status(502).json({
-            error: 'Bad Gateway',
-            message: __DEV__ ? 'Upstream server not responding' : err.message,
-          });
-        } else {
-          next(err);
-        }
-      },
-      userResHeaderDecorator: headers => {
-        delete headers['x-frame-options'];
-        delete headers['content-security-policy'];
-        return headers;
-      },
-      timeout: 30_000,
-    }),
-  );
-}
-
-/**
- * Verify WebSocket authentication token
- * @param {Object} jwt - JWT service instance
- * @param {string} token - Token to verify
- * @returns {Object} User payload (id, email)
- */
-function verifyWsToken(jwt, token) {
-  if (!token) {
-    const error = new Error('Token required');
-    error.code = 'E_TOKEN_REQUIRED';
-    throw error;
-  }
-
-  if (!jwt) {
-    const error = new Error('JWT not configured');
-    error.code = 'E_CONFIG_ERROR';
-    throw error;
-  }
-
-  const decoded = jwt.verifyTypedToken(token, 'access');
-  return { id: decoded.id, email: decoded.email };
-}
-
-/**
- * Initialize WebSocket server attached to HTTP server
- * @param {Object} httpServer - HTTP server instance
- * @param {Object} jwt - JWT service instance
- * @returns {Object} WebSocket server instance
- */
-function initWebSocket(httpServer, jwt) {
-  return createWebSocketServer(
-    {
-      path: config.wsPath,
-      enableLogging: !__DEV__,
-      onAuthentication: token => verifyWsToken(jwt, token),
-    },
-    httpServer,
-  );
-}
-
-/**
- * Log server startup information
- * @param {Object} options - Server options
- * @param {string} options.host - Server host
- * @param {number} options.port - Server port
- */
-function logStartup({ host, port }) {
-  const serverUrl = getBaseUrl({ host, port });
-  const wsProtocol = serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
-  const wsUrl =
-    wsProtocol + serverUrl.replace(/^https?:\/\//, '') + config.wsPath;
-
-  console.info('='.repeat(50));
-  console.info(`🚀 Server started`);
-  console.info(`   URL: ${serverUrl}/`);
-  console.info(`   WebSocket: ${wsUrl}`);
-  console.info(`   Environment: ${nodeEnv}`);
-  console.info('='.repeat(50));
-}
-
-export function serve(app, port = config.port, host = config.host) {
-  return new Promise((resolve, reject) => {
-    const httpServer = app.listen(port, host, err => {
-      if (err) {
-        console.error('❌ Server start failed:', err.message);
-        return reject(err);
-      }
-
-      const wsServer = initWebSocket(httpServer, app.get('jwt'));
-      app.set('ws', wsServer);
-
-      registerShutdownHandlers(httpServer, wsServer);
-      logStartup({ host, port });
-
-      resolve(httpServer);
-    });
-
-    httpServer.on('error', err => {
-      console.error(
-        err.code === 'EADDRINUSE'
-          ? `❌ Port ${port} in use`
-          : `❌ Server error: ${err}`,
-      );
-      reject(err);
-    });
-  });
-}
-
-// =============================================================================
-// MAIN APPLICATION
-// =============================================================================
-
-async function main(app, publicDir) {
-  // JWT Configuration
-  configureJwt(app);
-
-  // Expose i18n to API routes
-  app.set('i18n', i18n);
-
-  // Initialize SSR navigator
-  const nav = await loadNavigator();
-
-  // Express configuration
-  app.set('trust proxy', config.trustProxy);
-  app.disable('x-powered-by');
-
-  // Security headers + Request ID
-  app.use((req, res, next) => {
-    req.id = crypto.randomUUID();
-    res.setHeader('X-Request-Id', req.id);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    next();
-  });
-
-  // Request parsing
-  app.use(express.json({ limit: config.apiJsonRequestLimit }));
-  app.use(
-    express.urlencoded({
-      extended: true,
-      limit: config.apiUrlEncodedRequestLimit,
-    }),
-  );
-
-  // Locale detection
-  app.use(cookieParser());
-  app.use(
-    expressRequestLanguage({
-      languages: Object.keys(AVAILABLE_LOCALES),
-      queryName: LOCALE_COOKIE_NAME,
-      cookie: {
-        name: LOCALE_COOKIE_NAME,
-        options: {
-          path: '/',
-          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
-          httpOnly: true,
-          secure: !__DEV__,
-          sameSite: 'lax',
-        },
-        url: `/${LOCALE_COOKIE_NAME}/{language}`,
-      },
-    }),
-  );
-
-  // Static files
-  app.use(
-    express.static(publicDir || path.resolve('public'), {
-      maxAge: __DEV__ ? 0 : '1y',
-      etag: true,
-      lastModified: true,
-      index: false,
-    }),
-  );
-
-  // Rate limiter for API routes
-  const rateLimiter = rateLimit({
-    windowMs: __DEV__
-      ? 60_000
-      : parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
-    max: __DEV__ ? 100 : parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
-    standardHeaders: true,
-    legacyHeaders: false,
-    // Skip rate limiting for internal SSR requests (server fetching its own API)
-    skip: req => {
-      const ip = req.ip || req.socket.remoteAddress || '';
-      return !req.headers['x-forwarded-for'] && isLocalhost(ip);
-    },
-    handler: (req, res, _next, rateLimitInfo) => {
-      res.status(rateLimitInfo.statusCode).json({
-        success: false,
-        error: 'Too many requests from this IP, please try again later.',
-        retryAfter: Math.ceil(rateLimitInfo.windowMs / 60_000) + ' minutes',
-        limit: rateLimitInfo.max,
-        current: req.rateLimit.used,
-      });
-    },
-  });
-  app.use(config.apiPrefix, rateLimiter);
-
-  // API routes
-  await import('./api').then(api => api.default(app, config));
-  applyApiProxy(app);
-
-  // SSR handler
-  app.get('*', async (req, res, next) => {
+function createSSRHandler(navigator) {
+  return async (req, res, next) => {
     const startTime = Date.now();
     try {
       const history = createMemoryHistory({
@@ -532,14 +270,10 @@ async function main(app, publicDir) {
         locale,
         history,
         pathname: history.location.pathname,
+        query: Object.fromEntries(new URLSearchParams(history.location.search)),
       };
 
-      // Parse query params
-      context.query = Object.fromEntries(
-        new URLSearchParams(history.location.search),
-      );
-
-      const page = await nav.resolve(context);
+      const page = await navigator.resolve(context);
       if (!page) {
         const err = new Error(`Page ${req.path} not found`);
         err.name = 'PageNotFound';
@@ -574,10 +308,33 @@ async function main(app, publicDir) {
     } catch (err) {
       next(err);
     }
-  });
+  };
+}
 
-  // Error handler
-  app.use(async (err, req, res, next) => {
+// =============================================================================
+// SERVER SETUP
+// =============================================================================
+
+function formatErrorResponse(err, status) {
+  // Development: include stack trace
+  if (__DEV__) {
+    return {
+      success: false,
+      error: err.message,
+      status,
+      stack: err.stack,
+    };
+  }
+  // Production: minimal error info
+  return {
+    success: false,
+    error: status === 500 ? 'Internal Server Error' : err.message,
+    status,
+  };
+}
+
+function createErrorHandler() {
+  return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
     // Handle JWT errors
@@ -590,19 +347,17 @@ async function main(app, publicDir) {
       });
     }
 
-    // Get error status
     const status = err.status || 500;
 
-    // Log error details (both dev and production)
+    // Log error details
     console.error('❌ Error:', {
       status,
       message: err.message,
       path: req.path,
-      ...(err.stack && __DEV__ ? { stack: err.stack } : {}),
+      ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    // Development: Show pretty error page with stack trace
-    // Production: Return clean JSON error (don't expose internals)
+    // Development: Show pretty error page
     if (__DEV__) {
       try {
         const Youch = require('youch');
@@ -615,23 +370,222 @@ async function main(app, publicDir) {
         return res.status(status).send(await youch.toHTML());
       } catch (youchError) {
         console.error('⚠️ Youch rendering failed:', youchError.message);
-        // Fallback to JSON with stack trace in development
-        return res.status(status).json({
-          success: false,
-          error: err.message,
-          status,
-          stack: err.stack,
-        });
       }
     }
 
-    // Production: minimal error info (don't expose stack traces)
-    res.status(status).json({
-      success: false,
-      error: status === 500 ? 'Internal Server Error' : err.message,
-      status,
+    // Fallback to JSON response
+    res.status(status).json(formatErrorResponse(err, status));
+  };
+}
+
+function verifyWsToken(jwt, token) {
+  if (!token) {
+    const error = new Error('Token required');
+    error.code = 'E_TOKEN_REQUIRED';
+    throw error;
+  }
+
+  if (!jwt) {
+    const error = new Error('JWT not configured');
+    error.code = 'E_CONFIG_ERROR';
+    throw error;
+  }
+
+  const decoded = jwt.verifyTypedToken(token, 'access');
+  return { id: decoded.id, email: decoded.email };
+}
+
+// =============================================================================
+// MAIN FUNCTIONS
+// =============================================================================
+
+export function serve(app, port = config.port, host = config.host) {
+  // WebSocket path
+  const wsPath = process.env.RSK_WS_PATH || '/ws';
+
+  return new Promise((resolve, reject) => {
+    const httpServer = app.listen(port, host, err => {
+      if (err) {
+        console.error('❌ Server start failed:', err.message);
+        return reject(err);
+      }
+
+      // Initialize WebSocket
+      const jwt = app.get('jwt');
+      const wsServer = createWebSocketServer(
+        {
+          path: wsPath,
+          enableLogging: !__DEV__,
+          onAuthentication: token => verifyWsToken(jwt, token),
+        },
+        httpServer,
+      );
+      app.set('ws', wsServer);
+
+      registerShutdownHandlers(httpServer, wsServer);
+
+      // Print server info
+      const serverUrl = getBaseUrl({ host, port });
+      const wsProtocol = serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
+      const wsUrl = wsProtocol + serverUrl.replace(/^https?:\/\//, '') + wsPath;
+
+      console.info('='.repeat(50));
+      console.info(`🚀 Server started`);
+      console.info(`   URL: ${serverUrl}/`);
+      console.info(`   WebSocket: ${wsUrl}`);
+      console.info(`   Environment: ${config.nodeEnv}`);
+      console.info('='.repeat(50));
+
+      resolve(httpServer);
+    });
+
+    httpServer.on('error', err => {
+      console.error(
+        err.code === 'EADDRINUSE'
+          ? `❌ Port ${port} in use`
+          : `❌ Server error: ${err}`,
+      );
+      reject(err);
     });
   });
+}
+
+export default async function main(app, publicDir) {
+  // JWT Configuration
+  configureJwt(app);
+
+  // Expose i18n to API routes
+  app.set('i18n', i18n);
+
+  // Initialize SSR navigator
+  const nav = await loadNavigator();
+
+  // Express configuration
+  app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
+  app.disable('x-powered-by');
+
+  // Security headers + Request ID
+  app.use((req, res, next) => {
+    req.id = crypto.randomUUID();
+    res.setHeader('X-Request-Id', req.id);
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // Request parsing
+  app.use(
+    express.json({ limit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb' }),
+  );
+  app.use(
+    express.urlencoded({
+      extended: true,
+      limit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
+    }),
+  );
+
+  // Locale detection
+  app.use(cookieParser());
+  app.use(
+    expressRequestLanguage({
+      languages: Object.keys(AVAILABLE_LOCALES),
+      queryName: LOCALE_COOKIE_NAME,
+      cookie: {
+        name: LOCALE_COOKIE_NAME,
+        options: {
+          path: '/',
+          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+          httpOnly: true,
+          secure: !__DEV__,
+          sameSite: 'lax',
+        },
+        url: `/${LOCALE_COOKIE_NAME}/{language}`,
+      },
+    }),
+  );
+
+  // Static files
+  app.use(
+    express.static(publicDir || path.resolve('public'), {
+      maxAge: __DEV__ ? 0 : '1y',
+      etag: true,
+      lastModified: true,
+      index: false,
+    }),
+  );
+
+  // Rate limiter for API routes
+  app.use(
+    config.apiPrefix,
+    rateLimit({
+      windowMs: __DEV__
+        ? 60_000
+        : parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
+      max: __DEV__
+        ? 100
+        : parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
+      standardHeaders: true,
+      legacyHeaders: false,
+      skip: req => {
+        const ip = req.ip || req.socket.remoteAddress || '';
+        return !req.headers['x-forwarded-for'] && LOCALHOST_IPS.has(ip);
+      },
+      handler: (req, res, _next, rateLimitInfo) => {
+        res.status(rateLimitInfo.statusCode).json({
+          success: false,
+          error: 'Too many requests from this IP, please try again later.',
+          retryAfter: Math.ceil(rateLimitInfo.windowMs / 60_000) + ' minutes',
+          limit: rateLimitInfo.max,
+          current: req.rateLimit.used,
+        });
+      },
+    }),
+  );
+
+  // API routes
+  await initializeAPI(app, config);
+
+  // API proxy (if configured)
+  const proxyUrl = process.env.RSK_API_PROXY_URL;
+  if (proxyUrl) {
+    try {
+      new URL(proxyUrl);
+      console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${proxyUrl}`);
+
+      app.use(
+        config.apiPrefix,
+        createProxy(proxyUrl, {
+          proxyReqPathResolver: req =>
+            req.url.replace(new RegExp(`^${config.apiPrefix}`), ''),
+          proxyErrorHandler: (err, res, next) => {
+            console.error('❌ Proxy Error:', err.message);
+            if (!res.headersSent) {
+              const status = 502;
+              err.status = status;
+              res.status(status).json(formatErrorResponse(err, status));
+            } else {
+              next(err);
+            }
+          },
+          userResHeaderDecorator: headers => {
+            delete headers['x-frame-options'];
+            delete headers['content-security-policy'];
+            return headers;
+          },
+          timeout: 30_000,
+        }),
+      );
+    } catch {
+      console.error('❌ Invalid RSK_API_PROXY_URL:', proxyUrl);
+    }
+  }
+
+  // SSR handler
+  app.get('*', createSSRHandler(nav));
+
+  // Error handler
+  app.use(createErrorHandler());
 
   return app;
 }
@@ -646,7 +600,7 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    navigator = null;
+    cachedNavigator = null;
   });
   main.hot = module.hot;
 } else {
@@ -661,5 +615,3 @@ if (module.hot) {
     }
   })();
 }
-
-export default main;

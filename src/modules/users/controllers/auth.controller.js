@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../shared/validator';
+import { validateForm } from '../../../shared/validator';
 import {
   loginFormSchema,
   registerFormSchema,
   emailVerificationFormSchema,
   passwordResetRequestFormSchema,
   passwordResetConfirmFormSchema,
-} from '../../../../shared/validator/features/auth';
+} from '../../../shared/validator/features/auth';
 import * as authService from '../services/auth.service';
 import { generatePassword } from '../utils/password';
 

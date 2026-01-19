@@ -9,45 +9,6 @@ import { getAppName, getAppDescription } from '../shared/renderer/redux';
 import IsomorphicNavigator from '../shared/renderer/Navigator';
 
 /**
- * Checks if value is a plain object (created by Object constructor or Object.create(null))
- * @param {*} value - The value to check
- * @returns {boolean} Returns true if value is a plain object, else false
- */
-function isPlainObject(value) {
-  // Early return for null, undefined, primitives
-  if (value == null || typeof value !== 'object') {
-    return false;
-  }
-
-  // Get the internal [[Class]]
-  const tag = Object.prototype.toString.call(value);
-
-  // Must be [object Object]
-  if (tag !== '[object Object]') {
-    return false;
-  }
-
-  // Objects created via Object.create(null) have no prototype - these are plain
-  const proto = Object.getPrototypeOf(value);
-  if (proto === null) {
-    return true;
-  }
-
-  // Get the constructor from the prototype
-  const Ctor =
-    Object.prototype.hasOwnProperty.call(proto, 'constructor') &&
-    proto.constructor;
-
-  // Check if constructor is the Object constructor
-  return (
-    typeof Ctor === 'function' &&
-    Ctor instanceof Ctor &&
-    Function.prototype.toString.call(Ctor) ===
-      Function.prototype.toString.call(Object)
-  );
-}
-
-/**
  * Automatically discover and load all pages from page folders.
  *
  * This uses webpack's require.context to dynamically import all index.js files
@@ -138,144 +99,207 @@ const DEFAULT_PAGE_PRIORITY = 50;
 const PAGE_PATH_REGEX = /^\.\/([^/]+)\//;
 
 /**
+ * Checks if value is a plain object (created by Object constructor or Object.create(null))
+ * @param {*} value - The value to check
+ * @returns {boolean} Returns true if value is a plain object, else false
+ */
+function isPlainObject(value) {
+  // Early return for null, undefined, primitives
+  if (value == null || typeof value !== 'object') {
+    return false;
+  }
+
+  // Get the internal [[Class]]
+  const tag = Object.prototype.toString.call(value);
+
+  // Must be [object Object]
+  if (tag !== '[object Object]') {
+    return false;
+  }
+
+  // Objects created via Object.create(null) have no prototype - these are plain
+  const proto = Object.getPrototypeOf(value);
+  if (proto === null) {
+    return true;
+  }
+
+  // Get the constructor from the prototype
+  const Ctor =
+    Object.prototype.hasOwnProperty.call(proto, 'constructor') &&
+    proto.constructor;
+
+  // Check if constructor is the Object constructor
+  return (
+    typeof Ctor === 'function' &&
+    Ctor instanceof Ctor &&
+    Function.prototype.toString.call(Ctor) ===
+      Function.prototype.toString.call(Object)
+  );
+}
+
+/**
+ * Development-only logger helper
+ * @param {string} message - Log message
+ * @param {'log'|'warn'|'error'} [level='log'] - Log level
+ */
+function logDev(message, level = 'log') {
+  if (__DEV__) {
+    console[level](`[Navigator] ${message}`);
+  }
+}
+
+/**
+ * Extract folder name from webpack require.context path
+ * @param {string} resolvedPath - Path like './home/index.js'
+ * @returns {string|null} Folder name or null if invalid
+ */
+function extractFolderName(resolvedPath) {
+  const match = resolvedPath.match(PAGE_PATH_REGEX);
+  return match ? match[1] : null;
+}
+
+/**
+ * Resolve page module (handles both static objects and async functions)
+ * @param {Object|Function} module - Page module export
+ * @param {Function} pageBuilder - Builder function for nested pages
+ * @returns {Promise<Object>} Resolved page configuration
+ */
+async function resolvePageModule(module, pageBuilder) {
+  return typeof module === 'function' ? module(pageBuilder) : module;
+}
+
+/**
+ * Validate page module structure
+ * @param {*} module - Module to validate
+ * @param {string} folderName - Folder name for error messages
+ * @returns {{valid: boolean, error?: string}} Validation result
+ */
+function validatePageModule(module, folderName) {
+  if (!isPlainObject(module)) {
+    return {
+      valid: false,
+      error: `Invalid page module in ${folderName}/index.js. Must export an object or function returning one.`,
+    };
+  }
+
+  if (!('path' in module)) {
+    return {
+      valid: false,
+      error: `Route in ${folderName}/index.js must have a 'path' property.`,
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Normalize priority value with fallback to default
+ * @param {*} value - Priority value to normalize
+ * @param {string} folderName - Folder name for warning messages
+ * @returns {number} Valid priority number
+ */
+function normalizePriority(value, folderName) {
+  if (value == null) {
+    return DEFAULT_PAGE_PRIORITY;
+  }
+
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+
+  logDev(
+    `Invalid priority value in ${folderName}. Using default ${DEFAULT_PAGE_PRIORITY}.`,
+    'warn',
+  );
+  return DEFAULT_PAGE_PRIORITY;
+}
+
+/**
+ * Load and process a single page module
+ * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context
+ * @param {string} resolvedPath - Module path
+ * @returns {Promise<{pageConfig: Object, priority: number}|null>} Page result or null
+ */
+async function loadPageModule(ctx, resolvedPath) {
+  const folderName = extractFolderName(resolvedPath);
+  if (!folderName) {
+    logDev(`Invalid page format: ${resolvedPath}`, 'error');
+    return null;
+  }
+
+  try {
+    // Load and resolve module
+    const rawModule = ctx(resolvedPath).default;
+    const pageModule = await resolvePageModule(rawModule, createPages);
+
+    // Validate structure
+    const validation = validatePageModule(pageModule, folderName);
+    if (!validation.valid) {
+      logDev(validation.error, 'error');
+      return null;
+    }
+
+    // Skip dev-only routes in production
+    if (pageModule.devOnly && !__DEV__) {
+      return null;
+    }
+
+    // Extract and normalize priority
+    const priority = normalizePriority(pageModule.priority, folderName);
+
+    // Warn if no action provided
+    if (typeof pageModule.action !== 'function') {
+      logDev(`No action function provided for ${folderName}.`, 'warn');
+    }
+
+    // Build clean page config (exclude internal properties)
+    const { priority: _, devOnly: __, ...routeConfig } = pageModule;
+    const pageConfig = {
+      ...routeConfig,
+      _folderName: folderName,
+    };
+
+    logDev(
+      `✓ Page loaded: ${pageConfig.path || '(no path)'} (priority: ${priority}, folder: ${folderName})`,
+    );
+
+    return { pageConfig, priority };
+  } catch (error) {
+    console.error(
+      `[Navigator] Error loading page module ${folderName}/index.js:`,
+      error,
+    );
+    return null;
+  }
+}
+
+/**
  * Build pages array from discovered page modules
- * Supports async page module functions and provides comprehensive error handling
- *
  * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context
  * @returns {Promise<Array<Object>>} Sorted array of page objects
  */
 async function createPages(ctx) {
   const modulePaths = ctx.keys();
+  logDev(`Discovered ${modulePaths.length} page module(s)`);
 
-  if (__DEV__) {
-    console.log(`[Navigator] Discovered ${modulePaths.length} page module(s)`);
+  // Load all pages in parallel with error isolation
+  const results = await Promise.allSettled(
+    modulePaths.map(path => loadPageModule(ctx, path)),
+  );
+
+  // Filter successful loads and sort by priority (descending)
+  const loadedPages = results
+    .filter(r => r.status === 'fulfilled' && r.value != null)
+    .map(r => r.value)
+    .sort((a, b) => b.priority - a.priority);
+
+  // Log summary
+  const failedCount = results.length - loadedPages.length;
+  if (failedCount > 0) {
+    logDev(`⚠ ${failedCount} page(s) failed to load or were skipped`, 'warn');
   }
+  logDev(`Successfully loaded ${loadedPages.length} page(s)`);
 
-  const pages = modulePaths.map(async resolvedPath => {
-    // Extract folder name from path (e.g., './home/index.js' -> 'home')
-    const pathMatch = resolvedPath.match(PAGE_PATH_REGEX);
-    if (!pathMatch) {
-      console.error(`[Navigator] Invalid page format: ${resolvedPath}`);
-      return null;
-    }
-    const folderName = pathMatch[1];
-
-    try {
-      // Load page module
-      let pageModule = ctx(resolvedPath).default;
-
-      // Handle dynamic exports (functions that return route config)
-      if (typeof pageModule === 'function') {
-        pageModule = await pageModule(createPages);
-      }
-
-      // Validate export format - must be a plain object
-      if (!isPlainObject(pageModule)) {
-        console.error(
-          `[Navigator] Invalid page module in ${folderName}/index.js. Must export an object { path, action?, children?, ... } or a function returning one.`,
-        );
-        return null;
-      }
-
-      // Extract route config and action from resolved module
-      const { action, ...routeConfig } = pageModule;
-
-      // Validate that route has a path property (empty string '' is valid)
-      if (!Object.prototype.hasOwnProperty.call(routeConfig, 'path')) {
-        console.error(
-          `[Navigator] Route in ${folderName}/index.js must have a 'path' property.`,
-        );
-        return null;
-      }
-
-      // Skip development-only routes in production
-      if (routeConfig.devOnly && !__DEV__) {
-        if (__DEV__) {
-          console.log(
-            `[Navigator] Skipping dev-only route '${routeConfig.path}' in ${folderName} (production mode)`,
-          );
-        }
-        return null;
-      }
-
-      // Validate and normalize action function
-      if (typeof action !== 'function') {
-        console.warn(
-          `[Navigator] No action function provided for ${folderName}. Using default pass-through action.`,
-        );
-      }
-
-      // Extract priority before building page config
-      const priority = Object.prototype.hasOwnProperty.call(
-        routeConfig,
-        'priority',
-      )
-        ? routeConfig.priority
-        : DEFAULT_PAGE_PRIORITY;
-
-      // Validate priority is a number
-      if (typeof priority !== 'number' || isNaN(priority)) {
-        console.warn(
-          `[Navigator] Invalid page priority value in ${folderName}. Using default priority ${DEFAULT_PAGE_PRIORITY}.`,
-        );
-      }
-
-      // Remove custom properties that shouldn't be passed to navigator
-      delete routeConfig.priority;
-      delete routeConfig.devOnly;
-
-      // Build complete page config
-      const pageConfig = {
-        ...routeConfig,
-        action,
-        _folderName: folderName, // Add folder name for debugging
-      };
-
-      if (__DEV__) {
-        console.log(
-          `[Navigator] ✓ Page loaded: ${pageConfig.path || '(no path)'} (priority: ${priority}, folder: ${folderName})`,
-        );
-      }
-
-      return { pageConfig, priority };
-    } catch (error) {
-      console.error(
-        `[Navigator] Error loading page module ${folderName}/index.js:`,
-        error,
-      );
-      return null;
-    }
-  });
-
-  // Wait for all page promises to resolve in parallel
-  const pageResults = await Promise.all(pages);
-
-  // Filter out null values (failed/skipped pages)
-  const loadedPages = pageResults.filter(item => item != null);
-
-  // Log summary of failed pages in development
-  if (__DEV__) {
-    const failedCount = pageResults.length - loadedPages.length;
-    if (failedCount > 0) {
-      console.warn(
-        `[Navigator] ⚠ ${failedCount} page(s) failed to load or were skipped`,
-      );
-    }
-    console.log(
-      `[Navigator] Successfully loaded ${loadedPages.length} page(s)`,
-    );
-  }
-
-  // Sort pages by priority (higher priority first)
-  loadedPages.sort((a, b) => {
-    const priorityA =
-      typeof a.priority === 'number' ? a.priority : DEFAULT_PAGE_PRIORITY;
-    const priorityB =
-      typeof b.priority === 'number' ? b.priority : DEFAULT_PAGE_PRIORITY;
-    return priorityB - priorityA;
-  });
-
-  // Extract page configs (without priority metadata)
   return loadedPages.map(item => item.pageConfig);
 }
 
@@ -283,7 +307,7 @@ async function createPages(ctx) {
 const pagesContext = require.context(
   './',
   true,
-  /^\.\/[^/]+\/index\.(jsx?|tsx?)$/,
+  /^\.\/[^/]+\/index\.[cm]?[jt]sx?$/i,
 );
 
 /**

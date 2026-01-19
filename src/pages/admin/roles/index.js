@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import reducer, { SLICE_NAME } from './redux';
 import Roles from './routes/Roles';
 import CreateRole from './routes/create/CreateRole';
 import EditRole from './routes/edit/EditRole';
-import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Route configuration with child routes

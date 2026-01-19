@@ -326,11 +326,7 @@ function Groups() {
                     <span className={s.sectionLabel}>Roles:</span>
                     <Tag.List emptyText='No roles assigned'>
                       {visibleRoles.map(role => (
-                        <RoleTag
-                          key={role.id}
-                          name={role.name}
-                          className={s.roleTag}
-                        />
+                        <RoleTag key={role} name={role} className={s.roleTag} />
                       ))}
                       {remainingRoleCount > 0 && (
                         <Tag variant='neutral' className={s.roleTag}>

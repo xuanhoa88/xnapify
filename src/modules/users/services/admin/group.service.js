@@ -90,7 +90,13 @@ export async function createGroup(groupData, { models, webhook, actorId }) {
   // Log activity
   await logGroupActivity(webhook, 'created', group.id, { name }, actorId);
 
-  return group;
+  return {
+    ...group.toJSON(),
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+  };
 }
 
 /**
@@ -170,6 +176,10 @@ export async function getGroups(options, models) {
   // Add user count to each group
   const groupsWithCount = groups.map(group => ({
     ...group.toJSON(),
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
     userCount: group.users ? group.users.length : 0,
     roleCount: group.roles ? group.roles.length : 0,
   }));
@@ -225,7 +235,13 @@ export async function getGroupById(group_id, models) {
     throw error;
   }
 
-  return group;
+  return {
+    ...group.toJSON(),
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+  };
 }
 
 /**
@@ -320,7 +336,13 @@ export async function updateGroupById(
     actorId,
   );
 
-  return group;
+  return {
+    ...group.toJSON(),
+    roles:
+      Array.isArray(group.roles) && group.roles.length > 0
+        ? group.roles.map(r => r.name)
+        : [DEFAULT_ROLE],
+  };
 }
 
 /**

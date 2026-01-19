@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../../shared/validator';
+import { validateForm } from '../../../../shared/validator';
 import {
   createPermissionFormSchema,
   updatePermissionFormSchema,
   bulkUpdatePermissionStatusFormSchema,
   bulkDeletePermissionFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../../shared/validator/features/admin';
 import * as permissionService from '../../services/admin/permission.service';
 
 // ========================================================================

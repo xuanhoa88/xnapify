@@ -447,16 +447,16 @@ function Users() {
                 </td>
                 <td>{user.email}</td>
                 <td>
-                  <Tag.List>
-                    {user.roles && user.roles.length > 0 ? (
-                      user.roles.map(role => <RoleTag key={role} name={role} />)
-                    ) : (
-                      <RoleTag name='User' />
-                    )}
+                  <Tag.List emptyText='No roles assigned'>
+                    {user.roles &&
+                      user.roles.length > 0 &&
+                      user.roles.map(role => (
+                        <RoleTag key={role} name={role} />
+                      ))}
                   </Tag.List>
                 </td>
                 <td>
-                  <Tag.List>
+                  <Tag.List emptyText='No groups assigned'>
                     {user.groups &&
                       user.groups.map(group => (
                         <GroupTag key={group.id} name={group.name} />
@@ -464,7 +464,7 @@ function Users() {
                   </Tag.List>
                 </td>
                 <td>
-                  <Tag variant={user.is_active ? 'success' : 'danger'}>
+                  <Tag variant={user.is_active ? 'success' : 'error'}>
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Tag>
                 </td>

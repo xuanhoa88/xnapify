@@ -7,8 +7,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const path = require('path');
 const stylelint = require('stylelint');
 const stylelintConfig = require('../../.stylelintrc');
+const config = require('../config');
 const { BuildError } = require('../utils/error');
 const {
   formatDuration,
@@ -20,13 +22,8 @@ const {
   logWarn,
 } = require('../utils/logger');
 
-// Default patterns to lint
-const DEFAULT_PATTERNS = [
-  'src/**/*.css',
-  'src/**/*.scss',
-  'src/**/*.sass',
-  'src/**/*.less',
-];
+// Relative path to app directory
+const appDir = path.relative(config.CWD, config.APP_DIR);
 
 /**
  * Format stylelint warning for display
@@ -57,7 +54,15 @@ async function main() {
     const patterns = args.filter(arg => !arg.startsWith('--'));
 
     // Use provided patterns or defaults
-    const filesToLint = patterns.length > 0 ? patterns : DEFAULT_PATTERNS;
+    const filesToLint =
+      patterns.length > 0
+        ? patterns
+        : [
+            `${appDir}/**/*.css`,
+            `${appDir}/**/*.scss`,
+            `${appDir}/**/*.sass`,
+            `${appDir}/**/*.less`,
+          ];
 
     if (verbose) {
       logInfo(`📂 Linting patterns: ${filesToLint.join(', ')}`);
