@@ -1,0 +1,43 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.container {
+  padding: 40px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.title {
+  color: #0070f3;
+}
+
+.card {
+  background: #f0f0f0;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
+.codeBlock {
+  background: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: block;
+  margin-top: 8px;
+}
+
+.heading {
+  margin-top: 20px;
+}
+
+.infoBox {
+  background: #e6f7ff;
+  padding: 20px;
+  border-radius: 8px;
+  margin-top: 20px;
+  border: 1px solid #91d5ff;
+}

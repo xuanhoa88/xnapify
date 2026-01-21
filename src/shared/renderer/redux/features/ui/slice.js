@@ -129,12 +129,9 @@ const uiSlice = createSlice({
           state.breadcrumbs[namespace] = [];
         }
 
-        // Add single item or array of items
-        if (Array.isArray(item)) {
-          state.breadcrumbs[namespace].push(...item);
-        } else {
-          state.breadcrumbs[namespace].push(item);
-        }
+        const currentBreadcrumbs = state.breadcrumbs[namespace];
+        const newItems = Array.isArray(item) ? item : [item];
+        currentBreadcrumbs.push(...newItems);
       },
       prepare: (item, namespace) => ({
         payload: { item, namespace },

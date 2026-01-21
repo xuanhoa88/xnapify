@@ -35,7 +35,7 @@ import { createFetch } from './shared/fetch';
 import Html from './shared/renderer/Html';
 import App from './shared/renderer/App';
 import { createWebSocketServer } from './shared/ws/server';
-import initializeAPI from './bootstrap';
+import initializeAPI from './bootstrap/api';
 
 // =============================================================================
 // CONFIGURATION
@@ -48,7 +48,7 @@ const config = Object.freeze({
   apiPrefix: process.env.RSK_API_PREFIX || '/api',
 });
 
-let cachedNavigator = null;
+let cachedViews = null;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -69,12 +69,12 @@ function getBaseUrl({ host, port }) {
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
-async function loadNavigator() {
-  if (!cachedNavigator) {
-    cachedNavigator = await import('./pages').then(m => m.default());
-    if (__DEV__) console.log('✅ Navigator initialized');
+async function loadViews() {
+  if (!cachedViews) {
+    cachedViews = await import('./bootstrap/views').then(m => m.default());
+    if (__DEV__) console.log('✅ Views initialized');
   }
-  return cachedNavigator;
+  return cachedViews;
 }
 
 function getInnerHTML(element) {
@@ -241,7 +241,7 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-function createSSRHandler(navigator) {
+function createSSRHandler(views) {
   return async (req, res, next) => {
     const startTime = Date.now();
     try {
@@ -273,7 +273,7 @@ function createSSRHandler(navigator) {
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
       };
 
-      const page = await navigator.resolve(context);
+      const page = await views.resolve(context);
       if (!page) {
         const err = new Error(`Page ${req.path} not found`);
         err.name = 'PageNotFound';
@@ -457,8 +457,8 @@ export default async function main(app, publicDir) {
   // Expose i18n to API routes
   app.set('i18n', i18n);
 
-  // Initialize SSR navigator
-  const nav = await loadNavigator();
+  // Initialize SSR views
+  const views = await loadViews();
 
   // Express configuration
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
@@ -582,7 +582,7 @@ export default async function main(app, publicDir) {
   }
 
   // SSR handler
-  app.get('*', createSSRHandler(nav));
+  app.get('*', createSSRHandler(views));
 
   // Error handler
   app.use(createErrorHandler());
@@ -600,7 +600,7 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    cachedNavigator = null;
+    cachedViews = null;
   });
   main.hot = module.hot;
 } else {

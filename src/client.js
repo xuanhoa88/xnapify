@@ -68,7 +68,7 @@ if (context.locale && i18n.language !== context.locale) {
 
 let currentLocation = history.location;
 let unsubscribeNavigation = null;
-let cachedNavigator = null;
+let cachedViews = null;
 let wsClient = null;
 let isNavigating = false;
 let navigationAbortController = null;
@@ -187,16 +187,12 @@ function buildWebSocketUrl(path = '/ws') {
   }
 }
 
-// =============================================================================
-// NAVIGATOR
-// =============================================================================
-
-async function loadNavigator() {
-  if (!cachedNavigator) {
-    cachedNavigator = await import('./pages').then(m => m.default());
-    if (__DEV__) console.log('✅ Navigator initialized');
+async function loadViews() {
+  if (!cachedViews) {
+    cachedViews = await import('./bootstrap/views').then(m => m.default());
+    if (__DEV__) console.log('✅ Views initialized');
   }
-  return cachedNavigator;
+  return cachedViews;
 }
 
 // =============================================================================
@@ -338,8 +334,8 @@ async function handlePageChange(location, action) {
     context.locale =
       (currentState.intl && currentState.intl.locale) || context.locale;
 
-    const navigator = await loadNavigator();
-    const page = await navigator.resolve(context);
+    const views = await loadViews();
+    const page = await views.resolve(context);
     if (!page) {
       const err = new Error(`Page ${location.pathname} not found`);
       err.status = 404;
@@ -547,7 +543,7 @@ if (module.hot) {
       console.error('❌ HMR error:', err);
       return;
     }
-    cachedNavigator = null;
+    cachedViews = null;
     const loc = { ...currentLocation };
     const schedule = window.requestIdleCallback || setTimeout;
     schedule(

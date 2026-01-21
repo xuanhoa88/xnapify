@@ -142,6 +142,7 @@
     "jest-watch-typeahead": "0.4.2",
     "lint-staged": "7.0.0",
     "mini-css-extract-plugin": "2.9.2",
+    "normalize.css": "8.0.1",
     "open": "8.4.2",
     "pixrem": "4.0.1",
     "pleeease-filters": "4.0.0",

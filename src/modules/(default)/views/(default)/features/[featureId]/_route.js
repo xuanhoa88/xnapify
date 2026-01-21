@@ -1,0 +1,49 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import PropTypes from 'prop-types';
+import { featuresData } from '../../data';
+import FeatureDetails from '../../FeatureDetails';
+
+/**
+ * Page metadata - dynamic based on feature
+ */
+export const metadata = {
+  title: 'Feature Details',
+};
+
+/**
+ * Load function to get feature data
+ */
+export async function getInitialProps({ params }) {
+  const { featureId } = params;
+  const feature = featuresData.find(f => f.id === featureId);
+
+  if (!feature) {
+    return {
+      title: 'Feature Not Found',
+      featureId,
+    };
+  }
+
+  return {
+    title: `${feature.name} - Features`,
+    description: feature.description,
+    featureId,
+  };
+}
+
+/**
+ * Default export - Page component
+ */
+export default function FeatureDetailsPage({ featureId }) {
+  return <FeatureDetails featureId={featureId} />;
+}
+
+FeatureDetailsPage.propTypes = {
+  featureId: PropTypes.string.isRequired,
+};

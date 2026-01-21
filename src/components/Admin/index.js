@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Portal (default export)
-export { default } from './Portal';
-
 // Components
 export { default as Icon } from '../Icon';
 export { default as Loader } from './Loader';

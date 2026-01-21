@@ -1,0 +1,134 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../../components/variables.css';
+
+/* Search bar spacing */
+.modalSearchBar {
+  margin-bottom: var(--spacing-4);
+}
+
+/* User List - aligned with checkboxList pattern */
+.usersList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.userItem {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition: var(--transition-base);
+}
+
+.userItem:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-primary);
+}
+
+.userAvatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
+  color: white;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  flex-shrink: 0;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+  flex: 1;
+  min-width: 0;
+}
+
+.userName {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userEmail {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userMeta {
+  display: flex;
+  flex-shrink: 0;
+}
+
+.noUsers {
+  color: var(--color-text-secondary);
+  font-style: italic;
+  font-size: var(--font-size-sm);
+  padding: var(--spacing-4);
+  text-align: center;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .userItem {
+    padding: var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+
+  .userAvatar {
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-xs);
+  }
+
+  .userName {
+    font-size: var(--font-size-xs);
+  }
+
+  .userEmail {
+    font-size: 10px;
+  }
+}
+
+@media (max-width: 375px) {
+  .userItem {
+    flex-wrap: wrap;
+    padding: var(--spacing-2);
+  }
+
+  .userAvatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .userMeta {
+    width: 100%;
+    margin-top: var(--spacing-1);
+    padding-left: 44px;
+  }
+}

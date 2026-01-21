@@ -1,0 +1,169 @@
+/**
+ * DeleteAccountCard Component Styles
+ */
+@import '../../../../../components/variables.css';
+
+/* Card styles */
+.card {
+  background: var(--color-background);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  border: 1px solid var(--color-error-border);
+  padding: var(--spacing-6);
+  transition: var(--transition-base);
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgb(0 0 0 / 8%);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-5);
+  padding-bottom: var(--spacing-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cardIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgb(239 68 68 / 25%);
+  flex-shrink: 0;
+}
+
+.cardIcon svg {
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+
+.cardTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-error-text);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.cardDescription {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-secondary);
+  margin: var(--spacing-1) 0 0;
+}
+
+/* Warning box */
+.warning {
+  display: flex;
+  gap: var(--spacing-3);
+  padding: var(--spacing-4);
+  margin-bottom: var(--spacing-4);
+  border-radius: var(--radius-md);
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  color: #92400e;
+}
+
+.warning svg {
+  flex-shrink: 0;
+  color: #d97706;
+}
+
+.warning strong {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+  margin-bottom: var(--spacing-1);
+}
+
+.warning p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  line-height: var(--line-height-relaxed);
+}
+
+/* Button layout */
+.buttonDanger {
+  width: 100%;
+  margin-top: var(--spacing-2);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - TABLET
+   ============================================================================= */
+@media (max-width: 768px) {
+  .card {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .card:hover {
+    box-shadow: 0 1px 3px rgb(0 0 0 / 5%);
+  }
+
+  .cardHeader {
+    margin-bottom: var(--spacing-4);
+    padding-bottom: var(--spacing-3);
+  }
+
+  .cardIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .cardIcon svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-base);
+  }
+
+  .cardDescription {
+    font-size: var(--font-size-xs);
+  }
+
+  .warning {
+    padding: var(--spacing-3);
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - SMALL MOBILE
+   ============================================================================= */
+@media (max-width: 375px) {
+  .card {
+    padding: var(--spacing-3);
+  }
+
+  .cardHeader {
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+  }
+
+  .cardIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .cardIcon svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .warning {
+    flex-direction: column;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3);
+  }
+}

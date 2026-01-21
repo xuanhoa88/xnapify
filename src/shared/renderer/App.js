@@ -33,6 +33,7 @@
  * );
  */
 
+import 'normalize.css';
 import PropTypes from 'prop-types';
 import React, { useMemo } from 'react';
 import { I18nextProvider } from 'react-i18next';

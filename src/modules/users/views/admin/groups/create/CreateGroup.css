@@ -1,0 +1,467 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../../components/variables.css';
+
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+.formContainer {
+  background: var(--color-background);
+  padding: var(--spacing-8);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  max-width: 800px;
+}
+
+.form {
+  width: 100%;
+}
+
+.formSection {
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.formSection:last-of-type {
+  margin-bottom: var(--spacing-6);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-5);
+}
+
+.formGroup {
+  margin-bottom: var(--spacing-4);
+  flex: 1;
+}
+
+.formRow {
+  display: flex;
+  gap: var(--spacing-4);
+}
+
+/* Ensure Form.Field children in formRow have equal width */
+.formRow > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.formRow .formGroup {
+  margin-bottom: 0;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: var(--spacing-2);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+}
+
+.formInput {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 44px;
+  padding: 0 var(--spacing-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  transition: var(--transition-base);
+}
+
+.formInput:hover {
+  border-color: var(--color-border-hover);
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.formInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.formTextarea {
+  width: 100%;
+  padding: var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  background: var(--color-background);
+  transition: var(--transition-base);
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: var(--shadow-focus);
+}
+
+.formTextarea::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.formError {
+  padding: var(--spacing-4);
+  background: #fee2e2;
+  color: #991b1b;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--spacing-6);
+  font-size: var(--font-size-sm);
+  border: 1px solid #fecaca;
+}
+
+.loading {
+  padding: var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-4);
+}
+
+.cancelBtn {
+  height: 44px;
+  padding: 0 var(--spacing-6);
+  background: transparent;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: var(--transition-base);
+  color: var(--color-text-secondary);
+}
+
+.cancelBtn:hover {
+  background: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.submitBtn {
+  height: 44px;
+  padding: 0 var(--spacing-6);
+  background: var(--color-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.submitBtn:hover {
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.submitBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.searchInput {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 40px;
+  padding: 0 var(--spacing-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  background: var(--color-background);
+  color: var(--color-text-primary);
+  margin-bottom: var(--spacing-2);
+  transition: var(--transition-base);
+}
+
+.searchInput:hover {
+  border-color: var(--color-border-hover);
+}
+
+.searchInput:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+.searchInput::placeholder {
+  color: var(--color-text-tertiary);
+}
+
+.checkboxGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: var(--spacing-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  max-height: 320px;
+  min-height: 160px;
+  overflow-y: auto;
+
+  /* Custom scrollbar */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-border);
+    border-radius: 3px;
+  }
+
+  &::-webkit-scrollbar-thumb:hover {
+    background: var(--color-text-tertiary);
+  }
+
+  & .checkboxItem {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-3);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    color: var(--color-text-primary);
+    padding: var(--spacing-3);
+    margin: 0;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-base);
+    border: none;
+  }
+}
+
+.checkboxItem:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.checkboxItem input[type='checkbox'] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  margin: 1px 0 0;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+}
+
+.checkboxItem > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+}
+
+.itemDescription {
+  display: block;
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-normal);
+  margin: 0;
+  font-style: normal;
+  line-height: 1.4;
+}
+
+.noItemsFound {
+  padding: var(--spacing-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+.loadingMore {
+  padding: var(--spacing-4);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-sm);
+  font-style: italic;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  /* Form container compact */
+  .formContainer {
+    padding: var(--spacing-4);
+  }
+
+  /* Form row stack on mobile */
+  .formRow {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  /* Section titles compact */
+  .formSection {
+    margin-bottom: var(--spacing-5);
+    padding-bottom: var(--spacing-4);
+  }
+
+  .sectionTitle {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-3);
+  }
+
+  /* Form inputs compact */
+  .formGroup label {
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-1);
+  }
+
+  .formInput,
+  .formTextarea,
+  .searchInput {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .formTextarea {
+    min-height: 60px;
+  }
+
+  /* Checkbox group */
+  .checkboxGroup {
+    padding: var(--spacing-1);
+    max-height: 240px;
+    min-height: 120px;
+  }
+
+  .checkboxGroup .checkboxItem {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+    gap: var(--spacing-2);
+  }
+
+  .checkboxItem input[type='checkbox'] {
+    width: 14px;
+    height: 14px;
+  }
+
+  .itemDescription {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+
+  .noItemsFound,
+  .loadingMore,
+  .loading {
+    padding: var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+
+  /* Form actions compact */
+  .formActions {
+    flex-direction: column-reverse;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-5);
+    padding-top: var(--spacing-4);
+    border-top: none;
+  }
+
+  .cancelBtn {
+    width: 100%;
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    text-align: center;
+  }
+
+  .submitBtn {
+    width: 100%;
+    min-height: 40px;
+    padding: var(--spacing-2) var(--spacing-4);
+    font-size: var(--font-size-sm);
+    text-align: center;
+  }
+
+  /* Error message */
+  .formError {
+    padding: var(--spacing-3);
+    font-size: var(--font-size-xs);
+    margin-bottom: var(--spacing-4);
+  }
+}
+
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .formContainer {
+    padding: var(--spacing-3);
+  }
+
+  .sectionTitle {
+    font-size: var(--font-size-sm);
+  }
+
+  .checkboxGroup {
+    max-height: 160px;
+  }
+
+  .checkboxGroup .checkboxItem {
+    padding: var(--spacing-2);
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+  }
+
+  .cancelBtn,
+  .submitBtn {
+    width: 100%;
+    min-height: 36px;
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+    text-align: center;
+  }
+}

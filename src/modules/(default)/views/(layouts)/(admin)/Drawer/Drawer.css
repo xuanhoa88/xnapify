@@ -1,0 +1,294 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../../components/variables.css';
+
+/* =============================================================================
+   DRAWER - Dark theme to match header
+   ============================================================================= */
+
+.drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 260px;
+  background: rgb(15 20 30);
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  z-index: var(--z-modal);
+  transform: translateX(-100%);
+  transition: transform var(--transition-base);
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer.open {
+  transform: translateX(0);
+}
+
+/* =============================================================================
+   HEADER
+   ============================================================================= */
+
+.drawerHeader {
+  padding: var(--spacing-4) var(--spacing-4);
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 56px;
+  flex-shrink: 0;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+}
+
+.brandLogo {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.brandName {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  letter-spacing: -0.02em;
+}
+
+/* =============================================================================
+   NAVIGATION
+   ============================================================================= */
+
+.nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-4);
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 255 255 / 15%) transparent;
+}
+
+.nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav::-webkit-scrollbar-thumb {
+  background: rgb(255 255 255 / 15%);
+  border-radius: 2px;
+}
+
+.section {
+  margin-bottom: var(--spacing-4);
+}
+
+.sectionTitle {
+  font-size: 10px;
+  font-weight: var(--font-weight-semibold);
+  color: rgb(255 255 255 / 40%);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 var(--spacing-3);
+  margin: 0 0 var(--spacing-2) 0;
+}
+
+.menuList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menuLink {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-2) var(--spacing-3);
+  color: rgb(255 255 255 / 65%);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all var(--transition-fast);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.menuLink:hover {
+  background: rgb(255 255 255 / 8%);
+  color: white;
+  text-decoration: none;
+}
+
+.menuLink.active {
+  background: var(--color-primary);
+  color: white;
+}
+
+.menuLink.active:hover {
+  background: var(--color-primary);
+}
+
+.menuIcon {
+  flex-shrink: 0;
+  opacity: 0.8;
+}
+
+.menuLabel {
+  line-height: 1.4;
+}
+
+/* =============================================================================
+   DIVIDER
+   ============================================================================= */
+
+.divider {
+  height: 1px;
+  background: rgb(255 255 255 / 8%);
+  margin: var(--spacing-2) 0;
+}
+
+/* =============================================================================
+   USER FOOTER
+   ============================================================================= */
+
+.footer {
+  padding: var(--spacing-3) var(--spacing-4);
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-3);
+  flex-shrink: 0;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  min-width: 0;
+  flex: 1;
+}
+
+.userAvatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary) 0%,
+    var(--color-secondary) 100%
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  flex-shrink: 0;
+}
+
+.userDetails {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.userName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: white;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.userRole {
+  font-size: 10px;
+  color: rgb(255 255 255 / 50%);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* =============================================================================
+   OVERLAY
+   ============================================================================= */
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(0 0 0 / 60%);
+  z-index: var(--z-modal-backdrop);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .drawer {
+    width: 280px;
+  }
+
+  .drawerHeader {
+    padding: var(--spacing-3);
+    height: 52px;
+  }
+
+  .nav {
+    padding: var(--spacing-3);
+  }
+
+  .menuLink {
+    padding: var(--spacing-2);
+    font-size: var(--font-size-xs);
+  }
+
+  .sectionTitle {
+    font-size: 9px;
+  }
+
+  .footer {
+    padding: var(--spacing-2) var(--spacing-3);
+  }
+
+  .userAvatar {
+    width: 32px;
+    height: 32px;
+  }
+
+  .userName {
+    font-size: var(--font-size-xs);
+  }
+}
+
+@media (max-width: 375px) {
+  .drawer {
+    width: 100%;
+  }
+}

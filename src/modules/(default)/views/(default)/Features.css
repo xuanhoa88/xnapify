@@ -1,0 +1,236 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../components/variables.css';
+
+/* =============================================================================
+   ROOT
+   ============================================================================= */
+
+.root {
+  background: var(--color-background);
+}
+
+/* =============================================================================
+   HERO SECTION
+   ============================================================================= */
+
+.hero {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: var(--spacing-16) var(--spacing-6);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.hero::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+      circle at 30% 50%,
+      rgb(255 255 255 / 10%) 0%,
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 70% 80%,
+      rgb(255 255 255 / 8%) 0%,
+      transparent 50%
+    );
+  pointer-events: none;
+}
+
+.heroContent {
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+  z-index: 1;
+}
+
+.heroTitle {
+  font-size: var(--font-size-4xl);
+  font-weight: var(--font-weight-bold);
+  color: white;
+  margin: 0 0 var(--spacing-4);
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 8px rgb(0 0 0 / 15%);
+}
+
+.heroSubtitle {
+  font-size: var(--font-size-xl);
+  color: rgb(255 255 255 / 90%);
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* =============================================================================
+   FEATURES GRID SECTION
+   ============================================================================= */
+
+.features {
+  padding: var(--spacing-16) 0;
+  background: var(--color-background-secondary);
+}
+
+.container {
+  max-width: var(--max-content-width);
+  margin: 0 auto;
+  padding: 0 var(--spacing-6);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: var(--spacing-8);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-8);
+  transition: all var(--transition-base);
+  background: var(--color-background);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  text-decoration: none;
+  color: inherit;
+}
+
+.card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 12%);
+  border-color: var(--color-primary);
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+}
+
+.icon {
+  font-size: 3rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--font-size-xl);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+}
+
+.cardDesc {
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}
+
+.tag {
+  display: inline-block;
+  background: var(--color-background-secondary);
+  padding: var(--spacing-1) var(--spacing-3);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+  font-weight: var(--font-weight-medium);
+}
+
+.link {
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-sm);
+  margin-top: auto;
+  transition: color var(--transition-fast);
+}
+
+.card:hover .link {
+  color: var(--color-primary-dark);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 992px) {
+  .hero {
+    padding: var(--spacing-12) var(--spacing-4);
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-3xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-lg);
+  }
+
+  .features {
+    padding: var(--spacing-12) 0;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--spacing-6);
+  }
+}
+
+@media (max-width: 768px) {
+  .hero {
+    padding: var(--spacing-10) var(--spacing-4);
+  }
+
+  .heroTitle {
+    font-size: var(--font-size-2xl);
+  }
+
+  .heroSubtitle {
+    font-size: var(--font-size-base);
+  }
+
+  .container {
+    padding: 0 var(--spacing-4);
+  }
+
+  .features {
+    padding: var(--spacing-8) 0;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+
+  .card {
+    padding: var(--spacing-6);
+    border-radius: var(--radius-lg);
+  }
+
+  .card:hover {
+    transform: translateY(-4px);
+  }
+
+  .icon {
+    font-size: 2.5rem;
+  }
+
+  .cardTitle {
+    font-size: var(--font-size-lg);
+  }
+}
