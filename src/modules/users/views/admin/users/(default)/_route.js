@@ -12,9 +12,11 @@ import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
 /**
  * Page metadata
  */
-export const metadata = ({ i18n }) => ({
-  title: i18n.t('navigation.users', 'Users'),
-});
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.users', 'Users'),
+  };
+}
 
 /**
  * Boot function - inject Redux slice

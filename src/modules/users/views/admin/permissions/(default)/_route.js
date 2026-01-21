@@ -12,13 +12,11 @@ import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
 /**
  * Page metadata
  */
-export const metadata = ({ i18n }) => ({
-  title: i18n.t('navigation.permissions', 'Permissions'),
-  breadcrumb: {
-    label: i18n.t('navigation.permissions', 'Permissions'),
-    ns: 'admin',
-  },
-});
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.permissions', 'Permissions'),
+  };
+}
 
 /**
  * Mount function - dispatch breadcrumb to Redux

@@ -5,18 +5,25 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import PropTypes from 'prop-types';
 import Contact from './Contact';
 
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Contact Us',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.contact', 'Contact'),
+  };
+}
 
 /**
  * Default export - Page component
  */
-export default function ContactPage() {
-  return <Contact title={metadata.title} />;
+export default function ContactPage({ title }) {
+  return <Contact title={title} />;
 }
+
+ContactPage.propTypes = {
+  title: PropTypes.string.isRequired,
+};

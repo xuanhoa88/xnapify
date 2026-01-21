@@ -59,13 +59,6 @@ export async function getInitialProps({ locale }) {
 }
 
 /**
- * Page metadata
- */
-export const metadata = {
-  title: 'Privacy Policy',
-};
-
-/**
  * Default export - Page component
  */
 export default PrivacyPage;

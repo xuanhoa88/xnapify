@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import createRouter, { defaultResolver } from '../shared/renderer/router';
+import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
 
 // Webpack context for all collectable module files
@@ -26,22 +26,31 @@ function createContextAdapter(ctx) {
   };
 }
 
-/**
- * Custom route resolver that enriches pages with app metadata
- */
-async function routeResolver(ctx, options) {
-  const page = await defaultResolver(ctx, options);
-  if (!page) return null;
+class AppRouter extends Router {
+  async resolve(context) {
+    const page = await super.resolve(context);
+    const state = context.store.getState();
+    const appName = getAppName(state);
+    const appDescription = getAppDescription(state);
 
-  const state = ctx.store.getState();
-  const appName = getAppName(state);
-  const appDescription = getAppDescription(state);
+    if (page) {
+      // 1. Handle Metadata Fallback (Description)
+      if (!page.description) {
+        page.description = appDescription;
+      }
 
-  return {
-    ...page,
-    title: page.title ? `${page.title} - ${appName}` : appName,
-    description: page.description || appDescription,
-  };
+      // 2. Handle Title Suffixing (App Name)
+      if (page.title) {
+        // If page has a specific title, append app name: "Leaf Title - App Name"
+        page.title = `${page.title} - ${appName}`;
+      } else {
+        // If no title, fallback to app name: "App Name"
+        page.title = appName;
+      }
+    }
+
+    return page;
+  }
 }
 
 /**
@@ -50,7 +59,9 @@ async function routeResolver(ctx, options) {
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter() {
-  return createRouter(createContextAdapter(modulesContext), {
-    resolver: routeResolver,
+  return new AppRouter(createContextAdapter(modulesContext), {
+    context: {
+      // Init context here if needed
+    },
   });
 }

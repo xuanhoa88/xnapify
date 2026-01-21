@@ -12,21 +12,15 @@ import Home from './Home';
 /**
  * Load news data from API
  */
-export async function getInitialProps({ fetch }) {
+export async function getInitialProps({ fetch, i18n }) {
   const { data } = await fetch('/api/news');
 
   return {
     news: data.news,
     featuresData,
+    title: i18n.t('navigation.home', 'Home'),
   };
 }
-
-/**
- * Page metadata
- */
-export const metadata = {
-  title: 'Home',
-};
 
 /**
  * Default export - Page component

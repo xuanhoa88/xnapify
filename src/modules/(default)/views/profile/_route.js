@@ -11,19 +11,23 @@ import Profile from './Profile';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Profile',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.profile', 'Profile'),
+  };
+}
 
 /**
  * Guard function - require authentication
  */
-export async function guard(context) {
-  const state = context.store.getState();
-
+// Middleware to redirect if NOT authenticated
+export async function middleware(context, next) {
+  const { store } = context;
+  const state = store.getState();
   if (!isAuthenticated(state)) {
-    return { redirect: '/login' };
+    return { redirect: `/login?next=${encodeURIComponent(context.pathname)}` };
   }
+  return next();
 }
 
 /**

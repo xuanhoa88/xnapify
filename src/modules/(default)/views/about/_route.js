@@ -57,13 +57,6 @@ export async function getInitialProps({ locale }) {
 }
 
 /**
- * Page metadata
- */
-export const metadata = {
-  title: 'About',
-};
-
-/**
  * Default export - Page component
  */
 export default AboutPage;

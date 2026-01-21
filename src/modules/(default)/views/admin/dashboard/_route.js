@@ -11,9 +11,11 @@ import Dashboard from './Dashboard';
 /**
  * Page metadata
  */
-export const metadata = ({ i18n }) => ({
-  title: i18n.t('navigation.dashboard', 'Dashboard'),
-});
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.dashboard', 'Dashboard'),
+  };
+}
 
 /**
  * Boot function - inject Redux slice

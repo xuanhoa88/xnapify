@@ -10,10 +10,12 @@ import NotFound from './NotFound';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Page Not Found',
-  status: 404,
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.notFound', 'Page Not Found'),
+    status: 404,
+  };
+}
 
 /**
  * Default export - Page component

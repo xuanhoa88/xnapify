@@ -11,19 +11,23 @@ import Register from './Register';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Register',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.register', 'Register'),
+  };
+}
 
 /**
  * Guard function - redirect authenticated users
  */
-export async function guard(context) {
-  const state = context.store.getState();
-
+// Middleware to redirect if ALREADY authenticated
+export async function middleware(context, next) {
+  const { store } = context;
+  const state = store.getState();
   if (isAuthenticated(state)) {
     return { redirect: '/' };
   }
+  return next();
 }
 
 /**

@@ -12,9 +12,11 @@ import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
 /**
  * Page metadata
  */
-export const metadata = ({ i18n }) => ({
-  title: i18n.t('navigation.groups', 'Groups'),
-});
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.groups', 'Groups'),
+  };
+}
 
 /**
  * Mount function - dispatch breadcrumb to Redux

@@ -8,10 +8,6 @@
 /**
  * Admin index route - redirects to dashboard
  */
-export function guard() {
+export function middleware() {
   return { redirect: '/admin/dashboard' };
-}
-
-export default function AdminRedirect() {
-  return null;
 }

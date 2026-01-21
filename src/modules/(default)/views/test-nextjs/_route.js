@@ -11,9 +11,11 @@ import TestNextJSPage from './TestNextJS';
  * Page metadata
  * This will be used for the page title and meta tags
  */
-export const metadata = {
-  title: 'Next.js Routing Test',
-  description: 'Testing the new Next.js-style file-based routing system',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.testNextJS', 'Test NextJS'),
+    description: 'Testing the new Next.js-style file-based routing system',
+  };
+}
 
 export default TestNextJSPage;

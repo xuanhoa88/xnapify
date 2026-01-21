@@ -10,9 +10,11 @@ import ErrorPage from './ErrorPage';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Error',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.error', 'Error'),
+  };
+}
 
 /**
  * Default export - Page component

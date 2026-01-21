@@ -10,28 +10,25 @@ import { featuresData } from '../../data';
 import FeatureDetails from '../../FeatureDetails';
 
 /**
- * Page metadata - dynamic based on feature
+ * Page metadata
  */
-export const metadata = {
-  title: 'Feature Details',
-};
 
 /**
  * Load function to get feature data
  */
-export async function getInitialProps({ params }) {
+export async function getInitialProps({ params, i18n }) {
   const { featureId } = params;
   const feature = featuresData.find(f => f.id === featureId);
 
   if (!feature) {
     return {
-      title: 'Feature Not Found',
+      title: i18n.t('navigation.features', 'Features'),
       featureId,
     };
   }
 
   return {
-    title: `${feature.name} - Features`,
+    title: `${feature.name} - ${i18n.t('navigation.features', 'Features')}`,
     description: feature.description,
     featureId,
   };

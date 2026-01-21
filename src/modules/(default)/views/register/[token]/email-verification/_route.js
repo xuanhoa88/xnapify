@@ -12,19 +12,23 @@ import EmailVerification from '../../EmailVerification';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Email Verification',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.emailVerification', 'Email Verification'),
+  };
+}
 
 /**
  * Guard function - redirect authenticated users
  */
-export async function guard(context) {
-  const state = context.store.getState();
-
+// Middleware to redirect if ALREADY authenticated
+export async function middleware(context, next) {
+  const { store } = context;
+  const state = store.getState();
   if (isAuthenticated(state)) {
     return { redirect: '/' };
   }
+  return next();
 }
 
 /**

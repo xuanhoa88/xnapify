@@ -10,10 +10,12 @@ import Features from '../Features';
 /**
  * Page metadata
  */
-export const metadata = {
-  title: 'Features',
-  description: 'Explore our amazing features',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.features', 'Features'),
+    description: 'Explore our amazing features',
+  };
+}
 
 /**
  * Default export - Page component

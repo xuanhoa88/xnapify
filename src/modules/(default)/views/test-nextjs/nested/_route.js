@@ -7,9 +7,11 @@
 
 import NestedTestPage from './NestedPage';
 
-export const metadata = {
-  title: 'Nested Test Page',
-  description: 'Testing nested page with automatic layout wrapping',
-};
+export async function getInitialProps({ i18n }) {
+  return {
+    title: i18n.t('navigation.testNextJSNested', 'Test NextJS Nested'),
+    description: 'Testing nested page with automatic layout wrapping',
+  };
+}
 
 export default NestedTestPage;

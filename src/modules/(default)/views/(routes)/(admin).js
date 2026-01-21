@@ -35,13 +35,13 @@ export function mount({ store, i18n }) {
 }
 
 /**
- * Authentication guard for admin routes
+ * Authentication middleware for admin routes
  * Redirects unauthenticated users to login
  */
-export function guard({ store }) {
+export function middleware({ store }, next) {
   const state = store.getState();
   if (!isAuthenticated(state)) {
     return { redirect: '/login' };
   }
-  return null;
+  return next();
 }
