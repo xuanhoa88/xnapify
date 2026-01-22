@@ -26,7 +26,9 @@ import {
   Loader,
 } from '../../../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../../../shared/renderer/components/Button';
-import Form, { useFormContext } from '../../../../../../../shared/renderer/components/Form';
+import Form, {
+  useFormContext,
+} from '../../../../../../../shared/renderer/components/Form';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {

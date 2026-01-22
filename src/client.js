@@ -7,7 +7,6 @@
 
 import 'url-polyfill';
 import 'whatwg-fetch';
-import { loadableReady } from '@loadable/component';
 import { createBrowserHistory } from 'history';
 import { createFetch } from './shared/fetch';
 import {
@@ -509,20 +508,14 @@ async function initializeApp() {
 
 const READY_STATES = new Set(['interactive', 'complete']);
 let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
-let areChunksLoaded = false;
 let hasStarted = false;
 
 function attemptStartup() {
-  if (hasStarted || !isDOMReady || !areChunksLoaded) return;
+  if (hasStarted || !isDOMReady) return;
   hasStarted = true;
   if (__DEV__) console.log('✅ Starting app...');
   initializeApp();
 }
-
-loadableReady(() => {
-  areChunksLoaded = true;
-  attemptStartup();
-});
 
 if (isDOMReady) {
   attemptStartup();

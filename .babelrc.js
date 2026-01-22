@@ -10,7 +10,6 @@
  * Supports:
  *  - Modern JS (ESNext)
  *  - React (automatic runtime)
- *  - Code splitting (@loadable/component)
  *  - Optimizations for production
  */
 
@@ -56,11 +55,6 @@ module.exports = api => {
     ],
 
     plugins: [
-      // =====================
-      // 📦 Code splitting
-      // =====================
-      '@loadable/babel-plugin',
-
       // =====================
       // ⚙ Class fields & private methods
       // =====================

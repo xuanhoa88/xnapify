@@ -11,9 +11,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
 import { createPermissionFormSchema } from '../../../../../../shared/validator/features/admin';
 import { createPermission, isPermissionCreateLoading } from '../redux';
-import { Box, Icon, ConfirmModal } from '../../../../../../shared/renderer/components/Admin';
+import {
+  Box,
+  Icon,
+  ConfirmModal,
+} from '../../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../../shared/renderer/components/Button';
-import Form, { useFormContext } from '../../../../../../shared/renderer/components/Form';
+import Form, {
+  useFormContext,
+} from '../../../../../../shared/renderer/components/Form';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {

@@ -16,7 +16,10 @@ import {
   toggleDrawer,
   isDrawerOpen,
 } from '../../../../../../shared/renderer/redux';
-import { useHistory, Link } from '../../../../../../shared/renderer/components/History';
+import {
+  useHistory,
+  Link,
+} from '../../../../../../shared/renderer/components/History';
 import { useWebSocket } from '../../../../../../shared/ws/client';
 import Icon from '../../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../../shared/renderer/components/Button';

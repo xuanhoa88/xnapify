@@ -23,7 +23,9 @@ import {
 import { updatePreferencesFormSchema } from '../../../../../shared/validator/features/auth';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../shared/renderer/components/Button';
-import Form, { useFormContext } from '../../../../../shared/renderer/components/Form';
+import Form, {
+  useFormContext,
+} from '../../../../../shared/renderer/components/Form';
 import s from './PreferencesCard.css';
 
 // Default preferences values

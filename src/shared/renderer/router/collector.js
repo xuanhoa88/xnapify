@@ -100,7 +100,7 @@ const COLLECTORS = Object.freeze({
       );
 
       if (routeMatch) {
-        const [, moduleName, routePath] = routeMatch;
+        const [, , routePath] = routeMatch;
         // reused logic from routes to determine path Key?
         // Simplified: Just use the directory path as the key
         // Note: We need to normalize the path similar to routes (unwrap groups)

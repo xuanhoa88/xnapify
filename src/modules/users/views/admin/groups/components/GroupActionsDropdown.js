@@ -7,7 +7,10 @@
 
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
-import { Icon, Table } from '../../../../../../shared/renderer/components/Admin';
+import {
+  Icon,
+  Table,
+} from '../../../../../../shared/renderer/components/Admin';
 
 const { ActionsDropdown } = Table;
 

@@ -18,7 +18,9 @@ import {
 } from '../../../../shared/renderer/redux';
 import { Link } from '../../../../shared/renderer/components/History';
 import Button from '../../../../shared/renderer/components/Button';
-import Form, { useFormContext } from '../../../../shared/renderer/components/Form';
+import Form, {
+  useFormContext,
+} from '../../../../shared/renderer/components/Form';
 import s from './ResetPasswordRequest.css';
 
 /**

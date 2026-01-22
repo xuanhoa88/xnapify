@@ -46,8 +46,6 @@
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
-    "@loadable/component": "5.16.4",
-    "@loadable/server": "5.16.4",
     "@node-red/editor-api": "3.1.15",
     "@node-red/nodes": "3.1.15",
     "@node-red/runtime": "3.1.15",
@@ -111,8 +109,6 @@
     "@babel/plugin-transform-react-inline-elements": "7.27.1",
     "@babel/preset-env": "7.28.5",
     "@babel/preset-react": "7.28.5",
-    "@loadable/babel-plugin": "5.16.1",
-    "@loadable/webpack-plugin": "5.15.2",
     "@pmmmwh/react-refresh-webpack-plugin": "0.5.17",
     "@storybook/babel-plugin-require-context-hook": "1.0.1",
     "@svgr/webpack": "6.5.1",

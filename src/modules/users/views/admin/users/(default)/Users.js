@@ -14,7 +14,12 @@ import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../../../../shared/renderer/components/SearchableSelect';
-import { Box, Icon, Loader, Table } from '../../../../../../shared/renderer/components/Admin';
+import {
+  Box,
+  Icon,
+  Loader,
+  Table,
+} from '../../../../../../shared/renderer/components/Admin';
 import Tag from '../../../../../../shared/renderer/components/Tag';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Avatar from '../../../../../../shared/renderer/components/Avatar';

@@ -8,13 +8,13 @@
 import 'url-polyfill';
 import 'dotenv-flow/config';
 import path from 'path';
+import fs from 'fs/promises';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import createProxy from 'express-http-proxy';
 import expressRequestLanguage from 'express-request-language';
-import { ChunkExtractor } from '@loadable/server';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
@@ -75,17 +75,6 @@ async function loadViews() {
     if (__DEV__) console.log('✅ Views initialized');
   }
   return cachedViews;
-}
-
-function getInnerHTML(element) {
-  return (
-    (element &&
-      element.props &&
-      element.props.dangerouslySetInnerHTML &&
-      // eslint-disable-next-line no-underscore-dangle
-      element.props.dangerouslySetInnerHTML.__html) ||
-    null
-  );
 }
 
 async function initStore({ fetch, history }, locale) {
@@ -193,49 +182,36 @@ function registerShutdownHandlers(httpServer, wsServer) {
 // =============================================================================
 
 async function render({ context, component, metadata = {} }) {
-  const statsPath = path.resolve(__dirname, 'loadable-stats.json');
-  const extractor = new ChunkExtractor({
-    statsFile: statsPath,
-    publicPath: '/',
-    entrypoints: ['client'],
-  });
+  const scriptLinks = [];
+  const styleLinks = [];
 
-  const jsx = extractor.collectChunks(<App context={context}>{component}</App>);
-  const children = ReactDOM.renderToString(jsx);
+  try {
+    const statsPath = path.resolve(__dirname, 'stats.json');
+    const stats = await fs.readFile(statsPath, 'utf8');
+    const { entrypoints } = JSON.parse(stats);
+    const entryAssets =
+      (entrypoints && entrypoints.client && entrypoints.client.assets) || [];
+    const assets = entryAssets.map(asset =>
+      typeof asset === 'string' ? asset : asset.name,
+    );
+    scriptLinks.push(...assets.filter(f => /\.js$/i.test(f)));
+    styleLinks.push(...assets.filter(f => /\.css$/i.test(f)));
+  } catch (err) {
+    if (!__DEV__) {
+      console.error('❌ Missing stats.json:', err.message);
+    }
+  }
 
-  const linkElements = extractor.getLinkElements();
-  const styleElements = extractor.getStyleElements();
-  const scriptElements = extractor.getScriptElements();
-
-  const inlineScripts = scriptElements.filter(
-    el => el && el.props && el.props.dangerouslySetInnerHTML,
-  );
-  const namedChunksScript = inlineScripts.find(el => {
-    const innerHTML = getInnerHTML(el);
-    return innerHTML && innerHTML.includes('namedChunks');
-  });
-  const requiredChunksScript = inlineScripts.find(
-    el => el !== namedChunksScript && getInnerHTML(el),
+  const children = ReactDOM.renderToString(
+    <App context={context}>{component}</App>,
   );
 
   const htmlData = {
     ...metadata,
-    styles: styleElements
-      .map(el => ({ cssText: getInnerHTML(el) || '' }))
-      .filter(s => s.cssText),
-    styleLinks: linkElements
-      .filter(el => el && el.props && el.props.rel === 'stylesheet')
-      .map(el => el.props.href)
-      .filter(Boolean),
-    scripts: scriptElements
-      .filter(el => el && el.props && el.props.src)
-      .map(el => el.props.src),
-    loadableState: {
-      requiredChunks: getInnerHTML(requiredChunksScript) || '',
-      namedChunks: getInnerHTML(namedChunksScript) || '',
-    },
-    appState: { redux: context.store.getState() },
     children,
+    styleLinks: styleLinks.map(s => `/${s}`),
+    scriptLinks: scriptLinks.map(s => `/${s}`),
+    appState: { redux: context.store.getState() },
   };
 
   const html = ReactDOM.renderToStaticMarkup(<Html {...htmlData} />);

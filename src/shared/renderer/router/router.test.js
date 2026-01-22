@@ -1,5 +1,4 @@
-import { Router } from './index';
-import { ROUTE_PATH_DEFAULT } from './constants';
+import { Router } from '.';
 
 const mockModuleLoader = {
   files: () => [

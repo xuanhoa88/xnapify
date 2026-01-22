@@ -11,10 +11,6 @@ BUNDLE_ANALYZE=true npm run build
 
 ```javascript
 // Route-based (lazy loading)
-import loadable from '@loadable/component';
-const HeavyPage = loadable(() => import('./HeavyPage'));
-
-// Component-based
 import { lazy, Suspense } from 'react';
 const Chart = lazy(() => import('./Chart'));
 

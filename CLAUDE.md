@@ -61,7 +61,6 @@ react-starter-kit/
 - **React:** 18.3.1 with SSR and hydration
 - **State Management:** Redux 5.0.1 + Redux Toolkit 2.11.1
 - **Routing:** Custom page auto-discovery with dynamic imports
-- **Code Splitting:** @loadable/component 5.16.4
 - **Styling:** CSS Modules + PostCSS
 - **Forms:** React Hook Form 7.51.5 + Zod 3.23.8 validation
 - **i18n:** i18next 23.15.2 + react-i18next 14.1.3

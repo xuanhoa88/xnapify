@@ -6,10 +6,10 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const webpack = require('webpack');
 const { merge } = require('webpack-merge');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
-const LoadablePlugin = require('@loadable/webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
@@ -169,22 +169,50 @@ module.exports = merge(baseConfig, {
     // https://webpack.js.org/plugins/define-plugin/
     createDefinePluginConfig(),
 
-    // Loadable Components Plugin - generates stats file for SSR code splitting
-    // https://loadable-components.com/docs/api-loadable-server/
-    new LoadablePlugin({
-      // Output filename for the stats JSON file
-      filename: 'loadable-stats.json',
+    // Generate stats file for SSR asset injection
+    {
+      apply(compiler) {
+        compiler.hooks.done.tap('StatsWriterPlugin', stats => {
+          const statsData = stats.toJson({
+            all: false,
+            entrypoints: true,
+            namedChunkGroups: true,
+          });
 
-      // Write the stats file to disk in development mode
-      // The file will be written to the build directory specified in config.BUILD_DIR
-      writeToDisk: {
-        filename: config.BUILD_DIR, // Directory where the file will be written
+          // Filter out hot-update files
+          const filterAssets = assets =>
+            assets.filter(asset => {
+              const name = typeof asset === 'string' ? asset : asset.name;
+              return !/\.hot-update$/i.test(name);
+            });
+
+          if (statsData.entrypoints) {
+            for (const key in statsData.entrypoints) {
+              if (statsData.entrypoints[key].assets) {
+                statsData.entrypoints[key].assets = filterAssets(
+                  statsData.entrypoints[key].assets,
+                );
+              }
+            }
+          }
+
+          if (statsData.namedChunkGroups) {
+            for (const key in statsData.namedChunkGroups) {
+              if (statsData.namedChunkGroups[key].assets) {
+                statsData.namedChunkGroups[key].assets = filterAssets(
+                  statsData.namedChunkGroups[key].assets,
+                );
+              }
+            }
+          }
+
+          fs.writeFileSync(
+            path.join(config.BUILD_DIR, 'stats.json'),
+            JSON.stringify(statsData, null, 2),
+          );
+        });
       },
-
-      // Don't include the stats file in webpack's assets
-      // This prevents it from being included in the production build
-      outputAsset: false,
-    }),
+    },
 
     // Mini CSS Extract Plugin - extracts CSS into separate files
     // https://webpack.js.org/plugins/mini-css-extract-plugin/

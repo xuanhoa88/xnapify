@@ -22,7 +22,7 @@
  *     title="My App"
  *     description="A React application"
  *     locale="en-US"
- *     scripts={['/client.js']}
+ *     scriptLinks={['/client.js']}
  *     styleLinks={['/styles.css']}
  *     appState={{ redux: store.getState() }}
  *   >
@@ -72,48 +72,6 @@ OpenGraphMeta.propTypes = {
   image: PropTypes.string,
 };
 
-/**
- * Renders loadable component state scripts for SSR hydration
- *
- * Required for @loadable/component to properly hydrate code-split chunks
- * on the client side. These scripts must be rendered before the app state.
- *
- * @param {Object} props
- * @param {string} [props.requiredChunks] - JSON string of required chunks
- * @param {string} [props.namedChunks] - JSON string of named chunks
- * @returns {React.ReactElement|null} Loadable state scripts or null
- */
-function LoadableStateScripts({ requiredChunks, namedChunks }) {
-  if (!requiredChunks && !namedChunks) return null;
-
-  return (
-    <>
-      {requiredChunks && (
-        <script
-          id='__LOADABLE_REQUIRED_CHUNKS__'
-          type='application/json'
-          dangerouslySetInnerHTML={{ __html: requiredChunks }}
-        />
-      )}
-      {namedChunks && (
-        <script
-          id='__LOADABLE_REQUIRED_CHUNKS___ext'
-          type='application/json'
-          dangerouslySetInnerHTML={{ __html: namedChunks }}
-        />
-      )}
-    </>
-  );
-}
-
-/**
- * PropTypes for the LoadableStateScripts component
- */
-LoadableStateScripts.propTypes = {
-  requiredChunks: PropTypes.string,
-  namedChunks: PropTypes.string,
-};
-
 // =============================================================================
 // MAIN COMPONENT
 // =============================================================================
@@ -125,7 +83,7 @@ LoadableStateScripts.propTypes = {
  * - Meta tags for SEO and social sharing
  * - CSS and JavaScript resources
  * - Serialized application state for hydration
- * - Loadable component state for code splitting
+ * - Optimizing for SEO and performance
  *
  * @param {Object} props - Component props
  * @param {string} props.title - Page title
@@ -134,10 +92,8 @@ LoadableStateScripts.propTypes = {
  * @param {string} [props.url] - Canonical URL
  * @param {string} [props.locale='en-US'] - Document locale
  * @param {string} [props.type='website'] - Open Graph type
- * @param {Array} [props.styles=[]] - Inline CSS styles from @loadable/component
  * @param {Array} [props.styleLinks=[]] - CSS file URLs
- * @param {Array} [props.scripts=[]] - JavaScript file URLs
- * @param {Object} [props.loadableState] - Loadable component state for SSR
+ * @param {Array} [props.scriptLinks=[]] - JavaScript file URLs
  * @param {Object} props.appState - Application state (contains Redux state)
  * @param {string} props.children - Rendered React app HTML
  * @returns {React.ReactElement} Complete HTML document
@@ -149,17 +105,13 @@ export default function Html({
   url = null,
   type = 'website',
   locale = 'en-US',
-  styles = [],
   styleLinks = [],
-  scripts = [],
-  loadableState = null,
+  scriptLinks = [],
   appState,
   children,
 }) {
-  const safeLocale = locale || 'en-US';
-
   return (
-    <html className='no-js' lang={safeLocale}>
+    <html className='no-js' lang={locale || 'en-US'}>
       <head>
         {/* Basic meta tags */}
         <meta charSet='utf-8' />
@@ -183,40 +135,23 @@ export default function Html({
         {/* Canonical URL for SEO */}
         {url && <link rel='canonical' href={url} />}
 
-        {/* CSS stylesheets from @loadable/component */}
+        {/* CSS stylesheets */}
         {styleLinks.map(href => (
           <link key={href} rel='stylesheet' href={href} />
         ))}
 
         {/* Preload JavaScript bundles for faster loading */}
-        {scripts.map(src => (
+        {scriptLinks.map(src => (
           <link key={src} rel='preload' href={src} as='script' />
         ))}
 
         {/* PWA manifest and icons */}
         <link rel='manifest' href='/site.webmanifest' />
         <link rel='apple-touch-icon' href='/rsk_192x192.png' />
-
-        {/* Critical inline CSS from @loadable/component */}
-        {styles.map(({ cssText }, index) => (
-          <style
-            key={index}
-            data-ssr=''
-            dangerouslySetInnerHTML={{ __html: cssText }}
-          />
-        ))}
       </head>
       <body>
         {/* React app root */}
         <div id='app' dangerouslySetInnerHTML={{ __html: children }} />
-
-        {/* Loadable component state (must come before app state) */}
-        {loadableState && (
-          <LoadableStateScripts
-            requiredChunks={loadableState.requiredChunks}
-            namedChunks={loadableState.namedChunks}
-          />
-        )}
 
         {/* Application state for client hydration */}
         <script
@@ -226,7 +161,7 @@ export default function Html({
         />
 
         {/* JavaScript bundles */}
-        {scripts.map(src => (
+        {scriptLinks.map(src => (
           <script key={src} src={src} />
         ))}
       </body>
@@ -250,21 +185,10 @@ Html.propTypes = {
   type: PropTypes.string,
   /** Document locale (e.g., 'en-US', 'fr-FR') */
   locale: PropTypes.string,
-  /** Inline CSS styles from @loadable/component */
-  styles: PropTypes.arrayOf(
-    PropTypes.shape({
-      cssText: PropTypes.string.isRequired,
-    }),
-  ),
   /** CSS file URLs to link in the document head */
   styleLinks: PropTypes.arrayOf(PropTypes.string),
   /** JavaScript file URLs to load */
-  scripts: PropTypes.arrayOf(PropTypes.string),
-  /** Loadable component state for SSR hydration */
-  loadableState: PropTypes.shape({
-    requiredChunks: PropTypes.string,
-    namedChunks: PropTypes.string,
-  }),
+  scriptLinks: PropTypes.arrayOf(PropTypes.string),
   /** Application state for client-side hydration */
   appState: PropTypes.shape({
     redux: PropTypes.object.isRequired,

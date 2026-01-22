@@ -9,7 +9,10 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { Link, useHistory } from '../../../../../../shared/renderer/components/History';
+import {
+  Link,
+  useHistory,
+} from '../../../../../../shared/renderer/components/History';
 import {
   getUserDisplayName,
   getUserAvatarUrl,
