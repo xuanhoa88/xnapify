@@ -59,9 +59,32 @@ class AppRouter extends Router {
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter() {
-  return new AppRouter(createContextAdapter(modulesContext), {
+  const router = new AppRouter(createContextAdapter(modulesContext), {
     context: {
       // Init context here if needed
     },
+    errorHandler: async (error, context) => {
+      // Handle other errors (500, etc)
+      if (__DEV__) {
+        console.error('Router Error:', error);
+        // In dev, let it bubble up to see the stack trace or overlay
+        throw error;
+      }
+
+      // In production, show generic error page
+      return router.resolve({
+        ...context,
+        pathname: '/error',
+        error, // Pass error to component if it accepts it
+      });
+    },
   });
+
+  // Append catch-all route for 404s
+  router.routes.push({
+    path: '/*path',
+    action: context => router.resolve({ ...context, pathname: '/not-found' }),
+  });
+
+  return router;
 }

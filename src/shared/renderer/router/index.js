@@ -19,7 +19,11 @@ export async function defaultResolver(ctx, options) {
     Array.isArray(ctx.route.children) && ctx.route.children.length > 0;
 
   if (hasChildren && options.autoResolve) {
-    const childResult = await ctx.next();
+    // When resolving children, we must ensure the match is actually a descendant
+    // of the current route. Otherwise, we might inadvertently resolve a sibling
+    // (like /*path) if the matcher advances too far.
+    // Passing (false, ctx.route) enforces the isDescendant check in the resolve loop.
+    const childResult = await ctx.next(false, ctx.route);
     if (childResult != null) return childResult;
   }
 
