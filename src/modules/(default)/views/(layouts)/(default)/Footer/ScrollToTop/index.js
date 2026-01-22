@@ -7,8 +7,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
-import Icon from '../../../../../../../components/Icon';
-import Button from '../../../../../../../components/Button';
+import Icon from '../../../../../../../shared/renderer/components/Icon';
+import Button from '../../../../../../../shared/renderer/components/Button';
 import s from './ScrollToTop.css';
 
 /**

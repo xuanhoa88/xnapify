@@ -18,7 +18,7 @@ export default function TestNextJSPage() {
 
         <h3>File Location:</h3>
         <code className={s.codeBlock}>
-          src/modules/(default)/views/test-nextjs/page.js
+          src/modules/(default)/views/test-nextjs/_route.js
         </code>
 
         <h3 className={s.heading}>Route Path:</h3>
@@ -26,7 +26,7 @@ export default function TestNextJSPage() {
 
         <h3 className={s.heading}>Features Demonstrated:</h3>
         <ul>
-          <li>✅ File-based routing (page.js)</li>
+          <li>✅ File-based routing (_route.js)</li>
           <li>✅ Route groups: (default) removed from URL</li>
           <li>✅ Metadata export (title, description)</li>
           <li>✅ Component export as default</li>

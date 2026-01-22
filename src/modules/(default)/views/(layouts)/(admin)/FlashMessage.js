@@ -11,7 +11,7 @@ import {
   getFlashMessage,
   clearFlashMessage,
 } from '../../../../../shared/renderer/redux';
-import Toast from '../../../../../components/Toast';
+import Toast from '../../../../../shared/renderer/components/Toast';
 
 function FlashMessage() {
   const dispatch = useDispatch();

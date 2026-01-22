@@ -8,22 +8,22 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../../../components/History';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {
   SearchableSelect,
   useSearchableSelect,
-} from '../../../../../../components/SearchableSelect';
+} from '../../../../../../shared/renderer/components/SearchableSelect';
 import {
   Box,
   Icon,
   Loader,
   Table,
   ConfirmModal,
-} from '../../../../../../components/Admin';
-import Button from '../../../../../../components/Button';
-import Card from '../../../../../../components/Card';
-import Tag from '../../../../../../components/Tag';
-import Avatar from '../../../../../../components/Avatar';
+} from '../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../shared/renderer/components/Button';
+import Card from '../../../../../../shared/renderer/components/Card';
+import Tag from '../../../../../../shared/renderer/components/Tag';
+import Avatar from '../../../../../../shared/renderer/components/Avatar';
 import RoleTag from '../../users/components/RoleTag';
 import { fetchRoles } from '../../roles/redux';
 import {

@@ -20,11 +20,11 @@ import {
   getFlashMessage,
   clearFlashMessage,
 } from '../../../../shared/renderer/redux';
-import Toast from '../../../../components/Toast';
-import Icon from '../../../../components/Icon';
-import { Link } from '../../../../components/History';
-import Button from '../../../../components/Button';
-import Form, { useFormContext } from '../../../../components/Form';
+import Toast from '../../../../shared/renderer/components/Toast';
+import Icon from '../../../../shared/renderer/components/Icon';
+import { Link } from '../../../../shared/renderer/components/History';
+import Button from '../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../shared/renderer/components/Form';
 import s from './ResetPasswordConfirmation.css';
 
 /**

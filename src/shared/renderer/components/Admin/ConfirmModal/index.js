@@ -12,7 +12,7 @@ import Delete from './Delete';
  * ConfirmModal - Namespace for confirmation modal components
  *
  * Usage:
- *   import { ConfirmModal } from '../../../../components/Admin';
+ *   import { ConfirmModal } from '../../../components/Admin';
  *   <ConfirmModal.Back ref={confirmBackModalRef} onConfirm={handleConfirmBack} />
  *   <ConfirmModal.Delete
  *     ref={deleteModalRef}

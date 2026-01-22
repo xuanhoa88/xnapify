@@ -9,17 +9,17 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../../../components/History';
+import { useHistory } from '../../../../../../../shared/renderer/components/History';
 import { updateGroupFormSchema } from '../../../../../../../shared/validator/features/admin';
-import { useDebounce } from '../../../../../../../components/InfiniteScroll';
+import { useDebounce } from '../../../../../../../shared/renderer/components/InfiniteScroll';
 import {
   Box,
   Icon,
   Loader,
   ConfirmModal,
-} from '../../../../../../../components/Admin';
-import Button from '../../../../../../../components/Button';
-import Form, { useFormContext } from '../../../../../../../components/Form';
+} from '../../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../../../../shared/renderer/components/Form';
 import { fetchRoles } from '../../../roles/redux';
 import {
   updateGroup,

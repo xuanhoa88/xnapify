@@ -21,7 +21,7 @@ export default function NestedTestPage() {
 
         <h3 className={s.heading}>File Location:</h3>
         <code className={s.codeBlock}>
-          src/modules/(default)/views/test-nextjs/nested/page.js
+          src/modules/(default)/views/test-nextjs/nested/_route.js
         </code>
 
         <h3 className={s.heading}>Route Path:</h3>

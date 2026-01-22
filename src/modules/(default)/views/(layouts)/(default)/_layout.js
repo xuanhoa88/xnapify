@@ -12,7 +12,7 @@ import {
   getFlashMessage,
   clearFlashMessage,
 } from '../../../../../shared/renderer/redux';
-import Toast from '../../../../../components/Toast';
+import Toast from '../../../../../shared/renderer/components/Toast';
 import Footer from './Footer';
 import Header from './Header';
 import s from './Layout.css';

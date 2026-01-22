@@ -8,7 +8,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../../components/History';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {
   fetchRoles,
   getRoles,
@@ -24,9 +24,9 @@ import {
   Loader,
   Table,
   ConfirmModal,
-} from '../../../../../../components/Admin';
-import Button from '../../../../../../components/Button';
-import Card from '../../../../../../components/Card';
+} from '../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../shared/renderer/components/Button';
+import Card from '../../../../../../shared/renderer/components/Card';
 import RoleActionsDropdown from '../components/RoleActionsDropdown';
 import RolePermissionsModal from '../components/RolePermissionsModal';
 import RoleUsersModal from '../components/RoleUsersModal';

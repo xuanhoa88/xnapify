@@ -9,15 +9,15 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { getUserProfile } from '../../../../../../shared/renderer/redux';
-import { useHistory } from '../../../../../../components/History';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {
   SearchableSelect,
   useSearchableSelect,
-} from '../../../../../../components/SearchableSelect';
-import { Box, Icon, Loader, Table } from '../../../../../../components/Admin';
-import Tag from '../../../../../../components/Tag';
-import Button from '../../../../../../components/Button';
-import Avatar from '../../../../../../components/Avatar';
+} from '../../../../../../shared/renderer/components/SearchableSelect';
+import { Box, Icon, Loader, Table } from '../../../../../../shared/renderer/components/Admin';
+import Tag from '../../../../../../shared/renderer/components/Tag';
+import Button from '../../../../../../shared/renderer/components/Button';
+import Avatar from '../../../../../../shared/renderer/components/Avatar';
 import { fetchGroups } from '../../groups/redux';
 import { fetchRoles } from '../../roles/redux';
 import {

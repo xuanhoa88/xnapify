@@ -6,7 +6,7 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../../components/Icon';
+import Icon from '../../../../shared/renderer/components/Icon';
 import s from './Feedback.css';
 
 /**

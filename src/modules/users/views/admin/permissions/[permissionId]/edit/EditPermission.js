@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../../../../components/History';
+import { useHistory } from '../../../../../../../shared/renderer/components/History';
 import { updatePermissionFormSchema } from '../../../../../../../shared/validator/features/admin';
 import {
   fetchPermissionById,
@@ -24,9 +24,9 @@ import {
   Icon,
   ConfirmModal,
   Loader,
-} from '../../../../../../../components/Admin';
-import Button from '../../../../../../../components/Button';
-import Form, { useFormContext } from '../../../../../../../components/Form';
+} from '../../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../../../../shared/renderer/components/Form';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {

@@ -9,8 +9,8 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
-import { Box, Icon, Loader, Table } from '../../../../../components/Admin';
-import Card from '../../../../../components/Card';
+import { Box, Icon, Loader, Table } from '../../../../../shared/renderer/components/Admin';
+import Card from '../../../../../shared/renderer/components/Card';
 import {
   fetchDashboard,
   getActivities,

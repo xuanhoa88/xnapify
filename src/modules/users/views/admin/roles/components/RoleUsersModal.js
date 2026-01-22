@@ -14,10 +14,10 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
-import Modal from '../../../../../../components/Modal';
-import { Table } from '../../../../../../components/Admin';
-import Avatar from '../../../../../../components/Avatar';
-import Tag from '../../../../../../components/Tag';
+import Modal from '../../../../../../shared/renderer/components/Modal';
+import { Table } from '../../../../../../shared/renderer/components/Admin';
+import Avatar from '../../../../../../shared/renderer/components/Avatar';
+import Tag from '../../../../../../shared/renderer/components/Tag';
 import { fetchRoleUsers } from '../redux';
 import s from './RoleUsersModal.css';
 

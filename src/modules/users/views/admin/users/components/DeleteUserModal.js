@@ -14,7 +14,7 @@ import {
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
-import Modal from '../../../../../../components/Modal';
+import Modal from '../../../../../../shared/renderer/components/Modal';
 import { bulkDeleteUsers } from '../redux';
 import { getUserProfile } from '../../../../../../shared/renderer/redux';
 

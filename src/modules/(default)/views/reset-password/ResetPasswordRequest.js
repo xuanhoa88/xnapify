@@ -16,9 +16,9 @@ import {
   getResetPasswordError,
   clearResetPasswordError,
 } from '../../../../shared/renderer/redux';
-import { Link } from '../../../../components/History';
-import Button from '../../../../components/Button';
-import Form, { useFormContext } from '../../../../components/Form';
+import { Link } from '../../../../shared/renderer/components/History';
+import Button from '../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../shared/renderer/components/Form';
 import s from './ResetPasswordRequest.css';
 
 /**

@@ -16,7 +16,7 @@ import {
   getAvatarError,
   clearAvatarError,
 } from '../../../../../shared/renderer/redux';
-import Icon from '../../../../../components/Icon';
+import Icon from '../../../../../shared/renderer/components/Icon';
 import s from './ProfileHeader.css';
 
 function ProfileHeader() {

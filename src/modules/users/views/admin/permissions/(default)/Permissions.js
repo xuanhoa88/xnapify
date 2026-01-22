@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../../../components/History';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {
   fetchPermissions,
   getPermissions,
@@ -24,10 +24,10 @@ import {
   Loader,
   Table,
   ConfirmModal,
-} from '../../../../../../components/Admin';
-import Button from '../../../../../../components/Button';
-import Tag from '../../../../../../components/Tag';
-import { SearchableSelect } from '../../../../../../components/SearchableSelect';
+} from '../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../shared/renderer/components/Button';
+import Tag from '../../../../../../shared/renderer/components/Tag';
+import { SearchableSelect } from '../../../../../../shared/renderer/components/SearchableSelect';
 import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal';
 import s from './Permissions.css';
 

@@ -16,10 +16,10 @@ import {
   getAuthError,
   clearAuthError,
 } from '../../../../shared/renderer/redux';
-import { Link, useHistory, useQuery } from '../../../../components/History';
+import { Link, useHistory, useQuery } from '../../../../shared/renderer/components/History';
 import { useWebSocket } from '../../../../shared/ws/client';
-import Button from '../../../../components/Button';
-import Form, { useFormContext } from '../../../../components/Form';
+import Button from '../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../shared/renderer/components/Form';
 import s from './Register.css';
 
 /**

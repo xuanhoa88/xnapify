@@ -9,16 +9,16 @@ import { useState, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../../components/History';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import { createUserFormSchema } from '../../../../../../shared/validator/features/admin';
 import {
   generatePassword,
   showSuccessMessage,
 } from '../../../../../../shared/renderer/redux';
-import { useDebounce } from '../../../../../../components/InfiniteScroll';
-import { Box, Icon, ConfirmModal } from '../../../../../../components/Admin';
-import Button from '../../../../../../components/Button';
-import Form, { useFormContext } from '../../../../../../components/Form';
+import { useDebounce } from '../../../../../../shared/renderer/components/InfiniteScroll';
+import { Box, Icon, ConfirmModal } from '../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../../../shared/renderer/components/Form';
 import { fetchRoles } from '../../roles/redux';
 import { fetchGroups } from '../../groups/redux';
 import { createUser, isUserCreateLoading } from '../redux';

@@ -1,7 +1,7 @@
 /**
  * ProfileHeader Component Styles
  */
-@import '../../../../../components/variables.css';
+@import '../../../../../shared/renderer/components/variables.css';
 
 /* Profile header section */
 .profileHeader {

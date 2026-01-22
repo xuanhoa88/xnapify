@@ -113,7 +113,9 @@ module.exports = merge(baseConfig, {
     // Client entry: src/client.js → build/public/assets/client.js (or client.[hash].js)
     // This is the browser-side application that hydrates the SSR markup
     client: [
-      path.join(__dirname, 'browserSync', 'client.config.js'),
+      ...(isDebug
+        ? [path.join(__dirname, 'browserSync', 'client.config.js')]
+        : []),
       path.join(config.APP_DIR, 'client.js'),
     ],
   },

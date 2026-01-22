@@ -18,9 +18,9 @@ import {
   showSuccessMessage,
 } from '../../../../../shared/renderer/redux';
 import { changePasswordFormSchema } from '../../../../../shared/validator/features/auth';
-import Icon from '../../../../../components/Icon';
-import Button from '../../../../../components/Button';
-import Form, { useFormContext } from '../../../../../components/Form';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import Button from '../../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../../shared/renderer/components/Form';
 import s from './SecurityCard.css';
 
 function SecurityCard() {

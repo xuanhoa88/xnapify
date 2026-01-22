@@ -7,8 +7,8 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../../../../components/Icon';
-import Button from '../../../../../../components/Button';
+import Icon from '../../../../../../shared/renderer/components/Icon';
+import Button from '../../../../../../shared/renderer/components/Button';
 import s from './Messages.css';
 
 // Mock message data

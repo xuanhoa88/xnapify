@@ -7,7 +7,7 @@
 
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { Link } from '../../../../components/History';
+import { Link } from '../../../../shared/renderer/components/History';
 import { featuresData } from './data';
 import s from './FeatureDetails.css';
 

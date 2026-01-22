@@ -1,7 +1,7 @@
 /**
  * SecurityCard Component Styles
  */
-@import '../../../../../components/variables.css';
+@import '../../../../../shared/renderer/components/variables.css';
 
 /* Card styles */
 .card {

@@ -17,9 +17,9 @@ import {
   clearEmailVerificationError,
 } from '../../../../shared/renderer/redux';
 import { useWebSocket } from '../../../../shared/ws/client';
-import { Link, useHistory } from '../../../../components/History';
-import Button from '../../../../components/Button';
-import Form, { useFormContext } from '../../../../components/Form';
+import { Link, useHistory } from '../../../../shared/renderer/components/History';
+import Button from '../../../../shared/renderer/components/Button';
+import Form, { useFormContext } from '../../../../shared/renderer/components/Form';
 import s from './EmailVerification.css';
 
 /**

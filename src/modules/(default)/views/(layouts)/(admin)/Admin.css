@@ -6,7 +6,7 @@
  */
 
 /* Re-export shared variables for Admin components */
-@import '../../../../../components/variables.css';
+@import '../../../../../shared/renderer/components/variables.css';
 
 .root {
   display: flex;

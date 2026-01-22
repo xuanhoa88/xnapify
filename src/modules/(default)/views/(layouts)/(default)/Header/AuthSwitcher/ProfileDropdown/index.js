@@ -15,10 +15,10 @@ import {
   getUserAvatarUrl,
   logout,
 } from '../../../../../../../../shared/renderer/redux';
-import { Link, useHistory } from '../../../../../../../../components/History';
+import { Link, useHistory } from '../../../../../../../../shared/renderer/components/History';
 import { useWebSocket } from '../../../../../../../../shared/ws/client';
-import Icon from '../../../../../../../../components/Icon';
-import Button from '../../../../../../../../components/Button';
+import Icon from '../../../../../../../../shared/renderer/components/Icon';
+import Button from '../../../../../../../../shared/renderer/components/Button';
 import s from './ProfileDropdown.css';
 
 /**

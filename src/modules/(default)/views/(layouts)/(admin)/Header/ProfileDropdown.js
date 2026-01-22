@@ -9,15 +9,15 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import { Link, useHistory } from '../../../../../../components/History';
+import { Link, useHistory } from '../../../../../../shared/renderer/components/History';
 import {
   getUserDisplayName,
   getUserAvatarUrl,
   logout,
 } from '../../../../../../shared/renderer/redux';
 import { useWebSocket } from '../../../../../../shared/ws/client';
-import Icon from '../../../../../../components/Icon';
-import Button from '../../../../../../components/Button';
+import Icon from '../../../../../../shared/renderer/components/Icon';
+import Button from '../../../../../../shared/renderer/components/Button';
 import s from './ProfileDropdown.css';
 
 /**
