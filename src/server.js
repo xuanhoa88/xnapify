@@ -224,7 +224,8 @@ async function render({ context, component, metadata = {} }) {
       .map(el => ({ cssText: getInnerHTML(el) || '' }))
       .filter(s => s.cssText),
     styleLinks: linkElements
-      .map(el => el && el.props && el.props.href)
+      .filter(el => el && el.props && el.props.rel === 'stylesheet')
+      .map(el => el.props.href)
       .filter(Boolean),
     scripts: scriptElements
       .filter(el => el && el.props && el.props.src)
