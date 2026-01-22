@@ -75,16 +75,64 @@ const COLLECTORS = Object.freeze({
   },
 
   layouts: {
-    pattern: /\/\(layouts\)\/\([^)]+\)\/_layout\.[cm]?[jt]sx?$/i,
+    // Match _layout.js in (layouts) OR in any view directory (colocated)
+    pattern: /\/_layout\.[cm]?[jt]sx?$/i,
     extract: filePath => {
-      const m = filePath.match(
+      // 1. Check for Global/Theme layouts in (layouts) folder
+      const themeMatch = filePath.match(
         /^\.\/(\([^)]+\)|[^/]+)\/(?:views\/)?\(layouts\)\/\(([^)]+)\)\/_layout\.[cm]?[jt]sx?$/,
       );
-      if (!m) return null;
-      return {
-        key: `${m[1]}:${m[2]}`,
-        data: { moduleName: m[1], layoutName: m[2] },
-      };
+      if (themeMatch) {
+        return {
+          key: `${themeMatch[1]}:${themeMatch[2]}`,
+          data: {
+            moduleName: themeMatch[1],
+            layoutName: themeMatch[2],
+            type: 'theme',
+          },
+        };
+      }
+
+      // 2. Check for Colocated layouts in views folder
+      // e.g. ./modules/(default)/views/test-nextjs/_layout.js
+      const routeMatch = filePath.match(
+        /^\.\/([^/]+)\/views\/(.+?)\/_layout\.[cm]?[jt]sx?$/,
+      );
+
+      if (routeMatch) {
+        const [, moduleName, routePath] = routeMatch;
+        // reused logic from routes to determine path Key?
+        // Simplified: Just use the directory path as the key
+        // Note: We need to normalize the path similar to routes (unwrap groups)
+
+        const segments = routePath
+          .split(ROUTE_SEPARATOR)
+          .map(s => {
+            if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
+            // Param handling? Layouts in param folders?
+            // For now, keep simple literal paths or normalized
+            if (s.startsWith('[') && s.endsWith(']')) {
+              const param = s.slice(1, -1);
+              return param.startsWith('...')
+                ? `:${param.slice(3)}*`
+                : `:${param}`;
+            }
+            return s;
+          })
+          .filter(s => s && s !== 'default'); // default?
+
+        const pathname =
+          segments.length > 0
+            ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
+            : ROUTE_SEPARATOR;
+
+        return {
+          key: pathname,
+          data: { path: pathname, type: 'colocated' },
+        };
+      }
+
+      return null;
     },
     label: 'Layout',
   },

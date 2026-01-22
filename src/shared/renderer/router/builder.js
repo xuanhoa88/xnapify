@@ -29,20 +29,45 @@ function findConfigs(configs, rootSegment) {
 }
 
 /**
- * Finds layout modules for a given route based on root segment
+ * Finds layout modules for a given route based on root segment and path hierarchy
  */
-function findLayouts(layouts, rootSegment) {
+function findLayouts(layouts, rootSegment, pathname) {
+  const result = [];
   const defaultKey = `${ROUTE_PATH_DEFAULT}:default`;
 
-  // Section-specific layout overrides default
+  // 1. Theme/Global Layout (Section-specific or Default)
   if (rootSegment) {
     const sectionKey = `${ROUTE_PATH_DEFAULT}:${rootSegment}`;
-    if (layouts.has(sectionKey)) return [layouts.get(sectionKey)];
+    if (layouts.has(sectionKey)) {
+      result.push(layouts.get(sectionKey));
+    }
   }
 
-  // Fall back to default layout
-  if (layouts.has(defaultKey)) return [layouts.get(defaultKey)];
-  return [];
+  // If no section layout found, check default theme layout
+  if (result.length === 0 && layouts.has(defaultKey)) {
+    result.push(layouts.get(defaultKey));
+  }
+
+  // 2. Colocated/Nested Layouts (Path-based)
+  // Traverse the path from root to leaf to find _layout.js files
+  const segments = pathname.split(ROUTE_SEPARATOR).filter(Boolean);
+  let currentPath = '';
+
+  const pathLayouts = [];
+  segments.forEach(segment => {
+    currentPath += `${ROUTE_SEPARATOR}${segment}`;
+    if (layouts.has(currentPath)) {
+      pathLayouts.push(layouts.get(currentPath));
+    }
+  });
+
+  // Independence Rule: If colocated layouts exist, they act as the root layouts
+  // for this route, overriding any Global/Theme layouts.
+  if (pathLayouts.length > 0) {
+    return pathLayouts;
+  }
+
+  return result; // Return theme layouts only if no path layouts found
 }
 
 function findParentPath(pathname, routeMap) {
@@ -63,7 +88,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
     const rootSegment = getRootSegment(pathname);
     const { module } = pageInfo;
     const matchedConfigs = findConfigs(configs, rootSegment);
-    const matchedLayouts = findLayouts(layouts, rootSegment);
+    const matchedLayouts = findLayouts(layouts, rootSegment, pathname);
 
     routeMap.set(pathname, {
       path: pathname,
