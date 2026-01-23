@@ -12,7 +12,6 @@ const { merge } = require('webpack-merge');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const TerserPlugin = require('terser-webpack-plugin');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const config = require('../config');
 const { isVerbose } = require('../utils/logger');
 const {
@@ -22,74 +21,12 @@ const {
   isAnalyze,
   isDebug,
   isProfile,
-  reScript,
 } = require('./base.config');
 
 const verbose = isVerbose(); // Cache verbose check
 
 // Initialize base webpack configuration with common settings for all environments
 const baseConfig = createBaseConfig();
-
-// React Fast Refresh (HMR)
-if (isDebug) {
-  // Recursively adds a Babel plugin to matching rules
-  const addBabelLoaderPluginToRule = (rules, plugin, testFn) => {
-    if (!Array.isArray(rules)) return;
-
-    rules.forEach(rule => {
-      if (!rule) return;
-
-      // Check if the current rule matches the test function
-      if (testFn(rule)) {
-        const loaders = (
-          Array.isArray(rule.use) ? rule.use : [rule.use]
-        ).filter(Boolean);
-
-        loaders.forEach(loaderConfig => {
-          // Handle both string and object loader configurations
-          const loader =
-            typeof loaderConfig === 'string'
-              ? loaderConfig
-              : loaderConfig && loaderConfig.loader;
-
-          // Only modify babel-loader configurations
-          if (loader === 'babel-loader') {
-            // Ensure we're working with an object configuration
-            const cfg = typeof loaderConfig === 'object' ? loaderConfig : null;
-            if (!cfg) return;
-
-            cfg.options = cfg.options || {};
-            cfg.options.plugins = cfg.options.plugins || [];
-
-            // Add the plugin if not already present (check by resolved path)
-            const pluginExists = cfg.options.plugins.some(
-              p => p === plugin || (Array.isArray(p) && p[0] === plugin),
-            );
-
-            if (!pluginExists) {
-              cfg.options.plugins.push(plugin);
-            }
-          }
-        });
-      }
-
-      // Recursively process nested rules (like oneOf)
-      if (rule.oneOf) {
-        addBabelLoaderPluginToRule(rule.oneOf, plugin, testFn);
-      }
-    });
-  };
-
-  // Add React Refresh Babel plugin to JS/JSX files
-  // This enables component hot reloading without losing component state
-  const baseRules =
-    baseConfig.module && baseConfig.module.rules ? baseConfig.module.rules : [];
-  addBabelLoaderPluginToRule(
-    baseRules,
-    require.resolve('react-refresh/babel'),
-    rule => rule.test && reScript === rule.test,
-  );
-}
 
 /**
  * Configuration for the client-side bundle (client.js)
@@ -179,16 +116,18 @@ module.exports = merge(baseConfig, {
             namedChunkGroups: true,
           });
 
-          // Filter out hot-update files
-          const filterAssets = assets =>
-            assets.filter(asset =>
-              typeof asset === 'string' ? asset : asset.name,
-            );
+          // Filter out hot-update files from entrypoints/namedChunkGroups
+          // Note: excludeAssets only filters top-level assets array, not nested ones
+          const filterHotUpdates = assets =>
+            assets.filter(asset => {
+              const name = typeof asset === 'string' ? asset : asset.name;
+              return name && !/\.hot-update\./i.test(name);
+            });
 
           if (statsData.entrypoints) {
             for (const key in statsData.entrypoints) {
               if (statsData.entrypoints[key].assets) {
-                statsData.entrypoints[key].assets = filterAssets(
+                statsData.entrypoints[key].assets = filterHotUpdates(
                   statsData.entrypoints[key].assets,
                 );
               }
@@ -198,7 +137,7 @@ module.exports = merge(baseConfig, {
           if (statsData.namedChunkGroups) {
             for (const key in statsData.namedChunkGroups) {
               if (statsData.namedChunkGroups[key].assets) {
-                statsData.namedChunkGroups[key].assets = filterAssets(
+                statsData.namedChunkGroups[key].assets = filterHotUpdates(
                   statsData.namedChunkGroups[key].assets,
                 );
               }
@@ -226,16 +165,8 @@ module.exports = merge(baseConfig, {
       ignoreOrder: isDebug,
     }),
 
-    // React Refresh Webpack Plugin - enables Fast Refresh for React components (development only)
-    // Works together with react-refresh/babel plugin added to babel-loader above
-    // https://github.com/pmmmwh/react-refresh-webpack-plugin
-    ...(isDebug
-      ? [
-          new ReactRefreshWebpackPlugin({
-            overlay: false, // Disable error overlay (we use webpack-dev-middleware's overlay)
-          }),
-        ]
-      : []),
+    // Note: ReactRefreshWebpackPlugin is added by dev.js for development mode
+    // This avoids duplicate plugin instances which cause HMR conflicts
 
     // Webpack Bundle Analyzer (production only)
     // https://github.com/webpack-contrib/webpack-bundle-analyzer

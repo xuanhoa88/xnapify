@@ -112,6 +112,41 @@ function configureWebpackForDev(cfg, isClient = true) {
       }),
     );
 
+    // Add react-refresh/babel plugin to babel-loader for React Fast Refresh
+    const addBabelPluginToRules = (rules, plugin) => {
+      if (!Array.isArray(rules)) return;
+
+      rules.forEach(rule => {
+        if (!rule) return;
+
+        // Process loader array
+        const loaders = (
+          Array.isArray(rule.use) ? rule.use : [rule.use]
+        ).filter(Boolean);
+        loaders.forEach(loaderConfig => {
+          const loader =
+            typeof loaderConfig === 'string'
+              ? loaderConfig
+              : loaderConfig && loaderConfig.loader;
+
+          if (loader === 'babel-loader' && typeof loaderConfig === 'object') {
+            loaderConfig.options = loaderConfig.options || {};
+            loaderConfig.options.plugins = loaderConfig.options.plugins || [];
+            if (!loaderConfig.options.plugins.includes(plugin)) {
+              loaderConfig.options.plugins.push(plugin);
+            }
+          }
+        });
+
+        // Recursively process nested rules (like oneOf)
+        if (rule.oneOf) addBabelPluginToRules(rule.oneOf, plugin);
+      });
+    };
+
+    const refreshBabelPlugin = require.resolve('react-refresh/babel');
+    const rules = cfg.module && cfg.module.rules ? cfg.module.rules : [];
+    addBabelPluginToRules(rules, refreshBabelPlugin);
+
     // Use shared HMR client to ensure singleton connection
     const whm = require.resolve('../webpack/hotClient');
     Object.keys(cfg.entry).forEach(name => {
