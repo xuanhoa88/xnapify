@@ -7,6 +7,9 @@
 
 import CreateRole from './CreateRole';
 import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
+import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
+
+export const middleware = requirePermission('roles:create');
 
 /**
  * Page metadata

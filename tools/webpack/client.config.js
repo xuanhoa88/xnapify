@@ -181,10 +181,9 @@ module.exports = merge(baseConfig, {
 
           // Filter out hot-update files
           const filterAssets = assets =>
-            assets.filter(asset => {
-              const name = typeof asset === 'string' ? asset : asset.name;
-              return !/\.hot-update$/i.test(name);
-            });
+            assets.filter(asset =>
+              typeof asset === 'string' ? asset : asset.name,
+            );
 
           if (statsData.entrypoints) {
             for (const key in statsData.entrypoints) {

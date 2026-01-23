@@ -16,6 +16,7 @@ import {
 import {
   getUserDisplayName,
   getUserAvatarUrl,
+  getUserRoles,
   logout,
 } from '../../../../../../shared/renderer/redux';
 import { useWebSocket } from '../../../../../../shared/ws/client';
@@ -36,6 +37,7 @@ function ProfileDropdown() {
   // Redux state
   const displayName = useSelector(getUserDisplayName);
   const avatarUrl = useSelector(getUserAvatarUrl);
+  const roles = useSelector(getUserRoles);
 
   // Local state
   const [isOpen, setIsOpen] = useState(false);
@@ -85,6 +87,24 @@ function ProfileDropdown() {
     return displayName ? displayName.charAt(0).toUpperCase() : 'A';
   }, [displayName]);
 
+  // Determine display role
+  const displayRole = useMemo(() => {
+    if (!roles || roles.length === 0) return t('common.user', 'User');
+
+    // Filter out 'user' role to find more specific roles, unless it's the only one
+    const specializedRole = roles.find(r => {
+      const roleName = typeof r === 'string' ? r : r.name;
+      return roleName !== 'user';
+    });
+
+    const roleToDisplay = specializedRole || roles[0];
+    const roleName =
+      typeof roleToDisplay === 'string' ? roleToDisplay : roleToDisplay.name;
+
+    // Capitalize first letter
+    return roleName.charAt(0).toUpperCase() + roleName.slice(1);
+  }, [roles, t]);
+
   return (
     <div className={s.userMenu} ref={dropdownRef}>
       <Button
@@ -108,9 +128,7 @@ function ProfileDropdown() {
         </div>
         <div className={s.userInfo}>
           <span className={s.userName}>{displayName}</span>
-          <span className={s.userRole}>
-            {t('common.administrator', 'Administrator')}
-          </span>
+          <span className={s.userRole}>{displayRole}</span>
         </div>
         <Icon
           name='chevronDown'
@@ -125,9 +143,7 @@ function ProfileDropdown() {
         <div className={s.userDropdown} role='menu'>
           <div className={s.dropdownHeader}>
             <div className={s.dropdownUserName}>{displayName}</div>
-            <div className={s.dropdownUserEmail}>
-              {t('common.administrator', 'Administrator')}
-            </div>
+            <div className={s.dropdownUserEmail}>{displayRole}</div>
           </div>
 
           <Link

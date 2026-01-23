@@ -210,7 +210,7 @@ export async function getRoleById(role_id, models) {
     throw error;
   }
 
-  // Check if role has wildcard permission (*:manage or *:*)
+  // Check if role has wildcard permission (*:*)
   const wildcardPerm = `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`;
   const hasWildcard = role.permissions.some(
     p => `${p.resource}:${p.action}` === wildcardPerm,

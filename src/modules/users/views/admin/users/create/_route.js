@@ -7,6 +7,9 @@
 
 import CreateUser from './CreateUser';
 import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
+import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
+
+export const middleware = requirePermission('users:create');
 
 /**
  * Page metadata

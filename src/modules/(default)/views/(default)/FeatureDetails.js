@@ -96,4 +96,5 @@ FeatureDetails.propTypes = {
   featureId: PropTypes.string.isRequired,
 };
 
+// Force rebuild
 export default FeatureDetails;

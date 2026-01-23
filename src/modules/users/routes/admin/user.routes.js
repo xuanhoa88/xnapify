@@ -23,8 +23,7 @@ import * as rbacController from '../../controllers/admin/rbac.controller';
  * @returns {Router} Express router with user admin routes
  */
 export default function userRoutes(deps, userMiddlewares) {
-  const { requireAdmin, requirePermission, requireAnyPermission } =
-    userMiddlewares;
+  const { requirePermission, requireAnyPermission } = userMiddlewares;
   const router = deps.Router();
 
   // ========================================================================
@@ -32,12 +31,28 @@ export default function userRoutes(deps, userMiddlewares) {
   // ========================================================================
 
   /**
+   * @route   POST /
+   * @desc    Create new user
+   * @access  Admin only
+   * @body    { email, password, display_name, ... }
+   */
+  router.post(
+    '/',
+    requirePermission('users:create'),
+    userController.createUser,
+  );
+
+  /**
    * @route   GET /list
    * @desc    Get paginated list of all users
    * @access  Admin only
    * @query   { page, limit, search, role, status }
    */
-  router.get('/list', requireAdmin, userController.getUserList);
+  router.get(
+    '/list',
+    requirePermission('users:read'),
+    userController.getUserList,
+  );
 
   /**
    * @route   PATCH /status
@@ -45,7 +60,11 @@ export default function userRoutes(deps, userMiddlewares) {
    * @access  Admin only
    * @body    { ids: string[], state: 'active' | 'inactive' }
    */
-  router.patch('/status', requireAdmin, userController.bulkUpdateStatus);
+  router.patch(
+    '/status',
+    requirePermission('users:update'),
+    userController.bulkUpdateStatus,
+  );
 
   /**
    * @route   DELETE /
@@ -53,7 +72,11 @@ export default function userRoutes(deps, userMiddlewares) {
    * @access  Admin only
    * @body    { ids: string[] }
    */
-  router.delete('/', requireAdmin, userController.bulkDelete);
+  router.delete(
+    '/',
+    requirePermission('users:delete'),
+    userController.bulkDelete,
+  );
 
   /**
    * @route   GET /:id
@@ -61,7 +84,11 @@ export default function userRoutes(deps, userMiddlewares) {
    * @access  Admin only
    * @param   {string} id - User ID
    */
-  router.get('/:id', requireAdmin, userController.getUserById);
+  router.get(
+    '/:id',
+    requirePermission('users:read'),
+    userController.getUserById,
+  );
 
   /**
    * @route   PUT /:id
@@ -70,7 +97,11 @@ export default function userRoutes(deps, userMiddlewares) {
    * @param   {string} id - User ID
    * @body    { email, display_name, is_active, email_confirmed }
    */
-  router.put('/:id', requireAdmin, userController.updateUserById);
+  router.put(
+    '/:id',
+    requirePermission('users:update'),
+    userController.updateUserById,
+  );
 
   // ========================================================================
   // USER ASSIGNMENT ROUTES (roles, groups, permissions)
@@ -79,26 +110,26 @@ export default function userRoutes(deps, userMiddlewares) {
   /**
    * @route   PUT /:id/roles
    * @desc    Assign roles to a user
-   * @access  Admin (requires 'users:manage' permission)
+   * @access  Admin (requires 'users:update' permission)
    * @param   {string} id - User ID
    * @body    { role_names }
    */
   router.put(
     '/:id/roles',
-    requirePermission('users:manage'),
+    requirePermission('users:update'),
     rbacController.assignRolesToUser,
   );
 
   /**
    * @route   PUT /:id/groups
    * @desc    Assign groups to a user
-   * @access  Admin (requires 'users:manage' permission)
+   * @access  Admin (requires 'users:update' permission)
    * @param   {string} id - User ID
    * @body    { group_ids }
    */
   router.put(
     '/:id/groups',
-    requirePermission('users:manage'),
+    requirePermission('users:update'),
     rbacController.assignGroupsToUser,
   );
 
@@ -110,7 +141,7 @@ export default function userRoutes(deps, userMiddlewares) {
    */
   router.get(
     '/:id/permissions',
-    requireAnyPermission(['users:read', 'users:manage']),
+    requireAnyPermission(['users:read', 'users:update']),
     rbacController.getUserPermissions,
   );
 
@@ -124,7 +155,7 @@ export default function userRoutes(deps, userMiddlewares) {
    */
   router.get(
     '/:id/permissions/:resource/:action?',
-    requireAnyPermission(['users:read', 'users:manage']),
+    requireAnyPermission(['users:read', 'users:update']),
     rbacController.checkUserPermission,
   );
 

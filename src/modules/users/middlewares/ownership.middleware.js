@@ -91,7 +91,7 @@ export function requireOwnership(
  *   resourceModel: 'Post',
  *   ownerField: 'authorId',
  *   bypassRoles: ['admin', 'mod'],
- *   bypassPermissions: ['posts:manage:all']
+ *   bypassPermissions: ['posts:*']
  * }), controller.updatePost);
  */
 export function requireFlexibleOwnership(options) {

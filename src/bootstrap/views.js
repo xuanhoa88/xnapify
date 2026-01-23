@@ -63,16 +63,19 @@ export default async function initializeRouter() {
     context: {
       // Init context here if needed
     },
-    errorHandler: async (error, context) => {
+    errorHandler: async (error, ctx) => {
       // Handle other errors (500, etc)
-      if (__DEV__) {
+      if (__DEV__ && error.status !== 403) {
         console.error('Router Error:', error);
         // In dev, let it bubble up to see the stack trace or overlay
         throw error;
       }
 
+      // Remove internal router instance from context
+      const { _instance, ...context } = ctx;
+
       // In production, show generic error page
-      return router.resolve({
+      return _instance.resolve({
         ...context,
         pathname: '/error',
         error, // Pass error to component if it accepts it

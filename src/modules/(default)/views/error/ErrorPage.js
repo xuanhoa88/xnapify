@@ -19,7 +19,7 @@ function ErrorPage({ error = null }) {
   const { t } = useTranslation();
 
   // Development mode - show detailed error
-  if (__DEV__ && error) {
+  if (error) {
     return (
       <div className={s.root}>
         <div className={s.hero}>
@@ -29,7 +29,11 @@ function ErrorPage({ error = null }) {
         </div>
         <div className={s.content}>
           <div className={s.container}>
-            <pre className={s.stackTrace}>{error.stack}</pre>
+            {__DEV__ && error.stack && (
+              <pre className={s.stackTrace} suppressHydrationWarning>
+                {error.stack}
+              </pre>
+            )}
             <div className={s.actions}>
               <Link to='/' className={s.btnPrimary}>
                 {t('error.backToHome', 'Back to Home')}
@@ -84,7 +88,7 @@ ErrorPage.propTypes = {
   error: PropTypes.shape({
     name: PropTypes.string.isRequired,
     message: PropTypes.string.isRequired,
-    stack: PropTypes.string.isRequired,
+    stack: PropTypes.string,
   }),
 };
 

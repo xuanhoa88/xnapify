@@ -49,7 +49,7 @@ export async function initializeDefaults(req, res) {
  * Assign roles to a user
  *
  * @route   PUT /api/users/:id/roles
- * @access  Admin (requires 'users:manage' permission)
+ * @access  Admin (requires 'users:update' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -104,7 +104,7 @@ export async function assignRolesToUser(req, res) {
  * Assign groups to a user
  *
  * @route   PUT /api/users/:id/groups
- * @access  Admin (requires 'users:manage' permission)
+ * @access  Admin (requires 'users:update' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -233,7 +233,7 @@ export async function checkUserPermission(req, res) {
  * Remove role from user
  *
  * @route   DELETE /api/users/:id/roles/:role_id
- * @access  Admin (requires 'users:manage' permission)
+ * @access  Admin (requires 'users:update' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */
@@ -269,7 +269,7 @@ export async function removeRoleFromUser(req, res) {
  * Remove group from user
  *
  * @route   DELETE /api/users/:id/groups/:group_id
- * @access  Admin (requires 'users:manage' permission)
+ * @access  Admin (requires 'users:update' permission)
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
  */

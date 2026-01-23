@@ -93,6 +93,14 @@ export const getUserPreferencesData = state => {
   return (user && user.preferences) || null;
 };
 
+/**
+ * Get user roles
+ */
+export const getUserRoles = state => {
+  const user = getUserState(state);
+  return (user && user.roles) || [];
+};
+
 // =============================================================================
 // AUTH OPERATION (login, register, logout, me, refreshToken)
 // =============================================================================

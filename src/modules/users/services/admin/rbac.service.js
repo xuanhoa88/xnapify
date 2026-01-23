@@ -625,7 +625,7 @@ export async function removeGroupFromUser(
 /**
  * Get user's effective permissions (from roles and groups)
  * Uses in-memory cache for performance (5-minute TTL)
- * If user has wildcard (*:manage), expands to all permissions for API response
+ * If user has wildcard (*:*), expands to all permissions for API response
  *
  * @param {string} user_id - User ID
  * @param {Object} models - Database models
@@ -813,7 +813,7 @@ export async function userHasPermission(user_id, permissionName, models) {
 
 /**
  * Get group's effective permissions (from roles)
- * If any role has wildcard (*:manage), expands to all permissions
+ * If any role has wildcard (*:*), expands to all permissions
  *
  * @param {string} group_id - Group ID
  * @param {Object} models - Database models
@@ -1497,7 +1497,7 @@ export async function manageRolePermissions(
 
 /**
  * Get role permissions
- * If role has wildcard (*:manage), returns ALL active permissions from DB
+ * If role has wildcard (*:*), returns ALL active permissions from DB
  *
  * @param {string} role_id - Role ID
  * @param {Object} models - Database models
@@ -1527,7 +1527,7 @@ export async function getRolePermissions(role_id, models) {
     throw error;
   }
 
-  // Check if role has the wildcard permission (*:manage)
+  // Check if role has the wildcard permission (*:*)
   const hasWildcard = (role.permissions || []).some(
     p =>
       p.resource === DEFAULT_RESOURCES.ALL &&

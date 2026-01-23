@@ -8,6 +8,9 @@
 import reducer, { SLICE_NAME } from '../redux';
 import Users from './Users';
 import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
+import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
+
+export const middleware = requirePermission('users:read');
 
 /**
  * Page metadata

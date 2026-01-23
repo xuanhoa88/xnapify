@@ -8,6 +8,9 @@
 import PropTypes from 'prop-types';
 import EditPermission from './EditPermission';
 import { addBreadcrumb } from '../../../../../../../shared/renderer/redux';
+import { requirePermission } from '../../../../../../../shared/renderer/components/Rbac';
+
+export const middleware = requirePermission('permissions:update');
 
 /**
  * Page metadata
