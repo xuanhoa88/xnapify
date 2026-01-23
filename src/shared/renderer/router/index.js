@@ -5,8 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_MOUNT_KEY, ROUTE_UNMOUNT_KEY } from './constants';
-import { createError, decodeUrl, isDescendant } from './utils';
+import {
+  ROUTE_MOUNT_KEY,
+  ROUTE_UNMOUNT_KEY,
+  ROUTE_PREV_KEY,
+  ROUTE_PREV_CTX,
+} from './constants';
+import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
 import { runBoot, runMount, runUnmount } from './lifecycle';
 import { createMatcher, clearMatchCache } from './matcher';
@@ -46,9 +51,6 @@ export async function defaultResolver(ctx, options) {
  * Router class for file-based routing
  */
 export class Router {
-  _previousRoute = null;
-  _previousContext = null;
-
   constructor(moduleLoader, options) {
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
@@ -71,6 +73,61 @@ export class Router {
   }
 
   /**
+   * Traverse routes and invoke a lifecycle method
+   * @param {string} method - 'register' or 'unregister'
+   * @param {Object} context - App context
+   * @param {boolean} childrenFirst - If true, process children before parent (for cleanup)
+   */
+  _traverseRoutes(method, context, childrenFirst = false) {
+    let count = 0;
+    const walk = routes => {
+      routes.forEach(route => {
+        // Process children first for cleanup (unregister)
+        if (childrenFirst && route.children) {
+          walk(route.children);
+        }
+
+        if (route.module && typeof route.module[method] === 'function') {
+          try {
+            log(`${method}: ${route.path}`);
+            route.module[method](context);
+            count += 1;
+          } catch (err) {
+            log(`Error ${method} route ${route.path}: ${err.message}`, 'error');
+          }
+        }
+
+        // Process children after parent for registration
+        if (!childrenFirst && route.children) {
+          walk(route.children);
+        }
+      });
+    };
+    walk(this.routes);
+    return count;
+  }
+
+  /**
+   * Register routes with the application context
+   */
+  register(context) {
+    log('Starting Route Registration...');
+    // eslint-disable-next-line no-underscore-dangle
+    const count = this._traverseRoutes('register', context, false);
+    log(`Route Registration Complete. Registered ${count} modules.`);
+  }
+
+  /**
+   * Unregister routes from the application context (children-first order)
+   */
+  unregister(context) {
+    log('Starting Route Unregistration...');
+    // eslint-disable-next-line no-underscore-dangle
+    const count = this._traverseRoutes('unregister', context, true);
+    log(`Route Unregistration Complete. Unregistered ${count} modules.`);
+  }
+
+  /**
    * Resolves a URL to a route and executes its action
    * Handles the complete lifecycle: matching -> booting -> unmounting -> mounting -> resolving
    */
@@ -79,7 +136,13 @@ export class Router {
       context = { pathname: context };
     }
 
-    const resolver = this.options.routeResolver || defaultResolver;
+    // Auto-invoke registration (idempotent, errors caught in _traverseRoutes)
+    this.register(context);
+
+    const resolver =
+      typeof this.options.routeResolver === 'function'
+        ? this.options.routeResolver
+        : defaultResolver;
     const ctx = {
       ...this.options.context,
       ...context,
@@ -153,19 +216,19 @@ export class Router {
 
       // Run unmount hook on previous route (if navigating away)
       // eslint-disable-next-line no-underscore-dangle
-      if (this._previousRoute && this._previousRoute !== state.current.route) {
-        // eslint-disable-next-line no-underscore-dangle
-        await runUnmount(this._previousRoute, this._previousContext || ctx);
+      if (
+        this[ROUTE_PREV_KEY] &&
+        this[ROUTE_PREV_KEY] !== state.current.route
+      ) {
+        await runUnmount(this[ROUTE_PREV_KEY], this[ROUTE_PREV_CTX] || ctx);
       }
 
       // Run mount hook (per-request, every navigation)
       await runMount(state.current.route, state.current);
 
       // Track current route for unmount on next navigation
-      // eslint-disable-next-line no-underscore-dangle
-      this._previousRoute = state.current.route;
-      // eslint-disable-next-line no-underscore-dangle
-      this._previousContext = state.current;
+      this[ROUTE_PREV_KEY] = state.current.route;
+      this[ROUTE_PREV_CTX] = state.current;
 
       const result = await resolver(state.current, {
         autoResolve: state.current.route.autoResolve !== false,
@@ -180,7 +243,7 @@ export class Router {
     try {
       return await next();
     } catch (error) {
-      if (this.options.errorHandler) {
+      if (typeof this.options.errorHandler === 'function') {
         return this.options.errorHandler(error, ctx);
       }
       throw error;

@@ -9,8 +9,43 @@ import reducer, { SLICE_NAME } from '../redux';
 import Roles from './Roles';
 import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
 import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
+import {
+  registerMenu,
+  unregisterMenu,
+} from '../../../../../../shared/renderer/redux/features/ui';
 
 export const middleware = requirePermission('roles:read');
+
+/**
+ * Register menu item for this route
+ */
+export function register({ store, i18n }) {
+  store.dispatch(
+    registerMenu({
+      ns: 'admin',
+      item: {
+        ns: i18n.t('navigation.management', 'Management'),
+        path: '/admin/roles',
+        label: i18n.t('navigation.roles', 'Roles'),
+        icon: 'shield',
+        permission: 'roles:read',
+        order: 30,
+      },
+    }),
+  );
+}
+
+/**
+ * Unregister menu item for this route
+ */
+export function unregister({ store }) {
+  store.dispatch(
+    unregisterMenu({
+      ns: 'admin',
+      path: '/admin/roles',
+    }),
+  );
+}
 
 /**
  * Page metadata

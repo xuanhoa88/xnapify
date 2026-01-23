@@ -23,6 +23,7 @@ import {
 import { useWebSocket } from '../../../../../../shared/ws/client';
 import Icon from '../../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../../shared/renderer/components/Button';
+import { checkPermission } from '../../../../../../shared/renderer/components/Rbac';
 import s from './Drawer.css';
 
 function Drawer() {
@@ -67,9 +68,66 @@ function Drawer() {
   );
 
   // Navigation menu items with SVG icon names
+  const dynamicMenus = useSelector(state =>
+    state.ui.menus && state.ui.menus.admin ? state.ui.menus.admin : [],
+  );
+
+  const hasPermission = (user, permission) => {
+    // If no permission required, allow
+    if (!permission) return true;
+
+    // If user is not logged in, deny
+    if (!user) return false;
+
+    // Admin bypass
+    if (user.is_admin) return true;
+
+    // Use shared RBAC logic for permission matching (supports wildcards)
+    return checkPermission(user, permission);
+  };
+
+  const formatMenus = (items, user) => {
+    // Process the menus to ensure they have the correct structure
+    const sections = {};
+
+    items.forEach(item => {
+      if (!item || !item.ns) return;
+
+      // Permission check
+      if (!hasPermission(user, item.permission)) return;
+
+      const key = item.ns;
+      if (!sections[key]) {
+        sections[key] = {
+          ns: item.ns,
+          items: [],
+          order: item.order || 99,
+          seenPaths: new Set(),
+        };
+      }
+
+      // Deduplication check
+      if (item.path && !sections[key].seenPaths.has(item.path)) {
+        sections[key].seenPaths.add(item.path);
+        sections[key].items.push(item);
+      }
+    });
+
+    return Object.values(sections)
+      .map(groupBy => {
+        // Only return sections that have items
+        if (groupBy.items.length === 0) return null;
+
+        const { seenPaths: _, ...cleanSection } = groupBy;
+        return cleanSection;
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.order - b.order);
+  };
+
   const menuItems = [
     {
-      section: t('navigation.main', 'Main'),
+      ns: t('navigation.main', 'Main'),
       items: [
         {
           path: '/admin',
@@ -78,32 +136,9 @@ function Drawer() {
           exact: true,
         },
       ],
+      order: 0,
     },
-    {
-      section: t('navigation.management', 'Management'),
-      items: [
-        {
-          path: '/admin/users',
-          label: t('navigation.users', 'Users'),
-          icon: 'users',
-        },
-        {
-          path: '/admin/groups',
-          label: t('navigation.groups', 'Groups'),
-          icon: 'folder',
-        },
-        {
-          path: '/admin/roles',
-          label: t('navigation.roles', 'Roles'),
-          icon: 'shield',
-        },
-        {
-          path: '/admin/permissions',
-          label: t('navigation.permissions', 'Permissions'),
-          icon: 'key',
-        },
-      ],
-    },
+    ...formatMenus(dynamicMenus, user),
   ];
 
   return (
@@ -127,11 +162,11 @@ function Drawer() {
 
         {/* Navigation */}
         <nav className={s.nav}>
-          {menuItems.map(section => (
-            <div key={section.section} className={s.section}>
-              <h3 className={s.sectionTitle}>{section.section}</h3>
+          {menuItems.map(groupBy => (
+            <div key={groupBy.ns} className={s.section}>
+              <h3 className={s.sectionTitle}>{groupBy.ns}</h3>
               <ul className={s.menuList}>
-                {section.items.map(item => (
+                {groupBy.items.map(item => (
                   <li key={item.path}>
                     <Link
                       to={item.path}

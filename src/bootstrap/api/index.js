@@ -58,6 +58,8 @@ function guardAppProviders(app) {
    */
   const logBlocked = (operation, key) => {
     const error = new Error();
+    error.name = 'ProviderGuardError';
+    error.code = 'E_PROVIDER_GUARD_ERROR';
     const stack = error.stack
       ? error.stack.split('\n').slice(2, 6).join('\n')
       : '(stack unavailable)';

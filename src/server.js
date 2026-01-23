@@ -218,7 +218,7 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-function createSSRHandler(views) {
+function createSSRHandler() {
   return async (req, res, next) => {
     const startTime = Date.now();
     try {
@@ -250,6 +250,7 @@ function createSSRHandler(views) {
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
       };
 
+      const views = await loadViews();
       const page = await views.resolve(context);
       if (!page) {
         const err = new Error(`Page ${req.path} not found`);
@@ -358,12 +359,14 @@ function createErrorHandler() {
 function verifyWsToken(jwt, token) {
   if (!token) {
     const error = new Error('Token required');
+    error.name = 'TokenRequired';
     error.code = 'E_TOKEN_REQUIRED';
     throw error;
   }
 
   if (!jwt) {
     const error = new Error('JWT not configured');
+    error.name = 'JwtNotConfigured';
     error.code = 'E_CONFIG_ERROR';
     throw error;
   }
@@ -433,9 +436,6 @@ export default async function main(app, publicDir) {
 
   // Expose i18n to API routes
   app.set('i18n', i18n);
-
-  // Initialize SSR views
-  const views = await loadViews();
 
   // Express configuration
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
@@ -559,7 +559,7 @@ export default async function main(app, publicDir) {
   }
 
   // SSR handler
-  app.get('*', createSSRHandler(views));
+  app.get('*', createSSRHandler());
 
   // Error handler
   app.use(createErrorHandler());

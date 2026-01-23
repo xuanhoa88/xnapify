@@ -27,6 +27,9 @@ import { initialState } from './utils';
  *     placement?: string,
  *     title?: string,
  *     duration?: number
+ *   },
+ *   menus: {
+ *     [ns: string]: Array<MenuItem>
  *   }
  * }
  */
@@ -150,6 +153,43 @@ const uiSlice = createSlice({
     },
 
     /**
+     * Register a menu item
+     * Payload: { ns, item }
+     */
+    registerMenu: (state, action) => {
+      const { ns = 'default', item } = action.payload;
+      if (!state.menus) {
+        state.menus = {};
+      }
+      if (!state.menus[ns]) {
+        state.menus[ns] = [];
+      }
+
+      // Check for duplicates by path
+      const existingIndex = state.menus[ns].findIndex(
+        i => i.path === item.path,
+      );
+      if (existingIndex >= 0) {
+        // Update existing
+        state.menus[ns][existingIndex] = item;
+      } else {
+        // Add new
+        state.menus[ns].push(item);
+      }
+    },
+
+    /**
+     * Unregister a menu item
+     * Payload: { ns, path }
+     */
+    unregisterMenu: (state, action) => {
+      const { ns = 'default', path } = action.payload;
+      if (state.menus && state.menus[ns]) {
+        state.menus[ns] = state.menus[ns].filter(i => i.path !== path);
+      }
+    },
+
+    /**
      * Reset to initial state
      */
     resetUiState: () => initialState,
@@ -196,6 +236,8 @@ export const {
   addBreadcrumb,
   clearBreadcrumbs,
   resetUiState,
+  registerMenu,
+  unregisterMenu,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

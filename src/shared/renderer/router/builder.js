@@ -91,13 +91,13 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
     const matchedLayouts = findLayouts(layouts, rootSegment, pathname);
 
     routeMap.set(pathname, {
+      module, // Preserve module for register/unregister lifecycle
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedLayouts),
       // Lifecycle hooks: boot (config + route), mount/unmount (both)
       boot: createBoots(matchedConfigs, module.boot),
       mount: createMounts(matchedConfigs, module.mount),
       unmount: createUnmounts(matchedConfigs, module.unmount),
-      _filePath: pageInfo.filePath,
     });
   });
 

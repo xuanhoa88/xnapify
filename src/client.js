@@ -189,6 +189,7 @@ function buildWebSocketUrl(path = '/ws') {
 async function loadViews() {
   if (!cachedViews) {
     cachedViews = await import('./bootstrap/views').then(m => m.default());
+
     if (__DEV__) console.log('✅ Views initialized');
   }
   return cachedViews;
@@ -337,6 +338,7 @@ async function handlePageChange(location, action) {
     const page = await views.resolve(context);
     if (!page) {
       const err = new Error(`Page ${location.pathname} not found`);
+      err.name = 'PageNotFound';
       err.status = 404;
       throw err;
     }
@@ -514,7 +516,9 @@ function attemptStartup() {
   if (hasStarted || !isDOMReady) return;
   hasStarted = true;
   if (__DEV__) console.log('✅ Starting app...');
-  initializeApp();
+
+  // Initialize views and register routes
+  loadViews().then(initializeApp);
 }
 
 if (isDOMReady) {
