@@ -14,6 +14,7 @@ import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../../../../shared/renderer/components/SearchableSelect';
+import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 import {
   Box,
   Icon,
@@ -57,6 +58,8 @@ function Users() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const { hasPermission } = useRbac();
+  const canCreateUser = hasPermission('users:create');
   const users = useSelector(getUsers);
   const pagination = useSelector(getUsersPagination);
   const loading = useSelector(isUsersListLoading);
@@ -307,6 +310,12 @@ function Users() {
         <Button
           variant='primary'
           onClick={() => history.push('/admin/users/create')}
+          disabled={!canCreateUser}
+          title={
+            !canCreateUser
+              ? t('You do not have permission to create users')
+              : undefined
+          }
         >
           Add User
         </Button>
@@ -531,9 +540,20 @@ function Users() {
           icon='users'
           title='No users found'
           description='Try adjusting your search or filter criteria, or add a new user to get started.'
-          actionLabel='Add User'
-          onAction={() => history.push('/admin/users/create')}
-        />
+        >
+          <Button
+            variant='primary'
+            onClick={() => history.push('/admin/users/create')}
+            disabled={!canCreateUser}
+            title={
+              !canCreateUser
+                ? t('You do not have permission to create users')
+                : undefined
+            }
+          >
+            Add User
+          </Button>
+        </Table.Empty>
       )}
 
       {pagination && pagination.pages > 1 && (

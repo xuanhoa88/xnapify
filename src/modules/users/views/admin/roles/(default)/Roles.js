@@ -25,6 +25,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../../../../shared/renderer/components/Admin';
+import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Card from '../../../../../../shared/renderer/components/Card';
 import RoleActionsDropdown from '../components/RoleActionsDropdown';
@@ -55,6 +56,8 @@ function Roles() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const { hasPermission } = useRbac();
+  const canCreateRole = hasPermission('roles:create');
   const roles = useSelector(getRoles);
   const loading = useSelector(isRolesListLoading);
   const initialized = useSelector(isRolesListInitialized);
@@ -187,7 +190,16 @@ function Roles() {
         title={t('roles.title', 'Role Management')}
         subtitle='Define access levels and permissions'
       >
-        <Button variant='primary' onClick={handleAddRole}>
+        <Button
+          variant='primary'
+          onClick={handleAddRole}
+          disabled={!canCreateRole}
+          title={
+            !canCreateRole
+              ? t('You do not have permission to create roles')
+              : undefined
+          }
+        >
           <Icon name='plus' size={16} />
           {t('roles.addRole', 'Add Role')}
         </Button>
@@ -209,9 +221,20 @@ function Roles() {
             'roles.noRolesDescription',
             'Create a new role to define access levels and permissions.',
           )}
-          actionLabel={t('roles.addRole', 'Add Role')}
-          onAction={handleAddRole}
-        />
+        >
+          <Button
+            variant='primary'
+            onClick={handleAddRole}
+            disabled={!canCreateRole}
+            title={
+              !canCreateRole
+                ? t('You do not have permission to create roles')
+                : undefined
+            }
+          >
+            {t('roles.addRole', 'Add Role')}
+          </Button>
+        </Table.Empty>
       ) : (
         <div className={s.grid}>
           {roles.map(role => (

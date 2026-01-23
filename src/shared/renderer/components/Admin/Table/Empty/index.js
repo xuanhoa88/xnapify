@@ -8,7 +8,7 @@
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Icon from '../../../Icon';
-import Button from '../../../Button';
+
 import s from './Empty.css';
 
 /**
@@ -21,8 +21,7 @@ function Empty({
   icon = 'inbox',
   title = 'No items found',
   description,
-  actionLabel,
-  onAction,
+  children,
   className,
 }) {
   return (
@@ -32,11 +31,7 @@ function Empty({
       </div>
       <h3 className={s.title}>{title}</h3>
       {description && <p className={s.description}>{description}</p>}
-      {actionLabel && onAction && (
-        <Button variant='primary' onClick={onAction}>
-          {actionLabel}
-        </Button>
-      )}
+      {children}
     </div>
   );
 }
@@ -48,10 +43,8 @@ Empty.propTypes = {
   title: PropTypes.string,
   /** Optional description text */
   description: PropTypes.string,
-  /** Optional action button label */
-  actionLabel: PropTypes.string,
-  /** Optional action button click handler */
-  onAction: PropTypes.func,
+  /** Optional content to render (usually an action button) */
+  children: PropTypes.node,
   /** Additional CSS classes */
   className: PropTypes.string,
 };

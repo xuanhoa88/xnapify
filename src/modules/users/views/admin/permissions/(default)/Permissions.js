@@ -25,6 +25,7 @@ import {
   Table,
   ConfirmModal,
 } from '../../../../../../shared/renderer/components/Admin';
+import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Tag from '../../../../../../shared/renderer/components/Tag';
 import { SearchableSelect } from '../../../../../../shared/renderer/components/SearchableSelect';
@@ -38,6 +39,8 @@ function Permissions() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const { hasPermission } = useRbac();
+  const canCreatePermission = hasPermission('permissions:create');
   const permissions = useSelector(getPermissions);
   const loading = useSelector(isPermissionsListLoading);
   const initialized = useSelector(isPermissionsListInitialized);
@@ -272,7 +275,16 @@ function Permissions() {
         title='Permission Management'
         subtitle='Configure granular access controls'
       >
-        <Button variant='primary' onClick={handleAdd}>
+        <Button
+          variant='primary'
+          onClick={handleAdd}
+          disabled={!canCreatePermission}
+          title={
+            !canCreatePermission
+              ? t('You do not have permission to create permissions')
+              : undefined
+          }
+        >
           <Icon name='plus' size={16} />
           Add Permission
         </Button>
@@ -335,9 +347,20 @@ function Permissions() {
               ? `No permissions match "${search}". Try a different search.`
               : 'Create granular permissions to control access to resources.'
           }
-          actionLabel={search ? 'Clear Search' : 'Add Permission'}
-          onAction={search ? () => handleSearchChange('') : handleAdd}
-        />
+        >
+          <Button
+            variant='primary'
+            onClick={search ? () => handleSearchChange('') : handleAdd}
+            disabled={!search && !canCreatePermission}
+            title={
+              !search && !canCreatePermission
+                ? t('You do not have permission to create permissions')
+                : undefined
+            }
+          >
+            {search ? 'Clear Search' : 'Add Permission'}
+          </Button>
+        </Table.Empty>
       ) : (
         <div className={s.tableContainer}>
           <table className={s.table}>

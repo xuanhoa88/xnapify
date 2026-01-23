@@ -13,6 +13,7 @@ import {
   SearchableSelect,
   useSearchableSelect,
 } from '../../../../../../shared/renderer/components/SearchableSelect';
+import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 import {
   Box,
   Icon,
@@ -48,6 +49,8 @@ function Groups() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
+  const { hasPermission } = useRbac();
+  const canCreateGroup = hasPermission('groups:create');
   const groups = useSelector(getGroups);
   const loading = useSelector(isGroupsListLoading);
   const initialized = useSelector(isGroupsListInitialized);
@@ -217,7 +220,16 @@ function Groups() {
         title='Group Management'
         subtitle='Organize users into groups for easier access control'
       >
-        <Button variant='primary' onClick={handleAddGroup}>
+        <Button
+          variant='primary'
+          onClick={handleAddGroup}
+          disabled={!canCreateGroup}
+          title={
+            !canCreateGroup
+              ? t('You do not have permission to create groups')
+              : undefined
+          }
+        >
           <Icon name='plus' size={16} />
           Add Group
         </Button>
@@ -263,9 +275,20 @@ function Groups() {
           icon='folder'
           title='No groups found'
           description='Create a new group to organize users and assign roles.'
-          actionLabel='Add Group'
-          onAction={handleAddGroup}
-        />
+        >
+          <Button
+            variant='primary'
+            onClick={handleAddGroup}
+            disabled={!canCreateGroup}
+            title={
+              !canCreateGroup
+                ? t('You do not have permission to create groups')
+                : undefined
+            }
+          >
+            Add Group
+          </Button>
+        </Table.Empty>
       ) : (
         <div className={s.grid}>
           {groups.map(group => {
