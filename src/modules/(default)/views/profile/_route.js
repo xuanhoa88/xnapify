@@ -20,7 +20,6 @@ export async function getInitialProps({ i18n }) {
 /**
  * Guard function - require authentication
  */
-// Middleware to redirect if NOT authenticated
 export async function middleware(context, next) {
   const { store } = context;
   const state = store.getState();

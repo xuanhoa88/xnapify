@@ -31,7 +31,12 @@ function findConfigs(configs, rootSegment) {
 /**
  * Finds layout modules for a given route based on root segment and path hierarchy
  */
-function findLayouts(layouts, rootSegment, pathname) {
+function findLayouts(layouts, rootSegment, pathname, module) {
+  // 0. Explicit opt-out
+  if (module && module.layout === false) {
+    return [];
+  }
+
   const result = [];
   const defaultKey = `${ROUTE_PATH_DEFAULT}:default`;
 
@@ -88,7 +93,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
     const rootSegment = getRootSegment(pathname);
     const { module } = pageInfo;
     const matchedConfigs = findConfigs(configs, rootSegment);
-    const matchedLayouts = findLayouts(layouts, rootSegment, pathname);
+    const matchedLayouts = findLayouts(layouts, rootSegment, pathname, module);
 
     routeMap.set(pathname, {
       module, // Preserve module for register/unregister lifecycle

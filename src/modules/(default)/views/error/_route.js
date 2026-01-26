@@ -18,6 +18,11 @@ export async function getInitialProps({ i18n, error }) {
 }
 
 /**
+ * Route config
+ */
+export const layout = false;
+
+/**
  * Default export - Page component
  * Development only - renders error page standalone
  */

@@ -24,7 +24,6 @@ export async function getInitialProps({ i18n }) {
 /**
  * Guard function - redirect authenticated users
  */
-// Middleware to redirect if ALREADY authenticated
 export async function middleware(context, next) {
   const { store } = context;
   const state = store.getState();
@@ -33,6 +32,11 @@ export async function middleware(context, next) {
   }
   return next();
 }
+
+/**
+ * Route config
+ */
+export const layout = false;
 
 /**
  * Default export - Page component

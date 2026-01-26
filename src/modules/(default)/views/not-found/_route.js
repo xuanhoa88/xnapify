@@ -18,6 +18,11 @@ export async function getInitialProps({ i18n }) {
 }
 
 /**
+ * Route config
+ */
+export const layout = false;
+
+/**
  * Default export - Page component
  * Catch-all route for 404 pages
  */
