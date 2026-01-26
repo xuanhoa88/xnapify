@@ -339,11 +339,14 @@ describe('[ui] slice.js', () => {
       });
     });
 
-    it('should handle TOGGLE_ADMIN_DRAWER action', () => {
-      let state = reducer(undefined, { type: 'TOGGLE_ADMIN_DRAWER' });
+    it('should handle TOGGLE_DRAWER action', () => {
+      let state = reducer(undefined, {
+        type: 'TOGGLE_DRAWER',
+        payload: 'admin',
+      });
       expect(state.drawers.admin).toBe(true);
 
-      state = reducer(state, { type: 'TOGGLE_ADMIN_DRAWER' });
+      state = reducer(state, { type: 'TOGGLE_DRAWER', payload: 'admin' });
       expect(state.drawers.admin).toBe(false);
     });
   });

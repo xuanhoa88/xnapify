@@ -12,7 +12,6 @@ import {
   getFlashMessageVariant,
   getFlashMessageText,
   getAllBreadcrumbs,
-  getBreadcrumbsByNamespace,
   getBreadcrumbs,
 } from './selector';
 
@@ -190,34 +189,6 @@ describe('[ui] selector.js', () => {
           },
         };
         expect(getAllBreadcrumbs(state)).toEqual({});
-      });
-    });
-
-    describe('getBreadcrumbsByNamespace', () => {
-      it('should return breadcrumbs for namespace', () => {
-        const breadcrumbs = [{ label: 'Home' }, { label: 'Admin' }];
-        const state = {
-          ui: {
-            drawers: {},
-            breadcrumbs: {
-              admin: breadcrumbs,
-              user: [{ label: 'User' }],
-            },
-            flashMessage: null,
-          },
-        };
-        expect(getBreadcrumbsByNamespace(state, 'admin')).toEqual(breadcrumbs);
-      });
-
-      it('should return empty array when namespace does not exist', () => {
-        const state = {
-          ui: {
-            drawers: {},
-            breadcrumbs: {},
-            flashMessage: null,
-          },
-        };
-        expect(getBreadcrumbsByNamespace(state, 'admin')).toEqual([]);
       });
     });
 

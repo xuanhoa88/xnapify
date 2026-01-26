@@ -101,23 +101,13 @@ export const getAllBreadcrumbs = state => {
 };
 
 /**
- * Get breadcrumbs for a specific namespace
- *
- * @param {Object} state - Redux state
- * @param {string} namespace - Namespace to get breadcrumbs for
- * @returns {Array<{ label: string, url?: string }>} Breadcrumbs array
- */
-export const getBreadcrumbsByNamespace = (state, namespace) => {
-  const breadcrumbs = getAllBreadcrumbs(state);
-  return breadcrumbs[namespace] || [];
-};
-
-/**
  * Get breadcrumbs for 'admin' namespace (convenience selector)
  *
  * @param {Object} state - Redux state
+ * @param {string} ns - Namespace to get breadcrumbs for
  * @returns {Array<{ label: string, url?: string }>} Admin breadcrumbs array
  */
-export const getBreadcrumbs = state => {
-  return getBreadcrumbsByNamespace(state, 'admin');
+export const getBreadcrumbs = (state, ns = 'admin') => {
+  const breadcrumbs = getAllBreadcrumbs(state);
+  return breadcrumbs[ns] || [];
 };

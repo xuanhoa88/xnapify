@@ -30,6 +30,7 @@ import App from './shared/renderer/App';
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
 const ROOT_KEY = Symbol('__rsk.client__');
+const READY_STATES = new Set(['interactive', 'complete']);
 
 // =============================================================================
 // INITIALIZATION
@@ -66,22 +67,34 @@ if (context.locale && i18n.language !== context.locale) {
 // =============================================================================
 
 let currentLocation = history.location;
-let unsubscribeNavigation = null;
+let unlistenHistory = null;
 let cachedViews = null;
 let wsClient = null;
-let isNavigating = false;
-let navigationAbortController = null;
+let isTransitioning = false;
+let transitionAbortController = null;
 let hasHydrated = false;
 let ReactDOMClient = null;
 let visibilityChangeHandler = null;
+let scrollHandler = null;
+let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
+let hasStarted = false;
 
 const scrollPositionsHistory = {};
 
 // =============================================================================
-// METADATA HELPERS
+// UTILITIES: LOGGING
+// =============================================================================
+function log(message, level = 'log') {
+  if (__DEV__) {
+    console[level](`[Client] ${message}`);
+  }
+}
+
+// =============================================================================
+// UTILITIES: METADATA
 // =============================================================================
 
-function updateMeta(name, content, isProperty = false) {
+function updateMetaTag(name, content, isProperty = false) {
   if (!content) return;
   const attr = isProperty ? 'property' : 'name';
   let meta = document.querySelector(`meta[${attr}="${name}"]`);
@@ -93,29 +106,23 @@ function updateMeta(name, content, isProperty = false) {
   meta.setAttribute('content', content);
 }
 
-function updatePageMetadata({
-  title,
-  description,
-  image,
-  url,
-  type = 'website',
-}) {
+function updateMetadata({ title, description, image, url, type = 'website' }) {
   if (title) {
     document.title = title;
-    updateMeta('og:title', title, true);
-    updateMeta('twitter:title', title);
+    updateMetaTag('og:title', title, true);
+    updateMetaTag('twitter:title', title);
   }
   if (description) {
-    updateMeta('description', description);
-    updateMeta('og:description', description, true);
-    updateMeta('twitter:description', description);
+    updateMetaTag('description', description);
+    updateMetaTag('og:description', description, true);
+    updateMetaTag('twitter:description', description);
   }
   if (image) {
-    updateMeta('og:image', image, true);
-    updateMeta('twitter:image', image);
+    updateMetaTag('og:image', image, true);
+    updateMetaTag('twitter:image', image);
   }
   if (url) {
-    updateMeta('og:url', url, true);
+    updateMetaTag('og:url', url, true);
     let link = document.querySelector('link[rel="canonical"]');
     if (!link) {
       link = document.createElement('link');
@@ -125,12 +132,12 @@ function updatePageMetadata({
     link.setAttribute('href', url);
   }
   if (type) {
-    updateMeta('og:type', type, true);
+    updateMetaTag('og:type', type, true);
   }
 }
 
 // =============================================================================
-// SCROLL MANAGEMENT
+// UTILITIES: SCROLL MANAGEMENT
 // =============================================================================
 
 function saveScrollPosition() {
@@ -173,26 +180,25 @@ function restoreScrollPosition(location) {
 }
 
 // =============================================================================
-// WEBSOCKET
+// UTILITIES: NETWORK
 // =============================================================================
+
+async function loadViews() {
+  if (!cachedViews) {
+    cachedViews = await import('./bootstrap/views').then(m => m.default());
+    log('✅ Views initialized');
+  }
+  return cachedViews;
+}
 
 function buildWebSocketUrl(path = '/ws') {
   try {
     const normalizedPath = path.startsWith('/') ? path : `/${path}`;
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     return `${protocol}://${window.location.host}${normalizedPath}`;
-  } catch (error) {
+  } catch {
     return null;
   }
-}
-
-async function loadViews() {
-  if (!cachedViews) {
-    cachedViews = await import('./bootstrap/views').then(m => m.default());
-
-    if (__DEV__) console.log('✅ Views initialized');
-  }
-  return cachedViews;
 }
 
 // =============================================================================
@@ -216,7 +222,7 @@ async function initReactDOMClient() {
   return ReactDOMClient;
 }
 
-function renderApp(appElement, container, isInitial) {
+function renderPage(appElement, container, isInitial) {
   const client = ReactDOMClient;
 
   if (client) {
@@ -226,12 +232,14 @@ function renderApp(appElement, container, isInitial) {
       try {
         root = client.hydrateRoot(container, appElement, {
           onRecoverableError: err =>
-            __DEV__ && console.error('Hydration error:', err),
+            log(`❌ Hydration error: ${err.message}`, 'error'),
         });
-        if (__DEV__) console.log('✅ Hydrated');
+        log('✅ Hydrated');
       } catch (err) {
-        if (__DEV__)
-          console.warn('Hydration failed, using client render:', err);
+        log(
+          `❌ Hydration failed, using client render: ${err.message}`,
+          'error',
+        );
         root = client.createRoot(container);
         root.render(appElement);
       }
@@ -254,40 +262,45 @@ function renderApp(appElement, container, isInitial) {
 }
 
 // =============================================================================
-// NAVIGATION
+// TRANSITION
 // =============================================================================
 
-function abortNavigation() {
+function abortTransition() {
   if (
-    navigationAbortController &&
-    typeof navigationAbortController.abort === 'function'
+    transitionAbortController &&
+    typeof transitionAbortController.abort === 'function'
   ) {
-    navigationAbortController.abort();
+    transitionAbortController.abort();
   }
-  navigationAbortController = null;
-  isNavigating = false;
+  transitionAbortController = null;
+  isTransitioning = false;
 }
 
-function handleNavigationError(error, isInitial, location) {
+function isChunkLoadError(error) {
+  return (
+    error &&
+    (error.name === 'ChunkLoadError' || error.message.includes('Loading chunk'))
+  );
+}
+
+function handleTransitionError(error, isInitial, location) {
+  log(`❌ Transition error: ${error.message}`, 'error');
+
+  // In development, throw to show full error details
   if (__DEV__) {
-    console.error('❌ Navigation error:', error);
     throw error;
   }
 
   // Production: reload on initial load failure or chunk errors
-  if (
-    isInitial ||
-    (error &&
-      (error.name === 'ChunkLoadError' ||
-        error.message.includes('Loading chunk')))
-  ) {
-    console.warn('Navigation error, reloading...');
+  if (isInitial || isChunkLoadError(error)) {
+    log('🔄 Reloading page to recover...', 'info');
     window.location.reload();
     return;
   }
 
+  // Dispatch error to Redux for error boundary handling
   store.dispatch({
-    type: 'NAVIGATION_ERROR',
+    type: 'TRANSITION_ERROR',
     payload: {
       error: { message: error.message, stack: error.stack },
       location,
@@ -296,23 +309,23 @@ function handleNavigationError(error, isInitial, location) {
   });
 }
 
-async function handlePageChange(location, action) {
+async function onLocationChange(location, action) {
   const isInitial = !action;
 
-  // Abort previous navigation
-  if (isNavigating) abortNavigation();
+  // Abort previous transition
+  if (isTransitioning) abortTransition();
 
-  navigationAbortController = new AbortController();
-  const { signal } = navigationAbortController;
-  isNavigating = true;
+  transitionAbortController = new AbortController();
+  const { signal } = transitionAbortController;
+  isTransitioning = true;
 
   saveScrollPosition();
   if (action === 'PUSH') delete scrollPositionsHistory[location.key];
 
-  store.dispatch({ type: 'NAVIGATION_START', payload: { location, action } });
+  store.dispatch({ type: 'TRANSITION_START', payload: { location, action } });
 
   const loadingTimeout = setTimeout(() => {
-    store.dispatch({ type: 'NAVIGATION_LOADING', payload: true });
+    store.dispatch({ type: 'TRANSITION_LOADING', payload: true });
   }, LOADING_DELAY_MS);
 
   currentLocation = location;
@@ -351,21 +364,21 @@ async function handlePageChange(location, action) {
     }
 
     store.dispatch({
-      type: 'NAVIGATION_SUCCESS',
+      type: 'TRANSITION_SUCCESS',
       payload: { page, location, action },
     });
 
     const container = document.getElementById('app');
     if (!container) {
-      console.error('Root element #app not found');
+      log('❌ Root element #app not found', 'error');
       return;
     }
 
     const appElement = <App context={context}>{page.component}</App>;
-    renderApp(appElement, container, isInitial);
+    renderPage(appElement, container, isInitial);
 
     if (page.title || page.description) {
-      updatePageMetadata({
+      updateMetadata({
         title: page.title,
         description: page.description,
         url: window.location.href,
@@ -375,13 +388,13 @@ async function handlePageChange(location, action) {
     requestAnimationFrame(() => restoreScrollPosition(location));
   } catch (error) {
     if (!signal.aborted) {
-      handleNavigationError(error, isInitial, location);
+      handleTransitionError(error, isInitial, location);
     }
   } finally {
     clearTimeout(loadingTimeout);
-    store.dispatch({ type: 'NAVIGATION_LOADING', payload: false });
-    isNavigating = false;
-    navigationAbortController = null;
+    store.dispatch({ type: 'TRANSITION_LOADING', payload: false });
+    isTransitioning = false;
+    transitionAbortController = null;
   }
 }
 
@@ -393,14 +406,14 @@ function cleanup() {
   // Save scroll position before cleanup
   saveScrollPosition();
 
-  // Unsubscribe from navigation events
-  if (typeof unsubscribeNavigation === 'function') {
-    unsubscribeNavigation();
+  // Unsubscribe from history events
+  if (typeof unlistenHistory === 'function') {
+    unlistenHistory();
   }
-  unsubscribeNavigation = null;
+  unlistenHistory = null;
 
-  // Abort any ongoing navigation
-  abortNavigation();
+  // Abort any ongoing transition
+  abortTransition();
 
   // Dispose WebSocket client (removes all event listeners)
   if (wsClient && typeof wsClient.dispose === 'function') {
@@ -410,7 +423,10 @@ function cleanup() {
 
   // Remove event listeners
   window.removeEventListener('beforeunload', cleanup);
-  window.removeEventListener('scroll', saveScrollPosition, { passive: true });
+  if (scrollHandler) {
+    window.removeEventListener('scroll', scrollHandler, { passive: true });
+    scrollHandler = null;
+  }
 
   // Remove visibility change listener
   if (visibilityChangeHandler) {
@@ -418,7 +434,7 @@ function cleanup() {
     visibilityChangeHandler = null;
   }
 
-  if (__DEV__) console.log('✅ Cleanup completed');
+  log('✅ Cleanup completed', 'info');
 }
 
 async function initializeApp() {
@@ -431,14 +447,11 @@ async function initializeApp() {
 
   // Debounced scroll tracking
   let scrollTimeout;
-  window.addEventListener(
-    'scroll',
-    () => {
-      clearTimeout(scrollTimeout);
-      scrollTimeout = setTimeout(saveScrollPosition, 100);
-    },
-    { passive: true },
-  );
+  scrollHandler = () => {
+    clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(saveScrollPosition, 100);
+  };
+  window.addEventListener('scroll', scrollHandler, { passive: true });
 
   // WebSocket
   try {
@@ -448,41 +461,38 @@ async function initializeApp() {
 
       // Listen for connection events
       wsClient.on(MessageType.WELCOME, data => {
-        if (__DEV__)
-          console.log('✅ WebSocket connected:', data && data.connectionId);
+        log(`✅ WebSocket connected: ${data && data.connectionId}`);
       });
 
       wsClient.on(EventType.AUTHENTICATED, user => {
-        if (__DEV__)
-          console.log('✅ WebSocket authenticated as:', user && user.id);
+        log(`✅ WebSocket authenticated as: ${user && user.id}`);
       });
 
       wsClient.on(EventType.DISCONNECTED, info => {
-        if (__DEV__) console.log('🔌 WebSocket disconnected:', info);
+        log(`🔌 WebSocket disconnected: ${info}`, 'warn');
       });
 
       wsClient.on(EventType.RECONNECTING, attempt => {
-        if (__DEV__)
-          console.log(`🔄 WebSocket reconnecting (attempt ${attempt})`);
+        log(`🔄 WebSocket reconnecting (attempt ${attempt})`, 'warn');
       });
 
       wsClient.on('error', error => {
-        if (__DEV__) console.warn('⚠️ WebSocket error:', error);
+        log(`⚠️ WebSocket error: ${error}`, 'error');
       });
 
       wsClient.connect();
     }
   } catch (error) {
-    if (__DEV__) console.error('WebSocket init failed:', error);
+    log(`❌ WebSocket init failed: ${error}`, 'error');
   }
 
-  if (__DEV__) console.log('🚀 App initialized');
+  log('🚀 App initialized');
 
   // Handle initial page load first
-  await handlePageChange(currentLocation);
+  await onLocationChange(currentLocation);
 
-  // Subscribe to navigation AFTER initial render to avoid duplicate triggers
-  unsubscribeNavigation = history.listen(handlePageChange);
+  // Subscribe to history AFTER initial render to avoid duplicate triggers
+  unlistenHistory = history.listen(onLocationChange);
 
   // Session restoration on tab visibility change:
   // When user returns to tab, check if session is still valid
@@ -498,7 +508,7 @@ async function initializeApp() {
     } catch {
       // Refresh explicitly failed - session is truly expired
       await store.dispatch(logout());
-      if (__DEV__) console.log('⚠️ Session expired while away');
+      log('⚠️ Session expired while away', 'warn');
     }
   };
   document.addEventListener('visibilitychange', visibilityChangeHandler);
@@ -508,14 +518,10 @@ async function initializeApp() {
 // STARTUP
 // =============================================================================
 
-const READY_STATES = new Set(['interactive', 'complete']);
-let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
-let hasStarted = false;
-
 function attemptStartup() {
   if (hasStarted || !isDOMReady) return;
   hasStarted = true;
-  if (__DEV__) console.log('✅ Starting app...');
+  log('✅ Starting app...');
 
   // Initialize views and register routes
   loadViews().then(initializeApp);
@@ -537,7 +543,7 @@ if (isDOMReady) {
 if (module.hot) {
   module.hot.accept(err => {
     if (err) {
-      console.error('❌ HMR error:', err);
+      log(`❌ HMR error: ${err.message}`, 'error');
       return;
     }
     cachedViews = null;
@@ -546,7 +552,7 @@ if (module.hot) {
     schedule(
       () => {
         if (currentLocation.pathname === loc.pathname) {
-          handlePageChange(loc, 'HMR_UPDATE');
+          onLocationChange(loc, 'HMR_UPDATE');
         }
       },
       { timeout: 1000 },
@@ -567,7 +573,7 @@ if (module.hot) {
   });
 
   module.hot.dispose(() => {
-    if (__DEV__) console.log('🔥 HMR dispose');
+    log('🔥 HMR dispose', 'info');
     cleanup();
   });
 }
