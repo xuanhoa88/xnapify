@@ -18,10 +18,13 @@ async function processUpload(data) {
 
   switch (type) {
     case 'UPLOAD_SINGLE':
-      return await fs.upload(filesData[0] || filesData, options);
+      return await fs.upload(filesData[0] || filesData, {
+        ...options,
+        useWorker: false,
+      });
 
     case 'UPLOAD_BATCH':
-      return await fs.upload(filesData, options);
+      return await fs.upload(filesData, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown upload type: ${type}`);

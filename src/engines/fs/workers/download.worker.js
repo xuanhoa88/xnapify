@@ -18,10 +18,10 @@ async function processDownload(data) {
 
   switch (type) {
     case 'DOWNLOAD_SINGLE':
-      return await fs.download(fileNames[0], options);
+      return await fs.download(fileNames[0], { ...options, useWorker: false });
 
     case 'DOWNLOAD_BATCH':
-      return await fs.download(fileNames, options);
+      return await fs.download(fileNames, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown download type: ${type}`);

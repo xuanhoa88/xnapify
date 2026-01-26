@@ -8,7 +8,6 @@
 import engines from '../../engines';
 import { discoverModules } from './autoload';
 import { createCorsMiddleware } from './middlewares/cors';
-import { createCompressionMiddleware } from './middlewares/compression';
 import { createLoggingMiddleware } from './middlewares/logging';
 
 // =============================================================================
@@ -191,7 +190,6 @@ export default async function main(app, config = {}) {
     // Apply global middleware (order matters!)
     guardedApp.use(createLoggingMiddleware()); // Log all requests first
     guardedApp.use(createCorsMiddleware()); // CORS handling
-    guardedApp.use(createCompressionMiddleware()); // Response compression
 
     // Create API middlewares
     const apiMiddlewares = [];

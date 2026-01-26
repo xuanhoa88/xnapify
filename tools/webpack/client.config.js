@@ -11,7 +11,6 @@ const webpack = require('webpack');
 const { merge } = require('webpack-merge');
 const { BundleAnalyzerPlugin } = require('webpack-bundle-analyzer');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const TerserPlugin = require('terser-webpack-plugin');
 const config = require('../config');
 const { isVerbose } = require('../utils/logger');
 const {
@@ -25,17 +24,11 @@ const {
 
 const verbose = isVerbose(); // Cache verbose check
 
-// Initialize base webpack configuration with common settings for all environments
-const baseConfig = createBaseConfig();
-
 /**
  * Configuration for the client-side bundle (client.js)
  * Targets web browsers with optimizations for production
  */
-module.exports = merge(baseConfig, {
-  // Configuration name for multi-compiler mode (used in webpack logs)
-  name: 'client',
-
+module.exports = merge(createBaseConfig('client'), {
   // Build target environment: 'web' for browser execution
   // https://webpack.js.org/configuration/target/
   // This tells webpack to:
@@ -113,7 +106,11 @@ module.exports = merge(baseConfig, {
           const statsData = stats.toJson({
             all: false,
             entrypoints: true,
-            namedChunkGroups: true,
+            assets: true, // Only need asset filenames
+            chunkGroups: false,
+            namedChunkGroups: false,
+            chunks: false,
+            modules: false,
           });
 
           // Filter out hot-update files from entrypoints/namedChunkGroups
@@ -174,7 +171,7 @@ module.exports = merge(baseConfig, {
       ? [
           new BundleAnalyzerPlugin({
             // Mode: 'static' generates HTML report, 'json' for CI, 'server' for interactive
-            analyzerMode: process.env.BUNDLE_ANALYZER_MODE || 'static',
+            analyzerMode: config.env('BUNDLE_ANALYZER_MODE', 'static'),
 
             // Report output paths
             reportFilename: config.resolve(
@@ -189,7 +186,7 @@ module.exports = merge(baseConfig, {
             ),
 
             // Don't open browser automatically (can override with env var)
-            openAnalyzer: process.env.BUNDLE_ANALYZER_OPEN === 'true' || false,
+            openAnalyzer: config.env('BUNDLE_ANALYZER_OPEN') === 'true',
 
             // Generate JSON stats file for CI/CD integration
             generateStatsFile: true,
@@ -239,29 +236,64 @@ module.exports = merge(baseConfig, {
   ].filter(Boolean),
 
   // Client-specific optimization configuration
-  // https://webpack.js.org/configuration/optimization/
   optimization: {
-    // Runtime chunk - separate webpack runtime for better caching (production only)
     runtimeChunk: !isDebug ? 'single' : false,
 
-    // Minification (production only)
-    minimize: !isDebug,
+    // Code splitting - Smart Granular Caching (CLIENT ONLY)
+    // Server doesn't benefit from browser caching or HTTP/2
+    splitChunks: {
+      chunks: 'all',
+      maxInitialRequests: 25,
+      minSize: 20_000,
+      cacheGroups: {
+        // Robust Vendor Splitting: Auto-generates chunk names based on package name
+        // e.g. "vendor.react.js", "vendor.lodash.js"
+        defaultVendors: {
+          test: /[\\/]node_modules[\\/]/,
+          priority: 20,
+          reuseExistingChunk: true,
+          name(module) {
+            // 1. Check if it's a virtual module (no node_modules in path)
+            if (!module.context.includes('node_modules')) {
+              return 'vendor.virtual';
+            }
 
-    // TerserPlugin for client - removes console in production
-    ...(!isDebug
-      ? {
-          minimizer: [
-            new TerserPlugin({
-              parallel: true,
-              terserOptions: {
-                compress: {
-                  drop_console: true, // Remove console.* in production
-                },
-              },
-            }),
-          ],
-        }
-      : {}),
+            // Robust extraction for all package managers (npm, yarn, pnpm)
+            // 2. Get all path segments inside node_modules
+            const segments = module.context.split(/[\\/]node_modules[\\/]/);
+
+            // 3. Take the last segment (closest to the file) to handle pnpm/nested deps
+            let packageName = segments[segments.length - 1].split(/[\\/]/)[0];
+
+            // 4. Handle scoped packages (@scope/pkg)
+            if (packageName.startsWith('@')) {
+              const parts = segments[segments.length - 1].split(/[\\/]/);
+              if (parts.length > 1) {
+                packageName = `${parts[0]}/${parts[1]}`;
+              }
+            }
+
+            // 5. Sanitize name
+            return `vendor.${packageName.replace('@', '').replace('/', '-')}`;
+          },
+        },
+        // Commons: Shared app code
+        commons: {
+          minChunks: 2,
+          priority: 10,
+          reuseExistingChunk: true,
+          chunks: 'async',
+        },
+        // Styles: MONOLITHIC CSS to prevent FOUC
+        styles: {
+          name: 'styles',
+          test: /\.css$/,
+          chunks: 'all',
+          enforce: true,
+          priority: +Infinity,
+        },
+      },
+    },
   },
 
   // Some libraries import Node modules but don't use them in the browser.

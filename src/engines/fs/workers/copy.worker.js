@@ -25,12 +25,12 @@ async function processCopy(data) {
       } = operations;
       return await fs.copy(
         { source: sourceFileName, target: targetFileName },
-        singleOptions || options,
+        { ...(singleOptions || options), useWorker: false },
       );
     }
 
     case 'COPY_BATCH':
-      return await fs.copy(operations, options);
+      return await fs.copy(operations, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown copy type: ${type}`);

@@ -9,11 +9,11 @@ const path = require('path');
 const config = require('../config');
 
 // Environment-based configuration
-const isCI = process.env.CI === 'true';
-const isCoverage = process.env.COVERAGE === 'true';
-const isWatch = process.env.JEST_WATCH === 'true';
-const isVerbose = process.env.JEST_VERBOSE !== 'false';
-const maxWorkers = process.env.JEST_MAX_WORKERS || (isCI ? 2 : '50%');
+const isCI = config.env('CI') === 'true';
+const isCoverage = config.env('COVERAGE') === 'true';
+const isWatch = config.env('JEST_WATCH') === 'true';
+const isVerbose = config.env('JEST_VERBOSE') !== 'false';
+const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? 2 : '50%');
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
@@ -148,7 +148,7 @@ module.exports = {
   /**
    * The root directory that Jest should scan for tests and modules within.
    */
-  rootDir: process.env.CWD || process.cwd(),
+  rootDir: config.CWD,
 
   /**
    * A list of paths to directories that Jest should use to search for files in.

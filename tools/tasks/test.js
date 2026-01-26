@@ -30,7 +30,6 @@ async function main() {
     // Check for common flags
     const isWatch = args.includes('--watch') || args.includes('-w');
     const isCoverage = args.includes('--coverage');
-    const isCI = process.env.CI === 'true';
 
     // Build Jest arguments
     const jestArgs = [
@@ -43,7 +42,7 @@ async function main() {
     ];
 
     // Add CI-specific options
-    if (isCI && !args.includes('--ci')) {
+    if (!args.includes('--ci')) {
       jestArgs.push('--ci');
     }
 
@@ -53,10 +52,10 @@ async function main() {
     }
 
     // Log jest command in debug mode
-    logDebug(`Running: npx jest ${jestArgs.join(' ')}`);
+    logDebug(`Running: jest ${jestArgs.join(' ')}`);
 
     // Spawn Jest process
-    const jestProcess = spawn('npx', ['jest', ...jestArgs], {
+    const jestProcess = spawn('jest', jestArgs, {
       stdio: 'inherit',
       env: {
         ...process.env,

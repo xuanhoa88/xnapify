@@ -259,16 +259,16 @@ async function main() {
   // Deep clean is enabled by default
   // Set CLEAN_DEEP=false to disable
   const isExplicitlyDisabled =
-    process.env.CLEAN_DEEP === 'false' || process.argv.includes('--deep=false');
+    config.env('CLEAN_DEEP') === 'false' ||
+    process.argv.includes('--deep=false');
   const enableDeepClean = !isExplicitlyDisabled;
 
   // Dry run mode - only show what would be deleted
-  const isDryRun = process.env.CLEAN_DRY_RUN === 'true';
+  const isDryRun = config.env('CLEAN_DRY_RUN') === 'true';
 
   // Preservation settings
-  const preserveGit = process.env.CLEAN_PRESERVE_GIT !== 'false';
-  const maxAge =
-    parseInt(process.env.CLEAN_MAX_AGE, 10) || 7 * 24 * 60 * 60 * 1000; // 7 days
+  const preserveGit = config.env('CLEAN_PRESERVE_GIT') !== 'false';
+  const maxAge = parseInt(config.env('CLEAN_MAX_AGE', '604800000'), 10); // 7 days
 
   logInfo(`🧹 Starting enhanced cleanup operation...`);
 

@@ -176,7 +176,7 @@ async function generateBundleReport(analysis, duration) {
     duration,
     webpack: {
       version: webpack.version,
-      mode: process.env.NODE_ENV || 'development',
+      mode: config.env('NODE_ENV', 'development'),
     },
     summary: {
       totalSize: analysis.totalSize,

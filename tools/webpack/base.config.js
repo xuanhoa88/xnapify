@@ -7,10 +7,11 @@
 
 const path = require('path');
 const webpack = require('webpack');
+const TerserPlugin = require('terser-webpack-plugin');
 const config = require('../config');
 
 // Base webpack configuration
-const nodeEnv = process.env.NODE_ENV || 'development';
+const nodeEnv = config.env('NODE_ENV', 'development');
 const isDebug = nodeEnv !== 'production';
 
 // Enable bundle analyze
@@ -190,8 +191,11 @@ const createDefinePluginConfig = extraDefinitions =>
  * Common configuration chunk to be used for both
  * client-side (client.js) and server-side (server.js) bundles
  */
-function createBaseConfig() {
+function createBaseConfig(name) {
   return {
+    // Configuration name for multi-compiler mode (used in webpack logs)
+    name,
+
     // Set webpack mode based on environment
     mode: nodeEnv,
 
@@ -201,46 +205,35 @@ function createBaseConfig() {
     // Common optimization configuration
     // Specific configs (client/server) can override or extend these
     optimization: {
-      // Development: disable ALL optimizations for accurate source maps
-      // Optimizations can cause webpack to rearrange/merge code, breaking source map accuracy
-      ...(isDebug
-        ? {
-            concatenateModules: false,
-            usedExports: false,
-            sideEffects: false,
-            minimize: false,
-          }
-        : {
-            // Production: enable core optimizations
-            concatenateModules: true,
-            usedExports: true,
-            sideEffects: true,
-          }),
+      // Development: disable optimizations for accurate source maps
+      // Production: Webpack enables these by default with mode: 'production'
+      concatenateModules: !isDebug,
+      usedExports: !isDebug,
+      sideEffects: !isDebug,
+      minimize: !isDebug,
 
-      // Stable module/chunk IDs for better caching (both dev and prod)
+      // Stable IDs for better caching
       moduleIds: isDebug ? 'named' : 'deterministic',
       chunkIds: isDebug ? 'named' : 'deterministic',
 
-      // Code splitting - split vendors and common code into separate chunks
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          // Vendors: all node_modules
-          vendors: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            priority: 20,
-            reuseExistingChunk: true,
-          },
-          // Common: shared code (used in 2+ places)
-          common: {
-            minChunks: 2,
-            name: 'common',
-            priority: 10,
-            reuseExistingChunk: true,
-          },
-        },
-      },
+      // Minification (shared for client and server)
+      minimizer: !isDebug
+        ? [
+            new TerserPlugin({
+              parallel: true,
+              terserOptions: {
+                compress: {
+                  // drop_console can be overridden per-target if needed
+                  drop_console: name === 'client',
+                },
+              },
+            }),
+          ]
+        : [],
+
+      // splitChunks: Defined per-target in client.config.js and server.config.js
+      // Client uses granular vendor splitting for browser caching
+      // Server uses defaults (no splitting needed for Node.js)
     },
 
     // Output configuration for server bundle
@@ -423,10 +416,8 @@ function createBaseConfig() {
     // Source maps configuration
     // https://webpack.js.org/configuration/devtool/
     // Development: eval-source-map - highest quality, accurate line/column mappings
-    // Production: source-map - separate .map files for production debugging
-    devtool:
-      process.env.WEBPACK_DEVTOOL ||
-      (isDebug ? 'eval-source-map' : 'source-map'),
+    // Production: disabled to prevent exposing application logic
+    devtool: config.env('WEBPACK_DEVTOOL', isDebug ? 'eval-source-map' : false),
 
     // Plugins
     plugins: [

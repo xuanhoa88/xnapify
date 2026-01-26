@@ -18,10 +18,10 @@ async function processDelete(data) {
 
   switch (type) {
     case 'DELETE_SINGLE':
-      return await fs.remove(fileNames, options);
+      return await fs.remove(fileNames, { ...options, useWorker: false });
 
     case 'DELETE_BATCH':
-      return await fs.remove(fileNames, options);
+      return await fs.remove(fileNames, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown delete type: ${type}`);

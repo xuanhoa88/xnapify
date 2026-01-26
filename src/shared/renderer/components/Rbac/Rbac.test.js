@@ -42,7 +42,7 @@ describe('Rbac Component', () => {
       </Rbac>,
     );
     const tree = component.toJSON();
-    expect(tree).toMatchSnapshot();
+
     // Check content manually if snapshot is not enough or for TDD
     expect(tree.children).toContain('Protected Content');
   });

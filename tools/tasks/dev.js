@@ -486,8 +486,8 @@ async function main() {
   await generateJWT(config.CWD);
 
   // Get port and host from environment variables
-  const port = parseInt(process.env.RSK_PORT, 10) || 1337;
-  const host = process.env.RSK_HOST || 'localhost';
+  const port = parseInt(config.env('RSK_PORT', '1337'), 10);
+  const host = config.env('RSK_HOST', 'localhost');
 
   try {
     // Create Express server instance

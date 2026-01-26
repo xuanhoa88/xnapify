@@ -18,10 +18,10 @@ async function processInfo(data) {
 
   switch (type) {
     case 'GET_FILE_INFO':
-      return await fs.info(fileName, options);
+      return await fs.info(fileName, { ...options, useWorker: false });
 
     case 'PREVIEW_FILE':
-      return await fs.preview(fileName, options);
+      return await fs.preview(fileName, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown info type: ${type}`);

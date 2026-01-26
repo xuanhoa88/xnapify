@@ -9,7 +9,6 @@ const path = require('path');
 const webpack = require('webpack');
 const { merge } = require('webpack-merge');
 const nodeExternals = require('webpack-node-externals');
-const TerserPlugin = require('terser-webpack-plugin');
 const config = require('../config');
 const { isVerbose } = require('../utils/logger');
 const {
@@ -42,10 +41,7 @@ const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
  * Configuration for the server-side bundle (server.js)
  * Targets Node.js environment with CommonJS output
  */
-const webpackServerConfig = merge(createBaseConfig(), {
-  // Configuration name for multi-compiler mode (used in webpack logs)
-  name: 'server',
-
+const webpackServerConfig = merge(createBaseConfig('server'), {
   // Build target environment: 'node' for server-side execution
   // https://webpack.js.org/configuration/target/
   // This tells webpack to:
@@ -100,28 +96,6 @@ const webpackServerConfig = merge(createBaseConfig(), {
       // Note: Image and font rules are inherited from baseConfig
       createCSSRule({ isClient: false }),
     ],
-  },
-
-  // Server-specific optimization configuration
-  optimization: {
-    // Minification (production only)
-    minimize: !isDebug,
-
-    // TerserPlugin for server - keeps console for logging
-    ...(!isDebug
-      ? {
-          minimizer: [
-            new TerserPlugin({
-              parallel: true,
-              terserOptions: {
-                compress: {
-                  // Keep console.* for server-side logging
-                },
-              },
-            }),
-          ],
-        }
-      : {}),
   },
 
   plugins: [

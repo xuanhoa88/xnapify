@@ -11,6 +11,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
+import compression from 'compression';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import createProxy from 'express-http-proxy';
@@ -198,7 +199,7 @@ async function render({ context, component, metadata = {} }) {
     styleLinks.push(...assets.filter(f => /\.css$/i.test(f)));
   } catch (err) {
     if (!__DEV__) {
-      console.error('❌ Missing stats.json:', err.message);
+      console.error('❌ Failed to load stats.json:', err.message);
     }
   }
 
@@ -440,6 +441,24 @@ export default async function main(app, publicDir) {
   // Express configuration
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
   app.disable('x-powered-by');
+
+  // Compression
+  app.use(
+    compression({
+      filter: (req, res) => {
+        // Don't compress responses if the request includes a cache-control: no-transform directive
+        if (
+          req.headers['cache-control'] &&
+          /no-transform/i.test(req.headers['cache-control'])
+        ) {
+          return false;
+        }
+        // Use compression filter function
+        return compression.filter(req, res);
+      },
+      level: __DEV__ ? 1 : 6, // Higher compression in production
+    }),
+  );
 
   // Security headers + Request ID
   app.use((req, res, next) => {

@@ -19,11 +19,17 @@ async function processRename(data) {
   switch (type) {
     case 'RENAME_SINGLE': {
       const { oldName, newName, options: singleOptions } = operations;
-      return await fs.rename({ oldName, newName }, singleOptions || options);
+      return await fs.rename(
+        { oldName, newName },
+        { ...(singleOptions || options), useWorker: false },
+      );
     }
 
     case 'RENAME_BATCH':
-      return await fs.rename(operations.renameOperations, operations.options);
+      return await fs.rename(operations.renameOperations, {
+        ...operations.options,
+        useWorker: false,
+      });
 
     default:
       throw new FilesystemWorkerError(`Unknown rename type: ${type}`);

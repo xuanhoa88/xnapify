@@ -22,12 +22,12 @@ async function processSync(data) {
       const singleOperation = Array.isArray(operations)
         ? operations[0]
         : operations;
-      return await fs.sync(singleOperation, options);
+      return await fs.sync(singleOperation, { ...options, useWorker: false });
     }
 
     case 'SYNC_BATCH':
       // For batch sync, operations is an array of sync operations
-      return await fs.sync(operations, options);
+      return await fs.sync(operations, { ...options, useWorker: false });
 
     default:
       throw new FilesystemWorkerError(`Unknown sync type: ${type}`);
