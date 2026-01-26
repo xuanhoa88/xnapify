@@ -23,10 +23,8 @@ react-starter-kit/
 │   │   └── worker/               # Background workers
 │   ├── modules/                  # Business logic modules
 │   │   ├── users/                # User management, auth, RBAC
-│   ├── components/               # Reusable React components
-│   ├── pages/                    # Page components (auto-discovered routes)
-│   │   ├── admin/                # Admin panel pages
-│   │   └── index.js              # Page discovery and routing
+│   │   ├── (default)/            # Default module (homepage, etc.)
+│   │   │   └── views/            # Module views/pages (auto-discovered)
 │   ├── shared/                   # Shared utilities
 │   │   ├── renderer/             # SSR components (App, Html, Navigator, Redux)
 │   │   ├── fetch/                # Universal HTTP client
@@ -132,11 +130,11 @@ The application uses an auto-discovery system for both API modules and page comp
 - Each module can export models, routes, and initialization logic
 - Modules are loaded in two phases: models first, then routes
 
-**Pages** (`src/pages/index.js`):
+**Views** (`src/bootstrap/views.js`):
 
-- Automatically discovers page components using `require.context`
-- Supports nested routes and admin pages
-- Each page exports a route configuration with path, action, and metadata
+- Automatically discovers views in `src/modules/*/views`
+- Finds and mounts `_route.js` files using a defined hierarchy
+- Merges metadata and props via `getInitialProps`
 
 ### 2. Engines vs Modules
 
@@ -287,24 +285,27 @@ function MyComponent() {
 ### 4. Page Routing
 
 ```javascript
-// src/pages/example/index.js
+// src/modules/(default)/views/example/_route.js
 import React from 'react';
 import ExamplePage from './ExamplePage';
 
-export default {
-  path: '/example',
+// 1. Data Loading & Metadata (Server & Client)
+export async function getInitialProps({ fetch, store, i18n }) {
+  // Fetch data from API
+  const { data } = await fetch('/api/example');
 
-  async action({ fetch, params, query, store }) {
-    // Fetch data, dispatch actions, etc.
-    const data = await fetch('/api/example');
+  // Dispatch Redux actions if needed
+  // await store.dispatch(someAction());
 
-    return {
-      title: 'Example Page',
-      description: 'Example page description',
-      component: <ExamplePage data={data} />,
-    };
-  },
-};
+  return {
+    title: 'Example Page', // Metadata
+    description: 'Example page description',
+    data, // Passed to component as props
+  };
+}
+
+// 2. Component Export
+export default ExamplePage;
 ```
 
 ### 5. API Module Structure
@@ -502,22 +503,24 @@ docker run -p 1337:1337 \
 ### Fetching Data in Pages
 
 ```javascript
-export default {
-  path: '/users',
+// src/modules/(default)/views/users/_route.js
+import React from 'react';
+import UsersPage from './UsersPage';
 
-  async action({ fetch, store }) {
-    // Option 1: Direct fetch
-    const users = await fetch('/api/users');
+export async function getInitialProps({ fetch, store }) {
+  // Option 1: Direct fetch
+  const { data } = await fetch('/api/users');
 
-    // Option 2: Dispatch thunk
-    await store.dispatch(fetchUsers());
+  // Option 2: Dispatch thunk
+  // await store.dispatch(fetchUsers());
 
-    return {
-      title: 'Users',
-      component: <UsersPage />,
-    };
-  },
-};
+  return {
+    title: 'Users',
+    users: data, // Passed as props to component
+  };
+}
+
+export default UsersPage;
 ```
 
 ### Protected Routes

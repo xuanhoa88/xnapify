@@ -3,7 +3,7 @@ Add a new API module with models, controllers, routes, and services.
 ## Module Structure
 
 ```
-src/api/modules/{module-name}/
+src/modules/{module-name}/
 ├── index.js              # Module entry (routes, migrations, seeds)
 ├── models/
 │   ├── index.js          # Model factory + relationships
@@ -28,7 +28,7 @@ src/api/modules/{module-name}/
 ## 1. Create Model
 
 ```javascript
-// src/api/modules/{module}/models/Post.js
+// src/modules/{module}/models/Post.js
 export default function createPostModel({ connection, DataTypes }) {
   const types = DataTypes || connection.constructor.DataTypes;
 
@@ -65,7 +65,7 @@ export default function createPostModel({ connection, DataTypes }) {
 ## 2. Create Models Index with Relationships
 
 ```javascript
-// src/api/modules/{module}/models/index.js
+// src/modules/{module}/models/index.js
 import createPostModel from './Post';
 
 function initializeRelationships(models, parentModels) {
@@ -91,7 +91,7 @@ export default function initializeModels(db, parentModels = {}) {
 ## 3. Create Service
 
 ```javascript
-// src/api/modules/{module}/services/post.service.js
+// src/modules/{module}/services/post.service.js
 export async function getAll(models, options = {}) {
   const { limit = 20, offset = 0 } = options;
   return models.Post.findAndCountAll({ limit, offset });
@@ -124,7 +124,7 @@ export async function destroy(id, models) {
 ## 4. Create Controller
 
 ```javascript
-// src/api/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/controllers/post.controller.js
 import * as postService from '../services/post.service';
 
 export async function getAll(req, res) {
@@ -185,7 +185,7 @@ export async function create(req, res) {
 ## 5. Create Routes
 
 ```javascript
-// src/api/modules/{module}/routes/post.routes.js
+// src/modules/{module}/routes/post.routes.js
 import * as postController from '../controllers/post.controller';
 
 export default function postRoutes(deps, middlewares, app) {
@@ -208,7 +208,7 @@ export default function postRoutes(deps, middlewares, app) {
 ## 6. Create Module Entry
 
 ```javascript
-// src/api/modules/{module}/index.js
+// src/modules/{module}/index.js
 import postRoutes from './routes/post.routes';
 
 const migrationsContext = require.context(
@@ -245,7 +245,7 @@ export default async function postModule(deps, app) {
 ## 7. Create Migration
 
 ```javascript
-// src/api/modules/{module}/database/migrations/YYYY.MM.DD.create-posts-table.js
+// src/modules/{module}/database/migrations/YYYY.MM.DD.create-posts-table.js
 export async function up({ context: queryInterface }) {
   const { DataTypes } = queryInterface.sequelize.constructor;
 
@@ -282,7 +282,7 @@ export async function down({ context: queryInterface }) {
 ### Protected Routes with Permissions
 
 ```javascript
-// src/api/modules/{module}/routes/post.routes.js
+// src/modules/{module}/routes/post.routes.js
 import * as postController from '../controllers/post.controller';
 
 export default function postRoutes(deps, middlewares, app) {
@@ -327,7 +327,7 @@ export default function postRoutes(deps, middlewares, app) {
 ### Check Permissions in Controller
 
 ```javascript
-// src/api/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/controllers/post.controller.js
 export async function update(req, res) {
   const http = req.app.get('http');
   const auth = req.app.get('auth');
@@ -365,7 +365,7 @@ export async function update(req, res) {
 ## Validation with Zod
 
 ```javascript
-// src/api/modules/{module}/utils/validation.js
+// src/modules/{module}/utils/validation.js
 import { z } from 'zod';
 
 export const createPostSchema = z.object({
@@ -420,7 +420,7 @@ router.put(
 For heavy tasks, dispatch to worker instead of blocking the request:
 
 ```javascript
-// src/api/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/controllers/post.controller.js
 import workerPool from '../workers';
 
 export async function generateReport(req, res) {

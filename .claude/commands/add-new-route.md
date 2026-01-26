@@ -1,37 +1,43 @@
-Add a new page/route to the application.
+Add a new view/route to a module.
 
 ## Structure
 
 ```
-src/pages/{page-name}/
-├── index.js          # Route definition + action
-├── {PageName}.js     # Page component
-├── {PageName}.css    # CSS Modules styles
-└── {PageName}.test.js # Tests (optional)
+src/modules/{module-name}/views/{view-path}/
+├── _route.js         # Route definition (metadata, data fetching)
+├── {ViewName}.js     # View component
+├── {ViewName}.css    # CSS Modules styles
+└── {ViewName}.test.js # Tests (optional)
 ```
 
-## 1. Create Page Component
+## 1. Create View Component
 
 ```javascript
-// src/pages/my-page/MyPage.js
-import s from './MyPage.css';
+// src/modules/my-module/views/my-view/MyView.js
+import React from 'react';
+import PropTypes from 'prop-types';
+import s from './MyView.css';
 
-function MyPage() {
+function MyView({ title }) {
   return (
     <div className={s.container}>
-      <h1 className={s.title}>My Page</h1>
-      <p>Page content here</p>
+      <h1 className={s.title}>{title}</h1>
+      <p>View content here</p>
     </div>
   );
 }
 
-export default MyPage;
+MyView.propTypes = {
+  title: PropTypes.string.isRequired,
+};
+
+export default MyView;
 ```
 
 ## 2. Create Styles
 
 ```css
-/* src/pages/my-page/MyPage.css */
+/* src/modules/my-module/views/my-view/MyView.css */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -48,209 +54,82 @@ export default MyPage;
 ## 3. Create Route Definition
 
 ```javascript
-// src/pages/my-page/index.js
-import Layout from '@/components/Layout';
-import MyPage from './MyPage';
+// src/modules/my-module/views/my-view/_route.js
+import MyView from './MyView';
 
 /**
- * Route configuration
+ * Data Loading & Metadata (Server & Client)
  */
-const route = {
-  path: '/my-page',
-};
-
-/**
- * Route action
- */
-function action(context) {
-  const title = context.i18n.t('myPage.title', 'My Page');
+export async function getInitialProps({ fetch, store, i18n }) {
+  // Fetch data if needed
+  // const { data } = await fetch('/api/example');
 
   return {
-    title,
-    component: (
-      <Layout>
-        <MyPage />
-      </Layout>
-    ),
+    title: i18n.t('myView.title', 'My View'), // Page title
+    description: 'Description for SEO',
+    // props passed to component:
+    // data: data
   };
 }
 
-export default [route, action];
+/**
+ * Default Export
+ */
+export default MyView;
 ```
 
 ## 4. Add Navigation Link
 
 ```javascript
-import { Link } from '@/components/History/Link';
+import { Link } from '@/shared/renderer/components/History';
 
-<Link to='/my-page'>My Page</Link>;
+<Link to='/my-module/my-view'>My View</Link>;
 ```
 
 ## Dynamic Routes
 
+Create a folder with brackets `[paramName]` or `(group)` for organization.
+
+```
+src/modules/users/views/[id]/
+├── _route.js
+└── UserProfile.js
+```
+
 ```javascript
-// src/pages/users/:id/index.js
-import Layout from '@/components/Layout';
+// src/modules/users/views/[id]/_route.js
 import UserProfile from './UserProfile';
 
-const route = {
-  path: '/users/:id',
-};
-
-function action(context) {
-  const userId = context.params.id;
+export async function getInitialProps({ fetch, params }) {
+  const { id } = params;
+  const { data: user } = await fetch(`/api/users/${id}`);
 
   return {
-    title: `User ${userId}`,
-    component: (
-      <Layout>
-        <UserProfile userId={userId} />
-      </Layout>
-    ),
+    title: user.name,
+    user,
   };
 }
 
-export default [route, action];
+export default UserProfile;
 ```
 
 ## Protected Routes
 
+Use middleware in `_route.js` (if supported) or handle in component/getInitialProps. Note: Strict middleware support in `_route.js` depends on your router implementation, but typically auth checks happen in `getInitialProps` or via Higher Order Components.
+
 ```javascript
-// src/pages/dashboard/index.js
-import Layout from '@/components/Layout';
+// src/modules/admin/views/dashboard/_route.js
 import Dashboard from './Dashboard';
-import { isAuthenticated } from '@/shared/renderer/redux/features/user/selector';
 
-const route = { path: '/dashboard' };
-
-function action(context) {
-  const state = context.store.getState();
-
-  // Redirect if not authenticated
-  if (!isAuthenticated(state)) {
-    return { redirect: '/login' };
-  }
+export async function getInitialProps({ store, i18n }) {
+  const state = store.getState();
+  // Check auth state
+  // if (!isAuthenticated(state)) return { redirect: '/login' };
 
   return {
     title: 'Dashboard',
-    component: (
-      <Layout>
-        <Dashboard />
-      </Layout>
-    ),
   };
 }
 
-export default [route, action];
-```
-
-## Routes with Form Validation
-
-```javascript
-// src/pages/contact/index.js
-import Layout from '@/components/Layout';
-import ContactForm from './ContactForm';
-
-const route = { path: '/contact' };
-
-function action(context) {
-  return {
-    title: 'Contact Us',
-    description: 'Get in touch with us',
-    component: (
-      <Layout>
-        <ContactForm />
-      </Layout>
-    ),
-  };
-}
-
-export default [route, action];
-```
-
-```javascript
-// src/pages/contact/ContactForm.js
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
-
-const schema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  email: z.string().email('Invalid email address'),
-  message: z.string().min(10, 'Message must be at least 10 characters'),
-});
-
-function ContactForm() {
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm({
-    resolver: zodResolver(schema),
-  });
-
-  const onSubmit = async data => {
-    // Handle form submission
-    console.log(data);
-  };
-
-  return (
-    <form onSubmit={handleSubmit(onSubmit)}>
-      <div>
-        <input {...register('name')} placeholder='Name' />
-        {errors.name && <span>{errors.name.message}</span>}
-      </div>
-
-      <div>
-        <input {...register('email')} placeholder='Email' />
-        {errors.email && <span>{errors.email.message}</span>}
-      </div>
-
-      <div>
-        <textarea {...register('message')} placeholder='Message' />
-        {errors.message && <span>{errors.message.message}</span>}
-      </div>
-
-      <button type='submit'>Send</button>
-    </form>
-  );
-}
-
-export default ContactForm;
-```
-
-## Parent Routes with Children
-
-```javascript
-// src/pages/admin/index.js
-import Layout from '@/components/Layout';
-import { isAuthenticated } from '@/shared/renderer/redux/features/user/selector';
-
-const pagesContext = require.context('./', true, /^\.\/[^/]+\/index\.js$/);
-
-const route = async buildPages => {
-  const children = await buildPages(pagesContext);
-  return {
-    path: '/admin',
-    autoDelegate: false,
-    children,
-  };
-};
-
-async function action(context) {
-  // Auth check
-  if (!isAuthenticated(context.store.getState())) {
-    return { redirect: '/login' };
-  }
-
-  // Delegate to children
-  const childResult = await context.next();
-
-  return {
-    title: childResult?.title || 'Admin',
-    component: <Layout>{childResult?.component}</Layout>,
-  };
-}
-
-export default [route, action];
+export default Dashboard;
 ```

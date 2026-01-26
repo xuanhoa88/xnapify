@@ -62,11 +62,9 @@ src/
 │   ├── schedule/     # Cron jobs
 │   ├── webhook/      # Webhook handling
 │   └── worker/       # Background workers
-├── modules/          # Business logic modules
+├── modules/          # Business logic & Views (auto-discovered)
 │   ├── users/        # User management, auth, RBAC
-├── components/       # Reusable React components
-├── pages/            # Page components (routes)
-│   └── admin/        # Admin panel routes
+│   ├── (default)/    # Default module (homepage, etc.)
 ├── shared/           # Shared utilities
 │   ├── renderer/     # SSR utilities and Redux store
 │   ├── fetch/        # API client
