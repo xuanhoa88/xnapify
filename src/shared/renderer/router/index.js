@@ -10,6 +10,8 @@ import {
   ROUTE_UNMOUNT_KEY,
   ROUTE_PREV_KEY,
   ROUTE_PREV_CTX,
+  ROUTE_REGISTERED_KEY,
+  ROUTE_UNREGISTERED_KEY,
 } from './constants';
 import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
@@ -17,8 +19,18 @@ import { runBoot, runMount, runUnmount } from './lifecycle';
 import { createMatcher, clearMatchCache } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
+// ============================================================================
+// Helpers
+// ============================================================================
+
+/**
+ * Default route resolver
+ * @param {Object} ctx - Route context
+ * @param {Object} options - Router options
+ */
 export async function defaultResolver(ctx, options) {
-  if (!ctx.route || typeof ctx.route.action !== 'function') return undefined;
+  if (!ctx || !ctx.route || typeof ctx.route.action !== 'function')
+    return undefined;
 
   const hasChildren =
     Array.isArray(ctx.route.children) && ctx.route.children.length > 0;
@@ -43,6 +55,60 @@ export async function defaultResolver(ctx, options) {
   return result;
 }
 
+/**
+ * Traverse routes and invoke a lifecycle method
+ * @param {Array} routes - Routes to traverse
+ * @param {string} method - 'register' or 'unregister'
+ * @param {Object} context - App context
+ * @param {boolean} childrenFirst - If true, process children before parent (for cleanup)
+ * @returns {Promise<number>} Count of invoked methods
+ */
+async function traverseRoutes(routes, method, context, childrenFirst = false) {
+  let count = 0;
+
+  const processChildren = async route => {
+    if (Array.isArray(route.children) && route.children.length > 0) {
+      await walk(route.children);
+    }
+  };
+
+  const walk = async routeList => {
+    if (!Array.isArray(routeList)) return;
+
+    for (const route of routeList) {
+      // Skip null/undefined routes
+      if (!route || typeof route !== 'object') continue;
+
+      try {
+        // Process children first for cleanup (unregister)
+        if (childrenFirst) {
+          await processChildren(route);
+        }
+
+        // Invoke lifecycle method if available
+        if (route.module && typeof route.module[method] === 'function') {
+          log(`${method}: ${route.path}`);
+          await route.module[method](context);
+          count += 1;
+        }
+
+        // Process children after parent for registration
+        if (!childrenFirst) {
+          await processChildren(route);
+        }
+      } catch (err) {
+        log(
+          `Error ${method} route ${route.path || '(unknown)'}: ${err.message}`,
+          'error',
+        );
+      }
+    }
+  };
+
+  await walk(routes);
+  return count;
+}
+
 // ============================================================================
 // Router Class
 // ============================================================================
@@ -57,6 +123,8 @@ export class Router {
     this.routes = [];
     this.configs = new Map();
     this.layouts = new Map();
+    this[ROUTE_REGISTERED_KEY] = false;
+    this[ROUTE_UNREGISTERED_KEY] = false;
 
     if (moduleLoader) {
       const routes = collect(moduleLoader, 'routes');
@@ -73,57 +141,35 @@ export class Router {
   }
 
   /**
-   * Traverse routes and invoke a lifecycle method
-   * @param {string} method - 'register' or 'unregister'
-   * @param {Object} context - App context
-   * @param {boolean} childrenFirst - If true, process children before parent (for cleanup)
-   */
-  _traverseRoutes(method, context, childrenFirst = false) {
-    let count = 0;
-    const walk = routes => {
-      routes.forEach(route => {
-        // Process children first for cleanup (unregister)
-        if (childrenFirst && route.children) {
-          walk(route.children);
-        }
-
-        if (route.module && typeof route.module[method] === 'function') {
-          try {
-            log(`${method}: ${route.path}`);
-            route.module[method](context);
-            count += 1;
-          } catch (err) {
-            log(`Error ${method} route ${route.path}: ${err.message}`, 'error');
-          }
-        }
-
-        // Process children after parent for registration
-        if (!childrenFirst && route.children) {
-          walk(route.children);
-        }
-      });
-    };
-    walk(this.routes);
-    return count;
-  }
-
-  /**
    * Register routes with the application context
+   * @param {Object} context - App context
+   * @param {boolean} force - Force re-registration even if already registered
    */
-  register(context) {
+  async register(context, force = false) {
+    if (this[ROUTE_REGISTERED_KEY] && !force) return;
+    this[ROUTE_REGISTERED_KEY] = true;
+
     log('Starting Route Registration...');
-    // eslint-disable-next-line no-underscore-dangle
-    const count = this._traverseRoutes('register', context, false);
+    const count = await traverseRoutes(this.routes, 'register', context, false);
     log(`Route Registration Complete. Registered ${count} modules.`);
   }
 
   /**
    * Unregister routes from the application context (children-first order)
+   * @param {Object} context - App context
+   * @param {boolean} force - Force unregistration even if not registered
    */
-  unregister(context) {
+  async unregister(context, force = false) {
+    if (this[ROUTE_UNREGISTERED_KEY] && !force) return;
+    this[ROUTE_UNREGISTERED_KEY] = true;
+
     log('Starting Route Unregistration...');
-    // eslint-disable-next-line no-underscore-dangle
-    const count = this._traverseRoutes('unregister', context, true);
+    const count = await traverseRoutes(
+      this.routes,
+      'unregister',
+      context,
+      true,
+    );
     log(`Route Unregistration Complete. Unregistered ${count} modules.`);
   }
 
@@ -136,13 +182,6 @@ export class Router {
       context = { pathname: context };
     }
 
-    // Auto-invoke registration (idempotent, errors caught in _traverseRoutes)
-    this.register(context);
-
-    const resolver =
-      typeof this.options.routeResolver === 'function'
-        ? this.options.routeResolver
-        : defaultResolver;
     const ctx = {
       ...this.options.context,
       ...context,
@@ -154,6 +193,14 @@ export class Router {
     if (typeof ctx.pathname !== 'string' || !ctx.pathname) {
       throw createError('Context must have a valid pathname', 400);
     }
+
+    const resolver =
+      typeof this.options.routeResolver === 'function'
+        ? this.options.routeResolver
+        : defaultResolver;
+
+    // Auto-invoke registration (idempotent, errors caught in _traverseRoutes)
+    await this.register(ctx);
 
     const matcher = createMatcher(
       { children: this.routes },
