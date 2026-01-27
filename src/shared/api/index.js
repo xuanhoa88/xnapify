@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createContextAdapter } from '../context';
+
 // Auto-load engines via require.context
-const enginesContext = require.context(
-  './',
-  true,
-  /^\.\/[^/]+\/index\.(js|ts)$/,
+const enginesAdapter = createContextAdapter(
+  require.context('./', true, /^\.\/[^/]+\/index\.(js|ts)$/),
 );
 
 /**
@@ -18,12 +18,12 @@ const enginesContext = require.context(
  */
 const engines = {};
 
-enginesContext.keys().forEach(modulePath => {
+enginesAdapter.files().forEach(modulePath => {
   // Extract engine name: './db/index.js' -> 'db'
   const engineName = modulePath.match(/^\.\/([^/]+)\//)[1];
 
   // Load the engine module
-  const mod = enginesContext(modulePath);
+  const mod = enginesAdapter.load(modulePath);
 
   // Store the full module namespace to preserve both default and named exports
   engines[engineName] = mod;

@@ -28,10 +28,10 @@ const WORKER_CONFIG = Object.freeze({
 });
 
 // Auto-load workers via require.context (*.worker.js or *.worker.ts)
-const workersContext = require.context('./', false, /\.worker\.(js|ts)$/);
+const workersAdapter = require.context('./', false, /\.worker\.(js|ts)$/);
 
 // Create worker pool with email-specific configuration
-const workerPool = createWorkerPool(workersContext, {
+const workerPool = createWorkerPool(workersAdapter, {
   ErrorHandler: EmailWorkerError,
   engineName: '📧 Email',
   maxWorkers: WORKER_CONFIG.maxWorkers,

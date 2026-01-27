@@ -7,24 +7,14 @@
 
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
+import { createContextAdapter } from '../shared/context';
 
 // Webpack context for all collectable module files
-// Note: require.context requires a static regex literal for webpack to analyze
-const modulesContext = require.context(
+const modulesAdapter = require.context(
   '../modules',
   true,
   /(?:\/views\/.*\/(?:_route|_layout)|\/\(routes\)\/\([^)]+\)|\/\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
-
-/**
- * Creates an adapter for webpack's require.context to match the expected interface
- */
-function createContextAdapter(ctx) {
-  return {
-    files: () => ctx.keys(),
-    load: path => ctx(path),
-  };
-}
 
 /**
  * AppRouter extends the base Router to add custom metadata handling
@@ -67,11 +57,11 @@ class AppRouter extends Router {
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter() {
-  const router = new AppRouter(createContextAdapter(modulesContext), {
+  const router = new AppRouter(createContextAdapter(modulesAdapter), {
     context: {
       // Init context here if needed
     },
-    errorHandler: async (error, ctx) => {
+    errorHandler(error, ctx) {
       // Handle other errors (500, etc)
       if (__DEV__ && error.status !== 403) {
         console.error('Router Error:', error);

@@ -9,8 +9,8 @@ import { discoverModules, engines } from '../../shared/api';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 
-// Discover and mount modules
-const modulesContext = require.context(
+// Discover and mount modules - wrap at declaration for consistency
+const modulesAdapter = require.context(
   '../../modules',
   true,
   /\/index\.[cm]?[jt]s$/,
@@ -212,7 +212,7 @@ export default async function main(app, config = {}) {
 
     // Discover and mount modules
     const { apiRoutes, apiModels } = await discoverModules(
-      modulesContext,
+      modulesAdapter,
       guardedApp,
     );
 

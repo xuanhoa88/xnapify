@@ -117,7 +117,7 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
  * Router class for file-based routing
  */
 export class Router {
-  constructor(moduleLoader, options) {
+  constructor(adapter, options) {
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
     this.routes = [];
@@ -126,10 +126,10 @@ export class Router {
     this[ROUTE_REGISTERED_KEY] = false;
     this[ROUTE_UNREGISTERED_KEY] = false;
 
-    if (moduleLoader) {
-      const routes = collect(moduleLoader, 'routes');
-      this.configs = collect(moduleLoader, 'configs');
-      this.layouts = collect(moduleLoader, 'layouts');
+    if (adapter) {
+      const routes = collect(adapter, 'routes');
+      this.configs = collect(adapter, 'configs');
+      this.layouts = collect(adapter, 'layouts');
       this.routes = buildRoutes(routes, this.configs, this.layouts);
     } else if (this.options.routes) {
       this.routes = this.options.routes;

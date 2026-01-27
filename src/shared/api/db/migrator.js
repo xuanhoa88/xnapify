@@ -5,15 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
+import { createContextAdapter } from '../../context';
 
 // Auto-load migrations via require.context
-const migrationsContext = require.context('./migrations', false, /\.(js|ts)$/);
+const migrationsAdapter = require.context('./migrations', false, /\.(js|ts)$/);
 
 // Auto-load seeds via require.context
-const seedsContext = require.context('./seeds', false, /\.(js|ts)$/);
+const seedsAdapter = require.context('./seeds', false, /\.(js|ts)$/);
 
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'
@@ -27,43 +27,31 @@ function extractFileName(key) {
 }
 
 /**
- * Resolve absolute path from require.context
+ * Resolve absolute path from context adapter
  */
-function resolveAbsolutePath(context, key) {
-  // Method 1: Use context.resolve() if available (webpack provides this)
-  if (typeof context.resolve === 'function') {
+function resolveAbsolutePath(adapter, key) {
+  // Method 1: Use adapter.resolve() if available
+  if (typeof adapter.resolve === 'function') {
     try {
-      return context.resolve(key);
+      return adapter.resolve(key);
     } catch {
       // Fall through to alternative methods
     }
   }
 
-  // Method 2: Use require.resolve with context.id
-  // context.id contains the base path
-  if (context.id) {
-    try {
-      const basePath = context.id.split(' ')[0]; // Extract base path from context.id
-      const normalizedKey = key.replace(/^\.\//, '');
-      return path.resolve(basePath, normalizedKey);
-    } catch {
-      // Fall through
-    }
-  }
-
-  // Method 3: Fallback to relative path if absolute path cannot be determined
+  // Method 2: Fallback to relative path if absolute path cannot be determined
   return key;
 }
 
 /**
- * Convert require.context to umzug migrations (auto-deduplicated by filename)
+ * Convert context adapter to umzug migrations (auto-deduplicated by filename)
  */
-function contextToMigrations(context, prefix) {
-  const allKeys = context.keys();
+function adapterToMigrations(adapter, prefix) {
+  const allKeys = adapter.files();
   const uniqueMigrations = new Map();
 
   allKeys.forEach(key => {
-    const migration = context(key);
+    const migration = adapter.load(key);
     const fileName = extractFileName(key);
 
     // Create unique name with module prefix
@@ -73,7 +61,7 @@ function contextToMigrations(context, prefix) {
     if (!uniqueMigrations.has(name)) {
       uniqueMigrations.set(name, {
         name,
-        path: resolveAbsolutePath(context, key), // Use absolute path
+        path: resolveAbsolutePath(adapter, key), // Use absolute path
         up: async ({ context }) =>
           typeof migration.up === 'function' &&
           (await migration.up({ name, context, Sequelize })),
@@ -135,7 +123,9 @@ function mergeMigrations(migrationSources) {
       throw error;
     }
 
-    const migrations = contextToMigrations(source.context, source.prefix);
+    // Wrap raw context with adapter
+    const adapter = createContextAdapter(source.context);
+    const migrations = adapterToMigrations(adapter, source.prefix);
 
     migrations.forEach(migration => {
       if (allMigrations.has(migration.name)) {
@@ -189,7 +179,8 @@ function createMigrationUmzug(migrations, connection, logger = console) {
 
   if (migrations == null) {
     // Use built-in bundled migrations
-    migrationsConfig = contextToMigrations(migrationsContext);
+    const adapter = createContextAdapter(migrationsAdapter);
+    migrationsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(migrations)) {
     // Array of {context, prefix} objects
     migrationsConfig = mergeMigrations(migrations);
@@ -232,7 +223,8 @@ function createSeedUmzug(seeds, connection, logger = console) {
 
   if (seeds == null) {
     // Use built-in bundled seeds
-    seedsConfig = contextToMigrations(seedsContext);
+    const adapter = createContextAdapter(seedsAdapter);
+    seedsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(seeds)) {
     // Array of {context, prefix} objects
     seedsConfig = mergeMigrations(seeds);

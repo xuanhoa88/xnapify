@@ -36,10 +36,12 @@ function Drawer() {
   const isAuth = useSelector(isAuthenticated);
   const user = useSelector(getUserProfile);
 
-  const [currentPath, setCurrentPath] = useState('');
+  const [currentPath, setCurrentPath] = useState(
+    () => history.location.pathname,
+  );
 
   useEffect(() => {
-    setCurrentPath(history.location.pathname);
+    // Subscribe to location changes
     const unsubscribe = history.listen(location => {
       setCurrentPath(location.pathname);
     });

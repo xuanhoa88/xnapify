@@ -20,6 +20,7 @@
 import { fork } from 'child_process';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
+import { createContextAdapter } from '../../context';
 import { WorkerError } from './errors';
 
 /**
@@ -36,7 +37,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 /**
  * Create a WorkerPool instance for a specific engine
  *
- * @param {Object} workersContext - webpack require.context for worker files
+ * @param {Object} workersAdapter - webpack require.context for worker files
  * @param {Object} options - Configuration options
  * @param {class} options.ErrorHandler - Error class to use for worker errors
  * @param {string} options.engineName - Name of the engine (for logging)
@@ -45,7 +46,10 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
  * @param {number} options.maxRequestsPerWorker - Max requests per worker before restart
  * @returns {WorkerPool} Worker service instance
  */
-export function createWorkerPool(workersContext, options = {}) {
+export function createWorkerPool(workersAdapter, options = {}) {
+  // Wrap context with adapter for consistent interface
+  const adapter = createContextAdapter(workersAdapter);
+
   const {
     ErrorHandler = WorkerError,
     engineName = 'Worker',
@@ -60,12 +64,12 @@ export function createWorkerPool(workersContext, options = {}) {
   const workerModuleCache = new Map();
 
   /**
-   * Get available worker types from require.context
+   * Get available worker types from context adapter
    * @returns {Array<string>} Array of available worker names
    */
   function getAvailableWorkers() {
-    return workersContext
-      .keys()
+    return adapter
+      .files()
       .map(key => {
         const match = key.match(/^\.\/(.+)\.worker\.js$/);
         return match ? match[1] : null;
@@ -85,12 +89,12 @@ export function createWorkerPool(workersContext, options = {}) {
 
     const workerKey = `./${workerName}.worker.js`;
 
-    if (!workersContext.keys().includes(workerKey)) {
+    if (!adapter.files().includes(workerKey)) {
       return null;
     }
 
     try {
-      const workerModule = workersContext(workerKey);
+      const workerModule = adapter.load(workerKey);
       workerModuleCache.set(workerName, workerModule);
       return workerModule;
     } catch (error) {
@@ -110,14 +114,14 @@ export function createWorkerPool(workersContext, options = {}) {
   function getWorkerPath(workerName) {
     const workerKey = `./${workerName}.worker.js`;
 
-    if (!workersContext.keys().includes(workerKey)) {
+    if (!adapter.files().includes(workerKey)) {
       const availableWorkers = getAvailableWorkers().join(', ');
       throw new ErrorHandler(
         `Worker '${workerName}' not found. Available workers: ${availableWorkers}`,
       );
     }
 
-    return workersContext.resolve(workerKey);
+    return adapter.resolve(workerKey);
   }
 
   /**

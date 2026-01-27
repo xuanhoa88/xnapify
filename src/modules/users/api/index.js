@@ -14,14 +14,14 @@ import permissionRoutes from './routes/admin/permission.routes';
 import groupRoutes from './routes/admin/group.routes';
 
 // Auto-load migrations via require.context
-const migrationsContext = require.context(
+const migrationsAdapter = require.context(
   './database/migrations',
   false,
   /\.(js|ts)$/,
 );
 
 // Auto-load seeds via require.context
-const seedsContext = require.context('./database/seeds', false, /\.(js|ts)$/);
+const seedsAdapter = require.context('./database/seeds', false, /\.(js|ts)$/);
 
 /**
  * User Module Factory
@@ -56,13 +56,13 @@ export default async function userModule(deps, app) {
 
   // Initialize database migrations
   await db.runMigrations(
-    [{ context: migrationsContext, prefix: 'users' }],
+    [{ context: migrationsAdapter, prefix: 'users' }],
     db.connection,
   );
 
   // Initialize database seeds
   await db.runSeeds(
-    [{ context: seedsContext, prefix: 'users' }],
+    [{ context: seedsAdapter, prefix: 'users' }],
     db.connection,
   );
 

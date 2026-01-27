@@ -20,10 +20,10 @@ import { createWorkerPool } from '../../worker';
 import { FilesystemWorkerError } from '../utils';
 
 // Auto-load workers via require.context (*.worker.js or *.worker.ts)
-const workersContext = require.context('./', false, /\.worker\.(js|ts)$/);
+const workersAdapter = require.context('./', false, /\.worker\.(js|ts)$/);
 
 // Create worker pool with filesystem-specific configuration
-const workerPool = createWorkerPool(workersContext, {
+const workerPool = createWorkerPool(workersAdapter, {
   ErrorHandler: FilesystemWorkerError,
   engineName: '📁 Filesystem',
 });
