@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import i18n from '../i18n/instance';
+import i18n from '../i18n/getInstance';
 import { addNamespace } from '../i18n/addNamespace';
 import { getTranslations } from '../i18n/getTranslations';
 import { formatZodErrorToObject } from './formatter';

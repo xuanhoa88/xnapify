@@ -6,7 +6,7 @@
  */
 
 import { initReactI18next } from 'react-i18next';
-import i18nInstance from './instance';
+import i18nInstance from './getInstance';
 import { getTranslations } from './getTranslations';
 import { addNamespace } from './addNamespace';
 
