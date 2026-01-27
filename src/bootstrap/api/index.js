@@ -5,10 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import engines from '../../engines';
-import { discoverModules } from './autoload';
+import { discoverModules, engines } from '../../shared/api';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
+
+// Discover and mount modules
+const modulesContext = require.context(
+  '../../modules',
+  true,
+  /\/index\.[cm]?[jt]s$/,
+);
 
 // =============================================================================
 // PROVIDER GUARD SYSTEM
@@ -205,7 +211,13 @@ export default async function main(app, config = {}) {
     }
 
     // Discover and mount modules
-    const { apiRoutes } = await discoverModules(guardedApp);
+    const { apiRoutes, apiModels } = await discoverModules(
+      modulesContext,
+      guardedApp,
+    );
+
+    // Set models to app
+    guardedApp.set('models', apiModels);
 
     // Mount API routes with middleware stack
     guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);

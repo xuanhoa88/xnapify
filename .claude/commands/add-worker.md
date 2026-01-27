@@ -12,7 +12,7 @@ Use workers for:
 ## Structure
 
 ```
-src/api/{engine-or-module}/workers/
+src/modules/{module}/workers/
 ├── index.js                    # Worker pool
 ├── {task-name}.worker.js       # Worker handler
 └── {task-name}.worker.test.js  # Worker tests
@@ -21,8 +21,8 @@ src/api/{engine-or-module}/workers/
 ## 1. Create Worker Handler
 
 ```javascript
-// src/api/modules/posts/workers/generate-report.worker.js
-import { createWorkerHandler } from '@/api/engines/worker';
+// src/modules/posts/workers/generate-report.worker.js
+import { createWorkerHandler } from '@/shared/api/worker';
 
 /**
  * Generate posts report
@@ -35,7 +35,8 @@ async function generateReportLogic(payload) {
   const { startDate, endDate } = payload;
 
   // Heavy processing here
-  const models = require('@/api/engines/db').default.models;
+  const { connection } = require('@/shared/api/db');
+  const models = connection.models;
   const posts = await models.Post.findAll({
     where: {
       createdAt: {
@@ -61,8 +62,8 @@ export default createWorkerHandler(generateReportLogic, 'GENERATE_REPORT');
 ## 2. Create Worker Pool
 
 ```javascript
-// src/api/modules/posts/workers/index.js
-import { createWorkerPool } from '@/api/engines/worker';
+// src/modules/posts/workers/index.js
+import { createWorkerPool } from '@/shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
 
@@ -79,7 +80,7 @@ export default workerPool;
 ### From API Endpoint
 
 ```javascript
-// src/api/modules/posts/controllers/report.controller.js
+// src/modules/posts/controllers/report.controller.js
 import workerPool from '../workers';
 
 export async function generateReport(req, res) {
@@ -105,8 +106,8 @@ export async function generateReport(req, res) {
 ### From Scheduled Task
 
 ```javascript
-// src/api/modules/posts/index.js
-import schedule from '@/api/engines/schedule';
+// src/modules/posts/index.js
+import schedule from '@/shared/api/schedule';
 import workerPool from './workers';
 
 export default async function postsModule(deps, app) {
@@ -138,8 +139,8 @@ export default async function postsModule(deps, app) {
 ## 4. Worker with Error Handling
 
 ```javascript
-// src/api/modules/posts/workers/process-images.worker.js
-import { createWorkerHandler } from '@/api/engines/worker';
+// src/modules/posts/workers/process-images.worker.js
+import { createWorkerHandler } from '@/shared/api/worker';
 
 async function processImagesLogic(payload) {
   const { postId, images } = payload;
@@ -182,7 +183,7 @@ export default createWorkerHandler(processImagesLogic, 'PROCESS_IMAGES');
 ## 5. Testing Workers
 
 ```javascript
-// src/api/modules/posts/workers/generate-report.worker.test.js
+// src/modules/posts/workers/generate-report.worker.test.js
 import workerHandler from './generate-report.worker';
 
 describe('[worker] generate-report', () => {

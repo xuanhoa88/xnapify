@@ -19,7 +19,7 @@ import expressRequestLanguage from 'express-request-language';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
-import { configureJwt } from './engines/auth/jwt';
+import { configureJwt } from './shared/jwt';
 import {
   configureStore,
   setRuntimeVariable,
@@ -433,7 +433,8 @@ export function serve(app, port = config.port, host = config.host) {
 
 export default async function main(app, publicDir) {
   // JWT Configuration
-  configureJwt(app);
+  const jwt = configureJwt();
+  app.set('jwt', jwt);
 
   // Expose i18n to API routes
   app.set('i18n', i18n);

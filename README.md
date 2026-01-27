@@ -50,22 +50,16 @@ Open [http://localhost:1337](http://localhost:1337)
 
 ```
 src/
-├── bootstrap/        # API bootstrap logic
-├── engines/          # Core API infrastructure
-│   ├── auth/         # Authentication & JWT
-│   ├── cache/        # Caching layer
-│   ├── db/           # Database & Sequelize
-│   ├── email/        # Email service
-│   ├── fs/           # File system utilities
-│   ├── http/         # HTTP response helpers
-│   ├── queue/        # Job queue
-│   ├── schedule/     # Cron jobs
-│   ├── webhook/      # Webhook handling
-│   └── worker/       # Background workers
+├── bootstrap/        # Application bootstrap & configuration
 ├── modules/          # Business logic & Views (auto-discovered)
-│   ├── users/        # User management, auth, RBAC
 │   ├── (default)/    # Default module (homepage, etc.)
+│   └── ...           # Other modules
 ├── shared/           # Shared utilities
+│   ├── api/          # Core API infrastructure
+│   │   ├── auth/     # Auth middlewares & cookies
+│   │   ├── db/       # Database & Sequelize
+│   │   └── ...       # cache, email, fs, http, queue, etc.
+│   ├── jwt/          # JWT configuration & utilities
 │   ├── renderer/     # SSR utilities and Redux store
 │   ├── fetch/        # API client
 │   ├── ws/           # WebSocket client
@@ -163,18 +157,18 @@ For production deployments, consider:
 
 ### API Architecture
 
-The API is structured into **Engines** and **Modules**:
+The API is structured into **Shared API** and **Modules**:
 
-**Engines** (`src/engines/`):
+**Shared API** (`src/shared/api/` & `src/shared/jwt/`):
 
-- Core infrastructure components: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`
+- Core infrastructure components: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`, `jwt`
 - Provide reusable capabilities for modules
 - Should not contain business logic
 
 **Modules** (`src/modules/`):
 
 - Business logic domains: `users`, `homepage`
-- Consume engines to implement features
+- Consume shared API to implement features
 - Auto-discovered and loaded at startup
 
 **Key Pattern - Schedule + Worker + Queue:**

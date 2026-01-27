@@ -2,416 +2,225 @@ Setup WebSocket for real-time bidirectional communication.
 
 ## Overview
 
-WebSocket server runs alongside Express, providing real-time communication between server and clients.
+The application includes a robust, shared WebSocket implementation located in `src/shared/ws`.
 
-## Server-Side Setup
+- **Server**: Initialized in `src/server.js` and accessible via `app.get('ws')`.
+- **Client**: Initialized in `src/client.js` and accessible via the `useWebSocket` utility.
 
-The WebSocket server is already initialized in `src/server.js`. To add custom event handlers:
+## Server-Side Usage
 
-### 1. Create WebSocket Handler
+The WebSocket server is already configured and running. You do **not** need to create a new server.
+
+### 1. Accessing the WebSocket Server
+
+In your API modules or routes, access the WebSocket server instance from the Express `app`:
 
 ```javascript
-// src/api/modules/chat/websocket.js
-export function initChatWebSocket(wss, jwt) {
-  // Store active connections
-  const connections = new Map();
+// src/modules/chat/index.js
+export default async function chatModule(app) {
+  const ws = app.get('ws'); // Note: key is 'ws', not 'wss'
 
-  wss.on('connection', (ws, req) => {
-    const userId = req.user?.id;
-
-    if (!userId) {
-      ws.close(1008, 'Unauthorized');
-      return;
-    }
-
-    // Store connection
-    connections.set(userId, ws);
-    console.log(`User ${userId} connected via WebSocket`);
-
-    // Handle messages
-    ws.on('message', async data => {
-      try {
-        const message = JSON.parse(data);
-
-        switch (message.type) {
-          case 'chat:send':
-            await handleChatMessage(message.payload, userId, connections);
-            break;
-          case 'chat:typing':
-            broadcastTyping(message.payload, userId, connections);
-            break;
-          default:
-            ws.send(JSON.stringify({ error: 'Unknown message type' }));
-        }
-      } catch (error) {
-        console.error('WebSocket message error:', error);
-        ws.send(JSON.stringify({ error: 'Invalid message format' }));
-      }
-    });
-
-    // Handle disconnect
-    ws.on('close', () => {
-      connections.delete(userId);
-      console.log(`User ${userId} disconnected`);
-    });
-
-    // Send welcome message
-    ws.send(
-      JSON.stringify({
-        type: 'connected',
-        payload: { userId, timestamp: Date.now() },
-      }),
-    );
-  });
-
-  return { connections };
-}
-
-async function handleChatMessage(payload, senderId, connections) {
-  const { recipientId, text } = payload;
-
-  // Save to database
-  const models = require('@/api/engines/db').default.models;
-  const message = await models.Message.create({
-    senderId,
-    recipientId,
-    text,
-  });
-
-  // Send to recipient if online
-  const recipientWs = connections.get(recipientId);
-  if (recipientWs && recipientWs.readyState === 1) {
-    recipientWs.send(
-      JSON.stringify({
-        type: 'chat:message',
-        payload: message,
-      }),
-    );
-  }
-
-  // Confirm to sender
-  const senderWs = connections.get(senderId);
-  if (senderWs) {
-    senderWs.send(
-      JSON.stringify({
-        type: 'chat:sent',
-        payload: message,
-      }),
-    );
-  }
-}
-
-function broadcastTyping(payload, senderId, connections) {
-  const { recipientId } = payload;
-  const recipientWs = connections.get(recipientId);
-
-  if (recipientWs && recipientWs.readyState === 1) {
-    recipientWs.send(
-      JSON.stringify({
-        type: 'chat:typing',
-        payload: { userId: senderId },
-      }),
-    );
+  if (ws) {
+    // Access active connections
+    // ws.connections is a Map<connectionId, WebSocket>
+    console.log(`Active connections: ${ws.connections.size}`);
   }
 }
 ```
 
-### 2. Initialize in Module
+### 1.1 Connection Identity (`connectionId`)
+
+Each WebSocket connection is assigned a unique `connectionId` (UUID v4) upon connection. This ID is essential for targeting specific clients.
+
+- **Server-side**: Accessed via `connection.id`.
+- **Client-side**: Received in the `welcome` message or accessible via `ws.connectionId`.
 
 ```javascript
-// src/api/modules/chat/index.js
-import { initChatWebSocket } from './websocket';
-
-export default async function chatModule(deps, app) {
-  const wss = app.get('wss');
-  const jwt = app.get('auth').jwt;
-
-  // Initialize WebSocket handlers
-  const { connections } = initChatWebSocket(wss, jwt);
-
-  // Store connections for use in HTTP routes
-  app.set('chatConnections', connections);
-
-  // ... rest of module setup
-  console.info('✅ Chat module loaded');
-  return router;
-}
+// Example: Targeting a specific connection
+ws.sendToConnection(targetConnectionId, 'message:type', payload);
 ```
 
-## Client-Side Setup
+### 2. Handling Messages
 
-### 1. Create WebSocket Client
-
-```javascript
-// src/shared/ws/client.js
-export function createWebSocketClient() {
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  const token = getAuthToken(); // Get from cookie or localStorage
-
-  const ws = new WebSocket(`${protocol}//${host}/ws?token=${token}`);
-
-  const eventHandlers = new Map();
-
-  ws.onopen = () => {
-    console.log('WebSocket connected');
-    emit('connected');
-  };
-
-  ws.onmessage = event => {
-    try {
-      const message = JSON.parse(event.data);
-      emit(message.type, message.payload);
-    } catch (error) {
-      console.error('WebSocket message parse error:', error);
-    }
-  };
-
-  ws.onerror = error => {
-    console.error('WebSocket error:', error);
-    emit('error', error);
-  };
-
-  ws.onclose = () => {
-    console.log('WebSocket disconnected');
-    emit('disconnected');
-
-    // Auto-reconnect after 3 seconds
-    setTimeout(() => {
-      if (ws.readyState === WebSocket.CLOSED) {
-        window.location.reload();
-      }
-    }, 3000);
-  };
-
-  function emit(type, payload) {
-    const handlers = eventHandlers.get(type) || [];
-    handlers.forEach(handler => handler(payload));
-  }
-
-  function on(type, handler) {
-    if (!eventHandlers.has(type)) {
-      eventHandlers.set(type, []);
-    }
-    eventHandlers.get(type).push(handler);
-
-    // Return unsubscribe function
-    return () => {
-      const handlers = eventHandlers.get(type);
-      const index = handlers.indexOf(handler);
-      if (index > -1) {
-        handlers.splice(index, 1);
-      }
-    };
-  }
-
-  function send(type, payload) {
-    if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify({ type, payload }));
-    } else {
-      console.warn('WebSocket not connected');
-    }
-  }
-
-  function close() {
-    ws.close();
-  }
-
-  return { on, send, close, ws };
-}
-
-function getAuthToken() {
-  // Get token from cookie
-  const cookies = document.cookie.split(';');
-  const tokenCookie = cookies.find(c => c.trim().startsWith('token='));
-  return tokenCookie ? tokenCookie.split('=')[1] : null;
-}
-```
-
-### 2. Use in React Component
+Register a handler for a specific message type. The handler receives the WebSocket connection and the message payload.
 
 ```javascript
-// src/pages/chat/ChatPage.js
-import { useEffect, useState, useRef } from 'react';
-import { createWebSocketClient } from '@/shared/ws/client';
+// src/modules/chat/websocket.js
+import { MessageType } from '@/shared/ws/server'; // or defined locally
 
-function ChatPage() {
-  const [messages, setMessages] = useState([]);
-  const [typing, setTyping] = useState(false);
-  const wsRef = useRef(null);
+export function initChatWebSocket(ws) {
+  // Register handler for 'chat:send'
+  ws.registerHandler('chat:send', async (connection, message) => {
+    const { user } = connection;
+    const { text, recipientId } = message.data;
 
-  useEffect(() => {
-    // Create WebSocket connection
-    const ws = createWebSocketClient();
-    wsRef.current = ws;
+    // Access DB models if needed (via require or dependency injection)
+    // const { connection: dbData } = require('@/shared/api/db');
 
-    // Listen for messages
-    const unsubscribeMessage = ws.on('chat:message', message => {
-      setMessages(prev => [...prev, message]);
-    });
+    console.log(`Received chat from ${user?.id}: ${text}`);
 
-    const unsubscribeTyping = ws.on('chat:typing', payload => {
-      setTyping(true);
-      setTimeout(() => setTyping(false), 3000);
-    });
-
-    const unsubscribeConnected = ws.on('connected', () => {
-      console.log('Connected to chat');
-    });
-
-    // Cleanup
-    return () => {
-      unsubscribeMessage();
-      unsubscribeTyping();
-      unsubscribeConnected();
-      ws.close();
-    };
-  }, []);
-
-  const sendMessage = text => {
-    wsRef.current?.send('chat:send', {
-      recipientId: 'user-123',
-      text,
-    });
-  };
-
-  const handleTyping = () => {
-    wsRef.current?.send('chat:typing', {
-      recipientId: 'user-123',
-    });
-  };
-
-  return (
-    <div>
-      <div>
-        {messages.map((msg, i) => (
-          <div key={i}>{msg.text}</div>
-        ))}
-        {typing && <div>User is typing...</div>}
-      </div>
-
-      <input
-        onChange={handleTyping}
-        onKeyPress={e => {
-          if (e.key === 'Enter') {
-            sendMessage(e.target.value);
-            e.target.value = '';
-          }
-        }}
-      />
-    </div>
-  );
-}
-
-export default ChatPage;
-```
-
-## Broadcasting to All Clients
-
-```javascript
-// Broadcast to all connected clients
-function broadcastToAll(wss, message) {
-  wss.clients.forEach(client => {
-    if (client.readyState === 1) {
-      client.send(JSON.stringify(message));
-    }
+    // Send confirmation back
+    ws.sendToConnection(connection.id, 'chat:ack', { status: 'sent' });
   });
 }
+```
 
-// Usage
-broadcastToAll(wss, {
-  type: 'notification',
-  payload: { text: 'Server maintenance in 5 minutes' },
+### 3. Using Channels
+
+The shared implementation supports channels for granular broadcasting.
+
+**Channel Types:**
+
+- `PUBLIC`: Accessible by anyone.
+- `PROTECTED`: Requires valid authentication.
+- `PRIVATE`: Specific to a user (`user:{id}`).
+
+#### Public Channels
+
+Public channels are accessible to all connected clients. A default `public` channel is created on server start.
+
+```javascript
+// Server: Send to the public channel (all connections)
+ws.sendToPublicChannel('announcement', { text: 'Hello World' });
+
+// Or use the generic sendToChannel method
+ws.sendToChannel('public', 'announcement', { text: 'Hello World' });
+```
+
+#### Protected Channels
+
+Protected channels are only accessible to authenticated users. A default `protected` channel is created on server start.
+
+```javascript
+// Server: Send to all authenticated users
+ws.sendToProtectedChannel('system:alert', { message: 'Maintenance in 10m' });
+
+// Client: Subscribe (must be authenticated)
+ws.subscribe('protected');
+```
+
+#### Private Channels
+
+Private channels (`user:{userId}`) are created automatically when a user authenticates.
+
+```javascript
+// Server: Send to a specific user's private channel
+const userId = 'user-123';
+// The server automatically subscribes the user to 'user:user-123' upon auth.
+
+// Use the convenience method
+ws.sendToPrivateChannel(userId, 'notification', {
+  text: 'You have a new message',
+});
+
+// Or use the generic sendToChannel
+ws.sendToChannel(`user:${userId}`, 'notification', {
+  text: 'You have a new message',
 });
 ```
 
-## Room/Channel Management
+### 4. Broadcasting
 
 ```javascript
-// src/api/modules/chat/rooms.js
-export class RoomManager {
-  constructor() {
-    this.rooms = new Map(); // roomId -> Set of userIds
-    this.userRooms = new Map(); // userId -> Set of roomIds
-  }
+// Broadcast to ALL connected clients
+ws.broadcast('notification', { message: 'Server restarting...' });
 
-  joinRoom(userId, roomId) {
-    if (!this.rooms.has(roomId)) {
-      this.rooms.set(roomId, new Set());
-    }
-    this.rooms.get(roomId).add(userId);
+// Broadcast to authenticated users only
+ws.broadcast(
+  'notification',
+  { message: 'Hello Users' },
+  conn => conn.authenticated,
+);
+```
 
-    if (!this.userRooms.has(userId)) {
-      this.userRooms.set(userId, new Set());
-    }
-    this.userRooms.get(userId).add(roomId);
-  }
+## Client-Side Usage
 
-  leaveRoom(userId, roomId) {
-    this.rooms.get(roomId)?.delete(userId);
-    this.userRooms.get(userId)?.delete(roomId);
-  }
+The client is initialized in `src/client.js` and provides a singleton instance.
 
-  getRoomUsers(roomId) {
-    return Array.from(this.rooms.get(roomId) || []);
-  }
+### 1. Using in React Components
 
-  broadcastToRoom(roomId, message, connections) {
-    const users = this.getRoomUsers(roomId);
-    users.forEach(userId => {
-      const ws = connections.get(userId);
-      if (ws && ws.readyState === 1) {
-        ws.send(JSON.stringify(message));
-      }
-    });
-  }
+Use the `useWebSocket` utility to access the client instance.
+
+```javascript
+import React, { useEffect, useState } from 'react';
+import { useWebSocket } from '@/shared/ws/client';
+
+export default function ChatComponent() {
+  const ws = useWebSocket();
+  const [messages, setMessages] = useState([]);
+
+  useEffect(() => {
+    if (!ws) return;
+
+    // Define handler
+    const handleMessage = data => {
+      setMessages(prev => [...prev, data]);
+    };
+
+    // Subscribe to event
+    // The client extends EventEmitter, so we use .on() / .off()
+    ws.on('chat:message', handleMessage);
+
+    // Cleanup
+    return () => {
+      ws.off('chat:message', handleMessage);
+    };
+  }, [ws]);
+
+  const sendMessage = () => {
+    ws?.send('chat:send', { text: 'Hello!' });
+  };
+
+  return <button onClick={sendMessage}>Send</button>;
 }
+```
+
+### 2. Subscribing to Channels
+
+```javascript
+useEffect(() => {
+  if (!ws) return;
+
+  // Subscribe to channel
+  ws.subscribe('room:general');
+
+  // Listen for channel-specific messages
+  const handleNext = payload => {
+    // payload: { type, data }
+    console.log('Channel message:', payload);
+  };
+
+  // Events are emitted as `channel:{channelName}`
+  ws.on('channel:room:general', handleNext);
+
+  return () => {
+    ws.unsubscribe('room:general');
+    ws.off('channel:room:general', handleNext);
+  };
+}, [ws]);
 ```
 
 ## Authentication
 
-WebSocket authentication is handled in `src/server.js` via token verification:
+Authentication is handled automatically via cookies if `RSK_JWT_COOKIE_NAME` is set.
+
+- **Auto-Auth**: On connection, the server checks the cookie.
+- **Manual Auth**: Call `ws.login(token)` on the client.
+
+## Shared Types & Constants
+
+Import constants to ensure consistency.
 
 ```javascript
-// Token is passed as query parameter: ws://localhost:1337/ws?token=xxx
-// Server verifies token and attaches user to req.user
+import { EventType, MessageType } from '@/shared/ws/client'; // or @/shared/ws/server
 ```
 
-## Error Handling
+## Testing
+
+Use the browser console to test the client instance:
 
 ```javascript
-// Server-side
-ws.on('error', error => {
-  console.error('WebSocket error:', error);
-});
-
-// Client-side
-ws.on('error', error => {
-  console.error('Connection error:', error);
-  // Show user-friendly error message
-});
+// In browser console
+const ws = require('@/shared/ws/utils').useWebSocket(); // If exposed or accessible
+// Since it's not global, you might need to trigger it via UI or temporary global exposure.
 ```
-
-## Testing WebSocket
-
-```javascript
-// Manual testing with wscat
-npm install -g wscat
-wscat -c ws://localhost:1337/ws?token=YOUR_TOKEN
-
-// Send message
-> {"type":"chat:send","payload":{"recipientId":"123","text":"Hello"}}
-```
-
-## Best Practices
-
-1. **Always authenticate** - Verify tokens before accepting connections
-2. **Handle reconnection** - Implement auto-reconnect on client
-3. **Validate messages** - Check message format and type
-4. **Use message types** - Structured message format with type and payload
-5. **Clean up connections** - Remove from maps on disconnect
-6. **Handle errors gracefully** - Don't crash on invalid messages
-7. **Rate limit** - Prevent spam/abuse
-8. **Heartbeat/ping** - Keep connections alive
-9. **Serialize data** - Use JSON for message format
-10. **Store connections** - Use Map for O(1) lookups

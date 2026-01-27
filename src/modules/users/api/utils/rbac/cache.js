@@ -1,0 +1,186 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+// ========================================================================
+// RBAC CACHE UTILITY
+// ========================================================================
+
+/**
+ * RBAC Cache Module
+ *
+ * Provides caching for user RBAC data (roles, permissions, groups).
+ * Uses lazy initialization with app.get('cache') factory or custom factory.
+ */
+
+// Singleton cache instance
+let instance = null;
+
+// Custom cache factory (if configured)
+let customFactory = null;
+let customConfig = null;
+
+// Default cache options
+const DEFAULT_OPTIONS = Object.freeze({
+  type: 'memory',
+  maxSize: 1000,
+  ttl: 5 * 60 * 1000, // 5 minutes
+});
+
+// ========================================================================
+// CONFIGURATION
+// ========================================================================
+
+/**
+ * Configure cache with custom factory
+ *
+ * @param {Function} factory - Cache factory function
+ * @param {Object} [options] - Cache options (type, maxSize, ttl, directory)
+ * @returns {Object} Created cache instance
+ */
+export function configure(factory, options = {}) {
+  if (!factory || typeof factory !== 'function') {
+    const error = new Error('Invalid cache factory provided.');
+    error.name = 'InvalidCacheFactoryError';
+    error.code = 'INVALID_CACHE_FACTORY';
+    error.status = 500;
+    throw error;
+  }
+
+  customFactory = factory;
+  customConfig = { ...DEFAULT_OPTIONS, ...options };
+
+  // Create cache immediately
+  const baseCache = customFactory(customConfig);
+  instance =
+    typeof customFactory.withNamespace === 'function'
+      ? customFactory.withNamespace('rbac', baseCache)
+      : baseCache;
+
+  return instance;
+}
+
+/**
+ * Reset cache (for testing)
+ */
+export function reset() {
+  instance = null;
+  customFactory = null;
+  customConfig = null;
+}
+
+// ========================================================================
+// INTERNAL HELPER
+// ========================================================================
+
+/**
+ * Get cache instance (returns null if not available)
+ */
+function getInstance(appCache) {
+  // If instance is already created, return it
+  if (instance) return instance;
+
+  // Otherwise, get cache from app
+  if (!appCache) return null;
+
+  // If custom factory is configured, use it
+  if (typeof customFactory === 'function') {
+    const config = customConfig || DEFAULT_OPTIONS;
+    const baseCache = customFactory(config);
+    instance =
+      typeof customFactory.withNamespace === 'function'
+        ? customFactory.withNamespace('rbac', baseCache)
+        : baseCache;
+    return instance;
+  }
+  // Handle namespace object pattern (cache.default is the factory)
+  const factory = appCache.default || appCache;
+
+  // If factory is a function, call it to create instance
+  if (typeof factory === 'function') {
+    const config = customConfig || DEFAULT_OPTIONS;
+    const baseCache = factory(config);
+    instance =
+      typeof factory.withNamespace === 'function'
+        ? factory.withNamespace('rbac', baseCache)
+        : baseCache;
+    return instance;
+  }
+
+  // If factory is already an instance, use it directly
+  instance = factory;
+  return instance;
+}
+
+// ========================================================================
+// PUBLIC API - User Cache Operations
+// ========================================================================
+
+/**
+ * Get cached user data
+ */
+export function getUser(userId, appCache) {
+  if (!userId) return null;
+  const c = getInstance(appCache);
+  if (!c || typeof c.get !== 'function') return null;
+  return c.get(userId);
+}
+
+/**
+ * Set cached user data
+ */
+export function setUser(userId, data, appCache, ttl) {
+  if (!userId || !data) return;
+  const c = getInstance(appCache);
+  if (!c || typeof c.set !== 'function') return;
+  ttl ? c.set(userId, data, ttl) : c.set(userId, data);
+}
+
+/**
+ * Invalidate cache for a user
+ */
+export function invalidateUser(userId, appCache = null) {
+  if (!userId) return;
+  const c = getInstance(appCache);
+  if (c && typeof c.delete === 'function') c.delete(userId);
+}
+
+/**
+ * Invalidate cache for multiple users
+ */
+export function invalidateUsers(userIds, appCache = null) {
+  if (!Array.isArray(userIds) || userIds.length === 0) return;
+  const c = getInstance(appCache);
+  if (c && typeof c.delete === 'function') userIds.forEach(id => c.delete(id));
+}
+
+/**
+ * Invalidate all cached data
+ */
+export function invalidateAll(appCache = null) {
+  const c = getInstance(appCache);
+  if (c && typeof c.clear === 'function') c.clear();
+}
+
+// ========================================================================
+// PUBLIC API - Cache Management
+// ========================================================================
+
+/**
+ * Get cache statistics
+ */
+export function stats(appCache) {
+  const c = getInstance(appCache);
+  return c && typeof c.stats === 'function' ? c.stats() : null;
+}
+
+/**
+ * Cleanup expired entries
+ */
+export function cleanup(appCache) {
+  const c = getInstance(appCache);
+  return c && typeof c.cleanup === 'function' ? c.cleanup() : 0;
+}

@@ -106,7 +106,7 @@ app.use('/public', express.static('public', { maxAge: '1y' }));
 
 ```javascript
 // Offload heavy tasks to workers
-import workerPool from '@/api/engines/worker';
+import workerPool from '@/shared/api/worker';
 
 // Instead of blocking the request
 export async function generateReport(req, res) {
@@ -132,29 +132,23 @@ const workerPool = createWorkerPool(workersContext, {
 ## WebSocket Optimization
 
 ```javascript
-// Throttle frequent updates
+// The @shared/ws server handles heartbeat automatically via config.heartbeatInterval
+// Default: 30 seconds
+
+// Throttle frequent channel broadcasts
 import { throttle } from 'lodash';
 
-const sendUpdate = throttle((ws, data) => {
-  if (ws.readyState === WebSocket.OPEN) {
-    ws.send(JSON.stringify(data));
-  }
+const ws = app.get('ws');
+
+const throttledBroadcast = throttle((type, data) => {
+  ws.sendToPublicChannel(type, data);
 }, 100); // Max 10 updates per second
 
-// Use binary data for large payloads
-const buffer = Buffer.from(JSON.stringify(largeData));
-ws.send(buffer);
+// Use binary data for large payloads (if needed)
+// Note: @shared/ws uses JSON by default, but you can send raw buffers via ws connection
 
-// Clean up inactive connections
-setInterval(() => {
-  wss.clients.forEach(ws => {
-    if (ws.isAlive === false) {
-      ws.terminate();
-    }
-    ws.isAlive = false;
-    ws.ping();
-  });
-}, 30000);
+// The server automatically cleans up inactive connections via heartbeat
+// Connections that don't respond to ping are terminated
 ```
 
 ## Redux Optimization

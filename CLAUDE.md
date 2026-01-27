@@ -9,30 +9,23 @@
 ```
 react-starter-kit/
 ├── src/                          # Application source code
-│   ├── bootstrap/                # API bootstrap logic
-│   ├── engines/                  # Core API infrastructure
-│   │   ├── auth/                 # Authentication & JWT
-│   │   ├── cache/                # Caching layer
+├── bootstrap/                    # Application bootstrap & configuration
+├── modules/                      # Business logic & Views (auto-discovered)
+│   ├── (default)/                # Default module (homepage, etc.)
+│   └── ...                       # Other modules
+├── shared/                       # Shared utilities
+│   ├── api/                      # Core API infrastructure
+│   │   ├── auth/                 # Auth middlewares & cookies
 │   │   ├── db/                   # Database & Sequelize
-│   │   ├── email/                # Email service
-│   │   ├── fs/                   # File system utilities
-│   │   ├── http/                 # HTTP response helpers
-│   │   ├── queue/                # Job queue
-│   │   ├── schedule/             # Cron jobs
-│   │   ├── webhook/              # Webhook handling
-│   │   └── worker/               # Background workers
-│   ├── modules/                  # Business logic modules
-│   │   ├── users/                # User management, auth, RBAC
-│   │   ├── (default)/            # Default module (homepage, etc.)
-│   │   │   └── views/            # Module views/pages (auto-discovered)
-│   ├── shared/                   # Shared utilities
-│   │   ├── renderer/             # SSR components (App, Html, Navigator, Redux)
-│   │   ├── fetch/                # Universal HTTP client
-│   │   ├── ws/                   # WebSocket client/server
-│   │   ├── i18n/                 # i18n utilities
-│   │   └── validator/            # SSR validator utilities
-│   ├── client.js                 # Client-side entry point
-│   └── server.js                 # Server-side entry point (Express)
+│   │   └── ...                   # cache, email, fs, http, queue, etc.
+│   ├── jwt/                      # JWT configuration & utilities
+│   ├── renderer/                 # SSR utilities and Redux store
+│   ├── fetch/                    # API client
+│   ├── ws/                       # WebSocket client
+│   ├── i18n/                     # i18n utilities
+│   └── validator/                # SSR validator utilities
+├── client.js                     # Client entry point
+├── server.js                     # Server entry point
 ├── tools/                        # Build tools and tasks
 │   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
 │   ├── utils/                    # Build utilities (fs, logger, etc.)
@@ -136,18 +129,18 @@ The application uses an auto-discovery system for both API modules and page comp
 - Finds and mounts `_route.js` files using a defined hierarchy
 - Merges metadata and props via `getInitialProps`
 
-### 2. Engines vs Modules
+### 2. Shared API vs Modules
 
-**Engines** (`src/engines/`):
+**Shared API** (`src/shared/api/` & `src/shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`, `jwt`
 - Provide reusable capabilities for modules
 - Should not contain business logic
 
 **Modules** (`src/modules/`):
 
 - Business domains: `users`, `homepage`
-- Consume engines to implement features
+- Consume shared API to implement features
 - Each module can have: `index.js`, `model.js`, `controller.js`, `service.js`, `routes.js`
 
 ### 3. Universal Rendering (SSR)
@@ -160,16 +153,18 @@ The application uses an auto-discovery system for both API modules and page comp
 ### 4. State Management
 
 - **Redux Toolkit** for global state management
-- **Features:** `runtime`, `user`, `ui` (in `src/shared/renderer/redux/features/`)
+- **Global Features:** `runtime`, `user`, `ui`, `intl` (in `src/shared/renderer/redux/features/`)
+- **Module-level Features:** Colocated in `views/{view-path}/redux/` with dynamic injection
 - **Store Configuration:** `src/shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
+- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in route `boot` hook
 
 ### 5. Authentication & Authorization
 
 - **JWT-based authentication** with HTTP-only cookies
 - **RBAC system:** Users, Roles, Groups, Permissions
-- **Middleware:** `src/engines/auth/middleware.js`
+- **Middleware:** `src/shared/api/auth/middlewares.js`
 - **Protected routes:** Use `requireAuth` middleware
 - **API endpoints:** `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/register`
 
@@ -186,7 +181,7 @@ For heavy processing, use the Worker Engine:
 
 ```javascript
 // 1. Define worker
-import { createWorkerHandler } from '@/engines/worker';
+import { createWorkerHandler } from '@/shared/api/worker';
 // ... (omitting lines for brevity in tool call, standardizing on contiguous blocks is better but small edits are fine) with context:
 // wait, I need exact match.
 
@@ -198,7 +193,7 @@ const myTaskLogic = async payload => {
 export default createWorkerHandler(myTaskLogic, 'MY_TASK_TYPE');
 
 // 2. Create worker pool
-import { createWorkerPool } from '@/engines/worker';
+import { createWorkerPool } from '@/shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
 const workerPool = createWorkerPool(workersContext, {
@@ -246,29 +241,53 @@ export default MyComponent;
 ### 2. Redux Toolkit Patterns
 
 ```javascript
-// Feature slice (src/shared/renderer/redux/features/myFeature/slice.js)
+// Module-level slice (src/modules/blog/views/admin/posts/redux/slice.js)
 import { createSlice } from '@reduxjs/toolkit';
+import { fetchPosts, createPost } from './thunks';
 
-const myFeatureSlice = createSlice({
-  name: 'myFeature',
-  initialState: { value: 0 },
+export const SLICE_NAME = '@admin/posts';
+
+const postsSlice = createSlice({
+  name: SLICE_NAME,
+  initialState: { items: [], loading: false, error: null },
   reducers: {
-    increment: state => {
-      state.value += 1;
+    clearError: state => {
+      state.error = null;
     },
+  },
+  extraReducers: builder => {
+    builder
+      .addCase(fetchPosts.pending, state => {
+        state.loading = true;
+      })
+      .addCase(fetchPosts.fulfilled, (state, action) => {
+        state.items = action.payload;
+        state.loading = false;
+      })
+      .addCase(fetchPosts.rejected, (state, action) => {
+        state.error = action.payload;
+        state.loading = false;
+      });
   },
 });
 
-export const { increment } = myFeatureSlice.actions;
-export default myFeatureSlice.reducer;
+export const { clearError } = postsSlice.actions;
+export default postsSlice.reducer;
 
-// Thunks (src/shared/renderer/redux/features/myFeature/thunks.js)
-export const fetchData =
-  () =>
-  async (dispatch, getState, { fetch }) => {
-    const response = await fetch('/api/data');
-    dispatch(setData(response));
-  };
+// Thunks (src/modules/blog/views/admin/posts/redux/thunks.js)
+import { createAsyncThunk } from '@reduxjs/toolkit';
+
+export const fetchPosts = createAsyncThunk(
+  'admin/posts/fetchPosts',
+  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/posts', { query: options });
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
 ```
 
 ### 3. Styling with CSS Modules
@@ -282,31 +301,73 @@ function MyComponent() {
 }
 ```
 
-### 4. Page Routing
+### 4. Page Routing with Lifecycle Hooks
 
 ```javascript
-// src/modules/(default)/views/example/_route.js
-import React from 'react';
-import ExamplePage from './ExamplePage';
+// src/modules/blog/views/admin/posts/_route.js
+import reducer, { SLICE_NAME } from './redux';
+import PostsList from './PostsList';
+import {
+  addBreadcrumb,
+  registerMenu,
+  unregisterMenu,
+} from '@/shared/renderer/redux';
+import { requirePermission } from '@/shared/renderer/components/Rbac';
 
-// 1. Data Loading & Metadata (Server & Client)
-export async function getInitialProps({ fetch, store, i18n }) {
-  // Fetch data from API
-  const { data } = await fetch('/api/example');
+// 1. Middleware - permission check
+export const middleware = requirePermission('posts:read');
 
-  // Dispatch Redux actions if needed
-  // await store.dispatch(someAction());
-
-  return {
-    title: 'Example Page', // Metadata
-    description: 'Example page description',
-    data, // Passed to component as props
-  };
+// 2. Register - called once when route is discovered
+export function register({ store, i18n }) {
+  store.dispatch(
+    registerMenu({
+      ns: 'admin',
+      item: {
+        ns: i18n.t('navigation.content', 'Content'),
+        path: '/admin/posts',
+        label: i18n.t('navigation.posts', 'Posts'),
+        icon: 'file-text',
+        permission: 'posts:read',
+        order: 20,
+      },
+    }),
+  );
 }
 
-// 2. Component Export
-export default ExamplePage;
+// 3. Boot - inject Redux slice
+export function boot({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
+
+// 4. Mount - dispatch breadcrumb
+export function mount({ store, i18n, path }) {
+  store.dispatch(
+    addBreadcrumb(
+      { label: i18n.t('navigation.posts', 'Posts'), url: path },
+      'admin',
+    ),
+  );
+}
+
+// 5. Page metadata
+export async function getInitialProps({ i18n }) {
+  return { title: i18n.t('admin.posts.title', 'Posts Management') };
+}
+
+// 6. Component export
+export default PostsList;
 ```
+
+**Route Lifecycle Hooks:**
+
+| Hook              | Purpose                      | Called When          |
+| ----------------- | ---------------------------- | -------------------- |
+| `register`        | Register menus, global state | Route discovered     |
+| `unregister`      | Cleanup menus, global state  | Route unloaded       |
+| `boot`            | Inject Redux reducer         | Before route renders |
+| `mount`           | Dispatch breadcrumbs         | Route mounted        |
+| `middleware`      | Permission checks, redirects | Before rendering     |
+| `getInitialProps` | Data fetching, page metadata | Before rendering     |
 
 ### 5. API Module Structure
 
@@ -526,7 +587,7 @@ export default UsersPage;
 ### Protected Routes
 
 ```javascript
-import { requireAuth } from '@/engines/auth/middleware';
+import { requireAuth } from '@/shared/api/auth/middlewares';
 
 router.get('/protected', requireAuth, (req, res) => {
   // req.user is available
@@ -537,7 +598,7 @@ router.get('/protected', requireAuth, (req, res) => {
 ### Scheduled Tasks
 
 ```javascript
-import schedule from '@/engines/schedule';
+import schedule from '@/shared/api/schedule';
 
 schedule.register('daily-cleanup', '0 0 * * *', async () => {
   // Lightweight task or dispatch to worker

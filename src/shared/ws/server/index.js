@@ -739,8 +739,8 @@ class WebSocketServer extends EventEmitter {
   createPrivateChannel(userId, metadata = {}) {
     // eslint-disable-next-line no-underscore-dangle
     return this._createChannel(`user:${userId}`, ChannelType.PRIVATE, {
-      userId,
       ...metadata,
+      userId,
     });
   }
 
@@ -750,8 +750,8 @@ class WebSocketServer extends EventEmitter {
   createProtectedChannel(metadata = {}) {
     // eslint-disable-next-line no-underscore-dangle
     return this._createChannel(ChannelType.PROTECTED, ChannelType.PROTECTED, {
-      protected: true,
       ...metadata,
+      protected: true,
     });
   }
 
@@ -761,8 +761,8 @@ class WebSocketServer extends EventEmitter {
   createPublicChannel(metadata = {}) {
     // eslint-disable-next-line no-underscore-dangle
     return this._createChannel(ChannelType.PUBLIC, ChannelType.PUBLIC, {
-      public: true,
       ...metadata,
+      public: true,
     });
   }
 

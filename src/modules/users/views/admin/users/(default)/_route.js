@@ -7,12 +7,12 @@
 
 import reducer, { SLICE_NAME } from '../redux';
 import Users from './Users';
-import { addBreadcrumb } from '../../../../../../shared/renderer/redux';
-import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
 import {
+  addBreadcrumb,
   registerMenu,
   unregisterMenu,
-} from '../../../../../../shared/renderer/redux/features/ui';
+} from '../../../../../../shared/renderer/redux';
+import { requirePermission } from '../../../../../../shared/renderer/components/Rbac';
 
 export const middleware = requirePermission('users:read');
 

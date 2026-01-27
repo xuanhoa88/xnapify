@@ -118,27 +118,40 @@ Use preconfigured launch configurations:
 ## WebSocket Debugging
 
 ```javascript
-// Server-side: Check WebSocket connections
-app.get('/wss', (req, res) => {
-  const wss = req.app.get('wss');
-  res.json({
-    clients: wss.clients.size,
-    connections: Array.from(wss.clients).map(ws => ({
-      readyState: ws.readyState,
-      user: ws.userId,
-    })),
+// Server-side: Check WebSocket connections using the @shared/ws API
+app.get('/api/ws-debug', (req, res) => {
+  const ws = req.app.get('ws');
+  if (!ws) {
+    return res.status(500).json({ error: 'WebSocket server not initialized' });
+  }
+
+  // Use getStats() for server statistics
+  const stats = ws.getStats();
+
+  // Get connection details (ws.connections is a Map<connectionId, WebSocket>)
+  const connections = [];
+  ws.connections.forEach((conn, id) => {
+    connections.push({
+      id,
+      authenticated: conn.authenticated,
+      user: conn.user,
+      connectedAt: conn.connectedAt,
+    });
   });
+
+  res.json({ stats, connections });
 });
 
 // Client-side: Debug connection
-const ws = createWebSocketClient();
-ws.on('connected', () => console.log('✅ WebSocket connected'));
-ws.on('error', (error) => console.error('❌ WebSocket error:', error));
-ws.on('disconnected', () => console.log('🔌 WebSocket disconnected'));
+import { useWebSocket } from '@/shared/ws/client';
 
-// Test with wscat
-npm install -g wscat
-wscat -c ws://localhost:1337/ws?token=YOUR_TOKEN
+const ws = useWebSocket();
+ws.on('connected', () => console.log('✅ WebSocket connected'));
+ws.on('error', error => console.error('❌ WebSocket error:', error));
+ws.on('disconnected', info => console.log('🔌 WebSocket disconnected:', info));
+
+// Check client status
+console.log('Status:', ws.getStatus());
 ```
 
 ## RBAC/Permissions Debugging
@@ -195,35 +208,30 @@ fetch('/api/auth/me')
 
 ```javascript
 // Check migration status
-const db = require('@/api/engines/db').default;
-const migrations = await db.umzug.executed();
-console.log(
-  'Executed migrations:',
-  migrations.map(m => m.name),
-);
+const db = require('@/shared/api/db');
+const { connection } = db;
 
-const pending = await db.umzug.pending();
-console.log(
-  'Pending migrations:',
-  pending.map(m => m.name),
-);
+const status = await db.getMigrationStatus(null, connection);
+console.log('Executed migrations:', status.executed);
+
+console.log('Pending migrations:', status.pending);
 
 // Run migrations manually
-await db.umzug.up();
+await db.runMigrations(null, connection);
 
 // Rollback last migration
-await db.umzug.down();
+await db.revertMigration(null, connection);
 
 // Check database connection
 try {
-  await db.connection.authenticate();
+  await connection.authenticate();
   console.log('✅ Database connected');
 } catch (error) {
   console.error('❌ Database connection failed:', error);
 }
 
 // View database schema
-const tables = await db.connection.getQueryInterface().showAllTables();
+const tables = await connection.getQueryInterface().showAllTables();
 console.log('Tables:', tables);
 ```
 

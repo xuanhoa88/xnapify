@@ -26,7 +26,15 @@ function createContextAdapter(ctx) {
   };
 }
 
+/**
+ * AppRouter extends the base Router to add custom metadata handling
+ */
 class AppRouter extends Router {
+  /**
+   * Resolves a route and updates metadata (title, description)
+   * @param {Object} context - Router context
+   * @returns {Promise<Object>} Resolved page with metadata
+   */
   async resolve(context) {
     const page = await super.resolve(context);
     const state = context.store.getState();
