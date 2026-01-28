@@ -48,11 +48,20 @@ function SecurityCard() {
           }),
         ).unwrap();
         reset();
+        dispatch(
+          showSuccessMessage({
+            title: t('profile.saved', 'Saved'),
+            message: t(
+              'profile.passwordChanged',
+              'Password changed successfully',
+            ),
+          }),
+        );
       } catch {
         // Error is handled by Redux state
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   return (

@@ -28,9 +28,8 @@
  */
 export async function logActivity(webhook, activity, options = {}) {
   try {
-    // webhook is the module, access the default instance
-    const manager = webhook && (webhook.default || webhook);
-    if (!manager) {
+    // webhook is now the instance directly (no longer the module namespace)
+    if (!webhook) {
       console.warn('Activity Logger: No webhook manager instance provided');
       return null;
     }
@@ -43,8 +42,8 @@ export async function logActivity(webhook, activity, options = {}) {
       ...payload
     } = activity;
 
-    // Use manager.send to allow for worker processing if configured
-    const result = await manager.send(
+    // Use webhook.send to allow for worker processing if configured
+    const result = await webhook.send(
       {
         ...payload,
         event,

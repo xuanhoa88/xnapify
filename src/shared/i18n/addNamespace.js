@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import i18nInstance from './instance';
+import i18nInstance from './getInstance';
 
 /**
  * Add a new namespace with translations for all available locales

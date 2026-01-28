@@ -19,6 +19,7 @@ import {
   isPreferencesLoading,
   getPreferencesError,
   clearPreferencesError,
+  showSuccessMessage,
 } from '../../../../../shared/renderer/redux';
 import { updatePreferencesFormSchema } from '../../../../../shared/validator/features/auth';
 import Icon from '../../../../../shared/renderer/components/Icon';
@@ -100,11 +101,21 @@ function PreferencesCard() {
         if (data.language && data.language !== currentLocale) {
           dispatch(setLocale(data.language));
         }
+
+        dispatch(
+          showSuccessMessage({
+            title: t('profile.saved', 'Saved'),
+            message: t(
+              'profile.preferencesSaved',
+              'Preferences updated successfully',
+            ),
+          }),
+        );
       } catch {
         // Error is handled by Redux state
       }
     },
-    [dispatch, currentLocale],
+    [dispatch, currentLocale, t],
   );
 
   // Show loading state while fetching preferences

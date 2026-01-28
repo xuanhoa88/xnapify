@@ -30,7 +30,7 @@ export default function homepageModule({ Router }, app) {
   router.use(
     '/activities',
     auth.requireAuthMiddleware(),
-    webhook.createControllers(webhook.default),
+    webhook.createControllers(webhook),
   );
 
   return router;

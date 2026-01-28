@@ -23,11 +23,11 @@
  * ---
  *
  * @example <caption>Single Email</caption>
- * // Access singleton instance
- * const manager = email.default;
+ * // Access singleton instance (via app.get('email') or import)
+ * const email = app.get('email');
  *
  * // Single email (auto-decides, usually direct processing)
- * await email.default.send({
+ * await email.send({
  *   to: 'user@example.com',
  *   subject: 'Welcome',
  *   html: '<p>Hello!</p>'
@@ -35,21 +35,21 @@
  *
  * @example <caption>Worker Control</caption>
  * // Force worker processing
- * await email.default.send({ to, subject, html }, { useWorker: true });
+ * await email.send({ to, subject, html }, { useWorker: true });
  *
  * // Force direct processing (bypass worker even for batch)
- * await email.default.send(emailList, { useWorker: false });
+ * await email.send(emailList, { useWorker: false });
  *
  * @example <caption>Bulk Emails</caption>
  * // Bulk emails (auto-offloads to worker for 5+ emails)
- * await email.default.send([
+ * await email.send([
  *   { to: 'user1@example.com', subject: 'Hi', html: '<p>1</p>' },
  *   { to: 'user2@example.com', subject: 'Hi', html: '<p>2</p>' }
  * ]);
  *
  * @example <caption>Templates with LiquidJS</caption>
  * // With template placeholders (LiquidJS)
- * await email.default.send({
+ * await email.send({
  *   to: 'user@example.com',
  *   subject: 'Hi {{name}}',
  *   html: '<p>Hello {{name}}</p>',
@@ -69,24 +69,24 @@
  *   }
  * }
  *
- * email.default.addProvider('resend', new ResendProvider());
- * await email.default.send({ to, subject, html }, { provider: 'resend' });
+ * email.addProvider('resend', new ResendProvider());
+ * await email.send({ to, subject, html }, { provider: 'resend' });
  *
  * @example <caption>Lifecycle Management</caption>
  * // Get all registered providers
- * const providers = email.default.getProviderNames();
+ * const providers = email.getProviderNames();
  * // ['memory', 'smtp', 'sendgrid', 'mailgun']
  *
  * // Check if provider exists
- * if (email.default.hasProvider('smtp')) {
+ * if (email.hasProvider('smtp')) {
  *   console.log('SMTP provider available');
  * }
  *
  * // Get provider instance
- * const smtpProvider = email.default.getProvider('smtp');
+ * const smtpProvider = email.getProvider('smtp');
  *
  * // Get stats from all providers
- * const stats = email.default.getAllStats();
+ * const stats = email.getAllStats();
  * // {
  * //   memory: { sent: 10, failed: 0 },
  * //   smtp: { available: false },
@@ -94,7 +94,7 @@
  * // }
  *
  * // Cleanup (automatically called on process termination)
- * await email.default.cleanup();
+ * await email.cleanup();
  *
  * @example <caption>Integration with Schedule Engine</caption>
  *
@@ -138,7 +138,7 @@ export { createFactory };
 
 /**
  * Singleton instance of EmailManager
- * Used by the application via email.default
+ * Used by the application via app.get('email')
  */
 const email = createFactory();
 

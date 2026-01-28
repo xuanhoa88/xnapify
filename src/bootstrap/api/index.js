@@ -191,7 +191,7 @@ export default async function main(app, config = {}) {
     await engines.db.runSeeds(null, engines.db.connection);
 
     // Configure webhook database (adapter + worker) with current connection
-    engines.webhook.default.setDbConnection(engines.db.connection);
+    engines.webhook.setDbConnection(engines.db.connection);
 
     // Apply global middleware (order matters!)
     guardedApp.use(createLoggingMiddleware()); // Log all requests first

@@ -15,6 +15,7 @@ import {
   isProfileLoading,
   getProfileError,
   clearProfileError,
+  showSuccessMessage,
 } from '../../../../../shared/renderer/redux';
 import { updateProfileFormSchema } from '../../../../../shared/validator/features/auth';
 import Icon from '../../../../../shared/renderer/components/Icon';
@@ -58,11 +59,17 @@ function PersonalInfoCard() {
         await dispatch(updateUserProfile(data)).unwrap();
         // Reset form with the new saved data
         reset(data);
+        dispatch(
+          showSuccessMessage({
+            title: t('profile.saved', 'Saved'),
+            message: t('profile.savedMessage', 'Profile updated successfully'),
+          }),
+        );
       } catch {
         // Error is handled by Redux state
       }
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   return (

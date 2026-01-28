@@ -67,14 +67,17 @@ export async function getUserWithProfile(user_id, models) {
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError
  */
 export async function updateUserProfile(
   user_id,
   profileData,
-  { models, webhook },
+  { models, webhook, hook },
 ) {
+  const profileHooks = hook('profile');
+
   const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -121,6 +124,9 @@ export async function updateUserProfile(
     });
   }
 
+  // Run hooks
+  await profileHooks.emit('updated', { user_id, profileData });
+
   // Log activity
   await logUserActivity(webhook, 'profile_updated', user_id);
 
@@ -141,6 +147,7 @@ export async function updateUserProfile(
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
@@ -148,8 +155,10 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, webhook },
+  { models, webhook, hook },
 ) {
+  const profileHooks = hook('profile');
+
   const { User } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);
@@ -172,6 +181,9 @@ export async function changeUserPassword(
   // Update password (hashed automatically by model hook)
   await user.update({ password: newPassword });
 
+  // Run hooks
+  await profileHooks.emit('password_changed', { user_id });
+
   // Log activity
   await logUserActivity(webhook, 'password_changed', user_id);
 
@@ -186,13 +198,15 @@ export async function changeUserPassword(
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<Object>} Updated preferences
  */
 export async function updateUserPreferences(
   user_id,
   preferences,
-  { models, webhook },
+  { models, webhook, hook },
 ) {
+  const profileHooks = hook('profile');
   const { UserProfile } = models;
 
   // Find or create user profile
@@ -210,6 +224,9 @@ export async function updateUserPreferences(
 
     await profile.update({ preferences: updatedPreferences });
   }
+
+  // Run hooks
+  await profileHooks.emit('preferences_updated', { user_id, preferences });
 
   // Log activity
   await logUserActivity(webhook, 'preferences_updated', user_id);
@@ -253,6 +270,7 @@ export async function getUserPreferences(user_id, models) {
  * @param {string} password - User password for confirmation
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook engine for activity logging
  * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
@@ -260,8 +278,9 @@ export async function getUserPreferences(user_id, models) {
 export async function deleteUserAccount(
   user_id,
   password,
-  { models, webhook },
+  { models, webhook, hook },
 ) {
+  const profileHooks = hook('profile');
   const { User, UserProfile } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);
@@ -288,6 +307,9 @@ export async function deleteUserAccount(
 
   // Delete user (this will cascade to related records)
   await user.destroy();
+
+  // Run hooks
+  await profileHooks.emit('account_deleted', { user_id, email: userEmail });
 
   // Log activity
   await logUserActivity(webhook, 'account_deleted', user_id, {

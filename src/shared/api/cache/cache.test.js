@@ -284,7 +284,7 @@ describe('Cache Engine', () => {
     });
 
     it('should create namespaced cache from default instance', () => {
-      const userCache = withNamespace('users');
+      const userCache = cache.withNamespace('users');
 
       expect(userCache).toBeDefined();
       expect(userCache).toHaveProperty('get');
@@ -292,7 +292,7 @@ describe('Cache Engine', () => {
     });
 
     it('should prefix keys with namespace', () => {
-      const userCache = withNamespace('users');
+      const userCache = cache.withNamespace('users');
 
       userCache.set('123', { name: 'John' });
 
@@ -305,8 +305,8 @@ describe('Cache Engine', () => {
     });
 
     it('should isolate namespaced caches', () => {
-      const userCache = withNamespace('users');
-      const postCache = withNamespace('posts');
+      const userCache = cache.withNamespace('users');
+      const postCache = cache.withNamespace('posts');
 
       userCache.set('1', 'user-data');
       postCache.set('1', 'post-data');
@@ -321,8 +321,8 @@ describe('Cache Engine', () => {
     });
 
     it('should clear only namespaced keys', () => {
-      const userCache = withNamespace('users');
-      const postCache = withNamespace('posts');
+      const userCache = cache.withNamespace('users');
+      const postCache = cache.withNamespace('posts');
 
       userCache.set('1', 'user1');
       userCache.set('2', 'user2');
@@ -346,7 +346,7 @@ describe('Cache Engine', () => {
     });
 
     it('should support stats from base cache', () => {
-      const userCache = withNamespace('users');
+      const userCache = withNamespace('users', cache);
 
       userCache.set('1', 'data');
 
@@ -356,7 +356,7 @@ describe('Cache Engine', () => {
     });
 
     it('should support cleanup from base cache', () => {
-      const userCache = withNamespace('users');
+      const userCache = cache.withNamespace('users');
 
       userCache.set('expired', 'value', 1);
 

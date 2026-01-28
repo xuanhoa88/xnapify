@@ -106,10 +106,11 @@ export async function updateProfile(req, res) {
 
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook');
     const user = await profileService.updateUserProfile(
       req.user.id,
       { display_name, first_name, last_name, bio, location, website },
-      { models, webhook },
+      { models, webhook, hook },
     );
 
     return http.sendSuccess(res, {
@@ -138,7 +139,7 @@ export async function uploadAvatar(req, res) {
 
   try {
     // Check upload result from middleware (runs in routes)
-    const uploadResult = req[fs.default.MIDDLEWARES.UPLOAD];
+    const uploadResult = req[fs.MIDDLEWARES.UPLOAD];
     if (!uploadResult || !uploadResult.success) {
       const errorMsg =
         (uploadResult && uploadResult.error) || 'No file uploaded';
@@ -168,7 +169,7 @@ export async function uploadAvatar(req, res) {
     // Delete old avatar if different
     if (oldAvatarPath && oldAvatarPath !== fileName) {
       try {
-        await fs.default.remove(oldAvatarPath);
+        await fs.remove(oldAvatarPath);
       } catch (error) {
         console.warn('Failed to delete old avatar:', error.message);
       }
@@ -236,7 +237,7 @@ export async function previewAvatar(req, res) {
     }
 
     // Local file - stream from fs
-    const result = await fs.default.preview(avatarPath);
+    const result = await fs.preview(avatarPath);
 
     if (!result.success) {
       // File not found - redirect to default
@@ -285,7 +286,7 @@ export async function removeAvatar(req, res) {
     // Delete the avatar file using fs.remove()
     try {
       if (user.profile.picture) {
-        await fs.default.remove(user.profile.picture);
+        await fs.remove(user.profile.picture);
       }
     } catch (error) {
       // Log warning but continue - file may already be deleted
@@ -335,7 +336,11 @@ export async function changePassword(req, res) {
       req.user.id,
       currentPassword,
       newPassword,
-      { models: req.app.get('models'), webhook: req.app.get('webhook') },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        hook: req.app.get('hook'),
+      },
     );
 
     return http.sendSuccess(res, {
@@ -381,10 +386,11 @@ export async function updatePreferences(req, res) {
 
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook');
     const preferences = await profileService.updateUserPreferences(
       req.user.id,
       { language, timezone, notifications, theme },
-      { models, webhook },
+      { models, webhook, hook },
     );
 
     return http.sendSuccess(res, {
@@ -444,6 +450,7 @@ export async function deleteAccount(req, res) {
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
+      hook: req.app.get('hook'),
     });
 
     req.app.get('auth').clearAllAuthCookies(res);

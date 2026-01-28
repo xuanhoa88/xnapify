@@ -96,22 +96,30 @@ function getInstance(appCache) {
         : baseCache;
     return instance;
   }
-  // Handle namespace object pattern (cache.default is the factory)
-  const factory = appCache.default || appCache;
 
-  // If factory is a function, call it to create instance
-  if (typeof factory === 'function') {
+  // If appCache is a factory function
+  if (typeof appCache === 'function') {
     const config = customConfig || DEFAULT_OPTIONS;
-    const baseCache = factory(config);
-    instance =
-      typeof factory.withNamespace === 'function'
-        ? factory.withNamespace('rbac', baseCache)
-        : baseCache;
+    const baseCache = appCache(config);
+
+    // Check if factory has static namespacing method
+    if (typeof appCache.withNamespace === 'function') {
+      instance = appCache.withNamespace('rbac', baseCache);
+    } else {
+      instance = baseCache;
+    }
     return instance;
   }
 
-  // If factory is already an instance, use it directly
-  instance = factory;
+  // If appCache is an instance
+  // Check if instance supports namespacing (e.g. MemoryCache singleton)
+  if (appCache && typeof appCache.withNamespace === 'function') {
+    instance = appCache.withNamespace('rbac');
+    return instance;
+  }
+
+  // Fallback: use instance directly
+  instance = appCache;
   return instance;
 }
 

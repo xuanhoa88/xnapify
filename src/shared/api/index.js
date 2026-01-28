@@ -25,8 +25,17 @@ enginesAdapter.files().forEach(modulePath => {
   // Load the engine module
   const mod = enginesAdapter.load(modulePath);
 
-  // Store the full module namespace to preserve both default and named exports
-  engines[engineName] = mod;
+  // If the module exhibits a default export, prefer using it as the engine interface
+  // This allows usages like app.get('hook')()
+  if (mod.default) {
+    engines[engineName] = mod.default;
+    // Attach named exports to the default export for backward compatibility
+    // and access to auxiliary exports (e.g. constants, types)
+    Object.assign(engines[engineName], mod);
+  } else {
+    // Otherwise use the module namespace object directly
+    engines[engineName] = mod;
+  }
 });
 
 // Automatically export all discovered engines as named exports

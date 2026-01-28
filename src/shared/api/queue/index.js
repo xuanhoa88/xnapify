@@ -27,15 +27,15 @@
  * ---
  *
  * @example <caption>Basic Usage - Create channel and process jobs</caption>
- * // Access singleton instance
- * const manager = queue.default;
+ * // Access singleton instance (via app.get('queue') or import)
+ * const queue = app.get('queue');
  *
  * // Create/get a channel (consumer)
- * const zalo = queue.default('zalo', { concurrency: 5 });
+ * const zalo = queue('zalo', { concurrency: 5 });
  * zalo.on('chat', async (job) => { console.log(job.data); });
  *
  * // Emit event (producer)
- * queue.default.channel('zalo').emit('chat', { message: 'Hello' });
+ * queue.channel('zalo').emit('chat', { message: 'Hello' });
  *
  * @example <caption>Create isolated instance (for testing)</caption>
  * const testQueue = queue.createFactory({ type: 'memory' });
@@ -50,37 +50,37 @@
  *   close() { ... }
  * }
  *
- * queue.default.registerAdapter('redis', RedisQueue);
- * const channel = queue.default('notifications', { type: 'redis' });
+ * queue.registerAdapter('redis', RedisQueue);
+ * const channel = queue('notifications', { type: 'redis' });
  * channel.on('send', async (job) => { ... });
  *
  * @example <caption>Lifecycle Management</caption>
  * // Get all channels
- * const channels = queue.default.getChannelNames();
+ * const channels = queue.getChannelNames();
  * // ['zalo', 'notifications']
  *
  * // Check if channel exists
- * if (queue.default.has('zalo')) {
+ * if (queue.has('zalo')) {
  *   console.log('Zalo channel exists');
  * }
  *
  * // Get stats for all channels
- * const stats = queue.default.getStats();
+ * const stats = queue.getStats();
  * // {
  * //   zalo: { name: 'zalo', handlers: ['chat'], handlerCount: 1, ... },
  * //   notifications: { name: 'notifications', handlers: ['send'], ... }
  * // }
  *
  * // Remove a channel
- * await queue.default.remove('zalo');
+ * await queue.remove('zalo');
  *
  * // Close all channels (automatically called on process termination)
- * await queue.default.cleanup();
+ * await queue.cleanup();
  *
  * @example <caption>Integration with Schedule Engine</caption>
  *
  * // Create a notification channel
- * const notifications = queue.default('notifications', { concurrency: 10 });
+ * const notifications = queue('notifications', { concurrency: 10 });
  * notifications.on('email', async (job) => {
  *   await sendEmail(job.data);
  * });
@@ -88,7 +88,7 @@
  * // Schedule daily digest emails
  * schedule.register('daily-digest', '0 9 * * *', () => {
  *   // Emit job to queue for processing
- *   queue.default.channel('notifications').emit('email', {
+ *   queue.channel('notifications').emit('email', {
  *     to: 'users@example.com',
  *     subject: 'Daily Digest',
  *     template: 'digest'
@@ -106,7 +106,7 @@ export { createFactory };
 
 /**
  * Singleton instance of QueueFactory
- * Used by the application via queue.default
+ * Used by the application via app.get('queue')
  */
 const queue = createFactory();
 

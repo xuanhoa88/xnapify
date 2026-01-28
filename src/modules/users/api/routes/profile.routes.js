@@ -30,7 +30,7 @@ export default function profileRoutes(deps, userMiddlewares, app) {
   const requireAuth = auth.requireAuthMiddleware();
 
   // Create upload middleware for avatar
-  const avatarUpload = fs.default.useUploadMiddleware({
+  const avatarUpload = fs.useUploadMiddleware({
     fieldName: 'avatar',
     maxFiles: 1,
     maxFileSize: parseInt(process.env.RSK_AVATAR_MAX_SIZE) || 10 * 1024 * 1024, // 10MB
