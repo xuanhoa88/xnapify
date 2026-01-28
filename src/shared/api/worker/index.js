@@ -13,8 +13,8 @@
  *
  * @example
  * // Create a worker pool for an engine
- * const workersAdapter = require.context('./workers', false, /\.worker\.js$/);
- * const workerPool = worker.createWorkerPool(workersAdapter, {
+ * const workersContext = require.context('./workers', false, /\.worker\.js$/);
+ * const workerPool = worker.createWorkerPool(workersContext, {
  *   engineName: 'Email',
  *   maxWorkers: 4,
  * });

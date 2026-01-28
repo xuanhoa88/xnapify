@@ -9,7 +9,7 @@ import { createContextAdapter } from '../context';
 
 // Auto-load engines via require.context
 const enginesAdapter = createContextAdapter(
-  require.context('./', true, /^\.\/[^/]+\/index\.(js|ts)$/),
+  require.context('./', true, /^\.\/[^/]+\/index\.[cm]?[jt]s$/),
 );
 
 /**

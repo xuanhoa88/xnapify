@@ -14,7 +14,7 @@ import { createWorkerPool } from '../../worker';
 import { WebhookError } from '../errors';
 
 // Auto-load workers via require.context (*.worker.js or *.worker.ts)
-const workersAdapter = require.context('./', false, /\.worker\.(js|ts)$/);
+const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/);
 
 // Worker configuration (can be overridden by options)
 const DEFAULT_CONFIG = {
@@ -23,7 +23,7 @@ const DEFAULT_CONFIG = {
 };
 
 // Create worker pool with webhook-specific configuration
-const workerPool = createWorkerPool(workersAdapter, {
+const workerPool = createWorkerPool(workersContext, {
   ErrorHandler: WebhookError,
   engineName: 'Webhook',
   maxWorkers: DEFAULT_CONFIG.maxWorkers,

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Router } from 'express';
 import { DEFAULT_ACTIONS, DEFAULT_RESOURCES } from '../../constants/rbac';
 import * as rbacController from '../../controllers/admin/rbac.controller';
 
@@ -16,14 +17,13 @@ import * as rbacController from '../../controllers/admin/rbac.controller';
  * All routes require authentication and specific permissions.
  *
  * @param {Object} deps - Dependencies injected by parent router
- * @param {Function} deps.Router - Express Router constructor
  * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with role routes
  */
 export default function roleRoutes(deps, userMiddlewares) {
   const { requirePermission } = userMiddlewares;
-  const router = deps.Router();
+  const router = Router();
 
   /**
    * @route   POST /initialize

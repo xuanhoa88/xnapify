@@ -6,6 +6,14 @@
  */
 
 import Sequelize from 'sequelize';
+import {
+  runMigrations,
+  runSeeds,
+  revertMigration,
+  undoSeed,
+  getMigrationStatus,
+  getSeedStatus,
+} from './migrator';
 
 /**
  * Check if value is a plain object
@@ -45,11 +53,75 @@ function merge(target, source) {
 }
 
 /**
- * Create a new Sequelize connection instance
+ * Attach migration convenience methods to a Sequelize connection instance
+ *
+ * @param {Sequelize} sequelize - Sequelize connection instance
+ * @returns {Sequelize} Enhanced connection with migration methods
+ */
+function attachMigrationMethods(sequelize) {
+  /**
+   * Run pending migrations
+   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<void>}
+   */
+  sequelize.runMigrations = (migrations = null, options = {}) =>
+    runMigrations(migrations, sequelize, options);
+
+  /**
+   * Run seeds
+   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<void>}
+   */
+  sequelize.runSeeds = (seeds = null, options = {}) =>
+    runSeeds(seeds, sequelize, options);
+
+  /**
+   * Revert last migration
+   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<void>}
+   */
+  sequelize.revertMigration = (migrations = null, options = {}) =>
+    revertMigration(migrations, sequelize, options);
+
+  /**
+   * Undo last seed
+   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<void>}
+   */
+  sequelize.undoSeed = (seeds = null, options = {}) =>
+    undoSeed(seeds, sequelize, options);
+
+  /**
+   * Get migration status
+   * @param {Array|null} [migrations=null] - Migration source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<{executed: Array, pending: Array}>}
+   */
+  sequelize.getMigrationStatus = (migrations = null, options = {}) =>
+    getMigrationStatus(migrations, sequelize, options);
+
+  /**
+   * Get seed status
+   * @param {Array|null} [seeds=null] - Seed source
+   * @param {Object} [options] - Optional configuration
+   * @returns {Promise<{executed: Array, pending: Array}>}
+   */
+  sequelize.getSeedStatus = (seeds = null, options = {}) =>
+    getSeedStatus(seeds, sequelize, options);
+
+  return sequelize;
+}
+
+/**
+ * Create a new Sequelize connection instance with migration methods attached
  *
  * @param {string} [url] - Database URL (optional)
  * @param {Object} [options] - Sequelize options
- * @returns {Sequelize} Sequelize connection instance
+ * @returns {Sequelize} Sequelize connection instance with migration methods
  */
 export function createConnection(...args) {
   let databaseUrl = process.env.RSK_DATABASE_URL || 'sqlite:database.sqlite';
@@ -87,10 +159,12 @@ export function createConnection(...args) {
   // Deep merge options
   const config = merge({}, defaultOptions, options);
 
-  return new Sequelize(databaseUrl, config);
+  // Create connection and attach migration methods
+  const sequelize = new Sequelize(databaseUrl, config);
+  return attachMigrationMethods(sequelize);
 }
 
 /**
- * Default Sequelize connection instance
+ * Default Sequelize connection instance with migration methods
  */
 export const connection = createConnection();

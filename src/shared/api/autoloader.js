@@ -22,8 +22,8 @@ import { createContextAdapter } from '../context';
 /** Pattern to match model index files: ./moduleName/api/models/index.js */
 const MODEL_PATH_PATTERN = /^\.\/([^/]+)\/api\/models\/index\.[cm]?[jt]s$/;
 
-/** Pattern to match router index files: ./moduleName/api/index.js */
-const ROUTER_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/;
+/** Pattern to match module lifecycle files: ./moduleName/api/index.js */
+const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/;
 
 // =============================================================================
 // CORE MODULES CONFIGURATION
@@ -80,9 +80,12 @@ function loadModuleFactory(adapter, filePath) {
   const factory = mod.default || mod;
 
   if (typeof factory !== 'function') {
-    throw new Error(
+    const err = new Error(
       `Module must export a factory function, got ${typeof factory}`,
     );
+    err.name = 'InvalidModuleError';
+    err.code = 'INVALID_MODULE';
+    throw err;
   }
 
   return factory;
@@ -123,10 +126,10 @@ export function sortModules(modulePaths) {
 
   return [...modulePaths].sort((a, b) => {
     const nameA =
-      getModuleName(a, ROUTER_PATH_PATTERN) ||
+      getModuleName(a, LIFECYCLE_PATH_PATTERN) ||
       getModuleName(a, MODEL_PATH_PATTERN);
     const nameB =
-      getModuleName(b, ROUTER_PATH_PATTERN) ||
+      getModuleName(b, LIFECYCLE_PATH_PATTERN) ||
       getModuleName(b, MODEL_PATH_PATTERN);
 
     const priorityA = corePriority.has(nameA)
@@ -160,7 +163,7 @@ export function validateCoreModules(modulePaths, options = {}) {
 
   const foundModules = new Set(
     modulePaths
-      .map(path => getModuleName(path, ROUTER_PATH_PATTERN))
+      .map(path => getModuleName(path, LIFECYCLE_PATH_PATTERN))
       .filter(Boolean),
   );
 
@@ -172,7 +175,10 @@ export function validateCoreModules(modulePaths, options = {}) {
     const message = `Missing required core module(s): ${missing.join(', ')}`;
 
     if (strictCoreModules) {
-      throw new Error(message);
+      const error = new Error(message);
+      error.name = 'MissingCoreModulesError';
+      error.code = 'MISSING_CORE_MODULES';
+      throw error;
     }
 
     console.warn(`⚠️ ${message}`);
@@ -213,28 +219,45 @@ async function loadModels(adapter, paths, app) {
       const result = await factory(db, app);
 
       if (!result || typeof result !== 'object') {
-        throw new Error(
+        const error = new Error(
           'Model factory must return an object containing models',
         );
+        error.name = 'InvalidModelFactoryError';
+        error.code = 'INVALID_MODEL_FACTORY';
+        throw error;
       }
 
       const modelNames = Object.keys(result);
       if (modelNames.length === 0) {
-        throw new Error('Model factory returned empty object');
+        const error = new Error('Model factory returned empty object');
+        error.name = 'EmptyModelFactoryError';
+        error.code = 'EMPTY_MODEL_FACTORY';
+        throw error;
+      }
+
+      // Validate individual model values (must not be null/undefined)
+      const invalidModels = modelNames.filter(name => result[name] == null);
+      if (invalidModels.length > 0) {
+        const error = new Error(
+          `Invalid model value(s): ${invalidModels.join(', ')}. Each model must not be null or undefined.`,
+        );
+        error.name = 'InvalidModelError';
+        error.code = 'INVALID_MODEL';
+        throw error;
       }
 
       // Check for duplicate model names
       const duplicates = modelNames.filter(name => name in models);
       if (duplicates.length > 0) {
-        console.warn(
-          `⚠️ [${moduleName}] Overwriting models: ${duplicates.join(', ')}`,
+        const error = new Error(
+          `Duplicate model name(s): ${duplicates.join(', ')}. Module skipped.`,
         );
+        errors.push(createLoadError(moduleName, filePath, error));
+        console.error(`❌ [${moduleName}] ${error.message}`);
+        continue;
       }
 
       Object.assign(models, result);
-      console.info(
-        `✅ [${moduleName}] Loaded ${modelNames.length} model(s): ${modelNames.join(', ')}`,
-      );
     } catch (error) {
       errors.push(createLoadError(moduleName, filePath, error));
       console.error(`❌ [${moduleName}] ${error.message}`);
@@ -245,43 +268,58 @@ async function loadModels(adapter, paths, app) {
 }
 
 // =============================================================================
-// ROUTER LOADING
+// LIFECYCLE MANAGEMENT
 // =============================================================================
 
 /**
- * Load all router modules sequentially.
+ * Load all lifecycle modules.
  *
  * @param {object} adapter - Context adapter
- * @param {string[]} paths - Sorted router file paths
- * @param {object} app - Express app instance
- * @returns {Promise<{router: Router, errors: object[]}>}
+ * @param {string[]} paths - Sorted lifecycle file paths
+ * @returns {Promise<{lifecycles: Map, errors: object[]}>}
  */
-async function loadRouters(adapter, paths, app) {
-  const mainRouter = Router();
+async function loadModules(adapter, paths) {
+  const lifecycles = new Map();
   const errors = [];
 
   for (const filePath of paths) {
-    const moduleName = getModuleName(filePath, ROUTER_PATH_PATTERN);
+    const moduleName = getModuleName(filePath, LIFECYCLE_PATH_PATTERN);
 
     try {
-      const factory = loadModuleFactory(adapter, filePath);
-      const router = await factory({ Router }, app);
+      // Direct load (supports object { install, bootstrap } export)
+      const hooks = adapter.load(filePath);
 
-      if (!router || typeof router.use !== 'function') {
-        throw new Error(
-          'Router factory must return an Express Router instance',
+      if (!hooks || typeof hooks !== 'object') {
+        const err = new Error(
+          'Lifecycle module must export an object with lifecycle hooks',
         );
+        err.name = 'InvalidLifecycleError';
+        err.code = 'INVALID_LIFECYCLE';
+        throw err;
       }
 
-      mainRouter.use(router);
-      console.info(`✅ [${moduleName}] Mounted router`);
+      // Validate at least one hook exists
+      const hasValidHook =
+        typeof hooks.install === 'function' ||
+        typeof hooks.bootstrap === 'function';
+
+      if (!hasValidHook) {
+        const err = new Error(
+          'Lifecycle module must export at least one hook (install or bootstrap)',
+        );
+        err.name = 'InvalidLifecycleError';
+        err.code = 'INVALID_LIFECYCLE';
+        throw err;
+      }
+
+      lifecycles.set(moduleName, hooks);
     } catch (error) {
       errors.push(createLoadError(moduleName, filePath, error));
       console.error(`❌ [${moduleName}] ${error.message}`);
     }
   }
 
-  return { router: mainRouter, errors };
+  return { lifecycles, errors };
 }
 
 // =============================================================================
@@ -301,83 +339,94 @@ async function loadRouters(adapter, paths, app) {
  */
 export async function discoverModules(modulesContext, app) {
   if (!app) {
-    throw new Error('Express app instance is required');
+    const err = new Error('Express app instance is required');
+    err.name = 'InvalidAppError';
+    err.code = 'INVALID_APP';
+    throw err;
   }
 
-  console.info('🔍 Discovering API modules...\n');
+  // Start timer
+  const startTime = Date.now();
 
+  // Create router
+  const apiRouter = Router();
+
+  // Create adapter
   const adapter = createContextAdapter(modulesContext);
   const allFiles = adapter.files();
 
-  // Separate model and router files
+  // Filter model and lifecycle paths
   const modelPaths = allFiles.filter(path => MODEL_PATH_PATTERN.test(path));
-  const routerPaths = allFiles.filter(path => ROUTER_PATH_PATTERN.test(path));
-
-  console.info(
-    `📦 Found ${modelPaths.length} model module(s), ${routerPaths.length} router module(s)\n`,
+  const lifecyclePaths = allFiles.filter(path =>
+    LIFECYCLE_PATH_PATTERN.test(path),
   );
 
   // Validate core modules are present
-  const coreValidation = validateCoreModules(routerPaths);
+  const coreValidation = validateCoreModules(lifecyclePaths);
   if (!coreValidation.valid) {
-    throw new Error(
+    const err = new Error(
       `Core module validation failed: ${coreValidation.missing.join(', ')}`,
     );
+    err.name = 'InvalidCoreModulesError';
+    err.code = 'INVALID_CORE_MODULES';
+    throw err;
   }
 
   // Sort to load core modules first
   const sortedModelPaths = sortModules(modelPaths);
-  const sortedRouterPaths = sortModules(routerPaths);
+  const sortedLifecyclePaths = sortModules(lifecyclePaths);
 
-  const startTime = Date.now();
-
-  // Load models, then routers
+  // Load models first (needed for lifecycle)
   const { models, errors: modelErrors } = await loadModels(
     adapter,
     sortedModelPaths,
     app,
   );
-  const { router, errors: routerErrors } = await loadRouters(
+
+  // Load modules
+  const { lifecycles, errors: lifecycleErrors } = await loadModules(
     adapter,
-    sortedRouterPaths,
-    app,
+    sortedLifecyclePaths,
   );
 
-  const duration = Date.now() - startTime;
-  const allErrors = [...modelErrors, ...routerErrors];
+  // Combine all errors
+  const errors = [...modelErrors, ...lifecycleErrors];
 
-  // Summary
-  console.info('\n📊 Loading Summary:');
-  console.info(
-    `   Models:  ${Object.keys(models).length} loaded from ${sortedModelPaths.length} module(s)`,
-  );
-  console.info(`   Routers: ${sortedRouterPaths.length} mounted`);
-  console.info(`   Duration: ${duration}ms`);
-
-  if (allErrors.length > 0) {
-    console.warn(`   Errors:  ${allErrors.length}`);
+  // Bootstrap all modules
+  for (const [name, hooks] of lifecycles) {
+    if (hooks && typeof hooks.bootstrap === 'function') {
+      try {
+        await hooks.bootstrap(app, apiRouter);
+      } catch (error) {
+        console.error(`❌ [${name}] Bootstrap failed:`, error.message);
+      }
+    }
   }
 
   // Fail if any core module failed to load
-  const failedCoreModules = allErrors
+  const failedCoreModules = errors
     .filter(error => CORE_MODULES.has(error.moduleName))
     .map(error => error.moduleName);
 
   if (failedCoreModules.length > 0) {
-    throw new Error(
-      `Failed to load core modules: ${failedCoreModules.join(', ')}. Application cannot start.`,
+    const err = new Error(
+      `Failed to load core modules: ${failedCoreModules.join(
+        ', ',
+      )}. Application cannot start.`,
     );
+    err.name = 'InvalidCoreModulesError';
+    err.code = 'INVALID_CORE_MODULES';
+    throw err;
   }
 
+  // Summary
   console.info(
-    allErrors.length === 0
-      ? '\n✨ All modules loaded successfully\n'
-      : '\n⚠️ Some modules failed to load. Check errors above.\n',
+    `📦 API: ${Object.keys(models).length} model(s), ${lifecycles.size} lifecycle(s) loaded in ${Date.now() - startTime}ms`,
   );
 
-  return {
-    apiModels: models,
-    apiRoutes: router,
-    errors: allErrors,
-  };
+  if (errors.length > 0) {
+    console.warn(`⚠️ API: ${errors.length} module(s) failed to load`);
+  }
+
+  return { apiModels: models, apiRouter };
 }

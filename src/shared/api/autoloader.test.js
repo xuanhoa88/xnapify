@@ -54,6 +54,14 @@ describe('shared/api/autoloader', () => {
       expect(sorted).toHaveLength(3);
     });
 
+    it('should sort lifecycle files correctly', () => {
+      const { sortModules } = require('./autoloader');
+      const paths = ['./z_module/api/index.js', './users/api/index.js'];
+      const sorted = sortModules(paths);
+      expect(sorted[0]).toContain('users'); // users is core
+      expect(sorted[1]).toContain('z_module');
+    });
+
     it('should sort based on custom core modules', () => {
       process.env.RSK_MODULE_DEFAULTS = 'z_module';
       const { sortModules } = require('./autoloader');

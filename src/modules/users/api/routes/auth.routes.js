@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Router } from 'express';
 import * as authController from '../controllers/auth.controller';
 
 /**
@@ -15,19 +16,16 @@ import * as authController from '../controllers/auth.controller';
  *
  * All routes are public except /me which requires authentication.
  *
- * @param {Object} deps - Dependencies injected by parent router
- * @param {Function} deps.Router - Express Router constructor
- * @param {Object} userMiddlewares - Authentication middlewares
  * @param {Object} app - Express application instance
  * @returns {Router} Express router with authentication routes
  */
-export default function authRoutes(deps, userMiddlewares, app) {
+export default function authRoutes(app) {
   const auth = app.get('auth');
 
   // Create requireAuth middleware
   const requireAuth = auth.requireAuthMiddleware();
 
-  const router = deps.Router();
+  const router = Router();
 
   /**
    * @route   POST /register

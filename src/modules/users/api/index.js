@@ -1,0 +1,105 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { Router } from 'express';
+import * as userMiddlewares from './middlewares';
+import authRoutes from './routes/auth.routes';
+import profileRoutes from './routes/profile.routes';
+import userRoutes from './routes/admin/user.routes';
+import roleRoutes from './routes/admin/role.routes';
+import permissionRoutes from './routes/admin/permission.routes';
+import groupRoutes from './routes/admin/group.routes';
+
+// Auto-load migrations via require.context
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/,
+);
+
+// Auto-load seeds via require.context
+const seedsContext = require.context(
+  './database/seeds',
+  false,
+  /\.[cm]?[jt]s$/,
+);
+
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
+
+/**
+ * Install hook - runs once when the module is first installed.
+ * Use for database migrations, seeds, and initial data setup.
+ *
+ * @param {Object} app - Express app instance
+ */
+async function migrate(app) {
+  const db = app.get('db');
+
+  // Run database migrations
+  await db.connection.runMigrations([
+    { context: migrationsContext, prefix: 'users' },
+  ]);
+
+  // Run database seeds
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }]);
+
+  console.info('✅ [users] Migrations and seeds completed');
+}
+
+/**
+ * Bootstrap hook - runs on every application startup.
+ * Use for registering global middlewares and mounting routes.
+ *
+ * @param {Object} app - Express app instance
+ * @param {Router} apiRouter - Main API Router
+ */
+export async function bootstrap(app, apiRouter) {
+  // Run database migrations and seeds
+  await migrate(app);
+
+  // Register global middlewares in app settings for reuse by other modules
+  app.set('user.middlewares', userMiddlewares);
+
+  console.info('✅ [users] Middlewares registered');
+
+  // =========================================================================
+  // ROUTING
+  // =========================================================================
+
+  const router = Router();
+
+  // ========================================================================
+  // PUBLIC ROUTES
+  // ========================================================================
+
+  // Authentication routes (public)
+  router.use('/', authRoutes(app));
+
+  // Profile management routes (authenticated users)
+  router.use('/profile', profileRoutes(app, userMiddlewares));
+
+  // ========================================================================
+  // ADMIN ROUTES
+  // ========================================================================
+
+  // User administration routes: /admin/users
+  router.use('/admin/users', userRoutes(app, userMiddlewares));
+
+  // Role management routes: /admin/roles
+  router.use('/admin/roles', roleRoutes(app, userMiddlewares));
+
+  // Permission management routes: /admin/permissions
+  router.use('/admin/permissions', permissionRoutes(app, userMiddlewares));
+
+  // Group management routes: /admin/groups
+  router.use('/admin/groups', groupRoutes(app, userMiddlewares));
+
+  // Mount module routes to the main API router
+  apiRouter.use(router);
+}

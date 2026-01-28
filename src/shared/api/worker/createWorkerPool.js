@@ -37,7 +37,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 /**
  * Create a WorkerPool instance for a specific engine
  *
- * @param {Object} workersAdapter - webpack require.context for worker files
+ * @param {Object} workersContext - webpack require.context for worker files
  * @param {Object} options - Configuration options
  * @param {class} options.ErrorHandler - Error class to use for worker errors
  * @param {string} options.engineName - Name of the engine (for logging)
@@ -46,9 +46,9 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
  * @param {number} options.maxRequestsPerWorker - Max requests per worker before restart
  * @returns {WorkerPool} Worker service instance
  */
-export function createWorkerPool(workersAdapter, options = {}) {
+export function createWorkerPool(workersContext, options = {}) {
   // Wrap context with adapter for consistent interface
-  const adapter = createContextAdapter(workersAdapter);
+  const adapter = createContextAdapter(workersContext);
 
   const {
     ErrorHandler = WorkerError,

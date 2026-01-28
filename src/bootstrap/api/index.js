@@ -10,7 +10,7 @@ import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 
 // Discover and mount modules - wrap at declaration for consistency
-const modulesAdapter = require.context(
+const modulesContext = require.context(
   '../../modules',
   true,
   /\/index\.[cm]?[jt]s$/,
@@ -185,10 +185,10 @@ export default async function main(app, config = {}) {
     );
 
     // Initialize database migrations
-    await engines.db.runMigrations(null, engines.db.connection);
+    await engines.db.connection.runMigrations(null);
 
     // Initialize database seeds
-    await engines.db.runSeeds(null, engines.db.connection);
+    await engines.db.connection.runSeeds(null);
 
     // Configure webhook database (adapter + worker) with current connection
     engines.webhook.setDbConnection(engines.db.connection);
@@ -211,8 +211,8 @@ export default async function main(app, config = {}) {
     }
 
     // Discover and mount modules
-    const { apiRoutes, apiModels } = await discoverModules(
-      modulesAdapter,
+    const { apiRouter, apiModels } = await discoverModules(
+      modulesContext,
       guardedApp,
     );
 
@@ -220,7 +220,7 @@ export default async function main(app, config = {}) {
     guardedApp.set('models', apiModels);
 
     // Mount API routes with middleware stack
-    guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRoutes);
+    guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
 
     // Catch 404 and forward to error handler (prevents fallthrough to SSR)
     guardedApp.use(config.apiPrefix, engines.http.notFoundHandler);

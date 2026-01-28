@@ -10,7 +10,7 @@ import { getAppName, getAppDescription } from '../shared/renderer/redux';
 import { createContextAdapter } from '../shared/context';
 
 // Webpack context for all collectable module files
-const modulesAdapter = require.context(
+const modulesContext = require.context(
   '../modules',
   true,
   /(?:\/views\/.*\/(?:_route|_layout)|\/\(routes\)\/\([^)]+\)|\/\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
@@ -57,7 +57,7 @@ class AppRouter extends Router {
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter() {
-  const router = new AppRouter(createContextAdapter(modulesAdapter), {
+  const router = new AppRouter(createContextAdapter(modulesContext), {
     context: {
       // Init context here if needed
     },

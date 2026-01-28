@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Router } from 'express';
 import * as permissionController from '../../controllers/admin/permission.controller';
 
 /**
@@ -14,15 +15,13 @@ import * as permissionController from '../../controllers/admin/permission.contro
  *
  * All routes require authentication and specific permissions.
  *
- * @param {Object} deps - Dependencies injected by parent router
- * @param {Function} deps.Router - Express Router constructor
- * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} app - Express application instance
+ * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @returns {Router} Express router with permission routes
  */
-export default function permissionRoutes(deps, userMiddlewares) {
+export default function permissionRoutes(app, userMiddlewares) {
   const { requirePermission } = userMiddlewares;
-  const router = deps.Router();
+  const router = Router();
 
   /**
    * @route   POST /

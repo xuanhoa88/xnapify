@@ -10,10 +10,14 @@ import { Umzug, SequelizeStorage } from 'umzug';
 import { createContextAdapter } from '../../context';
 
 // Auto-load migrations via require.context
-const migrationsAdapter = require.context('./migrations', false, /\.(js|ts)$/);
+const migrationsContext = require.context(
+  './migrations',
+  false,
+  /\.[cm]?[jt]s$/,
+);
 
 // Auto-load seeds via require.context
-const seedsAdapter = require.context('./seeds', false, /\.(js|ts)$/);
+const seedsContext = require.context('./seeds', false, /\.[cm]?[jt]s$/);
 
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'
@@ -179,7 +183,7 @@ function createMigrationUmzug(migrations, connection, logger = console) {
 
   if (migrations == null) {
     // Use built-in bundled migrations
-    const adapter = createContextAdapter(migrationsAdapter);
+    const adapter = createContextAdapter(migrationsContext);
     migrationsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(migrations)) {
     // Array of {context, prefix} objects
@@ -223,7 +227,7 @@ function createSeedUmzug(seeds, connection, logger = console) {
 
   if (seeds == null) {
     // Use built-in bundled seeds
-    const adapter = createContextAdapter(seedsAdapter);
+    const adapter = createContextAdapter(seedsContext);
     seedsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(seeds)) {
     // Array of {context, prefix} objects

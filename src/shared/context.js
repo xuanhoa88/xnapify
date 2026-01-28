@@ -12,8 +12,8 @@
  * @returns {Object} Adapter with files() and load() methods
  *
  * @example
- * const modulesAdapter = require.context('../modules', true, /pattern/);
- * const adapter = createContextAdapter(modulesAdapter);
+ * const modulesContext = require.context('../modules', true, /pattern/);
+ * const adapter = createContextAdapter(modulesContext);
  *
  * // Get all file paths
  * const paths = adapter.files();
