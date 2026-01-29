@@ -13,13 +13,13 @@ import newsRoutes from './news.routes';
 // =============================================================================
 
 /**
- * Bootstrap hook - runs on every application startup.
+ * Initialize hook - runs on every application startup.
  * Use for registering event listeners, cron jobs, and mounting routes.
  *
  * @param {Object} app - Express app instance
  * @param {Router} apiRouter - Main API Router
  */
-export async function bootstrap(app, apiRouter) {
+export async function init(app, apiRouter) {
   const auth = app.get('auth');
   const webhook = app.get('webhook');
   const router = Router();

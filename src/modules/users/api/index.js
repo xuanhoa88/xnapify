@@ -33,13 +33,13 @@ const seedsContext = require.context(
 // =============================================================================
 
 /**
- * Bootstrap hook - runs on every application startup.
+ * Initialize hook - runs on every application startup.
  * Use for registering global middlewares and mounting routes.
  *
  * @param {Object} app - Express app instance
  * @param {Router} apiRouter - Main API Router
  */
-export async function bootstrap(app, apiRouter) {
+export async function init(app, apiRouter) {
   const db = app.get('db');
 
   // Run database migrations

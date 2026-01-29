@@ -313,7 +313,7 @@ async function loadModules(adapter, paths) {
     const moduleName = getModuleName(filePath, LIFECYCLE_PATH_PATTERN);
 
     try {
-      // Direct load (supports object { install, bootstrap } export)
+      // Direct load (supports object { install, uninstall, init } export)
       const hooks = adapter.load(filePath);
 
       if (!hooks || typeof hooks !== 'object') {
@@ -328,11 +328,12 @@ async function loadModules(adapter, paths) {
       // Validate at least one hook exists
       const hasValidHook =
         typeof hooks.install === 'function' ||
-        typeof hooks.bootstrap === 'function';
+        typeof hooks.uninstall === 'function' ||
+        typeof hooks.init === 'function';
 
       if (!hasValidHook) {
         const err = new Error(
-          'Lifecycle module must export at least one hook (install or bootstrap)',
+          'Lifecycle module must export at least one hook (install, uninstall or init)',
         );
         err.name = 'InvalidLifecycleError';
         err.code = 'INVALID_LIFECYCLE';
@@ -419,13 +420,13 @@ export async function discoverModules(modulesContext, app) {
   // Combine all errors
   const errors = [...modelErrors, ...lifecycleErrors];
 
-  // Bootstrap all modules
+  // Initialize all modules
   for (const [name, hooks] of lifecycles) {
-    if (hooks && typeof hooks.bootstrap === 'function') {
+    if (hooks && typeof hooks.init === 'function') {
       try {
-        await hooks.bootstrap(app, apiRouter);
+        await hooks.init(app, apiRouter);
       } catch (error) {
-        console.error(`❌ [${name}] Bootstrap failed:`, error.message);
+        console.error(`❌ [${name}] Initialize failed:`, error.message);
       }
     }
   }

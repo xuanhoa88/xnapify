@@ -107,6 +107,38 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
   return count;
 }
 
+/**
+ * Clone context for safe storage
+ * @param {Object} ctx - Context to clone
+ * @returns {Object} Cloned context with essential properties
+ */
+function cloneContext(ctx) {
+  if (!ctx) return null;
+
+  // Only clone essential properties to avoid memory bloat
+  const cloned = {
+    pathname: ctx.pathname,
+    route: ctx.route,
+    params: ctx.params ? { ...ctx.params } : {},
+    query: ctx.query ? { ...ctx.query } : {},
+  };
+
+  // Copy other non-function, non-Set properties
+  for (const key in ctx) {
+    if (
+      Object.prototype.hasOwnProperty.call(ctx, key) &&
+      typeof ctx[key] !== 'function' &&
+      !(ctx[key] instanceof Set) &&
+      !Object.prototype.hasOwnProperty.call(cloned, key) &&
+      !key.startsWith('_')
+    ) {
+      cloned[key] = ctx[key];
+    }
+  }
+
+  return cloned;
+}
+
 // ============================================================================
 // Router Class
 // ============================================================================
@@ -115,6 +147,21 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
 // In SSR, each request has its own context object.
 // In CSR, the context object is typically long-lived.
 const registeredContexts = new WeakMap();
+
+/**
+ * Navigation queue entry
+ */
+class NavigationEntry {
+  constructor(pathname, promise) {
+    this.pathname = pathname;
+    this.promise = promise;
+    this.cancelled = false;
+  }
+
+  cancel() {
+    this.cancelled = true;
+  }
+}
 
 /**
  * Router class for file-based routing
@@ -126,6 +173,24 @@ export class Router {
     this.routes = [];
     this.configs = new Map();
     this.layouts = new Map();
+
+    // Track previous route for unmount lifecycle (CSR only)
+    this[ROUTE_PREV_KEY] = null;
+    this[ROUTE_PREV_CTX] = null;
+
+    // Navigation queue to prevent race conditions
+    // eslint-disable-next-line no-underscore-dangle
+    this._navigationQueue = [];
+    // eslint-disable-next-line no-underscore-dangle
+    this._isNavigating = false;
+
+    // Registration promise cache to prevent concurrent registration
+    // eslint-disable-next-line no-underscore-dangle
+    this._registrationPromise = null;
+
+    // Max recursion depth for next() calls
+    // eslint-disable-next-line no-underscore-dangle
+    this._maxDepth = this.options.maxDepth || 50;
 
     if (adapter) {
       const routes = collect(adapter, 'routes');
@@ -152,8 +217,27 @@ export class Router {
     if (!force && registeredContexts.has(scope)) {
       return; // Already registered, skip
     }
-    registeredContexts.set(scope, true); // Always track registration
-    await traverseRoutes(this.routes, 'register', context, false);
+
+    // Reuse existing registration promise if one is in flight
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._registrationPromise) {
+      // eslint-disable-next-line no-underscore-dangle
+      return this._registrationPromise;
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._registrationPromise = (async () => {
+      try {
+        registeredContexts.set(scope, true);
+        await traverseRoutes(this.routes, 'register', context, false);
+      } finally {
+        // eslint-disable-next-line no-underscore-dangle
+        this._registrationPromise = null;
+      }
+    })();
+
+    // eslint-disable-next-line no-underscore-dangle
+    return this._registrationPromise;
   }
 
   /**
@@ -167,8 +251,46 @@ export class Router {
     if (!force && !registeredContexts.has(scope)) {
       return; // Not registered, skip
     }
-    registeredContexts.delete(scope); // Always clean up
+    registeredContexts.delete(scope);
     await traverseRoutes(this.routes, 'unregister', context, true);
+  }
+
+  /**
+   * Process navigation queue
+   */
+  async _processNavigationQueue() {
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._isNavigating || this._navigationQueue.length === 0) {
+      return;
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._isNavigating = true;
+
+    // eslint-disable-next-line no-underscore-dangle
+    while (this._navigationQueue.length > 0) {
+      // eslint-disable-next-line no-underscore-dangle
+      const entry = this._navigationQueue.shift();
+
+      // Cancel all remaining queued navigations except the last one
+      // eslint-disable-next-line no-underscore-dangle
+      if (this._navigationQueue.length > 0) {
+        entry.cancel();
+        continue;
+      }
+
+      if (!entry.cancelled) {
+        try {
+          await entry.promise;
+        } catch (error) {
+          // Error already handled in resolve, just log
+          log(`Navigation error: ${error.message}`, 'error');
+        }
+      }
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._isNavigating = false;
   }
 
   /**
@@ -181,10 +303,53 @@ export class Router {
         ? { pathname: contextOrPath }
         : contextOrPath;
 
+    // Create a promise for this navigation
+    let resolveNavigation;
+    let rejectNavigation;
+    const navigationPromise = new Promise((resolve, reject) => {
+      resolveNavigation = resolve;
+      rejectNavigation = reject;
+    });
+
+    const entry = new NavigationEntry(context.pathname, navigationPromise);
+
+    // Queue the navigation
+    // eslint-disable-next-line no-underscore-dangle
+    this._navigationQueue.push(entry);
+
+    // Start processing queue
+    // eslint-disable-next-line no-underscore-dangle
+    this._processNavigationQueue();
+
+    // Execute the actual resolution
+    (async () => {
+      try {
+        // Check if cancelled before starting
+        if (entry.cancelled) {
+          resolveNavigation(null);
+          return;
+        }
+
+        // eslint-disable-next-line no-underscore-dangle
+        const result = await this._resolveInternal(context, entry);
+        resolveNavigation(result);
+      } catch (error) {
+        rejectNavigation(error);
+      }
+    })();
+
+    return navigationPromise;
+  }
+
+  /**
+   * Internal resolve implementation
+   */
+  async _resolveInternal(context, navigationEntry) {
     const ctx = {
       ...this.options.context,
       ...context,
       _instance: this,
+      _navigationEntry: navigationEntry,
       [ROUTE_MOUNT_KEY]: new Set(),
       [ROUTE_UNMOUNT_KEY]: new Set(),
       [ROUTE_PREV_KEY]: null,
@@ -203,6 +368,11 @@ export class Router {
     // Auto-invoke registration (idempotent, errors caught in traverseRoutes)
     await this.register(ctx);
 
+    // Check if navigation was cancelled
+    if (navigationEntry.cancelled) {
+      return null;
+    }
+
     const matcher = createMatcher(
       { children: this.routes },
       this.baseUrl,
@@ -217,10 +387,33 @@ export class Router {
       matcher,
       matches: matcher.next(),
       cachedMatch: null,
-      current: null, // Tracks the currently processing route/context
+      current: null,
+      depth: 0,
+      mountedRoute: null, // Track what we've mounted for rollback
+      previousRouteSnapshot: {
+        route: this[ROUTE_PREV_KEY],
+        ctx: this[ROUTE_PREV_CTX] ? cloneContext(this[ROUTE_PREV_CTX]) : null,
+      },
     };
 
     const next = async (resume = false, parent = null, prevResult = null) => {
+      // Check recursion depth
+      state.depth += 1;
+      // eslint-disable-next-line no-underscore-dangle
+      if (state.depth > this._maxDepth) {
+        throw createError(
+          // eslint-disable-next-line no-underscore-dangle
+          `Maximum recursion depth (${this._maxDepth}) exceeded`,
+          500,
+          { pathname: ctx.pathname, depth: state.depth },
+        );
+      }
+
+      // Check if navigation was cancelled
+      if (navigationEntry.cancelled) {
+        return null;
+      }
+
       if (
         resume &&
         state.matches &&
@@ -259,38 +452,125 @@ export class Router {
 
       state.current = { ...ctx, ...state.matches.value };
 
+      // Check cancellation before boot
+      if (navigationEntry.cancelled) {
+        return null;
+      }
+
       // Run boot hook (config + route-level, parent → child, once per route)
       await runBoot(state.current.route, state.current);
 
-      // Run unmount hook on previous route (if navigating away)
-      if (ctx[ROUTE_PREV_KEY] && ctx[ROUTE_PREV_KEY] !== state.current.route) {
-        await runUnmount(ctx[ROUTE_PREV_KEY], ctx[ROUTE_PREV_CTX] || ctx);
+      // Check cancellation before unmount
+      if (navigationEntry.cancelled) {
+        return null;
+      }
+
+      // Run unmount hook on previous route ONLY on first match
+      // This ensures we unmount once per navigation, not on every next() call
+      if (!state.mountedRoute && state.previousRouteSnapshot.route) {
+        const prevRoute = state.previousRouteSnapshot.route;
+        const prevCtx = state.previousRouteSnapshot.ctx || ctx;
+
+        if (prevRoute !== state.current.route) {
+          await runUnmount(prevRoute, prevCtx);
+        }
+      }
+
+      // Check cancellation before mount
+      if (navigationEntry.cancelled) {
+        return null;
       }
 
       // Run mount hook (per-request, every navigation)
       await runMount(state.current.route, state.current);
 
-      // Track current route for unmount on next navigation (SSR-safe: stored on context)
-      ctx[ROUTE_PREV_KEY] = state.current.route;
-      ctx[ROUTE_PREV_CTX] = state.current;
+      // Track that we've mounted this route (for potential rollback)
+      if (!state.mountedRoute) {
+        state.mountedRoute = state.current.route;
+      }
+
+      // Check cancellation before resolver
+      if (navigationEntry.cancelled) {
+        return null;
+      }
 
       const result = await resolver(state.current, {
         autoResolve: state.current.route.autoResolve !== false,
       });
 
       if (result != null) return result;
+
+      state.depth -= 1; // Decrease depth before recursion
       return next(resume, parent, result);
     };
 
     ctx.next = next;
 
+    let result;
+    let navigationSuccessful = false;
+
     try {
-      return await next();
+      result = await next();
+
+      // Check if cancelled after resolution
+      if (navigationEntry.cancelled) {
+        return null;
+      }
+
+      navigationSuccessful = true;
+
+      // Only update prev route tracking on successful navigation
+      this[ROUTE_PREV_KEY] =
+        state.mountedRoute || (state.current && state.current.route);
+      this[ROUTE_PREV_CTX] = state.current ? cloneContext(state.current) : null;
+      ctx[ROUTE_PREV_KEY] = this[ROUTE_PREV_KEY];
+      ctx[ROUTE_PREV_CTX] = this[ROUTE_PREV_CTX];
+
+      return result;
     } catch (error) {
+      // Rollback: If we mounted a new route but navigation failed,
+      // we need to clean up and restore the previous route
+      if (state.mountedRoute && !navigationSuccessful) {
+        try {
+          await runUnmount(state.mountedRoute, state.current || ctx);
+
+          // Restore previous route if available
+          if (
+            state.previousRouteSnapshot.route &&
+            state.previousRouteSnapshot.ctx
+          ) {
+            await runMount(
+              state.previousRouteSnapshot.route,
+              state.previousRouteSnapshot.ctx,
+            );
+          }
+        } catch (rollbackError) {
+          log(
+            `Error during navigation rollback: ${rollbackError.message}`,
+            'error',
+          );
+        }
+      }
+
+      // Handle error with custom handler or rethrow
       if (typeof this.options.errorHandler === 'function') {
         return this.options.errorHandler(error, ctx);
       }
       throw error;
+    } finally {
+      // Cleanup: Clear Sets to prevent memory leaks
+      if (ctx[ROUTE_MOUNT_KEY]) {
+        ctx[ROUTE_MOUNT_KEY].clear();
+      }
+      if (ctx[ROUTE_UNMOUNT_KEY]) {
+        ctx[ROUTE_UNMOUNT_KEY].clear();
+      }
+
+      // Reset matcher state
+      state.matcher = null;
+      state.matches = null;
+      state.cachedMatch = null;
+      state.current = null;
     }
   }
 }

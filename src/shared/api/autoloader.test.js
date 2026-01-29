@@ -124,7 +124,7 @@ describe('shared/api/autoloader', () => {
         findAll: jest.fn(),
         create: jest.fn(),
       };
-      const lifecycle = { bootstrap: jest.fn() };
+      const lifecycle = { init: jest.fn() };
 
       mockContext.mockImplementation(key => {
         if (key === './users/api/models/User.js') {
@@ -134,7 +134,7 @@ describe('shared/api/autoloader', () => {
           return { default: jest.fn().mockResolvedValue(postModel) };
         }
         if (key === './users/api/index.js') {
-          return { bootstrap: lifecycle.bootstrap };
+          return { init: lifecycle.init };
         }
       });
 
@@ -166,13 +166,12 @@ describe('shared/api/autoloader', () => {
         findAll: jest.fn(),
         create: jest.fn(),
       };
-      const lifecycle = { bootstrap: jest.fn() };
+      const lifecycle = { init: jest.fn() };
 
       mockContext.mockImplementation(key => {
         if (key === './users/api/models/User.js')
           return { default: jest.fn().mockResolvedValue(userModel) };
-        if (key === './users/api/index.js')
-          return { bootstrap: lifecycle.bootstrap };
+        if (key === './users/api/index.js') return { init: lifecycle.init };
         return { default: jest.fn() };
       });
 

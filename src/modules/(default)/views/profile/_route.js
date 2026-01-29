@@ -6,6 +6,10 @@
  */
 
 import { isAuthenticated } from '../../../../shared/renderer/redux';
+import {
+  register as registerTestPlugin,
+  unregister as unregisterTestPlugin,
+} from './test-plugin';
 import Profile from './Profile';
 
 /**
@@ -27,6 +31,22 @@ export async function middleware(context, next) {
     return { redirect: `/login?next=${encodeURIComponent(context.pathname)}` };
   }
   return next();
+}
+
+/**
+ * Mount Hook - Runs when entering the route
+ */
+export async function mount() {
+  console.log('Profile mounted');
+  await registerTestPlugin();
+}
+
+/**
+ * Unmount Hook - Runs when leaving the route
+ */
+export async function unmount() {
+  console.log('Profile unmounted');
+  await unregisterTestPlugin();
 }
 
 /**

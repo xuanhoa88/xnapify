@@ -9,7 +9,7 @@ import { useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
-import { z } from '../../../../../shared/validator'; // Import z
+import { z } from '../../../../../shared/validator';
 import {
   getUserProfile,
   updateUserProfile,
@@ -49,6 +49,7 @@ function PersonalInfoCard() {
   const extendedSchema = usePluginSchema(
     'profile.personal_info.schema',
     baseSchema,
+    z,
   );
 
   // Wrap in factory for Form component
