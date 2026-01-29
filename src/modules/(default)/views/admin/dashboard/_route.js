@@ -9,19 +9,19 @@ import reducer, { SLICE_NAME } from './redux';
 import Dashboard from './Dashboard';
 
 /**
+ * Init function - inject Redux slice
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
+
+/**
  * Page metadata
  */
 export async function getInitialProps({ i18n }) {
   return {
     title: i18n.t('navigation.dashboard', 'Dashboard'),
   };
-}
-
-/**
- * Boot function - inject Redux slice
- */
-export function boot({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

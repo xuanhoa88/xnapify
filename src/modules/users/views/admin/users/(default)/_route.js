@@ -48,19 +48,19 @@ export function unregister({ store }) {
 }
 
 /**
+ * Init function - inject Redux slice
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
+
+/**
  * Page metadata
  */
 export async function getInitialProps({ i18n }) {
   return {
     title: i18n.t('navigation.users', 'Users'),
   };
-}
-
-/**
- * Boot function - inject Redux slice
- */
-export function boot({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

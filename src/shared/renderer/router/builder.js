@@ -8,9 +8,9 @@
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import { getRootSegment } from './utils';
 import {
-  createBoots,
-  createMounts,
-  createUnmounts,
+  createInit,
+  createMount,
+  createUnmount,
   createAction,
 } from './lifecycle';
 
@@ -99,10 +99,10 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
       module, // Preserve module for register/unregister lifecycle
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedLayouts),
-      // Lifecycle hooks: boot (config + route), mount/unmount (both)
-      boot: createBoots(matchedConfigs, module.boot),
-      mount: createMounts(matchedConfigs, module.mount),
-      unmount: createUnmounts(matchedConfigs, module.unmount),
+      // Lifecycle hooks: init (config + route), mount/unmount (both)
+      init: createInit(matchedConfigs, module.init),
+      mount: createMount(matchedConfigs, module.mount),
+      unmount: createUnmount(matchedConfigs, module.unmount),
     });
   });
 

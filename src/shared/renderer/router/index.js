@@ -13,7 +13,7 @@ import {
 } from './constants';
 import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
-import { runBoot, runMount, runUnmount } from './lifecycle';
+import { runInit, runMount, runUnmount } from './lifecycle';
 import { createMatcher, clearMatchCache } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
@@ -295,7 +295,7 @@ export class Router {
 
   /**
    * Resolves a URL to a route and executes its action
-   * Handles the complete lifecycle: matching -> booting -> unmounting -> mounting -> resolving
+   * Handles the complete lifecycle: matching -> initializing -> unmounting -> mounting -> resolving
    */
   async resolve(contextOrPath) {
     const context =
@@ -452,13 +452,13 @@ export class Router {
 
       state.current = { ...ctx, ...state.matches.value };
 
-      // Check cancellation before boot
+      // Check cancellation before init
       if (navigationEntry.cancelled) {
         return null;
       }
 
-      // Run boot hook (config + route-level, parent → child, once per route)
-      await runBoot(state.current.route, state.current);
+      // Run init hook (config + route-level, parent → child, once per route)
+      await runInit(state.current.route, state.current);
 
       // Check cancellation before unmount
       if (navigationEntry.cancelled) {
