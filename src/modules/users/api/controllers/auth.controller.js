@@ -12,7 +12,7 @@ import {
   emailVerificationFormSchema,
   passwordResetRequestFormSchema,
   passwordResetConfirmFormSchema,
-} from '../../../../shared/validator/features/auth';
+} from '../../validator/auth';
 import * as authService from '../services/auth.service';
 import { generatePassword } from '../utils/password';
 

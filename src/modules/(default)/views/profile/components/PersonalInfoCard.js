@@ -9,6 +9,7 @@ import { useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import { z } from '../../../../../shared/validator'; // Import z
 import {
   getUserProfile,
   updateUserProfile,
@@ -17,20 +18,41 @@ import {
   clearProfileError,
   showSuccessMessage,
 } from '../../../../../shared/renderer/redux';
-import { updateProfileFormSchema } from '../../../../../shared/validator/features/auth';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
+import {
+  PluginSlot,
+  usePluginSchema,
+  usePluginHooks,
+} from '../../../../../shared/plugin';
+import { updateProfileFormSchema } from '../../../../users/validator/auth';
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation(); // Destructure i18n
   const dispatch = useDispatch();
   const user = useSelector(getUserProfile);
   const loading = useSelector(isProfileLoading);
   const error = useSelector(getProfileError);
+  const pluginHooks = usePluginHooks();
+
+  // Instantiate base schema object
+  const baseSchema = useMemo(
+    () => updateProfileFormSchema({ i18n, z }),
+    [i18n],
+  );
+
+  // Extend schema with plugins (returns Zod object)
+  const extendedSchema = usePluginSchema(
+    'profile.personal_info.schema',
+    baseSchema,
+  );
+
+  // Wrap in factory for Form component
+  const formSchema = useCallback(() => extendedSchema, [extendedSchema]);
 
   // Clear error on unmount
   useEffect(() => {
@@ -57,6 +79,13 @@ function PersonalInfoCard() {
     async (data, { reset }) => {
       try {
         await dispatch(updateUserProfile(data)).unwrap();
+
+        // Execute plugin hooks
+        await pluginHooks.execute('profile.personal_info.submit', data, {
+          dispatch,
+          user,
+        });
+
         // Reset form with the new saved data
         reset(data);
         dispatch(
@@ -69,7 +98,7 @@ function PersonalInfoCard() {
         // Error is handled by Redux state
       }
     },
-    [dispatch, t],
+    [dispatch, t, pluginHooks, user],
   );
 
   return (
@@ -91,7 +120,7 @@ function PersonalInfoCard() {
       <Form.Error message={error || ''} />
 
       <Form
-        schema={updateProfileFormSchema}
+        schema={formSchema}
         defaultValues={defaultValues}
         onSubmit={handleSubmit}
       >
@@ -161,6 +190,9 @@ function PersonalInfoFormFields({ loading }) {
           )}
         />
       </Form.Field>
+
+      {/* Render plugin slots */}
+      <PluginSlot name='profile.personal_info.fields' />
 
       <Button
         variant='primary'

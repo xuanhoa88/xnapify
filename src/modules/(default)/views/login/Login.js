@@ -9,7 +9,6 @@ import { useCallback, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import PropTypes from 'prop-types';
-import { loginFormSchema } from '../../../../shared/validator/features/auth';
 import {
   login,
   getUserPreferences,
@@ -29,6 +28,7 @@ import Button from '../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../shared/renderer/components/Form';
+import { loginFormSchema } from '../../../users/validator/auth';
 import s from './Login.css';
 
 // Demo users for quick access

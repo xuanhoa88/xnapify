@@ -11,7 +11,7 @@ import {
   deleteAccountFormSchema,
   updateProfileFormSchema,
   updatePreferencesFormSchema,
-} from '../../../../shared/validator/features/auth';
+} from '../../validator/auth';
 import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
 

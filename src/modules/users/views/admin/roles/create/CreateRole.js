@@ -10,7 +10,6 @@ import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
-import { createRoleFormSchema } from '../../../../../../shared/validator/features/admin';
 import { useDebounce } from '../../../../../../shared/renderer/components/InfiniteScroll';
 import {
   Box,
@@ -21,6 +20,7 @@ import Button from '../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../../shared/renderer/components/Form';
+import { createRoleFormSchema } from '../../../../validator/admin';
 import { fetchPermissions } from '../../permissions/redux';
 import { createRole, isRoleCreateLoading } from '../redux';
 import s from './CreateRole.css';

@@ -9,7 +9,6 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';
-import { updatePermissionFormSchema } from '../../../../../../../shared/validator/features/admin';
 import {
   fetchPermissionById,
   updatePermission,
@@ -29,6 +28,7 @@ import Button from '../../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../../../shared/renderer/components/Form';
+import { updatePermissionFormSchema } from '../../../../../validator/admin';
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {

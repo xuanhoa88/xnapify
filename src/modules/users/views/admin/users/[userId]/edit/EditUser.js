@@ -10,7 +10,6 @@ import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';
-import { updateUserFormSchema } from '../../../../../../../shared/validator/features/admin';
 import {
   generatePassword,
   getUserProfile,
@@ -27,6 +26,7 @@ import Button from '../../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../../../shared/renderer/components/Form';
+import { updateUserFormSchema } from '../../../../../validator/admin';
 import { fetchRoles } from '../../../roles/redux';
 import { fetchGroups } from '../../../groups/redux';
 import {

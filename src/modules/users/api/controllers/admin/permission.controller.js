@@ -11,7 +11,7 @@ import {
   updatePermissionFormSchema,
   bulkUpdatePermissionStatusFormSchema,
   bulkDeletePermissionFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../validator/admin';
 import * as permissionService from '../../services/admin/permission.service';
 
 // ========================================================================

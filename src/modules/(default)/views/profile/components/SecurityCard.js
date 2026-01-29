@@ -17,12 +17,12 @@ import {
   generatePassword,
   showSuccessMessage,
 } from '../../../../../shared/renderer/redux';
-import { changePasswordFormSchema } from '../../../../../shared/validator/features/auth';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
+import { changePasswordFormSchema } from '../../../../users/validator/auth';
 import s from './SecurityCard.css';
 
 function SecurityCard() {

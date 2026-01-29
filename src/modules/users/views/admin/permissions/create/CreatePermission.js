@@ -9,7 +9,6 @@ import { useState, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
-import { createPermissionFormSchema } from '../../../../../../shared/validator/features/admin';
 import { createPermission, isPermissionCreateLoading } from '../redux';
 import {
   Box,
@@ -20,6 +19,7 @@ import Button from '../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../../../shared/renderer/components/Form';
+import { createPermissionFormSchema } from '../../../../validator/admin';
 import s from './CreatePermission.css';
 
 export default function CreatePermission() {

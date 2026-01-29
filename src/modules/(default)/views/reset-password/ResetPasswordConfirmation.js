@@ -9,7 +9,6 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { passwordResetConfirmFormSchema } from '../../../../shared/validator/features/auth';
 import {
   resetPasswordConfirmation,
   isResetPasswordLoading,
@@ -27,6 +26,7 @@ import Button from '../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
 } from '../../../../shared/renderer/components/Form';
+import { passwordResetConfirmFormSchema } from '../../../users/validator/auth';
 import s from './ResetPasswordConfirmation.css';
 
 /**

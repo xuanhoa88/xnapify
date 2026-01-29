@@ -11,7 +11,7 @@ import {
   assignGroupsToUserFormSchema,
   assignRolesToGroupFormSchema,
   manageRolePermissionsFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../validator/admin';
 import * as rbacService from '../../services/admin/rbac.service';
 import * as roleService from '../../services/admin/role.service';
 

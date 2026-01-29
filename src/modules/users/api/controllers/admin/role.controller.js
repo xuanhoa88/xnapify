@@ -9,7 +9,7 @@ import { validateForm } from '../../../../../shared/validator';
 import {
   createRoleFormSchema,
   updateRoleFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../validator/admin';
 import * as roleService from '../../services/admin/role.service';
 
 // ========================================================================

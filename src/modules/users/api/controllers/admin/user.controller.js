@@ -11,7 +11,7 @@ import {
   createUserFormSchema,
   bulkUpdateUserStatusFormSchema,
   bulkDeleteUserFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../validator/admin';
 import * as userAdminService from '../../services/admin/user.service';
 
 // ========================================================================

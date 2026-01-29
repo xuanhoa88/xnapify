@@ -9,7 +9,7 @@ import { validateForm } from '../../../../../shared/validator';
 import {
   createGroupFormSchema,
   updateGroupFormSchema,
-} from '../../../../../shared/validator/features/admin';
+} from '../../../validator/admin';
 import * as groupService from '../../services/admin/group.service';
 
 // ========================================================================
