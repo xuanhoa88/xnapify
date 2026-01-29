@@ -226,7 +226,11 @@ z.setErrorMap((issue, ctx) => {
  * @example
  * const [isValid, errors] = validateForm(loginFormSchema, { email, password });
  * if (!isValid) {
- *   return http.sendValidationError(res, errors[0]);
+ *   return res.status(422).json({
+ *     success: false,
+ *     message: 'Validation failed',
+ *     errors: errors[0],
+ *   });
  * }
  */
 export function validateForm(schema, data) {

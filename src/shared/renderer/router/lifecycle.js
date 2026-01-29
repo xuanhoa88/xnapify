@@ -232,6 +232,23 @@ export async function runInit(route, ctx) {
     current = current.parent;
   }
 
+  // Auto-install plugins via router options callback
+  if (
+    // eslint-disable-next-line no-underscore-dangle
+    ctx._instance &&
+    // eslint-disable-next-line no-underscore-dangle
+    ctx._instance.options &&
+    // eslint-disable-next-line no-underscore-dangle
+    typeof ctx._instance.options.onRouteInit === 'function'
+  ) {
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      await ctx._instance.options.onRouteInit(route, ctx);
+    } catch (error) {
+      log(`onRouteInit error for "${route.path}": ${error.message}`, 'error');
+    }
+  }
+
   // Init each route in sequence (parent → child)
   for (const r of hierarchy) {
     if (typeof r.init === 'function' && !r[ROUTE_INIT_KEY]) {
@@ -249,7 +266,26 @@ export async function runInit(route, ctx) {
  * Runs the route's mount hook and returns the result.
  */
 export async function runMount(route, ctx) {
-  if (!route || typeof route.mount !== 'function') return null;
+  if (!route) return null;
+
+  // Auto-install plugins via router options callback
+  if (
+    // eslint-disable-next-line no-underscore-dangle
+    ctx._instance &&
+    // eslint-disable-next-line no-underscore-dangle
+    ctx._instance.options &&
+    // eslint-disable-next-line no-underscore-dangle
+    typeof ctx._instance.options.onRouteMount === 'function'
+  ) {
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      await ctx._instance.options.onRouteMount(route, ctx);
+    } catch (error) {
+      log(`onRouteMount error for "${route.path}": ${error.message}`, 'error');
+    }
+  }
+
+  if (typeof route.mount !== 'function') return null;
   try {
     return await route.mount(ctx);
   } catch (error) {
@@ -272,6 +308,27 @@ export async function runUnmount(route, ctx) {
         log(`Unmount error for "${current.path}": ${error.message}`, 'error');
       }
     }
+
+    // Auto-uninstall plugins via router options callback
+    if (
+      // eslint-disable-next-line no-underscore-dangle
+      ctx._instance &&
+      // eslint-disable-next-line no-underscore-dangle
+      ctx._instance.options &&
+      // eslint-disable-next-line no-underscore-dangle
+      typeof ctx._instance.options.onRouteUnmount === 'function'
+    ) {
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        await ctx._instance.options.onRouteUnmount(current, ctx);
+      } catch (error) {
+        log(
+          `onRouteUnmount error for "${current.path}": ${error.message}`,
+          'error',
+        );
+      }
+    }
+
     current = current.parent;
   }
 }

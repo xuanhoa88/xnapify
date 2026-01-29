@@ -317,27 +317,28 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     this._navigationQueue.push(entry);
 
-    // Start processing queue
+    // Start processing queue (non-blocking)
     // eslint-disable-next-line no-underscore-dangle
     this._processNavigationQueue();
 
-    // Execute the actual resolution
+    // Start resolution (non-blocking) - captures resolve/reject from above
     (async () => {
       try {
         // Check if cancelled before starting
         if (entry.cancelled) {
-          resolveNavigation(null);
+          resolveNavigation(null); // Resolves the promise we created
           return;
         }
 
         // eslint-disable-next-line no-underscore-dangle
         const result = await this._resolveInternal(context, entry);
-        resolveNavigation(result);
+        resolveNavigation(result); // Resolves the promise we created
       } catch (error) {
-        rejectNavigation(error);
+        rejectNavigation(error); // Rejects the promise we created
       }
     })();
 
+    // Return the promise immediately (caller can await it)
     return navigationPromise;
   }
 

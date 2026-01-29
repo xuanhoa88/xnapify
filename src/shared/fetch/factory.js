@@ -255,9 +255,10 @@ export function createFetch(fetch, globalOptions = {}) {
       switch (responseType) {
         case 'json': {
           if (typeof context.options.payloadParser === 'function') {
-            const data = await context.response.text();
             // eslint-disable-next-line no-underscore-dangle
-            context.response._data = context.options.payloadParser(data);
+            context.response._data = await context.options.payloadParser(
+              context.response,
+            );
           } else {
             // eslint-disable-next-line no-underscore-dangle
             context.response._data = await context.response.json();
