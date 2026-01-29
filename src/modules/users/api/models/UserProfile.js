@@ -101,5 +101,12 @@ export default function createUserProfileModel({ connection, DataTypes }) {
     },
   );
 
+  UserProfile.associate = models => {
+    UserProfile.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user',
+    });
+  };
+
   return UserProfile;
 }

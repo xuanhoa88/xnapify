@@ -63,5 +63,12 @@ export default function createPasswordResetTokenModel({
     },
   );
 
+  PasswordResetToken.associate = models => {
+    PasswordResetToken.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user',
+    });
+  };
+
   return PasswordResetToken;
 }

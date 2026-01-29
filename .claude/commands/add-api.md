@@ -4,23 +4,25 @@ Add a new API module with models, controllers, routes, and services.
 
 ```
 src/modules/{module-name}/
-├── index.js              # Module entry (routes, migrations, seeds)
-├── models/
-│   ├── index.js          # Model factory + relationships
-│   └── {Model}.js        # Model definition
-├── controllers/
-│   └── {entity}.controller.js
-├── routes/
-│   └── {entity}.routes.js
-├── services/
-│   └── {entity}.service.js
-├── middlewares/
-│   └── index.js
-├── database/
-│   ├── migrations/       # Schema migrations
-│   └── seeds/            # Seed data
-└── utils/
-    └── validation.js
+├── api/
+│   ├── index.js              # Module entry (routes, migrations, seeds)
+│   ├── models/
+│   │   └── {Model}.js        # Model definition
+│   ├── controllers/
+│   │   └── {entity}.controller.js
+│   ├── routes/
+│   │   └── {entity}.routes.js
+│   ├── services/
+│   │   └── {entity}.service.js
+│   ├── middlewares/
+│   │   └── index.js
+│   ├── database/
+│   │   ├── migrations/       # Schema migrations
+│   │   └── seeds/            # Seed data
+│   └── utils/
+│       └── validation.js
+└── views/
+    └── ...
 ```
 
 ---
@@ -28,11 +30,11 @@ src/modules/{module-name}/
 ## 1. Create Model
 
 ```javascript
-// src/modules/{module}/models/Post.js
+// src/modules/{module}/api/models/Post.js
 export default function createPostModel({ connection, DataTypes }) {
   const types = DataTypes || connection.constructor.DataTypes;
 
-  return connection.define(
+  const Post = connection.define(
     'Post',
     {
       id: {
@@ -59,30 +61,15 @@ export default function createPostModel({ connection, DataTypes }) {
       timestamps: true,
     },
   );
-}
-```
 
-## 2. Create Models Index with Relationships
+  Post.associate = function (models) {
+    const { User } = models;
 
-```javascript
-// src/modules/{module}/models/index.js
-import createPostModel from './Post';
+    // Post belongs to User
+    Post.belongsTo(User, { foreignKey: 'user_id', as: 'author' });
+  };
 
-function initializeRelationships(models, parentModels) {
-  const { Post } = models;
-  const { User } = parentModels;
-
-  // Post belongs to User
-  Post.belongsTo(User, { foreignKey: 'user_id', as: 'author' });
-  User.hasMany(Post, { foreignKey: 'user_id', as: 'posts' });
-}
-
-export default function initializeModels(db, parentModels = {}) {
-  const Post = createPostModel(db);
-  const models = { Post };
-
-  initializeRelationships(models, parentModels);
-  return models;
+  return Post;
 }
 ```
 
@@ -93,7 +80,7 @@ export default function initializeModels(db, parentModels = {}) {
 Services receive dependencies as an options object for consistency:
 
 ```javascript
-// src/modules/{module}/services/post.service.js
+// src/modules/{module}/api/services/post.service.js
 
 export async function getAll(options = {}) {
   const { models, limit = 20, offset = 0 } = options;
@@ -147,7 +134,7 @@ export async function destroy(id, { models, webhook }) {
 ## 4. Create Controller
 
 ```javascript
-// src/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/api/controllers/post.controller.js
 import { validateForm } from '@/shared/validator';
 import { createPostSchema, updatePostSchema } from '../utils/validation';
 import * as postService from '../services/post.service';
@@ -266,7 +253,7 @@ export async function destroy(req, res) {
 ## 5. Create Routes
 
 ```javascript
-// src/modules/{module}/routes/post.routes.js
+// src/modules/{module}/api/routes/post.routes.js
 import * as postController from '../controllers/post.controller';
 
 export default function postRoutes(deps, middlewares, app) {
@@ -289,7 +276,7 @@ export default function postRoutes(deps, middlewares, app) {
 ## 6. Create Module Entry
 
 ```javascript
-// src/modules/{module}/index.js
+// src/modules/{module}/api/index.js
 import * as postMiddlewares from './middlewares';
 import postRoutes from './routes/post.routes';
 
@@ -330,7 +317,7 @@ export default async function postModule(deps, app) {
 ## 7. Create Migration
 
 ```javascript
-// src/modules/{module}/database/migrations/YYYY.MM.DD.create-posts-table.js
+// src/modules/{module}/api/database/migrations/YYYY.MM.DD.create-posts-table.js
 export async function up({ context: queryInterface }) {
   const { DataTypes } = queryInterface.sequelize.constructor;
 
@@ -356,7 +343,7 @@ export async function down({ context: queryInterface }) {
 ## Validation with Shared Validator
 
 ```javascript
-// src/modules/{module}/utils/validation.js
+// src/modules/{module}/api/utils/validation.js
 import { z } from 'zod';
 
 export const createPostSchema = z.object({
@@ -407,7 +394,7 @@ export async function create(req, res) {
 ### Protected Routes with Permissions
 
 ```javascript
-// src/modules/{module}/routes/post.routes.js
+// src/modules/{module}/api/routes/post.routes.js
 import * as postController from '../controllers/post.controller';
 
 export default function postRoutes(deps, middlewares, app) {
@@ -452,7 +439,7 @@ export default function postRoutes(deps, middlewares, app) {
 ### Check Permissions in Controller
 
 ```javascript
-// src/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/api/controllers/post.controller.js
 export async function update(req, res) {
   const http = req.app.get('http');
   const auth = req.app.get('auth');
@@ -494,7 +481,7 @@ export async function update(req, res) {
 For heavy tasks, dispatch to worker instead of blocking the request:
 
 ```javascript
-// src/modules/{module}/controllers/post.controller.js
+// src/modules/{module}/api/controllers/post.controller.js
 import workerPool from '@/shared/api/worker';
 
 export async function generateReport(req, res) {

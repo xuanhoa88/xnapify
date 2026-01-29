@@ -13,11 +13,11 @@ import { createContextAdapter } from '../../context';
 const migrationsContext = require.context(
   './migrations',
   false,
-  /\.[cm]?[jt]s$/,
+  /\.[cm]?[jt]s$/i,
 );
 
 // Auto-load seeds via require.context
-const seedsContext = require.context('./seeds', false, /\.[cm]?[jt]s$/);
+const seedsContext = require.context('./seeds', false, /\.[cm]?[jt]s$/i);
 
 /**
  * Extract filename from require.context key: './filename.js' -> 'filename'
@@ -27,7 +27,7 @@ function extractFileName(key) {
     .replace(/\\/g, '/') // Normalize backslashes
     .split('/') // Split into segments
     .pop() // Get last segment (filename)
-    .replace(/\.js$/, ''); // Remove extension
+    .replace(/\.[cm]?[jt]s$/i, ''); // Remove extension
 }
 
 /**

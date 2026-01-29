@@ -13,7 +13,7 @@ import { createContextAdapter } from '../shared/context';
 const modulesContext = require.context(
   '../modules',
   true,
-  /(?:\/views\/.*\/(?:_route|_layout)|\/\(routes\)\/\([^)]+\)|\/\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
+  /^\.\/[^/]+\/(?:(?:views\/)?(?:[^/]+\/)*)?(?:_route|_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
 /**

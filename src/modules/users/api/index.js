@@ -18,14 +18,14 @@ import groupRoutes from './routes/admin/group.routes';
 const migrationsContext = require.context(
   './database/migrations',
   false,
-  /\.[cm]?[jt]s$/,
+  /\.[cm]?[jt]s$/i,
 );
 
 // Auto-load seeds via require.context
 const seedsContext = require.context(
   './database/seeds',
   false,
-  /\.[cm]?[jt]s$/,
+  /\.[cm]?[jt]s$/i,
 );
 
 // =============================================================================
@@ -33,12 +33,13 @@ const seedsContext = require.context(
 // =============================================================================
 
 /**
- * Install hook - runs once when the module is first installed.
- * Use for database migrations, seeds, and initial data setup.
+ * Bootstrap hook - runs on every application startup.
+ * Use for registering global middlewares and mounting routes.
  *
  * @param {Object} app - Express app instance
+ * @param {Router} apiRouter - Main API Router
  */
-async function migrate(app) {
+export async function bootstrap(app, apiRouter) {
   const db = app.get('db');
 
   // Run database migrations
@@ -50,22 +51,9 @@ async function migrate(app) {
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }]);
 
   console.info('✅ [users] Migrations and seeds completed');
-}
-
-/**
- * Bootstrap hook - runs on every application startup.
- * Use for registering global middlewares and mounting routes.
- *
- * @param {Object} app - Express app instance
- * @param {Router} apiRouter - Main API Router
- */
-export async function bootstrap(app, apiRouter) {
-  // Run database migrations and seeds
-  await migrate(app);
 
   // Register global middlewares in app settings for reuse by other modules
   app.set('user.middlewares', userMiddlewares);
-
   console.info('✅ [users] Middlewares registered');
 
   // =========================================================================

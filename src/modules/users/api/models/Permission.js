@@ -64,5 +64,14 @@ export default function createPermissionModel({ connection, DataTypes }) {
     },
   );
 
+  Permission.associate = models => {
+    Permission.belongsToMany(models.Role, {
+      through: models.RolePermission,
+      foreignKey: 'permission_id',
+      otherKey: 'role_id',
+      as: 'roles',
+    });
+  };
+
   return Permission;
 }

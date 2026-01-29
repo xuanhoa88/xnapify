@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Router } from 'express';
 import { discoverModules, engines } from '../../shared/api';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
@@ -13,7 +14,7 @@ import { createLoggingMiddleware } from './middlewares/logging';
 const modulesContext = require.context(
   '../../modules',
   true,
-  /\/index\.[cm]?[jt]s$/,
+  /^\.\/[^/]+\/api\/.*\.[cm]?[jt]s$/i,
 );
 
 // =============================================================================
@@ -179,6 +180,10 @@ export default async function main(app, config = {}) {
     // Unlock providers for bootstrap (updates allowed during startup/HMR)
     unlockProviders();
 
+    // Attach unlock/lock and reload controls to app for runtime access
+    guardedApp.unlock = unlockProviders;
+    guardedApp.lock = lockProviders;
+
     // Register engines as providers
     Object.entries(engines).forEach(([name, engine]) =>
       guardedApp.set(name, engine),
@@ -211,16 +216,28 @@ export default async function main(app, config = {}) {
     }
 
     // Discover and mount modules
-    const { apiRouter, apiModels } = await discoverModules(
+    const { apiRouter, reload } = await discoverModules(
       modulesContext,
       guardedApp,
     );
 
-    // Set models to app
-    guardedApp.set('models', apiModels);
+    // Register reload engine
+    engines.autoloader = { reload };
 
-    // Mount API routes with middleware stack
-    guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
+    // Dynamic Router Bridge Logic
+    let currentApiRouter = apiRouter;
+    const bridgeRouter = Router();
+    bridgeRouter.use((req, res, next) => {
+      currentApiRouter(req, res, next);
+    });
+
+    // Provide a way for the reloader to swap the internal router
+    guardedApp.set('setApiRouter', newRouter => {
+      currentApiRouter = newRouter;
+    });
+
+    // Mount API routes with middleware stack (use bridgeRouter instead of apiRouter)
+    guardedApp.use(config.apiPrefix, ...apiMiddlewares, bridgeRouter);
 
     // Catch 404 and forward to error handler (prevents fallthrough to SSR)
     guardedApp.use(config.apiPrefix, engines.http.notFoundHandler);

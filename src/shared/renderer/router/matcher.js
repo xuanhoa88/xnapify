@@ -101,10 +101,7 @@ export function createMatcher(
             };
           }
         } catch (error) {
-          log(
-            `[Router] Error matching "${route.path}": ${error.message}`,
-            'error',
-          );
+          log(`Error matching "${route.path}": ${error.message}`, 'error');
           return { done: true, value: null };
         }
       }

@@ -59,5 +59,12 @@ export default function createUserLoginModel({ connection, DataTypes }) {
     },
   );
 
+  UserLogin.associate = models => {
+    UserLogin.belongsTo(models.User, {
+      foreignKey: 'user_id',
+      as: 'user',
+    });
+  };
+
   return UserLogin;
 }

@@ -10,8 +10,6 @@ import {
   ROUTE_UNMOUNT_KEY,
   ROUTE_PREV_KEY,
   ROUTE_PREV_CTX,
-  ROUTE_REGISTERED_KEY,
-  ROUTE_UNREGISTERED_KEY,
 } from './constants';
 import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
@@ -29,8 +27,9 @@ import { buildRoutes, validateConfig, linkParents } from './builder';
  * @param {Object} options - Router options
  */
 export async function defaultResolver(ctx, options) {
-  if (!ctx || !ctx.route || typeof ctx.route.action !== 'function')
+  if (!ctx || !ctx.route || typeof ctx.route.action !== 'function') {
     return undefined;
+  }
 
   const hasChildren =
     Array.isArray(ctx.route.children) && ctx.route.children.length > 0;
@@ -87,7 +86,6 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
 
         // Invoke lifecycle method if available
         if (route.module && typeof route.module[method] === 'function') {
-          log(`${method}: ${route.path}`);
           await route.module[method](context);
           count += 1;
         }
@@ -113,6 +111,11 @@ async function traverseRoutes(routes, method, context, childrenFirst = false) {
 // Router Class
 // ============================================================================
 
+// Track registration per context to avoid duplicate work.
+// In SSR, each request has its own context object.
+// In CSR, the context object is typically long-lived.
+const registeredContexts = new WeakMap();
+
 /**
  * Router class for file-based routing
  */
@@ -123,8 +126,6 @@ export class Router {
     this.routes = [];
     this.configs = new Map();
     this.layouts = new Map();
-    this[ROUTE_REGISTERED_KEY] = false;
-    this[ROUTE_UNREGISTERED_KEY] = false;
 
     if (adapter) {
       const routes = collect(adapter, 'routes');
@@ -146,12 +147,13 @@ export class Router {
    * @param {boolean} force - Force re-registration even if already registered
    */
   async register(context, force = false) {
-    if (this[ROUTE_REGISTERED_KEY] && !force) return;
-    this[ROUTE_REGISTERED_KEY] = true;
+    const scope = context && typeof context === 'object' ? context : this;
 
-    log('Starting Route Registration...');
-    const count = await traverseRoutes(this.routes, 'register', context, false);
-    log(`Route Registration Complete. Registered ${count} modules.`);
+    if (!force && registeredContexts.has(scope)) {
+      return; // Already registered, skip
+    }
+    registeredContexts.set(scope, true); // Always track registration
+    await traverseRoutes(this.routes, 'register', context, false);
   }
 
   /**
@@ -160,27 +162,24 @@ export class Router {
    * @param {boolean} force - Force unregistration even if not registered
    */
   async unregister(context, force = false) {
-    if (this[ROUTE_UNREGISTERED_KEY] && !force) return;
-    this[ROUTE_UNREGISTERED_KEY] = true;
+    const scope = context && typeof context === 'object' ? context : this;
 
-    log('Starting Route Unregistration...');
-    const count = await traverseRoutes(
-      this.routes,
-      'unregister',
-      context,
-      true,
-    );
-    log(`Route Unregistration Complete. Unregistered ${count} modules.`);
+    if (!force && !registeredContexts.has(scope)) {
+      return; // Not registered, skip
+    }
+    registeredContexts.delete(scope); // Always clean up
+    await traverseRoutes(this.routes, 'unregister', context, true);
   }
 
   /**
    * Resolves a URL to a route and executes its action
    * Handles the complete lifecycle: matching -> booting -> unmounting -> mounting -> resolving
    */
-  async resolve(context) {
-    if (typeof context === 'string') {
-      context = { pathname: context };
-    }
+  async resolve(contextOrPath) {
+    const context =
+      typeof contextOrPath === 'string'
+        ? { pathname: contextOrPath }
+        : contextOrPath;
 
     const ctx = {
       ...this.options.context,
@@ -188,6 +187,8 @@ export class Router {
       _instance: this,
       [ROUTE_MOUNT_KEY]: new Set(),
       [ROUTE_UNMOUNT_KEY]: new Set(),
+      [ROUTE_PREV_KEY]: null,
+      [ROUTE_PREV_CTX]: null,
     };
 
     if (typeof ctx.pathname !== 'string' || !ctx.pathname) {
@@ -199,7 +200,7 @@ export class Router {
         ? this.options.routeResolver
         : defaultResolver;
 
-    // Auto-invoke registration (idempotent, errors caught in _traverseRoutes)
+    // Auto-invoke registration (idempotent, errors caught in traverseRoutes)
     await this.register(ctx);
 
     const matcher = createMatcher(
@@ -262,20 +263,16 @@ export class Router {
       await runBoot(state.current.route, state.current);
 
       // Run unmount hook on previous route (if navigating away)
-      // eslint-disable-next-line no-underscore-dangle
-      if (
-        this[ROUTE_PREV_KEY] &&
-        this[ROUTE_PREV_KEY] !== state.current.route
-      ) {
-        await runUnmount(this[ROUTE_PREV_KEY], this[ROUTE_PREV_CTX] || ctx);
+      if (ctx[ROUTE_PREV_KEY] && ctx[ROUTE_PREV_KEY] !== state.current.route) {
+        await runUnmount(ctx[ROUTE_PREV_KEY], ctx[ROUTE_PREV_CTX] || ctx);
       }
 
       // Run mount hook (per-request, every navigation)
       await runMount(state.current.route, state.current);
 
-      // Track current route for unmount on next navigation
-      this[ROUTE_PREV_KEY] = state.current.route;
-      this[ROUTE_PREV_CTX] = state.current;
+      // Track current route for unmount on next navigation (SSR-safe: stored on context)
+      ctx[ROUTE_PREV_KEY] = state.current.route;
+      ctx[ROUTE_PREV_CTX] = state.current;
 
       const result = await resolver(state.current, {
         autoResolve: state.current.route.autoResolve !== false,

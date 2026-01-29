@@ -9,46 +9,92 @@ import { createContextAdapter } from '../context';
 
 // Auto-load engines via require.context
 const enginesAdapter = createContextAdapter(
-  require.context('./', true, /^\.\/[^/]+\/index\.[cm]?[jt]s$/),
+  require.context('./', true, /^\.\/[^/]+\/index\.[cm]?[jt]s$/i),
 );
+
+/**
+ * Extracts engine name from module path
+ * @param {string} modulePath - Path like './db/index.js'
+ * @returns {string|null} Engine name or null if invalid
+ */
+function extractEngineName(modulePath) {
+  const match = modulePath.match(/^\.\/([^/]+)\/index\.[cm]?[jt]s$/i);
+  return match ? match[1] : null;
+}
+
+/**
+ * Processes a module to create an engine interface
+ * Prefers default export as base, merges named exports as properties
+ * @param {Object} moduleExports - The loaded module
+ * @param {string} modulePath - Path to the module file (for logging)
+ * @returns {Object} Processed engine interface
+ */
+function processEngineModule(moduleExports, modulePath) {
+  const { default: defaultExport, ...namedExports } = moduleExports;
+
+  if (defaultExport) {
+    // Only assign named exports that don't conflict with default export
+    Object.keys(namedExports).forEach(key => {
+      if (key in defaultExport) {
+        console.warn(
+          `[Engines] Skipping named export "${key}" in "${modulePath}" - conflicts with default export property`,
+        );
+      } else {
+        defaultExport[key] = namedExports[key];
+      }
+    });
+
+    return defaultExport;
+  }
+
+  return namedExports;
+}
 
 /**
  * Build engines object from discovered modules
  * Maps engine directory names to their exported modules
  */
-const engines = {};
+const engines = enginesAdapter.files().reduce((acc, modulePath) => {
+  const engineName = extractEngineName(modulePath);
 
-enginesAdapter.files().forEach(modulePath => {
-  // Extract engine name: './db/index.js' -> 'db'
-  const engineName = modulePath.match(/^\.\/([^/]+)\//)[1];
-
-  // Load the engine module
-  const mod = enginesAdapter.load(modulePath);
-
-  // If the module exhibits a default export, prefer using it as the engine interface
-  // This allows usages like app.get('hook')()
-  if (mod.default) {
-    engines[engineName] = mod.default;
-    // Attach named exports to the default export for backward compatibility
-    // and access to auxiliary exports (e.g. constants, types)
-    Object.assign(engines[engineName], mod);
-  } else {
-    // Otherwise use the module namespace object directly
-    engines[engineName] = mod;
+  if (!engineName) {
+    console.warn(`[Engines] Skipping invalid module path: ${modulePath}`);
+    return acc;
   }
-});
 
-// Automatically export all discovered engines as named exports
-Object.keys(engines).forEach(engineName => {
-  // Use Object.defineProperty to create named exports dynamically
+  if (acc[engineName]) {
+    console.warn(
+      `[Engines] Duplicate engine "${engineName}" found at ${modulePath}`,
+    );
+    return acc;
+  }
+
+  try {
+    const moduleExports = enginesAdapter.load(modulePath);
+    acc[engineName] = processEngineModule(moduleExports, modulePath); // Pass modulePath
+  } catch (error) {
+    console.error(
+      `[Engines] Failed to load engine "${engineName}" from "${modulePath}":`,
+      error,
+    );
+  }
+
+  return acc;
+}, {});
+
+/**
+ * Create named exports for each discovered engine
+ * Allows: import { db, auth } from './engines'
+ */
+Object.entries(engines).forEach(([engineName, engineInterface]) => {
   Object.defineProperty(exports, engineName, {
     enumerable: true,
-    get: () => engines[engineName],
+    get: () => engineInterface,
   });
 });
 
-// Export engines object
+// Export engines object for direct access
 export { engines };
 
-// Export autoloader functions
+// Export autoloader utilities
 export * from './autoloader';

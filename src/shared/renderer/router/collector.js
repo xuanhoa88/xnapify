@@ -13,6 +13,7 @@ import { log } from './utils';
  */
 const COLLECTORS = Object.freeze({
   routes: {
+    optional: true,
     pattern: /\/views\/.*\/_route\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       const m = filePath.match(
@@ -60,10 +61,11 @@ const COLLECTORS = Object.freeze({
   },
 
   configs: {
+    optional: true,
     pattern: /\/\(routes\)\/\([^)]+\)\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       const m = filePath.match(
-        /^\.\/([^/]+)\/(?:views\/)?\(routes\)\/\(([^)]+)\)\.[cm]?[jt]sx?$/,
+        /^\.\/([^/]+)\/(?:views\/)?\(routes\)\/\(([^)]+)\)\.[cm]?[jt]sx?$/i,
       );
       if (!m) return null;
       return {
@@ -75,12 +77,13 @@ const COLLECTORS = Object.freeze({
   },
 
   layouts: {
+    optional: true,
     // Match _layout.js in (layouts) OR in any view directory (colocated)
     pattern: /\/_layout\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       // 1. Check for Global/Theme layouts in (layouts) folder
       const themeMatch = filePath.match(
-        /^\.\/(\([^)]+\)|[^/]+)\/(?:views\/)?\(layouts\)\/\(([^)]+)\)\/_layout\.[cm]?[jt]sx?$/,
+        /^\.\/(\([^)]+\)|[^/]+)\/(?:views\/)?\(layouts\)\/\(([^)]+)\)\/_layout\.[cm]?[jt]sx?$/i,
       );
       if (themeMatch) {
         return {
@@ -96,7 +99,7 @@ const COLLECTORS = Object.freeze({
       // 2. Check for Colocated layouts in views folder
       // e.g. ./modules/(default)/views/test-nextjs/_layout.js
       const routeMatch = filePath.match(
-        /^\.\/([^/]+)\/views\/(.+?)\/_layout\.[cm]?[jt]sx?$/,
+        /^\.\/([^/]+)\/views\/(.+?)\/_layout\.[cm]?[jt]sx?$/i,
       );
 
       if (routeMatch) {
@@ -145,12 +148,13 @@ export function collect(source, type) {
   const results = new Map();
   const filePaths = source.files().filter(p => config.pattern.test(p));
 
-  log(`Scanning ${filePaths.length} ${config.label.toLowerCase()} file(s)...`);
   if (filePaths.length === 0) {
-    log(
-      `Warning: No files found matching pattern ${config.pattern} in source keys: ${source.files()}`,
-      'warn',
-    );
+    if (!config.optional) {
+      log(
+        `Warning: No files found matching pattern ${config.pattern} in source keys`,
+        'warn',
+      );
+    }
   }
 
   for (const filePath of filePaths) {
@@ -160,12 +164,10 @@ export function collect(source, type) {
     try {
       const module = source.load(filePath);
       results.set(extracted.key, { ...extracted.data, module, filePath });
-      log(`✓ ${config.label}: ${filePath} → ${extracted.key}`);
     } catch (error) {
       log(`Error loading ${filePath}: ${error.message}`, 'error');
     }
   }
 
-  log(`${config.label} collection complete: ${results.size} item(s)`);
   return results;
 }

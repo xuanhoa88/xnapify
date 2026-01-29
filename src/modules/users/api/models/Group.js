@@ -74,5 +74,23 @@ export default function createGroupModel({ connection, DataTypes }) {
     },
   );
 
+  Group.associate = models => {
+    // Group <-> User (Many-to-Many through UserGroup)
+    Group.belongsToMany(models.User, {
+      through: models.UserGroup,
+      foreignKey: 'group_id',
+      otherKey: 'user_id',
+      as: 'users',
+    });
+
+    // Group <-> Role (Many-to-Many through GroupRole)
+    Group.belongsToMany(models.Role, {
+      through: models.GroupRole,
+      foreignKey: 'group_id',
+      otherKey: 'role_id',
+      as: 'roles',
+    });
+  };
+
   return Group;
 }

@@ -141,5 +141,47 @@ export default function createUserModel({ connection, DataTypes }) {
     },
   );
 
+  User.associate = models => {
+    // User <-> UserLogin (One-to-Many)
+    User.hasMany(models.UserLogin, {
+      foreignKey: 'user_id',
+      as: 'logins',
+      onUpdate: 'cascade',
+      onDelete: 'cascade',
+    });
+
+    // User <-> UserProfile (One-to-One)
+    User.hasOne(models.UserProfile, {
+      foreignKey: 'user_id',
+      as: 'profile',
+      onUpdate: 'cascade',
+      onDelete: 'cascade',
+    });
+
+    // User <-> Role (Many-to-Many through UserRole)
+    User.belongsToMany(models.Role, {
+      through: models.UserRole,
+      foreignKey: 'user_id',
+      otherKey: 'role_id',
+      as: 'roles',
+    });
+
+    // User <-> Group (Many-to-Many through UserGroup)
+    User.belongsToMany(models.Group, {
+      through: models.UserGroup,
+      foreignKey: 'user_id',
+      otherKey: 'group_id',
+      as: 'groups',
+    });
+
+    // User <-> PasswordResetToken (One-to-Many)
+    User.hasMany(models.PasswordResetToken, {
+      foreignKey: 'user_id',
+      as: 'passwordResetTokens',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
+    });
+  };
+
   return User;
 }

@@ -60,12 +60,18 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
     if (__DEV__) {
       try {
         const { createLogger } = require('redux-logger');
+        const isServer = typeof window === 'undefined';
+
         middleware.push(
           createLogger({
             collapsed: true,
             duration: true,
             timestamp: false,
             diff: false,
+            // Minimal log on server: hide state to avoid huge dumps
+            stateTransformer: isServer ? () => null : state => state,
+            // Optional: You could also minimize actions on server if needed
+            // actionTransformer: isServer ? action => ({ type: action.type }) : action => action,
           }),
         );
       } catch (err) {

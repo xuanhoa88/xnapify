@@ -239,7 +239,7 @@ export async function runBoot(route, ctx) {
         await r.boot(ctx);
         r[ROUTE_INIT_KEY] = true;
       } catch (error) {
-        log(`[Router] Boot error for "${r.path}": ${error.message}`, 'error');
+        log(`Boot error for "${r.path}": ${error.message}`, 'error');
       }
     }
   }
@@ -253,7 +253,7 @@ export async function runMount(route, ctx) {
   try {
     return await route.mount(ctx);
   } catch (error) {
-    log(`[Router] Mount error for "${route.path}": ${error.message}`, 'error');
+    log(`Mount error for "${route.path}": ${error.message}`, 'error');
     return null;
   }
 }
@@ -269,10 +269,7 @@ export async function runUnmount(route, ctx) {
       try {
         await current.unmount(ctx);
       } catch (error) {
-        log(
-          `[Router] Unmount error for "${current.path}": ${error.message}`,
-          'error',
-        );
+        log(`Unmount error for "${current.path}": ${error.message}`, 'error');
       }
     }
     current = current.parent;

@@ -83,10 +83,7 @@ function getInstance(appCache) {
   // If instance is already created, return it
   if (instance) return instance;
 
-  // Otherwise, get cache from app
-  if (!appCache) return null;
-
-  // If custom factory is configured, use it
+  // If custom factory is configured, use it (for testing/isolation)
   if (typeof customFactory === 'function') {
     const config = customConfig || DEFAULT_OPTIONS;
     const baseCache = customFactory(config);
@@ -97,23 +94,15 @@ function getInstance(appCache) {
     return instance;
   }
 
-  // If appCache is a factory function
-  if (typeof appCache === 'function') {
-    const config = customConfig || DEFAULT_OPTIONS;
-    const baseCache = appCache(config);
+  // Otherwise, get cache from app
+  if (!appCache) return null;
 
-    // Check if factory has static namespacing method
-    if (typeof appCache.withNamespace === 'function') {
-      instance = appCache.withNamespace('rbac', baseCache);
-    } else {
-      instance = baseCache;
-    }
-    return instance;
-  }
-
-  // If appCache is an instance
-  // Check if instance supports namespacing (e.g. MemoryCache singleton)
-  if (appCache && typeof appCache.withNamespace === 'function') {
+  // appCache is expected to be a singleton instance (from shared/api/cache)
+  // Check if it supports namespacing
+  if (typeof appCache.withNamespace === 'function') {
+    // Pass appCache as second arg to support both:
+    // 1. Instance method: withNamespace(ns) - ignores 2nd arg
+    // 2. Static method (if overwritten): withNamespace(ns, base) - usage 2nd arg
     instance = appCache.withNamespace('rbac');
     return instance;
   }

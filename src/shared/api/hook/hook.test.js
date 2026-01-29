@@ -1,4 +1,4 @@
-import hook, { createFactory, HookChannel } from './index';
+import hook, { createFactory, HookChannel } from '.';
 
 describe('Hook Engine', () => {
   describe('HookChannel', () => {

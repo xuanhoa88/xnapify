@@ -61,5 +61,31 @@ export default function createRoleModel({ connection, DataTypes }) {
     },
   );
 
+  Role.associate = models => {
+    // Role <-> User (Many-to-Many through UserRole)
+    Role.belongsToMany(models.User, {
+      through: models.UserRole,
+      foreignKey: 'role_id',
+      otherKey: 'user_id',
+      as: 'users',
+    });
+
+    // Role <-> Permission (Many-to-Many through RolePermission)
+    Role.belongsToMany(models.Permission, {
+      through: models.RolePermission,
+      foreignKey: 'role_id',
+      otherKey: 'permission_id',
+      as: 'permissions',
+    });
+
+    // Role <-> Group (Many-to-Many through GroupRole)
+    Role.belongsToMany(models.Group, {
+      through: models.GroupRole,
+      foreignKey: 'role_id',
+      otherKey: 'group_id',
+      as: 'groups',
+    });
+  };
+
   return Role;
 }

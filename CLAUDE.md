@@ -12,6 +12,8 @@ react-starter-kit/
 ├── bootstrap/                    # Application bootstrap & configuration
 ├── modules/                      # Business logic & Views (auto-discovered)
 │   ├── (default)/                # Default module (homepage, etc.)
+│   │   ├── api/                  # Backend logic
+│   │   └── views/                # Frontend views
 │   └── ...                       # Other modules
 ├── shared/                       # Shared utilities
 │   ├── api/                      # Core API infrastructure
@@ -119,7 +121,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **API Modules** (`src/bootstrap/index.js`):
 
-- Automatically discovers modules in `src/modules/`
+- Automatically discovers modules in `src/modules/*/api/index.js`
 - Each module can export models, routes, and initialization logic
 - Modules are loaded in two phases: models first, then routes
 
@@ -141,7 +143,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 - Business domains: `users`, `homepage`
 - Consume shared API to implement features
-- Each module can have: `index.js`, `model.js`, `controller.js`, `service.js`, `routes.js`
+- Structure: `api/` (backend) and `views/` (frontend)
 
 ### 3. Universal Rendering (SSR)
 
@@ -372,14 +374,13 @@ export default PostsList;
 ### 5. API Module Structure
 
 ```javascript
-// src/modules/my-module/index.js
+// src/modules/my-module/api/index.js
 export default function initMyModule(app, { db, auth }) {
-  // Module initialization
-  const router = require('./routes').default;
+  const router = require('./routes').default; // Auto-discovered from ./routes/index.js if exists, or manual import
   app.use('/api/my-module', router);
 }
 
-// src/api/modules/my-module/routes.js
+// src/api/modules/my-module/api/routes.js
 import express from 'express';
 import * as controller from './controller';
 
@@ -390,7 +391,7 @@ router.post('/', controller.create);
 
 export default router;
 
-// src/api/modules/my-module/controller.js
+// src/api/modules/my-module/api/controller.js
 import * as service from './service';
 
 export async function list(req, res) {
@@ -398,7 +399,7 @@ export async function list(req, res) {
   res.json(items);
 }
 
-// src/api/modules/my-module/service.js
+// src/api/modules/my-module/api/service.js
 export async function getAll() {
   // Business logic
   return [];
@@ -609,8 +610,8 @@ schedule.register('daily-cleanup', '0 0 * * *', async () => {
 ### Database Models
 
 ```javascript
-// src/modules/my-module/model.js
-export default function defineModel(sequelize, DataTypes) {
+// src/modules/my-module/api/models/MyModel.js
+export default function createMyModel(connection, DataTypes) {
   const MyModel = sequelize.define('MyModel', {
     name: {
       type: DataTypes.STRING,

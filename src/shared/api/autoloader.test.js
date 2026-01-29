@@ -87,4 +87,99 @@ describe('shared/api/autoloader', () => {
       ]);
     });
   });
+
+  describe('discoverModules', () => {
+    const mockApp = {
+      get: jest.fn(),
+      set: jest.fn(),
+    };
+    const mockDb = {};
+
+    beforeEach(() => {
+      mockApp.get.mockReturnValue(mockDb);
+      mockApp.get.mockClear();
+    });
+
+    it('should load models directly from files and associate them', async () => {
+      const { discoverModules } = require('./autoloader');
+
+      // Mock context
+      const mockContext = jest.fn();
+      mockContext.keys = jest.fn().mockReturnValue([
+        './users/api/models/User.js',
+        './users/api/models/Post.js',
+        './users/api/index.js', // Lifecycle file
+      ]);
+
+      // Mock factories
+      const userModel = {
+        name: 'User',
+        associate: jest.fn(),
+        findAll: jest.fn(),
+        create: jest.fn(),
+      };
+      const postModel = {
+        name: 'Post',
+        associate: jest.fn(),
+        findAll: jest.fn(),
+        create: jest.fn(),
+      };
+      const lifecycle = { bootstrap: jest.fn() };
+
+      mockContext.mockImplementation(key => {
+        if (key === './users/api/models/User.js') {
+          return { default: jest.fn().mockResolvedValue(userModel) };
+        }
+        if (key === './users/api/models/Post.js') {
+          return { default: jest.fn().mockResolvedValue(postModel) };
+        }
+        if (key === './users/api/index.js') {
+          return { bootstrap: lifecycle.bootstrap };
+        }
+      });
+
+      const { apiModels } = await discoverModules(mockContext, mockApp);
+
+      // Verify models loaded
+      expect(apiModels).toHaveProperty('User', userModel);
+      expect(apiModels).toHaveProperty('Post', postModel);
+
+      // Verify associations called
+      expect(userModel.associate).toHaveBeenCalledWith(apiModels);
+      expect(postModel.associate).toHaveBeenCalledWith(apiModels);
+    });
+
+    it('should skip non-model files in model directory', async () => {
+      const { discoverModules } = require('./autoloader');
+
+      const mockContext = jest.fn();
+      mockContext.keys = jest.fn().mockReturnValue([
+        './users/api/models/User.js',
+        './users/api/models/index.js', // Should be skipped
+        './users/api/models/User.test.js', // Should be skipped
+        './users/api/index.js',
+      ]);
+
+      const userModel = {
+        name: 'User',
+        associate: jest.fn(),
+        findAll: jest.fn(),
+        create: jest.fn(),
+      };
+      const lifecycle = { bootstrap: jest.fn() };
+
+      mockContext.mockImplementation(key => {
+        if (key === './users/api/models/User.js')
+          return { default: jest.fn().mockResolvedValue(userModel) };
+        if (key === './users/api/index.js')
+          return { bootstrap: lifecycle.bootstrap };
+        return { default: jest.fn() };
+      });
+
+      const { apiModels } = await discoverModules(mockContext, mockApp);
+
+      expect(apiModels).toHaveProperty('User');
+      expect(Object.keys(apiModels)).toHaveLength(1);
+    });
+  });
 });

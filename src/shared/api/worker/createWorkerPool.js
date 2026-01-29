@@ -71,7 +71,7 @@ export function createWorkerPool(workersContext, options = {}) {
     return adapter
       .files()
       .map(key => {
-        const match = key.match(/^\.\/(.+)\.worker\.js$/);
+        const match = key.match(/^\.\/(.+)\.worker\.[cm]?[jt]s$/i);
         return match ? match[1] : null;
       })
       .filter(Boolean);

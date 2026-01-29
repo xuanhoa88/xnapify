@@ -19,11 +19,11 @@ import { createContextAdapter } from '../context';
 // CONSTANTS
 // =============================================================================
 
-/** Pattern to match model index files: ./moduleName/api/models/index.js */
-const MODEL_PATH_PATTERN = /^\.\/([^/]+)\/api\/models\/index\.[cm]?[jt]s$/;
+/** Pattern to match model files: ./moduleName/api/models/ModelName.js */
+const MODEL_PATH_PATTERN = /^\.\/([^/]+)\/api\/models\/[^/]+\.[cm]?[jt]s$/i;
 
 /** Pattern to match module lifecycle files: ./moduleName/api/index.js */
-const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/;
+const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
 
 // =============================================================================
 // CORE MODULES CONFIGURATION
@@ -193,7 +193,7 @@ export function validateCoreModules(modulePaths, options = {}) {
 // =============================================================================
 
 /**
- * Load all model modules sequentially.
+ * Load all model modules directly from file paths.
  *
  * @param {object} adapter - Context adapter
  * @param {string[]} paths - Sorted model file paths
@@ -212,57 +212,84 @@ async function loadModels(adapter, paths, app) {
   const errors = [];
 
   for (const filePath of paths) {
+    const fileName = filePath.split('/').pop();
+
+    // Skip index files and test/spec files
+    if (
+      /^index\.[cm]?[jt]s$/i.test(fileName) ||
+      /\.(test|spec)\.[cm]?[jt]s$/i.test(fileName)
+    ) {
+      continue;
+    }
+
     const moduleName = getModuleName(filePath, MODEL_PATH_PATTERN);
 
     try {
       const factory = loadModuleFactory(adapter, filePath);
-      const result = await factory(db, app);
+      const model = await factory(db, app);
 
-      if (!result || typeof result !== 'object') {
-        const error = new Error(
-          'Model factory must return an object containing models',
+      // Validate model exists and has basic properties
+      if (!model) {
+        console.warn(
+          `⚠️ [${moduleName}] File "${filePath}" did not return a valid object.`,
         );
-        error.name = 'InvalidModelFactoryError';
-        error.code = 'INVALID_MODEL_FACTORY';
-        throw error;
+        continue;
       }
 
-      const modelNames = Object.keys(result);
-      if (modelNames.length === 0) {
-        const error = new Error('Model factory returned empty object');
-        error.name = 'EmptyModelFactoryError';
-        error.code = 'EMPTY_MODEL_FACTORY';
-        throw error;
+      if (!model.name) {
+        console.warn(
+          `⚠️ [${moduleName}] File "${filePath}" returned an object without a name property.`,
+        );
+        continue;
       }
 
-      // Validate individual model values (must not be null/undefined)
-      const invalidModels = modelNames.filter(name => result[name] == null);
-      if (invalidModels.length > 0) {
-        const error = new Error(
-          `Invalid model value(s): ${invalidModels.join(', ')}. Each model must not be null or undefined.`,
+      // Validate it's a Sequelize model
+      if (
+        typeof model.findAll !== 'function' ||
+        typeof model.create !== 'function'
+      ) {
+        console.warn(
+          `⚠️ [${moduleName}] Model "${model.name}" doesn't appear to be a Sequelize model (missing findAll/create methods).`,
         );
-        error.name = 'InvalidModelError';
-        error.code = 'INVALID_MODEL';
-        throw error;
+        continue;
       }
 
       // Check for duplicate model names
-      const duplicates = modelNames.filter(name => name in models);
-      if (duplicates.length > 0) {
+      if (model.name in models) {
         const error = new Error(
-          `Duplicate model name(s): ${duplicates.join(', ')}. Module skipped.`,
+          `Duplicate model name: "${model.name}". Module skipped.`,
         );
         errors.push(createLoadError(moduleName, filePath, error));
         console.error(`❌ [${moduleName}] ${error.message}`);
         continue;
       }
 
-      Object.assign(models, result);
+      models[model.name] = model;
     } catch (error) {
       errors.push(createLoadError(moduleName, filePath, error));
       console.error(`❌ [${moduleName}] ${error.message}`);
     }
   }
+
+  // Initialize associations after all models are loaded
+  Object.keys(models).forEach(modelName => {
+    if (
+      models[modelName] &&
+      typeof models[modelName].associate === 'function'
+    ) {
+      try {
+        models[modelName].associate(models);
+        console.log(`🔗 [${modelName}] Associations initialized`);
+      } catch (error) {
+        errors.push(
+          createLoadError(modelName, `${modelName}.associate(models)`, error),
+        );
+        console.error(
+          `❌ [${modelName}] Failed to initialize associations: ${error.message}`,
+        );
+      }
+    }
+  });
 
   return { models, errors };
 }
@@ -427,6 +454,9 @@ export async function discoverModules(modulesContext, app) {
   if (errors.length > 0) {
     console.warn(`⚠️ API: ${errors.length} module(s) failed to load`);
   }
+
+  // Register models on app instance
+  app.set('models', models);
 
   return { apiModels: models, apiRouter };
 }

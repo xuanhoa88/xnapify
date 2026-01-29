@@ -6,7 +6,7 @@
  */
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
-import { log, getRootSegment } from './utils';
+import { getRootSegment } from './utils';
 import {
   createBoots,
   createMounts,
@@ -128,7 +128,6 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
     }
   });
 
-  log(`Built ${routeMap.size} route(s)`);
   return tree;
 }
 

@@ -53,6 +53,8 @@ src/
 ├── bootstrap/        # Application bootstrap & configuration
 ├── modules/          # Business logic & Views (auto-discovered)
 │   ├── (default)/    # Default module (homepage, etc.)
+│   │   ├── api/      # Backend logic (models, routes, etc.)
+│   │   └── views/    # Frontend views
 │   └── ...           # Other modules
 ├── shared/           # Shared utilities
 │   ├── api/          # Core API infrastructure
@@ -194,11 +196,13 @@ The application uses an auto-discovery module system. Place new modules in `src/
 
 ```
 src/modules/your-module/
-├── index.js           # Module entry point
-├── models/            # Sequelize models
-├── controllers/       # Route handlers
-├── services/          # Business logic
-└── routes/            # Express routes
+├── api/               # Backend logic
+│   ├── index.js       # Module entry point
+│   ├── models/        # Sequelize models
+│   ├── controllers/   # Route handlers
+│   ├── services/      # Business logic
+│   └── routes/        # Express routes
+└── views/             # Frontend views
 ```
 
 Modules are automatically discovered and loaded at startup by `src/bootstrap/index.js`.
