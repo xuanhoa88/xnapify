@@ -8,10 +8,10 @@
 import { createContext, useContext, useCallback } from 'react';
 
 // Context for form field state (provided by Form.Field)
-export const FormFieldContext = createContext(null);
+export const FormFieldContext = createContext({});
 
 // Context for schema and validation instance (to detect required fields and provide z)
-export const FormValidationContext = createContext(null);
+export const FormValidationContext = createContext({});
 
 /**
  * Hook to get validation context (schema, z)

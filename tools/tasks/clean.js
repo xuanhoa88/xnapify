@@ -15,7 +15,6 @@ const { cleanDir, getFileInfo, readDir } = require('../utils/fs');
 const {
   formatBytes,
   formatDuration,
-  isVerbose,
   logDebug,
   logInfo,
   logVerbose,
@@ -440,25 +439,23 @@ async function main() {
       logInfo(`   🗑️  Freed space: ${formatBytes(stats.freedSpace)}`);
     }
 
-    if (isVerbose()) {
-      const performanceMetrics = [
-        `Performance metrics:`,
-        `   Efficiency: ${stats.efficiency.toFixed(1)}%`,
-        `   Average per target: ${Math.round(
-          stats.duration / activeTargets.length,
-        )}ms`,
-      ];
+    const performanceMetrics = [
+      `Performance metrics:`,
+      `   Efficiency: ${stats.efficiency.toFixed(1)}%`,
+      `   Average per target: ${Math.round(
+        stats.duration / activeTargets.length,
+      )}ms`,
+    ];
 
-      if (stats.freedSpace > 0) {
-        performanceMetrics.push(
-          `   Cleanup rate: ${formatBytes(
-            stats.freedSpace / (stats.duration / 1000),
-          )}/s`,
-        );
-      }
-
-      logVerbose(performanceMetrics.join('\n'));
+    if (stats.freedSpace > 0) {
+      performanceMetrics.push(
+        `   Cleanup rate: ${formatBytes(
+          stats.freedSpace / (stats.duration / 1000),
+        )}/s`,
+      );
     }
+
+    logVerbose(performanceMetrics.join('\n'));
 
     return {
       success: errorCount === 0,

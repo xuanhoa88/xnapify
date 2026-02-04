@@ -6,11 +6,9 @@
  */
 
 import { isAuthenticated } from '../../../../shared/renderer/redux';
-import {
-  register as registerTestPlugin,
-  unregister as unregisterTestPlugin,
-} from './test-plugin';
 import Profile from './Profile';
+
+import { bindPluginNamespace } from '../../../../shared/plugin';
 
 /**
  * Page metadata
@@ -24,13 +22,24 @@ export async function getInitialProps({ i18n }) {
 /**
  * Guard function - require authentication
  */
-export async function middleware(context, next) {
-  const { store } = context;
+export async function middleware({ store, pathname }, next) {
   const state = store.getState();
   if (!isAuthenticated(state)) {
-    return { redirect: `/login?next=${encodeURIComponent(context.pathname)}` };
+    return { redirect: `/login?next=${encodeURIComponent(pathname)}` };
   }
   return next();
+}
+
+/**
+ * Plugin Namespace to load
+ */
+export const pluginNamespace = 'profile';
+
+/**
+ * Init Hook - Bind plugins
+ */
+export async function init(ctx) {
+  bindPluginNamespace(pluginNamespace, ctx);
 }
 
 /**
@@ -38,7 +47,6 @@ export async function middleware(context, next) {
  */
 export async function mount() {
   console.log('Profile mounted');
-  await registerTestPlugin();
 }
 
 /**
@@ -46,7 +54,6 @@ export async function mount() {
  */
 export async function unmount() {
   console.log('Profile unmounted');
-  await unregisterTestPlugin();
 }
 
 /**

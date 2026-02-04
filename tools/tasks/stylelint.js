@@ -14,16 +14,18 @@ const config = require('../config');
 const { BuildError } = require('../utils/error');
 const {
   formatDuration,
-  isSilent,
-  isVerbose,
-  logDebug,
+  logVerbose,
   logError,
   logInfo,
   logWarn,
+  isSilent,
 } = require('../utils/logger');
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
+
+// Cache silent check for use throughout the task
+const silent = isSilent();
 
 /**
  * Format stylelint warning for display
@@ -40,8 +42,6 @@ function formatWarning(warning) {
  */
 async function main() {
   const startTime = Date.now();
-  const silent = isSilent();
-  const verbose = isVerbose();
 
   if (!silent) {
     logInfo('🎨 Running Stylelint...');
@@ -64,11 +64,9 @@ async function main() {
             `${appDir}/**/*.less`,
           ];
 
-    if (verbose) {
-      logInfo(`📂 Linting patterns: ${filesToLint.join(', ')}`);
-      if (shouldFix) {
-        logInfo('🔧 Fix mode enabled');
-      }
+    logVerbose(`📂 Linting patterns: ${filesToLint.join(', ')}`);
+    if (shouldFix) {
+      logVerbose('🔧 Fix mode enabled');
     }
 
     // Run stylelint
@@ -96,10 +94,10 @@ async function main() {
       warningCount += fileWarningsOnly.length;
 
       // Log file issues
-      if (fileWarnings.length > 0 && verbose) {
-        logDebug(`\n${fileResult.source}:`);
+      if (fileWarnings.length > 0) {
+        logVerbose(`\n${fileResult.source}:`);
         fileWarnings.forEach(warning => {
-          logDebug(`  ${formatWarning(warning)}`);
+          logVerbose(`  ${formatWarning(warning)}`);
         });
       }
 

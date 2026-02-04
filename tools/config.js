@@ -23,33 +23,26 @@ const CWD = (() => {
 })();
 
 // Resolve path from project root
-const resolve = (...args) => path.resolve(CWD, ...args);
+const resolvePath = (...args) => path.resolve(CWD, ...args);
 
 // Resolve directory with env var override support
 const getDirFromEnv = (envVar, defaultPath) => {
   const envValue = env(envVar);
-  if (!envValue) return resolve(defaultPath);
-  return path.isAbsolute(envValue) ? envValue : resolve(envValue);
+  if (!envValue) return resolvePath(defaultPath);
+  return path.isAbsolute(envValue) ? envValue : resolvePath(envValue);
 };
-
-const BUILD_DIR = getDirFromEnv('BUILD_DIR', 'build');
-const APP_DIR = getDirFromEnv('APP_DIR', 'src');
-const PUBLIC_DIR = getDirFromEnv('PUBLIC_DIR', 'public');
-const NODE_MODULES_DIR = getDirFromEnv('NODE_MODULES_DIR', 'node_modules');
 
 module.exports = {
   // Helpers
   env,
-  resolve,
   CWD,
 
   // Directories
-  BUILD_DIR,
-  APP_DIR,
-  PUBLIC_DIR,
-  NODE_MODULES_DIR,
+  BUILD_DIR: getDirFromEnv('BUILD_DIR', 'build'),
+  APP_DIR: getDirFromEnv('APP_DIR', 'src'),
+  PUBLIC_DIR: getDirFromEnv('PUBLIC_DIR', 'public'),
+  NODE_MODULES_DIR: getDirFromEnv('NODE_MODULES_DIR', 'node_modules'),
 
   // Shared bundle config
-  bundleAnalyze: env('BUNDLE_ANALYZE') === 'true',
-  bundleMaxAssetSize: parseInt(env('BUNDLE_MAX_ASSET_SIZE'), 10) || 250000, // 250KB
+  bundleMaxAssetSize: env('BUNDLE_MAX_ASSET_SIZE', 250_000), // 250KB
 };

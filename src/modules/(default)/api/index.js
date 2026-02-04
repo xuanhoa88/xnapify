@@ -6,7 +6,7 @@
  */
 
 import { Router } from 'express';
-import newsRoutes from './news.routes';
+import newsRoutes from './routes/news.routes';
 
 // =============================================================================
 // LIFECYCLE HOOKS

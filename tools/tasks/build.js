@@ -17,7 +17,6 @@ const {
 const {
   copyDir,
   copyFile,
-  ensureDir,
   pathExists,
   readFile,
   writeFile,
@@ -29,20 +28,20 @@ const {
   isVerbose,
   logDebug,
   logInfo,
-  logVerbose,
   logWarn,
 } = require('../utils/logger');
 const { generateJWT } = require('../utils/jwt');
-const { webpackClientConfig, webpackServerConfig } = require('../webpack');
-const clean = require('./clean');
+const {
+  clientConfig: webpackClientConfig,
+  serverConfig: webpackServerConfig,
+} = require('../webpack/app.config');
 
 // Build configuration
-const BUNDLE_REPORT_PATH = config.env(
-  'BUNDLE_REPORT_PATH',
-  path.join(config.BUILD_DIR, 'bundle-report.json'),
-);
-const BUILD_GENERATE_REPORT = config.env('BUILD_REPORT') !== 'false';
+
 const BUILD_TIMESTAMP = Date.now();
+
+// Cache verbose check for use throughout the build
+const verbose = isVerbose();
 
 /**
  * Copy static files to build directory
@@ -135,7 +134,7 @@ function analyzeStats(stats) {
 
   children.forEach(childStats => {
     (childStats.assets || []).forEach(asset => {
-      if (!asset.name.endsWith('.map')) {
+      if (asset.name && !asset.name.endsWith('.map')) {
         allAssets.push({
           name: asset.name,
           size: asset.size,
@@ -162,80 +161,28 @@ function analyzeStats(stats) {
 }
 
 /**
- * Generate bundle report
- * Saves comprehensive webpack stats to file for analysis
- */
-async function generateBundleReport(analysis, duration) {
-  if (!config.bundleAnalyze && !BUILD_GENERATE_REPORT) {
-    return;
-  }
-
-  // Create comprehensive report using webpack's built-in stats
-  const report = {
-    timestamp: new Date(BUILD_TIMESTAMP).toISOString(),
-    duration,
-    webpack: {
-      version: webpack.version,
-      mode: config.env('NODE_ENV', 'development'),
-    },
-    summary: {
-      totalSize: analysis.totalSize,
-      assetCount: analysis.assetCount,
-      warnings: analysis.warnings,
-      errors: analysis.errors,
-    },
-    // Include full webpack stats for detailed analysis
-    stats: analysis.webpackStats,
-  };
-
-  if (analysis.oversizedAssets.length > 0) {
-    report.performanceWarnings = {
-      oversizedAssets: analysis.oversizedAssets.map(a => ({
-        name: a.name,
-        size: a.size,
-        limit: config.bundleMaxAssetSize,
-      })),
-    };
-  }
-
-  // Save report
-  if (BUNDLE_REPORT_PATH) {
-    try {
-      await ensureDir(path.dirname(BUNDLE_REPORT_PATH));
-      await writeFile(BUNDLE_REPORT_PATH, JSON.stringify(report, null, 2));
-      logDebug(`📄 Bundle report saved to ${BUNDLE_REPORT_PATH}`);
-      logDebug(`   Report includes full webpack stats for analysis`);
-    } catch (error) {
-      logWarn(`Failed to save bundle report: ${error.message}`);
-    }
-  }
-}
-
-/**
  * Log bundle results
  */
 function logBundleResults(analysis, duration) {
   const formattedDuration = formatDuration(duration);
   logInfo(`✅ Bundle complete in ${formattedDuration}`);
 
-  const verbose = isVerbose(); // Cache verbose check
+  const bundleSummary = [
+    `\n📊 Bundle summary:`,
+    `   Total size: ${formatBytes(analysis.totalSize)}`,
+    `   Assets: ${analysis.assetCount}`,
+    `   Duration: ${formattedDuration}`,
+  ];
+
+  if (analysis.largestAssets.length > 0) {
+    bundleSummary.push(`   Largest assets:`);
+    analysis.largestAssets.forEach(asset => {
+      bundleSummary.push(`      • ${asset.name}: ${formatBytes(asset.size)}`);
+    });
+  }
 
   if (verbose) {
-    const bundleSummary = [
-      `\n📊 Bundle summary:`,
-      `   Total size: ${formatBytes(analysis.totalSize)}`,
-      `   Assets: ${analysis.assetCount}`,
-      `   Duration: ${formattedDuration}`,
-    ];
-
-    if (analysis.largestAssets.length > 0) {
-      bundleSummary.push(`   Largest assets:`);
-      analysis.largestAssets.forEach(asset => {
-        bundleSummary.push(`      • ${asset.name}: ${formatBytes(asset.size)}`);
-      });
-    }
-
-    logVerbose(bundleSummary.join('\n'));
+    logInfo(bundleSummary.join('\n'));
   }
 
   // Warnings
@@ -306,7 +253,6 @@ function createBundle() {
       // Analyze and report
       const analysis = analyzeStats(stats);
       logBundleResults(analysis, duration);
-      await generateBundleReport(analysis, duration);
 
       // Close and resolve
       compiler.close(closeErr => {
@@ -335,7 +281,7 @@ async function executeStep(step, index, total, silent) {
 
     const duration = Date.now() - start;
 
-    if (isVerbose()) {
+    if (verbose) {
       logInfo(`   ${step.name} completed (${formatDuration(duration)})`);
     }
   } catch (error) {
@@ -369,16 +315,8 @@ async function main() {
       logInfo(`🛑 Build operation interrupted`);
     });
 
-    // Cache verbose check for use throughout the build
-    const verbose = isVerbose();
-
     // Define build steps with uniform task functions
     const buildSteps = [
-      {
-        name: 'clean',
-        task: clean,
-        description: 'Cleaning build directory',
-      },
       {
         name: 'copy',
         task: () =>
@@ -449,7 +387,6 @@ async function main() {
         `      • '${config.BUILD_DIR}/public/assets/' (client assets)`,
         `      • '${config.BUILD_DIR}/package.json' (dependencies list)`,
       ].join('\n');
-
       logInfo(buildSummary);
     }
   } catch (error) {

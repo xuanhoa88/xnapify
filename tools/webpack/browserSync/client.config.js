@@ -408,18 +408,9 @@ function initialize() {
   let retries = 0;
 
   const attemptInit = () => {
-    // Try to get hotClient from window (in case hotClient.js loaded first)
+    // Get hotClient from window (hotClient.js loads first as entry point)
     // eslint-disable-next-line no-underscore-dangle
-    hotClient = window.__hotClientAPI__;
-
-    // Or try requiring it (if this loads first)
-    if (!hotClient) {
-      try {
-        hotClient = require('../hotClient');
-      } catch (err) {
-        logDebug('[BrowserSync] Could not require hotClient yet:', err);
-      }
-    }
+    hotClient = window.__rsk_hmr_api__;
 
     if (!hotClient) {
       retries++;

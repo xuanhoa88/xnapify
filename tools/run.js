@@ -6,8 +6,8 @@
  */
 
 const { spawn } = require('child_process');
-const path = require('path');
-const config = require('./config');
+const { existsSync } = require('fs');
+const { resolve } = require('path');
 const { BuildError } = require('./utils/error');
 const {
   formatDuration,
@@ -18,14 +18,54 @@ const {
   logInfo,
 } = require('./utils/logger');
 
+// Cache verbose and silent checks
+const verbose = isVerbose();
+const silent = isSilent();
+
+/**
+ * Auto-detect NODE_ENV based on command-line arguments
+ * Used for tasks that should change behavior based on flags
+ */
+function detectNodeEnv(taskConfig) {
+  const taskArgs = process.argv.slice(3).map(arg => arg.toLowerCase());
+
+  // Plugin task rules
+  if (taskConfig.name === 'plugin') {
+    if (
+      taskArgs.includes('--watch') ||
+      taskArgs.includes('--dev') ||
+      taskArgs.includes('--development')
+    ) {
+      logDebug(
+        'Auto-detected NODE_ENV=development from --watch flag in plugin task',
+      );
+      return 'development';
+    }
+
+    logDebug('Auto-detected NODE_ENV=production from plugin task');
+    return 'production';
+  }
+
+  // Generic rules for all tasks
+  if (taskArgs.includes('--production') || taskArgs.includes('--prod')) {
+    logDebug('Auto-detected NODE_ENV=production from flags');
+    return 'production';
+  }
+  if (taskArgs.includes('--dev') || taskArgs.includes('--development')) {
+    logDebug('Auto-detected NODE_ENV=development from flags');
+    return 'development';
+  }
+  return null;
+}
+
 /**
  * Simple task runner - executes a task function and handles errors
+ * This is used when importing tasks directly (not via CLI)
  */
 function main(fn, options) {
   const task = typeof fn.default === 'undefined' ? fn : fn.default;
   const taskName = task.name || 'anonymous';
   const startTime = Date.now();
-  const silent = isSilent(); // Cache silent check
 
   // Log task start
   if (!silent) {
@@ -68,7 +108,6 @@ function main(fn, options) {
 
       // Log failure
       if (!silent) {
-        const verbose = isVerbose();
         let errorMessage = `❌ Failed '${taskName}' after ${formattedDuration}\n${taskError.message}`;
 
         if (verbose && taskError.stack) {
@@ -90,10 +129,6 @@ const AVAILABLE_TASKS = [
     processEnv: { NODE_ENV: 'production' },
   },
   {
-    name: 'clean',
-    description: 'Clean build directory',
-  },
-  {
     name: 'dev',
     description: 'Start the project for development',
     processEnv: { NODE_ENV: 'development' },
@@ -102,6 +137,14 @@ const AVAILABLE_TASKS = [
     name: 'test',
     description: 'Run tests with Jest',
     processEnv: { NODE_ENV: 'test' },
+  },
+  {
+    name: 'plugin',
+    description: 'Build plugins (use --watch for development)',
+  },
+  {
+    name: 'clean',
+    description: 'Clean build directory',
   },
   {
     name: 'prettier',
@@ -129,52 +172,133 @@ function showHelp() {
 }
 
 /**
+ * Validate that a task exists and its file is present
+ */
+function validateTask(taskName) {
+  // Check if task is in available tasks list
+  const taskConfig = AVAILABLE_TASKS.find(task => task.name === taskName);
+  if (!taskConfig) {
+    throw new BuildError(`Unknown task '${taskName}'`, {
+      task: taskName,
+      availableTasks: AVAILABLE_TASKS.map(t => t.name),
+    });
+  }
+
+  // Check if task file exists
+  const taskPath = resolve(__dirname, 'tasks', `${taskName}.js`);
+  if (!existsSync(taskPath)) {
+    throw new BuildError(`Task file not found: ${taskPath}`, {
+      task: taskName,
+      taskPath,
+    });
+  }
+
+  return { taskConfig, taskPath };
+}
+
+/**
  * Execute a task in a child process
  * Each task runs in isolation with its own NODE_ENV
  */
 function executeTask(taskName) {
+  // Validate task before attempting to execute
+  const { taskConfig, taskPath } = validateTask(taskName);
+
+  // Default NODE_ENV if not already set
+  const defaultEnv =
+    (taskConfig.processEnv && taskConfig.processEnv.NODE_ENV) ||
+    detectNodeEnv(taskConfig) ||
+    'development';
+
+  // Load environment variables first (before creating promise)
+  require('dotenv-flow').config({ silent: true });
+
+  // Load config
+  const config = require('./config');
+
+  // Build environment for task process
+  // Priority: task-specific env > existing process.env
+  // But don't override NODE_ENV if already explicitly set
+  const taskEnv = {
+    ...process.env,
+    NODE_ENV: process.env.NODE_ENV || defaultEnv,
+    ...taskConfig.processEnv,
+  };
+
+  logDebug(`Executing task: ${taskName}`);
+  logDebug(`Environment: NODE_ENV=${taskEnv.NODE_ENV}`);
+
   return new Promise((resolve, reject) => {
-    logDebug(`Spawning task: ${taskName}`);
-
-    // Get task-specific environment variables (if any)
-    const taskConfig = AVAILABLE_TASKS.find(task => task.name === taskName);
-    const taskEnv = taskConfig && taskConfig.processEnv;
-
-    // Merge task-specific environment variables with process.env
-    const processEnv = taskEnv
-      ? Object.assign({}, process.env, taskEnv)
-      : process.env;
-    processEnv.NODE_ENV = processEnv.NODE_ENV || 'development';
-
     // Get additional arguments to forward to task (everything after task name)
-    const taskArgs = process.argv.slice(3); // Skip node, script, and task name
+    const taskArgs = [taskPath, ...process.argv.slice(3)];
 
-    // Add task path to arguments
-    taskArgs.unshift(path.resolve(__dirname, 'tasks', `${taskName}.js`));
+    logDebug(`Spawning: node ${taskArgs.join(' ')}`);
 
     // Spawn task in child process using node
     const taskProcess = spawn('node', taskArgs, {
       stdio: 'inherit', // Inherit stdin, stdout, stderr
-      env: processEnv,
+      env: taskEnv,
       cwd: config.CWD,
     });
 
     // Handle task process exit
     taskProcess.on('exit', (code, signal) => {
       if (signal) {
-        reject(new Error(`Task '${taskName}' killed by signal ${signal}`));
+        reject(
+          new BuildError(`Task '${taskName}' killed by signal ${signal}`, {
+            task: taskName,
+            signal,
+          }),
+        );
       } else if (code !== 0) {
-        reject(new Error(`Task '${taskName}' exited with code ${code}`));
+        reject(
+          new BuildError(`Task '${taskName}' exited with code ${code}`, {
+            task: taskName,
+            exitCode: code,
+          }),
+        );
       } else {
+        logDebug(`Task '${taskName}' completed successfully`);
         resolve();
       }
     });
 
-    // Handle task process errors
+    // Handle task process errors (spawn failures, etc.)
     taskProcess.on('error', error => {
-      reject(new Error(`Failed to spawn task '${taskName}': ${error.message}`));
+      reject(
+        new BuildError(`Failed to spawn task '${taskName}'`, {
+          task: taskName,
+          originalError: error.message,
+          stack: error.stack,
+        }),
+      );
     });
   });
+}
+
+/**
+ * Handle CLI errors with appropriate messaging
+ */
+function handleCLIError(error) {
+  let errorMessage = `\n🚫 ${error.message}`;
+
+  // Show stack trace in verbose mode
+  if (verbose && error.stack) {
+    errorMessage += `\n\nStack trace:\n${error.stack}`;
+  }
+
+  // Show additional context if available
+  if (error.context) {
+    logDebug(`Error context: ${JSON.stringify(error.context, null, 2)}`);
+
+    // Show available tasks if unknown task error
+    if (error.context.availableTasks) {
+      showHelp();
+    }
+  }
+
+  logError(errorMessage);
+  process.exit(1);
 }
 
 // CLI handling
@@ -195,24 +319,7 @@ if (require.main === module) {
   }
 
   // Execute task in child process
-  executeTask(taskName).catch(error => {
-    // Task file not found or spawn failed
-    if (error.message.includes('Failed to spawn')) {
-      showHelp();
-      logError(error.message);
-    } else {
-      // Task execution failed
-      const verbose = isVerbose();
-      let errorMessage = `\n🚫 ${error.message}`;
-
-      if (verbose && error.stack) {
-        errorMessage += `\n\nStack trace:\n${error.stack}`;
-      }
-
-      logError(errorMessage);
-    }
-    process.exit(1);
-  });
+  executeTask(taskName).catch(handleCLIError);
 }
 
 module.exports = main;

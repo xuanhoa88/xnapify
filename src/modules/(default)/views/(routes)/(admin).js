@@ -38,10 +38,10 @@ export function mount({ store, i18n }) {
  * Authentication middleware for admin routes
  * Redirects unauthenticated users to login
  */
-export function middleware({ store }, next) {
+export function middleware({ store, pathname }, next) {
   const state = store.getState();
   if (!isAuthenticated(state)) {
-    return { redirect: '/login' };
+    return { redirect: `/login?next=${encodeURIComponent(pathname)}` };
   }
   return next();
 }

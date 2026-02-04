@@ -171,8 +171,6 @@ export class Router {
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
     this.routes = [];
-    this.configs = new Map();
-    this.layouts = new Map();
 
     // Track previous route for unmount lifecycle (CSR only)
     this[ROUTE_PREV_KEY] = null;
@@ -192,11 +190,21 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     this._maxDepth = this.options.maxDepth || 50;
 
+    // Auto-registration behavior (default: true)
+    // When true, routes are automatically registered on first resolve()
+    // When false, you must manually call router.register() before resolving
+    // eslint-disable-next-line no-underscore-dangle
+    this._autoRegister =
+      this.options.autoRegister !== undefined
+        ? this.options.autoRegister
+        : true;
+
     if (adapter) {
-      const routes = collect(adapter, 'routes');
-      this.configs = collect(adapter, 'configs');
-      this.layouts = collect(adapter, 'layouts');
-      this.routes = buildRoutes(routes, this.configs, this.layouts);
+      this.routes = buildRoutes(
+        collect(adapter, 'routes'),
+        collect(adapter, 'configs'),
+        collect(adapter, 'layouts'),
+      );
     } else if (this.options.routes) {
       this.routes = this.options.routes;
     }
@@ -228,8 +236,18 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     this._registrationPromise = (async () => {
       try {
+        // Call custom register hook if provided
+        if (typeof this.options.register === 'function') {
+          await this.options.register(context, this);
+        }
+
         registeredContexts.set(scope, true);
         await traverseRoutes(this.routes, 'register', context, false);
+      } catch (err) {
+        // Remove from registered contexts on failure
+        registeredContexts.delete(scope);
+        log(`Error during registration: ${err.message}`, 'error');
+        throw err;
       } finally {
         // eslint-disable-next-line no-underscore-dangle
         this._registrationPromise = null;
@@ -251,8 +269,19 @@ export class Router {
     if (!force && !registeredContexts.has(scope)) {
       return; // Not registered, skip
     }
-    registeredContexts.delete(scope);
-    await traverseRoutes(this.routes, 'unregister', context, true);
+
+    try {
+      registeredContexts.delete(scope);
+      await traverseRoutes(this.routes, 'unregister', context, true);
+
+      // Call custom unregister hook if provided
+      if (typeof this.options.unregister === 'function') {
+        await this.options.unregister(context, this);
+      }
+    } catch (err) {
+      log(`Error during unregistration: ${err.message}`, 'error');
+      throw err;
+    }
   }
 
   /**
@@ -366,8 +395,11 @@ export class Router {
         ? this.options.routeResolver
         : defaultResolver;
 
-    // Auto-invoke registration (idempotent, errors caught in traverseRoutes)
-    await this.register(ctx);
+    // Auto-invoke registration if enabled (idempotent, errors caught in traverseRoutes)
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._autoRegister) {
+      await this.register(ctx);
+    }
 
     // Check if navigation was cancelled
     if (navigationEntry.cancelled) {

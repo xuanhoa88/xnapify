@@ -6,8 +6,24 @@
  */
 
 import { Router } from 'express';
-import * as http from '../http';
 import * as services from './services';
+
+/**
+ * Create standardized response object
+ * @private
+ */
+function createResponse(success, data = null, message = null, meta = null) {
+  const response = {
+    success,
+    timestamp: new Date().toISOString(),
+  };
+
+  if (data != null) response.data = data;
+  if (message) response.message = message;
+  if (meta) response.meta = meta;
+
+  return response;
+}
 
 /**
  * Handle operation result
@@ -15,16 +31,51 @@ import * as services from './services';
  */
 function handleResult(res, result) {
   if (result.success) {
-    return http.sendSuccess(res, result.data, result.message);
+    return res
+      .status(200)
+      .json(createResponse(true, result.data, result.message));
   }
 
   // Handle operation errors
   if (result.error) {
     const { status = 500, message } = result.error;
-    return http.sendError(res, message, status, null, result.error);
+    const response = createResponse(false, null, message);
+    if (result.error) {
+      // Ideally we should separate "errors" from "error object" but matching previous behavior:
+      // http.sendError passed result.error as the 'errors' argument (?)
+      // check prior implementation: sendError(res, message, statusCode, errors, meta)
+      // prior call: http.sendError(res, message, status, null, result.error) -> wait, 4th arg is errors, 5th is meta
+      // The original code was: http.sendError(res, message, status, null, result.error);
+      // So 'errors' was null, and 'meta' was result.error.
+      // So I should put result.error in meta?
+      // createResponse(false, null, message, result.error)
+      response.meta = result.error;
+    }
+    return res.status(status).json(response);
   }
 
-  return http.sendServerError(res, result.message || 'Operation failed');
+  return res
+    .status(500)
+    .json(createResponse(false, null, result.message || 'Operation failed'));
+}
+
+/**
+ * Extract pagination parameters
+ * @private
+ */
+function getPagination(req) {
+  const defaults = { page: 1, limit: 10, maxLimit: 100 };
+  const page = Math.max(1, parseInt(req.query.page, 10) || defaults.page);
+  const limit = Math.min(
+    defaults.maxLimit,
+    Math.max(1, parseInt(req.query.limit, 10) || defaults.limit),
+  );
+
+  return {
+    page,
+    limit,
+    offset: (page - 1) * limit,
+  };
 }
 
 /**
@@ -41,13 +92,15 @@ export function createControllers(webhook) {
     try {
       const options = {
         ...req.query,
-        ...http.getPagination(req),
+        ...getPagination(req),
       };
 
       const result = await services.list(webhook, options);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to list webhooks');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to list webhooks'));
     }
   });
 
@@ -57,7 +110,9 @@ export function createControllers(webhook) {
       const result = await services.stats(webhook);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to get statistics');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to get statistics'));
     }
   });
 
@@ -67,7 +122,9 @@ export function createControllers(webhook) {
       const result = await services.pending(webhook, req.query);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to get pending webhooks');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to get pending webhooks'));
     }
   });
 
@@ -84,7 +141,9 @@ export function createControllers(webhook) {
       const result = await services.cleanup(webhook, options);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to cleanup webhooks');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to cleanup webhooks'));
     }
   });
 
@@ -94,7 +153,9 @@ export function createControllers(webhook) {
       const result = await services.getById(webhook, req.params.id);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to get webhook');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to get webhook'));
     }
   });
 
@@ -104,7 +165,9 @@ export function createControllers(webhook) {
       const result = await services.retry(webhook, req.params.id);
       handleResult(res, result);
     } catch (error) {
-      http.sendServerError(res, 'Failed to retry webhook');
+      res
+        .status(500)
+        .json(createResponse(false, null, 'Failed to retry webhook'));
     }
   });
 

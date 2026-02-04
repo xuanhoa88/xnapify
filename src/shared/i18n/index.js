@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { initReactI18next } from 'react-i18next';
 import i18nInstance from './getInstance';
 import { getTranslations } from './getTranslations';
 import { addNamespace } from './addNamespace';
@@ -13,18 +12,8 @@ import { addNamespace } from './addNamespace';
 // Export utilities
 export { getTranslations, addNamespace };
 
-// =============================================================================
-// LOCALE CONFIGURATION
-// =============================================================================
-
-// Default locale
-export const DEFAULT_LOCALE = 'en-US';
-
-// Cookie max-age in seconds (for cookie max-age attribute)
-export const LOCALE_COOKIE_MAX_AGE = 365 * 24 * 60 * 60; // 1 year
-
-// Cookie and query parameter name
-export const LOCALE_COOKIE_NAME = 'lang';
+// Export constants
+export * from './constants';
 
 /**
  * Get display name for a locale using native Intl.DisplayNames API
@@ -97,21 +86,18 @@ export const AVAILABLE_LOCALES = Object.freeze(
  * Create and initialize i18n instance immediately
  * Synchronous initialization for simplicity
  */
-i18nInstance.use(initReactI18next).init({
-  resources: DEFAULT_RESOURCES,
-  lng: DEFAULT_LOCALE,
-  fallbackLng: DEFAULT_LOCALE,
-  defaultNS: 'translation',
-  ns: ['translation'],
-  interpolation: {
-    escapeValue: false, // React already escapes
-  },
-  react: {
-    useSuspense: false, // Required for SSR
-    bindI18n: 'languageChanged loaded', // Re-render on language change
-    bindI18nStore: 'added removed', // Re-render on store changes
-  },
-  debug: process.env.RSK_I18N_DEBUG === 'true',
+/**
+ * Initialize i18n resources
+ * We iterate through the loaded resources and add them to the already initialized instance
+ */
+Object.entries(DEFAULT_RESOURCES).forEach(([locale, resource]) => {
+  i18nInstance.addResourceBundle(
+    locale,
+    'translation',
+    resource.translation,
+    true,
+    true,
+  );
 });
 
 // =============================================================================

@@ -21,7 +21,21 @@ import {
   EventType,
   MessageType,
 } from './shared/ws/client';
+import pluginManager from './shared/plugin/manager/client';
 import App from './shared/renderer/App';
+
+// Expose shared dependencies to window for plugins (Global Vendors Pattern)
+window.React = require('react');
+window.ReactDOM = require('react-dom');
+window.ReactRedux = require('react-redux');
+window.ReactHookForm = require('react-hook-form');
+window.ReactI18Next = require('react-i18next');
+window.I18Next = require('i18next');
+window.Lodash = require('lodash');
+window.Dayjs = require('dayjs');
+window.Zod = require('zod');
+window.Clsx = require('clsx');
+window.PropTypes = require('prop-types');
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION
@@ -36,15 +50,28 @@ const READY_STATES = new Set(['interactive', 'complete']);
 // INITIALIZATION
 // =============================================================================
 
-const history = createBrowserHistory({ basename: '' });
-const fetch = createFetch(window.fetch);
+// Create browser history with configurable basename
+const history = createBrowserHistory({
+  basename: process.env.PUBLIC_URL || '',
+});
+
+// Abort controller for request cancellation
+let fetchAbortController = new AbortController();
+
+// Create fetch
+const fetch = createFetch(window.fetch, {
+  signal: fetchAbortController.signal,
+});
 
 // eslint-disable-next-line no-underscore-dangle
 const { redux: preloadedReduxState = {} } = window.__PRELOADED_STATE__ || {};
 // eslint-disable-next-line no-underscore-dangle
 delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
+
+// Initialize Redux store
 const store = configureStore(preloadedReduxState, { fetch, history, i18n });
 
+// Create context for React components
 const context = {
   store,
   fetch,
@@ -206,7 +233,7 @@ function buildWebSocketUrl(path = '/ws') {
 // =============================================================================
 
 async function initReactDOMClient() {
-  if (ReactDOMClient !== null) return ReactDOMClient;
+  if (ReactDOMClient != null) return ReactDOMClient;
   try {
     ReactDOMClient = await import('react-dom/client');
     if (
@@ -214,8 +241,12 @@ async function initReactDOMClient() {
       typeof ReactDOMClient.createRoot !== 'function' ||
       typeof ReactDOMClient.hydrateRoot !== 'function'
     ) {
-      ReactDOMClient = false;
+      throw new Error('React DOM client not found');
     }
+
+    // Expose ReactDOMClient for plugins (Global Vendors Pattern)
+    // Plugins dependent on 'react-dom/client' will use this global
+    window.ReactDOMClient = ReactDOMClient;
   } catch {
     ReactDOMClient = false;
   }
@@ -402,37 +433,66 @@ async function onLocationChange(location, action) {
 // LIFECYCLE
 // =============================================================================
 
+const safeCleanup = (name, fn) => {
+  try {
+    fn();
+  } catch (err) {
+    log(`  ❌ ${name} failed: ${err.message}`, 'error');
+  }
+};
+
 function cleanup() {
   // Save scroll position before cleanup
-  saveScrollPosition();
+  safeCleanup('Save scroll position', saveScrollPosition);
 
   // Unsubscribe from history events
-  if (typeof unlistenHistory === 'function') {
-    unlistenHistory();
-  }
-  unlistenHistory = null;
+  safeCleanup('Unsubscribe from history', () => {
+    if (typeof unlistenHistory === 'function') {
+      unlistenHistory();
+    }
+    unlistenHistory = null;
+  });
 
   // Abort any ongoing transition
-  abortTransition();
+  safeCleanup('Abort transition', () => {
+    abortTransition();
+  });
 
   // Dispose WebSocket client (removes all event listeners)
-  if (wsClient && typeof wsClient.dispose === 'function') {
-    wsClient.dispose();
-  }
-  wsClient = null;
+  safeCleanup('Dispose WebSocket', () => {
+    if (wsClient && typeof wsClient.dispose === 'function') {
+      wsClient.dispose();
+    }
+    wsClient = null;
+  });
 
   // Remove event listeners
-  window.removeEventListener('beforeunload', cleanup);
-  if (scrollHandler) {
-    window.removeEventListener('scroll', scrollHandler, { passive: true });
-    scrollHandler = null;
-  }
+  safeCleanup('Remove beforeunload listener', () => {
+    window.removeEventListener('beforeunload', cleanup);
+  });
+
+  safeCleanup('Remove scroll listener', () => {
+    if (scrollHandler) {
+      window.removeEventListener('scroll', scrollHandler, { passive: true });
+      scrollHandler = null;
+    }
+  });
 
   // Remove visibility change listener
-  if (visibilityChangeHandler) {
-    document.removeEventListener('visibilitychange', visibilityChangeHandler);
-    visibilityChangeHandler = null;
-  }
+  safeCleanup('Remove visibility change listener', () => {
+    if (visibilityChangeHandler) {
+      document.removeEventListener('visibilitychange', visibilityChangeHandler);
+      visibilityChangeHandler = null;
+    }
+  });
+
+  // Abort any ongoing requests
+  safeCleanup('Abort fetch requests', () => {
+    if (fetchAbortController) {
+      fetchAbortController.abort();
+      fetchAbortController = null;
+    }
+  });
 
   log('✅ Cleanup completed', 'info');
 }
@@ -480,6 +540,12 @@ async function initializeApp() {
         log(`⚠️ WebSocket error: ${error}`, 'error');
       });
 
+      // Listen for plugin updates
+      wsClient.on('PLUGIN_UPDATE', event => {
+        log(`🧩 Plugin update received: ${event.type} ${event.pluginId}`);
+        pluginManager.handleEvent(event);
+      });
+
       wsClient.connect();
     }
   } catch (error) {
@@ -518,13 +584,16 @@ async function initializeApp() {
 // STARTUP
 // =============================================================================
 
-function attemptStartup() {
+async function attemptStartup() {
   if (hasStarted || !isDOMReady) return;
   hasStarted = true;
   log('✅ Starting app...');
 
-  // Initialize views and register routes
-  loadViews().then(initializeApp);
+  // Initialize plugins (Client Side)
+  await pluginManager.init({ ...context });
+
+  // Initialize app
+  await initializeApp();
 }
 
 if (isDOMReady) {

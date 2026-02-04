@@ -17,16 +17,17 @@ const { BuildError, setupGracefulShutdown } = require('../utils/error');
 const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
 const { generateJWT } = require('../utils/jwt');
 const {
-  WEBPACK_SERVER_BUNDLE_PATH,
-  webpackClientConfig,
-  webpackServerConfig,
+  SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
+  clientConfig: webpackClientConfig,
+  serverConfig: webpackServerConfig,
+} = require('../webpack/app.config');
+const {
   start: startBrowserSync,
   shutdown: shutdownBrowserSync,
   notifyRestart: notifyBrowserSyncRestart,
   notifyReady: notifyBrowserSyncReady,
   onClientConnected: onBrowserSyncClientConnected,
-} = require('../webpack');
-const clean = require('./clean');
+} = require('../webpack/browserSync/server.config');
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
@@ -34,7 +35,11 @@ const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
 // Webpack HMR plugin
 const { HotModuleReplacementPlugin } = webpack;
 
-const silent = isSilent(); // Cache silent check
+// Cache silent check for use throughout the task
+const silent = isSilent();
+
+// Cache verbose check for use throughout the task
+const verbose = isVerbose();
 
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance
@@ -191,7 +196,7 @@ function loadServerBundle() {
     };
   } catch (error) {
     logError('❌ Failed to load server bundle');
-    if (isVerbose()) {
+    if (verbose) {
       logError(error);
     }
     throw error; // Re-throw to allow proper error handling upstream
@@ -249,7 +254,7 @@ async function reinitializeServerAndMiddlewares() {
     notifyBrowserSyncReady();
   } catch (err) {
     logError('❌ Failed to reinitialize server and middlewares');
-    if (isVerbose()) {
+    if (verbose) {
       logError(err);
     }
     // Optional: trigger a full server restart if HMR fails
@@ -268,7 +273,7 @@ async function checkForUpdate() {
   try {
     // Skip if HMR runtime is not available or not in 'idle' state
     if (!hmr || typeof hmr.status !== 'function' || hmr.status() !== 'idle') {
-      if (isVerbose()) logInfo('HMR not ready, skipping update check');
+      if (verbose) logInfo('HMR not ready, skipping update check');
       return false;
     }
 
@@ -280,7 +285,7 @@ async function checkForUpdate() {
 
     // No updates found
     if (!updatedModules || updatedModules.length === 0) {
-      if (isVerbose()) logInfo('No HMR updates available.');
+      if (verbose) logInfo('No HMR updates available.');
       return false;
     }
 
@@ -365,7 +370,7 @@ function setupWebpackMiddlewares(clientCompiler) {
   // Webpack Hot Middleware (HMR)
   // ---------------------------
   const hotMiddleware = webpackHotMiddleware(clientCompiler, {
-    log: isVerbose() ? console.log : false, // Verbose logging
+    log: verbose ? console.log : false, // Verbose logging
     path: '/~/__webpack_hmr', // WebSocket path for HMR
     heartbeat: 10_000, // Heartbeat interval in ms
   });
@@ -419,7 +424,7 @@ function setupServerBundleWatcher(serverCompiler) {
 
         logError('❌ Server bundle has ' + count + ' error(s)');
 
-        if (isVerbose()) {
+        if (verbose) {
           errors.forEach(function (err, i) {
             logError('  ' + (i + 1) + '. ' + err.message);
             if (err.module && err.module.resource) {
@@ -432,7 +437,7 @@ function setupServerBundleWatcher(serverCompiler) {
       }
 
       // Successful compilation
-      if (isVerbose()) {
+      if (verbose) {
         const time = stats.endTime - stats.startTime;
         logInfo('✅ Server bundle compiled in ' + time + 'ms');
         logInfo('🔄 Checking for HMR updates...');
@@ -479,9 +484,6 @@ async function main() {
       });
   });
 
-  // Clean build directory
-  await clean();
-
   // Generate JWT
   await generateJWT(config.CWD);
 
@@ -524,7 +526,7 @@ async function main() {
     const duration = Date.now() - startTime;
     logInfo(`🎉 Development server ready in ${Math.round(duration / 1000)}s`);
 
-    if (isVerbose()) {
+    if (verbose) {
       logInfo(`   🔥 HMR, Live Reload, Error Overlay enabled`);
     }
 

@@ -49,6 +49,7 @@ module.exports = {
     '!**/build/**',
     '!**/release/**',
     '!**/out/**',
+    '!**/.cache/**',
   ],
 
   /**
@@ -173,6 +174,7 @@ module.exports = {
     '/release/',
     '/out/',
     '/coverage/',
+    '/.cache/',
   ],
 
   /**
@@ -318,6 +320,7 @@ module.exports = {
     '/out/',
     '/release/',
     '/coverage/',
+    '/.cache/',
   ],
 
   /**

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { FormFieldContext } from '../FormContext';
@@ -30,19 +30,20 @@ function FormError({ message, className }) {
   const error = fieldContext && fieldContext.error;
   const displayMessage = message || (error && error.message);
 
-  if (!displayMessage) return null;
-
   // Use different style for form-level vs field-level errors
-  const isFieldError = !message && fieldContext;
+  const isFieldError = useMemo(
+    () => !message && Object.keys(fieldContext || {}).length > 0,
+    [message, fieldContext],
+  );
 
-  return (
+  return displayMessage ? (
     <div
       className={clsx(isFieldError ? s.fieldError : s.formError, className)}
       role='alert'
     >
       {displayMessage}
     </div>
-  );
+  ) : null;
 }
 
 FormError.propTypes = {

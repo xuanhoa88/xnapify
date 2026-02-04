@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import registry from './registry';
+import { registry } from './registry';
 
 /**
  * PluginSlot - Renders components registered for a named slot
@@ -15,13 +16,34 @@ import registry from './registry';
  *   <PluginSlot name="profile.fields" formData={formData} />
  */
 function PluginSlot({ name, ...props }) {
-  const components = registry.getSlot(name);
+  const [components, setComponents] = useState(() => {
+    const slots = registry.getSlot(name);
+    return slots;
+  });
+
+  useEffect(() => {
+    // Sync with current registry state
+    setComponents(registry.getSlot(name));
+
+    // Subscribe to future changes
+    const unsubscribe = registry.subscribe(() => {
+      setComponents(registry.getSlot(name));
+    });
+
+    return unsubscribe;
+  }, [name]);
 
   if (!components.length) return null;
 
-  return components.map(({ component: Component$ }, index) => (
-    <Component$ key={`${name}-${index}`} {...props} />
-  ));
+  return components.map(({ component: Component$, ...options }, index) => {
+    const key =
+      options.id ||
+      options.key ||
+      Component$.displayName ||
+      Component$.name ||
+      `${name}-${index}`;
+    return <Component$ key={key} {...props} />;
+  });
 }
 
 PluginSlot.propTypes = {

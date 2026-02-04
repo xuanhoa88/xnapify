@@ -6,8 +6,30 @@
  */
 
 import i18n from 'i18next';
+import { initReactI18next } from 'react-i18next';
+import { DEFAULT_LOCALE } from './constants';
 
 // Create i18n instance
 const i18nInstance = i18n.createInstance();
+
+/**
+ * Create and initialize i18n instance immediately
+ * Synchronous initialization for simplicity
+ */
+i18nInstance.use(initReactI18next).init({
+  lng: DEFAULT_LOCALE,
+  fallbackLng: DEFAULT_LOCALE,
+  defaultNS: 'translation',
+  ns: ['translation'],
+  interpolation: {
+    escapeValue: false, // React already escapes
+  },
+  react: {
+    useSuspense: false, // Required for SSR
+    bindI18n: 'languageChanged loaded', // Re-render on language change
+    bindI18nStore: 'added removed', // Re-render on store changes
+  },
+  debug: process.env.RSK_I18N_DEBUG === 'true',
+});
 
 export default i18nInstance;

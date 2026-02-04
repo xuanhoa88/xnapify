@@ -6,10 +6,12 @@
  */
 
 // Private property symbols
-const PLUGINS = Symbol('plugins');
-const SLOTS = Symbol('slots');
-const HOOKS = Symbol('hooks');
-const SCHEMAS = Symbol('schemas');
+const PLUGINS = Symbol('__rsk.pluginsList__');
+const SLOTS = Symbol('__rsk.pluginSlots__');
+const HOOKS = Symbol('__rsk.pluginHooks__');
+const SCHEMAS = Symbol('__rsk.pluginSchemas__');
+const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
+const LISTENERS = Symbol('__rsk.pluginListeners__');
 
 /**
  * PluginRegistry - Manages plugin registrations, UI slots, hooks, and schema extensions
@@ -23,6 +25,8 @@ class PluginRegistry {
     this[SLOTS] = new Map(); // Map<slotId, Map<component, options>>
     this[HOOKS] = new Map(); // Map<hookId, Set<callback>>
     this[SCHEMAS] = new Map(); // Map<schemaId, Set<extender>>
+    this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
+    this[LISTENERS] = new Set(); // Set<callback>
   }
 
   // =========================================================================
@@ -75,6 +79,132 @@ class PluginRegistry {
   }
 
   // =========================================================================
+  // Definition & Namespace Management
+  // =========================================================================
+
+  /**
+   * Register a plugin definition (from register() export)
+   * Expected format: { register: () => [{ namespace }, { id, ... }], install, uninstall }
+   * @param {Object} definition - Plugin definition object
+   * @param {Object} context - Plugin context
+   */
+  define(definition, context) {
+    if (typeof definition.register !== 'function') {
+      console.warn(
+        '[PluginRegistry] Invalid plugin definition: missing register()',
+      );
+      return this;
+    }
+
+    const [ns, id, meta] = definition.register(context);
+
+    if (!ns) {
+      console.warn('[PluginRegistry] Plugin definition missing ns (namespace)');
+      return this;
+    }
+
+    if (!this[DEFINITIONS].has(ns)) {
+      this[DEFINITIONS].set(ns, new Set());
+    }
+
+    // Store the full definition wrapper
+    const definitions = this[DEFINITIONS].get(ns);
+    const newDef = {
+      ...meta,
+      id,
+      context,
+      name: meta.name || id,
+      install: definition.install,
+      uninstall: definition.uninstall,
+      mount: definition.mount,
+      unmount: definition.unmount,
+    };
+
+    // Remove existing definition with same ID if present (update/overwrite)
+    for (const def of definitions) {
+      if (def.id === id) {
+        definitions.delete(def);
+        break;
+      }
+    }
+
+    definitions.add(newDef);
+
+    return this;
+  }
+
+  /**
+   * Install all plugins for a given namespace
+   * @param {string} ns - Namespace to install
+   */
+  async installNamespace(ns) {
+    console.log(`[PluginRegistry] installNamespace called for: ${ns}`);
+    const plugins = this[DEFINITIONS].get(ns);
+    if (!plugins) {
+      console.warn(`[PluginRegistry] No plugins found for namespace: ${ns}`);
+      return;
+    }
+    console.log(
+      `[PluginRegistry] Found ${plugins.size} plugins for namespace ${ns}`,
+    );
+
+    for (const plugin of plugins) {
+      console.log(
+        `[PluginRegistry] Registering plugin from namespace: ${plugin.id}`,
+      );
+      // 1. Register the plugin instance
+      // We wrap the mount/unmount into init/destroy for the standard register method
+      const pluginInstance = {
+        ...plugin,
+        init: async reg => {
+          console.log(`[PluginRegistry] Initializing plugin: ${plugin.id}`);
+          if (typeof plugin.mount === 'function') {
+            await plugin.mount(reg);
+          } else {
+            console.warn(
+              `[PluginRegistry] Plugin ${plugin.id} has no mount method`,
+            );
+          }
+        },
+        destroy: async reg => {
+          if (typeof plugin.unmount === 'function') {
+            await plugin.unmount(reg);
+          }
+        },
+      };
+
+      await this.register(plugin.id, pluginInstance);
+    }
+  }
+
+  /**
+   * Uninstall all plugins for a given namespace
+   * @param {string} ns - Namespace to uninstall
+   */
+  async uninstallNamespace(ns) {
+    const plugins = this[DEFINITIONS].get(ns);
+    if (!plugins) return;
+
+    for (const plugin of plugins) {
+      await this.unregister(plugin.id);
+    }
+  }
+
+  /**
+   * Check if a namespace is installed (at least one plugin from it is registered)
+   * @param {string} ns - Namespace to check
+   */
+  isNamespaceInstalled(ns) {
+    const plugins = this[DEFINITIONS].get(ns);
+    if (!plugins) return false;
+
+    for (const plugin of plugins) {
+      if (this.has(plugin.id)) return true;
+    }
+    return false;
+  }
+
+  // =========================================================================
   // Slot Management (UI extension points)
   // =========================================================================
 
@@ -91,6 +221,7 @@ class PluginRegistry {
     const slotMap = this[SLOTS].get(slotId);
     if (!slotMap.has(component)) {
       slotMap.set(component, { order: 0, ...options });
+      this.notify();
     }
     return this;
   }
@@ -100,6 +231,7 @@ class PluginRegistry {
     const slotMap = this[SLOTS].get(slotId);
     if (slotMap && typeof slotMap.delete === 'function') {
       slotMap.delete(component);
+      this.notify();
     }
     return this;
   }
@@ -222,7 +354,26 @@ class PluginRegistry {
     this[SLOTS].clear();
     this[HOOKS].clear();
     this[SCHEMAS].clear();
+    this[DEFINITIONS].clear();
+    this.notify();
     return this;
+  }
+
+  /**
+   * Subscribe to registry changes
+   * @param {Function} callback - () => void
+   * @returns {Function} Unsubscribe function
+   */
+  subscribe(callback) {
+    this[LISTENERS].add(callback);
+    return () => {
+      this[LISTENERS].delete(callback);
+    };
+  }
+
+  /** Notify all listeners of changes */
+  notify() {
+    this[LISTENERS].forEach(callback => callback());
   }
 }
 

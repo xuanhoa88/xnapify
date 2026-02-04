@@ -7,7 +7,6 @@
 
 const crypto = require('crypto');
 const path = require('path');
-const dotenvFlow = require('dotenv-flow');
 const { pathExists, readFile, writeFile } = require('./fs');
 const { logInfo, logWarn, logDebug } = require('./logger');
 
@@ -206,8 +205,11 @@ async function generateJWT(cwd, buildDir) {
       logInfo(`   ⏰ Token expires: ${jwtConfig.RSK_JWT_EXPIRES_IN}`);
     }
 
-    // Reload environment variables to pick up the newly generated JWT secret
-    dotenvFlow.config({ silent: true });
+    // Update process.env directly since we know the values
+    // This allows the current process to use the new secret immediately
+    // without relying on dotenv-flow to reload (which doesn't overwrite existing vars)
+    process.env.RSK_JWT_SECRET = jwtConfig.RSK_JWT_SECRET;
+    process.env.RSK_JWT_EXPIRES_IN = jwtConfig.RSK_JWT_EXPIRES_IN;
   } catch (error) {
     throw new Error(`Failed to generate JWT configuration: ${error.message}`);
   }

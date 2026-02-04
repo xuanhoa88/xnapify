@@ -424,7 +424,7 @@ export async function discoverModules(modulesContext, app) {
   for (const [name, hooks] of lifecycles) {
     if (hooks && typeof hooks.init === 'function') {
       try {
-        await hooks.init(app, apiRouter);
+        await hooks.init(app, apiRouter, { Router, CORE_MODULES });
       } catch (error) {
         console.error(`❌ [${name}] Initialize failed:`, error.message);
       }

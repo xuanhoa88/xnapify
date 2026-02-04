@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const hotClientAPI = Symbol('__rsk.hotClientAPI__');
+const HMR_API_KEY = '__rsk_hmr_api__';
 
 // Only intercept EventSource once
-if (!window[hotClientAPI]) {
+if (!window[HMR_API_KEY]) {
   let eventSourceInstance = null;
   const messageHandlers = [];
   const errorHandlers = [];
@@ -67,7 +67,7 @@ if (!window[hotClientAPI]) {
   };
 
   // Store API in window for global access
-  window[hotClientAPI] = {
+  window[HMR_API_KEY] = {
     /**
      * Subscribe to all HMR messages
      * @param {Function} handler - Callback function that receives parsed message data
@@ -148,4 +148,4 @@ if (!window[hotClientAPI]) {
 require('webpack-hot-middleware/client?path=/~/__webpack_hmr&timeout=20000&reload=true&overlay=false');
 
 // Export the API (will be available via window or via module.exports)
-module.exports = window[hotClientAPI];
+module.exports = window[HMR_API_KEY];

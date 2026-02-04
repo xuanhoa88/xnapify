@@ -33,16 +33,18 @@ import i18n, {
   AVAILABLE_LOCALES,
 } from './shared/i18n';
 import { createFetch } from './shared/fetch';
-import Html from './shared/renderer/Html';
-import App from './shared/renderer/App';
+import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
 import initializeAPI from './bootstrap/api';
+import Html from './shared/renderer/Html';
+import App from './shared/renderer/App';
 
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
 
 const config = Object.freeze({
+  cwd: __dirname,
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.RSK_PORT, 10) || 1337,
   host: process.env.RSK_HOST || '0.0.0.0',
@@ -78,7 +80,7 @@ async function loadViews() {
   return cachedViews;
 }
 
-async function initStore({ fetch, history }, locale) {
+async function initReduxStore({ fetch, history }, locale) {
   const store = configureStore(
     { user: { data: null } },
     { fetch, history, i18n },
@@ -219,16 +221,50 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
+function withTimeout(promise, timeoutMs, operationName) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(() => {
+        const error = new Error(
+          `${operationName} timeout (${timeoutMs}ms exceeded)`,
+        );
+        error.name = 'TimeoutError';
+        error.operation = operationName;
+        reject(error);
+      }, timeoutMs);
+    }),
+  ]);
+}
+
 function createSSRHandler() {
   return async (req, res, next) => {
     const startTime = Date.now();
+
+    // Initialize redux store
+    let store;
+    let context;
+
+    // Create abort controller for request cancellation
+    const abortController = new AbortController();
+
+    // Handle client disconnect
+    req.on('close', () => {
+      if (!res.headersSent) {
+        console.info('✅ Client disconnected');
+        abortController.abort();
+      }
+    });
+
     try {
+      // Create memory history
       const history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
         initialIndex: 0,
       });
 
       const fetch = createFetch(nodeFetch, {
+        signal: abortController.signal,
         defaults: {
           baseUrl: getBaseUrl({ host: config.host, port: config.port }),
           headers: {
@@ -238,10 +274,16 @@ function createSSRHandler() {
         },
       });
 
+      // Initialize store with timeout protection
       const locale = req.language || DEFAULT_LOCALE;
-      const store = await initStore({ fetch, history }, locale);
+      store = await withTimeout(
+        initReduxStore({ fetch, history }, locale),
+        3_000,
+        'Redux store initialization',
+      );
 
-      const context = {
+      // Create context
+      context = {
         fetch,
         store,
         i18n,
@@ -249,10 +291,26 @@ function createSSRHandler() {
         history,
         pathname: history.location.pathname,
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
+        signal: abortController.signal,
       };
 
-      const views = await loadViews();
-      const page = await views.resolve(context);
+      // Initialize plugins for SSR (Server-Side)
+      await withTimeout(
+        pluginManager.init({ ...context, cwd: config.cwd }),
+        5_000,
+        'Plugin initialization',
+      );
+
+      // Load views with timeout protection
+      const views = await withTimeout(loadViews(), 5_000, 'Views loading');
+
+      // Resolve page with timeout protection
+      const page = await withTimeout(
+        views.resolve(context),
+        3_000,
+        'Page resolution',
+      );
+
       if (!page) {
         const err = new Error(`Page ${req.path} not found`);
         err.name = 'PageNotFound';
@@ -260,10 +318,12 @@ function createSSRHandler() {
         throw err;
       }
 
+      // Handle redirect
       if (page.redirect) {
         return res.redirect(page.redirect);
       }
 
+      // Handle no component
       if (!page.component) {
         const err = new Error(`Page ${req.path} has no component`);
         err.name = 'PageHasNoComponent';
@@ -271,21 +331,80 @@ function createSSRHandler() {
         throw err;
       }
 
-      const html = await render({
-        context,
-        component: page.component,
-        metadata: getMetadata(page, req),
-      });
+      // Render with timeout protection
+      const html = await withTimeout(
+        render({
+          context,
+          component: page.component,
+          metadata: getMetadata(page, req),
+        }),
+        10_000,
+        'SSR render',
+      );
 
+      // Send response
       const renderTime = Date.now() - startTime;
+      res.setHeader('X-Render-Time', `${renderTime}ms`);
+      res.setHeader('X-SSR-Locale', locale);
+      res.status(page.status || 200).send(html);
+
+      // Log performance warnings
       if (__DEV__ && renderTime > 1000) {
         console.warn(`⚠️ Slow SSR: ${req.path} took ${renderTime}ms`);
       }
-
-      res.setHeader('X-Render-Time', `${renderTime}ms`);
-      res.status(page.status || 200).send(html);
     } catch (err) {
+      // Handle abort errors gracefully
+      if (err.name === 'AbortError' || abortController.signal.aborted) {
+        console.info('✅ Request aborted');
+        return; // Don't call next() - request was cancelled
+      }
+
+      // Handle timeout errors with detailed logging
+      if (err.name === 'TimeoutError') {
+        console.error(`⏱️ SSR Timeout: ${err.operation} - ${err.message}`);
+        err.status = 504; // Gateway Timeout
+      }
+
       next(err);
+    } finally {
+      // Clean up Redux store
+      if (store) {
+        try {
+          if (typeof store.close === 'function') {
+            store.close();
+            if (__DEV__) {
+              console.info('✅ Redux store closed');
+            }
+          }
+        } catch (cleanupErr) {
+          console.error('❌ Error closing Redux store', {
+            error: cleanupErr.message,
+          });
+        }
+      }
+
+      // Clean up abort controller
+      if (!abortController.signal.aborted) {
+        abortController.abort();
+        if (__DEV__) {
+          console.info('✅ Abort controller aborted');
+        }
+      }
+
+      // Clear context references to help GC
+      if (context) {
+        context.fetch = null;
+        context.store = null;
+        context.history = null;
+      }
+
+      // Log final metrics
+      if (__DEV__) {
+        const totalTime = Date.now() - startTime;
+        if (totalTime > 5000) {
+          console.info(`✅ Cleanup complete for slow request (${totalTime}ms)`);
+        }
+      }
     }
   };
 }
@@ -432,6 +551,9 @@ export function serve(app, port = config.port, host = config.host) {
 }
 
 export default async function main(app, publicDir) {
+  // Set current working directory
+  app.set('cwd', config.cwd);
+
   // JWT Configuration
   const jwt = configureJwt();
   app.set('jwt', jwt);

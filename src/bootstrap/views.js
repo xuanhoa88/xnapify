@@ -8,6 +8,7 @@
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
 import { createContextAdapter } from '../shared/context';
+import { pluginRegistry } from '../shared/plugin';
 
 // Webpack context for all collectable module files
 const modulesContext = require.context(
@@ -59,7 +60,8 @@ class AppRouter extends Router {
 export default async function initializeRouter() {
   const router = new AppRouter(createContextAdapter(modulesContext), {
     context: {
-      // Init context here if needed
+      // Add plugin registry to context
+      pluginRegistry,
     },
     errorHandler(error, ctx) {
       // Handle other errors (500, etc)
@@ -78,6 +80,27 @@ export default async function initializeRouter() {
         pathname: '/error',
         error, // Pass error to component if it accepts it
       });
+    },
+    async onRouteMount(route, _ctx) {
+      // Check both route property (from bindPluginNamespace) and module export
+      const namespace =
+        route.pluginNamespace || (route.module && route.module.pluginNamespace);
+
+      if (namespace) {
+        if (!pluginRegistry.isNamespaceInstalled(namespace)) {
+          console.log(`[Router] Installing plugin namespace: ${namespace}`);
+          await pluginRegistry.installNamespace(namespace);
+        } else {
+          console.log(
+            `[Router] Plugin namespace already installed: ${namespace}`,
+          );
+        }
+      }
+    },
+    async onRouteUnmount(route, _ctx) {
+      if (route.pluginNamespace) {
+        await pluginRegistry.uninstallNamespace(route.pluginNamespace);
+      }
     },
   });
 

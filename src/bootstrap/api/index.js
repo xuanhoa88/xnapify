@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import { discoverModules, engines } from '../../shared/api';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
@@ -27,6 +26,7 @@ const modulesContext = require.context(
  */
 const APP_PROVIDERS = new Set([
   ...Object.keys(engines),
+  'cwd', // Current working directory
   'jwt', // JWT utilities
   'ws', // WebSocket server
   'models', // Database models
@@ -216,28 +216,10 @@ export default async function main(app, config = {}) {
     }
 
     // Discover and mount modules
-    const { apiRouter, reload } = await discoverModules(
-      modulesContext,
-      guardedApp,
-    );
+    const { apiRouter } = await discoverModules(modulesContext, guardedApp);
 
-    // Register reload engine
-    engines.autoloader = { reload };
-
-    // Dynamic Router Bridge Logic
-    let currentApiRouter = apiRouter;
-    const bridgeRouter = Router();
-    bridgeRouter.use((req, res, next) => {
-      currentApiRouter(req, res, next);
-    });
-
-    // Provide a way for the reloader to swap the internal router
-    guardedApp.set('setApiRouter', newRouter => {
-      currentApiRouter = newRouter;
-    });
-
-    // Mount API routes with middleware stack (use bridgeRouter instead of apiRouter)
-    guardedApp.use(config.apiPrefix, ...apiMiddlewares, bridgeRouter);
+    // Mount API routes with middleware stack
+    guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
 
     // Catch 404 and forward to error handler (prevents fallthrough to SSR)
     guardedApp.use(config.apiPrefix, engines.http.notFoundHandler);

@@ -41,8 +41,9 @@
     "test:coverage": "node tools/run test --coverage",
     "test:ci": "node tools/run test --ci",
     "clean": "node tools/run clean",
-    "build": "node tools/run build",
-    "dev": "node tools/run dev"
+    "plugin": "node tools/run plugin",
+    "build": "npm run clean && npm run plugin && node tools/run build",
+    "dev": "npm run clean && concurrently -k -n PLUGINS,APP -c green,blue \"npm run plugin -- --watch\" \"node tools/run dev\""
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -116,8 +117,8 @@
     "babel-jest": "24.9.0",
     "babel-loader": "8.0.0",
     "babel-plugin-transform-react-remove-prop-types": "0.4.13",
+    "concurrently": "8.2.2",
     "core-js": "3.46.0",
-    "cross-env": "7.0.3",
     "css-loader": "6.11.0",
     "eslint": "8.57.0",
     "eslint-config-prettier": "8.10.2",
@@ -129,6 +130,7 @@
     "eslint-plugin-prettier": "5.2.1",
     "eslint-plugin-react": "7.37.5",
     "eslint-plugin-react-hooks": "5.1.0",
+    "expose-loader": "3.1.0",
     "frontmatter-markdown-loader": "3.7.0",
     "html-loader": "4.2.0",
     "husky": "8.0.3",
@@ -170,7 +172,6 @@
     "stylelint-config-standard": "28.0.0",
     "terser-webpack-plugin": "5.3.14",
     "webpack": "5.96.0",
-    "webpack-bundle-analyzer": "4.10.2",
     "webpack-dev-middleware": "5.2.0",
     "webpack-hot-middleware": "2.26.1",
     "webpack-merge": "5.10.0",

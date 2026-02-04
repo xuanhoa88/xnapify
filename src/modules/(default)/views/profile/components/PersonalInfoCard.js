@@ -134,7 +134,8 @@ function PersonalInfoCard() {
 function PersonalInfoFormFields({ loading }) {
   const { t } = useTranslation();
   const {
-    formState: { isSubmitting },
+    register,
+    formState: { isSubmitting, errors },
   } = useFormContext();
 
   return (
@@ -193,7 +194,11 @@ function PersonalInfoFormFields({ loading }) {
       </Form.Field>
 
       {/* Render plugin slots */}
-      <PluginSlot name='profile.personal_info.fields' />
+      <PluginSlot
+        name='profile.personal_info.fields'
+        register={register}
+        errors={errors}
+      />
 
       <Button
         variant='primary'

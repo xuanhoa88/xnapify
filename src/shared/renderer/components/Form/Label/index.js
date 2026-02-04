@@ -27,6 +27,7 @@ import s from './FormLabel.css';
  */
 function FormLabel({ children, className, required: requiredProp }) {
   const { id, name } = useFormField();
+  // Safely handle cases where FormValidationContext is not provided (e.g., in plugins)
   const { schema, z } = useFormValidation();
   const { i18n } = useTranslation();
 

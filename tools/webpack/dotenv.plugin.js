@@ -29,8 +29,12 @@ const { logInfo, logWarn } = require('../utils/logger');
  * @param {boolean} options.verbose - Enable verbose logging (default: false)
  * @returns {Object} Webpack DefinePlugin definitions
  */
-function createDotenvDefinitions(options = {}) {
+function loadDotenv(options = {}) {
   const { prefix = 'RSK_', verbose = false } = options;
+
+  // Load environment variables using dotenv-flow
+  // This supports .env, .env.local, .env.[node_env], etc.
+  // Note: dotenv-flow is initialized in tools/run.js, so process.env is already populated
 
   // Find all environment variables with the specified prefix
   const envVars = Object.keys(process.env)
@@ -62,6 +66,4 @@ function createDotenvDefinitions(options = {}) {
   return envVars;
 }
 
-module.exports = {
-  createDotenvDefinitions,
-};
+module.exports = loadDotenv;
