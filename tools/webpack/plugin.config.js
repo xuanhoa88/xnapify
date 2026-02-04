@@ -14,8 +14,8 @@ const {
   createCSSRule,
   createDefinePlugin,
   createSharedDependencies,
-  clientExternals,
   pkg,
+  isDebug,
 } = require('./base.config');
 const loadDotenv = require('./dotenv.plugin');
 
@@ -103,6 +103,15 @@ function getEntry(plugins, field, outputName = field) {
 }
 
 /**
+ * Custom PostCSS function to get plugins and add a plugin to strip :root
+ * This prevents plugins from overriding global :root variables of the host app
+ *
+ * @param {Object} loader - The webpack loader context
+ * @param {string} pluginName - The name of the plugin being processed
+ * @returns {Array} List of PostCSS plugins
+ */
+
+/**
  * Create webpack configuration for plugins
  * @param {Object} options
  * @param {Array} options.plugins - Plugin objects to build
@@ -110,80 +119,127 @@ function getEntry(plugins, field, outputName = field) {
  * @returns {Array} [clientConfig, serverConfig]
  */
 function createPluginConfig({ plugins, buildPath }) {
-  const clientConfig = createWebpackConfig('client', {
-    entry: getEntry(plugins, MANIFEST_UI_ENTRY),
-    experiments: { outputModule: false },
-    output: {
-      path: buildPath,
-      filename: '[name].js',
-      library: {
-        type: 'window',
-        name: ['__rsk__plugins__', '[name]'], // Assigns to window.__rsk__plugins__['plugin-id/browser']
-      },
-      // Ensure the bundle doesn't conflict
-      uniqueName: '[name]',
-    },
-    module: {
-      rules: [
-        createCSSRule({
-          isClient: true,
-          extractLoader: MiniCssExtractPlugin.loader,
-        }),
-      ],
-    },
-    plugins: [
-      new webpack.ProvidePlugin({
-        process: require.resolve('process/browser'),
-      }),
-      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
-      new webpack.container.ModuleFederationPlugin({
-        name: 'plugin_consumers',
-        shared: createSharedDependencies(
-          Object.fromEntries(
-            Object.entries(pkg.dependencies || {}).filter(
-              ([dep]) => !clientExternals[dep],
-            ),
-          ),
-          {
-            eager: true,
-            singleton: true,
-            strictVersion: false,
+  // Build each plugin as a separate MF container
+  const clientConfigs = plugins
+    .filter(p => p.manifest && p.manifest[MANIFEST_UI_ENTRY])
+    .map(plugin => {
+      // Plugin object has: name, path, manifest
+      const pluginName = plugin.name;
+      if (typeof pluginName !== 'string' || pluginName.trim().length === 0) {
+        logWarn(`Skipping plugin with invalid name:`, plugin);
+        return;
+      }
+
+      // Resolve entry path
+      const entryPath = path.resolve(
+        plugin.path,
+        plugin.manifest[MANIFEST_UI_ENTRY],
+      );
+
+      // Create safe container name from plugin name
+      const containerName = `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+      return createWebpackConfig('client', {
+        entry: {
+          // Single entry for the plugin
+          plugin: entryPath,
+        },
+        experiments: { outputModule: false },
+        output: {
+          path: path.join(buildPath, pluginName),
+          filename: 'browser.js',
+          // MF container library format
+          library: {
+            type: 'var',
+            name: containerName,
           },
-        ),
-      }),
-      new MiniCssExtractPlugin({
-        filename: '[name].css',
-      }),
-    ],
-    // Disable code splitting and runtime chunk
-    // Plugins should be single-file bundles that rely on host's shared dependencies
-    optimization: {
-      splitChunks: false,
-      runtimeChunk: false,
-    },
-    // Use externals for core libraries to ensure singletons (MF eager:true breaks singletons for sync entries)
-    // Use dynamic externals to delegate shared dependencies to the host
-    externals: clientExternals,
-  });
+          // Public path for loading chunks - will be set dynamically
+          publicPath: 'auto',
+          uniqueName: containerName,
+        },
+        module: {
+          rules: [
+            createCSSRule({
+              isClient: true,
+              extractLoader: MiniCssExtractPlugin.loader,
+              stripRoot: true,
+              localIdentName: isDebug
+                ? `${pluginName}_[local]__[hash:base64:5]`
+                : `${pluginName}_[hash:base64:5]`,
+            }),
+          ],
+        },
+        plugins: [
+          new webpack.ProvidePlugin({
+            process: require.resolve('process/browser'),
+          }),
+          createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
+          // Configure as MF container that exposes the plugin module
+          new webpack.container.ModuleFederationPlugin({
+            name: containerName,
+            filename: 'remoteEntry.js',
+            // Expose the plugin as a module
+            exposes: {
+              './plugin': entryPath,
+            },
+            // Share React and other deps with host
+            shared: createSharedDependencies(pkg.dependencies || {}, {
+              eager: false,
+              singleton: true,
+              strictVersion: false,
+            }),
+          }),
+          new MiniCssExtractPlugin({
+            filename: '[name].[contenthash:8].css',
+            chunkFilename: '[name].[contenthash:8].css',
+            ignoreOrder: isDebug,
+          }),
+        ],
+      });
+    });
 
-  const serverConfig = createWebpackConfig('server', {
-    // Use 'browser' field but output to 'server.js' for server bundle
-    entry: getEntry(plugins, MANIFEST_UI_ENTRY, 'server'),
-    experiments: { outputModule: false },
-    output: {
-      path: buildPath,
-      filename: '[name].js',
-      library: { type: 'commonjs' },
-    },
-    module: {
-      rules: [createCSSRule({ isClient: false })],
-    },
-    plugins: [
-      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
-    ],
-  });
+  const serverConfigs = plugins
+    .filter(p => p.manifest && p.manifest[MANIFEST_UI_ENTRY])
+    .map(plugin => {
+      const pluginName = plugin.name;
+      const entryPath = path.resolve(
+        plugin.path,
+        plugin.manifest[MANIFEST_UI_ENTRY],
+      );
 
-  return [clientConfig, serverConfig];
+      // Unique entry for each plugin server bundle
+      const entry = {};
+      const entryName = `${pluginName}/server`
+        .replace(/\.[^.\\/]+$/, '')
+        .replace(/\/+/g, '/');
+      entry[entryName] = entryPath;
+
+      return createWebpackConfig('server', {
+        entry,
+        experiments: { outputModule: false },
+        output: {
+          path: buildPath,
+          filename: '[name].js',
+          library: { type: 'commonjs' },
+        },
+        module: {
+          rules: [
+            createCSSRule({
+              isClient: false,
+              stripRoot: true,
+              localIdentName: isDebug
+                ? `${pluginName}_[local]__[hash:base64:5]`
+                : `${pluginName}_[hash:base64:5]`,
+            }),
+          ],
+        },
+        plugins: [
+          createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
+        ],
+      });
+    });
+
+  return [...clientConfigs, ...serverConfigs];
 }
 
 // Export manifest fields for use in other modules

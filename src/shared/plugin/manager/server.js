@@ -18,10 +18,16 @@ class ServerPluginManager extends BasePluginManager {
    */
 
   /**
-   * Load plugin module
+   * Load plugin module (server uses require, not MF containers)
+   * @param {string} id - Plugin ID
+   * @param {object} manifest - Plugin manifest with internalId
+   * @param {string} _containerName - Not used on server (MF container name)
    */
-  async loadPluginModule(id, code, manifest, internalId) {
-    // Ideally, internalId gives us the directory name.
+  async loadPluginModule(id, manifest, _containerName) {
+    // Server uses direct require, not MF containers
+    // Get internalId from the API response (passed via base manager)
+    const internalId = manifest && manifest.internalId;
+
     if (!internalId) {
       if (__DEV__) {
         const error = new Error(

@@ -54,25 +54,6 @@ const reVideo = /\.(?:mp4|webm|ogv|mov|avi|mkv)(?:\?.*)?$/i;
 const reData = /\.(?:json|xml|csv|ya?ml)(?:\?.*)?$/i;
 
 /**
- * Externals configuration for client bundle
- * Maps module names to global variable names
- */
-const clientExternals = Object.freeze({
-  react: 'React',
-  'react-dom': 'ReactDOM',
-  'react-dom/client': 'ReactDOMClient',
-  'react-redux': 'ReactRedux',
-  'react-hook-form': 'ReactHookForm',
-  'react-i18next': 'ReactI18Next',
-  i18next: 'I18Next',
-  lodash: 'Lodash',
-  dayjs: 'Dayjs',
-  zod: 'Zod',
-  clsx: 'Clsx',
-  'prop-types': 'PropTypes',
-});
-
-/**
  * Convert strings OR package names to safe PascalCase
  *
  * Supports:
@@ -118,7 +99,12 @@ const getFileNamePattern = (hashType = 'hash') =>
  * @param {any} options.extractLoader - MiniCssExtractPlugin.loader for client (optional)
  * @returns {Object} Webpack rule configuration
  */
-const createCSSRule = ({ isClient, extractLoader }) => {
+const createCSSRule = ({
+  isClient,
+  extractLoader,
+  postcssPlugins,
+  localIdentName,
+}) => {
   // Common CSS loader options
   const cssLoaderOptions = {
     importLoaders: 1, // Will be dynamically adjusted per preprocessor
@@ -129,9 +115,9 @@ const createCSSRule = ({ isClient, extractLoader }) => {
       auto: resourcePath => resourcePath.includes(config.APP_DIR),
       // Server: only export class names, Client: full CSS
       exportOnlyLocals: !isClient,
-      localIdentName: isDebug
-        ? '[name]-[local]-[hash:base64:5]'
-        : '[hash:base64:5]',
+      localIdentName:
+        localIdentName ||
+        (isDebug ? '[name]-[local]-[hash:base64:5]' : '[hash:base64:5]'),
     },
   };
 
@@ -139,6 +125,7 @@ const createCSSRule = ({ isClient, extractLoader }) => {
   const postcssLoaderOptions = {
     sourceMap: isDebug,
     postcssOptions: {
+      // Use config file
       config: path.resolve(__dirname, '..', 'postcss.config.js'),
       // SugarSS parser (for .sss files)
       parser: file => (file && file.endsWith('.sss') ? 'sugarss' : undefined),
@@ -314,6 +301,10 @@ function createWebpackConfig(name, options = {}) {
         moduleIds: isDebug ? 'named' : 'deterministic',
         chunkIds: isDebug ? 'named' : 'deterministic',
 
+        // Disable code splitting and runtime chunk
+        splitChunks: false,
+        runtimeChunk: false,
+
         // Minification (shared for client and server)
         minimizer: !isDebug
           ? [
@@ -323,6 +314,13 @@ function createWebpackConfig(name, options = {}) {
                   compress: {
                     // drop_console can be overridden per-target if needed
                     drop_console: name === 'client',
+                    comparisons: false,
+                    inline: 2,
+                  },
+                  mangle: { safari10: true },
+                  output: {
+                    comments: false,
+                    ascii_only: true,
                   },
                 },
               }),
@@ -556,7 +554,6 @@ module.exports = {
   reAudio,
   reVideo,
   reData,
-  clientExternals,
   toPascalCase,
   createCSSRule,
   createDefinePlugin,

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import express from 'express';
 import fs from 'fs/promises';
 import path from 'path';
 import crypto from 'crypto';
@@ -12,7 +13,7 @@ import crypto from 'crypto';
 // Derive encryption key from JWT secret for consistent ID obfuscation
 const PLUGIN_KEY = crypto
   .createHash('sha256')
-  .update(process.env.RSK_JWT_SECRET || 'default-insecure-secret')
+  .update(process.env.RSK_JWT_SECRET || __filename)
   .digest();
 
 /**
@@ -103,7 +104,7 @@ export const listPlugins = async (req, res) => {
 };
 
 /**
- * Get plugin metadata and script URL
+ * Get plugin metadata and remote entry URL
  */
 export const getPlugin = async (req, res) => {
   try {
@@ -119,8 +120,6 @@ export const getPlugin = async (req, res) => {
       throw err;
     }
 
-    // Read manifest
-    let manifest;
     try {
       // Get manifest path
       const manifestPath = path.join(pluginsDir, pluginId, 'package.json');
@@ -129,24 +128,17 @@ export const getPlugin = async (req, res) => {
       const manifestContent = await fs.readFile(manifestPath, 'utf8');
 
       // Parse manifest
-      manifest = JSON.parse(manifestContent);
+      const manifest = JSON.parse(manifestContent);
 
-      // Verify browser entry exists
-      const entryPoint = path.join(pluginsDir, pluginId, manifest.browser);
-      console.log(
-        `[PluginAPI] Serving client bundle for ${pluginId}: ${entryPoint}`,
-      );
-      await fs.access(entryPoint);
+      // Create safe container name from plugin ID (must match webpack config)
+      const containerName = `plugin_${pluginId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
-      // Read the script file
-      const code = await fs.readFile(entryPoint, 'utf8');
-
-      // Return plugin metadata AND the code
-      // We pass the code directly instead of a URL
+      // Return plugin metadata with script URL (via API endpoint)
       return res.json({
         success: true,
         data: {
-          code,
+          // Container name to access from window after script loads
+          containerName,
           manifest,
           internalId: pluginId,
         },
@@ -163,4 +155,23 @@ export const getPlugin = async (req, res) => {
       message: err.message,
     });
   }
+};
+
+/**
+ * Serve plugin static files using express.static
+ */
+export const servePluginStatic = (req, res, next) => {
+  // Get plugins directory
+  const pluginsDir = getPluginsDir(req);
+
+  // Decrypt ID
+  const pluginId = decryptPluginId(req.params.id);
+  if (!pluginId) {
+    return res.status(400).send('Invalid Plugin ID');
+  }
+
+  const root = path.join(pluginsDir, pluginId);
+
+  // Use express.static to serve files from the plugin directory
+  return express.static(root)(req, res, next);
 };

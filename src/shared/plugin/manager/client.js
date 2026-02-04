@@ -56,25 +56,31 @@ class ClientPluginManager extends BasePluginManager {
   }
 
   /**
-   * Load plugin module
+   * Load plugin module as MF remote container
+   * @param {string} id - Plugin ID
+   * @param {object} _manifest - Plugin manifest
+   * @param {string} containerName - MF container name (window global)
    */
-  async loadPluginModule(id, code, _manifest, _internalId) {
+  async loadPluginModule(id, _manifest, containerName) {
     try {
+      // Build script URL from plugin ID
+      const scriptUrl = `/api/plugins/${id}/static/remoteEntry.js`;
+
       // Ensure shared scope is ready before loading any plugin
       // eslint-disable-next-line no-underscore-dangle
       await this._ensureSharedScopeInitialized();
 
-      // Additional wait for shared scope to fully propagate
-      await new Promise(resolve => setTimeout(resolve, 200));
+      if (__DEV__) {
+        console.log(
+          `[ClientPluginManager] Loading plugin ${id} from ${scriptUrl}`,
+        );
+      }
 
-      // Create and execute the plugin script
-      const blob = new Blob([code], { type: 'application/javascript' });
-      const blobUrl = URL.createObjectURL(blob);
-
+      // Load the remoteEntry script via script tag
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
-        script.src = blobUrl;
-        script.async = false;
+        script.src = scriptUrl;
+        script.async = true;
         script.onload = () => resolve();
         script.onerror = e => {
           const err = new Error(
@@ -86,61 +92,31 @@ class ClientPluginManager extends BasePluginManager {
 
         // Append to body (after vendor scripts)
         document.body.appendChild(script);
-
-        // DON'T remove the script - Module Federation needs it to stay in DOM
       });
 
-      // Clean up blob URL after script loads
-      URL.revokeObjectURL(blobUrl);
-
-      // Retrieve the plugin instance from the global namespace
-      const entryId = _internalId || id;
-      const entryName = `${entryId}/browser`;
-
-      // Poll for plugin registration (in case wrapper has setTimeout)
-      let attempts = 0;
-      const maxAttempts = 50; // 5 seconds max
-      let pluginModule;
-
-      while (attempts < maxAttempts) {
-        // eslint-disable-next-line no-underscore-dangle
-        pluginModule =
-          // eslint-disable-next-line no-underscore-dangle
-          window.__rsk__plugins__ && window.__rsk__plugins__[entryName];
-
-        if (pluginModule) {
-          // Check if it's an error object
-          if (pluginModule.error) {
-            const err = new Error(
-              `Plugin failed to initialize: ${pluginModule.error}`,
-            );
-            err.name = 'PluginManagerError';
-            throw err;
-          }
-          break;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 100));
-        attempts++;
-      }
-
-      if (!pluginModule) {
-        // eslint-disable-next-line no-underscore-dangle
-        if (window.__rsk__plugins__ && __DEV__) {
-          console.warn(
-            '[ClientPluginManager] Available plugins:',
-            // eslint-disable-next-line no-underscore-dangle
-            Object.keys(window.__rsk__plugins__),
-          );
-        }
-
+      // Get the container from window
+      const container = window[containerName];
+      if (!container) {
         const err = new Error(
-          `Plugin ${id} (entry: ${entryName}) loaded but window.__rsk__plugins__['${entryName}'] is undefined after ${maxAttempts * 100}ms. ` +
-            `Check that plugin webpack config uses PluginLibraryWrapperPlugin.`,
+          `Plugin container ${containerName} not found on window after script loaded`,
         );
         err.name = 'PluginManagerError';
         throw err;
       }
+      // Initialize the container with the host's shared scope
+      // eslint-disable-next-line no-undef
+      // Check if container is already initialized (has __initialized__ flag)
+      // Module Federation containers can only be init'd once
+      // eslint-disable-next-line no-underscore-dangle
+      if (!container.__initialized__) {
+        // eslint-disable-next-line no-undef
+        await container.init(__webpack_share_scopes__.default);
+        // eslint-disable-next-line no-underscore-dangle
+        container.__initialized__ = true;
+      }
+      // Get the exposed plugin module
+      const factory = await container.get('./plugin');
+      const pluginModule = factory();
 
       if (__DEV__) {
         console.log(`[ClientPluginManager] Successfully loaded plugin: ${id}`);

@@ -16,7 +16,6 @@ const {
   createCSSRule,
   createDefinePlugin,
   createSharedDependencies,
-  clientExternals,
   isDebug,
   pkg,
 } = require('./base.config');
@@ -70,19 +69,67 @@ const clientConfig = createWebpackConfig('client', {
     createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
     new webpack.container.ModuleFederationPlugin({
       name: 'host',
-      shared: createSharedDependencies(
-        Object.fromEntries(
-          Object.entries(pkg.dependencies || {}).filter(
-            ([dep]) => !clientExternals[dep],
-          ),
-        ),
-        {
-          eager: true,
-          singleton: true,
-          strictVersion: false,
-        },
-      ),
+      shared: createSharedDependencies(pkg.dependencies || {}, {
+        eager: true,
+        singleton: true,
+        strictVersion: false,
+      }),
     }),
+    new MiniCssExtractPlugin({
+      filename: isDebug
+        ? 'assets/[name].css'
+        : 'assets-[fullhash:8]/[name].[contenthash:8].css',
+      chunkFilename: isDebug
+        ? 'assets/[id].css'
+        : 'assets-[fullhash:8]/[id].[contenthash:8].css',
+      ignoreOrder: isDebug,
+    }),
+    {
+      apply(compiler) {
+        compiler.hooks.compilation.tap('AppWrapperPlugin', compilation => {
+          const { webpack: wp } = compiler;
+          const { ConcatSource } = wp.sources;
+
+          compilation.hooks.processAssets.tap(
+            {
+              name: 'AppWrapperPlugin',
+              stage: wp.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_INLINE,
+            },
+            assets => {
+              for (const [name, asset] of Object.entries(assets)) {
+                // Only process main app bundles, not chunks
+                if (!name.endsWith('.js') || name.includes('.chunk.')) {
+                  continue;
+                }
+
+                const originalSource = asset.source();
+
+                // Wrap the app code to init shared scope before execution
+                // The host's shared scope should already be initialized, so we just
+                // need to ensure it's available before the app code runs
+                const wrappedSource = new ConcatSource(
+                  `(function() {
+  // Initialize Module Federation shared scope before app code runs
+  // This is synchronous since the host already has the scope ready
+  if (typeof __webpack_init_sharing__ !== 'undefined') {
+    __webpack_init_sharing__('default');
+  }
+  // App code starts here
+`,
+                  originalSource,
+                  `
+  // App code ends here
+})();
+`,
+                );
+
+                compilation.updateAsset(name, wrappedSource);
+              }
+            },
+          );
+        });
+      },
+    },
     {
       apply(compiler) {
         compiler.hooks.done.tap('StatsWriterPlugin', stats => {
@@ -129,16 +176,6 @@ const clientConfig = createWebpackConfig('client', {
         });
       },
     },
-    new MiniCssExtractPlugin({
-      filename: isDebug
-        ? 'assets/[name].css'
-        : 'assets-[fullhash:8]/[name].[contenthash:8].css',
-      chunkFilename: isDebug
-        ? 'assets/[id].css'
-        : 'assets-[fullhash:8]/[id].[contenthash:8].css',
-      ignoreOrder: isDebug,
-    }),
-
     ...(verbose
       ? [
           new webpack.ProgressPlugin({
@@ -154,36 +191,6 @@ const clientConfig = createWebpackConfig('client', {
         ]
       : []),
   ].filter(Boolean),
-  optimization: {
-    runtimeChunk: !isDebug ? 'single' : false,
-    splitChunks: {
-      chunks: 'all',
-      maxInitialRequests: 25,
-      minSize: 20_000,
-      cacheGroups: {
-        defaultVendors: {
-          test: /[\\/]node_modules[\\/]/,
-          priority: 20,
-          reuseExistingChunk: true,
-          name: 'vendors',
-          chunks: 'async',
-        },
-        commons: {
-          minChunks: 2,
-          priority: 10,
-          reuseExistingChunk: true,
-          chunks: 'async',
-        },
-        styles: {
-          name: 'styles',
-          test: /\.css$/,
-          chunks: 'all',
-          enforce: true,
-          priority: +Infinity,
-        },
-      },
-    },
-  },
 });
 
 /**

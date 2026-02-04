@@ -23,6 +23,10 @@ export async function init(app, apiRouter) {
   // Get plugin metadata and script URL
   router.get('/plugins/:id', controller.getPlugin);
 
+  // Serve plugin static files (remoteEntry.js, chunks, assets)
+  // detailed: /api/plugins/:id/static/* -> serves files from plugin dir
+  router.use('/plugins/:id/static', controller.servePluginStatic);
+
   // Mount routes
   apiRouter.use(router);
 

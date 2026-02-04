@@ -84,15 +84,10 @@ export class BasePluginManager {
   async fetchAll() {
     try {
       const response = await this[PLUGIN_CONTEXT].fetch('/api/plugins');
-      if (!response || !response.success) {
-        const error = new Error(
-          (response && response.message) || 'Failed to fetch plugin list',
-        );
-        error.name = 'PluginManagerError';
-        throw error;
-      }
-
-      const plugins = (response.data && response.data.plugins) || [];
+      const plugins =
+        response.data && Array.isArray(response.data.plugins)
+          ? response.data.plugins
+          : [];
       const results = await Promise.allSettled(
         plugins.map(plugin => {
           const id = typeof plugin === 'object' ? plugin.id : plugin;
@@ -177,11 +172,17 @@ export class BasePluginManager {
         throw error;
       }
 
-      const { code, manifest: serverManifest, internalId } = response.data;
+      const {
+        containerName,
+        manifest: serverManifest,
+        internalId,
+      } = response.data;
       if (serverManifest) manifest = serverManifest;
+      // Add internalId to manifest for server-side loading
+      if (internalId && manifest) manifest.internalId = internalId;
 
-      // Load the plugin
-      let plugin = await this.executePlugin(id, code, manifest, internalId);
+      // Load the plugin via MF container
+      let plugin = await this.executePlugin(id, manifest, containerName);
 
       // Handle ES module default export
       plugin = plugin.default || plugin;

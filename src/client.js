@@ -24,19 +24,6 @@ import {
 import pluginManager from './shared/plugin/manager/client';
 import App from './shared/renderer/App';
 
-// Expose shared dependencies to window for plugins (Global Vendors Pattern)
-window.React = require('react');
-window.ReactDOM = require('react-dom');
-window.ReactRedux = require('react-redux');
-window.ReactHookForm = require('react-hook-form');
-window.ReactI18Next = require('react-i18next');
-window.I18Next = require('i18next');
-window.Lodash = require('lodash');
-window.Dayjs = require('dayjs');
-window.Zod = require('zod');
-window.Clsx = require('clsx');
-window.PropTypes = require('prop-types');
-
 // =============================================================================
 // CONSTANTS & CONFIGURATION
 // =============================================================================
