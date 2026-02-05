@@ -466,7 +466,7 @@ All environment variables use the `RSK_` prefix for consistency. Key variables (
 ```bash
 # Server Configuration
 RSK_PORT=1337
-RSK_HOST=localhost
+RSK_HOST=127.0.0.1
 RSK_HTTPS=false
 
 # Application Metadata

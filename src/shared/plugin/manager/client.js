@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { BasePluginManager } from './base';
+import { BasePluginManager, LOADED_VERSIONS } from './base';
 
 // Symbol to store initialization promise
 const PLUGIN_MANAGER_INIT = Symbol('__rsk.pluginManagerInit__');
@@ -14,6 +14,92 @@ class ClientPluginManager extends BasePluginManager {
   constructor() {
     super();
     this[PLUGIN_MANAGER_INIT] = null;
+    // Track loaded plugin versions for intelligent cache invalidation
+    this[LOADED_VERSIONS] = new Map(); // pluginId -> version
+  }
+
+  /**
+   * Build plugin script URL
+   * @param {string} id - Plugin ID
+   * @param {string} [filename='plugin.js'] - Script filename
+   * @returns {string} Plugin script URL
+   */
+  getPluginScriptUrl(id, filename = 'plugin.js') {
+    return `/api/plugins/${id}/static/${filename}`;
+  }
+
+  /**
+   * Load a script dynamically
+   * @param {string} url - Script URL
+   * @param {Object} options - Loading options
+   * @returns {Promise<void>}
+   */
+  async loadScript(url, options = {}) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = url;
+      script.async = options.async !== false;
+
+      script.onload = () => resolve();
+      script.onerror = e => {
+        const error = new Error(`Failed to load script: ${url}`);
+        error.code = 'SCRIPT_LOAD_FAILED';
+        error.url = url;
+        error.originalError = e;
+        reject(error);
+      };
+
+      document.body.appendChild(script);
+    });
+  }
+
+  /**
+   * Initialize Module Federation container
+   * @param {Object} container - MF container
+   * @param {string} containerName - Container name
+   * @returns {Promise<void>}
+   */
+  async initializeContainer(container, containerName) {
+    // Check if already initialized
+    // eslint-disable-next-line no-underscore-dangle
+    if (container.__initialized__) {
+      return;
+    }
+
+    // Verify shared scope is available
+    // eslint-disable-next-line no-undef
+    if (
+      typeof __webpack_share_scopes__ === 'undefined' ||
+      // eslint-disable-next-line no-undef
+      !__webpack_share_scopes__.default
+    ) {
+      const error = new Error('Module Federation shared scope not available');
+      error.code = 'SHARED_SCOPE_UNAVAILABLE';
+      throw error;
+    }
+
+    // Initialize with shared scope
+    // eslint-disable-next-line no-undef
+    await container.init(__webpack_share_scopes__.default);
+    // eslint-disable-next-line no-underscore-dangle
+    container.__initialized__ = true;
+
+    if (__DEV__) {
+      console.log(
+        `[ClientPluginManager] Initialized container: ${containerName}`,
+      );
+    }
+  }
+
+  /**
+   * Get module from container
+   * @param {Object} container - MF container
+   * @param {string} moduleName - Module name (e.g., './plugin')
+   * @returns {Promise<Object>} Module
+   */
+  async getContainerModule(container, moduleName = './plugin') {
+    const factory = await container.get(moduleName);
+    return factory();
   }
 
   /**
@@ -37,6 +123,7 @@ class ClientPluginManager extends BasePluginManager {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // Verify shared scope is available
+      // eslint-disable-next-line no-undef
       if (
         typeof __webpack_share_scopes__ === 'undefined' ||
         // eslint-disable-next-line no-undef
@@ -58,17 +145,27 @@ class ClientPluginManager extends BasePluginManager {
   /**
    * Load plugin module as MF remote container
    * @param {string} id - Plugin ID
-   * @param {object} _manifest - Plugin manifest
+   * @param {object} manifest - Plugin manifest
    * @param {string} containerName - MF container name (window global)
    */
-  async loadPluginModule(id, _manifest, containerName) {
-    try {
-      // Build script URL from plugin ID
-      const scriptUrl = `/api/plugins/${id}/static/plugin.js`;
+  async loadPluginModule(id, manifest, containerName) {
+    const startTime = Date.now();
+    const currentVersion = (manifest && manifest.version) || '0.0.0';
 
+    try {
       // Ensure shared scope is ready before loading any plugin
       // eslint-disable-next-line no-underscore-dangle
       await this._ensureSharedScopeInitialized();
+
+      // Version-based cache invalidation via URL query parameter
+      const loadedVersion = this[LOADED_VERSIONS].get(id);
+      const versionChanged = currentVersion && loadedVersion !== currentVersion;
+
+      // Add version to script URL for cache busting when version changes
+      const baseUrl = this.getPluginScriptUrl(id);
+      const scriptUrl = versionChanged
+        ? `${baseUrl}?v=${currentVersion}`
+        : baseUrl;
 
       if (__DEV__) {
         console.log(
@@ -76,62 +173,60 @@ class ClientPluginManager extends BasePluginManager {
         );
       }
 
-      // Load the plugin.js script via script tag
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = scriptUrl;
-        script.async = true;
-        script.onload = () => resolve();
-        script.onerror = e => {
-          const err = new Error(
-            `Failed to load plugin script: ${e.message || e}`,
-          );
-          err.name = 'PluginManagerError';
-          reject(err);
-        };
-
-        // Append to body (after vendor scripts)
-        document.body.appendChild(script);
-      });
+      // Load the plugin script
+      await this.loadScript(scriptUrl);
 
       // Get the container from window
       const container = window[containerName];
       if (!container) {
-        const err = new Error(
+        const error = new Error(
           `Plugin container ${containerName} not found on window after script loaded`,
         );
-        err.name = 'PluginManagerError';
-        throw err;
+        error.code = 'CONTAINER_NOT_FOUND';
+        error.containerName = containerName;
+        throw error;
       }
-      // Initialize the container with the host's shared scope
-      // eslint-disable-next-line no-undef
-      // Check if container is already initialized (has __initialized__ flag)
-      // Module Federation containers can only be init'd once
-      // eslint-disable-next-line no-underscore-dangle
-      if (!container.__initialized__) {
-        // eslint-disable-next-line no-undef
-        await container.init(__webpack_share_scopes__.default);
-        // eslint-disable-next-line no-underscore-dangle
-        container.__initialized__ = true;
-      }
-      // Get the exposed plugin module
-      const factory = await container.get('./plugin');
-      const pluginModule = factory();
 
+      // Initialize the container with the host's shared scope
+      await this.initializeContainer(container, containerName);
+
+      // Get the exposed plugin module
+      const pluginModule = await this.getContainerModule(container);
+
+      // Track loaded version for future cache invalidation
+      this[LOADED_VERSIONS].set(id, currentVersion);
+
+      // Performance monitoring
+      const loadTime = Date.now() - startTime;
       if (__DEV__) {
-        console.log(`[ClientPluginManager] Successfully loaded plugin: ${id}`);
+        console.log(
+          `[ClientPluginManager] Successfully loaded plugin: ${id} v${currentVersion} (${loadTime}ms)`,
+        );
+        if (loadTime > 500) {
+          console.warn(
+            `[ClientPluginManager] Slow plugin load detected: ${id} took ${loadTime}ms`,
+          );
+        }
       }
 
       return pluginModule.default || pluginModule;
-    } catch (e) {
-      console.error(`[ClientPluginManager] Failed to load plugin ${id}:`, e);
+    } catch (err) {
+      // Enhanced error with full context for debugging
+      const error = new Error(`Failed to load plugin "${id}": ${err.message}`);
+      error.code = err.code || 'PLUGIN_LOAD_FAILED';
+      error.pluginId = id;
+      error.containerName = containerName;
+      error.originalError = err;
 
-      // In production, don't crash the app - just skip the plugin
-      if (__DEV__) {
-        throw e;
-      }
+      console.error(`[ClientPluginManager] ${error.message}`, {
+        pluginId: id,
+        containerName,
+        version: currentVersion,
+        error: err.message,
+        stack: __DEV__ ? err.stack : undefined,
+      });
 
-      return null;
+      throw error;
     }
   }
 

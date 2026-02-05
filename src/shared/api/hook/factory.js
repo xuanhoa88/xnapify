@@ -101,5 +101,31 @@ export function createFactory() {
   factory.getChannelNames = () => manager.getChannelNames();
   factory.cleanup = () => manager.cleanup();
 
+  /**
+   * Return a factory bound to the given context (e.g. req.app).
+   * Usage:
+   *   const reqHook = hook.withContext(req.app);
+   *   const profile = reqHook('profile'); // handlers run with req.app as `this`
+   *
+   * The returned factory is callable and has all the same methods as the original.
+   */
+  factory.withContext = context => {
+    // Create a new callable factory bound to the context
+    const boundFactory = name => manager.channel(name).withContext(context);
+
+    // Attach all factory methods to maintain API parity
+    boundFactory.channel = name => manager.channel(name).withContext(context);
+    boundFactory.has = name => manager.has(name);
+    boundFactory.remove = name => manager.remove(name);
+    boundFactory.getChannelNames = () => manager.getChannelNames();
+    boundFactory.cleanup = () => manager.cleanup();
+
+    // Allow chaining: boundFactory.withContext(newContext)
+    // Creates a new bound factory with the new context
+    boundFactory.withContext = newContext => factory.withContext(newContext);
+
+    return boundFactory;
+  };
+
   return factory;
 }

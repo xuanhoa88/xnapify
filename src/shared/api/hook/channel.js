@@ -94,6 +94,50 @@ class HookChannel {
       this[HOOK_HANDLERS].clear();
     }
   }
+
+  /**
+   * Create a bound wrapper of this channel with a context object.
+   * Handlers registered through the wrapper will be invoked with
+   * the provided context as `this` (handler.call(context, ...args)).
+   *
+   * @param {Object} context
+   * @returns {{on: Function, emit: Function, off: Function, name: string, events: string[]}}
+   */
+  withContext(context) {
+    const channel = this;
+    const wrapperMap = new WeakMap();
+
+    return {
+      on(event, handler, priority = 10) {
+        if (typeof handler !== 'function') {
+          throw new TypeError('Handler must be a function');
+        }
+
+        // Wrap handler so it runs with the provided context as `this`
+        const wrapped = (...args) => handler.call(context, ...args);
+        wrapperMap.set(handler, wrapped);
+
+        channel.on(event, wrapped, priority);
+        return this;
+      },
+
+      emit(event, ...args) {
+        return channel.emit(event, ...args);
+      },
+
+      off(event) {
+        return channel.off(event);
+      },
+
+      get name() {
+        return channel.name;
+      },
+
+      get events() {
+        return channel.events;
+      },
+    };
+  }
 }
 
 export { HookChannel };

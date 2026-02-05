@@ -62,8 +62,10 @@ function formatProfileResponse(user) {
 export async function getProfile(req, res) {
   const http = req.app.get('http');
   try {
-    const models = req.app.get('models');
-    const user = await profileService.getUserWithProfile(req.user.id, models);
+    const user = await profileService.getUserWithProfile(req.user.id, {
+      models: req.app.get('models'),
+      hook: req.app.get('hook').withContext(req.app)
+    });
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
@@ -104,13 +106,14 @@ export async function updateProfile(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook');
     const user = await profileService.updateUserProfile(
       req.user.id,
       { display_name, first_name, last_name, bio, location, website },
-      { models, webhook, hook },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        hook: req.app.get('hook').withContext(req.app)
+      },
     );
 
     return http.sendSuccess(res, {
@@ -154,7 +157,10 @@ export async function uploadAvatar(req, res) {
     }
 
     // Get user with profile
-    const user = await profileService.getUserWithProfile(req.user.id, models);
+    const user = await profileService.getUserWithProfile(req.user.id, {
+      models,
+      hook: req.app.get('hook').withContext(req.app)
+    });
 
     // Store old avatar for cleanup
     const oldAvatarPath = user.profile && user.profile.picture;
@@ -267,11 +273,13 @@ export async function previewAvatar(req, res) {
 export async function removeAvatar(req, res) {
   const http = req.app.get('http');
   const fs = req.app.get('fs');
-  const models = req.app.get('models');
 
   try {
     // Get user with profile to find current avatar
-    const user = await profileService.getUserWithProfile(req.user.id, models);
+    const user = await profileService.getUserWithProfile(req.user.id, {
+      models: req.app.get('models'),
+      hook: req.app.get('hook').withContext(req.app)
+    });
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
@@ -339,7 +347,7 @@ export async function changePassword(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        hook: req.app.get('hook'),
+        hook: req.app.get('hook').withContext(req.app),
       },
     );
 
@@ -384,13 +392,14 @@ export async function updatePreferences(req, res) {
       return http.sendValidationError(res, validationErrors[0]);
     }
 
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook');
     const preferences = await profileService.updateUserPreferences(
       req.user.id,
       { language, timezone, notifications, theme },
-      { models, webhook, hook },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        hook: req.app.get('hook').withContext(req.app)
+      },
     );
 
     return http.sendSuccess(res, {
@@ -413,10 +422,12 @@ export async function updatePreferences(req, res) {
 export async function getPreferences(req, res) {
   const http = req.app.get('http');
   try {
-    const models = req.app.get('models');
     const preferences = await profileService.getUserPreferences(
       req.user.id,
-      models,
+      {
+        models: req.app.get('models'),
+        hook: req.app.get('hook').withContext(req.app)
+      }
     );
 
     return http.sendSuccess(res, { preferences });
@@ -450,7 +461,7 @@ export async function deleteAccount(req, res) {
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
-      hook: req.app.get('hook'),
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     req.app.get('auth').clearAllAuthCookies(res);

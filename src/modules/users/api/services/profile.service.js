@@ -16,11 +16,13 @@ import { logUserActivity } from '../utils/activity';
  * Get user with profile information
  *
  * @param {string} user_id - User ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook factory for activity logging
  * @returns {Promise<Object>} User with profile
  * @throws {Error} If UserNotFoundError
  */
-export async function getUserWithProfile(user_id, models) {
+export async function getUserWithProfile(user_id, { models, hook }) {
   const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -55,6 +57,9 @@ export async function getUserWithProfile(user_id, models) {
     error.status = 404;
     throw error;
   }
+
+  // Emit hook event if hook factory provided
+  await hook('profile').emit('retrieved', { user, user_id });
 
   return user;
 }
@@ -66,8 +71,8 @@ export async function getUserWithProfile(user_id, models) {
  * @param {Object} profileData - Profile data to update
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook factory for activity logging
  * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError
  */
@@ -76,8 +81,6 @@ export async function updateUserProfile(
   profileData,
   { models, webhook, hook },
 ) {
-  const profileHooks = hook('profile');
-
   const { User, UserProfile, Role, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -112,6 +115,9 @@ export async function updateUserProfile(
     error.status = 404;
     throw error;
   }
+
+  // Run hooks before updating
+  await hook('profile').emit('updating', { user_id, profileData });
 
   // Update profile data
   if (user.profile) {
@@ -124,8 +130,8 @@ export async function updateUserProfile(
     });
   }
 
-  // Run hooks
-  await profileHooks.emit('updated', { user_id, profileData });
+  // Run hooks after updating
+  await hook('profile').emit('updated', { user_id, profileData });
 
   // Log activity
   await logUserActivity(webhook, 'profile_updated', user_id);
@@ -146,8 +152,8 @@ export async function updateUserProfile(
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook factory for activity logging
  * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
@@ -157,8 +163,6 @@ export async function changeUserPassword(
   newPassword,
   { models, webhook, hook },
 ) {
-  const profileHooks = hook('profile');
-
   const { User } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);
@@ -182,7 +186,7 @@ export async function changeUserPassword(
   await user.update({ password: newPassword });
 
   // Run hooks
-  await profileHooks.emit('password_changed', { user_id });
+  await hook('profile').emit('password_changed', { user, user_id });
 
   // Log activity
   await logUserActivity(webhook, 'password_changed', user_id);
@@ -197,8 +201,8 @@ export async function changeUserPassword(
  * @param {Object} preferences - User preferences
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook factory for activity logging
  * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {Object} [options.hook] - Hook engine for activity logging
  * @returns {Promise<Object>} Updated preferences
  */
 export async function updateUserPreferences(
@@ -206,7 +210,6 @@ export async function updateUserPreferences(
   preferences,
   { models, webhook, hook },
 ) {
-  const profileHooks = hook('profile');
   const { UserProfile } = models;
 
   // Find or create user profile
@@ -226,7 +229,11 @@ export async function updateUserPreferences(
   }
 
   // Run hooks
-  await profileHooks.emit('preferences_updated', { user_id, preferences });
+  await hook('profile').emit('preferences_updated', {
+    user_id,
+    profile,
+    preferences,
+  });
 
   // Log activity
   await logUserActivity(webhook, 'preferences_updated', user_id);
@@ -238,16 +245,20 @@ export async function updateUserPreferences(
  * Get user preferences
  *
  * @param {string} user_id - User ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
+ * @param {Object} options.hook - Hook factory for activity logging
  * @returns {Promise<Object>} User preferences
  */
-export async function getUserPreferences(user_id, models) {
+export async function getUserPreferences(user_id, { models, hook }) {
   const { UserProfile } = models;
 
   const profile = await UserProfile.findOne({
     where: { user_id },
     attributes: ['preferences'],
   });
+
+  await hook('profile').emit('preferences_retrieved', { profile, user_id });
 
   return (
     (profile && profile.preferences) || {
@@ -280,7 +291,6 @@ export async function deleteUserAccount(
   password,
   { models, webhook, hook },
 ) {
-  const profileHooks = hook('profile');
   const { User, UserProfile } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);
@@ -309,7 +319,10 @@ export async function deleteUserAccount(
   await user.destroy();
 
   // Run hooks
-  await profileHooks.emit('account_deleted', { user_id, email: userEmail });
+  await hook('profile').emit('account_deleted', {
+    user_id,
+    email: userEmail,
+  });
 
   // Log activity
   await logUserActivity(webhook, 'account_deleted', user_id, {

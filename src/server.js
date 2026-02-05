@@ -42,21 +42,6 @@ import App from './shared/renderer/App';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-
-const config = Object.freeze({
-  cwd: __dirname,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  port: parseInt(process.env.RSK_PORT, 10) || 1337,
-  host: process.env.RSK_HOST || '0.0.0.0',
-  apiPrefix: process.env.RSK_API_PREFIX || '/api',
-});
-
-let cachedViews = null;
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
 const LOCALHOST_IPS = new Set([
   '0.0.0.0',
   '127.0.0.1',
@@ -66,9 +51,32 @@ const LOCALHOST_IPS = new Set([
   'localhost',
 ]);
 
-function getBaseUrl({ host, port }) {
+function normalizeHost(host) {
+  return LOCALHOST_IPS.has(host) ? '127.0.0.1' : host;
+}
+
+function parsePort(port, defaultPort) {
+  const parsedPort = parseInt(port, 10);
+  return parsedPort >= 0 && parsedPort <= 65535 ? parsedPort : defaultPort;
+}
+
+const config = Object.freeze({
+  cwd: __dirname,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  port: parsePort(process.env.RSK_PORT, 1337),
+  host: normalizeHost(process.env.RSK_HOST || '127.0.0.1'),
+  apiPrefix: process.env.RSK_API_PREFIX || '/api',
+});
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+let cachedViews = null;
+
+function getBaseUrl(port, host) {
   const protocol = process.env.RSK_HTTPS === 'true' ? 'https' : 'http';
-  const normalizedHost = LOCALHOST_IPS.has(host) ? 'localhost' : host;
+  const normalizedHost = normalizeHost(host || '127.0.0.1');
   return `${protocol}://${normalizedHost}:${port}`;
 }
 
@@ -237,7 +245,7 @@ function withTimeout(promise, timeoutMs, operationName) {
   ]);
 }
 
-function createSSRHandler() {
+function createSSRHandler(port, host) {
   return async (req, res, next) => {
     const startTime = Date.now();
 
@@ -266,7 +274,7 @@ function createSSRHandler() {
       const fetch = createFetch(nodeFetch, {
         signal: abortController.signal,
         defaults: {
-          baseUrl: getBaseUrl({ host: config.host, port: config.port }),
+          baseUrl: getBaseUrl(port, host),
           headers: {
             Cookie: req.headers.cookie || '',
             'User-Agent': req.headers['user-agent'] || 'RSK',
@@ -278,7 +286,7 @@ function createSSRHandler() {
       const locale = req.language || DEFAULT_LOCALE;
       store = await withTimeout(
         initReduxStore({ fetch, history }, locale),
-        3_000,
+        5_000,
         'Redux store initialization',
       );
 
@@ -294,12 +302,15 @@ function createSSRHandler() {
         signal: abortController.signal,
       };
 
-      // Initialize plugins for SSR (Server-Side)
-      await withTimeout(
-        pluginManager.init({ ...context, cwd: config.cwd }),
-        5_000,
-        'Plugin initialization',
-      );
+      // Initialize plugins (Server Side)
+      try {
+        await pluginManager.init({ ...context, cwd: config.cwd });
+      } catch (error) {
+        // Log but don't fail the request
+        if (__DEV__) {
+          console.warn('⚠️ Plugin initialization failed:', error.message);
+        }
+      }
 
       // Load views with timeout protection
       const views = await withTimeout(loadViews(), 5_000, 'Views loading');
@@ -499,45 +510,52 @@ function verifyWsToken(jwt, token) {
 // MAIN FUNCTIONS
 // =============================================================================
 
-export function serve(app, port = config.port, host = config.host) {
+export function serve(app, { port = config.port, host = config.host }) {
   // WebSocket path
   const wsPath = process.env.RSK_WS_PATH || '/ws';
 
   return new Promise((resolve, reject) => {
-    const httpServer = app.listen(port, host, err => {
-      if (err) {
-        console.error('❌ Server start failed:', err.message);
-        return reject(err);
-      }
+    const httpServer = app.listen(
+      port,
+      normalizeHost(host || '127.0.0.1'),
+      err => {
+        if (err) {
+          console.error('❌ Server start failed:', err.message);
+          return reject(err);
+        }
 
-      // Initialize WebSocket
-      const jwt = app.get('jwt');
-      const wsServer = createWebSocketServer(
-        {
-          path: wsPath,
-          enableLogging: !__DEV__,
-          onAuthentication: token => verifyWsToken(jwt, token),
-        },
-        httpServer,
-      );
-      app.set('ws', wsServer);
+        // Initialize WebSocket
+        const jwt = app.get('jwt');
+        const wsServer = createWebSocketServer(
+          {
+            path: wsPath,
+            enableLogging: !__DEV__,
+            onAuthentication: token => verifyWsToken(jwt, token),
+          },
+          httpServer,
+        );
+        app.set('ws', wsServer);
 
-      registerShutdownHandlers(httpServer, wsServer);
+        registerShutdownHandlers(httpServer, wsServer);
 
-      // Print server info
-      const serverUrl = getBaseUrl({ host, port });
-      const wsProtocol = serverUrl.startsWith('https://') ? 'wss://' : 'ws://';
-      const wsUrl = wsProtocol + serverUrl.replace(/^https?:\/\//, '') + wsPath;
+        // Print server info
+        const serverUrl = getBaseUrl(port, host);
+        const wsProtocol = serverUrl.startsWith('https://')
+          ? 'wss://'
+          : 'ws://';
+        const wsUrl =
+          wsProtocol + serverUrl.replace(/^https?:\/\//, '') + wsPath;
 
-      console.info('='.repeat(50));
-      console.info(`🚀 Server started`);
-      console.info(`   URL: ${serverUrl}/`);
-      console.info(`   WebSocket: ${wsUrl}`);
-      console.info(`   Environment: ${config.nodeEnv}`);
-      console.info('='.repeat(50));
+        console.info('='.repeat(50));
+        console.info(`🚀 Server started`);
+        console.info(`   URL: ${serverUrl}/`);
+        console.info(`   WebSocket: ${wsUrl}`);
+        console.info(`   Environment: ${config.nodeEnv}`);
+        console.info('='.repeat(50));
 
-      resolve(httpServer);
-    });
+        resolve(httpServer);
+      },
+    );
 
     httpServer.on('error', err => {
       console.error(
@@ -550,7 +568,10 @@ export function serve(app, port = config.port, host = config.host) {
   });
 }
 
-export default async function main(app, publicDir) {
+export default async function main(
+  app,
+  { publicDir, port = config.port, host = config.host },
+) {
   // Set current working directory
   app.set('cwd', config.cwd);
 
@@ -701,7 +722,7 @@ export default async function main(app, publicDir) {
   }
 
   // SSR handler
-  app.get('*', createSSRHandler());
+  app.get('*', createSSRHandler(port, host));
 
   // Error handler
   app.use(createErrorHandler());

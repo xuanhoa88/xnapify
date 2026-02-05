@@ -145,7 +145,7 @@ export async function getCurrentUser(userId, models) {
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If user already exists or creation fails
  */
-export async function registerUser(userData, { models, webhook }) {
+export async function registerUser(userData, { models, webhook, hook } = {}) {
   const { email, password } = userData;
   const { User, UserProfile, Role } = models;
 
@@ -187,6 +187,9 @@ export async function registerUser(userData, { models, webhook }) {
     useWorker: true,
   });
 
+  // Emit hook event if hook factory provided
+  await hook('auth').emit('registered', { user_id: user.id, email });
+
   // Return formatted user data with default RBAC for new user
   return formatUserData(user, {
     roles: [DEFAULT_ROLE],
@@ -203,10 +206,13 @@ export async function registerUser(userData, { models, webhook }) {
  * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<void>}
  */
-export async function logoutUser(userId, { webhook }) {
+export async function logoutUser(userId, { webhook, hook } = {}) {
   await logUserActivity(webhook, 'logout', userId, {}, null, {
     useWorker: true,
   });
+
+  // Emit hook event if hook factory provided
+  await hook('auth').emit('logout', { user_id: userId });
 }
 
 /**
@@ -226,7 +232,7 @@ export async function logoutUser(userId, { webhook }) {
 export async function authenticateUser(
   email,
   password,
-  { models, webhook, activityData },
+  { models, webhook, activityData, hook } = {},
 ) {
   const { User, UserProfile, Role, Permission, Group } = models;
 
@@ -340,6 +346,13 @@ export async function authenticateUser(
     { useWorker: true },
   );
 
+  // Emit hook event if hook factory provided
+  await hook('auth').emit('login', {
+    user_id: user.id,
+    activityData,
+    user: formatUserData(user),
+  });
+
   return formatUserData(user);
 }
 
@@ -353,7 +366,7 @@ export async function authenticateUser(
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid or expired
  */
-export async function verifyEmail(token, { models, webhook }) {
+export async function verifyEmail(token, { models, webhook, hook } = {}) {
   const { User } = models;
 
   // In a real implementation, you would decode and verify the JWT token
@@ -390,6 +403,12 @@ export async function verifyEmail(token, { models, webhook }) {
       { useWorker: true },
     );
 
+    // Emit hook event if hook factory provided
+    await hook('auth').emit('email_verified', {
+      user_id: user.id,
+      email: user.email,
+    });
+
     return user;
   } catch (error) {
     error.name = 'InvalidTokenError';
@@ -410,7 +429,10 @@ export async function verifyEmail(token, { models, webhook }) {
  * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<Object>} Reset token info (token for email, message)
  */
-export async function resetPasswordRequest(email, { models, webhook }) {
+export async function resetPasswordRequest(
+  email,
+  { models, webhook, hook } = {},
+) {
   const { User, PasswordResetToken } = models;
 
   const user = await User.findOne({ where: { email } });
@@ -451,6 +473,12 @@ export async function resetPasswordRequest(email, { models, webhook }) {
     { useWorker: true },
   );
 
+  // Emit hook event if hook factory provided
+  await hook('auth').emit('password_reset_requested', {
+    user_id: user.id,
+    email,
+  });
+
   // Return the raw token (to be sent via email)
   // In production, you would send this via email instead of returning it
   return {
@@ -478,7 +506,7 @@ export async function resetPasswordRequest(email, { models, webhook }) {
 export async function resetPasswordConfirmation(
   token,
   newPassword,
-  { models, webhook },
+  { models, webhook, hook } = {},
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -539,6 +567,9 @@ export async function resetPasswordConfirmation(
     null,
     { useWorker: true },
   );
+
+  // Emit hook event if hook factory provided
+  await hook('auth').emit('password_reset_completed', { user_id: user.id });
 
   return user;
 }

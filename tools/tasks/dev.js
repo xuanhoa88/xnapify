@@ -41,6 +41,10 @@ const silent = isSilent();
 // Cache verbose check for use throughout the task
 const verbose = isVerbose();
 
+// Get port and host from environment variables
+const port = parseInt(config.env('RSK_PORT', '1337'), 10);
+const host = config.env('RSK_HOST', '127.0.0.1');
+
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance
 // - hmr: Tracks Hot Module Replacement state and configuration
@@ -246,7 +250,7 @@ async function reinitializeServerAndMiddlewares() {
     const serverBundle = loadServerBundle();
 
     // Re-initialize app with the new server bundle and routes
-    await serverBundle.init(app);
+    await serverBundle.init(app, { publicDir: config.PUBLIC_DIR, port, host });
 
     logInfo('✅ Server bundle and middlewares reinitialized successfully');
 
@@ -487,10 +491,6 @@ async function main() {
   // Generate JWT
   await generateJWT(config.CWD);
 
-  // Get port and host from environment variables
-  const port = parseInt(config.env('RSK_PORT', '1337'), 10);
-  const host = config.env('RSK_HOST', 'localhost');
-
   try {
     // Create Express server instance
     app = express();
@@ -513,10 +513,10 @@ async function main() {
 
     // Load and initialize SSR app (after compilation)
     const bundle = loadServerBundle();
-    await bundle.init(app, config.PUBLIC_DIR);
+    await bundle.init(app, { publicDir: config.PUBLIC_DIR, port, host });
 
     // Start the HTTP server
-    const server = await bundle.serve(app, port, host);
+    const server = await bundle.serve(app, { port, host });
 
     // Initialize BrowserSync WebSocket server for live reload and HMR
     // This will also open the browser automatically if no clients are connected

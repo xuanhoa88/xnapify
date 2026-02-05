@@ -577,7 +577,12 @@ async function attemptStartup() {
   log('✅ Starting app...');
 
   // Initialize plugins (Client Side)
-  await pluginManager.init({ ...context });
+  try {
+    await pluginManager.init({ ...context });
+  } catch (error) {
+    console.error('⚠️ Plugin initialization failed:', error.message);
+    // Continue app startup even if plugins fail
+  }
 
   // Initialize app
   await initializeApp();

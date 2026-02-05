@@ -12,10 +12,12 @@
  */
 import { registry } from '../registry';
 
+export const INITIALIZED = Symbol('__rsk.initializedPlugins__');
 export const ACTIVE_PLUGINS = Symbol('__rsk.activePlugins__');
 export const PLUGIN_CONTEXT = Symbol('__rsk.pluginContext__');
 export const PLUGIN_METADATA = Symbol('__rsk.pluginMetadata__');
-export const EVENT_HANDLERS = Symbol('__rsk.eventHandlers__');
+export const EVENT_HANDLERS = Symbol('__rsk.pluginEventHandlers__');
+export const LOADED_VERSIONS = Symbol('__rsk.loadedPluginVersions__');
 
 /**
  * Plugin states
@@ -47,17 +49,33 @@ export class BasePluginManager {
     this[ACTIVE_PLUGINS] = new Map(); // id -> plugin instance
     this[PLUGIN_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
+    this[INITIALIZED] = false;
   }
 
   /**
    * Initialize the plugin manager
+   *
    * @param {Object} context - Application context
-   * @param {Function} context.fetch - Fetch function for API calls
+   * @param {Function} context.fetch - Fetch function for API calls (required)
+   * @param {Object} [context.store] - Redux store instance
+   * @param {Object} [context.i18n] - i18n instance
+   * @param {Object} [context.history] - History instance (client only)
+   * @param {string} [context.locale] - Current locale
+   * @param {string} [context.pathname] - Current pathname (client only)
+   * @param {Object} [context.query] - Query parameters (client only)
+   * @param {string} [context.cwd] - Current working directory (server only)
+   * @param {AbortSignal} [context.signal] - Abort signal for request cancellation (server only)
+   *
+   * @note Server context: Initialized once at startup with server-level context
+   * @note Client context: Initialized before app startup, updated on navigation
    */
   async init(context) {
-    // Skip if already initialized (singleton)
-    if (this[ACTIVE_PLUGINS].size > 0) {
-      // Update context for the current request
+    // Singleton pattern: Skip re-initialization if already initialized
+    // This prevents redundant plugin loading on subsequent calls (e.g., per-request on server)
+    // We check the explicit INITIALIZED flag instead of active plugin count
+    // to handle cases where no plugins are installed (count = 0)
+    if (this[INITIALIZED]) {
+      // Update context for the current request/navigation
       this[PLUGIN_CONTEXT] = context;
       return;
     }
@@ -76,6 +94,7 @@ export class BasePluginManager {
     this.subscribeToEvents();
 
     await this.fetchAll();
+    this[INITIALIZED] = true;
   }
 
   /**
@@ -154,6 +173,8 @@ export class BasePluginManager {
     this.emit('plugin:loading', { id });
 
     try {
+      // Load plugin dependencies first (ensures dependency graph is satisfied)
+      // Dependencies are loaded recursively before the plugin itself
       if (
         manifest &&
         manifest.dependencies &&

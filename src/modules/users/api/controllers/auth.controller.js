@@ -50,6 +50,7 @@ export async function register(req, res) {
 
     // Get webhook engine for activity tracking
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Register user - returns complete user data with RBAC
     const userData = await authService.registerUser(
@@ -57,7 +58,7 @@ export async function register(req, res) {
         email,
         password,
       },
-      { models, auth, webhook },
+      { models, auth, webhook, hook },
     );
 
     // Generate token pair using configured JWT instance
@@ -117,6 +118,7 @@ export async function login(req, res) {
 
     // Get webhook engine for activity tracking
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Authenticate user - returns complete user data with RBAC in one query
     const userData = await authService.authenticateUser(email, password, {
@@ -126,6 +128,7 @@ export async function login(req, res) {
       },
       models,
       webhook,
+      hook,
     });
 
     // Generate token pair using configured JWT instance
@@ -183,10 +186,11 @@ export async function logout(req, res) {
   try {
     const auth = req.app.get('auth');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Log logout activity via service (if user is authenticated)
     if (req.user) {
-      await authService.logoutUser(req.user.id, { webhook });
+      await authService.logoutUser(req.user.id, { webhook, hook });
     }
 
     // Clear token cookies
@@ -296,9 +300,10 @@ export async function emailVerification(req, res) {
     // Get models and webhook from app context
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Verify email with token (activity logged in service)
-    const user = await authService.verifyEmail(token, { models, webhook });
+    const user = await authService.verifyEmail(token, { models, webhook, hook });
 
     // Get complete user data with RBAC information
     const userData = await authService.getCurrentUser(user.id, models);
@@ -368,9 +373,10 @@ export async function resetPasswordRequest(req, res) {
     // Get models and webhook from app context
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Request password reset (activity logged in service)
-    await authService.resetPasswordRequest(email, { models, webhook });
+    await authService.resetPasswordRequest(email, { models, webhook, hook });
 
     // Always return success for security (don't reveal if email exists)
     return http.sendSuccess(res, {
@@ -414,12 +420,14 @@ export async function resetPasswordConfirmation(req, res) {
     const models = req.app.get('models');
     const auth = req.app.get('auth');
     const webhook = req.app.get('webhook');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Confirm reset password with token (activity logged in service)
     await authService.resetPasswordConfirmation(token, password, {
       models,
       auth,
       webhook,
+      hook,
     });
 
     return http.sendSuccess(res, {
