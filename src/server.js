@@ -207,6 +207,12 @@ async function render({ context, component, metadata = {} }) {
     );
     scriptLinks.push(...assets.filter(f => /\.js$/i.test(f)));
     styleLinks.push(...assets.filter(f => /\.css$/i.test(f)));
+
+    // Add plugin CSS files
+    const pluginCssUrls = pluginManager.getPluginCssUrls();
+    if (pluginCssUrls.length > 0) {
+      styleLinks.push(...pluginCssUrls);
+    }
   } catch (err) {
     if (!__DEV__) {
       console.error('❌ Failed to load stats.json:', err.message);
@@ -220,8 +226,9 @@ async function render({ context, component, metadata = {} }) {
   const htmlData = {
     ...metadata,
     children,
-    styleLinks: styleLinks.map(s => `/${s}`),
-    scriptLinks: scriptLinks.map(s => `/${s}`),
+    // Add leading slash only if not already present (plugin CSS URLs already have it)
+    styleLinks: styleLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
+    scriptLinks: scriptLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
     appState: { redux: context.store.getState() },
   };
 

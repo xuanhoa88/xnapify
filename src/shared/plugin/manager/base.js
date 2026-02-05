@@ -18,6 +18,7 @@ export const PLUGIN_CONTEXT = Symbol('__rsk.pluginContext__');
 export const PLUGIN_METADATA = Symbol('__rsk.pluginMetadata__');
 export const EVENT_HANDLERS = Symbol('__rsk.pluginEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedPluginVersions__');
+export const PLUGIN_CSS_FILES = Symbol('__rsk.pluginCssFiles__');
 
 /**
  * Plugin states
@@ -49,6 +50,7 @@ export class BasePluginManager {
     this[ACTIVE_PLUGINS] = new Map(); // id -> plugin instance
     this[PLUGIN_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
+    this[PLUGIN_CSS_FILES] = new Map(); // id -> cssFiles array
     this[INITIALIZED] = false;
   }
 
@@ -232,6 +234,27 @@ export class BasePluginManager {
       console.log(`[PluginManager] Successfully loaded plugin: ${id}`);
       this.emit('plugin:loaded', { id, plugin });
 
+      // Store CSS files from manifest if available (for SSR injection)
+      if (
+        manifest &&
+        Array.isArray(manifest.cssFiles) &&
+        manifest.cssFiles.length > 0
+      ) {
+        if (__DEV__) {
+          console.log(
+            `[PluginManager] CSS files in manifest for ${id}:`,
+            manifest.cssFiles,
+          );
+        }
+
+        this[PLUGIN_CSS_FILES].set(id, manifest.cssFiles);
+        if (__DEV__) {
+          console.log(
+            `[PluginManager] Stored ${manifest.cssFiles.length} CSS file(s) for ${id}`,
+          );
+        }
+      }
+
       return plugin;
     } catch (error) {
       console.error(`[PluginManager] Failed to load plugin "${id}":`, error);
@@ -246,6 +269,22 @@ export class BasePluginManager {
       this.emit('plugin:failed', { id, error });
       throw error;
     }
+  }
+
+  /**
+   * Get all plugin CSS URLs for SSR injection
+   * @returns {Array<string>} Array of CSS URLs
+   */
+  getPluginCssUrls() {
+    const urls = [];
+    for (const [id, files] of this[PLUGIN_CSS_FILES]) {
+      if (Array.isArray(files)) {
+        for (const file of files) {
+          urls.push(`/api/plugins/${id}/static/${file}`);
+        }
+      }
+    }
+    return urls;
   }
 
   /**

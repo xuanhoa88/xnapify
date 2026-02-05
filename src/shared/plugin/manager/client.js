@@ -21,10 +21,10 @@ class ClientPluginManager extends BasePluginManager {
   /**
    * Build plugin script URL
    * @param {string} id - Plugin ID
-   * @param {string} [filename='plugin.js'] - Script filename
+   * @param {string} filename - Script filename
    * @returns {string} Plugin script URL
    */
-  getPluginScriptUrl(id, filename = 'plugin.js') {
+  getPluginScriptUrl(id, filename) {
     return `/api/plugins/${id}/static/${filename}`;
   }
 
@@ -36,12 +36,30 @@ class ClientPluginManager extends BasePluginManager {
    */
   async loadScript(url, options = {}) {
     return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = url;
-      script.async = options.async !== false;
+      let script = document.querySelector(`script[src="${url}"]`);
 
-      script.onload = () => resolve();
-      script.onerror = e => {
+      // Check if already loaded
+      if (script && script.complete) {
+        return resolve();
+      }
+
+      if (!script) {
+        script = document.createElement('script');
+        script.src = url;
+        script.async = options.async !== false;
+        document.body.appendChild(script);
+      }
+
+      // If link exists (SSR or just created) but not loaded, wait for it
+      const handleLoad = () => {
+        script.removeEventListener('load', handleLoad);
+        script.removeEventListener('error', handleError);
+        resolve();
+      };
+
+      const handleError = e => {
+        script.removeEventListener('load', handleLoad);
+        script.removeEventListener('error', handleError);
         const error = new Error(`Failed to load script: ${url}`);
         error.code = 'SCRIPT_LOAD_FAILED';
         error.url = url;
@@ -49,7 +67,8 @@ class ClientPluginManager extends BasePluginManager {
         reject(error);
       };
 
-      document.body.appendChild(script);
+      script.addEventListener('load', handleLoad);
+      script.addEventListener('error', handleError);
     });
   }
 
@@ -162,7 +181,7 @@ class ClientPluginManager extends BasePluginManager {
       const versionChanged = currentVersion && loadedVersion !== currentVersion;
 
       // Add version to script URL for cache busting when version changes
-      const baseUrl = this.getPluginScriptUrl(id);
+      const baseUrl = this.getPluginScriptUrl(id, 'plugin.js');
       const scriptUrl = versionChanged
         ? `${baseUrl}?v=${currentVersion}`
         : baseUrl;

@@ -98,6 +98,16 @@ export async function getPluginById(app, encryptedId) {
   // Create safe container name from plugin ID (must match webpack config)
   const containerName = `plugin_${pluginId.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
+  // Read assets.json to get CSS files
+  try {
+    const assetsPath = path.join(pluginsDir, pluginId, 'assets.json');
+    const assetsData = await fs.readFile(assetsPath, 'utf8');
+    const { css: cssFiles } = JSON.parse(assetsData);
+    manifest.cssFiles = Array.isArray(cssFiles) ? [...new Set(cssFiles)] : [];
+  } catch {
+    // assets.json might not exist if plugin has no CSS or build failed
+  }
+
   return {
     containerName,
     manifest,

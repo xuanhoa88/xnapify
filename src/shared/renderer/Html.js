@@ -137,8 +137,15 @@ export default function Html({
 
         {/* CSS stylesheets */}
         {styleLinks.map(href => (
-          <link key={href} rel='stylesheet' href={href} />
+          <link key={href} rel='stylesheet' type='text/css' href={href} />
         ))}
+
+        {/* Application state for client hydration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__PRELOADED_STATE__=${serialize(appState)}`,
+          }}
+        />
 
         {/* Preload JavaScript bundles for faster loading */}
         {scriptLinks.map(src => (
@@ -153,16 +160,9 @@ export default function Html({
         {/* React app root */}
         <div id='app' dangerouslySetInnerHTML={{ __html: children }} />
 
-        {/* Application state for client hydration */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `window.__PRELOADED_STATE__=${serialize(appState)}`,
-          }}
-        />
-
         {/* JavaScript bundles */}
         {scriptLinks.map(src => (
-          <script key={src} src={src} />
+          <script key={src} type='text/javascript' src={src} />
         ))}
       </body>
     </html>

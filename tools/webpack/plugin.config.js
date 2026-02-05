@@ -107,6 +107,35 @@ class StripRootCSSPlugin {
 }
 
 /**
+ * Webpack plugin to generate assets.json with CSS file list
+ * This allows the server to know which CSS files to preload for each plugin
+ */
+class PluginAssetsPlugin {
+  apply(compiler) {
+    compiler.hooks.done.tap('PluginAssetsPlugin', stats => {
+      const fs = require('fs');
+      const outputPath = compiler.options.output.path;
+      const statsData = stats.toJson({ assets: true });
+
+      // Extract CSS filenames from assets
+      const cssFiles = (statsData.assets || [])
+        .filter(asset => asset.name.endsWith('.css'))
+        .map(asset => asset.name);
+
+      // Write assets.json to the output directory
+      const assetsPath = path.join(outputPath, 'assets.json');
+      fs.writeFileSync(assetsPath, JSON.stringify({ css: cssFiles }, null, 2));
+
+      if (verbose) {
+        console.log(
+          `[PluginAssetsPlugin] Generated assets.json with ${cssFiles.length} CSS file(s)`,
+        );
+      }
+    });
+  }
+}
+
+/**
  * Create safe container name from plugin name
  * @param {string} pluginName - Plugin name
  * @returns {string} Safe container name for webpack
@@ -196,6 +225,7 @@ function createClientConfig(
         ignoreOrder: isDebug,
       }),
       new StripRootCSSPlugin(),
+      new PluginAssetsPlugin(),
       ...createProgressPlugins(),
     ],
   });
