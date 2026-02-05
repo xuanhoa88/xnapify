@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-module.exports = ({ options } = {}) => ({
+module.exports = () => ({
   // The list of plugins for PostCSS
   // https://github.com/postcss/postcss
   plugins: [
@@ -57,16 +57,5 @@ module.exports = ({ options } = {}) => ({
       // Browserslist config will be read from .browserslistrc automatically
       flexbox: 'no-2009',
     }),
-    ...(options && options.stripRoot
-      ? [
-          root => {
-            root.walkRules(rule => {
-              if (rule.selector === ':root') {
-                rule.remove();
-              }
-            });
-          },
-        ]
-      : []),
   ],
 });

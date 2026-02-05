@@ -32,6 +32,92 @@ const verbose = isVerbose();
  */
 const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
 
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+/**
+ * Create ProgressPlugin for verbose builds
+ * @returns {Array} Array containing ProgressPlugin or empty
+ */
+const createProgressPlugins = () =>
+  verbose
+    ? [
+        new webpack.ProgressPlugin({
+          activeModules: true,
+          entries: true,
+          modules: true,
+          modulesCount: 5000,
+          profile: isProfile,
+          dependencies: true,
+          dependenciesCount: 10000,
+          percentBy: 'entries',
+        }),
+      ]
+    : [];
+
+/**
+ * Create StatsWriterPlugin to output build stats
+ * Filters out hot update files and writes minimal stats.json
+ * @returns {Object} Webpack plugin object
+ */
+function createStatsWriterPlugin() {
+  return {
+    apply(compiler) {
+      compiler.hooks.done.tap('StatsWriterPlugin', stats => {
+        const statsData = stats.toJson({
+          all: false,
+          entrypoints: true,
+          assets: false,
+          chunkGroups: false,
+          namedChunkGroups: false,
+          chunks: false,
+          modules: false,
+        });
+
+        // Filter out hot update assets
+        const filterHotUpdates = assets =>
+          assets.filter(asset => {
+            const name = typeof asset === 'string' ? asset : asset.name;
+            return name && !/\.hot-update\./i.test(name);
+          });
+
+        // Clean entrypoints
+        if (statsData.entrypoints) {
+          for (const key in statsData.entrypoints) {
+            if (statsData.entrypoints[key].assets) {
+              statsData.entrypoints[key].assets = filterHotUpdates(
+                statsData.entrypoints[key].assets,
+              );
+            }
+          }
+        }
+
+        // Clean namedChunkGroups
+        if (statsData.namedChunkGroups) {
+          for (const key in statsData.namedChunkGroups) {
+            if (statsData.namedChunkGroups[key].assets) {
+              statsData.namedChunkGroups[key].assets = filterHotUpdates(
+                statsData.namedChunkGroups[key].assets,
+              );
+            }
+          }
+        }
+
+        // Write stats to file
+        fs.writeFileSync(
+          path.join(config.BUILD_DIR, 'stats.json'),
+          JSON.stringify(statsData, null, 2),
+        );
+      });
+    },
+  };
+}
+
+// =============================================================================
+// CLIENT CONFIG
+// =============================================================================
+
 /**
  * Configuration for the client-side bundle (client.js)
  * Targets web browsers with optimizations for production
@@ -57,7 +143,6 @@ const clientConfig = createWebpackConfig('client', {
   module: {
     rules: [
       createCSSRule({
-        isClient: true,
         extractLoader: MiniCssExtractPlugin.loader,
       }),
     ],
@@ -84,114 +169,14 @@ const clientConfig = createWebpackConfig('client', {
         : 'assets-[fullhash:8]/[id].[contenthash:8].css',
       ignoreOrder: isDebug,
     }),
-    {
-      apply(compiler) {
-        compiler.hooks.compilation.tap('AppWrapperPlugin', compilation => {
-          const { webpack: wp } = compiler;
-          const { ConcatSource } = wp.sources;
-
-          compilation.hooks.processAssets.tap(
-            {
-              name: 'AppWrapperPlugin',
-              stage: wp.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE_INLINE,
-            },
-            assets => {
-              for (const [name, asset] of Object.entries(assets)) {
-                // Only process main app bundles, not chunks
-                if (!name.endsWith('.js') || name.includes('.chunk.')) {
-                  continue;
-                }
-
-                const originalSource = asset.source();
-
-                // Wrap the app code to init shared scope before execution
-                // The host's shared scope should already be initialized, so we just
-                // need to ensure it's available before the app code runs
-                const wrappedSource = new ConcatSource(
-                  `(function() {
-  // Initialize Module Federation shared scope before app code runs
-  // This is synchronous since the host already has the scope ready
-  if (typeof __webpack_init_sharing__ !== 'undefined') {
-    __webpack_init_sharing__('default');
-  }
-  // App code starts here
-`,
-                  originalSource,
-                  `
-  // App code ends here
-})();
-`,
-                );
-
-                compilation.updateAsset(name, wrappedSource);
-              }
-            },
-          );
-        });
-      },
-    },
-    {
-      apply(compiler) {
-        compiler.hooks.done.tap('StatsWriterPlugin', stats => {
-          const statsData = stats.toJson({
-            all: false,
-            entrypoints: true,
-            assets: false,
-            chunkGroups: false,
-            namedChunkGroups: false,
-            chunks: false,
-            modules: false,
-          });
-
-          const filterHotUpdates = assets =>
-            assets.filter(asset => {
-              const name = typeof asset === 'string' ? asset : asset.name;
-              return name && !/\.hot-update\./i.test(name);
-            });
-
-          if (statsData.entrypoints) {
-            for (const key in statsData.entrypoints) {
-              if (statsData.entrypoints[key].assets) {
-                statsData.entrypoints[key].assets = filterHotUpdates(
-                  statsData.entrypoints[key].assets,
-                );
-              }
-            }
-          }
-
-          if (statsData.namedChunkGroups) {
-            for (const key in statsData.namedChunkGroups) {
-              if (statsData.namedChunkGroups[key].assets) {
-                statsData.namedChunkGroups[key].assets = filterHotUpdates(
-                  statsData.namedChunkGroups[key].assets,
-                );
-              }
-            }
-          }
-
-          fs.writeFileSync(
-            path.join(config.BUILD_DIR, 'stats.json'),
-            JSON.stringify(statsData, null, 2),
-          );
-        });
-      },
-    },
-    ...(verbose
-      ? [
-          new webpack.ProgressPlugin({
-            activeModules: true,
-            entries: true,
-            modules: true,
-            modulesCount: 5000,
-            profile: isProfile,
-            dependencies: true,
-            dependenciesCount: 10000,
-            percentBy: 'entries',
-          }),
-        ]
-      : []),
-  ].filter(Boolean),
+    createStatsWriterPlugin(),
+    ...createProgressPlugins(),
+  ],
 });
+
+// =============================================================================
+// SERVER CONFIG
+// =============================================================================
 
 /**
  * Configuration for the server-side bundle (server.js)
@@ -208,7 +193,7 @@ const serverConfig = createWebpackConfig('server', {
     libraryTarget: 'commonjs2',
   },
   module: {
-    rules: [createCSSRule({ isClient: false })],
+    rules: [createCSSRule({ exportOnlyLocals: true })],
   },
   plugins: [
     createDefinePlugin({
@@ -223,10 +208,13 @@ const serverConfig = createWebpackConfig('server', {
           }),
         ]
       : []),
-  ].filter(Boolean),
+  ],
 });
 
-// Export clientConfig, serverConfig, and SERVER_BUNDLE_PATH
+// =============================================================================
+// EXPORTS
+// =============================================================================
+
 module.exports = {
   clientConfig,
   serverConfig,

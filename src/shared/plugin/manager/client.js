@@ -64,7 +64,7 @@ class ClientPluginManager extends BasePluginManager {
   async loadPluginModule(id, _manifest, containerName) {
     try {
       // Build script URL from plugin ID
-      const scriptUrl = `/api/plugins/${id}/static/remoteEntry.js`;
+      const scriptUrl = `/api/plugins/${id}/static/plugin.js`;
 
       // Ensure shared scope is ready before loading any plugin
       // eslint-disable-next-line no-underscore-dangle
@@ -76,7 +76,7 @@ class ClientPluginManager extends BasePluginManager {
         );
       }
 
-      // Load the remoteEntry script via script tag
+      // Load the plugin.js script via script tag
       await new Promise((resolve, reject) => {
         const script = document.createElement('script');
         script.src = scriptUrl;

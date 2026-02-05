@@ -5,8 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
-import * as controller from './controller';
+import pluginRoutes from './routes/plugin.routes';
+
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
 
 /**
  * Initialize plugins module API
@@ -15,20 +18,8 @@ import * as controller from './controller';
  * @param {Router} apiRouter - Main API Router
  */
 export async function init(app, apiRouter) {
-  const router = Router();
-
-  // List all plugins
-  router.get('/plugins', controller.listPlugins);
-
-  // Get plugin metadata and script URL
-  router.get('/plugins/:id', controller.getPlugin);
-
-  // Serve plugin static files (remoteEntry.js, chunks, assets)
-  // detailed: /api/plugins/:id/static/* -> serves files from plugin dir
-  router.use('/plugins/:id/static', controller.servePluginStatic);
-
-  // Mount routes
-  apiRouter.use(router);
+  // Mount plugin routes
+  apiRouter.use('/plugins', pluginRoutes(app));
 
   console.info('✅ [plugins] API routes registered');
 }
