@@ -59,7 +59,7 @@ export async function createPermission(req, res) {
       return http.sendError(res, error.message, 409);
     }
 
-    return http.sendServerError(res, 'Failed to create permission');
+    return http.sendServerError(res, 'Failed to create permission', error);
   }
 }
 
@@ -88,7 +88,7 @@ export async function getPermissions(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get permissions');
+    return http.sendServerError(res, 'Failed to get permissions', error);
   }
 }
 
@@ -115,7 +115,11 @@ export async function getPermissionsByResource(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get permissions by resource');
+    return http.sendServerError(
+      res,
+      'Failed to get permissions by resource',
+      error,
+    );
   }
 }
 
@@ -137,7 +141,7 @@ export async function getPermissionById(req, res) {
 
     return http.sendSuccess(res, { permission });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get permission');
+    return http.sendServerError(res, 'Failed to get permission', error);
   }
 }
 
@@ -181,7 +185,7 @@ export async function updatePermission(req, res) {
       return http.sendError(res, error.message, 409);
     }
 
-    return http.sendServerError(res, 'Failed to update permission');
+    return http.sendServerError(res, 'Failed to update permission', error);
   }
 }
 
@@ -231,7 +235,11 @@ export async function bulkUpdateStatus(req, res) {
       updated: permissions.length,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to bulk update permissions');
+    return http.sendServerError(
+      res,
+      'Failed to bulk update permissions',
+      error,
+    );
   }
 }
 
@@ -275,6 +283,6 @@ export async function deletePermissions(req, res) {
       protectedIds: result.protectedIds,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to delete permissions');
+    return http.sendServerError(res, 'Failed to delete permissions', error);
   }
 }

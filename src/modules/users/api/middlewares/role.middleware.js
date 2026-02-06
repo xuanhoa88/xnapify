@@ -58,7 +58,7 @@ export function requireRole(requiredRole) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Role authorization failed');
+      return http.sendServerError(res, 'Role authorization failed', error);
     }
   };
 }
@@ -98,7 +98,7 @@ export function requireAnyRole(allowedRoles) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Role authorization failed');
+      return http.sendServerError(res, 'Role authorization failed', error);
     }
   };
 }
@@ -176,7 +176,9 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
       }
 
       if (minimumRoleLevel === -1) {
-        return http.sendServerError(res, 'Invalid minimum role configuration');
+        const newError = new Error('Invalid minimum role configuration');
+        newError.name = 'InvalidRoleConfigurationError';
+        throw newError;
       }
 
       // Check if user's highest role level meets minimum requirement
@@ -194,7 +196,11 @@ export function requireRoleLevel(minimumRole, roleHierarchy = SYSTEM_ROLES) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Role level authorization failed');
+      return http.sendServerError(
+        res,
+        'Role level authorization failed',
+        error,
+      );
     }
   };
 }
@@ -225,7 +231,11 @@ export function requireDynamicRole(getRoleRequirement) {
         return requireRole(requiredRole)(req, res, next);
       }
     } catch (error) {
-      return http.sendServerError(res, 'Dynamic role authorization failed');
+      return http.sendServerError(
+        res,
+        'Dynamic role authorization failed',
+        error,
+      );
     }
   };
 }

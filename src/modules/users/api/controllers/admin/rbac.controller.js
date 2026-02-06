@@ -41,7 +41,7 @@ export async function initializeDefaults(req, res) {
       ...result,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to initialize RBAC system');
+    return http.sendServerError(res, 'Failed to initialize RBAC system', error);
   }
 }
 
@@ -96,7 +96,7 @@ export async function assignRolesToUser(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to assign roles to user');
+    return http.sendServerError(res, 'Failed to assign roles to user', error);
   }
 }
 
@@ -151,7 +151,7 @@ export async function assignGroupsToUser(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to assign groups to user');
+    return http.sendServerError(res, 'Failed to assign groups to user', error);
   }
 }
 
@@ -180,7 +180,7 @@ export async function getUserPermissions(req, res) {
       return http.sendNotFound(res, error.message);
     }
 
-    return http.sendServerError(res, 'Failed to get user permissions');
+    return http.sendServerError(res, 'Failed to get user permissions', error);
   }
 }
 
@@ -225,7 +225,7 @@ export async function checkUserPermission(req, res) {
       return http.sendNotFound(res, error.message);
     }
 
-    return http.sendServerError(res, 'Failed to check user permission');
+    return http.sendServerError(res, 'Failed to check user permission', error);
   }
 }
 
@@ -261,7 +261,7 @@ export async function removeRoleFromUser(req, res) {
       message: `Role '${role_id}' removed from user successfully`,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to remove role from user');
+    return http.sendServerError(res, 'Failed to remove role from user', error);
   }
 }
 
@@ -297,7 +297,7 @@ export async function removeGroupFromUser(req, res) {
       message: `Group '${group_id}' removed from user successfully`,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to remove group from user');
+    return http.sendServerError(res, 'Failed to remove group from user', error);
   }
 }
 
@@ -330,7 +330,7 @@ export async function getGroupPermissions(req, res) {
       return http.sendNotFound(res, error.message);
     }
 
-    return http.sendServerError(res, 'Failed to get group permissions');
+    return http.sendServerError(res, 'Failed to get group permissions', error);
   }
 }
 
@@ -359,7 +359,7 @@ export async function getGroupRoles(req, res) {
       return http.sendNotFound(res, error.message);
     }
 
-    return http.sendServerError(res, 'Failed to get group roles');
+    return http.sendServerError(res, 'Failed to get group roles', error);
   }
 }
 
@@ -416,7 +416,7 @@ export async function assignRolesToGroup(req, res) {
         role_names: error.message,
       });
     }
-    return http.sendServerError(res, 'Failed to assign roles to group');
+    return http.sendServerError(res, 'Failed to assign roles to group', error);
   }
 }
 
@@ -462,7 +462,7 @@ export async function addRoleToGroup(req, res) {
     if (error.name === 'RoleNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
-    return http.sendServerError(res, 'Failed to add role to group');
+    return http.sendServerError(res, 'Failed to add role to group', error);
   }
 }
 
@@ -508,7 +508,7 @@ export async function removeRoleFromGroup(req, res) {
     if (error.name === 'RoleNotFoundError') {
       return http.sendNotFound(res, error.message);
     }
-    return http.sendServerError(res, 'Failed to remove role from group');
+    return http.sendServerError(res, 'Failed to remove role from group', error);
   }
 }
 
@@ -541,7 +541,7 @@ export async function getRolePermissions(req, res) {
       return http.sendNotFound(res, error.message);
     }
 
-    return http.sendServerError(res, 'Failed to get role permissions');
+    return http.sendServerError(res, 'Failed to get role permissions', error);
   }
 }
 
@@ -605,6 +605,10 @@ export async function manageRolePermissions(req, res) {
         permissions: error.message,
       });
     }
-    return http.sendServerError(res, 'Failed to manage role permissions');
+    return http.sendServerError(
+      res,
+      'Failed to manage role permissions',
+      error,
+    );
   }
 }

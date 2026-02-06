@@ -87,7 +87,7 @@ export async function register(req, res) {
       return http.sendError(res, 'User with this email already exists', 409);
     }
 
-    return http.sendServerError(res, 'Registration failed');
+    return http.sendServerError(res, 'Registration failed', error);
   }
 }
 
@@ -169,7 +169,7 @@ export async function login(req, res) {
       return http.sendUnauthorized(res, 'Invalid email or password');
     }
 
-    return http.sendServerError(res, 'Login failed');
+    return http.sendServerError(res, 'Login failed', error);
   }
 }
 
@@ -198,7 +198,7 @@ export async function logout(req, res) {
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });
   } catch (error) {
-    return http.sendServerError(res, 'Logout failed');
+    return http.sendServerError(res, 'Logout failed', error);
   }
 }
 
@@ -221,7 +221,7 @@ export async function me(req, res) {
 
     return http.sendSuccess(res, { user: userData });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get user information');
+    return http.sendServerError(res, 'Failed to get user information', error);
   }
 }
 
@@ -271,7 +271,7 @@ export async function refreshToken(req, res) {
       return http.sendUnauthorized(res, 'Invalid refresh token');
     }
 
-    return http.sendServerError(res, 'Failed to refresh token');
+    return http.sendServerError(res, 'Failed to refresh token', error);
   }
 }
 
@@ -303,7 +303,11 @@ export async function emailVerification(req, res) {
     const hook = req.app.get('hook').withContext(req.app);
 
     // Verify email with token (activity logged in service)
-    const user = await authService.verifyEmail(token, { models, webhook, hook });
+    const user = await authService.verifyEmail(token, {
+      models,
+      webhook,
+      hook,
+    });
 
     // Get complete user data with RBAC information
     const userData = await authService.getCurrentUser(user.id, models);
@@ -342,7 +346,7 @@ export async function emailVerification(req, res) {
       return http.sendError(res, 'Email already verified', 400);
     }
 
-    return http.sendServerError(res, 'Email verification failed');
+    return http.sendServerError(res, 'Email verification failed', error);
   }
 }
 
@@ -386,6 +390,7 @@ export async function resetPasswordRequest(req, res) {
     return http.sendServerError(
       res,
       'Failed to process password reset request',
+      error,
     );
   }
 }
@@ -449,7 +454,7 @@ export async function resetPasswordConfirmation(req, res) {
       return http.sendError(res, 'Email already verified', 400);
     }
 
-    return http.sendServerError(res, 'Password reset failed');
+    return http.sendServerError(res, 'Password reset failed', error);
   }
 }
 
@@ -474,6 +479,6 @@ export async function generateRandomPassword(req, res) {
 
     return http.sendSuccess(res, { password });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to generate password');
+    return http.sendServerError(res, 'Failed to generate password', error);
   }
 }

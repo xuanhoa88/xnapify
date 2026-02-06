@@ -180,8 +180,8 @@ class ClientPluginManager extends BasePluginManager {
       const loadedVersion = this[LOADED_VERSIONS].get(id);
       const versionChanged = currentVersion && loadedVersion !== currentVersion;
 
-      // Add version to script URL for cache busting when version changes
-      const baseUrl = this.getPluginScriptUrl(id, 'plugin.js');
+      // Load browser.js (MF container)
+      const baseUrl = this.getPluginScriptUrl(id, 'browser.js');
       const scriptUrl = versionChanged
         ? `${baseUrl}?v=${currentVersion}`
         : baseUrl;

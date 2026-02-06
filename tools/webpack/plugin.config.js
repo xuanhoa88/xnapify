@@ -29,7 +29,7 @@ const isProfile = process.argv.includes('--profile');
  * Manifest field names for plugin entry points
  * Used by both webpack config and manifest generator
  * - browser: view bundle entry (used for both client UMD and server CommonJS)
- * - main: reserved for backend/API plugin code (not built by this config)
+ * - api: reserved for backend/API plugin code (not built by this config)
  */
 const MANIFEST_UI_ENTRY = 'browser';
 const MANIFEST_API_ENTRY = 'api';
@@ -70,7 +70,6 @@ const createProgressPlugins = () =>
 
 /**
  * Webpack plugin to strip :root CSS rules from final CSS assets
- * This runs after MiniCssExtractPlugin has bundled all CSS
  */
 class StripRootCSSPlugin {
   apply(compiler) {
@@ -84,7 +83,6 @@ class StripRootCSSPlugin {
           for (const [name, asset] of Object.entries(assets)) {
             if (name.endsWith('.css')) {
               let source = asset.source();
-              // Remove :root { ... } blocks
               const originalLength = source.length;
               source = source.replace(/:root\s*\{[^}]*\}/g, '');
               if (source.length !== originalLength) {
@@ -107,40 +105,11 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Webpack plugin to generate assets.json with CSS file list
- * This allows the server to know which CSS files to preload for each plugin
- */
-class PluginAssetsPlugin {
-  apply(compiler) {
-    compiler.hooks.done.tap('PluginAssetsPlugin', stats => {
-      const fs = require('fs');
-      const outputPath = compiler.options.output.path;
-      const statsData = stats.toJson({ assets: true });
-
-      // Extract CSS filenames from assets
-      const cssFiles = (statsData.assets || [])
-        .filter(asset => asset.name.endsWith('.css'))
-        .map(asset => asset.name);
-
-      // Write assets.json to the output directory
-      const assetsPath = path.join(outputPath, 'assets.json');
-      fs.writeFileSync(assetsPath, JSON.stringify({ css: cssFiles }, null, 2));
-
-      if (verbose) {
-        console.log(
-          `[PluginAssetsPlugin] Generated assets.json with ${cssFiles.length} CSS file(s)`,
-        );
-      }
-    });
-  }
-}
-
-/**
- * Create safe container name from plugin name
+ * Create safe library name from plugin name
  * @param {string} pluginName - Plugin name
- * @returns {string} Safe container name for webpack
+ * @returns {string} Safe library name for webpack
  */
-const getContainerName = pluginName =>
+const getLibraryName = pluginName =>
   `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 /**
@@ -160,99 +129,28 @@ function validatePlugin(plugin) {
     plugin.path,
     plugin.manifest[MANIFEST_UI_ENTRY],
   );
-  const containerName = getContainerName(pluginName);
+  const libraryName = getLibraryName(pluginName);
 
-  return { pluginName, entryPath, containerName };
+  return { pluginName, entryPath, libraryName };
 }
 
 // =============================================================================
-// CLIENT CONFIG
+// CLIENT CONFIG (browser.js + plugin.css)
 // =============================================================================
 
 /**
  * Create client webpack config for a plugin
- * @param {Object} pluginData - Validated plugin data
- * @param {string} buildPath - Output directory
- * @returns {Object} Webpack configuration
+ * Generates: browser.js
  */
-function createClientConfig(
-  { pluginName, entryPath, containerName },
-  buildPath,
-) {
+function createClientConfig({ pluginName, entryPath, libraryName }, buildPath) {
   return createWebpackConfig('client', {
-    entry: {
-      plugin: entryPath,
-    },
+    entry: { client: entryPath },
     experiments: { outputModule: false },
     output: {
       path: path.join(buildPath, pluginName),
-      filename: 'browser.js',
-      library: {
-        type: 'var',
-        name: containerName,
-      },
-      publicPath: 'auto',
-      uniqueName: containerName,
-    },
-    module: {
-      rules: [
-        createCSSRule({
-          extractLoader: MiniCssExtractPlugin.loader,
-          localIdentName: getPluginLocalIdentName(pluginName),
-        }),
-      ],
-    },
-    plugins: [
-      new webpack.ProvidePlugin({
-        process: require.resolve('process/browser'),
-      }),
-      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
-      new webpack.container.ModuleFederationPlugin({
-        name: containerName,
-        filename: 'plugin.js',
-        exposes: {
-          './plugin': entryPath,
-        },
-        shared: createSharedDependencies(pkg.dependencies || {}, {
-          eager: false,
-          singleton: true,
-          strictVersion: false,
-        }),
-      }),
-      new MiniCssExtractPlugin({
-        filename: '[name].[contenthash:8].css',
-        chunkFilename: '[name].[contenthash:8].css',
-        ignoreOrder: isDebug,
-      }),
-      new StripRootCSSPlugin(),
-      new PluginAssetsPlugin(),
-      ...createProgressPlugins(),
-    ],
-  });
-}
-
-// =============================================================================
-// SERVER CONFIG
-// =============================================================================
-
-/**
- * Create server webpack config for a plugin
- * @param {Object} pluginData - Validated plugin data
- * @param {string} buildPath - Output directory
- * @returns {Object} Webpack configuration
- */
-function createServerConfig({ pluginName, entryPath }, buildPath) {
-  const entryName = `${pluginName}/server`
-    .replace(/\.[^.\\/]+$/, '')
-    .replace(/\/+/g, '/');
-
-  return createWebpackConfig('server', {
-    entry: { [entryName]: entryPath },
-    experiments: { outputModule: false },
-    output: {
-      path: buildPath,
       filename: '[name].js',
-      library: { type: 'commonjs' },
+      publicPath: 'auto',
+      uniqueName: libraryName,
     },
     module: {
       rules: [
@@ -263,7 +161,60 @@ function createServerConfig({ pluginName, entryPath }, buildPath) {
       ],
     },
     plugins: [
+      new webpack.ProvidePlugin({
+        process: require.resolve('process/browser'),
+      }),
       createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
+      // Module Federation for sharing React with host app (outputs as browser.js)
+      new webpack.container.ModuleFederationPlugin({
+        name: libraryName,
+        filename: 'browser.js',
+        exposes: {
+          './plugin': entryPath,
+        },
+        shared: createSharedDependencies(pkg.dependencies || {}, {
+          eager: false,
+          singleton: true,
+          strictVersion: false,
+        }),
+      }),
+      ...createProgressPlugins(),
+    ],
+  });
+}
+
+// =============================================================================
+// SERVER CONFIG (server.js)
+// =============================================================================
+
+/**
+ * Create server webpack config for a plugin
+ * Generates: server.js, plugin.css
+ */
+function createServerConfig({ pluginName, entryPath }, buildPath) {
+  return createWebpackConfig('server', {
+    entry: { server: entryPath },
+    experiments: { outputModule: false },
+    output: {
+      path: path.join(buildPath, pluginName),
+      filename: '[name].js',
+      library: { type: 'commonjs' },
+    },
+    module: {
+      rules: [
+        createCSSRule({
+          extractLoader: MiniCssExtractPlugin.loader,
+          localIdentName: getPluginLocalIdentName(pluginName),
+        }),
+      ],
+    },
+    plugins: [
+      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
+      new MiniCssExtractPlugin({
+        filename: 'plugin.css',
+        ignoreOrder: isDebug,
+      }),
+      new StripRootCSSPlugin(),
       ...createProgressPlugins(),
     ],
   });
@@ -292,7 +243,7 @@ function createPluginConfig({ plugins, buildPath }) {
     const pluginData = validatePlugin(plugin);
     if (!pluginData) continue;
 
-    // Create both client and server configs
+    // Create client (browser.js + plugin.css) and server (server.js) configs
     configs.push(createClientConfig(pluginData, buildPath));
     configs.push(createServerConfig(pluginData, buildPath));
   }

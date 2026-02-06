@@ -87,7 +87,7 @@ export async function createUser(req, res) {
         email: 'Email is already in use by another user',
       });
     }
-    return http.sendServerError(res, 'Failed to create user');
+    return http.sendServerError(res, 'Failed to create user', error);
   }
 }
 
@@ -121,7 +121,7 @@ export async function getUserList(req, res) {
       pagination: result.pagination,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get user list');
+    return http.sendServerError(res, 'Failed to get user list', error);
   }
 }
 
@@ -148,7 +148,7 @@ export async function getUserById(req, res) {
       user,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get user');
+    return http.sendServerError(res, 'Failed to get user', error);
   }
 }
 
@@ -234,10 +234,7 @@ export async function updateUserById(req, res) {
       });
     }
 
-    return http.sendServerError(
-      res,
-      `Failed to update user: ${error.message} - ${error.stack}`,
-    );
+    return http.sendServerError(res, 'Failed to update user', error);
   }
 }
 
@@ -296,7 +293,11 @@ export async function bulkUpdateStatus(req, res) {
       updated: result.updated,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to bulk update user status');
+    return http.sendServerError(
+      res,
+      'Failed to bulk update user status',
+      error,
+    );
   }
 }
 
@@ -344,6 +345,6 @@ export async function bulkDelete(req, res) {
       deletedIds: result.deletedIds,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to bulk delete users');
+    return http.sendServerError(res, 'Failed to bulk delete users', error);
   }
 }

@@ -31,7 +31,10 @@ export function requireGroup(groupName) {
     try {
       const models = req.app.get('models');
       if (!models) {
-        return http.sendServerError(res, 'Database models not available');
+        const err = new Error('Database models not available');
+        err.code = 'DATABASE_MODELS_NOT_AVAILABLE';
+        err.status = 500;
+        throw err;
       }
       const { User, Group } = models;
 
@@ -62,7 +65,7 @@ export function requireGroup(groupName) {
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Group check failed');
+      return http.sendServerError(res, 'Group check failed', error);
     }
   };
 }
@@ -89,7 +92,10 @@ export function requireAnyGroup(groupNames) {
     try {
       const models = req.app.get('models');
       if (!models) {
-        return http.sendServerError(res, 'Database models not available');
+        const err = new Error('Database models not available');
+        err.code = 'DATABASE_MODELS_NOT_AVAILABLE';
+        err.status = 500;
+        throw err;
       }
       const { User, Group } = models;
 
@@ -122,7 +128,7 @@ export function requireAnyGroup(groupNames) {
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Groups check failed');
+      return http.sendServerError(res, 'Groups check failed', error);
     }
   };
 }
@@ -149,7 +155,10 @@ export function requireAllGroups(groupNames) {
     try {
       const models = req.app.get('models');
       if (!models) {
-        return http.sendServerError(res, 'Database models not available');
+        const err = new Error('Database models not available');
+        err.code = 'DATABASE_MODELS_NOT_AVAILABLE';
+        err.status = 500;
+        throw err;
       }
       const { User, Group } = models;
 
@@ -185,7 +194,7 @@ export function requireAllGroups(groupNames) {
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Groups check failed');
+      return http.sendServerError(res, 'Groups check failed', error);
     }
   };
 }
@@ -214,7 +223,10 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
     try {
       const models = req.app.get('models');
       if (!models) {
-        return http.sendServerError(res, 'Database models not available');
+        const err = new Error('Database models not available');
+        err.code = 'DATABASE_MODELS_NOT_AVAILABLE';
+        err.status = 500;
+        throw err;
       }
       const { User, Group } = models;
 
@@ -236,7 +248,10 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
       // Get minimum required level
       const minimumLevel = groupHierarchy.indexOf(minimumGroup);
       if (minimumLevel === -1) {
-        return http.sendServerError(res, 'Invalid minimum group configuration');
+        const err = new Error('Invalid minimum group configuration');
+        err.code = 'INVALID_MINIMUM_GROUP_CONFIGURATION';
+        err.status = 500;
+        throw err;
       }
 
       // Check if user has any group at or above the minimum level
@@ -257,7 +272,7 @@ export function requireGroupLevel(minimumGroup, groupHierarchy) {
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Group level check failed');
+      return http.sendServerError(res, 'Group level check failed', error);
     }
   };
 }

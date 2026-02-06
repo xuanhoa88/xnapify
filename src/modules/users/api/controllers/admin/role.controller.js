@@ -62,7 +62,7 @@ export async function createRole(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to create role');
+    return http.sendServerError(res, 'Failed to create role', error);
   }
 }
 
@@ -88,7 +88,7 @@ export async function getRoles(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get roles');
+    return http.sendServerError(res, 'Failed to get roles', error);
   }
 }
 
@@ -112,7 +112,7 @@ export async function getRoleById(req, res) {
 
     return http.sendSuccess(res, { role });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get role');
+    return http.sendServerError(res, 'Failed to get role', error);
   }
 }
 
@@ -172,7 +172,7 @@ export async function updateRole(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to update role');
+    return http.sendServerError(res, 'Failed to update role', error);
   }
 }
 
@@ -213,7 +213,7 @@ export async function deleteRole(req, res) {
       message: `Role deleted successfully`,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to delete role');
+    return http.sendServerError(res, 'Failed to delete role', error);
   }
 }
 
@@ -246,7 +246,7 @@ export async function getRoleUsers(req, res) {
     if (error.name === 'RoleNotFoundError') {
       return http.sendError(res, error.message, 404);
     }
-    return http.sendServerError(res, 'Failed to get role users');
+    return http.sendServerError(res, 'Failed to get role users', error);
   }
 }
 
@@ -279,6 +279,6 @@ export async function getRoleGroups(req, res) {
     if (error.name === 'RoleNotFoundError') {
       return http.sendError(res, error.message, 404);
     }
-    return http.sendServerError(res, 'Failed to get role groups');
+    return http.sendServerError(res, 'Failed to get role groups', error);
   }
 }

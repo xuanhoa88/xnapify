@@ -41,7 +41,10 @@ export function requireOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return http.sendServerError(res, `Model ${resourceModel} not found`);
+        const err = new Error(`Model ${resourceModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       const resource = await Model.findByPk(req.params[resource_id]);
@@ -67,7 +70,7 @@ export function requireOwnership(
       req.resource = resource;
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Ownership check failed');
+      return http.sendServerError(res, 'Ownership check failed', error);
     }
   };
 }
@@ -116,7 +119,10 @@ export function requireFlexibleOwnership(options) {
       const Model = models[resourceModel];
 
       if (!Model) {
-        return http.sendServerError(res, `Model ${resourceModel} not found`);
+        const err = new Error(`Model ${resourceModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       const resource = await Model.findByPk(req.params[resource_id]);
@@ -174,7 +180,7 @@ export function requireFlexibleOwnership(options) {
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Ownership check failed');
+      return http.sendServerError(res, 'Ownership check failed', error);
     }
   };
 }
@@ -214,14 +220,17 @@ export function requireSharedOwnership(
       const SharedModel = models[sharedModel];
 
       if (!Model) {
-        return http.sendServerError(res, `Model ${resourceModel} not found`);
+        const err = new Error(`Model ${resourceModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       if (!SharedModel) {
-        return http.sendServerError(
-          res,
-          `Shared model ${sharedModel} not found`,
-        );
+        const err = new Error(`Shared model ${sharedModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       const resource = await Model.findByPk(req.params[resource_id]);
@@ -259,7 +268,7 @@ export function requireSharedOwnership(
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Shared ownership check failed');
+      return http.sendServerError(res, 'Shared ownership check failed', error);
     }
   };
 }
@@ -297,7 +306,10 @@ export function requireHierarchicalOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return http.sendServerError(res, `Model ${resourceModel} not found`);
+        const err = new Error(`Model ${resourceModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       const resource = await Model.findByPk(req.params[resource_id]);
@@ -333,7 +345,11 @@ export function requireHierarchicalOwnership(
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Hierarchical ownership check failed');
+      return http.sendServerError(
+        res,
+        'Hierarchical ownership check failed',
+        error,
+      );
     }
   };
 }
@@ -373,7 +389,10 @@ export function requireTimeBasedOwnership(
       const Model = models[resourceModel];
 
       if (!Model) {
-        return http.sendServerError(res, `Model ${resourceModel} not found`);
+        const err = new Error(`Model ${resourceModel} not found`);
+        err.code = 'MODEL_NOT_FOUND';
+        err.status = 500;
+        throw err;
       }
 
       const resource = await Model.findByPk(req.params[resource_id]);
@@ -411,7 +430,11 @@ export function requireTimeBasedOwnership(
 
       next();
     } catch (error) {
-      return http.sendServerError(res, 'Time-based ownership check failed');
+      return http.sendServerError(
+        res,
+        'Time-based ownership check failed',
+        error,
+      );
     }
   };
 }

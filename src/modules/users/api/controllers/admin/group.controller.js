@@ -64,7 +64,7 @@ export async function createGroup(req, res) {
       return http.sendError(res, error.message, 409);
     }
 
-    return http.sendServerError(res, 'Failed to create group');
+    return http.sendServerError(res, 'Failed to create group', error);
   }
 }
 
@@ -93,7 +93,7 @@ export async function getGroups(req, res) {
 
     return http.sendSuccess(res, result);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get groups');
+    return http.sendServerError(res, 'Failed to get groups', error);
   }
 }
 
@@ -122,7 +122,7 @@ export async function getGroupById(req, res) {
       group,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get group');
+    return http.sendServerError(res, 'Failed to get group', error);
   }
 }
 
@@ -178,7 +178,7 @@ export async function updateGroupById(req, res) {
       return http.sendError(res, error.message, 409);
     }
 
-    return http.sendServerError(res, 'Failed to update group');
+    return http.sendServerError(res, 'Failed to update group', error);
   }
 }
 
@@ -216,7 +216,7 @@ export async function deleteGroup(req, res) {
       message: `Group deleted successfully`,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to delete group');
+    return http.sendServerError(res, 'Failed to delete group', error);
   }
 }
 
@@ -246,6 +246,6 @@ export async function getGroupUsers(req, res) {
 
     return http.sendSuccess(res, data);
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get group users');
+    return http.sendServerError(res, 'Failed to get group users', error);
   }
 }

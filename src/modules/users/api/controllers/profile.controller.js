@@ -64,7 +64,7 @@ export async function getProfile(req, res) {
   try {
     const user = await profileService.getUserWithProfile(req.user.id, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app)
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     if (!user) {
@@ -75,7 +75,7 @@ export async function getProfile(req, res) {
       profile: formatProfileResponse(user),
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get user profile');
+    return http.sendServerError(res, 'Failed to get user profile', error);
   }
 }
 
@@ -112,7 +112,7 @@ export async function updateProfile(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        hook: req.app.get('hook').withContext(req.app)
+        hook: req.app.get('hook').withContext(req.app),
       },
     );
 
@@ -120,7 +120,7 @@ export async function updateProfile(req, res) {
       profile: formatProfileResponse(user),
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to update profile');
+    return http.sendServerError(res, 'Failed to update profile', error);
   }
 }
 
@@ -159,7 +159,7 @@ export async function uploadAvatar(req, res) {
     // Get user with profile
     const user = await profileService.getUserWithProfile(req.user.id, {
       models,
-      hook: req.app.get('hook').withContext(req.app)
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     // Store old avatar for cleanup
@@ -190,7 +190,7 @@ export async function uploadAvatar(req, res) {
       },
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to upload avatar');
+    return http.sendServerError(res, 'Failed to upload avatar', error);
   }
 }
 
@@ -278,7 +278,7 @@ export async function removeAvatar(req, res) {
     // Get user with profile to find current avatar
     const user = await profileService.getUserWithProfile(req.user.id, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app)
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     if (!user) {
@@ -313,7 +313,7 @@ export async function removeAvatar(req, res) {
       },
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to remove avatar');
+    return http.sendServerError(res, 'Failed to remove avatar', error);
   }
 }
 
@@ -361,7 +361,7 @@ export async function changePassword(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to change password');
+    return http.sendServerError(res, 'Failed to change password', error);
   }
 }
 
@@ -398,7 +398,7 @@ export async function updatePreferences(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        hook: req.app.get('hook').withContext(req.app)
+        hook: req.app.get('hook').withContext(req.app),
       },
     );
 
@@ -407,7 +407,7 @@ export async function updatePreferences(req, res) {
       preferences,
     });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to update preferences');
+    return http.sendServerError(res, 'Failed to update preferences', error);
   }
 }
 
@@ -422,17 +422,14 @@ export async function updatePreferences(req, res) {
 export async function getPreferences(req, res) {
   const http = req.app.get('http');
   try {
-    const preferences = await profileService.getUserPreferences(
-      req.user.id,
-      {
-        models: req.app.get('models'),
-        hook: req.app.get('hook').withContext(req.app)
-      }
-    );
+    const preferences = await profileService.getUserPreferences(req.user.id, {
+      models: req.app.get('models'),
+      hook: req.app.get('hook').withContext(req.app),
+    });
 
     return http.sendSuccess(res, { preferences });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to get preferences');
+    return http.sendServerError(res, 'Failed to get preferences', error);
   }
 }
 
@@ -476,6 +473,6 @@ export async function deleteAccount(req, res) {
       });
     }
 
-    return http.sendServerError(res, 'Failed to delete user');
+    return http.sendServerError(res, 'Failed to delete user', error);
   }
 }

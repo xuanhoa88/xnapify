@@ -122,7 +122,7 @@ export function requirePermission(permission) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Permission check failed');
+      return http.sendServerError(res, 'Permission check failed', error);
     }
   };
 }
@@ -166,7 +166,7 @@ export function requirePermissions(permissions) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Permissions check failed');
+      return http.sendServerError(res, 'Permissions check failed', error);
     }
   };
 }
@@ -210,7 +210,7 @@ export function requireAnyPermission(permissions) {
       if (error.name === 'UserNotFoundError') {
         return http.sendUnauthorized(res, 'User not found');
       }
-      return http.sendServerError(res, 'Permission check failed');
+      return http.sendServerError(res, 'Permission check failed', error);
     }
   };
 }

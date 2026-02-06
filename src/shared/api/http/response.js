@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { randomUUID } from 'crypto';
+
 /**
  * HTTP Status Codes
  */
@@ -14,10 +16,8 @@ export const HTTP_STATUS = Object.freeze({
   CREATED: 201,
   ACCEPTED: 202,
   NO_CONTENT: 204,
-  PARTIAL_CONTENT: 206,
 
   // Redirection
-  MOVED_PERMANENTLY: 301,
   FOUND: 302,
   NOT_MODIFIED: 304,
 
@@ -28,21 +28,113 @@ export const HTTP_STATUS = Object.freeze({
   NOT_FOUND: 404,
   METHOD_NOT_ALLOWED: 405,
   CONFLICT: 409,
-  GONE: 410,
-  PAYLOAD_TOO_LARGE: 413,
   UNPROCESSABLE_ENTITY: 422,
   TOO_MANY_REQUESTS: 429,
 
   // Server Error
   INTERNAL_SERVER_ERROR: 500,
-  NOT_IMPLEMENTED: 501,
-  BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
-  GATEWAY_TIMEOUT: 504,
 });
 
 /**
- * Standard response format
+ * Safe keys allowed in public error responses
+ */
+const SAFE_ERROR_KEYS = new Set(['message', 'field', 'code', 'type', 'reason']);
+
+/**
+ * Dangerous keys that should never be exposed
+ */
+const BLOCKED_KEYS = new Set([
+  'stack',
+  'trace',
+  'sql',
+  'query',
+  'path',
+  'password',
+  'token',
+  'secret',
+]);
+
+/**
+ * Sanitizes error objects for public API responses
+ * @param {*} error - Error to sanitize
+ * @returns {Object|Array|null} Sanitized error or null
+ */
+function sanitizeError(error) {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  // Handle arrays (validation errors)
+  if (Array.isArray(error)) {
+    return error.map(sanitizeError).filter(Boolean);
+  }
+
+  const sanitized = {};
+
+  for (const [key, value] of Object.entries(error)) {
+    // Skip blocked keys
+    if (BLOCKED_KEYS.has(key)) continue;
+
+    // Only include safe keys
+    if (SAFE_ERROR_KEYS.has(key)) {
+      sanitized[key] = typeof value === 'string' ? value : String(value);
+    }
+  }
+
+  // Ensure there's always a message
+  if (!sanitized.message) {
+    sanitized.message = 'Invalid request';
+  }
+
+  return sanitized;
+}
+
+/**
+ * Normalizes errors into public/internal format
+ * @param {*} error - Error to normalize
+ * @returns {Object} { public, internal }
+ */
+function normalizeError(error) {
+  if (!error) {
+    return { public: null, internal: null };
+  }
+
+  // Native Error instances - hide details
+  if (error instanceof Error) {
+    return {
+      public: { message: 'Internal server error' },
+      internal: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
+    };
+  }
+
+  // Arrays (validation errors) - safe to expose
+  if (Array.isArray(error)) {
+    const sanitized = sanitizeError(error);
+    return { public: sanitized, internal: error };
+  }
+
+  // Plain objects - sanitize
+  if (typeof error === 'object') {
+    return {
+      public: sanitizeError(error),
+      internal: error,
+    };
+  }
+
+  // Primitives - convert to object
+  return {
+    public: { message: String(error) },
+    internal: error,
+  };
+}
+
+/**
+ * Creates standard response structure
  * @param {boolean} success - Success status
  * @param {*} data - Response data
  * @param {string} message - Response message
@@ -60,7 +152,7 @@ export function createResponse(
     timestamp: new Date().toISOString(),
   };
 
-  if (data != null) {
+  if (data !== null && data !== undefined) {
     response.data = data;
   }
 
@@ -76,69 +168,29 @@ export function createResponse(
 }
 
 /**
- * Send success response
+ * Sends success response
  * @param {Object} res - Express response object
  * @param {*} data - Response data
+ * @param {number} statusCode - HTTP status code
  * @param {string} message - Success message
- * @param {number} statusCode - HTTP status code (default: 200)
  * @param {Object} meta - Additional metadata
  */
 export function sendSuccess(
   res,
   data = null,
-  message = null,
   statusCode = HTTP_STATUS.OK,
+  message = null,
   meta = null,
 ) {
   return res.status(statusCode).json(createResponse(true, data, message, meta));
 }
 
 /**
- * Send created response (201)
- * @param {Object} res - Express response object
- * @param {*} data - Created resource data
- * @param {string} message - Success message
- * @param {Object} meta - Additional metadata
- */
-export function sendCreated(
-  res,
-  data,
-  message = 'Resource created successfully',
-  meta = null,
-) {
-  return sendSuccess(res, data, message, HTTP_STATUS.CREATED, meta);
-}
-
-/**
- * Send accepted response (202)
- * @param {Object} res - Express response object
- * @param {*} data - Response data
- * @param {string} message - Acceptance message
- * @param {Object} meta - Additional metadata
- */
-export function sendAccepted(
-  res,
-  data = null,
-  message = 'Request accepted for processing',
-  meta = null,
-) {
-  return sendSuccess(res, data, message, HTTP_STATUS.ACCEPTED, meta);
-}
-
-/**
- * Send no content response (204)
- * @param {Object} res - Express response object
- */
-export function sendNoContent(res) {
-  return res.status(HTTP_STATUS.NO_CONTENT).end();
-}
-
-/**
- * Send error response
+ * Sends error response
  * @param {Object} res - Express response object
  * @param {string} message - Error message
- * @param {number} statusCode - HTTP status code (default: 400)
- * @param {Object} errors - Validation errors (optional)
+ * @param {number} statusCode - HTTP status code
+ * @param {*} errors - Error details (sanitized automatically)
  * @param {Object} meta - Additional metadata
  */
 export function sendError(
@@ -148,31 +200,56 @@ export function sendError(
   errors = null,
   meta = null,
 ) {
+  const errorId = randomUUID();
   const response = createResponse(false, null, message, meta);
 
-  if (errors) {
-    response.errors = errors;
+  // Log internal errors in development
+  if (__DEV__ && errors) {
+    console.error(`[Error ${errorId}]:`, errors);
+  }
+
+  // Normalize and sanitize errors
+  const { public: publicError, internal: internalError } =
+    normalizeError(errors);
+
+  if (publicError) {
+    response.errors = publicError;
+  }
+
+  response.errorId = errorId;
+
+  // Log critical errors in production
+  if (!__DEV__ && statusCode >= 500) {
+    console.error(`[Error ${errorId}]:`, internalError || message);
   }
 
   return res.status(statusCode).json(response);
 }
 
-/**
- * Send bad request error response (400)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- * @param {Object} errors - Validation/request errors (optional)
- */
+// ============================================================================
+// Success Response Helpers
+// ============================================================================
+
+export function sendCreated(res, data, message = 'Resource created') {
+  return sendSuccess(res, data, HTTP_STATUS.CREATED, message);
+}
+
+export function sendAccepted(res, data = null, message = 'Request accepted') {
+  return sendSuccess(res, data, HTTP_STATUS.ACCEPTED, message);
+}
+
+export function sendNoContent(res) {
+  return res.status(HTTP_STATUS.NO_CONTENT).end();
+}
+
+// ============================================================================
+// Error Response Helpers
+// ============================================================================
+
 export function sendBadRequest(res, message = 'Bad request', errors = null) {
   return sendError(res, message, HTTP_STATUS.BAD_REQUEST, errors);
 }
 
-/**
- * Send validation error response (422)
- * @param {Object} res - Express response object
- * @param {Object} errors - Validation errors
- * @param {string} message - Error message
- */
 export function sendValidationError(
   res,
   errors,
@@ -181,39 +258,18 @@ export function sendValidationError(
   return sendError(res, message, HTTP_STATUS.UNPROCESSABLE_ENTITY, errors);
 }
 
-/**
- * Send unauthorized error response (401)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- */
 export function sendUnauthorized(res, message = 'Authentication required') {
   return sendError(res, message, HTTP_STATUS.UNAUTHORIZED);
 }
 
-/**
- * Send forbidden error response (403)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- */
 export function sendForbidden(res, message = 'Access forbidden') {
   return sendError(res, message, HTTP_STATUS.FORBIDDEN);
 }
 
-/**
- * Send not found error response (404)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- */
 export function sendNotFound(res, message = 'Resource not found') {
   return sendError(res, message, HTTP_STATUS.NOT_FOUND);
 }
 
-/**
- * Send method not allowed error response (405)
- * @param {Object} res - Express response object
- * @param {Array} allowedMethods - Allowed HTTP methods
- * @param {string} message - Error message
- */
 export function sendMethodNotAllowed(
   res,
   allowedMethods = [],
@@ -225,167 +281,119 @@ export function sendMethodNotAllowed(
   return sendError(res, message, HTTP_STATUS.METHOD_NOT_ALLOWED);
 }
 
-/**
- * Send conflict error response (409)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- */
-export function sendConflict(res, message = 'Resource conflict') {
-  return sendError(res, message, HTTP_STATUS.CONFLICT);
+export function sendConflict(
+  res,
+  message = 'Resource conflict',
+  errors = null,
+) {
+  return sendError(res, message, HTTP_STATUS.CONFLICT, errors);
 }
 
-/**
- * Send rate limit error response (429)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- * @param {Object} meta - Rate limit metadata (limit, remaining, reset)
- */
 export function sendRateLimit(res, message = 'Too many requests', meta = null) {
   return sendError(res, message, HTTP_STATUS.TOO_MANY_REQUESTS, null, meta);
 }
 
-/**
- * Send internal server error response (500)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- */
-export function sendServerError(res, message = 'Internal server error') {
-  return sendError(res, message, HTTP_STATUS.INTERNAL_SERVER_ERROR);
+export function sendServerError(
+  res,
+  message = 'Internal server error',
+  error = null,
+) {
+  return sendError(res, message, HTTP_STATUS.INTERNAL_SERVER_ERROR, error);
 }
 
-/**
- * Send service unavailable error response (503)
- * @param {Object} res - Express response object
- * @param {string} message - Error message
- * @param {Object} meta - Service metadata (retryAfter, etc.)
- */
 export function sendServiceUnavailable(
   res,
-  message = 'Service temporarily unavailable',
+  message = 'Service unavailable',
   meta = null,
 ) {
   return sendError(res, message, HTTP_STATUS.SERVICE_UNAVAILABLE, null, meta);
 }
 
+// ============================================================================
+// Specialized Response Helpers
+// ============================================================================
+
 /**
- * Send paginated response
+ * Sends paginated response
  * @param {Object} res - Express response object
  * @param {Array} items - Array of items
  * @param {Object} pagination - Pagination metadata
- * @param {number} pagination.page - Current page
- * @param {number} pagination.limit - Items per page
- * @param {number} pagination.total - Total items
- * @param {number} pagination.pages - Total pages
- * @param {string} message - Success message
  */
-export function sendPaginated(
-  res,
-  items,
-  pagination,
-  message = 'Data retrieved successfully',
-) {
+export function sendPaginated(res, items, pagination, message = 'Success') {
+  const { page, limit, total } = pagination;
+  const pages = Math.ceil(total / limit);
+
   const meta = {
     pagination: {
-      page: pagination.page,
-      limit: pagination.limit,
-      total: pagination.total,
-      pages: pagination.pages,
-      hasNext: pagination.page < pagination.pages,
-      hasPrev: pagination.page > 1,
+      page,
+      limit,
+      total,
+      pages,
+      hasNext: page < pages,
+      hasPrev: page > 1,
     },
   };
 
-  return sendSuccess(res, { items }, message, HTTP_STATUS.OK, meta);
+  return sendSuccess(res, { items }, HTTP_STATUS.OK, message, meta);
 }
 
 /**
- * Send file response
+ * Sends file download
  * @param {Object} res - Express response object
  * @param {string} filePath - Path to file
- * @param {string} fileName - Download filename
- * @param {Object} options - Additional options
- * @param {Function} onError - Error callback (optional)
+ * @param {string} fileName - Download filename (optional)
+ * @param {Object} options - sendFile options
  */
-export function sendFile(
-  res,
-  filePath,
-  fileName = null,
-  options = {},
-  onError = null,
-) {
+export function sendFile(res, filePath, fileName = null, options = {}) {
   if (fileName) {
     // Sanitize filename to prevent header injection
-    const sanitized = fileName.replace(/["\r\n]/g, '');
-    res.set('Content-Disposition', `attachment; filename="${sanitized}"`);
+    const safe = fileName.replace(/["'\r\n]/g, '');
+    res.set('Content-Disposition', `attachment; filename="${safe}"`);
   }
 
   return res.sendFile(filePath, options, err => {
-    if (err) {
-      if (onError) {
-        onError(err);
-      } else if (!res.headersSent) {
-        sendServerError(res, 'File not found or inaccessible');
-      }
+    if (err && !res.headersSent) {
+      sendServerError(res, 'Failed to send file');
     }
   });
 }
 
 /**
- * Send redirect response
+ * Sends redirect
  * @param {Object} res - Express response object
  * @param {string} url - Redirect URL
- * @param {number} statusCode - HTTP status code (default: 302)
+ * @param {boolean} permanent - Use 301 instead of 302
  */
-export function sendRedirect(res, url, statusCode = HTTP_STATUS.FOUND) {
-  return res.redirect(statusCode, url);
+export function sendRedirect(res, url, permanent = false) {
+  const status = permanent ? 301 : HTTP_STATUS.FOUND;
+  return res.redirect(status, url);
 }
 
 /**
- * Send JSON response with custom headers
- * @param {Object} res - Express response object
- * @param {*} data - Response data
- * @param {Object} headers - Custom headers
- * @param {number} statusCode - HTTP status code
- */
-export function sendJson(res, data, headers = {}, statusCode = HTTP_STATUS.OK) {
-  // Set custom headers
-  Object.entries(headers).forEach(([key, value]) => {
-    res.set(key, value);
-  });
-
-  return res.status(statusCode).json(data);
-}
-
-/**
- * Send stream response
+ * Sends stream response
  * @param {Object} res - Express response object
  * @param {Stream} stream - Readable stream
  * @param {string} contentType - Content type
  * @param {Object} headers - Additional headers
- * @param {Function} onError - Error callback (optional)
  */
 export function sendStream(
   res,
   stream,
   contentType = 'application/octet-stream',
   headers = {},
-  onError = null,
 ) {
   res.set('Content-Type', contentType);
 
-  // Set additional headers
   Object.entries(headers).forEach(([key, value]) => {
     res.set(key, value);
   });
 
-  // Handle stream errors
   stream.on('error', err => {
-    if (onError) {
-      onError(err);
-    } else if (!res.headersSent) {
+    if (!res.headersSent) {
+      console.error('Stream error:', err);
       res
         .status(HTTP_STATUS.INTERNAL_SERVER_ERROR)
-        .json(createResponse(false, null, 'Stream error occurred'));
+        .json(createResponse(false, null, 'Stream error'));
     }
   });
 

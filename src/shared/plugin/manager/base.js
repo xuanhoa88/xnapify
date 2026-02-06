@@ -235,24 +235,13 @@ export class BasePluginManager {
       this.emit('plugin:loaded', { id, plugin });
 
       // Store CSS files from manifest if available (for SSR injection)
-      if (
-        manifest &&
-        Array.isArray(manifest.cssFiles) &&
-        manifest.cssFiles.length > 0
-      ) {
-        if (__DEV__) {
-          console.log(
-            `[PluginManager] CSS files in manifest for ${id}:`,
-            manifest.cssFiles,
-          );
-        }
-
-        this[PLUGIN_CSS_FILES].set(id, manifest.cssFiles);
-        if (__DEV__) {
-          console.log(
-            `[PluginManager] Stored ${manifest.cssFiles.length} CSS file(s) for ${id}`,
-          );
-        }
+      if (serverManifest && Array.isArray(serverManifest.cssFiles)) {
+        this[PLUGIN_CSS_FILES].set(
+          id,
+          serverManifest.cssFiles.map(
+            cssFile => `/api/plugins/${id}/static/${cssFile}`,
+          ),
+        );
       }
 
       return plugin;
@@ -277,12 +266,8 @@ export class BasePluginManager {
    */
   getPluginCssUrls() {
     const urls = [];
-    for (const [id, files] of this[PLUGIN_CSS_FILES]) {
-      if (Array.isArray(files)) {
-        for (const file of files) {
-          urls.push(`/api/plugins/${id}/static/${file}`);
-        }
-      }
+    for (const [, cssFiles] of this[PLUGIN_CSS_FILES]) {
+      urls.push(...cssFiles);
     }
     return urls;
   }
