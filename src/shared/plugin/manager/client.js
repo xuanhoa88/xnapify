@@ -25,10 +25,11 @@ class ClientPluginManager extends BasePluginManager {
   /**
    * Load a script dynamically
    * @param {string} url - Script URL
+   * @param {string} pluginId - Plugin ID for cleanup tracking
    * @param {Object} options - Loading options
    * @returns {Promise<void>}
    */
-  async loadScript(url, options = {}) {
+  async loadScript(url, pluginId, options = {}) {
     return new Promise((resolve, reject) => {
       let script = document.querySelector(`script[src="${url}"]`);
 
@@ -41,6 +42,7 @@ class ClientPluginManager extends BasePluginManager {
         script = document.createElement('script');
         script.src = url;
         script.async = options.async !== false;
+        script.setAttribute('data-plugin-id', pluginId);
         document.body.appendChild(script);
       }
 
@@ -209,7 +211,7 @@ class ClientPluginManager extends BasePluginManager {
       }
 
       // Load the plugin script
-      await this.loadScript(scriptUrl);
+      await this.loadScript(scriptUrl, id);
 
       // Get the container from window
       const container = window[containerName];

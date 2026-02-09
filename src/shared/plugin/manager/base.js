@@ -352,6 +352,40 @@ export class BasePluginManager {
   }
 
   /**
+   * Clean up plugin CSS resources from DOM (client-side only)
+   * @param {string} id - Plugin ID
+   */
+  cleanupPluginResources(id) {
+    // Remove CSS links
+    const cssUrls = this[PLUGIN_CSS_ENTRY_POINTS].get(id);
+    if (cssUrls && typeof document !== 'undefined') {
+      for (const url of cssUrls) {
+        const link = document.querySelector(`link[href="${url}"]`);
+        if (link) {
+          link.remove();
+          if (__DEV__) {
+            console.log(`[PluginManager] Removed CSS: ${url}`);
+          }
+        }
+      }
+    }
+    this[PLUGIN_CSS_ENTRY_POINTS].delete(id);
+
+    // Remove JS scripts (by plugin ID data attribute)
+    if (typeof document !== 'undefined') {
+      const scripts = document.querySelectorAll(
+        `script[data-plugin-id="${id}"]`,
+      );
+      scripts.forEach(script => {
+        script.remove();
+        if (__DEV__) {
+          console.log(`[PluginManager] Removed script for: ${id}`);
+        }
+      });
+    }
+  }
+
+  /**
    * Load plugin dependencies
    * @param {string} pluginId - Plugin requesting dependencies
    * @param {Array<string>} dependencies - Array of dependency IDs
@@ -507,6 +541,9 @@ export class BasePluginManager {
         }
       }
       this[PLUGIN_API_INSTANCES].delete(id);
+
+      // Cleanup CSS/JS resources from DOM
+      this.cleanupPluginResources(id);
 
       // Unregister from registry
       await registry.unregister(id);

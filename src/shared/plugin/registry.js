@@ -12,6 +12,7 @@ const HOOKS = Symbol('__rsk.pluginHooks__');
 const SCHEMAS = Symbol('__rsk.pluginSchemas__');
 const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
 const LISTENERS = Symbol('__rsk.pluginListeners__');
+const REGISTRATIONS = Symbol('__rsk.pluginRegistrations__');
 
 /**
  * PluginRegistry - Manages plugin registrations, UI slots, hooks, and schema extensions
@@ -27,6 +28,7 @@ class PluginRegistry {
     this[SCHEMAS] = new Map(); // Map<schemaId, Set<extender>>
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
+    this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [], schemas: [] }>
   }
 
   // =========================================================================
@@ -51,10 +53,14 @@ class PluginRegistry {
 
   /**
    * Unregister a plugin by ID (supports async destroy)
+   * Automatically cleans up all registrations made by this plugin
    * @param {string} pluginId - Plugin identifier
    * @returns {Promise<this>}
    */
   async unregister(pluginId) {
+    // Clean up all registrations before calling destroy
+    this.clearPluginRegistrations(pluginId);
+
     const plugin = this[PLUGINS].get(pluginId);
     if (plugin && typeof plugin.destroy === 'function') {
       await plugin.destroy(this);
@@ -76,6 +82,60 @@ class PluginRegistry {
   /** Get list of registered plugin IDs */
   list() {
     return Array.from(this[PLUGINS].keys());
+  }
+
+  /**
+   * Track a registration for a plugin (internal helper)
+   * @param {string} pluginId - Plugin that owns this registration
+   * @param {string} type - 'slots' | 'hooks' | 'schemas'
+   * @param {Object} data - Registration data to track
+   */
+  trackRegistration(pluginId, type, data) {
+    if (!pluginId) return;
+
+    if (!this[REGISTRATIONS].has(pluginId)) {
+      this[REGISTRATIONS].set(pluginId, { slots: [], hooks: [], schemas: [] });
+    }
+    const reg = this[REGISTRATIONS].get(pluginId);
+    if (reg[type]) {
+      reg[type].push(data);
+    }
+  }
+
+  /**
+   * Clear all registrations made by a plugin
+   * @param {string} pluginId - Plugin to clear registrations for
+   */
+  clearPluginRegistrations(pluginId) {
+    const reg = this[REGISTRATIONS].get(pluginId);
+    if (!reg) return;
+
+    // Clear slots
+    for (const { slotId, component } of reg.slots) {
+      this.unregisterSlot(slotId, component);
+    }
+
+    // Clear hooks
+    for (const { hookId, callback } of reg.hooks) {
+      this.unregisterHook(hookId, callback);
+    }
+
+    // Clear schemas
+    for (const { schemaId, extender } of reg.schemas) {
+      this.unregisterSchema(schemaId, extender);
+    }
+
+    if (__DEV__) {
+      const total = reg.slots.length + reg.hooks.length + reg.schemas.length;
+      if (total > 0) {
+        console.log(
+          `[PluginRegistry] Cleared ${total} registrations for plugin: ${pluginId}`,
+        );
+      }
+    }
+
+    // Remove tracking entry
+    this[REGISTRATIONS].delete(pluginId);
   }
 
   // =========================================================================
@@ -385,15 +445,17 @@ class PluginRegistry {
    * Register a component for a slot (idempotent)
    * @param {string} slotId - Slot identifier
    * @param {React.Component} component - Component to render
-   * @param {Object} options - { order: number, ... }
+   * @param {Object} options - { order: number, pluginId: string, ... }
    */
   registerSlot(slotId, component, options = {}) {
+    const { pluginId, ...slotOptions } = options;
     if (!this[SLOTS].has(slotId)) {
       this[SLOTS].set(slotId, new Map());
     }
     const slotMap = this[SLOTS].get(slotId);
     if (!slotMap.has(component)) {
-      slotMap.set(component, { order: 0, ...options });
+      slotMap.set(component, { order: 0, ...slotOptions });
+      this.trackRegistration(pluginId, 'slots', { slotId, component });
       this.notify();
     }
     return this;
@@ -427,14 +489,16 @@ class PluginRegistry {
    * Register a hook callback (idempotent - Set handles deduplication)
    * @param {string} hookId - Hook identifier
    * @param {Function} callback - Callback function (can be async)
+   * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
    */
-  registerHook(hookId, callback) {
+  registerHook(hookId, callback, pluginId) {
     if (!this[HOOKS].has(hookId)) {
       this[HOOKS].set(hookId, new Set());
     }
     const callbacks = this[HOOKS].get(hookId);
     if (callbacks && typeof callbacks.add === 'function') {
       callbacks.add(callback);
+      this.trackRegistration(pluginId, 'hooks', { hookId, callback });
     }
     return this;
   }
@@ -477,12 +541,14 @@ class PluginRegistry {
    * Register a schema extender (idempotent)
    * @param {string} schemaId - Schema identifier
    * @param {Function} extender - (schema, validator) => extendedSchema
+   * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
    */
-  registerSchema(schemaId, extender) {
+  registerSchema(schemaId, extender, pluginId) {
     if (!this[SCHEMAS].has(schemaId)) {
       this[SCHEMAS].set(schemaId, new Set());
     }
     this[SCHEMAS].get(schemaId).add(extender);
+    this.trackRegistration(pluginId, 'schemas', { schemaId, extender });
     return this;
   }
 
