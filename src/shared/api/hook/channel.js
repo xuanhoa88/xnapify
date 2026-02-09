@@ -86,12 +86,30 @@ class HookChannel {
   /**
    * Remove handlers for an event
    * @param {string} [event] - Event name, or all if omitted
+   * @param {Function} [handler] - Specific handler to remove, or all for event if omitted
    */
-  off(event) {
-    if (event) {
-      this[HOOK_HANDLERS].delete(event);
-    } else {
+  off(event, handler) {
+    if (!event) {
       this[HOOK_HANDLERS].clear();
+      return;
+    }
+
+    if (!handler) {
+      this[HOOK_HANDLERS].delete(event);
+      return;
+    }
+
+    // Remove specific handler
+    const list = this[HOOK_HANDLERS].get(event);
+    if (list) {
+      const idx = list.findIndex(h => h.handler === handler);
+      if (idx !== -1) {
+        list.splice(idx, 1);
+      }
+      // Clean up empty arrays
+      if (list.length === 0) {
+        this[HOOK_HANDLERS].delete(event);
+      }
     }
   }
 

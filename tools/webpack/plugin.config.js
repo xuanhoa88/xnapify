@@ -19,20 +19,12 @@ const {
 } = require('./base.config');
 const loadDotenv = require('./dotenv.plugin');
 
-// Cache verbose check for use throughout the build
+// =============================================================================
+// CONSTANTS
+// =============================================================================
+
 const verbose = isVerbose();
-
-// Enable bundle profile
 const isProfile = process.argv.includes('--profile');
-
-/**
- * Manifest field names for plugin entry points
- * Used by both webpack config and manifest generator
- * - browser: view bundle entry (used for both client UMD and server CommonJS)
- * - api: reserved for backend/API plugin code (not built by this config)
- */
-const MANIFEST_UI_ENTRY = 'browser';
-const MANIFEST_API_ENTRY = 'api';
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -40,8 +32,6 @@ const MANIFEST_API_ENTRY = 'api';
 
 /**
  * Create CSS Modules localIdentName for a plugin
- * @param {string} pluginName - Plugin name
- * @returns {string} CSS Modules localIdentName pattern
  */
 const getPluginLocalIdentName = pluginName =>
   isDebug
@@ -49,24 +39,27 @@ const getPluginLocalIdentName = pluginName =>
     : `${pluginName}_[hash:base64:5]`;
 
 /**
- * Create ProgressPlugin for verbose builds
- * @returns {Array} Array containing ProgressPlugin or empty
+ * Create safe library name from plugin name
  */
-const createProgressPlugins = () =>
+const getLibraryName = pluginName =>
+  `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+/**
+ * Create ProgressPlugin for verbose builds
+ */
+const createProgressPlugin = () =>
   verbose
-    ? [
-        new webpack.ProgressPlugin({
-          activeModules: true,
-          entries: true,
-          modules: true,
-          modulesCount: 5000,
-          profile: isProfile,
-          dependencies: true,
-          dependenciesCount: 10000,
-          percentBy: 'entries',
-        }),
-      ]
-    : [];
+    ? new webpack.ProgressPlugin({
+        activeModules: true,
+        entries: true,
+        modules: true,
+        modulesCount: 5000,
+        profile: isProfile,
+        dependencies: true,
+        dependenciesCount: 10000,
+        percentBy: 'entries',
+      })
+    : null;
 
 /**
  * Webpack plugin to strip :root CSS rules from final CSS assets
@@ -80,24 +73,22 @@ class StripRootCSSPlugin {
           stage: webpack.Compilation.PROCESS_ASSETS_STAGE_OPTIMIZE,
         },
         assets => {
-          for (const [name, asset] of Object.entries(assets)) {
-            if (name.endsWith('.css')) {
-              let source = asset.source();
-              const originalLength = source.length;
-              source = source.replace(/:root\s*\{[^}]*\}/g, '');
-              if (source.length !== originalLength) {
-                compilation.updateAsset(
-                  name,
-                  new webpack.sources.RawSource(source),
-                );
-                if (verbose) {
-                  console.log(
-                    `[StripRootCSSPlugin] Removed :root from ${name}`,
-                  );
-                }
+          Object.entries(assets).forEach(([name, asset]) => {
+            if (!name.endsWith('.css')) return;
+
+            const source = asset.source();
+            const stripped = source.replace(/:root\s*\{[^}]*\}/g, '');
+
+            if (source.length !== stripped.length) {
+              compilation.updateAsset(
+                name,
+                new webpack.sources.RawSource(stripped),
+              );
+              if (verbose) {
+                console.log(`[StripRootCSSPlugin] Removed :root from ${name}`);
               }
             }
-          }
+          });
         },
       );
     });
@@ -105,119 +96,160 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Create safe library name from plugin name
- * @param {string} pluginName - Plugin name
- * @returns {string} Safe library name for webpack
- */
-const getLibraryName = pluginName =>
-  `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-/**
- * Validate plugin and extract common data
- * @param {Object} plugin - Plugin object with name, path, manifest
- * @returns {Object|null} Plugin data or null if invalid
+ * Validate plugin and extract metadata
  */
 function validatePlugin(plugin) {
-  const pluginName = plugin.name;
-
-  if (typeof pluginName !== 'string' || pluginName.trim().length === 0) {
-    logWarn(`Skipping plugin with invalid name:`, plugin);
+  if (
+    !plugin ||
+    typeof plugin.name !== 'string' ||
+    plugin.name.trim().length === 0
+  ) {
+    logWarn('Skipping plugin with invalid name:', plugin);
     return null;
   }
 
-  const entryPath = path.resolve(
-    plugin.path,
-    plugin.manifest[MANIFEST_UI_ENTRY],
-  );
-  const libraryName = getLibraryName(pluginName);
+  if (!plugin.path) {
+    logWarn(`Plugin "${plugin.name}" missing path`);
+    return null;
+  }
 
-  return { pluginName, entryPath, libraryName };
+  if (!plugin.manifest || (!plugin.manifest.browser && !plugin.manifest.main)) {
+    logWarn(`Plugin "${plugin.name}" missing UI or API entry point`);
+    return null;
+  }
+
+  // Normalize plugin name
+  const pluginName = plugin.name.trim();
+
+  return {
+    pluginName,
+    clientPath: plugin.manifest.browser
+      ? path.resolve(plugin.path, plugin.manifest.browser)
+      : null,
+    apiPath: plugin.manifest.main
+      ? path.resolve(plugin.path, plugin.manifest.main)
+      : null,
+    libraryName: getLibraryName(pluginName),
+  };
 }
 
+/**
+ * Create shared environment definition
+ */
+const createEnvDefine = () =>
+  createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) });
+
+/**
+ * Filter null plugins from array
+ */
+const filterPlugins = plugins => plugins.filter(Boolean);
+
 // =============================================================================
-// CLIENT CONFIG (browser.js + plugin.css)
+// CONFIG BUILDERS
 // =============================================================================
 
 /**
- * Create client webpack config for a plugin
- * Generates: browser.js
+ * Create client configs for plugin
+ * Returns both browser (Module Federation) and server (CommonJS + CSS) builds
  */
-function createClientConfig({ pluginName, entryPath, libraryName }, buildPath) {
-  return createWebpackConfig('client', {
-    entry: { client: entryPath },
-    experiments: { outputModule: false },
-    output: {
-      path: path.join(buildPath, pluginName),
-      filename: '[name].js',
-      publicPath: 'auto',
-      uniqueName: libraryName,
-    },
-    module: {
-      rules: [
-        createCSSRule({
-          exportOnlyLocals: true,
-          localIdentName: getPluginLocalIdentName(pluginName),
-        }),
-      ],
-    },
-    plugins: [
-      new webpack.ProvidePlugin({
-        process: require.resolve('process/browser'),
-      }),
-      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
-      // Module Federation for sharing React with host app (outputs as browser.js)
-      new webpack.container.ModuleFederationPlugin({
-        name: libraryName,
+function createClientConfig(pluginData, buildPath) {
+  const { pluginName, clientPath, libraryName } = pluginData;
+
+  if (!clientPath) return [];
+
+  const outputPath = path.join(buildPath, pluginName);
+  const localIdentName = getPluginLocalIdentName(pluginName);
+
+  return [
+    // Browser build (Module Federation)
+    createWebpackConfig('client', {
+      entry: clientPath,
+      experiments: { outputModule: false },
+      output: {
+        path: outputPath,
         filename: 'browser.js',
-        exposes: {
-          './plugin': entryPath,
-        },
-        shared: createSharedDependencies(pkg.dependencies || {}, {
-          eager: false,
-          singleton: true,
-          strictVersion: false,
+        publicPath: 'auto',
+        uniqueName: libraryName,
+      },
+      module: {
+        rules: [
+          createCSSRule({
+            exportOnlyLocals: true,
+            localIdentName,
+          }),
+        ],
+      },
+      plugins: filterPlugins([
+        new webpack.ProvidePlugin({
+          process: require.resolve('process/browser'),
         }),
-      }),
-      ...createProgressPlugins(),
-    ],
-  });
+        createEnvDefine(),
+        new webpack.container.ModuleFederationPlugin({
+          name: libraryName,
+          filename: 'remote.js',
+          exposes: {
+            './plugin': clientPath,
+          },
+          shared: createSharedDependencies(pkg.dependencies || {}, {
+            eager: false,
+            singleton: true,
+            strictVersion: false,
+          }),
+        }),
+        createProgressPlugin(),
+      ]),
+    }),
+
+    // Server build (CommonJS + CSS extraction)
+    createWebpackConfig('server', {
+      entry: clientPath,
+      experiments: { outputModule: false },
+      output: {
+        path: outputPath,
+        filename: 'server.js',
+        library: { type: 'commonjs' },
+      },
+      module: {
+        rules: [
+          createCSSRule({
+            extractLoader: MiniCssExtractPlugin.loader,
+            localIdentName,
+          }),
+        ],
+      },
+      plugins: filterPlugins([
+        createEnvDefine(),
+        new MiniCssExtractPlugin({
+          filename: 'plugin.css',
+          ignoreOrder: isDebug,
+        }),
+        new StripRootCSSPlugin(),
+        createProgressPlugin(),
+      ]),
+    }),
+  ];
 }
 
-// =============================================================================
-// SERVER CONFIG (server.js)
-// =============================================================================
-
 /**
- * Create server webpack config for a plugin
- * Generates: server.js, plugin.css
+ * Create API server config (if plugin has API entry)
  */
-function createServerConfig({ pluginName, entryPath }, buildPath) {
-  return createWebpackConfig('server', {
-    entry: { server: entryPath },
-    experiments: { outputModule: false },
-    output: {
-      path: path.join(buildPath, pluginName),
-      filename: '[name].js',
-      library: { type: 'commonjs' },
-    },
-    module: {
-      rules: [
-        createCSSRule({
-          extractLoader: MiniCssExtractPlugin.loader,
-          localIdentName: getPluginLocalIdentName(pluginName),
-        }),
-      ],
-    },
-    plugins: [
-      createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
-      new MiniCssExtractPlugin({
-        filename: 'plugin.css',
-        ignoreOrder: isDebug,
-      }),
-      new StripRootCSSPlugin(),
-      ...createProgressPlugins(),
-    ],
-  });
+function createApiConfig(pluginData, buildPath) {
+  const { pluginName, apiPath } = pluginData;
+
+  if (!apiPath) return [];
+
+  return [
+    createWebpackConfig('server', {
+      entry: apiPath,
+      experiments: { outputModule: false },
+      output: {
+        path: path.join(buildPath, pluginName),
+        filename: 'api.js',
+        library: { type: 'commonjs' },
+      },
+      plugins: filterPlugins([createEnvDefine(), createProgressPlugin()]),
+    }),
+  ];
 }
 
 // =============================================================================
@@ -231,28 +263,29 @@ function createServerConfig({ pluginName, entryPath }, buildPath) {
  * @param {string} options.buildPath - Output directory
  * @returns {Array} Array of webpack configurations
  */
-function createPluginConfig({ plugins, buildPath }) {
+function createPluginConfig({ plugins = [], buildPath }) {
+  if (!Array.isArray(plugins)) {
+    throw new Error('plugins must be an array');
+  }
+
+  if (typeof buildPath !== 'string' || buildPath.trim().length === 0) {
+    throw new Error('buildPath must be a non-empty string');
+  }
+
   const configs = [];
 
-  // Filter plugins with UI entry
-  const uiPlugins = plugins.filter(
-    p => p.manifest && p.manifest[MANIFEST_UI_ENTRY],
-  );
-
-  for (const plugin of uiPlugins) {
+  for (const plugin of plugins) {
     const pluginData = validatePlugin(plugin);
     if (!pluginData) continue;
 
-    // Create client (browser.js + plugin.css) and server (server.js) configs
-    configs.push(createClientConfig(pluginData, buildPath));
-    configs.push(createServerConfig(pluginData, buildPath));
+    // Create browser and server builds
+    configs.push(...createClientConfig(pluginData, buildPath));
+
+    // Optionally create API build
+    configs.push(...createApiConfig(pluginData, buildPath));
   }
 
-  return configs;
+  return [...new Set(configs)];
 }
-
-// Export manifest fields for use in other modules
-createPluginConfig.MANIFEST_UI_ENTRY = MANIFEST_UI_ENTRY;
-createPluginConfig.MANIFEST_API_ENTRY = MANIFEST_API_ENTRY;
 
 module.exports = createPluginConfig;

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+export { registry } from './registry';
 export { default as pluginRegistry } from './registry';
 export { default as PluginSlot } from './PluginSlot';
 export { usePluginHooks, usePluginSchema } from './usePlugin';
-export { bindPluginNamespace } from './utils';

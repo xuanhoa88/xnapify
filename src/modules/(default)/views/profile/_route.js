@@ -8,8 +8,6 @@
 import { isAuthenticated } from '../../../../shared/renderer/redux';
 import Profile from './Profile';
 
-import { bindPluginNamespace } from '../../../../shared/plugin';
-
 /**
  * Page metadata
  */
@@ -31,16 +29,9 @@ export async function middleware({ store, pathname }, next) {
 }
 
 /**
- * Plugin Namespace to load
+ * Plugin workspace to load
  */
-export const pluginNamespace = 'profile';
-
-/**
- * Init Hook - Bind plugins
- */
-export async function init(ctx) {
-  bindPluginNamespace(pluginNamespace, ctx);
-}
+export const workspace = 'profile';
 
 /**
  * Mount Hook - Runs when entering the route

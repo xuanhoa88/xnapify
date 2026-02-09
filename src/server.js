@@ -35,7 +35,7 @@ import i18n, {
 import { createFetch } from './shared/fetch';
 import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
-import initializeAPI from './bootstrap/api';
+import initializeAPI, { APP_PROVIDERS } from './bootstrap/api';
 import Html from './shared/renderer/Html';
 import App from './shared/renderer/App';
 
@@ -125,6 +125,50 @@ function getMetadata(page, req) {
     url: `${protocol}://${host}${req.path}`,
     type: page.type || 'website',
   };
+}
+
+/**
+ * Create restricted app proxy for plugins.
+ * Only exposes app.get(key) for allowed providers - blocks everything else.
+ *
+ * @param {object} app - Express app instance
+ * @returns {Proxy} Restricted proxy
+ */
+function createPluginAppProxy(app) {
+  return new Proxy(Object.freeze({}), {
+    get(target, prop) {
+      // Only allow app.get() for retrieving engines/providers
+      if (prop === 'get') {
+        return key => {
+          if (APP_PROVIDERS.has(key)) {
+            return app.get(key);
+          }
+          const err = new Error(`Plugin access denied for: ${String(key)}`);
+          err.code = 'PLUGIN_ACCESS_DENIED';
+          err.key = key;
+          throw err;
+        };
+      }
+
+      // Block everything else with explicit error
+      const err = new Error(`Plugins cannot access app.${String(prop)}`);
+      err.code = 'PLUGIN_ACCESS_DENIED';
+      err.property = prop;
+      throw err;
+    },
+
+    // Prevent property enumeration
+    ownKeys() {
+      return ['get'];
+    },
+
+    getOwnPropertyDescriptor(target, prop) {
+      if (prop === 'get') {
+        return { configurable: true, enumerable: true };
+      }
+      return undefined;
+    },
+  });
 }
 
 // =============================================================================
@@ -309,9 +353,14 @@ function createSSRHandler(port, host) {
         signal: abortController.signal,
       };
 
-      // Initialize plugins (Server Side)
+      // Initialize plugins (Server Side) with restricted app access
       try {
-        await pluginManager.init({ ...context, cwd: config.cwd });
+        const pluginApp = createPluginAppProxy(req.app);
+        await pluginManager.init({
+          ...context,
+          cwd: config.cwd,
+          app: pluginApp,
+        });
       } catch (error) {
         // Log but don't fail the request
         if (__DEV__) {

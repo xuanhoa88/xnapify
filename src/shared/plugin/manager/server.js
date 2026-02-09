@@ -6,28 +6,24 @@
  */
 
 import path from 'path';
-import { BasePluginManager, PLUGIN_CONTEXT, LOADED_VERSIONS } from './base';
-
-// Symbol to store initialization promise
-const PLUGIN_MANAGER_INIT = Symbol('__rsk.pluginManagerInit__');
+import {
+  BasePluginManager,
+  PLUGIN_CONTEXT,
+  LOADED_VERSIONS,
+  PLUGIN_MANAGER_INIT,
+  PLUGIN_API_INSTANCES,
+} from './base';
 
 class ServerPluginManager extends BasePluginManager {
-  constructor() {
-    super();
-    this[PLUGIN_MANAGER_INIT] = null;
-    // Track loaded plugin versions for intelligent cache invalidation
-    this[LOADED_VERSIONS] = new Map(); // pluginId -> version
-  }
-
   /**
    * Get the plugin bundle path
    * @param {string} internalId - Plugin internal ID (folder name)
-   * @param {string} [filename='server.js'] - Bundle filename
+   * @param {string} filename - Bundle filename
    * @returns {string} Plugin bundle path
    */
-  getPluginBundlePath(internalId, filename = 'server.js') {
+  getPluginBundlePath(internalId, filename) {
     const pluginDir = path.resolve(
-      (this[PLUGIN_CONTEXT] && this[PLUGIN_CONTEXT].cwd) || process.cwd(),
+      this[PLUGIN_CONTEXT].cwd,
       process.env.RSK_PLUGIN_PATH || 'plugins',
     );
     return path.join(pluginDir, internalId, filename);
@@ -47,7 +43,7 @@ class ServerPluginManager extends BasePluginManager {
     const requireFunc =
       typeof __non_webpack_require__ === 'function'
         ? // eslint-disable-next-line no-undef
-        __non_webpack_require__
+          __non_webpack_require__
         : require;
 
     return requireFunc(bundlePath);
@@ -58,20 +54,25 @@ class ServerPluginManager extends BasePluginManager {
    * @throws {Error} If context is invalid
    */
   _validateServerContext() {
-    if (!this[PLUGIN_CONTEXT] || typeof this[PLUGIN_CONTEXT].cwd !== 'string') {
+    if (
+      typeof this[PLUGIN_CONTEXT].cwd !== 'string' ||
+      this[PLUGIN_CONTEXT].cwd.trim().length === 0
+    ) {
       if (__DEV__) {
         console.warn(
           '[ServerPluginManager] Running without explicit cwd, using process.cwd()',
         );
       }
+      this[PLUGIN_CONTEXT].cwd = process.cwd();
     }
   }
 
   /**
    * Ensure server plugin manager is ready
    * For SSR: Ensures context is valid before loading plugins
+   * @returns {Promise<void>}
    */
-  async _ensureServerReady() {
+  async _ensureReady() {
     if (this[PLUGIN_MANAGER_INIT]) {
       return this[PLUGIN_MANAGER_INIT];
     }
@@ -90,52 +91,110 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
+   * Resolve the plugin entry point based on manifest
+   * @param {Object} manifest - Plugin manifest
+   * @returns {string} Entry point filename
+   */
+  /**
+   * Resolve the plugin entry point based on manifest
+   * @param {Object} manifest - Plugin manifest
+   * @returns {string|null} Entry point filename or null
+   */
+  resolveEntryPoint(manifest) {
+    // If browser exists, we have a View (server.js) generated from it
+    if (manifest && manifest.browser) return 'server.js';
+    if (manifest && manifest.main) return 'api.js';
+    return null;
+  }
+
+  /**
    * Load plugin module (server uses require, not MF containers)
    * @param {string} id - Plugin ID
+   * @param {string|null} entryPoint - Resolved entry point filename
    * @param {object} manifest - Plugin manifest with internalId
-   * @param {string} _containerName - Not used on server (MF container name)
+   * @param {object} options - Additional options (internalId)
+   * @returns {Promise<Object|null>} Plugin module or null
    */
-  async loadPluginModule(id, manifest, _containerName) {
-    const startTime = Date.now();
-    const currentVersion = (manifest && manifest.version) || '0.0.0';
-
-    // Server uses direct require, not MF containers
-    // Get internalId from the API response (passed via base manager)
-    const internalId = manifest && manifest.internalId;
-
-    if (!internalId) {
+  async loadPluginModule(id, entryPoint, manifest, options) {
+    // Skip if no entry point resolved (e.g. client-only plugin)
+    if (!entryPoint) {
       if (__DEV__) {
-        const error = new Error(
-          'Internal ID required for server-side plugin loading',
+        console.log(
+          `[ServerPluginManager] Skipping plugin ${id} (no server entry point)`,
         );
-        error.code = 'INTERNAL_ID_REQUIRED';
-        throw error;
       }
       return null;
     }
 
+    const startTime = Date.now();
+    const currentVersion = (manifest && manifest.version) || '0.0.0';
+    const internalId =
+      (options && options.internalId) || (manifest && manifest.internalId);
+
     try {
+      // Validate internalId early (fail-fast)
+      if (!internalId) {
+        const error = new Error(
+          `Internal ID required for server-side plugin loading: ${id}`,
+        );
+        error.code = 'INTERNAL_ID_REQUIRED';
+        error.pluginId = id;
+        throw error;
+      }
+
       // Ensure server is ready before loading any plugin
       // eslint-disable-next-line no-underscore-dangle
-      await this._ensureServerReady();
+      await this._ensureReady();
 
       // Version-based cache invalidation
       const loadedVersion = this[LOADED_VERSIONS].get(id);
       const versionChanged = currentVersion && loadedVersion !== currentVersion;
 
-      // Get plugin bundle path
-      const bundlePath = this.getPluginBundlePath(internalId);
+      let pluginModule = null;
 
-      if (__DEV__) {
-        console.log(
-          `[ServerPluginManager] Loading plugin ${id} from ${bundlePath}${versionChanged ? ' (version changed)' : ''}`,
+      // 1. Load View Module if browser entry exists
+      if (manifest && manifest.browser) {
+        const bundlePath = this.getPluginBundlePath(
+          path.join(internalId, path.dirname(manifest.browser)),
+          'server.js',
         );
+        if (__DEV__) {
+          console.log(
+            `[ServerPluginManager] Loading plugin ${id} from ${bundlePath}${versionChanged ? ' (version changed)' : ''}`,
+          );
+        }
+        const viewModule = this.loadModule(bundlePath);
+        pluginModule = viewModule.default || viewModule;
       }
 
-      // Load the plugin module
-      const pluginModule = this.loadModule(bundlePath);
+      // 2. Boot API if main entry exists
+      if (manifest && manifest.main) {
+        const apiBundlePath = this.getPluginBundlePath(
+          internalId,
+          manifest.main,
+        );
+        try {
+          const apiModule = this.loadModule(apiBundlePath);
+          const pluginApi = apiModule.default || apiModule;
 
-      // Track loaded version for future cache invalidation
+          // Object-only pattern: plugins must export { mount(context), unmount?(context) }
+          if (pluginApi && typeof pluginApi.mount === 'function') {
+            if (__DEV__) {
+              console.log(`[ServerPluginManager] Booting API for ${id}`);
+            }
+            await pluginApi.mount(this[PLUGIN_CONTEXT]);
+            // Store API instance for unmount during unload
+            this[PLUGIN_API_INSTANCES].set(id, pluginApi);
+          }
+        } catch (err) {
+          console.warn(
+            `[ServerPluginManager] Failed to boot API for ${id}:`,
+            err.message,
+          );
+        }
+      }
+
+      // Track loaded version
       this[LOADED_VERSIONS].set(id, currentVersion);
 
       // Performance monitoring
@@ -151,9 +210,22 @@ class ServerPluginManager extends BasePluginManager {
         }
       }
 
-      return pluginModule.default || pluginModule;
+      // Return plugin module if available
+      if (pluginModule) {
+        return pluginModule;
+      }
+
+      // API-only plugin: return synthetic object for registry validation
+      if (entryPoint === 'api.js') {
+        return {
+          name: id,
+          version: currentVersion,
+          register: () => [],
+        };
+      }
+
+      return null;
     } catch (err) {
-      // Enhanced error with full context for debugging
       const error = new Error(`Failed to load plugin "${id}": ${err.message}`);
       error.code = err.code || 'PLUGIN_LOAD_FAILED';
       error.pluginId = id;
@@ -161,8 +233,8 @@ class ServerPluginManager extends BasePluginManager {
       error.originalError = err;
 
       console.error(`[ServerPluginManager] ${error.message}`, {
-        pluginId: id,
         internalId,
+        pluginId: id,
         version: currentVersion,
         error: err.message,
         stack: __DEV__ ? err.stack : undefined,

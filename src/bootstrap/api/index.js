@@ -24,7 +24,7 @@ const modulesContext = require.context(
  * Core app providers protected from modification after initialization
  * @type {Set<string>}
  */
-const APP_PROVIDERS = new Set([
+export const APP_PROVIDERS = new Set([
   ...Object.keys(engines),
   'cwd', // Current working directory
   'jwt', // JWT utilities
@@ -163,20 +163,18 @@ function guardAppProviders(app) {
  *
  * @param {Object} app - Express app instance
  * @param {Object} config - Configuration object
+ * @returns {Object} Guarded app instance
  * @throws {Error} If configuration is invalid or initialization fails
  */
 export default async function main(app, config = {}) {
-  let unlockProviders;
-  let lockProviders;
+  // Guard app first and get control methods
+  const { app: guardedApp, unlock, lock } = guardAppProviders(app);
+
+  // Store control methods for finally block
+  const unlockProviders = unlock;
+  const lockProviders = lock;
 
   try {
-    // Guard app first and get control methods
-    const { app: guardedApp, unlock, lock } = guardAppProviders(app);
-
-    // Store control methods for finally block
-    unlockProviders = unlock;
-    lockProviders = lock;
-
     // Unlock providers for bootstrap (updates allowed during startup/HMR)
     unlockProviders();
 
@@ -215,7 +213,7 @@ export default async function main(app, config = {}) {
       apiMiddlewares.push(engines.auth.optionalAuthMiddleware());
     }
 
-    // Discover and mount modules
+    // Scan and register module engines
     const { apiRouter } = await discoverModules(modulesContext, guardedApp);
 
     // Mount API routes with middleware stack
@@ -237,4 +235,6 @@ export default async function main(app, config = {}) {
       lockProviders();
     }
   }
+
+  return guardedApp;
 }

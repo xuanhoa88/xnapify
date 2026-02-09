@@ -151,7 +151,10 @@ const createCSSRule = ({
         test: /\.s[ac]ss$/i,
         use: buildLoaders({
           loader: 'sass-loader',
-          options: { sourceMap: isDebug },
+          options: {
+            api: 'modern', // Use modern Sass API (fixes deprecation warning)
+            sourceMap: isDebug,
+          },
         }),
       },
       {

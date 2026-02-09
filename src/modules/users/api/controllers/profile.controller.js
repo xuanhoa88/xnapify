@@ -7,45 +7,13 @@
 
 import { validateForm } from '../../../../shared/validator';
 import {
+  updateProfileFormSchema,
   changePasswordFormSchema,
   deleteAccountFormSchema,
-  updateProfileFormSchema,
   updatePreferencesFormSchema,
 } from '../../validator/auth';
-import { DEFAULT_ROLE } from '../constants/rbac';
 import * as profileService from '../services/profile.service';
-
-// ========================================================================
-// HELPER FUNCTIONS
-// ========================================================================
-
-/**
- * Format user profile response
- * @param {Object} user - User object with profile, roles, and groups
- * @returns {Object} Formatted profile object
- */
-function formatProfileResponse(user) {
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    bio: (user.profile && user.profile.bio) || null,
-    location: (user.profile && user.profile.location) || null,
-    website: (user.profile && user.profile.website) || null,
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(role => role.name)
-        : [DEFAULT_ROLE],
-    groups: user.groups || [],
-  };
-}
+import { formatUserResponse } from '../utils/formatters';
 
 // ========================================================================
 // PROFILE MANAGEMENT CONTROLLERS
@@ -72,7 +40,9 @@ export async function getProfile(req, res) {
     }
 
     return http.sendSuccess(res, {
-      profile: formatProfileResponse(user),
+      profile: await formatUserResponse(user, {
+        hook: req.app.get('hook').withContext(req.app),
+      }),
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user profile', error);
@@ -117,7 +87,9 @@ export async function updateProfile(req, res) {
     );
 
     return http.sendSuccess(res, {
-      profile: formatProfileResponse(user),
+      profile: await formatUserResponse(user, {
+        hook: req.app.get('hook').withContext(req.app),
+      }),
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update profile', error);

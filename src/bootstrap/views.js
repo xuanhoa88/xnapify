@@ -82,24 +82,27 @@ export default async function initializeRouter() {
       });
     },
     async onRouteMount(route, _ctx) {
-      // Check both route property (from bindPluginNamespace) and module export
-      const namespace =
-        route.pluginNamespace || (route.module && route.module.pluginNamespace);
+      // Check route.workspace (set in route init hook) or module export
+      const ns = route.workspace || (route.module && route.module.workspace);
 
-      if (namespace) {
-        if (!pluginRegistry.isNamespaceInstalled(namespace)) {
-          console.log(`[Router] Installing plugin namespace: ${namespace}`);
-          await pluginRegistry.installNamespace(namespace);
-        } else {
-          console.log(
-            `[Router] Plugin namespace already installed: ${namespace}`,
-          );
+      if (ns) {
+        if (!pluginRegistry.isNamespaceLoaded(ns)) {
+          if (__DEV__) {
+            console.log(`[Router] Loading plugin namespace: ${ns}`);
+          }
+          await pluginRegistry.loadNamespace(ns);
+        } else if (__DEV__) {
+          console.log(`[Router] Plugin namespace already loaded: ${ns}`);
         }
       }
     },
     async onRouteUnmount(route, _ctx) {
-      if (route.pluginNamespace) {
-        await pluginRegistry.uninstallNamespace(route.pluginNamespace);
+      const ns = route.workspace;
+      if (ns) {
+        if (__DEV__) {
+          console.log(`[Router] Unloading plugin namespace: ${ns}`);
+        }
+        await pluginRegistry.unloadNamespace(ns);
       }
     },
   });

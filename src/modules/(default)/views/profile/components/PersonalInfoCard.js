@@ -71,6 +71,7 @@ function PersonalInfoCard() {
       bio: (user && user.bio) || '',
       location: (user && user.location) || '',
       website: (user && user.website) || '',
+      nickname: (user && user.nickname) || '',
     }),
     [user],
   );

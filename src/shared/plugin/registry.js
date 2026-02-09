@@ -134,33 +134,54 @@ class PluginRegistry {
   }
 
   /**
-   * Install all plugins for a given namespace
-   * @param {string} ns - Namespace to install
+   * Check if a namespace is loaded (at least one plugin from it is registered)
+   * @param {string} ns - Namespace to check
    */
-  async installNamespace(ns) {
-    console.log(`[PluginRegistry] installNamespace called for: ${ns}`);
+  isNamespaceLoaded(ns) {
+    const plugins = this[DEFINITIONS].get(ns);
+    if (!plugins) return false;
+
+    for (const plugin of plugins) {
+      if (this.has(plugin.id)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Load all plugins for a given namespace (runtime activation)
+   * @param {string} ns - Namespace to load
+   */
+  async loadNamespace(ns) {
+    if (__DEV__) {
+      console.log(`[PluginRegistry] loadNamespace called for: ${ns}`);
+    }
     const plugins = this[DEFINITIONS].get(ns);
     if (!plugins) {
       console.warn(`[PluginRegistry] No plugins found for namespace: ${ns}`);
       return;
     }
-    console.log(
-      `[PluginRegistry] Found ${plugins.size} plugins for namespace ${ns}`,
-    );
+    if (__DEV__) {
+      console.log(
+        `[PluginRegistry] Found ${plugins.size} plugins for namespace ${ns}`,
+      );
+    }
 
     for (const plugin of plugins) {
-      console.log(
-        `[PluginRegistry] Registering plugin from namespace: ${plugin.id}`,
-      );
-      // 1. Register the plugin instance
-      // We wrap the mount/unmount into init/destroy for the standard register method
+      if (__DEV__) {
+        console.log(
+          `[PluginRegistry] Loading plugin from namespace: ${plugin.id}`,
+        );
+      }
+      // Wrap mount/unmount into init/destroy for the standard register method
       const pluginInstance = {
         ...plugin,
         init: async reg => {
-          console.log(`[PluginRegistry] Initializing plugin: ${plugin.id}`);
+          if (__DEV__) {
+            console.log(`[PluginRegistry] Mounting plugin: ${plugin.id}`);
+          }
           if (typeof plugin.mount === 'function') {
             await plugin.mount(reg);
-          } else {
+          } else if (__DEV__) {
             console.warn(
               `[PluginRegistry] Plugin ${plugin.id} has no mount method`,
             );
@@ -178,30 +199,182 @@ class PluginRegistry {
   }
 
   /**
-   * Uninstall all plugins for a given namespace
-   * @param {string} ns - Namespace to uninstall
+   * Unload all plugins for a given namespace (runtime deactivation)
+   * @param {string} ns - Namespace to unload
    */
-  async uninstallNamespace(ns) {
+  async unloadNamespace(ns) {
     const plugins = this[DEFINITIONS].get(ns);
     if (!plugins) return;
 
     for (const plugin of plugins) {
       await this.unregister(plugin.id);
     }
+    if (__DEV__) {
+      console.log(`[PluginRegistry] Unloaded namespace: ${ns}`);
+    }
   }
 
   /**
-   * Check if a namespace is installed (at least one plugin from it is registered)
-   * @param {string} ns - Namespace to check
+   * Find a plugin definition by ID across all namespaces
+   * @param {string} id - Plugin ID
+   * @returns {Object|null} Plugin definition or null
    */
-  isNamespaceInstalled(ns) {
-    const plugins = this[DEFINITIONS].get(ns);
-    if (!plugins) return false;
-
-    for (const plugin of plugins) {
-      if (this.has(plugin.id)) return true;
+  findDefinition(id) {
+    for (const [, definitions] of this[DEFINITIONS]) {
+      for (const def of definitions) {
+        if (def.id === id) return def;
+      }
     }
-    return false;
+    return null;
+  }
+
+  /**
+   * Install a specific plugin by ID
+   * Calls the install() lifecycle hook if present
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if installed successfully
+   */
+  async installPlugin(id) {
+    const definition = this.findDefinition(id);
+    if (!definition) {
+      console.warn(`[PluginRegistry] Cannot install: plugin "${id}" not found`);
+      return false;
+    }
+
+    // Call install hook if present
+    if (typeof definition.install === 'function') {
+      try {
+        await definition.install(definition.context);
+        if (__DEV__) {
+          console.log(`[PluginRegistry] Installed plugin: ${id}`);
+        }
+      } catch (error) {
+        console.error(
+          `[PluginRegistry] Failed to install plugin "${id}":`,
+          error,
+        );
+        throw error;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Uninstall a specific plugin by ID
+   * Calls the uninstall() lifecycle hook if present
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if uninstalled successfully
+   */
+  async uninstallPlugin(id) {
+    const definition = this.findDefinition(id);
+    if (!definition) {
+      console.warn(
+        `[PluginRegistry] Cannot uninstall: plugin "${id}" not found`,
+      );
+      return false;
+    }
+
+    // Call uninstall hook if present
+    if (typeof definition.uninstall === 'function') {
+      try {
+        await definition.uninstall(definition.context);
+        if (__DEV__) {
+          console.log(`[PluginRegistry] Uninstalled plugin: ${id}`);
+        }
+      } catch (error) {
+        console.error(
+          `[PluginRegistry] Failed to uninstall plugin "${id}":`,
+          error,
+        );
+        throw error;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Load a specific plugin by ID (runtime activation)
+   * Creates plugin instance and calls mount() hook
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if loaded successfully
+   */
+  async loadPlugin(id) {
+    const definition = this.findDefinition(id);
+    if (!definition) {
+      console.warn(`[PluginRegistry] Cannot load: plugin "${id}" not found`);
+      return false;
+    }
+
+    if (this.has(id)) {
+      if (__DEV__) {
+        console.warn(`[PluginRegistry] Plugin "${id}" is already loaded`);
+      }
+      return true;
+    }
+
+    // Create plugin instance with mount/unmount wrappers
+    const pluginInstance = {
+      ...definition,
+      init: async reg => {
+        if (__DEV__) {
+          console.log(`[PluginRegistry] Mounting plugin: ${id}`);
+        }
+        if (typeof definition.mount === 'function') {
+          await definition.mount(reg);
+        }
+      },
+      destroy: async reg => {
+        if (typeof definition.unmount === 'function') {
+          await definition.unmount(reg);
+        }
+      },
+    };
+
+    await this.register(id, pluginInstance);
+    return true;
+  }
+
+  /**
+   * Unload a specific plugin by ID (runtime deactivation)
+   * Unregisters plugin and calls unmount() hook
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if unloaded successfully
+   */
+  async unloadPlugin(id) {
+    if (!this.has(id)) {
+      if (__DEV__) {
+        console.warn(`[PluginRegistry] Plugin "${id}" is not loaded`);
+      }
+      return false;
+    }
+
+    await this.unregister(id);
+    if (__DEV__) {
+      console.log(`[PluginRegistry] Unloaded plugin: ${id}`);
+    }
+    return true;
+  }
+
+  /**
+   * Update a specific plugin by ID
+   * Unloads current instance and reloads for new version
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if updated successfully
+   */
+  async updatePlugin(id) {
+    if (__DEV__) {
+      console.log(`[PluginRegistry] Updating plugin: ${id}`);
+    }
+
+    // Unload if currently loaded
+    if (this.has(id)) {
+      await this.unloadPlugin(id);
+    }
+
+    // Reload plugin
+    return this.loadPlugin(id);
   }
 
   // =========================================================================

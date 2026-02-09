@@ -65,11 +65,11 @@ function generateManifests(plugins) {
 
     const outputManifest = {
       ...manifest,
-      ...(manifest[createPluginConfig.MANIFEST_API_ENTRY] && {
-        [createPluginConfig.MANIFEST_API_ENTRY]: `./${createPluginConfig.MANIFEST_API_ENTRY}.js`,
+      ...(manifest.main && {
+        main: './api.js',
       }),
-      ...(manifest[createPluginConfig.MANIFEST_UI_ENTRY] && {
-        [createPluginConfig.MANIFEST_UI_ENTRY]: `./${createPluginConfig.MANIFEST_UI_ENTRY}.js`,
+      ...(manifest.browser && {
+        browser: './browser.js',
       }),
     };
 

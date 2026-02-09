@@ -5,19 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { BasePluginManager, LOADED_VERSIONS } from './base';
-
-// Symbol to store initialization promise
-const PLUGIN_MANAGER_INIT = Symbol('__rsk.pluginManagerInit__');
+import {
+  BasePluginManager,
+  LOADED_VERSIONS,
+  PLUGIN_MANAGER_INIT,
+} from './base';
 
 class ClientPluginManager extends BasePluginManager {
-  constructor() {
-    super();
-    this[PLUGIN_MANAGER_INIT] = null;
-    // Track loaded plugin versions for intelligent cache invalidation
-    this[LOADED_VERSIONS] = new Map(); // pluginId -> version
-  }
-
   /**
    * Build plugin script URL
    * @param {string} id - Plugin ID
@@ -113,19 +107,19 @@ class ClientPluginManager extends BasePluginManager {
   /**
    * Get module from container
    * @param {Object} container - MF container
-   * @param {string} moduleName - Module name (e.g., './plugin')
    * @returns {Promise<Object>} Module
    */
-  async getContainerModule(container, moduleName = './plugin') {
-    const factory = await container.get(moduleName);
+  async getContainerModule(container) {
+    const factory = await container.get('./plugin');
     return factory();
   }
 
   /**
    * Ensure Module Federation shared scope is initialized
    * For SSR: Wait for hydration to complete before loading plugins
+   * @returns {Promise<void>}
    */
-  async _ensureSharedScopeInitialized() {
+  async _ensureReady() {
     if (this[PLUGIN_MANAGER_INIT]) {
       return this[PLUGIN_MANAGER_INIT];
     }
@@ -162,26 +156,48 @@ class ClientPluginManager extends BasePluginManager {
   }
 
   /**
+   * Resolve the plugin entry point based on manifest
+   * @param {Object} manifest - Plugin manifest
+   * @returns {string|null} Entry point filename or null to skip
+   */
+  resolveEntryPoint(manifest) {
+    // If browser entry exists, we always load 'remote.js' which is the Webpack MF container
+    return manifest && manifest.browser ? 'remote.js' : null;
+  }
+
+  /**
    * Load plugin module as MF remote container
    * @param {string} id - Plugin ID
-   * @param {object} manifest - Plugin manifest
-   * @param {string} containerName - MF container name (window global)
+   * @param {string|null} entryPoint - Resolved entry point filename
+   * @param {Object} manifest - Plugin manifest
+   * @param {Object} options - Additional options (containerName)
    */
-  async loadPluginModule(id, manifest, containerName) {
+  async loadPluginModule(id, entryPoint, manifest, options) {
+    // Skip if no entry point resolved (e.g. server-only plugin)
+    if (!entryPoint) {
+      if (__DEV__) {
+        console.log(
+          `[ClientPluginManager] Skipping plugin ${id} (no client entry point)`,
+        );
+      }
+      return null;
+    }
+
     const startTime = Date.now();
     const currentVersion = (manifest && manifest.version) || '0.0.0';
+    const containerName = options && options.containerName;
 
     try {
       // Ensure shared scope is ready before loading any plugin
       // eslint-disable-next-line no-underscore-dangle
-      await this._ensureSharedScopeInitialized();
+      await this._ensureReady();
 
       // Version-based cache invalidation via URL query parameter
       const loadedVersion = this[LOADED_VERSIONS].get(id);
       const versionChanged = currentVersion && loadedVersion !== currentVersion;
 
-      // Load browser.js (MF container)
-      const baseUrl = this.getPluginScriptUrl(id, 'browser.js');
+      // Load remote.js (MF container)
+      const baseUrl = this.getPluginScriptUrl(id, entryPoint);
       const scriptUrl = versionChanged
         ? `${baseUrl}?v=${currentVersion}`
         : baseUrl;

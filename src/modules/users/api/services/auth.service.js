@@ -12,123 +12,12 @@ import {
   validateResetToken,
 } from '../utils/password';
 import { DEFAULT_ROLE } from '../constants/rbac';
-import { collectUserRBACData, isAdmin } from '../utils/rbac/collector';
 import { logUserActivity } from '../utils/activity';
-
-// ========================================================================
-// HELPERS
-// ========================================================================
-
-/**
- * Format user data for API response
- *
- * @param {Object} user - User model instance
- * @param {Object} [rbacData] - Pre-collected RBAC data (optional)
- * @returns {Object} Formatted user object
- */
-function formatUserData(user, rbacData = null) {
-  // Collect RBAC data if not provided
-  const rbac = rbacData || collectUserRBACData(user);
-
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    bio: (user.profile && user.profile.bio) || null,
-    location: (user.profile && user.profile.location) || null,
-    website: (user.profile && user.profile.website) || null,
-    is_admin: isAdmin({ roles: rbac.roles }),
-    roles: rbac.roles,
-    permissions: rbac.permissions,
-    groups: rbac.groups,
-  };
-}
+import { formatUserResponse } from '../utils/formatters';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
 // ========================================================================
-
-/**
- * Get current user with complete RBAC information
- *
- * Fetches user data including profile, roles, permissions, and groups.
- * This is the centralized function used by login, register, and me endpoints
- * to ensure consistent user data formatting.
- *
- * @param {string} userId - User ID to fetch
- * @param {Object} models - Database models
- * @returns {Promise<Object>} Formatted user object with RBAC data
- */
-export async function getCurrentUser(userId, models) {
-  const { User, UserProfile, Role, Permission, Group } = models;
-
-  // Get user with profile, roles, permissions, and groups
-  const user = await User.findByPk(userId, {
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
-  });
-
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  return formatUserData(user);
-}
 
 /**
  * Register a new user
@@ -191,28 +80,31 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
   await hook('auth').emit('registered', { user_id: user.id, email });
 
   // Return formatted user data with default RBAC for new user
-  return formatUserData(user, {
-    roles: [DEFAULT_ROLE],
-    permissions: [],
-    groups: [],
+  return formatUserResponse(user, {
+    hook,
+    rbacData: {
+      roles: [DEFAULT_ROLE],
+      permissions: [],
+      groups: [],
+    },
   });
 }
 
 /**
  * Log user logout activity
  *
- * @param {string} userId - User ID
+ * @param {string} user_id - User ID
  * @param {Object} options - Options object
  * @param {Object} [options.webhook] - Webhook engine for activity logging
  * @returns {Promise<void>}
  */
-export async function logoutUser(userId, { webhook, hook } = {}) {
-  await logUserActivity(webhook, 'logout', userId, {}, null, {
+export async function logoutUser(user_id, { webhook, hook } = {}) {
+  await logUserActivity(webhook, 'logout', user_id, {}, null, {
     useWorker: true,
   });
 
   // Emit hook event if hook factory provided
-  await hook('auth').emit('logout', { user_id: userId });
+  await hook('auth').emit('logout', { user_id });
 }
 
 /**
@@ -350,10 +242,10 @@ export async function authenticateUser(
   await hook('auth').emit('login', {
     user_id: user.id,
     activityData,
-    user: formatUserData(user),
+    user: await formatUserResponse(user, { hook }),
   });
 
-  return formatUserData(user);
+  return formatUserResponse(user, { hook });
 }
 
 /**

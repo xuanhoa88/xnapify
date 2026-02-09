@@ -14,7 +14,9 @@ import {
   passwordResetConfirmFormSchema,
 } from '../../validator/auth';
 import * as authService from '../services/auth.service';
+import * as profileService from '../services/profile.service';
 import { generatePassword } from '../utils/password';
+import { formatUserResponse } from '../utils/formatters';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS
@@ -213,11 +215,16 @@ export async function logout(req, res) {
 export async function me(req, res) {
   const http = req.app.get('http');
   try {
-    // Get models from app context
-    const models = req.app.get('models');
+    const hook = req.app.get('hook').withContext(req.app);
 
     // Get complete user data with RBAC information
-    const userData = await authService.getCurrentUser(req.user.id, models);
+    const user = await profileService.getUserWithProfile(req.user.id, {
+      models: req.app.get('models'),
+      hook: hook,
+    });
+
+    // Format response with hook extension support
+    const userData = await formatUserResponse(user, { hook: hook });
 
     return http.sendSuccess(res, { user: userData });
   } catch (error) {
@@ -310,7 +317,10 @@ export async function emailVerification(req, res) {
     });
 
     // Get complete user data with RBAC information
-    const userData = await authService.getCurrentUser(user.id, models);
+    const userData = await profileService.getUserWithProfile(user.id, {
+      models,
+      hook,
+    });
 
     // Generate token pair using configured JWT instance
     const jwt = req.app.get('jwt');

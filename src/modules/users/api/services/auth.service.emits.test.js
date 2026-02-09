@@ -3,13 +3,23 @@ import { createFactory } from '../../../../shared/api/hook/factory';
 
 // Mock password utilities where needed
 jest.mock('../utils/password', () => ({
-  createTimedResetToken: jest.fn(() => ({ token: 'tok1', hashedToken: 'hashed', expiresAt: Date.now() + 3600 })),
+  createTimedResetToken: jest.fn(() => ({
+    token: 'tok1',
+    hashedToken: 'hashed',
+    expiresAt: Date.now() + 3600,
+  })),
   hashToken: jest.fn(token => `hashed_${token}`),
   validateResetToken: jest.fn(() => ({ valid: true, errors: [] })),
   verifyPassword: jest.fn(() => true),
 }));
 
-import { createTimedResetToken, hashToken, validateResetToken, verifyPassword } from '../utils/password';
+import {
+  createTimedResetToken,
+  // eslint-disable-next-line no-unused-vars
+  hashToken,
+  validateResetToken,
+  verifyPassword,
+} from '../utils/password';
 
 describe('auth.service emits (additional)', () => {
   test('registerUser emits registered', async () => {
@@ -41,7 +51,10 @@ describe('auth.service emits (additional)', () => {
       called = true;
     });
 
-    await authService.registerUser({ email: user.email, password: 'p' }, { models, webhook: null, hook });
+    await authService.registerUser(
+      { email: user.email, password: 'p' },
+      { models, webhook: null, hook },
+    );
 
     expect(called).toBe(true);
   });
@@ -88,7 +101,12 @@ describe('auth.service emits (additional)', () => {
       called = true;
     });
 
-    await authService.authenticateUser('email', 'pass', { models, webhook: null, activityData, hook });
+    await authService.authenticateUser('email', 'pass', {
+      models,
+      webhook: null,
+      activityData,
+      hook,
+    });
 
     expect(called).toBe(true);
     expect(verifyPassword).toHaveBeenCalled();
@@ -100,7 +118,12 @@ describe('auth.service emits (additional)', () => {
     const hook = factory.withContext(ctx);
 
     let called = false;
-    const user = { id: 'u3', email_confirmed: false, email: 'u3@example.com', update: jest.fn() };
+    const user = {
+      id: 'u3',
+      email_confirmed: false,
+      email: 'u3@example.com',
+      update: jest.fn(),
+    };
 
     const models = {
       User: {
@@ -148,7 +171,11 @@ describe('auth.service emits (additional)', () => {
     // ensure event registered on channel
     expect(hook('auth').events).toContain('password_reset_requested');
 
-    await authService.resetPasswordRequest(user.email, { models, webhook: null, hook });
+    await authService.resetPasswordRequest(user.email, {
+      models,
+      webhook: null,
+      hook,
+    });
 
     expect(called).toBe(true);
     expect(createTimedResetToken).toHaveBeenCalled();
@@ -161,7 +188,13 @@ describe('auth.service emits (additional)', () => {
 
     let called = false;
 
-    const tokenRecord = { hashed_token: 'hashed_val', user_id: 'u5', expires_at: Date.now() + 10000, used_at: null, update: jest.fn() };
+    const tokenRecord = {
+      hashed_token: 'hashed_val',
+      user_id: 'u5',
+      expires_at: Date.now() + 10000,
+      used_at: null,
+      update: jest.fn(),
+    };
 
     const models = {
       User: {
@@ -179,7 +212,11 @@ describe('auth.service emits (additional)', () => {
       called = true;
     });
 
-    await authService.resetPasswordConfirmation('token123', 'newpass', { models, webhook: null, hook });
+    await authService.resetPasswordConfirmation('token123', 'newpass', {
+      models,
+      webhook: null,
+      hook,
+    });
 
     expect(called).toBe(true);
     expect(validateResetToken).toHaveBeenCalled();

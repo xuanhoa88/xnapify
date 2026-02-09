@@ -13,17 +13,20 @@ import { logUserActivity } from '../utils/activity';
 // ========================================================================
 
 /**
- * Get user with profile information
+ * Get user with profile and RBAC information
+ *
+ * Centralized function for fetching user data with profile, roles, permissions,
+ * and groups. Used by both auth and profile endpoints.
  *
  * @param {string} user_id - User ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} options.hook - Hook factory for activity logging
- * @returns {Promise<Object>} User with profile
+ * @returns {Promise<Object>} User with profile and RBAC
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserWithProfile(user_id, { models, hook }) {
-  const { User, UserProfile, Role, Group } = models;
+  const { User, UserProfile, Role, Permission, Group } = models;
 
   const user = await User.findByPk(user_id, {
     include: [
@@ -33,11 +36,22 @@ export async function getUserWithProfile(user_id, { models, hook }) {
         as: 'roles',
         attributes: ['id', 'name', 'description'],
         through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
+            through: { attributes: [] },
+          },
+        ],
       },
       {
         model: Group,
         as: 'groups',
         attributes: ['id', 'name', 'description', 'category', 'type'],
+        required: false,
         through: { attributes: [] },
         include: [
           {
@@ -45,6 +59,16 @@ export async function getUserWithProfile(user_id, { models, hook }) {
             as: 'roles',
             attributes: ['id', 'name', 'description'],
             through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
+                through: { attributes: [] },
+              },
+            ],
           },
         ],
       },
