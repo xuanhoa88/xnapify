@@ -6,15 +6,40 @@
  */
 
 import path from 'path';
+import { registry } from '../Registry';
 import {
   BasePluginManager,
   PLUGIN_CONTEXT,
   LOADED_VERSIONS,
   PLUGIN_MANAGER_INIT,
-  PLUGIN_API_INSTANCES,
 } from './base';
 
+const PLUGIN_API_INSTANCES = Symbol('__rsk.pluginApiInstances__');
+
 class ServerPluginManager extends BasePluginManager {
+  constructor() {
+    super();
+    this[PLUGIN_API_INSTANCES] = new Map();
+
+    // Clean up API instances when plugin is unloaded
+    this.on('plugin:unloaded', async ({ id }) => {
+      const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
+      if (apiPlugin && typeof apiPlugin.destroy === 'function') {
+        try {
+          await apiPlugin.destroy(registry, this[PLUGIN_CONTEXT]);
+          if (__DEV__) {
+            console.log(`[PluginManager] Destroyed API for: ${id}`);
+          }
+        } catch (err) {
+          console.error(
+            `[PluginManager] Failed to destroy API for ${id}:`,
+            err,
+          );
+        }
+      }
+      this[PLUGIN_API_INSTANCES].delete(id);
+    });
+  }
   /**
    * Get the plugin bundle path
    * @param {string} internalId - Plugin internal ID (folder name)
@@ -182,7 +207,7 @@ class ServerPluginManager extends BasePluginManager {
             if (__DEV__) {
               console.log(`[ServerPluginManager] Booting API for ${id}`);
             }
-            await pluginApi.init(this[PLUGIN_CONTEXT]);
+            await pluginApi.init(registry, this[PLUGIN_CONTEXT]);
             // Store API instance for destroy during unload
             this[PLUGIN_API_INSTANCES].set(id, pluginApi);
           } else {
@@ -247,6 +272,11 @@ class ServerPluginManager extends BasePluginManager {
       throw error;
     }
   }
+
+  /**
+   * Unload a plugin by ID
+   * @param {string} id - Plugin ID
+   */
 
   /**
    * Subscribe to events (No-op on server)

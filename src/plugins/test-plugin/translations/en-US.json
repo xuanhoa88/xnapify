@@ -1,0 +1,8 @@
+{
+  "nickname": "Nickname",
+  "nickname_hint": "Added via Test Plugin (min 3 chars)",
+  "validations": {
+    "nickname_taken": "This nickname is already taken",
+    "nickname_too_short": "Nickname must be at least 3 characters long"
+  }
+}

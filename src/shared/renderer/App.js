@@ -38,7 +38,7 @@ import PropTypes from 'prop-types';
 import React, { useMemo } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
-import { HistoryProvider } from './Providers';
+import { HistoryProvider } from './Providers/History';
 
 // =============================================================================
 // PROP TYPES

@@ -196,7 +196,10 @@ function Roles() {
           disabled={!canCreateRole}
           title={
             !canCreateRole
-              ? t('You do not have permission to create roles')
+              ? t(
+                  'roles.noPermissionToCreate',
+                  'You do not have permission to create roles',
+                )
               : undefined
           }
         >
@@ -228,7 +231,10 @@ function Roles() {
             disabled={!canCreateRole}
             title={
               !canCreateRole
-                ? t('You do not have permission to create roles')
+                ? t(
+                    'roles.noPermissionToCreate',
+                    'You do not have permission to create roles',
+                  )
                 : undefined
             }
           >

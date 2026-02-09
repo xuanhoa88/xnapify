@@ -20,7 +20,6 @@ export const EVENT_HANDLERS = Symbol('__rsk.pluginEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedPluginVersions__');
 export const PLUGIN_CSS_ENTRY_POINTS = Symbol('__rsk.pluginCssEntryPoints__');
 export const PLUGIN_MANAGER_INIT = Symbol('__rsk.pluginManagerInit__');
-export const PLUGIN_API_INSTANCES = Symbol('__rsk.pluginApiInstances__');
 
 /**
  * Plugin states
@@ -56,7 +55,6 @@ export class BasePluginManager {
     this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> cssFiles array
     this[LOADED_VERSIONS] = new Map(); // pluginId -> version
     this[PLUGIN_MANAGER_INIT] = null; // initialization promise
-    this[PLUGIN_API_INSTANCES] = new Map(); // id -> API plugin instance { init, destroy }
   }
 
   /**
@@ -147,7 +145,7 @@ export class BasePluginManager {
         .map((result, index) => ({ result, plugin: plugins[index] }))
         .filter(({ result }) => result.status === 'fulfilled');
 
-      this.emit('plugins:initialized', {
+      await this.emit('plugins:initialized', {
         total: plugins.length,
         loaded: success.length,
         failed: failures.length,
@@ -159,7 +157,7 @@ export class BasePluginManager {
       }
     } catch (error) {
       console.error('[PluginManager] Failed to fetch plugins:', error);
-      this.emit('plugins:init-failed', { error });
+      await this.emit('plugins:init-failed', { error });
     }
   }
 
@@ -364,7 +362,7 @@ export class BasePluginManager {
     if (!id || typeof id !== 'string') {
       const error = new Error('Plugin ID must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('plugin:validation-failed', { id, error });
+      await this.emit('plugin:validation-failed', { id, error });
       console.error(error);
       return;
     }
@@ -388,7 +386,7 @@ export class BasePluginManager {
       manifest,
     });
 
-    this.emit('plugin:loading', { id });
+    await this.emit('plugin:loading', { id });
 
     try {
       // Load plugin dependencies first (ensures dependency graph is satisfied)
@@ -465,7 +463,7 @@ export class BasePluginManager {
       await registry.define(plugin, this[PLUGIN_CONTEXT]);
 
       // Call init() lifecycle hook (runtime activation)
-      await registry.register(id, plugin);
+      await registry.register(id, plugin, this[PLUGIN_CONTEXT]);
 
       // Store plugin instance
       this[ACTIVE_PLUGINS].set(id, plugin);
@@ -484,7 +482,7 @@ export class BasePluginManager {
       if (__DEV__) {
         console.log(`[PluginManager] Successfully loaded plugin: ${id}`);
       }
-      this.emit('plugin:loaded', { id, plugin });
+      await this.emit('plugin:loaded', { id, plugin });
 
       // Store CSS files from manifest if available (for SSR injection)
       if (serverManifest && Array.isArray(serverManifest.cssFiles)) {
@@ -507,7 +505,7 @@ export class BasePluginManager {
         metadata.error = error;
       }
 
-      this.emit('plugin:failed', { id, error });
+      await this.emit('plugin:failed', { id, error });
       console.error(error);
     }
   }
@@ -520,7 +518,7 @@ export class BasePluginManager {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Plugin ID must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('plugin:validation-failed', { id, error });
+      await this.emit('plugin:validation-failed', { id, error });
       console.error(error);
       return;
     }
@@ -535,7 +533,7 @@ export class BasePluginManager {
       metadata.state = PluginState.UNLOADING;
     }
 
-    this.emit('plugin:unloading', { id });
+    await this.emit('plugin:unloading', { id });
 
     try {
       const plugin = this[ACTIVE_PLUGINS].get(id);
@@ -545,21 +543,11 @@ export class BasePluginManager {
         await plugin.onUnload(this[PLUGIN_CONTEXT]);
       }
 
-      // Call plugin API destroy hook
-      const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
-      if (apiPlugin && typeof apiPlugin.destroy === 'function') {
-        await apiPlugin.destroy(this[PLUGIN_CONTEXT]);
-        if (__DEV__) {
-          console.log(`[PluginManager] Destroyed API for: ${id}`);
-        }
-      }
-      this[PLUGIN_API_INSTANCES].delete(id);
-
       // Cleanup CSS/JS resources from DOM
       this.cleanupPluginResources(id);
 
       // Unregister from registry
-      await registry.unregister(id);
+      await registry.unregister(id, this[PLUGIN_CONTEXT]);
 
       // Remove from active plugins
       this[ACTIVE_PLUGINS].delete(id);
@@ -570,7 +558,7 @@ export class BasePluginManager {
       }
 
       console.log(`[PluginManager] Successfully unloaded plugin: ${id}`);
-      this.emit('plugin:unloaded', { id });
+      await this.emit('plugin:unloaded', { id });
     } catch (error) {
       console.error(`[PluginManager] Failed to unload plugin "${id}":`, error);
 
@@ -579,7 +567,7 @@ export class BasePluginManager {
         metadata.error = error;
       }
 
-      this.emit('plugin:unload-failed', { id, error });
+      await this.emit('plugin:unload-failed', { id, error });
       console.error(error);
     }
   }
@@ -606,7 +594,7 @@ export class BasePluginManager {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Plugin ID must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('plugin:validation-failed', { id, error });
+      await this.emit('plugin:validation-failed', { id, error });
       console.error(error);
       return;
     }
@@ -614,7 +602,7 @@ export class BasePluginManager {
     const oldMetadata = this[PLUGIN_METADATA].get(id);
     const oldVersion = (oldMetadata && oldMetadata.version) || 'unknown';
 
-    this.emit('plugin:updating', {
+    await this.emit('plugin:updating', {
       id,
       oldVersion,
       newVersion: (newManifest && newManifest.version) || 'unknown',
@@ -640,10 +628,10 @@ export class BasePluginManager {
         );
       }
 
-      this.emit('plugin:updated', { id, oldVersion, newVersion });
+      await this.emit('plugin:updated', { id, oldVersion, newVersion });
     } catch (error) {
       console.error(`[PluginManager] Failed to update plugin "${id}":`, error);
-      this.emit('plugin:update-failed', { id, error });
+      await this.emit('plugin:update-failed', { id, error });
       console.error(error);
     }
   }
@@ -657,12 +645,12 @@ export class BasePluginManager {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Plugin ID must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('plugin:validation-failed', { id, error });
+      await this.emit('plugin:validation-failed', { id, error });
       console.error(error);
       return;
     }
 
-    this.emit('plugin:installing', { id });
+    await this.emit('plugin:installing', { id });
 
     try {
       const result = await registry.installPlugin(id);
@@ -670,12 +658,12 @@ export class BasePluginManager {
         if (__DEV__) {
           console.log(`[PluginManager] Installed plugin: ${id}`);
         }
-        this.emit('plugin:installed', { id });
+        await this.emit('plugin:installed', { id });
       }
       return result;
     } catch (error) {
       console.error(`[PluginManager] Failed to install plugin "${id}":`, error);
-      this.emit('plugin:install-failed', { id, error });
+      await this.emit('plugin:install-failed', { id, error });
       console.error(error);
     }
   }
@@ -689,12 +677,12 @@ export class BasePluginManager {
     if (typeof id !== 'string' || id.trim().length === 0) {
       const error = new Error('Plugin ID must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('plugin:validation-failed', { id, error });
+      await this.emit('plugin:validation-failed', { id, error });
       console.error(error);
       return;
     }
 
-    this.emit('plugin:uninstalling', { id });
+    await this.emit('plugin:uninstalling', { id });
 
     try {
       const result = await registry.uninstallPlugin(id);
@@ -702,7 +690,7 @@ export class BasePluginManager {
         if (__DEV__) {
           console.log(`[PluginManager] Uninstalled plugin: ${id}`);
         }
-        this.emit('plugin:uninstalled', { id });
+        await this.emit('plugin:uninstalled', { id });
       }
       return result;
     } catch (error) {
@@ -710,7 +698,7 @@ export class BasePluginManager {
         `[PluginManager] Failed to uninstall plugin "${id}":`,
         error,
       );
-      this.emit('plugin:uninstall-failed', { id, error });
+      await this.emit('plugin:uninstall-failed', { id, error });
       console.error(error);
     }
   }
@@ -738,12 +726,12 @@ export class BasePluginManager {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('namespace:validation-failed', { ns, error });
+      await this.emit('namespace:validation-failed', { ns, error });
       console.error(error);
       return;
     }
 
-    this.emit('namespace:loading', { ns });
+    await this.emit('namespace:loading', { ns });
 
     try {
       if (__DEV__) {
@@ -774,7 +762,7 @@ export class BasePluginManager {
               console.log(`[PluginManager] Initializing plugin: ${plugin.id}`);
             }
             if (typeof plugin.init === 'function') {
-              await plugin.init(reg);
+              await plugin.init(reg, this[PLUGIN_CONTEXT]);
             } else if (__DEV__) {
               console.warn(
                 `[PluginManager] Plugin ${plugin.id} has no 'init' method`,
@@ -786,7 +774,7 @@ export class BasePluginManager {
               console.log(`[PluginManager] Destroying plugin: ${plugin.id}`);
             }
             if (typeof plugin.destroy === 'function') {
-              await plugin.destroy(reg);
+              await plugin.destroy(reg, this[PLUGIN_CONTEXT]);
             } else if (__DEV__) {
               console.warn(
                 `[PluginManager] Plugin ${plugin.id} has no 'destroy' method`,
@@ -801,10 +789,10 @@ export class BasePluginManager {
       if (__DEV__) {
         console.log(`[PluginManager] Loaded namespace: ${ns}`);
       }
-      this.emit('namespace:loaded', { ns });
+      await this.emit('namespace:loaded', { ns });
     } catch (error) {
       console.error(`[PluginManager] Failed to load namespace "${ns}":`, error);
-      this.emit('namespace:load-failed', { ns, error });
+      await this.emit('namespace:load-failed', { ns, error });
       console.error(error);
     }
   }
@@ -817,12 +805,12 @@ export class BasePluginManager {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'PluginManagerError';
-      this.emit('namespace:validation-failed', { ns, error });
+      await this.emit('namespace:validation-failed', { ns, error });
       console.error(error);
       return;
     }
 
-    this.emit('namespace:unloading', { ns });
+    await this.emit('namespace:unloading', { ns });
 
     try {
       const plugins = registry.getDefinitions(ns);
@@ -835,13 +823,13 @@ export class BasePluginManager {
       if (__DEV__) {
         console.log(`[PluginManager] Unloaded namespace: ${ns}`);
       }
-      this.emit('namespace:unloaded', { ns });
+      await this.emit('namespace:unloaded', { ns });
     } catch (error) {
       console.error(
         `[PluginManager] Failed to unload namespace "${ns}":`,
         error,
       );
-      this.emit('namespace:unload-failed', { ns, error });
+      await this.emit('namespace:unload-failed', { ns, error });
       console.error(error);
     }
   }
@@ -919,18 +907,27 @@ export class BasePluginManager {
    * Event emitter - emit an event
    * @param {string} eventType - Event type
    * @param {Object} data - Event data
+   * @returns {Promise<void>}
    */
-  emit(eventType, data) {
+  async emit(eventType, data) {
     const handlers = this[EVENT_HANDLERS].get(eventType);
-    if (handlers) {
-      handlers.forEach(handler => {
-        try {
-          handler(data);
-        } catch (error) {
-          console.error(`[PluginManager] Event handler error:`, error);
-        }
-      });
+    if (!handlers || handlers.size === 0) {
+      return;
     }
+
+    const handlerPromises = Array.from(handlers).map(handler =>
+      Promise.resolve()
+        .then(() => handler(data))
+        .catch(error => {
+          console.error(
+            `[PluginManager] Event handler error for "${eventType}":`,
+            error,
+          );
+          // Optionally re-throw or handle based on your error strategy
+        }),
+    );
+
+    await Promise.all(handlerPromises);
   }
 
   /**
@@ -940,30 +937,41 @@ export class BasePluginManager {
    * @returns {Function} Unsubscribe function
    */
   on(eventType, handler) {
+    if (typeof handler !== 'function') {
+      throw new TypeError('Handler must be a function');
+    }
+
     if (!this[EVENT_HANDLERS].has(eventType)) {
       this[EVENT_HANDLERS].set(eventType, new Set());
     }
 
-    this[EVENT_HANDLERS].get(eventType).add(handler);
+    const handlers = this[EVENT_HANDLERS].get(eventType);
+    handlers.add(handler);
 
     // Return unsubscribe function
-    return () => {
-      const handlers = this[EVENT_HANDLERS].get(eventType);
-      if (handlers) {
-        handlers.delete(handler);
-      }
-    };
+    return () => this.off(eventType, handler);
   }
 
   /**
    * Event emitter - unsubscribe from an event
    * @param {string} eventType - Event type
-   * @param {Function} handler - Event handler
+   * @param {Function} handler - Event handler (optional - if omitted, removes all handlers)
    */
   off(eventType, handler) {
     const handlers = this[EVENT_HANDLERS].get(eventType);
-    if (handlers) {
+    if (!handlers) {
+      return;
+    }
+
+    if (handler) {
       handlers.delete(handler);
+      // Clean up empty event type
+      if (handlers.size === 0) {
+        this[EVENT_HANDLERS].delete(eventType);
+      }
+    } else {
+      // Remove all handlers for this event type
+      this[EVENT_HANDLERS].delete(eventType);
     }
   }
 
@@ -971,16 +979,32 @@ export class BasePluginManager {
    * Clean up resources
    */
   async destroy() {
+    if (__DEV__) {
+      console.log('[PluginManager] Destroying...');
+    }
+
+    await this.emit('manager:destroying');
+
     // Unload all plugins
     const pluginIds = Array.from(this[ACTIVE_PLUGINS].keys());
     await Promise.all(pluginIds.map(id => this.unloadPlugin(id)));
 
-    // Clear all event handlers
+    // Clear all internal state
+    this[ACTIVE_PLUGINS].clear();
+    this[PLUGIN_METADATA].clear();
+    this[PLUGIN_CSS_ENTRY_POINTS].clear();
+    this[LOADED_VERSIONS].clear();
+    this[PLUGIN_CONTEXT] = null;
+    this[INITIALIZED] = false;
+    this[PLUGIN_MANAGER_INIT] = null;
+
+    await this.emit('manager:destroyed');
+
+    // Clear all event handlers last
     this[EVENT_HANDLERS].clear();
 
-    // Clear metadata
-    this[PLUGIN_METADATA].clear();
-
-    console.log('[PluginManager] Destroyed');
+    if (__DEV__) {
+      console.log('[PluginManager] Destroyed');
+    }
   }
 }

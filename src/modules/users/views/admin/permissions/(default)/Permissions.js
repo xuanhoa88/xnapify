@@ -281,7 +281,10 @@ function Permissions() {
           disabled={!canCreatePermission}
           title={
             !canCreatePermission
-              ? t('You do not have permission to create permissions')
+              ? t(
+                  'permissions.noPermissionToCreate',
+                  'You do not have permission to create permissions',
+                )
               : undefined
           }
         >
@@ -354,7 +357,10 @@ function Permissions() {
             disabled={!search && !canCreatePermission}
             title={
               !search && !canCreatePermission
-                ? t('You do not have permission to create permissions')
+                ? t(
+                    'permissions.noPermissionToCreate',
+                    'You do not have permission to create permissions',
+                  )
                 : undefined
             }
           >

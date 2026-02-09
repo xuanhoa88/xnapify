@@ -363,10 +363,10 @@ function createSSRHandler(port, host) {
           cwd: config.cwd,
           app: pluginApp,
         });
-      } catch (error) {
+      } catch (err) {
         // Log but don't fail the request
         if (__DEV__) {
-          console.warn('⚠️ Plugin initialization failed:', error.message);
+          console.warn('⚠️ Plugin initialization failed:', err.message);
         }
       }
 

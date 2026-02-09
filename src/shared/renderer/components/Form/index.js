@@ -6,7 +6,7 @@
  */
 
 import { useFormContext, Controller } from 'react-hook-form';
-import '../../../../shared/validator';
+import '../../../validator';
 import Form from './Form';
 import FormField from './Field';
 import FormLabel from './Label';

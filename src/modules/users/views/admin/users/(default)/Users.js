@@ -313,7 +313,10 @@ function Users() {
           disabled={!canCreateUser}
           title={
             !canCreateUser
-              ? t('You do not have permission to create users')
+              ? t(
+                  'users.noPermissionToCreate',
+                  'You do not have permission to create users',
+                )
               : undefined
           }
         >
@@ -547,7 +550,10 @@ function Users() {
             disabled={!canCreateUser}
             title={
               !canCreateUser
-                ? t('You do not have permission to create users')
+                ? t(
+                    'users.noPermissionToCreate',
+                    'You do not have permission to create users',
+                  )
                 : undefined
             }
           >

@@ -10,7 +10,7 @@ export default function PluginField({ register }) {
     <Form.Field name='nickname' label={t('nickname', 'Nickname')}>
       <Form.Input {...register('nickname')} />
       <div className={s.formText}>
-        {t('nickname_hint', 'Added via Test Plugin (min 3 chars)')}
+        {t('nickname_hint', 'This field requires a minimum of 3 characters')}
       </div>
     </Form.Field>
   );

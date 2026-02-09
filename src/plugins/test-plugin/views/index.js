@@ -5,23 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { addNamespace } from '../../../shared/i18n/addNamespace';
-import { getTranslations } from '../../../shared/i18n/getTranslations';
+import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
-import { PLUGIN_ID } from '../constants';
 import PluginField from './PluginField';
 
-// Register translations for this plugin (client-side)
-addNamespace(
-  PLUGIN_ID,
-  getTranslations(require.context('../translations', false, /\.json$/i)),
-);
-
 // Extract handlers for cleanup
-const extendProfileValidator = (schema, _validator) => {
+const extendProfileValidator = (schema, validator) => {
   // Merge plugin schema with base schema
   // We use the exported profileSchema which uses the shared Zod instance
-  const extension = profileSchema();
+  const extension = profileSchema(validator);
   return schema.merge(extension);
 };
 
@@ -52,7 +44,12 @@ export default {
   },
 
   // Lifecycle: init (called when plugin is initialized)
-  init(registry) {
+  init(registry, context) {
+    // 0. Register Translations
+    if (context && context.i18n) {
+      registerTranslations(context.i18n);
+    }
+
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', PluginField, {
       order: 10,

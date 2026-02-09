@@ -5,16 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { addNamespace } from '../../../shared/i18n/addNamespace';
-import { getTranslations } from '../../../shared/i18n/getTranslations';
-import { PLUGIN_ID } from '../constants';
+import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
-
-// Register translations for this plugin (server-side)
-addNamespace(
-  PLUGIN_ID,
-  getTranslations(require.context('../translations', false, /\.json$/i)),
-);
 
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
@@ -48,10 +40,15 @@ export default {
   },
 
   // Lifecycle: init (called when plugin is initialized on server)
-  async init(context) {
+  async init(registry, context) {
     console.log(
       '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
     );
+
+    // 0. Register Translations
+    if (context.i18n) {
+      registerTranslations(context.i18n);
+    }
 
     // Get database connection
     const db = context.app.get('db');
@@ -86,7 +83,7 @@ export default {
     // Handler to extend profile schema
     this[HANDLERS].updateValidation = function (context) {
       if (context.schema) {
-        const extension = profileSchema();
+        const extension = profileSchema(context.z);
         context.schema = context.schema.merge(extension);
         console.log('[Test Plugin] Extended profile schema via hook');
       }
@@ -144,7 +141,7 @@ export default {
   },
 
   // Lifecycle: destroy (called when plugin is disabled)
-  async destroy(context) {
+  async destroy(registry, context) {
     console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
 
     const db = context.app.get('db');

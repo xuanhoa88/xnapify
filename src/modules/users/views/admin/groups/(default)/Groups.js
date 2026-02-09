@@ -226,7 +226,10 @@ function Groups() {
           disabled={!canCreateGroup}
           title={
             !canCreateGroup
-              ? t('You do not have permission to create groups')
+              ? t(
+                  'groups.noPermissionToCreate',
+                  'You do not have permission to create groups',
+                )
               : undefined
           }
         >
@@ -282,7 +285,10 @@ function Groups() {
             disabled={!canCreateGroup}
             title={
               !canCreateGroup
-                ? t('You do not have permission to create groups')
+                ? t(
+                    'groups.noPermissionToCreate',
+                    'You do not have permission to create groups',
+                  )
                 : undefined
             }
           >

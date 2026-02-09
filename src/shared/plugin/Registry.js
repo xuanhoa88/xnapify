@@ -39,14 +39,15 @@ class PluginRegistry {
    * Register a plugin (idempotent, supports async init)
    * @param {string} pluginId - Plugin identifier
    * @param {Object} plugin - { name, init, destroy }
+   * @param {Object} context - Optional plugin context (i18n, store, etc.)
    * @returns {Promise<this>}
    */
-  async register(pluginId, plugin) {
+  async register(pluginId, plugin, context) {
     if (this[PLUGINS].has(pluginId)) return this;
 
     this[PLUGINS].set(pluginId, { ...plugin, id: pluginId });
     if (typeof plugin.init === 'function') {
-      await plugin.init(this);
+      await plugin.init(this, context);
     }
     return this;
   }
@@ -55,16 +56,17 @@ class PluginRegistry {
    * Unregister a plugin by ID (supports async destroy)
    * Automatically cleans up all registrations made by this plugin
    * @param {string} pluginId - Plugin identifier
+   * @param {Object} context - Optional plugin context
    * @returns {Promise<this>}
    */
-  async unregister(pluginId) {
+  async unregister(pluginId, context) {
     // Clean up all registrations before calling destroy
     // eslint-disable-next-line no-underscore-dangle
     this._clearPluginRegistrations(pluginId);
 
     const plugin = this[PLUGINS].get(pluginId);
     if (plugin && typeof plugin.destroy === 'function') {
-      await plugin.destroy(this);
+      await plugin.destroy(this, context);
     }
     this[PLUGINS].delete(pluginId);
     return this;

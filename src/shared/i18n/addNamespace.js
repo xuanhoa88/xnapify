@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import i18nInstance from './getInstance';
+import defaultI18nInstance from './getInstance';
 
 /**
  * Add a new namespace with translations for all available locales
@@ -14,8 +14,9 @@ import i18nInstance from './getInstance';
  * @param {string} namespace - The namespace identifier (e.g., 'zod', 'common')
  * @param {Object} translations - Object mapping locale codes to translation objects
  *   Example: { 'en-US': {...}, 'vi-VN': {...} }
+ * @param {Object} [i18nInstance] - Optional i18n instance to register with (defaults to imported instance)
  */
-export function addNamespace(namespace, translations) {
+export function addNamespace(namespace, translations, i18nInstance) {
   // Validate inputs
   if (!namespace || typeof namespace !== 'string') {
     throw new Error('Namespace must be a non-empty string');
@@ -27,9 +28,12 @@ export function addNamespace(namespace, translations) {
     );
   }
 
+  // Use provided instance or fallback to default
+  const i18n = i18nInstance || defaultI18nInstance;
+
   try {
     // Check if i18n instance is ready
-    if (!i18nInstance || !i18nInstance.options) {
+    if (!i18n || !i18n.options) {
       if (__DEV__) {
         console.warn(
           '[i18n] Instance not ready when registering namespace:',
@@ -41,23 +45,14 @@ export function addNamespace(namespace, translations) {
     }
 
     // Add the namespace to the list if not already present
-    if (
-      i18nInstance.options.ns &&
-      !i18nInstance.options.ns.includes(namespace)
-    ) {
-      i18nInstance.options.ns.push(namespace);
+    if (i18n.options.ns && !i18n.options.ns.includes(namespace)) {
+      i18n.options.ns.push(namespace);
     }
 
     // Add translations for each locale
     Object.entries(translations).forEach(([locale, translation]) => {
-      if (!i18nInstance.hasResourceBundle(locale, namespace)) {
-        i18nInstance.addResourceBundle(
-          locale,
-          namespace,
-          translation,
-          true,
-          true,
-        );
+      if (!i18n.hasResourceBundle(locale, namespace)) {
+        i18n.addResourceBundle(locale, namespace, translation, true, true);
         if (__DEV__) {
           console.log(
             `[i18n] Registered namespace '${namespace}' for locale '${locale}'`,

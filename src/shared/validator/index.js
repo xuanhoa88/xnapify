@@ -21,31 +21,145 @@ addNamespace(
  * Helper function to translate a value with optional prefix
  * @param {string} value - The value to translate
  * @param {Object} options - Translation options
- * @param {string} options.prefix - Prefix namespace for the translation key
+ * @param {string} [options.prefix] - Prefix namespace for the translation key
  * @returns {string} Translated value or original value if translation not found
  */
 function translateLabel(value, options = {}) {
-  const t = i18n.t.bind(i18n);
   const { prefix } = options;
 
-  if (prefix) {
-    const key = `zod:${prefix}.${value}`;
-    const translated = t(key, { defaultValue: value });
-    return translated !== key ? translated : value;
+  if (!prefix) {
+    return value;
   }
-  return value;
+
+  const key = `zod:${prefix}.${value}`;
+  const translated = i18n.t(key, { defaultValue: value });
+
+  // Return original value if translation key wasn't found
+  return translated !== key ? translated : value;
 }
 
 /**
- * Comprehensive Zod error map following zod-vue-i18n patterns
- * Translates Zod validation errors using i18n with support for:
- * - All ZodIssueCode types
- * - Type-based too_small/too_big messages
- * - Custom i18n keys via params.i18n
- * - Path context for field-specific messages
+ * Handle invalid_string validation messages
+ * @private
  */
-z.setErrorMap((issue, ctx) => {
-  const t = i18n.t.bind(i18n);
+function handleInvalidString(issue, translateLabel) {
+  // Handle object-based validations (startsWith, endsWith)
+  if (typeof issue.validation === 'object') {
+    if ('startsWith' in issue.validation) {
+      return {
+        key: 'zod:errors.invalid_string.startsWith',
+        options: { startsWith: issue.validation.startsWith },
+      };
+    }
+
+    if ('endsWith' in issue.validation) {
+      return {
+        key: 'zod:errors.invalid_string.endsWith',
+        options: { endsWith: issue.validation.endsWith },
+      };
+    }
+
+    // Unknown object validation
+    return {
+      key: 'zod:errors.custom',
+      options: {},
+    };
+  }
+
+  // String-based validations (email, url, uuid, etc.)
+  return {
+    key: `zod:errors.invalid_string.${issue.validation}`,
+    options: {
+      validation: translateLabel(issue.validation, { prefix: 'validations' }),
+    },
+  };
+}
+
+/**
+ * Handle too_small validation messages
+ * @private
+ */
+function handleTooSmall(issue) {
+  const type = issue.type || 'string';
+  const variant = issue.exact
+    ? 'exact'
+    : issue.inclusive
+      ? 'inclusive'
+      : 'not_inclusive';
+
+  return {
+    key: `zod:errors.too_small.${type}.${variant}`,
+    options: {
+      minimum: issue.minimum,
+      count: issue.minimum,
+    },
+  };
+}
+
+/**
+ * Handle too_big validation messages
+ * @private
+ */
+function handleTooBig(issue) {
+  const type = issue.type || 'string';
+  const variant = issue.exact
+    ? 'exact'
+    : issue.inclusive
+      ? 'inclusive'
+      : 'not_inclusive';
+
+  return {
+    key: `zod:errors.too_big.${type}.${variant}`,
+    options: {
+      maximum: issue.maximum,
+      count: issue.maximum,
+    },
+  };
+}
+
+/**
+ * Handle custom validation messages with i18n support
+ * @private
+ */
+function handleCustom(issue) {
+  // Support custom i18n keys via params.i18n
+  if (!issue.params?.i18n) {
+    return {
+      key: 'zod:errors.custom',
+      options: {},
+    };
+  }
+
+  const { i18n: i18nParam } = issue.params;
+
+  // String format: params.i18n = "custom.error.key"
+  if (typeof i18nParam === 'string') {
+    return {
+      key: i18nParam,
+      options: {},
+    };
+  }
+
+  // Object format: params.i18n = { key: "custom.error.key", options: { ... } }
+  if (typeof i18nParam === 'object' && i18nParam.key) {
+    return {
+      key: i18nParam.key,
+      options: i18nParam.options || {},
+    };
+  }
+
+  // Invalid format, fallback to default
+  return {
+    key: 'zod:errors.custom',
+    options: {},
+  };
+}
+
+/**
+ * Get message key and options for a given Zod issue
+ * @private
+ */
+function getMessageKeyAndOptions(issue) {
   let messageKey;
   let options = {};
 
@@ -67,9 +181,7 @@ z.setErrorMap((issue, ctx) => {
 
     case z.ZodIssueCode.invalid_literal:
       messageKey = 'zod:errors.invalid_literal';
-      options = {
-        expected: JSON.stringify(issue.expected),
-      };
+      options = { expected: JSON.stringify(issue.expected) };
       break;
 
     case z.ZodIssueCode.unrecognized_keys:
@@ -112,74 +224,33 @@ z.setErrorMap((issue, ctx) => {
       messageKey = 'zod:errors.invalid_date';
       break;
 
-    case z.ZodIssueCode.invalid_string:
-      // Handle object-based validations (startsWith, endsWith)
-      if (typeof issue.validation === 'object') {
-        if ('startsWith' in issue.validation) {
-          messageKey = 'zod:errors.invalid_string.startsWith';
-          options = { startsWith: issue.validation.startsWith };
-        } else if ('endsWith' in issue.validation) {
-          messageKey = 'zod:errors.invalid_string.endsWith';
-          options = { endsWith: issue.validation.endsWith };
-        } else {
-          messageKey = 'zod:errors.custom';
-        }
-      } else {
-        messageKey = `zod:errors.invalid_string.${issue.validation}`;
-        options = {
-          validation: translateLabel(issue.validation, {
-            prefix: 'validations',
-          }),
-        };
-      }
+    case z.ZodIssueCode.invalid_string: {
+      const result = handleInvalidString(issue, translateLabel);
+      messageKey = result.key;
+      options = result.options;
       break;
+    }
 
     case z.ZodIssueCode.too_small: {
-      // Build nested key: too_small.{type}.{exact|inclusive|not_inclusive}
-      const type = issue.type || 'string';
-      let variant;
-      if (issue.exact) {
-        variant = 'exact';
-      } else {
-        variant = issue.inclusive ? 'inclusive' : 'not_inclusive';
-      }
-      messageKey = `zod:errors.too_small.${type}.${variant}`;
-      options = { minimum: issue.minimum, count: issue.minimum };
+      const result = handleTooSmall(issue);
+      messageKey = result.key;
+      options = result.options;
       break;
     }
 
     case z.ZodIssueCode.too_big: {
-      // Build nested key: too_big.{type}.{exact|inclusive|not_inclusive}
-      const type = issue.type || 'string';
-      let variant;
-      if (issue.exact) {
-        variant = 'exact';
-      } else {
-        variant = issue.inclusive ? 'inclusive' : 'not_inclusive';
-      }
-      messageKey = `zod:errors.too_big.${type}.${variant}`;
-      options = { maximum: issue.maximum, count: issue.maximum };
+      const result = handleTooBig(issue);
+      messageKey = result.key;
+      options = result.options;
       break;
     }
 
-    case z.ZodIssueCode.custom:
-      // Support custom i18n keys via params.i18n
-      if (issue.params && issue.params.i18n) {
-        if (typeof issue.params.i18n === 'string') {
-          messageKey = issue.params.i18n;
-        } else if (
-          typeof issue.params.i18n === 'object' &&
-          issue.params.i18n.key
-        ) {
-          messageKey = issue.params.i18n.key;
-          options = issue.params.i18n.options || {};
-        } else {
-          messageKey = 'zod:errors.custom';
-        }
-      } else {
-        messageKey = 'zod:errors.custom';
-      }
+    case z.ZodIssueCode.custom: {
+      const result = handleCustom(issue);
+      messageKey = result.key;
+      options = result.options;
       break;
+    }
 
     case z.ZodIssueCode.invalid_intersection_types:
       messageKey = 'zod:errors.invalid_intersection_types';
@@ -195,21 +266,43 @@ z.setErrorMap((issue, ctx) => {
       break;
 
     default:
-      return { message: ctx.defaultError };
+      return null; // Signal to use default error
   }
 
+  return { messageKey, options };
+}
+
+/**
+ * Comprehensive Zod error map following zod-vue-i18n patterns
+ * Translates Zod validation errors using i18n with support for:
+ * - All ZodIssueCode types
+ * - Type-based too_small/too_big messages
+ * - Custom i18n keys via params.i18n
+ * - Path context for field-specific messages
+ */
+z.setErrorMap((issue, ctx) => {
+  const result = getMessageKeyAndOptions(issue);
+
+  // Use default error if issue code not handled
+  if (!result) {
+    return { message: ctx.defaultError };
+  }
+
+  const { messageKey, options } = result;
+
   // Add path context for field-specific messages (supports WithPath pattern)
-  options.path = issue.path ? issue.path.join('.') : '';
+  const path = issue.path?.length > 0 ? issue.path.join('.') : '';
+  const optionsWithPath = { ...options, path };
 
   // Try to get message with path suffix first (e.g., invalidTypeWithPath)
-  if (options.path) {
-    const withPathKey = messageKey + 'WithPath';
+  if (path) {
+    const withPathKey = `${messageKey}WithPath`;
     if (i18n.exists(withPathKey)) {
-      return { message: t(withPathKey, options) };
+      return { message: i18n.t(withPathKey, optionsWithPath) };
     }
   }
 
-  return { message: t(messageKey, options) };
+  return { message: i18n.t(messageKey, optionsWithPath) };
 });
 
 /**
@@ -217,7 +310,7 @@ z.setErrorMap((issue, ctx) => {
  *
  * @param {Function} schema - Factory function that receives { i18n, z } and returns Zod schema
  * @param {Object} data - Form data to validate
- * @returns {[boolean, Object]} - Tuple [isValid, errors]. errors is undefined if valid.
+ * @returns {[boolean, Object|undefined]} - Tuple [isValid, errors]. errors is undefined if valid.
  *
  * @example
  * const [isValid, errors] = validateForm(loginFormSchema, { email, password });
@@ -225,22 +318,37 @@ z.setErrorMap((issue, ctx) => {
  *   return res.status(422).json({
  *     success: false,
  *     message: 'Validation failed',
- *     errors: errors[0],
+ *     errors,
  *   });
  * }
  */
 export function validateForm(schema, data) {
+  // Validate inputs
+  if (typeof schema !== 'function') {
+    return [
+      false,
+      {
+        _schema: [
+          'Invalid schema: expected a function that returns a Zod schema',
+        ],
+      },
+    ];
+  }
+
   let zodSchema;
 
   // Call schema factory and handle any errors
   try {
     zodSchema = schema({ i18n, z });
   } catch (error) {
-    // Schema factory threw an error - return in same format as validation errors (array)
+    // Schema factory threw an error - return in same format as validation errors
+    const errorMessage =
+      error instanceof Error ? error.message : 'Unknown error occurred';
+
     return [
       false,
       {
-        _schema: [`Schema validation failed: ${error.message}`],
+        _schema: [`Schema initialization failed: ${errorMessage}`],
       },
     ];
   }
@@ -251,7 +359,7 @@ export function validateForm(schema, data) {
       false,
       {
         _schema: [
-          'Invalid schema: schema factory must return a Zod schema object',
+          'Invalid schema: schema factory must return a Zod schema object with safeParse method',
         ],
       },
     ];
