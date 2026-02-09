@@ -351,11 +351,10 @@ function createSSRHandler(port, host) {
 
       // Initialize plugins (Server Side) with restricted app access
       try {
-        const pluginApp = createPluginAppProxy(req.app);
         await pluginManager.init({
           ...context,
           cwd: config.cwd,
-          app: pluginApp,
+          app: createPluginAppProxy(req.app),
         });
       } catch (err) {
         // Log but don't fail the request
