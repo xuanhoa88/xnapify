@@ -335,18 +335,12 @@ function createSSRHandler(port, host) {
         },
       });
 
-      // Initialize store with timeout protection
+      // Get locale from request
       const locale = req.language || DEFAULT_LOCALE;
-      store = await withTimeout(
-        initReduxStore({ fetch, history }, locale),
-        5_000,
-        'Redux store initialization',
-      );
 
       // Create context
       context = {
         fetch,
-        store,
         i18n,
         locale,
         history,
@@ -369,6 +363,14 @@ function createSSRHandler(port, host) {
           console.warn('⚠️ Plugin initialization failed:', err.message);
         }
       }
+
+      // Initialize store with timeout protection
+      store = await withTimeout(
+        initReduxStore({ fetch, history }, locale),
+        5_000,
+        'Redux store initialization',
+      );
+      context.store = store;
 
       // Load views with timeout protection
       const views = await withTimeout(loadViews(), 5_000, 'Views loading');
