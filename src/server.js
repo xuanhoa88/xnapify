@@ -82,7 +82,9 @@ function getBaseUrl(port, host) {
 
 async function loadViews() {
   if (!cachedViews) {
-    cachedViews = await import('./bootstrap/views').then(m => m.default());
+    cachedViews = await import('./bootstrap/views').then(m =>
+      m.default({ pluginManager }),
+    );
     if (__DEV__) console.log('✅ Views initialized');
   }
   return cachedViews;

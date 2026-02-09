@@ -40,9 +40,12 @@ const config = {
 
   // Global variables available in the code
   globals: {
+    NODE_ENV: true,
     __DEV__: true,
     __TEST__: true,
-    NODE_ENV: true,
+    // Plugin build globals (injected via webpack DefinePlugin)
+    __PLUGIN_NAME__: 'readonly',
+    __PLUGIN_DESCRIPTION__: 'readonly',
   },
 
   // Environment settings

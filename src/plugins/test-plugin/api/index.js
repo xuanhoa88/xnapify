@@ -4,8 +4,6 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-import { PLUGIN_ID } from '../constants';
-
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
 
@@ -18,41 +16,65 @@ export default {
 
   // Metadata & registration config
   register() {
-    return ['profile', PLUGIN_ID, { name: 'Test Plugin (Backend)' }];
+    return [
+      ['profile', 'dashboard'],
+      __PLUGIN_NAME__,
+      { name: __PLUGIN_DESCRIPTION__ },
+    ];
   },
 
   // Lifecycle: Mount (called when plugin is initialized on server)
   mount(context) {
-    console.log('[Test Plugin] Backend logic initialized for ' + PLUGIN_ID);
+    console.log(
+      '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
+    );
 
     // Get hook engine from app
     const hook = context.app.get('hook');
 
     // Handler to extend profile schema
-    this[HANDLERS].extendSchema = function (context) {
+    this[HANDLERS].updateValidation = function (context) {
       if (context.schema) {
         const extension = profileSchema();
         context.schema = context.schema.merge(extension);
         console.log('[Test Plugin] Extended profile schema via hook');
       }
     };
-    hook('profile').on('extendSchema', this[HANDLERS].extendSchema);
+    hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
-    // Store handler reference for cleanup
-    // This handler extends the user response with a nickname field
+    // Handler to intercept profile update and save nickname to preferences
+    this[HANDLERS].updating = function (data) {
+      const { formData, user } = data;
+
+      // If nickname is provided, move it to preferences
+      if (formData && 'nickname' in formData) {
+        const { nickname } = formData;
+        delete formData.nickname; // Remove from top-level
+
+        // Get existing preferences from the user's profile
+        const existingPreferences =
+          (user && user.profile && user.profile.preferences) || {};
+
+        // Merge nickname into existing preferences
+        formData.preferences = {
+          ...existingPreferences,
+          ...(formData.preferences || {}),
+          nickname,
+        };
+        console.log('[Test Plugin] Saved nickname to preferences:', nickname);
+      }
+    };
+    hook('profile').on('updating', this[HANDLERS].updating);
+
+    // Handler to read nickname from preferences and add to response
     this[HANDLERS].formatResponse = function (data) {
       const { user, profile, result } = data;
 
-      // Add nickname to the response object
-      // This is the extensible pattern - plugins can add any custom fields
+      // Read nickname from preferences JSON field
       let nickname = null;
       if (profile) {
-        if (typeof profile.getDataValue === 'function') {
-          nickname = profile.getDataValue('nickname');
-        }
-        if (!nickname) {
-          nickname = profile.nickname;
-        }
+        const preferences = profile.preferences || {};
+        nickname = preferences.nickname || null;
       }
 
       // Set default nickname from email if not present
@@ -72,12 +94,15 @@ export default {
 
   // Lifecycle: Unmount (called when plugin is disabled)
   unmount(context) {
-    console.log('[Test Plugin] Backend logic unmounted for ' + PLUGIN_ID);
+    console.log('[Test Plugin] Backend logic unmounted for ' + __PLUGIN_NAME__);
 
     // Unsubscribe from hooks
     const hook = context.app.get('hook');
-    if (this[HANDLERS].extendSchema) {
-      hook('profile').off('extendSchema', this[HANDLERS].extendSchema);
+    if (this[HANDLERS].updateValidation) {
+      hook('profile').off('validation:update', this[HANDLERS].updateValidation);
+    }
+    if (this[HANDLERS].updating) {
+      hook('profile').off('updating', this[HANDLERS].updating);
     }
     if (this[HANDLERS].formatResponse) {
       hook('profile').off('formatResponse', this[HANDLERS].formatResponse);

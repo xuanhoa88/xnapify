@@ -74,7 +74,7 @@ export async function updateProfile(req, res) {
       z,
     };
 
-    await hook('profile').emit('extendSchema', context);
+    await hook('profile').emit('validation:update', context);
 
     // 3. Validate using the (potentially extended) schema
     // We wrap it in a factory because validateForm expects a function

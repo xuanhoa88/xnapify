@@ -199,7 +199,9 @@ function restoreScrollPosition(location) {
 
 async function loadViews() {
   if (!cachedViews) {
-    cachedViews = await import('./bootstrap/views').then(m => m.default());
+    cachedViews = await import('./bootstrap/views').then(m =>
+      m.default({ pluginManager }),
+    );
     log('✅ Views initialized');
   }
   return cachedViews;
@@ -525,12 +527,6 @@ async function initializeApp() {
 
       wsClient.on('error', error => {
         log(`⚠️ WebSocket error: ${error}`, 'error');
-      });
-
-      // Listen for plugin updates
-      wsClient.on('PLUGIN_UPDATE', event => {
-        log(`🧩 Plugin update received: ${event.type} ${event.pluginId}`);
-        pluginManager.handleEvent(event);
       });
 
       wsClient.connect();

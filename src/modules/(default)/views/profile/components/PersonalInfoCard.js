@@ -25,10 +25,12 @@ import Form, {
 } from '../../../../../shared/renderer/components/Form';
 import {
   PluginSlot,
-  usePluginSchema,
+  usePluginValidator,
   usePluginHooks,
+  usePluginDefaultValues,
 } from '../../../../../shared/plugin';
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
+import Loader from './Loader';
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard() {
@@ -39,6 +41,12 @@ function PersonalInfoCard() {
   const error = useSelector(getProfileError);
   const pluginHooks = usePluginHooks();
 
+  // Fetch defaults from plugins
+  const [pluginDefaultValues, loadingDefaultValues] = usePluginDefaultValues(
+    'profile.personal_info.defaults',
+    user,
+  );
+
   // Instantiate base schema object
   const baseSchema = useMemo(
     () => updateProfileFormSchema({ i18n, z }),
@@ -46,14 +54,14 @@ function PersonalInfoCard() {
   );
 
   // Extend schema with plugins (returns Zod object)
-  const extendedSchema = usePluginSchema(
+  const extendedValidator = usePluginValidator(
     'profile.personal_info.schema',
     baseSchema,
     z,
   );
 
   // Wrap in factory for Form component
-  const formSchema = useCallback(() => extendedSchema, [extendedSchema]);
+  const formSchema = useCallback(() => extendedValidator, [extendedValidator]);
 
   // Clear error on unmount
   useEffect(() => {
@@ -65,15 +73,16 @@ function PersonalInfoCard() {
   // Derive default values from user (memoized to prevent unnecessary re-renders)
   const defaultValues = useMemo(
     () => ({
+      ...pluginDefaultValues, // Defaults from plugins
+      ...user, // User data overrides defaults
       display_name: (user && user.display_name) || '',
       first_name: (user && user.first_name) || '',
       last_name: (user && user.last_name) || '',
       bio: (user && user.bio) || '',
       location: (user && user.location) || '',
       website: (user && user.website) || '',
-      nickname: (user && user.nickname) || '',
     }),
-    [user],
+    [user, pluginDefaultValues],
   );
 
   // Handle form submit - Form component provides methods via callback
@@ -102,6 +111,10 @@ function PersonalInfoCard() {
     },
     [dispatch, t, pluginHooks, user],
   );
+
+  if (loadingDefaultValues) {
+    return <Loader />;
+  }
 
   return (
     <div className={s.card}>

@@ -8,7 +8,6 @@
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
 import { createContextAdapter } from '../shared/context';
-import { pluginRegistry } from '../shared/plugin';
 
 // Webpack context for all collectable module files
 const modulesContext = require.context(
@@ -55,13 +54,15 @@ class AppRouter extends Router {
 /**
  * Creates the router with webpack module context
  *
+ * @param {Object} options - Router initialization options
+ * @param {Object} options.pluginManager - Plugin manager instance (client or server)
  * @returns {Promise<Router>} Configured router instance
  */
-export default async function initializeRouter() {
+export default async function initializeRouter({ pluginManager } = {}) {
   const router = new AppRouter(createContextAdapter(modulesContext), {
     context: {
-      // Add plugin registry to context
-      pluginRegistry,
+      // Add plugin manager to context (for namespace operations)
+      pluginManager,
     },
     errorHandler(error, ctx) {
       // Handle other errors (500, etc)
@@ -81,29 +82,32 @@ export default async function initializeRouter() {
         error, // Pass error to component if it accepts it
       });
     },
-    async onRouteInit(route, _ctx) {
+    async onRouteInit(route, ctx) {
       // Check route.workspace (set in route init hook) or module export
       const ns = route.workspace || (route.module && route.module.workspace);
+      const manager = ctx.pluginManager || pluginManager;
 
-      if (ns) {
-        if (!pluginRegistry.isNamespaceLoaded(ns)) {
+      if (ns && manager) {
+        if (!manager.isNamespaceLoaded(ns)) {
           if (__DEV__) {
             console.log(`[Router] Loading plugin namespace: ${ns}`);
           }
-          await pluginRegistry.loadNamespace(ns);
+          await manager.loadNamespace(ns);
         } else if (__DEV__) {
           console.log(`[Router] Plugin namespace already loaded: ${ns}`);
         }
       }
     },
-    async onRouteDestroy(route, _ctx) {
+    async onRouteDestroy(route, ctx) {
       // Check route.workspace (set in route init hook) or module export
       const ns = route.workspace || (route.module && route.module.workspace);
-      if (ns) {
+      const manager = ctx.pluginManager || pluginManager;
+
+      if (ns && manager) {
         if (__DEV__) {
           console.log(`[Router] Unloading plugin namespace: ${ns}`);
         }
-        await pluginRegistry.unloadNamespace(ns);
+        await manager.unloadNamespace(ns);
       }
     },
   });

@@ -141,7 +141,11 @@ export async function updateUserProfile(
   }
 
   // Run hooks before updating
-  await hook('profile').emit('updating', { user_id, profileData });
+  await hook('profile').emit('updating', {
+    user_id,
+    user,
+    formData: profileData,
+  });
 
   // Update profile data
   if (user.profile) {
@@ -155,7 +159,7 @@ export async function updateUserProfile(
   }
 
   // Run hooks after updating
-  await hook('profile').emit('updated', { user_id, profileData });
+  await hook('profile').emit('updated', { user_id, user });
 
   // Log activity
   await logUserActivity(webhook, 'profile_updated', user_id);

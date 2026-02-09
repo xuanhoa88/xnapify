@@ -187,159 +187,6 @@ export class BasePluginManager {
   }
 
   /**
-   * Load a single plugin by ID
-   * @param {string} id - Plugin ID
-   * @param {Object} manifest - Optional plugin manifest
-   * @returns {Promise<Object|null>} Plugin instance or null if skipped
-   */
-  async loadPlugin(id, manifest = null) {
-    if (!id || typeof id !== 'string') {
-      const error = new Error('Plugin ID must be a non-empty string');
-      error.name = 'PluginManagerError';
-      throw error;
-    }
-
-    // Check if already loaded
-    if (this[ACTIVE_PLUGINS].has(id)) {
-      if (__DEV__) {
-        console.warn(`[PluginManager] Plugin "${id}" is already loaded`);
-      }
-      return this[ACTIVE_PLUGINS].get(id);
-    }
-
-    // Initialize metadata
-    this[PLUGIN_METADATA].set(id, {
-      id,
-      state: PluginState.LOADING,
-      version: (manifest && manifest.version) || 'unknown',
-      error: null,
-      loadedAt: null,
-      dependencies: (manifest && manifest.dependencies) || [],
-      manifest,
-    });
-
-    this.emit('plugin:loading', { id });
-
-    try {
-      // Load plugin dependencies first (ensures dependency graph is satisfied)
-      // Dependencies are loaded recursively before the plugin itself
-      if (
-        manifest &&
-        manifest.dependencies &&
-        manifest.dependencies.length > 0
-      ) {
-        await this.loadDependencies(id, manifest.dependencies);
-      }
-
-      // Fetch plugin bundle from API
-      const response = await this[PLUGIN_CONTEXT].fetch(`/api/plugins/${id}`);
-      if (!response || !response.success) {
-        const error = new Error(
-          (response && response.message) || 'Failed to fetch plugin bundle',
-        );
-        error.name = 'PluginManagerError';
-        throw error;
-      }
-
-      const {
-        containerName,
-        manifest: serverManifest,
-        internalId,
-      } = response.data;
-      if (serverManifest) manifest = serverManifest;
-      // Add internalId to manifest for server-side loading
-      if (internalId && manifest) manifest.internalId = internalId;
-
-      // Resolve entry point (main vs browser)
-      const entryPoint = this.resolveEntryPoint(manifest);
-
-      if (!entryPoint) {
-        if (__DEV__) {
-          console.log(
-            `[PluginManager] Skipping execution for ${id} (no entry point for environment)`,
-          );
-        }
-        // Update metadata to show it's loaded safely but has no active instance
-        const metadata = this[PLUGIN_METADATA].get(id);
-        metadata.state = PluginState.LOADED;
-        metadata.loadedAt = Date.now();
-        metadata.manifest = { ...manifest };
-        return null;
-      }
-
-      // Load the plugin via MF container or require
-      let plugin = await this.executePlugin(id, entryPoint, manifest, {
-        containerName,
-        internalId,
-      });
-
-      // Handle null return (plugin was skipped by loadPluginModule)
-      if (!plugin) {
-        const metadata = this[PLUGIN_METADATA].get(id);
-        metadata.state = PluginState.LOADED;
-        metadata.loadedAt = Date.now();
-        metadata.manifest = { ...manifest };
-        return null;
-      }
-
-      // Handle ES module default export
-      plugin = plugin.default || plugin;
-
-      // Validate plugin structure
-      this.validatePluginStructure(plugin);
-
-      // Register with registry
-      if (__DEV__) {
-        console.log(`[PluginManager] Defining plugin in registry: ${id}`);
-      }
-      await registry.define(plugin, this[PLUGIN_CONTEXT]);
-
-      // Store plugin instance
-      this[ACTIVE_PLUGINS].set(id, plugin);
-
-      // Update metadata
-      const metadata = this[PLUGIN_METADATA].get(id);
-      metadata.state = PluginState.LOADED;
-      metadata.loadedAt = Date.now();
-      metadata.manifest = { ...manifest };
-
-      // Call plugin lifecycle hook
-      if (typeof plugin.onLoad === 'function') {
-        await plugin.onLoad(this[PLUGIN_CONTEXT]);
-      }
-
-      if (__DEV__) {
-        console.log(`[PluginManager] Successfully loaded plugin: ${id}`);
-      }
-      this.emit('plugin:loaded', { id, plugin });
-
-      // Store CSS files from manifest if available (for SSR injection)
-      if (serverManifest && Array.isArray(serverManifest.cssFiles)) {
-        this[PLUGIN_CSS_ENTRY_POINTS].set(
-          id,
-          serverManifest.cssFiles.map(
-            cssFile => `/api/plugins/${id}/static/${cssFile}`,
-          ),
-        );
-      }
-
-      return plugin;
-    } catch (error) {
-      console.error(`[PluginManager] Failed to load plugin "${id}":`, error);
-
-      // Update metadata
-      const metadata = this[PLUGIN_METADATA].get(id);
-      if (metadata) {
-        metadata.state = PluginState.FAILED;
-        metadata.error = error;
-      }
-
-      this.emit('plugin:failed', { id, error });
-      throw error;
-    }
-  }
-
-  /**
    * Get all plugin CSS URLs for SSR injection
    * @returns {Array<string>} Array of CSS URLs
    */
@@ -508,10 +355,176 @@ export class BasePluginManager {
   }
 
   /**
+   * Load a single plugin by ID
+   * @param {string} id - Plugin ID
+   * @param {Object} manifest - Optional plugin manifest
+   * @returns {Promise<Object|null>} Plugin instance or null if skipped
+   */
+  async loadPlugin(id, manifest = null) {
+    if (!id || typeof id !== 'string') {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return;
+    }
+
+    // Check if already loaded
+    if (this[ACTIVE_PLUGINS].has(id)) {
+      if (__DEV__) {
+        console.warn(`[PluginManager] Plugin "${id}" is already loaded`);
+      }
+      return this[ACTIVE_PLUGINS].get(id);
+    }
+
+    // Initialize metadata
+    this[PLUGIN_METADATA].set(id, {
+      id,
+      state: PluginState.LOADING,
+      version: (manifest && manifest.version) || 'unknown',
+      error: null,
+      loadedAt: null,
+      dependencies: (manifest && manifest.dependencies) || [],
+      manifest,
+    });
+
+    this.emit('plugin:loading', { id });
+
+    try {
+      // Load plugin dependencies first (ensures dependency graph is satisfied)
+      // Dependencies are loaded recursively before the plugin itself
+      if (
+        manifest &&
+        manifest.dependencies &&
+        manifest.dependencies.length > 0
+      ) {
+        await this.loadDependencies(id, manifest.dependencies);
+      }
+
+      // Fetch plugin bundle from API
+      const response = await this[PLUGIN_CONTEXT].fetch(`/api/plugins/${id}`);
+      if (!response || !response.success) {
+        const error = new Error(
+          (response && response.message) || 'Failed to fetch plugin bundle',
+        );
+        error.name = 'PluginManagerError';
+        throw error;
+      }
+
+      const {
+        containerName,
+        manifest: serverManifest,
+        internalId,
+      } = response.data;
+      if (serverManifest) manifest = serverManifest;
+      // Add internalId to manifest for server-side loading
+      if (internalId && manifest) manifest.internalId = internalId;
+
+      // Resolve entry point (main vs browser)
+      const entryPoint = this.resolveEntryPoint(manifest);
+
+      if (!entryPoint) {
+        if (__DEV__) {
+          console.log(
+            `[PluginManager] Skipping execution for ${id} (no entry point for environment)`,
+          );
+        }
+        // Update metadata to show it's loaded safely but has no active instance
+        const metadata = this[PLUGIN_METADATA].get(id);
+        metadata.state = PluginState.LOADED;
+        metadata.loadedAt = Date.now();
+        metadata.manifest = { ...manifest };
+        return null;
+      }
+
+      // Load the plugin via MF container or require
+      let plugin = await this.executePlugin(id, entryPoint, manifest, {
+        containerName,
+        internalId,
+      });
+
+      // Handle null return (plugin was skipped by loadPluginModule)
+      if (!plugin) {
+        const metadata = this[PLUGIN_METADATA].get(id);
+        metadata.state = PluginState.LOADED;
+        metadata.loadedAt = Date.now();
+        metadata.manifest = { ...manifest };
+        return null;
+      }
+
+      // Handle ES module default export
+      plugin = plugin.default || plugin;
+
+      // Validate plugin structure
+      this.validatePluginStructure(plugin);
+
+      // Register with registry
+      if (__DEV__) {
+        console.log(`[PluginManager] Defining plugin in registry: ${id}`);
+      }
+      await registry.define(plugin, this[PLUGIN_CONTEXT]);
+
+      // Call mount() lifecycle hook (runtime activation)
+      await registry.register(id, plugin);
+
+      // Store plugin instance
+      this[ACTIVE_PLUGINS].set(id, plugin);
+
+      // Update metadata
+      const metadata = this[PLUGIN_METADATA].get(id);
+      metadata.state = PluginState.LOADED;
+      metadata.loadedAt = Date.now();
+      metadata.manifest = { ...manifest };
+
+      // Call plugin lifecycle hook
+      if (typeof plugin.onLoad === 'function') {
+        await plugin.onLoad(this[PLUGIN_CONTEXT]);
+      }
+
+      if (__DEV__) {
+        console.log(`[PluginManager] Successfully loaded plugin: ${id}`);
+      }
+      this.emit('plugin:loaded', { id, plugin });
+
+      // Store CSS files from manifest if available (for SSR injection)
+      if (serverManifest && Array.isArray(serverManifest.cssFiles)) {
+        this[PLUGIN_CSS_ENTRY_POINTS].set(
+          id,
+          serverManifest.cssFiles.map(
+            cssFile => `/api/plugins/${id}/static/${cssFile}`,
+          ),
+        );
+      }
+
+      return plugin;
+    } catch (error) {
+      console.error(`[PluginManager] Failed to load plugin "${id}":`, error);
+
+      // Update metadata
+      const metadata = this[PLUGIN_METADATA].get(id);
+      if (metadata) {
+        metadata.state = PluginState.FAILED;
+        metadata.error = error;
+      }
+
+      this.emit('plugin:failed', { id, error });
+      console.error(error);
+    }
+  }
+
+  /**
    * Unload a plugin by ID
    * @param {string} id - Plugin ID
    */
   async unloadPlugin(id) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return;
+    }
+
     if (!this[ACTIVE_PLUGINS].has(id)) {
       console.warn(`[PluginManager] Plugin "${id}" is not loaded`);
       return;
@@ -567,7 +580,7 @@ export class BasePluginManager {
       }
 
       this.emit('plugin:unload-failed', { id, error });
-      throw error;
+      console.error(error);
     }
   }
 
@@ -590,13 +603,21 @@ export class BasePluginManager {
    * @param {Object} newManifest - New plugin manifest (optional, will fetch if not provided)
    */
   async updatePlugin(id, newManifest = null) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return;
+    }
+
     const oldMetadata = this[PLUGIN_METADATA].get(id);
-    const oldVersion = oldMetadata?.version || 'unknown';
+    const oldVersion = (oldMetadata && oldMetadata.version) || 'unknown';
 
     this.emit('plugin:updating', {
       id,
       oldVersion,
-      newVersion: newManifest?.version,
+      newVersion: (newManifest && newManifest.version) || 'unknown',
     });
 
     try {
@@ -608,7 +629,10 @@ export class BasePluginManager {
       // Load new version (this calls install hook)
       await this.loadPlugin(id, newManifest);
 
-      const newVersion = this[PLUGIN_METADATA].get(id)?.version || 'unknown';
+      const newVersion =
+        (this[PLUGIN_METADATA].get(id) &&
+          this[PLUGIN_METADATA].get(id).version) ||
+        'unknown';
 
       if (__DEV__) {
         console.log(
@@ -620,7 +644,198 @@ export class BasePluginManager {
     } catch (error) {
       console.error(`[PluginManager] Failed to update plugin "${id}":`, error);
       this.emit('plugin:update-failed', { id, error });
-      throw error;
+      console.error(error);
+    }
+  }
+
+  /**
+   * Install a plugin (one-time setup, calls install() lifecycle hook)
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if installed successfully
+   */
+  async installPlugin(id) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return;
+    }
+
+    this.emit('plugin:installing', { id });
+
+    try {
+      const result = await registry.installPlugin(id);
+      if (result) {
+        if (__DEV__) {
+          console.log(`[PluginManager] Installed plugin: ${id}`);
+        }
+        this.emit('plugin:installed', { id });
+      }
+      return result;
+    } catch (error) {
+      console.error(`[PluginManager] Failed to install plugin "${id}":`, error);
+      this.emit('plugin:install-failed', { id, error });
+      console.error(error);
+    }
+  }
+
+  /**
+   * Uninstall a plugin (one-time teardown, calls uninstall() lifecycle hook)
+   * @param {string} id - Plugin ID
+   * @returns {Promise<boolean>} True if uninstalled successfully
+   */
+  async uninstallPlugin(id) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return;
+    }
+
+    this.emit('plugin:uninstalling', { id });
+
+    try {
+      const result = await registry.uninstallPlugin(id);
+      if (result) {
+        if (__DEV__) {
+          console.log(`[PluginManager] Uninstalled plugin: ${id}`);
+        }
+        this.emit('plugin:uninstalled', { id });
+      }
+      return result;
+    } catch (error) {
+      console.error(
+        `[PluginManager] Failed to uninstall plugin "${id}":`,
+        error,
+      );
+      this.emit('plugin:uninstall-failed', { id, error });
+      console.error(error);
+    }
+  }
+
+  /**
+   * Check if a namespace is loaded (at least one plugin from it is registered)
+   * @param {string} ns - Namespace to check
+   * @returns {boolean}
+   */
+  isNamespaceLoaded(ns) {
+    const plugins = registry.getDefinitions(ns);
+    if (!plugins) return false;
+
+    for (const plugin of plugins) {
+      if (registry.has(plugin.id)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Load all plugins for a given namespace (runtime activation)
+   * @param {string} ns - Namespace to load
+   */
+  async loadNamespace(ns) {
+    if (typeof ns !== 'string' || ns.trim().length === 0) {
+      const error = new Error('Namespace must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('namespace:validation-failed', { ns, error });
+      console.error(error);
+      return;
+    }
+
+    this.emit('namespace:loading', { ns });
+
+    try {
+      if (__DEV__) {
+        console.log(`[PluginManager] loadNamespace called for: ${ns}`);
+      }
+      const plugins = registry.getDefinitions(ns);
+      if (!plugins) {
+        console.warn(`[PluginManager] No plugins found for namespace: ${ns}`);
+        return;
+      }
+      if (__DEV__) {
+        console.log(
+          `[PluginManager] Found ${plugins.size} plugins for namespace ${ns}`,
+        );
+      }
+
+      for (const plugin of plugins) {
+        if (__DEV__) {
+          console.log(
+            `[PluginManager] Loading plugin from namespace: ${plugin.id}`,
+          );
+        }
+        // Wrap mount/unmount into init/destroy for the standard register method
+        const pluginInstance = {
+          ...plugin,
+          init: async reg => {
+            if (__DEV__) {
+              console.log(`[PluginManager] Mounting plugin: ${plugin.id}`);
+            }
+            if (typeof plugin.mount === 'function') {
+              await plugin.mount(reg);
+            } else if (__DEV__) {
+              console.warn(
+                `[PluginManager] Plugin ${plugin.id} has no mount method`,
+              );
+            }
+          },
+          destroy: async reg => {
+            if (typeof plugin.unmount === 'function') {
+              await plugin.unmount(reg);
+            }
+          },
+        };
+
+        await registry.register(plugin.id, pluginInstance);
+      }
+
+      if (__DEV__) {
+        console.log(`[PluginManager] Loaded namespace: ${ns}`);
+      }
+      this.emit('namespace:loaded', { ns });
+    } catch (error) {
+      console.error(`[PluginManager] Failed to load namespace "${ns}":`, error);
+      this.emit('namespace:load-failed', { ns, error });
+      console.error(error);
+    }
+  }
+
+  /**
+   * Unload all plugins for a given namespace (runtime deactivation)
+   * @param {string} ns - Namespace to unload
+   */
+  async unloadNamespace(ns) {
+    if (typeof ns !== 'string' || ns.trim().length === 0) {
+      const error = new Error('Namespace must be a non-empty string');
+      error.name = 'PluginManagerError';
+      this.emit('namespace:validation-failed', { ns, error });
+      console.error(error);
+      return;
+    }
+
+    this.emit('namespace:unloading', { ns });
+
+    try {
+      const plugins = registry.getDefinitions(ns);
+      if (!plugins) return;
+
+      for (const plugin of plugins) {
+        await registry.unregister(plugin.id);
+      }
+
+      if (__DEV__) {
+        console.log(`[PluginManager] Unloaded namespace: ${ns}`);
+      }
+      this.emit('namespace:unloaded', { ns });
+    } catch (error) {
+      console.error(
+        `[PluginManager] Failed to unload namespace "${ns}":`,
+        error,
+      );
+      this.emit('namespace:unload-failed', { ns, error });
+      console.error(error);
     }
   }
 

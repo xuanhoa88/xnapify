@@ -123,7 +123,7 @@ class PluginRegistry {
 
     // Clear schemas
     for (const { schemaId, extender } of reg.schemas) {
-      this.unregisterSchema(schemaId, extender);
+      this.unregisterValidator(schemaId, extender);
     }
 
     if (__DEV__) {
@@ -157,122 +157,45 @@ class PluginRegistry {
       return this;
     }
 
-    const [ns, id, meta] = definition.register(context);
+    const [nsOrArr, id, meta] = definition.register(context);
 
-    if (!ns) {
+    if (!nsOrArr) {
       console.warn('[PluginRegistry] Plugin definition missing ns (namespace)');
       return this;
     }
 
-    if (!this[DEFINITIONS].has(ns)) {
-      this[DEFINITIONS].set(ns, new Set());
-    }
+    const namespaces = Array.isArray(nsOrArr) ? nsOrArr : [nsOrArr];
 
-    // Store the full definition wrapper
-    const definitions = this[DEFINITIONS].get(ns);
-    const newDef = {
-      ...meta,
-      id,
-      context,
-      name: meta.name || id,
-      install: definition.install,
-      uninstall: definition.uninstall,
-      mount: definition.mount,
-      unmount: definition.unmount,
-    };
-
-    // Remove existing definition with same ID if present (update/overwrite)
-    for (const def of definitions) {
-      if (def.id === id) {
-        definitions.delete(def);
-        break;
+    for (const ns of namespaces) {
+      if (!this[DEFINITIONS].has(ns)) {
+        this[DEFINITIONS].set(ns, new Set());
       }
-    }
 
-    definitions.add(newDef);
-
-    return this;
-  }
-
-  /**
-   * Check if a namespace is loaded (at least one plugin from it is registered)
-   * @param {string} ns - Namespace to check
-   */
-  isNamespaceLoaded(ns) {
-    const plugins = this[DEFINITIONS].get(ns);
-    if (!plugins) return false;
-
-    for (const plugin of plugins) {
-      if (this.has(plugin.id)) return true;
-    }
-    return false;
-  }
-
-  /**
-   * Load all plugins for a given namespace (runtime activation)
-   * @param {string} ns - Namespace to load
-   */
-  async loadNamespace(ns) {
-    if (__DEV__) {
-      console.log(`[PluginRegistry] loadNamespace called for: ${ns}`);
-    }
-    const plugins = this[DEFINITIONS].get(ns);
-    if (!plugins) {
-      console.warn(`[PluginRegistry] No plugins found for namespace: ${ns}`);
-      return;
-    }
-    if (__DEV__) {
-      console.log(
-        `[PluginRegistry] Found ${plugins.size} plugins for namespace ${ns}`,
-      );
-    }
-
-    for (const plugin of plugins) {
-      if (__DEV__) {
-        console.log(
-          `[PluginRegistry] Loading plugin from namespace: ${plugin.id}`,
-        );
-      }
-      // Wrap mount/unmount into init/destroy for the standard register method
-      const pluginInstance = {
-        ...plugin,
-        init: async reg => {
-          if (__DEV__) {
-            console.log(`[PluginRegistry] Mounting plugin: ${plugin.id}`);
-          }
-          if (typeof plugin.mount === 'function') {
-            await plugin.mount(reg);
-          } else if (__DEV__) {
-            console.warn(
-              `[PluginRegistry] Plugin ${plugin.id} has no mount method`,
-            );
-          }
-        },
-        destroy: async reg => {
-          if (typeof plugin.unmount === 'function') {
-            await plugin.unmount(reg);
-          }
-        },
+      // Store the full definition wrapper
+      const definitions = this[DEFINITIONS].get(ns);
+      const newDef = {
+        ...meta,
+        id,
+        context,
+        name: meta.name || id,
+        install: definition.install,
+        uninstall: definition.uninstall,
+        mount: definition.mount,
+        unmount: definition.unmount,
       };
 
-      await this.register(plugin.id, pluginInstance);
-    }
-  }
+      // Remove existing definition with same ID if present (update/overwrite)
+      for (const def of definitions) {
+        if (def.id === id) {
+          definitions.delete(def);
+          break;
+        }
+      }
 
-  /**
-   * Unload all plugins for a given namespace (runtime deactivation)
-   * @param {string} ns - Namespace to unload
-   */
-  async unloadNamespace(ns) {
-    const plugins = this[DEFINITIONS].get(ns);
-    if (!plugins) return;
+      definitions.add(newDef);
+    }
 
-    for (const plugin of plugins) {
-      await this.unregister(plugin.id);
-    }
-    if (__DEV__) {
-      console.log(`[PluginRegistry] Unloaded namespace: ${ns}`);
-    }
+    return this;
   }
 
   /**
@@ -287,6 +210,15 @@ class PluginRegistry {
       }
     }
     return null;
+  }
+
+  /**
+   * Get all plugin definitions for a namespace
+   * @param {string} ns - Namespace
+   * @returns {Set|null} Set of plugin definitions or null
+   */
+  getDefinitions(ns) {
+    return this[DEFINITIONS].get(ns) || null;
   }
 
   /**
@@ -356,69 +288,6 @@ class PluginRegistry {
   }
 
   /**
-   * Load a specific plugin by ID (runtime activation)
-   * Creates plugin instance and calls mount() hook
-   * @param {string} id - Plugin ID
-   * @returns {Promise<boolean>} True if loaded successfully
-   */
-  async loadPlugin(id) {
-    const definition = this.findDefinition(id);
-    if (!definition) {
-      console.warn(`[PluginRegistry] Cannot load: plugin "${id}" not found`);
-      return false;
-    }
-
-    if (this.has(id)) {
-      if (__DEV__) {
-        console.warn(`[PluginRegistry] Plugin "${id}" is already loaded`);
-      }
-      return true;
-    }
-
-    // Create plugin instance with mount/unmount wrappers
-    const pluginInstance = {
-      ...definition,
-      init: async reg => {
-        if (__DEV__) {
-          console.log(`[PluginRegistry] Mounting plugin: ${id}`);
-        }
-        if (typeof definition.mount === 'function') {
-          await definition.mount(reg);
-        }
-      },
-      destroy: async reg => {
-        if (typeof definition.unmount === 'function') {
-          await definition.unmount(reg);
-        }
-      },
-    };
-
-    await this.register(id, pluginInstance);
-    return true;
-  }
-
-  /**
-   * Unload a specific plugin by ID (runtime deactivation)
-   * Unregisters plugin and calls unmount() hook
-   * @param {string} id - Plugin ID
-   * @returns {Promise<boolean>} True if unloaded successfully
-   */
-  async unloadPlugin(id) {
-    if (!this.has(id)) {
-      if (__DEV__) {
-        console.warn(`[PluginRegistry] Plugin "${id}" is not loaded`);
-      }
-      return false;
-    }
-
-    await this.unregister(id);
-    if (__DEV__) {
-      console.log(`[PluginRegistry] Unloaded plugin: ${id}`);
-    }
-    return true;
-  }
-
-  /**
    * Update a specific plugin by ID
    * Unloads current instance and reloads for new version
    * @param {string} id - Plugin ID
@@ -429,13 +298,20 @@ class PluginRegistry {
       console.log(`[PluginRegistry] Updating plugin: ${id}`);
     }
 
+    // Find definition
+    const definition = this.findDefinition(id);
+    if (!definition) {
+      console.warn(`[PluginRegistry] Cannot load: plugin "${id}" not found`);
+      return false;
+    }
+
     // Unload if currently loaded
     if (this.has(id)) {
-      await this.unloadPlugin(id);
+      await this.unregister(id);
     }
 
     // Reload plugin
-    return this.loadPlugin(id);
+    return this.register(id, definition);
   }
 
   // =========================================================================
@@ -541,12 +417,12 @@ class PluginRegistry {
   // =========================================================================
 
   /**
-   * Register a schema extender (idempotent)
+   * Register a validator extender (idempotent)
    * @param {string} schemaId - Schema identifier
    * @param {Function} extender - (schema, validator) => extendedSchema
    * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
    */
-  registerSchema(schemaId, extender, pluginId) {
+  registerValidator(schemaId, extender, pluginId) {
     if (!this[SCHEMAS].has(schemaId)) {
       this[SCHEMAS].set(schemaId, new Set());
     }
@@ -556,8 +432,8 @@ class PluginRegistry {
     return this;
   }
 
-  /** Unregister a schema extender */
-  unregisterSchema(schemaId, extender) {
+  /** Unregister a validator extender */
+  unregisterValidator(schemaId, extender) {
     const extenders = this[SCHEMAS].get(schemaId);
     if (extenders && typeof extenders.delete === 'function') {
       extenders.delete(extender);
@@ -566,13 +442,13 @@ class PluginRegistry {
   }
 
   /**
-   * Extend a schema with all registered extenders
+   * Extend a validator with all registered extenders
    * @param {string} schemaId - Schema identifier
    * @param {ZodSchema} baseSchema - Base Zod schema
    * @param {Object} validator - Zod instance
    * @returns {ZodSchema} Extended schema
    */
-  extendSchema(schemaId, baseSchema, validator) {
+  extendValidator(schemaId, baseSchema, validator) {
     const extenders = this[SCHEMAS].get(schemaId);
     if (!extenders) return baseSchema;
 

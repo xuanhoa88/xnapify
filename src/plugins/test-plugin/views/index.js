@@ -6,7 +6,6 @@
  */
 
 import PluginField from './PluginField';
-import { PLUGIN_ID } from '../constants';
 import { profileSchema } from '../validator';
 
 // Extract handlers for cleanup
@@ -18,17 +17,29 @@ const extendProfileSchema = (schema, _validator) => {
 };
 
 const handleProfileSubmit = async (data, _context) => {
-  console.log('[Test Plugin] Form submitted with data:', data);
   if (data.nickname) {
     console.log(`[Test Plugin] Hello, ${data.nickname}!`);
   }
+};
+
+const handleProfileDefaults = async user => {
+  if (!user || !user.nickname) {
+    return {
+      nickname: 'Anonymous User',
+    };
+  }
+  return {};
 };
 
 // Plugin definition
 export default {
   // Metadata & registration config
   register() {
-    return ['profile', PLUGIN_ID, { name: 'Test Plugin' }];
+    return [
+      ['profile', 'dashboard'],
+      __PLUGIN_NAME__,
+      { name: __PLUGIN_DESCRIPTION__ },
+    ];
   },
 
   // Lifecycle: Mount (called when route is mounted)
@@ -39,13 +50,17 @@ export default {
     });
 
     // 2. Extend Schema
-    registry.registerSchema(
+    registry.registerValidator(
       'profile.personal_info.schema',
       extendProfileSchema,
     );
 
     // 3. Register Hook
     registry.registerHook('profile.personal_info.submit', handleProfileSubmit);
+    registry.registerHook(
+      'profile.personal_info.defaults',
+      handleProfileDefaults,
+    );
 
     console.log('[Test Plugin] Mounted');
   },
@@ -53,13 +68,17 @@ export default {
   // Lifecycle: Unmount (called when route is unmounted)
   unmount(registry) {
     registry.unregisterSlot('profile.personal_info.fields', PluginField);
-    registry.unregisterSchema(
+    registry.unregisterValidator(
       'profile.personal_info.schema',
       extendProfileSchema,
     );
     registry.unregisterHook(
       'profile.personal_info.submit',
       handleProfileSubmit,
+    );
+    registry.unregisterHook(
+      'profile.personal_info.defaults',
+      handleProfileDefaults,
     );
 
     console.log('[Test Plugin] Unmounted');

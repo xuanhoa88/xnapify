@@ -119,10 +119,12 @@ function validatePlugin(plugin) {
   }
 
   // Normalize plugin name
-  const pluginName = plugin.name.trim();
+  const pluginName = plugin.manifest.name || plugin.name.trim();
+  const pluginDescription = plugin.manifest.description || pluginName;
 
   return {
     pluginName,
+    pluginDescription,
     clientPath: plugin.manifest.browser
       ? path.resolve(plugin.path, plugin.manifest.browser)
       : null,
@@ -153,12 +155,17 @@ const filterPlugins = plugins => plugins.filter(Boolean);
  * Returns both browser (Module Federation) and server (CommonJS + CSS) builds
  */
 function createClientConfig(pluginData, buildPath) {
-  const { pluginName, clientPath, libraryName } = pluginData;
+  const { pluginName, clientPath, libraryName, pluginDescription } = pluginData;
 
   if (!clientPath) return [];
 
   const outputPath = path.join(buildPath, pluginName);
   const localIdentName = getPluginLocalIdentName(pluginName);
+
+  const pluginDefines = createDefinePlugin({
+    __PLUGIN_NAME__: JSON.stringify(pluginName),
+    __PLUGIN_DESCRIPTION__: JSON.stringify(pluginDescription),
+  });
 
   return [
     // Browser build (Module Federation)
@@ -183,6 +190,7 @@ function createClientConfig(pluginData, buildPath) {
         new webpack.ProvidePlugin({
           process: require.resolve('process/browser'),
         }),
+        pluginDefines,
         createEnvDefine(),
         new webpack.container.ModuleFederationPlugin({
           name: libraryName,
@@ -218,6 +226,7 @@ function createClientConfig(pluginData, buildPath) {
         ],
       },
       plugins: filterPlugins([
+        pluginDefines,
         createEnvDefine(),
         new MiniCssExtractPlugin({
           filename: 'plugin.css',
@@ -234,9 +243,14 @@ function createClientConfig(pluginData, buildPath) {
  * Create API server config (if plugin has API entry)
  */
 function createApiConfig(pluginData, buildPath) {
-  const { pluginName, apiPath } = pluginData;
+  const { pluginName, apiPath, pluginDescription } = pluginData;
 
   if (!apiPath) return [];
+
+  const pluginDefines = createDefinePlugin({
+    __PLUGIN_NAME__: JSON.stringify(pluginName),
+    __PLUGIN_DESCRIPTION__: JSON.stringify(pluginDescription),
+  });
 
   return [
     createWebpackConfig('server', {
@@ -247,7 +261,11 @@ function createApiConfig(pluginData, buildPath) {
         filename: 'api.js',
         library: { type: 'commonjs' },
       },
-      plugins: filterPlugins([createEnvDefine(), createProgressPlugin()]),
+      plugins: filterPlugins([
+        pluginDefines,
+        createEnvDefine(),
+        createProgressPlugin(),
+      ]),
     }),
   ];
 }
