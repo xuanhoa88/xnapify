@@ -10,7 +10,7 @@
  * Handles dynamic loading, unloading, and synchronization of plugins.
  * Shared logic for both server and client.
  */
-import { registry } from '../registry';
+import { registry } from '../Registry';
 
 export const INITIALIZED = Symbol('__rsk.initializedPlugins__');
 export const ACTIVE_PLUGINS = Symbol('__rsk.activePlugins__');

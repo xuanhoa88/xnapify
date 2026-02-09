@@ -7,7 +7,7 @@
 
 import { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
-import { registry } from './registry';
+import { registry } from './Registry';
 
 /**
  * PluginSlot - Renders components registered for a named slot

@@ -6,7 +6,7 @@
  */
 
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { registry } from './registry';
+import { registry } from './Registry';
 
 /**
  * Hook to execute plugin hooks

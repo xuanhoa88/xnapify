@@ -6,11 +6,13 @@
  */
 
 // Private property symbols
+import Hook from './Hook';
+
 const PLUGINS = Symbol('__rsk.pluginsList__');
 const SLOTS = Symbol('__rsk.pluginSlots__');
-const HOOKS = Symbol('__rsk.pluginHooks__');
 const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
 const LISTENERS = Symbol('__rsk.pluginListeners__');
+const HOOKS = Symbol('__rsk.pluginHooks__');
 const REGISTRATIONS = Symbol('__rsk.pluginRegistrations__');
 
 /**
@@ -23,7 +25,7 @@ class PluginRegistry {
   constructor() {
     this[PLUGINS] = new Map(); // Map<id, plugin>
     this[SLOTS] = new Map(); // Map<slotId, Map<component, options>>
-    this[HOOKS] = new Map(); // Map<hookId, Set<callback>>
+    this[HOOKS] = new Hook(); // Specialized hook manager
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
     this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [] }>
@@ -115,9 +117,7 @@ class PluginRegistry {
     }
 
     // Clear hooks (includes schema extenders)
-    for (const { hookId, callback } of reg.hooks) {
-      this.unregisterHook(hookId, callback);
-    }
+    this[HOOKS].clear(pluginId);
 
     if (__DEV__) {
       const total = reg.slots.length + reg.hooks.length;
@@ -363,24 +363,12 @@ class PluginRegistry {
    * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
    */
   registerHook(hookId, callback, pluginId) {
-    if (!this[HOOKS].has(hookId)) {
-      this[HOOKS].set(hookId, new Set());
-    }
-    const callbacks = this[HOOKS].get(hookId);
-    if (callbacks && typeof callbacks.add === 'function') {
-      callbacks.add(callback);
-      // eslint-disable-next-line no-underscore-dangle
-      this._trackRegistration(pluginId, 'hooks', { hookId, callback });
-    }
+    this[HOOKS].register(hookId, callback, pluginId);
     return this;
   }
 
-  /** Unregister a hook callback */
   unregisterHook(hookId, callback) {
-    const callbacks = this[HOOKS].get(hookId);
-    if (callbacks && typeof callbacks.delete === 'function') {
-      callbacks.delete(callback);
-    }
+    this[HOOKS].unregister(hookId, callback);
     return this;
   }
 
@@ -391,18 +379,7 @@ class PluginRegistry {
    * @returns {Promise<Array>} Results from all callbacks
    */
   async executeHook(hookId, ...args) {
-    const callbacks = this[HOOKS].get(hookId);
-    if (!callbacks) return [];
-
-    const results = [];
-    for (const callback of callbacks) {
-      try {
-        results.push(await callback(...args));
-      } catch (error) {
-        console.error(`[PluginRegistry] Hook "${hookId}" error:`, error);
-      }
-    }
-    return results;
+    return this[HOOKS].execute(hookId, ...args);
   }
 
   // =========================================================================
@@ -439,4 +416,6 @@ class PluginRegistry {
 
 // Export singleton
 export const registry = new PluginRegistry();
-export default registry;
+
+// Export class
+export default PluginRegistry;
