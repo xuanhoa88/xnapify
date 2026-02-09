@@ -9,7 +9,7 @@ import PluginField from './PluginField';
 import { profileSchema } from '../validator';
 
 // Extract handlers for cleanup
-const extendProfileSchema = (schema, _validator) => {
+const extendProfileValidator = (schema, _validator) => {
   // Merge plugin schema with base schema
   // We use the exported profileSchema which uses the shared Zod instance
   const extension = profileSchema();
@@ -50,15 +50,15 @@ export default {
     });
 
     // 2. Extend Schema
-    registry.registerValidator(
-      'profile.personal_info.schema',
-      extendProfileSchema,
+    registry.registerHook(
+      'profile.personal_info.validator',
+      extendProfileValidator,
     );
 
     // 3. Register Hook
     registry.registerHook('profile.personal_info.submit', handleProfileSubmit);
     registry.registerHook(
-      'profile.personal_info.defaults',
+      'profile.personal_info.formData',
       handleProfileDefaults,
     );
 
@@ -68,16 +68,16 @@ export default {
   // Lifecycle: destroy (called when plugin is disabled)
   destroy(registry) {
     registry.unregisterSlot('profile.personal_info.fields', PluginField);
-    registry.unregisterValidator(
-      'profile.personal_info.schema',
-      extendProfileSchema,
+    registry.unregisterHook(
+      'profile.personal_info.validator',
+      extendProfileValidator,
     );
     registry.unregisterHook(
       'profile.personal_info.submit',
       handleProfileSubmit,
     );
     registry.unregisterHook(
-      'profile.personal_info.defaults',
+      'profile.personal_info.formData',
       handleProfileDefaults,
     );
 

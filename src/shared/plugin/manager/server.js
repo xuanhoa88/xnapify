@@ -185,6 +185,10 @@ class ServerPluginManager extends BasePluginManager {
             await pluginApi.init(this[PLUGIN_CONTEXT]);
             // Store API instance for destroy during unload
             this[PLUGIN_API_INSTANCES].set(id, pluginApi);
+          } else {
+            console.warn(
+              `[ServerPluginManager] Plugin ${id} has no init method in API module`,
+            );
           }
         } catch (err) {
           console.warn(

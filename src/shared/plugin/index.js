@@ -9,5 +9,5 @@ export { default as PluginSlot } from './PluginSlot';
 export {
   usePluginHooks,
   usePluginValidator,
-  usePluginDefaultValues,
+  usePluginFormData,
 } from './usePlugin';

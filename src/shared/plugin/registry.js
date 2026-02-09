@@ -406,55 +406,6 @@ class PluginRegistry {
   }
 
   // =========================================================================
-  // Schema Management (Zod schema extensions) - Reuses Hook system
-  // =========================================================================
-
-  /**
-   * Register a validator extender (idempotent)
-   * Reuses registerHook internally with 'schema:' prefix
-   * @param {string} schemaId - Schema identifier
-   * @param {Function} extender - (schema, validator) => extendedSchema
-   * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
-   */
-  registerValidator(schemaId, extender, pluginId) {
-    return this.registerHook(`schema:${schemaId}`, extender, pluginId);
-  }
-
-  /** Unregister a validator extender */
-  unregisterValidator(schemaId, extender) {
-    return this.unregisterHook(`schema:${schemaId}`, extender);
-  }
-
-  /**
-   * Extend a validator with all registered extenders
-   * @param {string} schemaId - Schema identifier
-   * @param {ZodSchema} baseSchema - Base Zod schema
-   * @param {Object} validator - Zod instance
-   * @returns {Promise<ZodSchema>} Extended schema
-   */
-  extendValidator(schemaId, baseSchema, validator) {
-    const hookId = `schema:${schemaId}`;
-    const extenders = this[HOOKS].get(hookId);
-    if (!extenders) return Promise.resolve(baseSchema);
-
-    // Chain extenders using Promise.resolve
-    return Array.from(extenders).reduce(
-      (promise, extender) =>
-        promise
-          .then(schema => extender(schema, validator))
-          .catch(error => {
-            console.error(
-              `[PluginRegistry] Schema "${schemaId}" error:`,
-              error,
-            );
-            // On error, return previous schema to keep chain alive
-            return promise;
-          }),
-      Promise.resolve(baseSchema),
-    );
-  }
-
-  // =========================================================================
   // Utility
   // =========================================================================
 

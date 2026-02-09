@@ -25,9 +25,9 @@ import Form, {
 } from '../../../../../shared/renderer/components/Form';
 import {
   PluginSlot,
-  usePluginValidator,
   usePluginHooks,
-  usePluginDefaultValues,
+  usePluginValidator,
+  usePluginFormData,
 } from '../../../../../shared/plugin';
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
 import Loader from './Loader';
@@ -42,8 +42,8 @@ function PersonalInfoCard() {
   const pluginHooks = usePluginHooks();
 
   // Fetch defaults from plugins
-  const [pluginDefaultValues, loadingDefaultValues] = usePluginDefaultValues(
-    'profile.personal_info.defaults',
+  const [pluginDefaultValues, loadingDefaultValues] = usePluginFormData(
+    'profile.personal_info.formData',
     user,
   );
 
@@ -53,9 +53,9 @@ function PersonalInfoCard() {
     [i18n],
   );
 
-  // Extend schema with plugins (returns [schema, loading])
+  // Extend schema with plugins
   const [extendedValidator, loadingValidator] = usePluginValidator(
-    'profile.personal_info.schema',
+    'profile.personal_info.validator',
     baseSchema,
     z,
   );
