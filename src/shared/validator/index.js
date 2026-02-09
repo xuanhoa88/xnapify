@@ -29,7 +29,7 @@ function translateLabel(value, options = {}) {
   const { prefix } = options;
 
   if (prefix) {
-    const key = `zod.${prefix}.${value}`;
+    const key = `zod:${prefix}.${value}`;
     const translated = t(key, { defaultValue: value });
     return translated !== key ? translated : value;
   }
@@ -53,11 +53,11 @@ z.setErrorMap((issue, ctx) => {
     case z.ZodIssueCode.invalid_type:
       // Handle undefined/null as required field errors
       if (issue.received === 'undefined') {
-        messageKey = 'zod.errors.invalid_type_received_undefined';
+        messageKey = 'zod:errors.invalid_type_received_undefined';
       } else if (issue.received === 'null') {
-        messageKey = 'zod.errors.invalid_type_received_null';
+        messageKey = 'zod:errors.invalid_type_received_null';
       } else {
-        messageKey = 'zod.errors.invalid_type';
+        messageKey = 'zod:errors.invalid_type';
         options = {
           expected: translateLabel(issue.expected, { prefix: 'types' }),
           received: translateLabel(issue.received, { prefix: 'types' }),
@@ -66,14 +66,14 @@ z.setErrorMap((issue, ctx) => {
       break;
 
     case z.ZodIssueCode.invalid_literal:
-      messageKey = 'zod.errors.invalid_literal';
+      messageKey = 'zod:errors.invalid_literal';
       options = {
         expected: JSON.stringify(issue.expected),
       };
       break;
 
     case z.ZodIssueCode.unrecognized_keys:
-      messageKey = 'zod.errors.unrecognized_keys';
+      messageKey = 'zod:errors.unrecognized_keys';
       options = {
         keys: issue.keys.join(', '),
         count: issue.keys.length,
@@ -81,11 +81,11 @@ z.setErrorMap((issue, ctx) => {
       break;
 
     case z.ZodIssueCode.invalid_union:
-      messageKey = 'zod.errors.invalid_union';
+      messageKey = 'zod:errors.invalid_union';
       break;
 
     case z.ZodIssueCode.invalid_union_discriminator:
-      messageKey = 'zod.errors.invalid_union_discriminator';
+      messageKey = 'zod:errors.invalid_union_discriminator';
       options = {
         options: issue.options.join(', '),
         count: issue.options.length,
@@ -93,7 +93,7 @@ z.setErrorMap((issue, ctx) => {
       break;
 
     case z.ZodIssueCode.invalid_enum_value:
-      messageKey = 'zod.errors.invalid_enum_value';
+      messageKey = 'zod:errors.invalid_enum_value';
       options = {
         options: issue.options.join(', '),
         received: issue.received,
@@ -101,31 +101,31 @@ z.setErrorMap((issue, ctx) => {
       break;
 
     case z.ZodIssueCode.invalid_arguments:
-      messageKey = 'zod.errors.invalid_arguments';
+      messageKey = 'zod:errors.invalid_arguments';
       break;
 
     case z.ZodIssueCode.invalid_return_type:
-      messageKey = 'zod.errors.invalid_return_type';
+      messageKey = 'zod:errors.invalid_return_type';
       break;
 
     case z.ZodIssueCode.invalid_date:
-      messageKey = 'zod.errors.invalid_date';
+      messageKey = 'zod:errors.invalid_date';
       break;
 
     case z.ZodIssueCode.invalid_string:
       // Handle object-based validations (startsWith, endsWith)
       if (typeof issue.validation === 'object') {
         if ('startsWith' in issue.validation) {
-          messageKey = 'zod.errors.invalid_string.startsWith';
+          messageKey = 'zod:errors.invalid_string.startsWith';
           options = { startsWith: issue.validation.startsWith };
         } else if ('endsWith' in issue.validation) {
-          messageKey = 'zod.errors.invalid_string.endsWith';
+          messageKey = 'zod:errors.invalid_string.endsWith';
           options = { endsWith: issue.validation.endsWith };
         } else {
-          messageKey = 'zod.errors.custom';
+          messageKey = 'zod:errors.custom';
         }
       } else {
-        messageKey = `zod.errors.invalid_string.${issue.validation}`;
+        messageKey = `zod:errors.invalid_string.${issue.validation}`;
         options = {
           validation: translateLabel(issue.validation, {
             prefix: 'validations',
@@ -143,7 +143,7 @@ z.setErrorMap((issue, ctx) => {
       } else {
         variant = issue.inclusive ? 'inclusive' : 'not_inclusive';
       }
-      messageKey = `zod.errors.too_small.${type}.${variant}`;
+      messageKey = `zod:errors.too_small.${type}.${variant}`;
       options = { minimum: issue.minimum, count: issue.minimum };
       break;
     }
@@ -157,7 +157,7 @@ z.setErrorMap((issue, ctx) => {
       } else {
         variant = issue.inclusive ? 'inclusive' : 'not_inclusive';
       }
-      messageKey = `zod.errors.too_big.${type}.${variant}`;
+      messageKey = `zod:errors.too_big.${type}.${variant}`;
       options = { maximum: issue.maximum, count: issue.maximum };
       break;
     }
@@ -174,24 +174,24 @@ z.setErrorMap((issue, ctx) => {
           messageKey = issue.params.i18n.key;
           options = issue.params.i18n.options || {};
         } else {
-          messageKey = 'zod.errors.custom';
+          messageKey = 'zod:errors.custom';
         }
       } else {
-        messageKey = 'zod.errors.custom';
+        messageKey = 'zod:errors.custom';
       }
       break;
 
     case z.ZodIssueCode.invalid_intersection_types:
-      messageKey = 'zod.errors.invalid_intersection_types';
+      messageKey = 'zod:errors.invalid_intersection_types';
       break;
 
     case z.ZodIssueCode.not_multiple_of:
-      messageKey = 'zod.errors.not_multiple_of';
+      messageKey = 'zod:errors.not_multiple_of';
       options = { multipleOf: issue.multipleOf };
       break;
 
     case z.ZodIssueCode.not_finite:
-      messageKey = 'zod.errors.not_finite';
+      messageKey = 'zod:errors.not_finite';
       break;
 
     default:
@@ -204,12 +204,8 @@ z.setErrorMap((issue, ctx) => {
   // Try to get message with path suffix first (e.g., invalidTypeWithPath)
   if (options.path) {
     const withPathKey = messageKey + 'WithPath';
-    const withPathMessage = t(withPathKey, {
-      ...options,
-      defaultValue: null,
-    });
-    if (withPathMessage && withPathMessage !== withPathKey) {
-      return { message: withPathMessage };
+    if (i18n.exists(withPathKey)) {
+      return { message: t(withPathKey, options) };
     }
   }
 
@@ -265,7 +261,7 @@ export function validateForm(schema, data) {
   const result = zodSchema.safeParse(data);
 
   if (result.success) {
-    return [true];
+    return [true, result.data];
   }
 
   // Return error messages as arrays (same format as schema errors above)

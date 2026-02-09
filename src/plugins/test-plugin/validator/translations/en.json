@@ -1,0 +1,8 @@
+{
+  "nickname": "Nickname",
+  "bio": "Bio",
+  "validations": {
+    "nickname_taken": "This nickname is already taken",
+    "bio_too_long": "Bio must be less than {{max}} characters"
+  }
+}

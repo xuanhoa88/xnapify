@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm } from '../../../../shared/validator';
+import { validateForm, z } from '../../../../shared/validator';
 import {
   updateProfileFormSchema,
   changePasswordFormSchema,
@@ -59,36 +59,50 @@ export async function getProfile(req, res) {
  */
 export async function updateProfile(req, res) {
   const http = req.app.get('http');
-  try {
-    const { display_name, first_name, last_name, bio, location, website } =
-      req.body;
+  const hook = req.app.get('hook').withContext(req.app);
+  const i18n = req.app.get('i18n');
 
-    // Validate input using shared schema
-    const [isValid, validationErrors] = validateForm(updateProfileFormSchema, {
-      display_name,
-      first_name,
-      last_name,
-      bio,
-      location,
-      website,
-    });
+  try {
+    // 1. Initialize base schema
+    const baseSchema = updateProfileFormSchema({ i18n, z });
+
+    // 2. Allow plugins to extend the schema via hooks
+    // We pass a mutable context with the schema
+    const context = {
+      schema: baseSchema,
+      i18n,
+      z,
+    };
+
+    await hook('profile').emit('extendSchema', context);
+
+    // 3. Validate using the (potentially extended) schema
+    // We wrap it in a factory because validateForm expects a function
+    const [isValid, dataOrErrors] = validateForm(
+      () => context.schema,
+      req.body,
+    );
+
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, dataOrErrors[0]);
     }
 
+    const validatedData = dataOrErrors;
+
+    // 4. Update user profile with validated data
     const user = await profileService.updateUserProfile(
       req.user.id,
-      { display_name, first_name, last_name, bio, location, website },
+      validatedData,
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        hook: req.app.get('hook').withContext(req.app),
+        hook: hook,
       },
     );
 
     return http.sendSuccess(res, {
       profile: await formatUserResponse(user, {
-        hook: req.app.get('hook').withContext(req.app),
+        hook: hook,
       }),
     });
   } catch (error) {

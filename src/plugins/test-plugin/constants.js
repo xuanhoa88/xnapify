@@ -1,0 +1,9 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+// Plugin ID
+export const PLUGIN_ID = 'test-plugin';

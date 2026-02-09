@@ -4,12 +4,12 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
-
-// Plugin ID
-const PLUGIN_ID = 'test-plugin';
+import { PLUGIN_ID } from '../constants';
 
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
+
+import { profileSchema } from '../validator';
 
 // Plugin definition for backend
 export default {
@@ -17,16 +17,26 @@ export default {
   [HANDLERS]: {},
 
   // Metadata & registration config
-  register: function register() {
+  register() {
     return ['profile', PLUGIN_ID, { name: 'Test Plugin (Backend)' }];
   },
 
   // Lifecycle: Mount (called when plugin is initialized on server)
-  mount: function mount(context) {
+  mount(context) {
     console.log('[Test Plugin] Backend logic initialized for ' + PLUGIN_ID);
 
     // Get hook engine from app
     const hook = context.app.get('hook');
+
+    // Handler to extend profile schema
+    this[HANDLERS].extendSchema = function (context) {
+      if (context.schema) {
+        const extension = profileSchema();
+        context.schema = context.schema.merge(extension);
+        console.log('[Test Plugin] Extended profile schema via hook');
+      }
+    };
+    hook('profile').on('extendSchema', this[HANDLERS].extendSchema);
 
     // Store handler reference for cleanup
     // This handler extends the user response with a nickname field
@@ -61,11 +71,14 @@ export default {
   },
 
   // Lifecycle: Unmount (called when plugin is disabled)
-  unmount: function unmount(context) {
+  unmount(context) {
     console.log('[Test Plugin] Backend logic unmounted for ' + PLUGIN_ID);
 
     // Unsubscribe from hooks
     const hook = context.app.get('hook');
+    if (this[HANDLERS].extendSchema) {
+      hook('profile').off('extendSchema', this[HANDLERS].extendSchema);
+    }
     if (this[HANDLERS].formatResponse) {
       hook('profile').off('formatResponse', this[HANDLERS].formatResponse);
     }

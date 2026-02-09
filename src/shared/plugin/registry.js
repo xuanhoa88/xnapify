@@ -59,7 +59,8 @@ class PluginRegistry {
    */
   async unregister(pluginId) {
     // Clean up all registrations before calling destroy
-    this.clearPluginRegistrations(pluginId);
+    // eslint-disable-next-line no-underscore-dangle
+    this._clearPluginRegistrations(pluginId);
 
     const plugin = this[PLUGINS].get(pluginId);
     if (plugin && typeof plugin.destroy === 'function') {
@@ -90,7 +91,7 @@ class PluginRegistry {
    * @param {string} type - 'slots' | 'hooks' | 'schemas'
    * @param {Object} data - Registration data to track
    */
-  trackRegistration(pluginId, type, data) {
+  _trackRegistration(pluginId, type, data) {
     if (!pluginId) return;
 
     if (!this[REGISTRATIONS].has(pluginId)) {
@@ -106,7 +107,7 @@ class PluginRegistry {
    * Clear all registrations made by a plugin
    * @param {string} pluginId - Plugin to clear registrations for
    */
-  clearPluginRegistrations(pluginId) {
+  _clearPluginRegistrations(pluginId) {
     const reg = this[REGISTRATIONS].get(pluginId);
     if (!reg) return;
 
@@ -455,7 +456,8 @@ class PluginRegistry {
     const slotMap = this[SLOTS].get(slotId);
     if (!slotMap.has(component)) {
       slotMap.set(component, { order: 0, ...slotOptions });
-      this.trackRegistration(pluginId, 'slots', { slotId, component });
+      // eslint-disable-next-line no-underscore-dangle
+      this._trackRegistration(pluginId, 'slots', { slotId, component });
       this.notify();
     }
     return this;
@@ -498,7 +500,8 @@ class PluginRegistry {
     const callbacks = this[HOOKS].get(hookId);
     if (callbacks && typeof callbacks.add === 'function') {
       callbacks.add(callback);
-      this.trackRegistration(pluginId, 'hooks', { hookId, callback });
+      // eslint-disable-next-line no-underscore-dangle
+      this._trackRegistration(pluginId, 'hooks', { hookId, callback });
     }
     return this;
   }
@@ -548,7 +551,8 @@ class PluginRegistry {
       this[SCHEMAS].set(schemaId, new Set());
     }
     this[SCHEMAS].get(schemaId).add(extender);
-    this.trackRegistration(pluginId, 'schemas', { schemaId, extender });
+    // eslint-disable-next-line no-underscore-dangle
+    this._trackRegistration(pluginId, 'schemas', { schemaId, extender });
     return this;
   }
 

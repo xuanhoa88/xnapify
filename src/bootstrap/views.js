@@ -81,7 +81,7 @@ export default async function initializeRouter() {
         error, // Pass error to component if it accepts it
       });
     },
-    async onRouteMount(route, _ctx) {
+    async onRouteInit(route, _ctx) {
       // Check route.workspace (set in route init hook) or module export
       const ns = route.workspace || (route.module && route.module.workspace);
 
@@ -96,8 +96,9 @@ export default async function initializeRouter() {
         }
       }
     },
-    async onRouteUnmount(route, _ctx) {
-      const ns = route.workspace;
+    async onRouteDestroy(route, _ctx) {
+      // Check route.workspace (set in route init hook) or module export
+      const ns = route.workspace || (route.module && route.module.workspace);
       if (ns) {
         if (__DEV__) {
           console.log(`[Router] Unloading plugin namespace: ${ns}`);
