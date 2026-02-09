@@ -391,7 +391,7 @@ export async function runSeeds(seeds = null, connection, options = {}) {
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function revertMigration(
+export async function revertMigrations(
   migrations = null,
   connection,
   options = {},
@@ -426,7 +426,7 @@ export async function revertMigration(
  * @param {Console|Object} [options.logger] - Logger instance
  * @returns {Promise<void>}
  */
-export async function undoSeed(seeds = null, connection, options = {}) {
+export async function undoSeeds(seeds = null, connection, options = {}) {
   validateConnection(connection);
 
   const logger = options.logger || console;

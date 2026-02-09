@@ -220,7 +220,7 @@ console.log('Pending migrations:', status.pending);
 await db.runMigrations(null, connection);
 
 // Rollback last migration
-await db.revertMigration(null, connection);
+await db.revertMigrations(null, connection);
 
 // Check database connection
 try {

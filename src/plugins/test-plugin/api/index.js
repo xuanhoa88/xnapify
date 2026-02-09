@@ -4,10 +4,34 @@
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
+
+import { addNamespace } from '../../../shared/i18n/addNamespace';
+import { getTranslations } from '../../../shared/i18n/getTranslations';
+import { PLUGIN_ID } from '../constants';
+import { profileSchema } from '../validator';
+
+// Register translations for this plugin (server-side)
+addNamespace(
+  PLUGIN_ID,
+  getTranslations(require.context('../translations', false, /\.json$/i)),
+);
+
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
 
-import { profileSchema } from '../validator';
+// Private symbol for migrations context
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+
+// Private symbol for seeds context
+const seedsContext = require.context(
+  './database/seeds',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
 
 // Plugin definition for backend
 export default {
@@ -24,12 +48,39 @@ export default {
   },
 
   // Lifecycle: init (called when plugin is initialized on server)
-  init(context) {
+  async init(context) {
     console.log(
       '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
     );
 
-    // Get hook engine from app
+    // Get database connection
+    const db = context.app.get('db');
+    if (db) {
+      try {
+        console.log('[Test Plugin] Migration keys:', migrationsContext.keys());
+        await db.connection.runMigrations([
+          { context: migrationsContext, prefix: 'test-plugin' },
+        ]);
+        console.log('[Test Plugin] Database migrations executed');
+      } catch (error) {
+        console.error(
+          '[Test Plugin] Database migration failed:',
+          error.message,
+        );
+      }
+
+      try {
+        console.log('[Test Plugin] Seed keys:', seedsContext.keys());
+        await db.connection.runSeeds([
+          { context: seedsContext, prefix: 'test-plugin' },
+        ]);
+        console.log('[Test Plugin] Database seeds executed');
+      } catch (error) {
+        console.error('[Test Plugin] Database seed failed:', error.message);
+      }
+    }
+
+    // Get hook engine
     const hook = context.app.get('hook');
 
     // Handler to extend profile schema
@@ -93,8 +144,33 @@ export default {
   },
 
   // Lifecycle: destroy (called when plugin is disabled)
-  destroy(context) {
+  async destroy(context) {
     console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
+
+    const db = context.app.get('db');
+    if (db) {
+      try {
+        console.log('[Test Plugin] Database migrations/seeds destroyed');
+        await db.connection.revertMigrations([
+          { context: migrationsContext, prefix: 'test-plugin' },
+        ]);
+        console.log('[Test Plugin] Database migrations destroyed');
+      } catch (error) {
+        console.error(
+          '[Test Plugin] Database migration failed:',
+          error.message,
+        );
+      }
+
+      try {
+        await db.connection.undoSeeds([
+          { context: seedsContext, prefix: 'test-plugin' },
+        ]);
+        console.log('[Test Plugin] Database seeds destroyed');
+      } catch (error) {
+        console.error('[Test Plugin] Database seed failed:', error.message);
+      }
+    }
 
     // Unsubscribe from hooks
     const hook = context.app.get('hook');

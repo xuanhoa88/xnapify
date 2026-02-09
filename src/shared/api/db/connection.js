@@ -9,8 +9,8 @@ import Sequelize from 'sequelize';
 import {
   runMigrations,
   runSeeds,
-  revertMigration,
-  undoSeed,
+  revertMigrations,
+  undoSeeds,
   getMigrationStatus,
   getSeedStatus,
 } from './migrator';
@@ -83,8 +83,8 @@ function attachMigrationMethods(sequelize) {
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.revertMigration = (migrations = null, options = {}) =>
-    revertMigration(migrations, sequelize, options);
+  sequelize.revertMigrations = (migrations = null, options = {}) =>
+    revertMigrations(migrations, sequelize, options);
 
   /**
    * Undo last seed
@@ -92,8 +92,8 @@ function attachMigrationMethods(sequelize) {
    * @param {Object} [options] - Optional configuration
    * @returns {Promise<void>}
    */
-  sequelize.undoSeed = (seeds = null, options = {}) =>
-    undoSeed(seeds, sequelize, options);
+  sequelize.undoSeeds = (seeds = null, options = {}) =>
+    undoSeeds(seeds, sequelize, options);
 
   /**
    * Get migration status

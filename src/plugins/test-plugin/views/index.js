@@ -5,8 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PluginField from './PluginField';
+import { addNamespace } from '../../../shared/i18n/addNamespace';
+import { getTranslations } from '../../../shared/i18n/getTranslations';
 import { profileSchema } from '../validator';
+import { PLUGIN_ID } from '../constants';
+import PluginField from './PluginField';
+
+// Register translations for this plugin (client-side)
+addNamespace(
+  PLUGIN_ID,
+  getTranslations(require.context('../translations', false, /\.json$/i)),
+);
 
 // Extract handlers for cleanup
 const extendProfileValidator = (schema, _validator) => {
