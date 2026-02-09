@@ -35,10 +35,37 @@ export function usePluginHooks() {
  * @param {Object} validator - Zod instance (caller provides)
  */
 export function usePluginValidator(schemaId, baseSchema, validator) {
-  return useMemo(
-    () => registry.extendValidator(schemaId, baseSchema, validator),
-    [schemaId, baseSchema, validator],
-  );
+  const [schema, setSchema] = useState(baseSchema);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+    setLoading(true);
+
+    registry
+      .extendValidator(schemaId, baseSchema, validator)
+      .then(extended => {
+        if (mounted) {
+          setSchema(extended);
+          setLoading(false);
+        }
+      })
+      .catch(error => {
+        console.error(
+          `[usePluginValidator] Error extending schema ${schemaId}:`,
+          error,
+        );
+        if (mounted) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, [schemaId, baseSchema, validator]);
+
+  return [schema, loading];
 }
 
 /**

@@ -23,8 +23,8 @@ export default {
     ];
   },
 
-  // Lifecycle: Mount (called when plugin is initialized on server)
-  mount(context) {
+  // Lifecycle: init (called when plugin is initialized on server)
+  init(context) {
     console.log(
       '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
     );
@@ -92,9 +92,9 @@ export default {
     hook('profile').on('formatResponse', this[HANDLERS].formatResponse);
   },
 
-  // Lifecycle: Unmount (called when plugin is disabled)
-  unmount(context) {
-    console.log('[Test Plugin] Backend logic unmounted for ' + __PLUGIN_NAME__);
+  // Lifecycle: destroy (called when plugin is disabled)
+  destroy(context) {
+    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
 
     // Unsubscribe from hooks
     const hook = context.app.get('hook');

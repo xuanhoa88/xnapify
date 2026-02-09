@@ -53,8 +53,8 @@ function PersonalInfoCard() {
     [i18n],
   );
 
-  // Extend schema with plugins (returns Zod object)
-  const extendedValidator = usePluginValidator(
+  // Extend schema with plugins (returns [schema, loading])
+  const [extendedValidator, loadingValidator] = usePluginValidator(
     'profile.personal_info.schema',
     baseSchema,
     z,
@@ -112,7 +112,7 @@ function PersonalInfoCard() {
     [dispatch, t, pluginHooks, user],
   );
 
-  if (loadingDefaultValues) {
+  if (loadingDefaultValues || loadingValidator) {
     return <Loader />;
   }
 

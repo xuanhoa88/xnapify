@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -43,6 +44,14 @@ function Form({
     defaultValues,
     mode: 'onChange', // Validates on every change - works reliably on desktop and mobile
   });
+
+  // Reset form when defaultValues change (e.g., when data loads asynchronously)
+  // This ensures the form reflects the latest data, fixing issues with "Anonymous User"
+  // showing up when plugin defaults load before user data.
+  // Note: Parent components should memoize defaultValues to avoid unnecessary resets.
+  useEffect(() => {
+    methods.reset(defaultValues);
+  }, [defaultValues, methods]);
 
   const handleFormSubmit = methods.handleSubmit(async data => {
     if (typeof onSubmit === 'function') {

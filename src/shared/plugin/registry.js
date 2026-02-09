@@ -9,7 +9,6 @@
 const PLUGINS = Symbol('__rsk.pluginsList__');
 const SLOTS = Symbol('__rsk.pluginSlots__');
 const HOOKS = Symbol('__rsk.pluginHooks__');
-const SCHEMAS = Symbol('__rsk.pluginSchemas__');
 const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
 const LISTENERS = Symbol('__rsk.pluginListeners__');
 const REGISTRATIONS = Symbol('__rsk.pluginRegistrations__');
@@ -25,10 +24,9 @@ class PluginRegistry {
     this[PLUGINS] = new Map(); // Map<id, plugin>
     this[SLOTS] = new Map(); // Map<slotId, Map<component, options>>
     this[HOOKS] = new Map(); // Map<hookId, Set<callback>>
-    this[SCHEMAS] = new Map(); // Map<schemaId, Set<extender>>
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
-    this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [], schemas: [] }>
+    this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [] }>
   }
 
   // =========================================================================
@@ -95,7 +93,7 @@ class PluginRegistry {
     if (!pluginId) return;
 
     if (!this[REGISTRATIONS].has(pluginId)) {
-      this[REGISTRATIONS].set(pluginId, { slots: [], hooks: [], schemas: [] });
+      this[REGISTRATIONS].set(pluginId, { slots: [], hooks: [] });
     }
     const reg = this[REGISTRATIONS].get(pluginId);
     if (reg[type]) {
@@ -116,18 +114,13 @@ class PluginRegistry {
       this.unregisterSlot(slotId, component);
     }
 
-    // Clear hooks
+    // Clear hooks (includes schema extenders)
     for (const { hookId, callback } of reg.hooks) {
       this.unregisterHook(hookId, callback);
     }
 
-    // Clear schemas
-    for (const { schemaId, extender } of reg.schemas) {
-      this.unregisterValidator(schemaId, extender);
-    }
-
     if (__DEV__) {
-      const total = reg.slots.length + reg.hooks.length + reg.schemas.length;
+      const total = reg.slots.length + reg.hooks.length;
       if (total > 0) {
         console.log(
           `[PluginRegistry] Cleared ${total} registrations for plugin: ${pluginId}`,
@@ -180,8 +173,8 @@ class PluginRegistry {
         name: meta.name || id,
         install: definition.install,
         uninstall: definition.uninstall,
-        mount: definition.mount,
-        unmount: definition.unmount,
+        init: definition.init,
+        destroy: definition.destroy,
       };
 
       // Remove existing definition with same ID if present (update/overwrite)
@@ -413,32 +406,23 @@ class PluginRegistry {
   }
 
   // =========================================================================
-  // Schema Management (Zod schema extensions)
+  // Schema Management (Zod schema extensions) - Reuses Hook system
   // =========================================================================
 
   /**
    * Register a validator extender (idempotent)
+   * Reuses registerHook internally with 'schema:' prefix
    * @param {string} schemaId - Schema identifier
    * @param {Function} extender - (schema, validator) => extendedSchema
    * @param {string} [pluginId] - Optional plugin ID for auto-cleanup
    */
   registerValidator(schemaId, extender, pluginId) {
-    if (!this[SCHEMAS].has(schemaId)) {
-      this[SCHEMAS].set(schemaId, new Set());
-    }
-    this[SCHEMAS].get(schemaId).add(extender);
-    // eslint-disable-next-line no-underscore-dangle
-    this._trackRegistration(pluginId, 'schemas', { schemaId, extender });
-    return this;
+    return this.registerHook(`schema:${schemaId}`, extender, pluginId);
   }
 
   /** Unregister a validator extender */
   unregisterValidator(schemaId, extender) {
-    const extenders = this[SCHEMAS].get(schemaId);
-    if (extenders && typeof extenders.delete === 'function') {
-      extenders.delete(extender);
-    }
-    return this;
+    return this.unregisterHook(`schema:${schemaId}`, extender);
   }
 
   /**
@@ -446,21 +430,28 @@ class PluginRegistry {
    * @param {string} schemaId - Schema identifier
    * @param {ZodSchema} baseSchema - Base Zod schema
    * @param {Object} validator - Zod instance
-   * @returns {ZodSchema} Extended schema
+   * @returns {Promise<ZodSchema>} Extended schema
    */
   extendValidator(schemaId, baseSchema, validator) {
-    const extenders = this[SCHEMAS].get(schemaId);
-    if (!extenders) return baseSchema;
+    const hookId = `schema:${schemaId}`;
+    const extenders = this[HOOKS].get(hookId);
+    if (!extenders) return Promise.resolve(baseSchema);
 
-    let schema = baseSchema;
-    for (const extender of extenders) {
-      try {
-        schema = extender(schema, validator);
-      } catch (error) {
-        console.error(`[PluginRegistry] Schema "${schemaId}" error:`, error);
-      }
-    }
-    return schema;
+    // Chain extenders using Promise.resolve
+    return Array.from(extenders).reduce(
+      (promise, extender) =>
+        promise
+          .then(schema => extender(schema, validator))
+          .catch(error => {
+            console.error(
+              `[PluginRegistry] Schema "${schemaId}" error:`,
+              error,
+            );
+            // On error, return previous schema to keep chain alive
+            return promise;
+          }),
+      Promise.resolve(baseSchema),
+    );
   }
 
   // =========================================================================
@@ -472,7 +463,6 @@ class PluginRegistry {
     this[PLUGINS].clear();
     this[SLOTS].clear();
     this[HOOKS].clear();
-    this[SCHEMAS].clear();
     this[DEFINITIONS].clear();
     this.notify();
     return this;

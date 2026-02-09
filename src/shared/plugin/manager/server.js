@@ -177,13 +177,13 @@ class ServerPluginManager extends BasePluginManager {
           const apiModule = this.loadModule(apiBundlePath);
           const pluginApi = apiModule.default || apiModule;
 
-          // Object-only pattern: plugins must export { mount(context), unmount?(context) }
-          if (pluginApi && typeof pluginApi.mount === 'function') {
+          // Object-only pattern: plugins must export { init(context), destroy?(context) }
+          if (pluginApi && typeof pluginApi.init === 'function') {
             if (__DEV__) {
               console.log(`[ServerPluginManager] Booting API for ${id}`);
             }
-            await pluginApi.mount(this[PLUGIN_CONTEXT]);
-            // Store API instance for unmount during unload
+            await pluginApi.init(this[PLUGIN_CONTEXT]);
+            // Store API instance for destroy during unload
             this[PLUGIN_API_INSTANCES].set(id, pluginApi);
           }
         } catch (err) {

@@ -42,8 +42,8 @@ export default {
     ];
   },
 
-  // Lifecycle: Mount (called when route is mounted)
-  mount(registry) {
+  // Lifecycle: init (called when plugin is initialized)
+  init(registry) {
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', PluginField, {
       order: 10,
@@ -62,11 +62,11 @@ export default {
       handleProfileDefaults,
     );
 
-    console.log('[Test Plugin] Mounted');
+    console.log('[Test Plugin] Initialized');
   },
 
-  // Lifecycle: Unmount (called when route is unmounted)
-  unmount(registry) {
+  // Lifecycle: destroy (called when plugin is disabled)
+  destroy(registry) {
     registry.unregisterSlot('profile.personal_info.fields', PluginField);
     registry.unregisterValidator(
       'profile.personal_info.schema',
@@ -81,6 +81,6 @@ export default {
       handleProfileDefaults,
     );
 
-    console.log('[Test Plugin] Unmounted');
+    console.log('[Test Plugin] Destroyed');
   },
 };

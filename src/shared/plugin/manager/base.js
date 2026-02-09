@@ -56,7 +56,7 @@ export class BasePluginManager {
     this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> cssFiles array
     this[LOADED_VERSIONS] = new Map(); // pluginId -> version
     this[PLUGIN_MANAGER_INIT] = null; // initialization promise
-    this[PLUGIN_API_INSTANCES] = new Map(); // id -> API plugin instance { mount, unmount }
+    this[PLUGIN_API_INSTANCES] = new Map(); // id -> API plugin instance { init, destroy }
   }
 
   /**
@@ -464,7 +464,7 @@ export class BasePluginManager {
       }
       await registry.define(plugin, this[PLUGIN_CONTEXT]);
 
-      // Call mount() lifecycle hook (runtime activation)
+      // Call init() lifecycle hook (runtime activation)
       await registry.register(id, plugin);
 
       // Store plugin instance
@@ -545,12 +545,12 @@ export class BasePluginManager {
         await plugin.onUnload(this[PLUGIN_CONTEXT]);
       }
 
-      // Call plugin API unmount hook
+      // Call plugin API destroy hook
       const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
-      if (apiPlugin && typeof apiPlugin.unmount === 'function') {
-        await apiPlugin.unmount(this[PLUGIN_CONTEXT]);
+      if (apiPlugin && typeof apiPlugin.destroy === 'function') {
+        await apiPlugin.destroy(this[PLUGIN_CONTEXT]);
         if (__DEV__) {
-          console.log(`[PluginManager] Unmounted API for: ${id}`);
+          console.log(`[PluginManager] Destroyed API for: ${id}`);
         }
       }
       this[PLUGIN_API_INSTANCES].delete(id);
@@ -766,24 +766,31 @@ export class BasePluginManager {
             `[PluginManager] Loading plugin from namespace: ${plugin.id}`,
           );
         }
-        // Wrap mount/unmount into init/destroy for the standard register method
+        // Wrap init/destroy for the standard register method
         const pluginInstance = {
           ...plugin,
           init: async reg => {
             if (__DEV__) {
-              console.log(`[PluginManager] Mounting plugin: ${plugin.id}`);
+              console.log(`[PluginManager] Initializing plugin: ${plugin.id}`);
             }
-            if (typeof plugin.mount === 'function') {
-              await plugin.mount(reg);
+            if (typeof plugin.init === 'function') {
+              await plugin.init(reg);
             } else if (__DEV__) {
               console.warn(
-                `[PluginManager] Plugin ${plugin.id} has no mount method`,
+                `[PluginManager] Plugin ${plugin.id} has no 'init' method`,
               );
             }
           },
           destroy: async reg => {
-            if (typeof plugin.unmount === 'function') {
-              await plugin.unmount(reg);
+            if (__DEV__) {
+              console.log(`[PluginManager] Destroying plugin: ${plugin.id}`);
+            }
+            if (typeof plugin.destroy === 'function') {
+              await plugin.destroy(reg);
+            } else if (__DEV__) {
+              console.warn(
+                `[PluginManager] Plugin ${plugin.id} has no 'destroy' method`,
+              );
             }
           },
         };
