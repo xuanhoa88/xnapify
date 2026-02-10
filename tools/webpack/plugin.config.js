@@ -8,58 +8,18 @@
 const path = require('path');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
-const { logWarn, isVerbose } = require('../utils/logger');
+const { logWarn } = require('../utils/logger');
 const {
   createWebpackConfig,
   createCSSRule,
   createDefinePlugin,
+  createEnvDefine,
+  createProgressPlugin,
   createSharedDependencies,
   pkg,
   isDebug,
+  verbose,
 } = require('./base.config');
-const loadDotenv = require('./dotenv.plugin');
-
-// =============================================================================
-// CONSTANTS
-// =============================================================================
-
-const verbose = isVerbose();
-const isProfile = process.argv.includes('--profile');
-
-// =============================================================================
-// HELPER FUNCTIONS
-// =============================================================================
-
-/**
- * Create CSS Modules localIdentName for a plugin
- */
-const getPluginLocalIdentName = pluginName =>
-  isDebug
-    ? `${pluginName}_[local]__[hash:base64:5]`
-    : `${pluginName}_[hash:base64:5]`;
-
-/**
- * Create safe library name from plugin name
- */
-const getLibraryName = pluginName =>
-  `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-/**
- * Create ProgressPlugin for verbose builds
- */
-const createProgressPlugin = () =>
-  verbose
-    ? new webpack.ProgressPlugin({
-        activeModules: true,
-        entries: true,
-        modules: true,
-        modulesCount: 5000,
-        profile: isProfile,
-        dependencies: true,
-        dependenciesCount: 10000,
-        percentBy: 'entries',
-      })
-    : null;
 
 /**
  * Webpack plugin to strip :root CSS rules from final CSS assets
@@ -135,16 +95,23 @@ function validatePlugin(plugin) {
   };
 }
 
-/**
- * Create shared environment definition
- */
-const createEnvDefine = () =>
-  createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) });
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
 
 /**
- * Filter null plugins from array
+ * Create CSS Modules localIdentName for a plugin
  */
-const filterPlugins = plugins => plugins.filter(Boolean);
+const getPluginLocalIdentName = pluginName =>
+  isDebug
+    ? `${pluginName}_[local]__[hash:base64:5]`
+    : `${pluginName}_[hash:base64:5]`;
+
+/**
+ * Create safe library name from plugin name
+ */
+const getLibraryName = pluginName =>
+  `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 // =============================================================================
 // CONFIG BUILDERS
@@ -154,18 +121,13 @@ const filterPlugins = plugins => plugins.filter(Boolean);
  * Create client configs for plugin
  * Returns both browser (Module Federation) and server (CommonJS + CSS) builds
  */
-function createClientConfig(pluginData, buildPath) {
-  const { pluginName, clientPath, libraryName, pluginDescription } = pluginData;
+function createClientConfig(pluginData, pluginDefines, buildPath) {
+  const { pluginName, clientPath, libraryName } = pluginData;
 
   if (!clientPath) return [];
 
   const outputPath = path.join(buildPath, pluginName);
   const localIdentName = getPluginLocalIdentName(pluginName);
-
-  const pluginDefines = createDefinePlugin({
-    __PLUGIN_NAME__: JSON.stringify(pluginName),
-    __PLUGIN_DESCRIPTION__: JSON.stringify(pluginDescription),
-  });
 
   return [
     // Browser build (Module Federation)
@@ -175,8 +137,22 @@ function createClientConfig(pluginData, buildPath) {
       output: {
         path: outputPath,
         filename: 'browser.js',
+        chunkFilename: '[name].chunk.js',
         publicPath: 'auto',
         uniqueName: libraryName,
+      },
+      optimization: {
+        splitChunks: {
+          chunks: 'async',
+          cacheGroups: {
+            vendors: {
+              test: /[\\/]node_modules[\\/]/,
+              name: 'vendors',
+              chunks: 'async',
+              priority: -10,
+            },
+          },
+        },
       },
       module: {
         rules: [
@@ -186,7 +162,7 @@ function createClientConfig(pluginData, buildPath) {
           }),
         ],
       },
-      plugins: filterPlugins([
+      plugins: [
         new webpack.ProvidePlugin({
           process: require.resolve('process/browser'),
         }),
@@ -205,7 +181,7 @@ function createClientConfig(pluginData, buildPath) {
           }),
         }),
         createProgressPlugin(),
-      ]),
+      ].filter(Boolean),
     }),
 
     // Server build (CommonJS + CSS extraction)
@@ -225,7 +201,7 @@ function createClientConfig(pluginData, buildPath) {
           }),
         ],
       },
-      plugins: filterPlugins([
+      plugins: [
         pluginDefines,
         createEnvDefine(),
         new MiniCssExtractPlugin({
@@ -234,7 +210,7 @@ function createClientConfig(pluginData, buildPath) {
         }),
         new StripRootCSSPlugin(),
         createProgressPlugin(),
-      ]),
+      ].filter(Boolean),
     }),
   ];
 }
@@ -242,15 +218,10 @@ function createClientConfig(pluginData, buildPath) {
 /**
  * Create API server config (if plugin has API entry)
  */
-function createApiConfig(pluginData, buildPath) {
-  const { pluginName, apiPath, pluginDescription } = pluginData;
+function createApiConfig(pluginData, pluginDefines, buildPath) {
+  const { pluginName, apiPath } = pluginData;
 
   if (!apiPath) return [];
-
-  const pluginDefines = createDefinePlugin({
-    __PLUGIN_NAME__: JSON.stringify(pluginName),
-    __PLUGIN_DESCRIPTION__: JSON.stringify(pluginDescription),
-  });
 
   return [
     createWebpackConfig('server', {
@@ -261,11 +232,11 @@ function createApiConfig(pluginData, buildPath) {
         filename: 'api.js',
         library: { type: 'commonjs' },
       },
-      plugins: filterPlugins([
+      plugins: [
         pluginDefines,
         createEnvDefine(),
         createProgressPlugin(),
-      ]),
+      ].filter(Boolean),
     }),
   ];
 }
@@ -296,11 +267,17 @@ function createPluginConfig({ plugins = [], buildPath }) {
     const pluginData = validatePlugin(plugin);
     if (!pluginData) continue;
 
+    // Create shared plugin defines once
+    const pluginDefines = createDefinePlugin({
+      __PLUGIN_NAME__: JSON.stringify(pluginData.pluginName),
+      __PLUGIN_DESCRIPTION__: JSON.stringify(pluginData.pluginDescription),
+    });
+
     // Create browser and server builds
-    configs.push(...createClientConfig(pluginData, buildPath));
+    configs.push(...createClientConfig(pluginData, pluginDefines, buildPath));
 
     // Optionally create API build
-    configs.push(...createApiConfig(pluginData, buildPath));
+    configs.push(...createApiConfig(pluginData, pluginDefines, buildPath));
   }
 
   return [...new Set(configs)];

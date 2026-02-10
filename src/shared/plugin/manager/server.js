@@ -12,14 +12,18 @@ import {
   PLUGIN_CONTEXT,
   LOADED_VERSIONS,
   PLUGIN_MANAGER_INIT,
+  PLUGIN_METADATA,
 } from './base';
 
+// Symbols for internal state
 const PLUGIN_API_INSTANCES = Symbol('__rsk.pluginApiInstances__');
+const PLUGIN_CSS_ENTRY_POINTS = Symbol('__rsk.pluginCssEntryPoints__');
 
 class ServerPluginManager extends BasePluginManager {
   constructor() {
     super();
     this[PLUGIN_API_INSTANCES] = new Map();
+    this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> cssFiles array
 
     // Clean up API instances when plugin is unloaded
     this.on('plugin:unloaded', async ({ id }) => {
@@ -38,8 +42,41 @@ class ServerPluginManager extends BasePluginManager {
         }
       }
       this[PLUGIN_API_INSTANCES].delete(id);
+      this[PLUGIN_CSS_ENTRY_POINTS].delete(id);
+    });
+
+    // Store CSS entry points when plugin is loaded
+    this.on('plugin:loaded', async ({ id }) => {
+      const metadata = this[PLUGIN_METADATA].get(id);
+      const manifest = metadata && metadata.manifest;
+
+      if (manifest && Array.isArray(manifest.cssFiles)) {
+        this[PLUGIN_CSS_ENTRY_POINTS].set(
+          id,
+          manifest.cssFiles.map(cssFile => this.getPluginAssetUrl(id, cssFile)),
+        );
+      }
+    });
+
+    // Clear internal maps when manager is destroyed
+    this.on('manager:destroyed', () => {
+      this[PLUGIN_API_INSTANCES].clear();
+      this[PLUGIN_CSS_ENTRY_POINTS].clear();
     });
   }
+
+  /**
+   * Get all plugin CSS URLs for SSR injection
+   * @returns {Array<string>} Array of CSS URLs
+   */
+  getPluginCssUrls() {
+    const urls = [];
+    for (const [, cssFiles] of this[PLUGIN_CSS_ENTRY_POINTS]) {
+      urls.push(...cssFiles);
+    }
+    return urls;
+  }
+
   /**
    * Get the plugin bundle path
    * @param {string} internalId - Plugin internal ID (folder name)
@@ -272,11 +309,6 @@ class ServerPluginManager extends BasePluginManager {
       throw error;
     }
   }
-
-  /**
-   * Unload a plugin by ID
-   * @param {string} id - Plugin ID
-   */
 
   /**
    * Subscribe to events (No-op on server)

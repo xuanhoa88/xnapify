@@ -12,6 +12,8 @@ const TerserPlugin = require('terser-webpack-plugin');
 const { default: merge } = require('webpack-merge');
 const nodeExternals = require('webpack-node-externals');
 const config = require('../config');
+const { isVerbose } = require('../utils/logger');
+const loadDotenv = require('./dotenv.plugin');
 
 // =============================================================================
 // CONSTANTS
@@ -25,6 +27,8 @@ const pkg = JSON.parse(
 // Base webpack configuration
 const nodeEnv = config.env('NODE_ENV', 'development');
 const isDebug = nodeEnv !== 'production';
+const isProfile = process.argv.includes('--profile');
+const verbose = isVerbose();
 
 // =============================================================================
 // FILE PATTERNS
@@ -188,6 +192,31 @@ const createDefinePlugin = extraDefinitions =>
     __DEV__: !!isDebug,
     ...extraDefinitions,
   });
+
+/**
+ * Create ProgressPlugin for verbose builds
+ * @returns {webpack.ProgressPlugin|null} ProgressPlugin or null
+ */
+const createProgressPlugin = () =>
+  verbose
+    ? new webpack.ProgressPlugin({
+        activeModules: true,
+        entries: true,
+        modules: true,
+        modulesCount: 5000,
+        profile: isProfile,
+        dependencies: true,
+        dependenciesCount: 10000,
+        percentBy: 'entries',
+      })
+    : null;
+
+/**
+ * Create environment DefinePlugin with dotenv variables
+ * @returns {webpack.DefinePlugin} DefinePlugin instance
+ */
+const createEnvDefine = () =>
+  createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) });
 
 /**
  * Create shared dependencies configuration for Module Federation
@@ -477,6 +506,8 @@ function createWebpackConfig(name, options = {}) {
 module.exports = {
   // Constants
   isDebug,
+  verbose,
+  isProfile,
   pkg: Object.freeze(pkg),
 
   // File patterns
@@ -492,6 +523,8 @@ module.exports = {
   // Factory functions
   createCSSRule,
   createDefinePlugin,
+  createEnvDefine,
+  createProgressPlugin,
   createSharedDependencies,
   createWebpackConfig,
 };

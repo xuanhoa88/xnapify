@@ -12,13 +12,13 @@
  */
 import { registry } from '../Registry';
 
+// Symbols for internal state
 export const INITIALIZED = Symbol('__rsk.initializedPlugins__');
 export const ACTIVE_PLUGINS = Symbol('__rsk.activePlugins__');
 export const PLUGIN_CONTEXT = Symbol('__rsk.pluginContext__');
 export const PLUGIN_METADATA = Symbol('__rsk.pluginMetadata__');
 export const EVENT_HANDLERS = Symbol('__rsk.pluginEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedPluginVersions__');
-export const PLUGIN_CSS_ENTRY_POINTS = Symbol('__rsk.pluginCssEntryPoints__');
 export const PLUGIN_MANAGER_INIT = Symbol('__rsk.pluginManagerInit__');
 
 /**
@@ -52,9 +52,18 @@ export class BasePluginManager {
     this[ACTIVE_PLUGINS] = new Map(); // id -> plugin instance
     this[PLUGIN_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
-    this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> cssFiles array
     this[LOADED_VERSIONS] = new Map(); // pluginId -> version
     this[PLUGIN_MANAGER_INIT] = null; // initialization promise
+  }
+
+  /**
+   * Build plugin asset URL
+   * @param {string} id - Plugin ID
+   * @param {string} filename - Asset filename
+   * @returns {string} Plugin asset URL
+   */
+  getPluginAssetUrl(id, filename) {
+    return `/api/plugins/${id}/static/${filename}`;
   }
 
   /**
@@ -182,52 +191,6 @@ export class BasePluginManager {
   async loadPluginModule(_id, _entryPoint, _manifest, _options) {
     // Override in subclasses
     return null;
-  }
-
-  /**
-   * Get all plugin CSS URLs for SSR injection
-   * @returns {Array<string>} Array of CSS URLs
-   */
-  getPluginCssUrls() {
-    const urls = [];
-    for (const [, cssFiles] of this[PLUGIN_CSS_ENTRY_POINTS]) {
-      urls.push(...cssFiles);
-    }
-    return urls;
-  }
-
-  /**
-   * Clean up plugin CSS resources from DOM (client-side only)
-   * @param {string} id - Plugin ID
-   */
-  cleanupPluginResources(id) {
-    // Remove CSS links
-    const cssUrls = this[PLUGIN_CSS_ENTRY_POINTS].get(id);
-    if (cssUrls && typeof document !== 'undefined') {
-      for (const url of cssUrls) {
-        const link = document.querySelector(`link[href="${url}"]`);
-        if (link) {
-          link.remove();
-          if (__DEV__) {
-            console.log(`[PluginManager] Removed CSS: ${url}`);
-          }
-        }
-      }
-    }
-    this[PLUGIN_CSS_ENTRY_POINTS].delete(id);
-
-    // Remove JS scripts (by plugin ID data attribute)
-    if (typeof document !== 'undefined') {
-      const scripts = document.querySelectorAll(
-        `script[data-plugin-id="${id}"]`,
-      );
-      scripts.forEach(script => {
-        script.remove();
-        if (__DEV__) {
-          console.log(`[PluginManager] Removed script for: ${id}`);
-        }
-      });
-    }
   }
 
   /**
@@ -481,16 +444,6 @@ export class BasePluginManager {
       }
       await this.emit('plugin:loaded', { id, plugin });
 
-      // Store CSS files from manifest if available (for SSR injection)
-      if (serverManifest && Array.isArray(serverManifest.cssFiles)) {
-        this[PLUGIN_CSS_ENTRY_POINTS].set(
-          id,
-          serverManifest.cssFiles.map(
-            cssFile => `/api/plugins/${id}/static/${cssFile}`,
-          ),
-        );
-      }
-
       return plugin;
     } catch (error) {
       console.error(`[PluginManager] Failed to load plugin "${id}":`, error);
@@ -539,9 +492,6 @@ export class BasePluginManager {
       if (plugin && typeof plugin.onUnload === 'function') {
         await plugin.onUnload(this[PLUGIN_CONTEXT]);
       }
-
-      // Cleanup CSS/JS resources from DOM
-      this.cleanupPluginResources(id);
 
       // Unregister from registry
       await registry.unregister(id, this[PLUGIN_CONTEXT]);
@@ -1001,7 +951,7 @@ export class BasePluginManager {
     // Clear all internal state
     this[ACTIVE_PLUGINS].clear();
     this[PLUGIN_METADATA].clear();
-    this[PLUGIN_CSS_ENTRY_POINTS].clear();
+
     this[LOADED_VERSIONS].clear();
     this[PLUGIN_CONTEXT] = null;
     this[INITIALIZED] = false;

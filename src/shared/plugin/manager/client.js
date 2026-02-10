@@ -12,16 +12,34 @@ import {
 } from './base';
 
 class ClientPluginManager extends BasePluginManager {
-  /**
-   * Build plugin script URL
-   * @param {string} id - Plugin ID
-   * @param {string} filename - Script filename
-   * @returns {string} Plugin script URL
-   */
-  getPluginScriptUrl(id, filename) {
-    return `/api/plugins/${id}/static/${filename}`;
-  }
+  constructor() {
+    super();
 
+    // Clean up DOM resources when plugin is unloaded
+    this.on('plugin:unloaded', ({ id }) => {
+      // Remove CSS links (SSR-injected or dynamically added)
+      const cssLinks = document.querySelectorAll(
+        `link[href^="/api/plugins/${id}/static/"][rel="stylesheet"]`,
+      );
+      cssLinks.forEach(link => {
+        link.remove();
+        if (__DEV__) {
+          console.log(`[PluginManager] Removed CSS: ${link.href}`);
+        }
+      });
+
+      // Remove JS scripts (by plugin ID data attribute)
+      const scripts = document.querySelectorAll(
+        `script[data-plugin-id="${id}"]`,
+      );
+      scripts.forEach(script => {
+        script.remove();
+        if (__DEV__) {
+          console.log(`[PluginManager] Removed script for: ${id}`);
+        }
+      });
+    });
+  }
   /**
    * Load a script dynamically
    * @param {string} url - Script URL
@@ -199,7 +217,7 @@ class ClientPluginManager extends BasePluginManager {
       const versionChanged = currentVersion && loadedVersion !== currentVersion;
 
       // Load remote.js (MF container)
-      const baseUrl = this.getPluginScriptUrl(id, entryPoint);
+      const baseUrl = this.getPluginAssetUrl(id, entryPoint);
       const scriptUrl = versionChanged
         ? `${baseUrl}?v=${currentVersion}`
         : baseUrl;

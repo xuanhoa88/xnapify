@@ -10,22 +10,15 @@ const fs = require('fs');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const config = require('../config');
-const { isVerbose } = require('../utils/logger');
 const {
   createWebpackConfig,
   createCSSRule,
-  createDefinePlugin,
+  createEnvDefine,
+  createProgressPlugin,
   createSharedDependencies,
   isDebug,
   pkg,
 } = require('./base.config');
-const loadDotenv = require('./dotenv.plugin');
-
-// Enable bundle profile
-const isProfile = process.argv.includes('--profile');
-
-// Cache verbose check
-const verbose = isVerbose();
 
 /**
  * Get the compiled server entry path from webpack output configuration
@@ -35,26 +28,6 @@ const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
-/**
- * Create ProgressPlugin for verbose builds
- * @returns {Array} Array containing ProgressPlugin or empty
- */
-const createProgressPlugins = () =>
-  verbose
-    ? [
-        new webpack.ProgressPlugin({
-          activeModules: true,
-          entries: true,
-          modules: true,
-          modulesCount: 5000,
-          profile: isProfile,
-          dependencies: true,
-          dependenciesCount: 10000,
-          percentBy: 'entries',
-        }),
-      ]
-    : [];
 
 /**
  * Create StatsWriterPlugin to output build stats
@@ -88,17 +61,6 @@ function createStatsWriterPlugin() {
             if (statsData.entrypoints[key].assets) {
               statsData.entrypoints[key].assets = filterHotUpdates(
                 statsData.entrypoints[key].assets,
-              );
-            }
-          }
-        }
-
-        // Clean namedChunkGroups
-        if (statsData.namedChunkGroups) {
-          for (const key in statsData.namedChunkGroups) {
-            if (statsData.namedChunkGroups[key].assets) {
-              statsData.namedChunkGroups[key].assets = filterHotUpdates(
-                statsData.namedChunkGroups[key].assets,
               );
             }
           }
@@ -140,6 +102,25 @@ const clientConfig = createWebpackConfig('client', {
       ? 'assets/[name].chunk.js'
       : 'assets-[fullhash:8]/[name].[chunkhash:8].chunk.js',
   },
+  optimization: {
+    splitChunks: {
+      chunks: 'all',
+      cacheGroups: {
+        vendors: {
+          test: /[\\/]node_modules[\\/]/,
+          name: 'vendors',
+          chunks: 'all',
+          priority: -10,
+        },
+        common: {
+          minChunks: 2,
+          priority: -20,
+          reuseExistingChunk: true,
+        },
+      },
+    },
+    runtimeChunk: 'single',
+  },
   module: {
     rules: [
       createCSSRule({
@@ -151,7 +132,7 @@ const clientConfig = createWebpackConfig('client', {
     new webpack.ProvidePlugin({
       process: require.resolve('process/browser'),
     }),
-    createDefinePlugin({ ...loadDotenv({ prefix: 'RSK_', verbose }) }),
+    createEnvDefine(),
     new webpack.container.ModuleFederationPlugin({
       name: 'host',
       shared: createSharedDependencies(pkg.dependencies || {}, {
@@ -170,8 +151,8 @@ const clientConfig = createWebpackConfig('client', {
       ignoreOrder: isDebug,
     }),
     createStatsWriterPlugin(),
-    ...createProgressPlugins(),
-  ],
+    createProgressPlugin(),
+  ].filter(Boolean),
 });
 
 // =============================================================================
@@ -189,16 +170,13 @@ const serverConfig = createWebpackConfig('server', {
   output: {
     path: config.BUILD_DIR,
     filename: '[name].js',
-    chunkFilename: 'chunks/[name].js',
     libraryTarget: 'commonjs2',
   },
   module: {
     rules: [createCSSRule({ exportOnlyLocals: true })],
   },
   plugins: [
-    createDefinePlugin({
-      ...loadDotenv({ prefix: 'RSK_', verbose }),
-    }),
+    createEnvDefine(),
     ...(isDebug
       ? [
           new webpack.BannerPlugin({
