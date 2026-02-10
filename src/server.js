@@ -56,8 +56,21 @@ function normalizeHost(host) {
 }
 
 function parsePort(port, defaultPort) {
-  const parsedPort = parseInt(port, 10);
-  return parsedPort >= 0 && parsedPort <= 65535 ? parsedPort : defaultPort;
+  const parsed = parseInt(port, 10);
+  if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 65535) {
+    return parsed;
+  }
+
+  const parsedDefault = parseInt(defaultPort, 10);
+  if (
+    Number.isInteger(parsedDefault) &&
+    parsedDefault >= 0 &&
+    parsedDefault <= 65535
+  ) {
+    return parsedDefault;
+  }
+
+  return 1337;
 }
 
 const config = Object.freeze({
@@ -569,7 +582,10 @@ function verifyWsToken(jwt, token) {
 // MAIN FUNCTIONS
 // =============================================================================
 
-export function serve(app, { port = config.port, host = config.host }) {
+export function serve(app, options = {}) {
+  // Destructure with defaults
+  const { port = config.port, host = config.host } = options;
+
   // WebSocket path
   const wsPath = process.env.RSK_WS_PATH || '/ws';
 
@@ -627,10 +643,10 @@ export function serve(app, { port = config.port, host = config.host }) {
   });
 }
 
-export default async function main(
-  app,
-  { publicDir, port = config.port, host = config.host },
-) {
+export default async function main(app, options = {}) {
+  // Destructure with defaults
+  const { publicDir, port = config.port, host = config.host } = options;
+
   // Set current working directory
   app.set('cwd', config.cwd);
 
