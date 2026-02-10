@@ -123,7 +123,7 @@ function handleTooBig(issue) {
  */
 function handleCustom(issue) {
   // Support custom i18n keys via params.i18n
-  if (!issue.params?.i18n) {
+  if (!issue.params || !issue.params.i18n) {
     return {
       key: 'zod:errors.custom',
       options: {},
@@ -291,7 +291,7 @@ z.setErrorMap((issue, ctx) => {
   const { messageKey, options } = result;
 
   // Add path context for field-specific messages (supports WithPath pattern)
-  const path = issue.path?.length > 0 ? issue.path.join('.') : '';
+  const path = issue.path && issue.path.length > 0 ? issue.path.join('.') : '';
   const optionsWithPath = { ...options, path };
 
   // Try to get message with path suffix first (e.g., invalidTypeWithPath)

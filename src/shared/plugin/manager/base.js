@@ -462,11 +462,8 @@ export class BasePluginManager {
       }
       await registry.define(plugin, this[PLUGIN_CONTEXT]);
 
-      // Call init() lifecycle hook (runtime activation)
-      await registry.register(id, plugin, this[PLUGIN_CONTEXT]);
-
-      // Store plugin instance
-      this[ACTIVE_PLUGINS].set(id, plugin);
+      // Plugin activation (init/destroy) is deferred to loadNamespace.
+      // loadPlugin only fetches, validates, and defines.
 
       // Update metadata
       const metadata = this[PLUGIN_METADATA].get(id);
@@ -749,11 +746,21 @@ export class BasePluginManager {
       }
 
       for (const plugin of plugins) {
+        if (this[ACTIVE_PLUGINS].has(plugin.id)) {
+          if (__DEV__) {
+            console.log(
+              `[PluginManager] Plugin "${plugin.id}" is already active. Skipping component registration.`,
+            );
+          }
+          continue;
+        }
+
         if (__DEV__) {
           console.log(
             `[PluginManager] Loading plugin from namespace: ${plugin.id}`,
           );
         }
+
         // Wrap init/destroy for the standard register method
         const pluginInstance = {
           ...plugin,
@@ -784,6 +791,7 @@ export class BasePluginManager {
         };
 
         await registry.register(plugin.id, pluginInstance);
+        this[ACTIVE_PLUGINS].set(plugin.id, pluginInstance);
       }
 
       if (__DEV__) {
@@ -817,7 +825,8 @@ export class BasePluginManager {
       if (!plugins) return;
 
       for (const plugin of plugins) {
-        await registry.unregister(plugin.id);
+        await registry.unregister(plugin.id, this[PLUGIN_CONTEXT]);
+        this[ACTIVE_PLUGINS].delete(plugin.id);
       }
 
       if (__DEV__) {
