@@ -1124,7 +1124,27 @@ export async function bootstrap(app, server, options = {}) {
   });
 
   // SSR handler (must be after API routes)
-  app.get('*', createSSRHandler(baseUrl, api.APP_PROVIDERS));
+  const ssrHandler = createSSRHandler(baseUrl, api.APP_PROVIDERS);
+
+  // Pre-compile route prefixes for better performance
+  const SKIP_SSR_PREFIXES = [
+    config.apiPrefix,
+    nodeRED.settings.httpAdminRoot,
+    nodeRED.settings.httpNodeRoot,
+  ].filter(Boolean); // Remove any undefined/null values
+
+  app.get('*', (req, res, next) => {
+    // Skip SSR for API and Node-RED routes
+    const shouldSkipSSR = SKIP_SSR_PREFIXES.some(prefix =>
+      req.path.startsWith(prefix),
+    );
+
+    if (shouldSkipSSR) {
+      return next();
+    }
+
+    return ssrHandler(req, res, next);
+  });
 
   // Error handler (must be last)
   app.use(createErrorHandler());
