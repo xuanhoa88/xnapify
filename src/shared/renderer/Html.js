@@ -52,9 +52,9 @@ import serialize from 'serialize-javascript';
 function OpenGraphMeta({ title, description, type, url, image }) {
   return (
     <>
-      <meta property='og:title' content={title} />
-      <meta property='og:description' content={description} />
-      <meta property='og:type' content={type} />
+      {title && <meta property='og:title' content={title} />}
+      {description && <meta property='og:description' content={description} />}
+      {type && <meta property='og:type' content={type} />}
       {url && <meta property='og:url' content={url} />}
       {image && <meta property='og:image' content={image} />}
     </>
@@ -65,9 +65,9 @@ function OpenGraphMeta({ title, description, type, url, image }) {
  * PropTypes for the OpenGraphMeta component
  */
 OpenGraphMeta.propTypes = {
-  title: PropTypes.string.isRequired,
-  description: PropTypes.string.isRequired,
-  type: PropTypes.string.isRequired,
+  title: PropTypes.string,
+  description: PropTypes.string,
+  type: PropTypes.string,
   url: PropTypes.string,
   image: PropTypes.string,
 };

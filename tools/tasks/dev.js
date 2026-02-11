@@ -7,7 +7,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const express = require('express');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
@@ -47,8 +46,12 @@ const host = config.env('RSK_HOST', '127.0.0.1');
 
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance
+// - server: Holds the HTTP server instance
 // - hmr: Tracks Hot Module Replacement state and configuration
-let app, hmr;
+// - hotMiddleware: Webpack hot middleware instance
+// - devMiddleware: Webpack dev middleware instance
+// - dispose: Dispose server bundle (Node-RED, etc.)
+let app, server, hmr, hotMiddleware, devMiddleware, dispose;
 
 /**
  * Create compilation promise for webpack compiler
@@ -175,6 +178,25 @@ function configureWebpackForDev(cfg, isClient = true) {
 }
 
 /**
+ * Recursively clears module and its children from require.cache
+ * This ensures all dependencies of the server bundle (like Node-RED) are reloaded
+ * without clearing unrelated modules (like webpack/build tools).
+ */
+function clearModuleCache(modulePath, visited = new Set()) {
+  if (visited.has(modulePath)) return;
+  visited.add(modulePath);
+
+  const module = require.cache[modulePath];
+  if (!module) return;
+
+  if (module.children) {
+    module.children.forEach(child => clearModuleCache(child.id, visited));
+  }
+
+  delete require.cache[modulePath];
+}
+
+/**
  * Loads the server bundle and sets up HMR if available.
  * Clears the require cache to ensure fresh module loading on each call.
  *
@@ -182,22 +204,22 @@ function configureWebpackForDev(cfg, isClient = true) {
  * @property {Function} init - Function to initialize the Express application
  * @property {Function} serve - Function to start the HTTP server
  */
-function loadServerBundle() {
-  // Clear require cache to ensure we get a fresh bundle
-  delete require.cache[require.resolve(WEBPACK_SERVER_BUNDLE_PATH)];
 
+function loadServerBundle() {
   try {
+    // Recursively clear cache starting from the server bundle
+    // This removes the bundle AND all its dependencies (including node_modules/node-red/*)
+    // from the cache, ensuring a fresh start for the next require().
+    clearModuleCache(require.resolve(WEBPACK_SERVER_BUNDLE_PATH));
+
     // Load the server bundle
-    const bundle = require(WEBPACK_SERVER_BUNDLE_PATH);
+    const { hot, ...bundle } = require(WEBPACK_SERVER_BUNDLE_PATH);
 
     // Set up HMR if available (for development)
-    hmr = bundle.default.hot;
+    hmr = hot;
 
     // Return a clean API surface
-    return {
-      init: bundle.default,
-      serve: bundle.serve,
-    };
+    return bundle;
   } catch (error) {
     logError('❌ Failed to load server bundle');
     if (verbose) {
@@ -208,66 +230,119 @@ function loadServerBundle() {
 }
 
 /**
- * Reinitializes the server bundle and Express application middlewares
- * while preserving webpack middleware state for HMR.
+ * Launches or relaunches the development server.
+ * - If server exists: Swaps the request listener to the new app.
+ * - If server missing: Initializes a new one.
  */
-async function reinitializeServerAndMiddlewares() {
-  try {
-    // Guard: Ensure Express app and router are initialized
-    // eslint-disable-next-line no-underscore-dangle
-    if (!app || !app._router || !Array.isArray(app._router.stack)) {
-      throw new Error('Express router is not initialized');
-    }
+async function createDevServer(serverBundle, prevServer) {
+  ({ app, server } = serverBundle.init());
 
-    // Find the index after the last webpack middleware
-    const findWebpackMiddlewareBoundary = () => {
-      let lastWebpackIndex = -1;
-      // eslint-disable-next-line no-underscore-dangle
-      for (let i = 0; i < app._router.stack.length; i++) {
-        // eslint-disable-next-line no-underscore-dangle
-        const layer = app._router.stack[i];
-        if (layer.handle && layer.handle[kWebpackMiddleware]) {
-          lastWebpackIndex = i;
-        }
-      }
-
-      return lastWebpackIndex + 1; // Return index after the last webpack middleware
-    };
-
-    const boundaryIndex = findWebpackMiddlewareBoundary();
-    if (boundaryIndex === 0) {
-      logInfo('⚠️ No webpack middleware found, reloading all middlewares');
-    } else {
-      // Remove all application-added middlewares and routes after the Webpack boundary
-      // eslint-disable-next-line no-underscore-dangle
-      app._router.stack.splice(boundaryIndex);
-    }
-
-    // Notify clients that server is restarting
-    notifyBrowserSyncRestart();
-
-    // Reload the latest server bundle
-    const serverBundle = loadServerBundle();
-
-    // Re-initialize app with the new server bundle and routes
-    await serverBundle.init(app, { publicDir: config.PUBLIC_DIR, port, host });
-
-    logInfo('✅ Server bundle and middlewares reinitialized successfully');
-
-    // Notify clients that server is ready (triggers reload)
-    notifyBrowserSyncReady();
-  } catch (err) {
-    logError('❌ Failed to reinitialize server and middlewares');
-    if (verbose) {
-      logError(err);
-    }
-    // Optional: trigger a full server restart if HMR fails
+  // Reuse existing server if available
+  if (prevServer) {
+    server = prevServer;
   }
+
+  // Attach webpack middlewares to the new app
+  attachWebpackMiddlewares(app);
+
+  // Initialize launch function
+  let launch;
+
+  // Bootstrap the app (routes, database, etc.)
+  ({ launch } = await serverBundle.bootstrap(app, server, {
+    port,
+    host,
+    publicDir: config.PUBLIC_DIR,
+  }));
+
+  logInfo('✅ Server reloaded successfully');
+
+  if (prevServer) {
+    // Hot-swap: Remove old listener and add the new one
+    // NOTE: This relies on the fact that the 'request' listener is the Express app
+    prevServer.removeAllListeners('request');
+    prevServer.on('request', app);
+
+    notifyBrowserSyncReady();
+  }
+
+  return launch;
 }
 
 /**
- * Apply HMR updates or reload app on failure
+ * Setup webpack compilers and middleware
  */
+function setupWebpackCompilers() {
+  // Configure webpack for development with HMR
+  configureWebpackForDev(webpackClientConfig, true);
+  configureWebpackForDev(webpackServerConfig, false);
+
+  // Create webpack compilers
+  const multiCompiler = webpack([webpackClientConfig, webpackServerConfig]);
+  const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
+  const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
+
+  if (!clientCompiler || !serverCompiler) {
+    throw new BuildError('Failed to create webpack compilers');
+  }
+
+  return { clientCompiler, serverCompiler };
+}
+
+/**
+ * Setup Express middleware for webpack
+ */
+function createWebpackMiddlewares(clientCompiler) {
+  // ---------------------------
+  // Webpack Dev Middleware
+  // ---------------------------
+  const devMiddleware = webpackDevMiddleware(clientCompiler, {
+    publicPath: webpackClientConfig.output.publicPath, // Serve assets from correct URL
+    stats: {
+      colors: true, // Colored console output
+      chunks: false, // Hide chunk details to reduce noise
+      modules: false, // Hide module details
+    },
+    writeToDisk: true, // Write files to disk for SSR
+    serverSideRender: true, // Enable SSR access to webpack stats
+  });
+
+  // ---------------------------
+  // Webpack Hot Middleware (HMR)
+  // ---------------------------
+  const hotMiddlewareInstance = webpackHotMiddleware(clientCompiler, {
+    log: verbose ? console.log : false, // Verbose logging
+    path: '/~/__webpack_hmr', // WebSocket path for HMR
+    heartbeat: 10_000, // Heartbeat interval in ms
+  });
+
+  return { devMiddleware, hotMiddleware: hotMiddlewareInstance };
+}
+
+/**
+ * Attaches webpack middlewares to an Express app instance
+ */
+function attachWebpackMiddlewares(expressApp) {
+  // Helper to wrap and tag a middleware
+  const wrapWebpackMiddleware = fn => {
+    const wrapper = (req, res, next) => fn(req, res, next);
+    wrapper[kWebpackMiddleware] = true;
+    return wrapper;
+  };
+
+  expressApp.use(wrapWebpackMiddleware(devMiddleware));
+  expressApp.use(wrapWebpackMiddleware(hotMiddleware));
+  expressApp.use(
+    wrapWebpackMiddleware((req, res, next) => {
+      if (req.method === 'POST' && req.path === '/~/__bs_connected') {
+        onBrowserSyncClientConnected();
+        return res.status(204).end();
+      }
+      next();
+    }),
+  );
+}
+
 /**
  * Check for HMR updates and optionally apply them.
  *
@@ -275,6 +350,12 @@ async function reinitializeServerAndMiddlewares() {
  */
 async function checkForUpdate() {
   try {
+    // Return early if Express app is not initialized (e.g. during initial compilation)
+    if (!app) {
+      if (verbose) logInfo('App not initialized, skipping update check');
+      return false;
+    }
+
     // Skip if HMR runtime is not available or not in 'idle' state
     if (!hmr || typeof hmr.status !== 'function' || hmr.status() !== 'idle') {
       if (verbose) logInfo('HMR not ready, skipping update check');
@@ -284,8 +365,12 @@ async function checkForUpdate() {
     // Small delay to ensure all modules are loaded before checking
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Check for updates and auto-apply them
-    const updatedModules = await hmr.check(true);
+    // Small delay to ensure all modules are loaded before checking
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Check for updates but DO NOT auto-apply them (we reload the bundle manually)
+    // Applying updates to the old bundle can cause freezes if dispose handlers hang
+    const updatedModules = await hmr.check(false);
 
     // No updates found
     if (!updatedModules || updatedModules.length === 0) {
@@ -294,7 +379,21 @@ async function checkForUpdate() {
     }
 
     logInfo(`🔥 HMR: Detected ${updatedModules.length} updated module(s).`);
-    await reinitializeServerAndMiddlewares();
+
+    // Clean up previous bundle resources (Node-RED, etc.)
+    if (dispose) {
+      try {
+        await dispose();
+      } catch (err) {
+        logError('❌ Error disposing previous bundle:', err);
+      }
+    }
+
+    const serverBundle = loadServerBundle();
+    dispose = serverBundle.dispose;
+    await createDevServer(serverBundle, server);
+
+    await notifyBrowserSyncRestart();
 
     return true;
   } catch (err) {
@@ -322,78 +421,6 @@ async function checkForUpdate() {
 
     return false;
   }
-}
-
-/**
- * Setup webpack compilers and middleware
- */
-function setupWebpackCompilers() {
-  // Configure webpack for development with HMR
-  configureWebpackForDev(webpackClientConfig, true);
-  configureWebpackForDev(webpackServerConfig, false);
-
-  // Create webpack compilers
-  const multiCompiler = webpack([webpackClientConfig, webpackServerConfig]);
-  const clientCompiler = multiCompiler.compilers.find(c => c.name === 'client');
-  const serverCompiler = multiCompiler.compilers.find(c => c.name === 'server');
-
-  if (!clientCompiler || !serverCompiler) {
-    throw new BuildError('Failed to create webpack compilers');
-  }
-
-  return { clientCompiler, serverCompiler };
-}
-
-/**
- * Setup Express middleware for webpack
- */
-function setupWebpackMiddlewares(clientCompiler) {
-  // Helper to wrap and tag a middleware as Webpack middleware
-  const wrapWebpackMiddleware = fn => {
-    const wrapper = (req, res, next) => fn(req, res, next);
-    wrapper[kWebpackMiddleware] = true;
-    return wrapper;
-  };
-
-  // ---------------------------
-  // Webpack Dev Middleware
-  // ---------------------------
-  const devMiddleware = webpackDevMiddleware(clientCompiler, {
-    publicPath: webpackClientConfig.output.publicPath, // Serve assets from correct URL
-    stats: {
-      colors: true, // Colored console output
-      chunks: false, // Hide chunk details to reduce noise
-      modules: false, // Hide module details
-    },
-    writeToDisk: true, // Write files to disk for SSR
-    serverSideRender: true, // Enable SSR access to webpack stats
-  });
-  app.use(wrapWebpackMiddleware(devMiddleware));
-
-  // ---------------------------
-  // Webpack Hot Middleware (HMR)
-  // ---------------------------
-  const hotMiddleware = webpackHotMiddleware(clientCompiler, {
-    log: verbose ? console.log : false, // Verbose logging
-    path: '/~/__webpack_hmr', // WebSocket path for HMR
-    heartbeat: 10_000, // Heartbeat interval in ms
-  });
-  app.use(wrapWebpackMiddleware(hotMiddleware));
-
-  // ---------------------------
-  // BrowserSync Client Connection Endpoint
-  // ---------------------------
-  app.use(
-    wrapWebpackMiddleware((req, res, next) => {
-      if (req.method === 'POST' && req.path === '/~/__bs_connected') {
-        onBrowserSyncClientConnected();
-        return res.status(204).end();
-      }
-      next();
-    }),
-  );
-
-  return hotMiddleware;
 }
 
 /**
@@ -467,60 +494,68 @@ async function main() {
   logInfo('🚀 Starting development server...');
 
   // Setup graceful shutdown handler
-  setupGracefulShutdown(() => {
+  setupGracefulShutdown(async () => {
     logInfo('🛑 Development server shutting down...');
 
-    Promise.allSettled([
+    const shutdownPromise = Promise.allSettled([
       // Shutdown BrowserSync safely (won't throw)
       shutdownBrowserSync(),
+
+      // Dispose server bundle (Node-RED, etc.)
+      dispose,
 
       // Print goodbye message (synchronous)
       new Promise(resolve => {
         logInfo('👋 Goodbye!');
         resolve();
       }),
-    ])
-      // Always executed regardless of success/failure of above tasks
-      .finally(() => {
-        // Reset references to allow GC
-        app = null;
-        hmr = null;
-      });
+    ]);
+
+    return shutdownPromise.finally(() => {
+      // Reset references to allow GC
+      app = null;
+      server = null;
+      hmr = null;
+      devMiddleware = null;
+      hotMiddleware = null;
+      dispose = null;
+    });
   });
 
   // Generate JWT
   await generateJWT(config.CWD);
 
   try {
-    // Create Express server instance
-    app = express();
-
     // Setup webpack compilers
     const { clientCompiler, serverCompiler } = setupWebpackCompilers();
-
-    // Setup webpack dev middleware (HMR, hot reload)
-    const hotMiddleware = setupWebpackMiddlewares(clientCompiler);
 
     // Watch for server bundle changes to enable HMR for server code
     // This allows server-side code to be updated without restarting the dev server
     setupServerBundleWatcher(serverCompiler);
 
-    // Wait for initial webpack compilation
-    await Promise.all([
-      createCompilationPromise('client', clientCompiler),
-      createCompilationPromise('server', serverCompiler),
-    ]);
+    // Create compilation promises
+    const clientPromise = createCompilationPromise('client', clientCompiler);
+    const serverPromise = createCompilationPromise('server', serverCompiler);
 
-    // Load and initialize SSR app (after compilation)
-    const bundle = loadServerBundle();
-    await bundle.init(app, { publicDir: config.PUBLIC_DIR, port, host });
+    // Wait for server compilation first
+    await serverPromise;
 
-    // Start the HTTP server
-    const server = await bundle.serve(app, { port, host });
+    // Load server bundle
+    const serverBundle = loadServerBundle();
+    dispose = serverBundle.dispose;
 
-    // Initialize BrowserSync WebSocket server for live reload and HMR
+    // Create webpack middlewares (triggering client compilation)
+    ({ devMiddleware, hotMiddleware } =
+      createWebpackMiddlewares(clientCompiler));
+
+    await clientPromise;
+
+    // Start Server
+    const launch = await createDevServer(serverBundle);
+    await launch();
+
     // This will also open the browser automatically if no clients are connected
-    startBrowserSync(server, hotMiddleware);
+    await startBrowserSync(server, hotMiddleware);
 
     // Success
     const duration = Date.now() - startTime;

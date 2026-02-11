@@ -16,8 +16,8 @@ export async function getInitialProps({ fetch, i18n }) {
   const { data } = await fetch('/api/news');
 
   return {
-    news: data.news,
-    featuresData,
+    news: data.news || [],
+    features: featuresData,
     title: i18n.t('navigation.home', 'Home'),
   };
 }
@@ -26,7 +26,7 @@ export async function getInitialProps({ fetch, i18n }) {
  * Default export - Page component
  */
 export default function HomePage({ context: { initialProps } }) {
-  const { news, featuresData: features } = initialProps;
+  const { news = [], features = [] } = initialProps || {};
   return <Home loading={false} payload={news} featuresData={features} />;
 }
 
@@ -34,7 +34,7 @@ HomePage.propTypes = {
   context: PropTypes.shape({
     initialProps: PropTypes.shape({
       news: PropTypes.array.isRequired,
-      featuresData: PropTypes.array.isRequired,
+      features: PropTypes.array.isRequired,
     }).isRequired,
   }).isRequired,
 };

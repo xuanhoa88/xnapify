@@ -6,21 +6,144 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import util from '@node-red/util';
-import runtime from '@node-red/runtime';
-import editorApi from '@node-red/editor-api';
 import createSettings from './settings';
 
-class NodeRedManager {
-  constructor() {
+// This prevents the instance from being lost during HMR
+const kNodeRedInstance = Symbol.for('__rsk.nodeREDInstance__');
+
+/**
+ * Lifecycle states for the Node-RED manager
+ */
+const LifecycleState = Object.freeze({
+  UNINITIALIZED: 'uninitialized',
+  INITIALIZING: 'initializing',
+  INITIALIZED: 'initialized',
+  STARTING: 'starting',
+  RUNNING: 'running',
+  STOPPING: 'stopping',
+  STOPPED: 'stopped',
+  ERROR: 'error',
+});
+
+/**
+ * Configuration defaults
+ */
+const DEFAULT_CONFIG = Object.freeze({
+  shutdownTimeout: 45_000,
+  startupTimeout: 60_000,
+  hmrWaitTimeout: 60_000,
+  postShutdownDelay: 200,
+  postShutdownErrorDelay: 1000,
+});
+
+/**
+ * Default emoji map for logger
+ */
+const DEFAULT_EMOJI_MAP = Object.freeze({
+  info: 'ℹ️',
+  success: '✅',
+  warn: '⚠️',
+  error: '❌',
+  debug: '🔍',
+  network: '🔌',
+  restart: '🔄',
+  wait: '⏳',
+});
+
+/**
+ * Logger abstraction for potential future integration
+ */
+class Logger {
+  static log(level, message, ...args) {
+    const emoji = DEFAULT_EMOJI_MAP[level] || '📝';
+    const prefix = `${emoji} [Node-RED]`;
+
+    switch (level) {
+      case 'error':
+        console.error(prefix, message, ...args);
+        break;
+      case 'warn':
+        console.warn(prefix, message, ...args);
+        break;
+      default:
+        console.log(prefix, message, ...args);
+    }
+  }
+
+  static info(msg, ...args) {
+    this.log('info', msg, ...args);
+  }
+  static success(msg, ...args) {
+    this.log('success', msg, ...args);
+  }
+  static warn(msg, ...args) {
+    this.log('warn', msg, ...args);
+  }
+  static error(msg, ...args) {
+    this.log('error', msg, ...args);
+  }
+  static debug(msg, ...args) {
+    this.log('debug', msg, ...args);
+  }
+  static network(msg, ...args) {
+    this.log('network', msg, ...args);
+  }
+  static restart(msg, ...args) {
+    this.log('restart', msg, ...args);
+  }
+  static wait(msg, ...args) {
+    this.log('wait', msg, ...args);
+  }
+}
+
+/**
+ * Custom error types for better error handling
+ */
+class NodeRedError extends Error {
+  constructor(message, code, originalError = null) {
+    super(message);
+    this.name = 'NodeRedError';
+    this.code = code;
+    this.originalError = originalError;
+  }
+}
+
+/**
+ * Node-RED manager for managing Node-RED runtime and editor
+ */
+export class NodeRedManager {
+  constructor(config = {}) {
+    this._config = { ...DEFAULT_CONFIG, ...config };
     this._server = null;
     this._upgradeListener = null;
     this._settings = null;
-    this._initialized = false;
+    this._state = LifecycleState.UNINITIALIZED;
+    this._stateTransitionLock = Promise.resolve();
+    this._startPromise = null;
+    this._shutdownPromise = null;
+    this._util = null;
+    this._runtime = null;
+    this._editorApi = null;
   }
 
   /**
-   * Current settings (read-only access for external proxy config, etc.).
+   * Current lifecycle state
+   * @returns {string}
+   */
+  get state() {
+    return this._state;
+  }
+
+  /**
+   * Check if Node-RED is ready to handle requests
+   * @returns {boolean}
+   */
+  get isReady() {
+    return this._state === LifecycleState.RUNNING;
+  }
+
+  /**
+   * Current settings (read-only)
    * @returns {object|null}
    */
   get settings() {
@@ -28,129 +151,471 @@ class NodeRedManager {
   }
 
   /**
-   * Initialize and start Node-RED.
-   *
-   * Handles HMR gracefully — if already running, shuts down first.
+   * Get Node-RED runtime instance
+   * @returns {object|null}
+   */
+  get runtime() {
+    return this._runtime;
+  }
+
+  /**
+   * Get Node-RED editor API instance
+   * @returns {object|null}
+   */
+  get editorApi() {
+    return this._editorApi;
+  }
+
+  /**
+   * Get Node-RED util instance
+   * @returns {object|null}
+   */
+  get util() {
+    return this._util;
+  }
+
+  /**
+   * Initialize and start Node-RED with HMR support
    *
    * @param {import('express').Express} app - Express app
    * @param {import('http').Server} server - HTTP server
    * @param {object} config - Configuration for settings factory
-   * @param {string} [config.host] - Server host
-   * @param {number} [config.port] - Server port
-   * @param {string} [config.protocol] - http or https
    */
   async init(app, server, config) {
-    if (this._initialized) {
-      console.log(
-        '🔄 [Node-RED] Already initialized (HMR detected), skipping init',
-      );
+    return this._withStateLock(async () => {
+      // Handle concurrent/repeated initialization
+      if (this._state === LifecycleState.INITIALIZING) {
+        Logger.warn(
+          'Initialization already in progress, skipping duplicate call',
+        );
+        return;
+      }
+
+      // Safety check: if THIS instance is already running (e.g. rapid consecutive processing), stop it first
+      if (this._isInitializedOrRunning()) {
+        Logger.restart('Restarting (re-entrant init calls)...');
+        await this.shutdown();
+      }
+
+      // Clean up previous HMR instance if it exists on the server
+      const prevInstance = server[kNodeRedInstance];
+      if (prevInstance && prevInstance !== this) {
+        Logger.restart('Cleaning up previous HMR instance...');
+        try {
+          // Force cleanup of the old listener
+          if (
+            prevInstance._upgradeListener &&
+            prevInstance._server === server
+          ) {
+            server.removeListener('upgrade', prevInstance._upgradeListener);
+          }
+
+          // Attempt full shutdown
+          await prevInstance.shutdown();
+        } catch (err) {
+          Logger.warn('Failed to clean up previous instance:', err);
+        }
+      } else if (!prevInstance) {
+        Logger.debug('No previous HMR instance found to clean up');
+      }
+
+      // Attach current instance to server for future cleanup
+      Object.defineProperty(server, kNodeRedInstance, {
+        value: this,
+        writable: true,
+        enumerable: false,
+        configurable: true,
+      });
+
+      await this._performInit(app, server, config);
+    });
+  }
+
+  /**
+   * Start Node-RED runtime and editor
+   */
+  async start() {
+    // Already starting - return existing promise
+    if (this._state === LifecycleState.STARTING && this._startPromise) {
+      Logger.debug('Start already in progress, waiting...');
+      return this._startPromise;
+    }
+
+    // Already running - no-op
+    if (this._state === LifecycleState.RUNNING) {
+      Logger.debug('Already running, skipping start');
       return;
     }
 
-    this._server = server;
-    this._settings = createSettings(config);
+    // Invalid state
+    if (this._state !== LifecycleState.INITIALIZED) {
+      throw new NodeRedError(
+        `Cannot start from state: ${this._state}`,
+        'INVALID_STATE',
+      );
+    }
 
-    // Initialise the util module (log, i18n, etc.)
-    util.init(this._settings);
+    return this._withStateLock(async () => {
+      // Double-check state after acquiring lock
+      if (this._state !== LifecycleState.INITIALIZED) {
+        Logger.debug(`State changed to ${this._state} while waiting for lock`);
+        return;
+      }
 
-    // Initialise the runtime
-    await runtime.init(this._settings, server, editorApi);
+      this._state = LifecycleState.STARTING;
+      this._startPromise = this._performStart();
 
-    // Initialise editor API with a proxied server to capture the upgrade listener
-    const serverProxy = this._createServerProxy(server);
-    await editorApi.init(this._settings, serverProxy, runtime.storage, runtime);
-
-    // Mount routes
-    app.use(this._settings.httpAdminRoot, editorApi.httpAdmin);
-    app.use(this._settings.httpNodeRoot, runtime.httpNode);
-
-    app.use(config.apiPrefix, (req, res, next) => {
       try {
-        // Store original URL for logging/debugging
-        req.originalProxyUrl = req.url;
+        await this._startPromise;
+      } finally {
+        this._startPromise = null;
+      }
+    });
+  }
 
-        // Forward to Node-RED's HTTP node handler
-        runtime.httpNode(req, res, next);
+  /**
+   * Shutdown Node-RED and clean up resources
+   */
+  async shutdown() {
+    // Nothing to shutdown
+    if (this._state === LifecycleState.UNINITIALIZED) {
+      Logger.debug('Already uninitialized, skipping shutdown');
+      return;
+    }
+
+    // Already stopping - return existing promise
+    if (this._state === LifecycleState.STOPPING) {
+      Logger.debug('Shutdown already in progress, waiting...');
+      return this._shutdownPromise;
+    }
+
+    return this._withStateLock(async () => {
+      this._state = LifecycleState.STOPPING;
+      this._shutdownPromise = this._performShutdown();
+
+      try {
+        await this._shutdownPromise;
+      } finally {
+        this._shutdownPromise = null;
+      }
+    });
+  }
+
+  /**
+   * Setup API proxy middleware
+   */
+  setupApiProxy(app, apiPrefix) {
+    if (!this._settings) {
+      throw new NodeRedError(
+        'Cannot setup proxy before initialization',
+        'NOT_INITIALIZED',
+      );
+    }
+
+    app.use(apiPrefix, (req, res, next) => {
+      if (!this.isReady) {
+        return res.status(503).json({
+          error: 'Node-RED not ready',
+          state: this._state,
+        });
+      }
+
+      // Check if runtime is available
+      if (!this._runtime || !this._runtime.httpNode) {
+        return res.status(503).json({
+          error: 'Node-RED runtime not available',
+          state: this._state,
+        });
+      }
+
+      try {
+        req.originalProxyUrl = req.url;
+        this._runtime.httpNode(req, res, next);
       } catch (error) {
-        console.error('API proxy error:', error);
+        Logger.error('Proxy error:', error);
         next(error);
       }
     });
-    console.info(
-      `🔀 API Proxy: ${config.apiPrefix}/* → ${this._settings.httpNodeRoot}/*`,
+
+    Logger.network(`Proxy: ${apiPrefix}/* → ${this._settings.httpNodeRoot}/*`);
+  }
+
+  // ========================================================================
+  // Private Methods
+  // ========================================================================
+
+  /**
+   * Check if state is initialized or running
+   * @private
+   */
+  _isInitializedOrRunning() {
+    return (
+      this._state === LifecycleState.INITIALIZED ||
+      this._state === LifecycleState.RUNNING
     );
-
-    // Attach runtime admin to editor admin
-    if (editorApi.httpAdmin && runtime.httpAdmin) {
-      editorApi.httpAdmin.use(runtime.httpAdmin);
-    }
-
-    this._initialized = true;
-
-    // HMR: auto-start if server is already listening (serve() won't re-run)
-    if (server.listening) {
-      await this.start();
-    } else {
-      server.on('listening', () => this.start());
-      console.log('✅ [Node-RED] Initialized');
-    }
   }
 
   /**
-   * Start Node-RED runtime and editor.
-   * Must be called AFTER httpServer.listen() so the comms WebSocket works.
+   * Perform the actual initialization
+   * @private
    */
-  async start() {
-    if (!this._initialized) {
-      throw new Error('[Node-RED] Cannot start before init()');
-    }
-
-    await runtime.start();
-    await editorApi.start();
-    console.log('🚀 [Node-RED] Ready at ' + this._settings.httpAdminRoot);
-  }
-
-  /**
-   * Shutdown Node-RED and clean up resources.
-   * Safe to call even if not initialized (no-op).
-   */
-  async shutdown() {
-    if (!this._initialized) return;
+  async _performInit(app, server, config) {
+    this._state = LifecycleState.INITIALIZING;
 
     try {
-      await runtime.stop();
-      await editorApi.stop();
-    } catch (err) {
-      console.error('❌ [Node-RED] Error during stop:', err);
-    }
+      this._validateInitArgs(app, server, config);
 
-    // Remove upgrade listener to prevent HMR crashes
-    if (this._upgradeListener && this._server) {
-      this._server.removeListener('upgrade', this._upgradeListener);
-      console.log('🔌 [Node-RED] Removed upgrade listener');
-    }
+      // Create settings
+      this._settings = createSettings(config);
 
-    this._upgradeListener = null;
-    this._server = null;
-    this._initialized = false;
-    console.log('✅ [Node-RED] Stopped');
+      // Dynamic import for util
+      this._util = (await import('@node-red/util')).default;
+      this._util.init(this._settings);
+
+      // Setup server proxy
+      this._server = server;
+
+      // Initialize Node-RED components
+      await this._initializeComponents();
+
+      // Mount routes
+      this._mountRoutes(app);
+
+      // Transition to initialized
+      this._state = LifecycleState.INITIALIZED;
+      Logger.success('Initialized');
+
+      // Auto-start if configured OR server is already listening
+      if (server.listening) {
+        Logger.info('Server already listening, auto-starting...');
+        this._state = LifecycleState.STARTING;
+        await this._performStart();
+      }
+    } catch (error) {
+      this._state = LifecycleState.ERROR;
+      Logger.error('Init failed:', error);
+      throw new NodeRedError('Initialization failed', 'INIT_FAILED', error);
+    }
   }
 
   /**
-   * Create a Proxy over the HTTP server to intercept `upgrade` event
-   * listener registration. This lets us clean it up on shutdown so
-   * HMR re-initialization doesn't crash with a stale WebSocket handler.
-   *
-   * @param {import('http').Server} server
-   * @returns {Proxy}
+   * Validate init arguments
+   * @private
+   */
+  _validateInitArgs(app, server, config) {
+    if (!app || typeof app.use !== 'function') {
+      throw new NodeRedError(
+        'Invalid app argument - must be Express app',
+        'INVALID_ARGUMENT',
+      );
+    }
+    if (!server || typeof server.on !== 'function') {
+      throw new NodeRedError(
+        'Invalid server argument - must be HTTP server',
+        'INVALID_ARGUMENT',
+      );
+    }
+    if (!config || typeof config !== 'object') {
+      throw new NodeRedError(
+        'Invalid config argument - must be object',
+        'INVALID_ARGUMENT',
+      );
+    }
+  }
+
+  /**
+   * Initialize Node-RED runtime and editor components
+   * @private
+   */
+  async _initializeComponents() {
+    try {
+      // Small delay to ensure cache flush completes
+      await new Promise(resolve => setImmediate(resolve));
+
+      // Dynamic imports for runtime and editorApi
+      this._runtime = (await import('@node-red/runtime')).default;
+      this._editorApi = (await import('@node-red/editor-api')).default;
+
+      // Initialize with recovery for locked runtime
+      // Use proxy to capture upgrade listener for HMR cleanup
+      const serverProxy = this._createServerProxy(this._server);
+
+      await this._runtime.init(this._settings, serverProxy, this._editorApi);
+
+      await this._editorApi.init(
+        this._settings,
+        serverProxy,
+        this._runtime.storage,
+        this._runtime,
+      );
+    } catch (error) {
+      throw new NodeRedError(
+        'Component initialization failed',
+        'COMPONENT_INIT_FAILED',
+        error,
+      );
+    }
+  }
+
+  /**
+   * Mount Node-RED routes to Express app
+   * @private
+   */
+  _mountRoutes(app) {
+    try {
+      app.use(this._settings.httpAdminRoot, this._editorApi.httpAdmin);
+      app.use(this._settings.httpNodeRoot, this._runtime.httpNode);
+
+      // Link admin APIs
+      if (this._editorApi.httpAdmin && this._runtime.httpAdmin) {
+        this._editorApi.httpAdmin.use(this._runtime.httpAdmin);
+      }
+    } catch (error) {
+      throw new NodeRedError('Route mounting failed', 'MOUNT_FAILED', error);
+    }
+  }
+
+  /**
+   * Perform the actual start operation
+   * @private
+   */
+  async _performStart() {
+    try {
+      const startTimeout = this._config.startupTimeout;
+
+      await Promise.race([
+        Promise.all([this._runtime.start(), this._editorApi.start()]),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Start timeout')), startTimeout),
+        ),
+      ]);
+
+      this._state = LifecycleState.RUNNING;
+      Logger.success('Ready');
+    } catch (error) {
+      this._state = LifecycleState.ERROR;
+      Logger.error('Start failed:', error);
+      throw new NodeRedError('Start failed', 'START_FAILED', error);
+    }
+  }
+
+  /**
+   * Perform the actual shutdown operation
+   * @private
+   */
+  async _performShutdown() {
+    const errors = [];
+
+    // Stop runtime and editor with proper sequencing
+    try {
+      const stopPromises = [];
+
+      // Stop in reverse order of initialization
+      if (this._editorApi) {
+        stopPromises.push(
+          this._safeStop(this._editorApi, 'Editor').catch(err => {
+            errors.push(err);
+            return null;
+          }),
+        );
+      }
+
+      if (this._runtime) {
+        stopPromises.push(
+          this._safeStop(this._runtime, 'Runtime').catch(err => {
+            errors.push(err);
+            return null;
+          }),
+        );
+      }
+
+      if (stopPromises.length > 0) {
+        await Promise.race([
+          Promise.all(stopPromises),
+          new Promise((_, reject) =>
+            setTimeout(
+              () => reject(new Error('Shutdown timeout')),
+              this._config.shutdownTimeout,
+            ),
+          ),
+        ]);
+      }
+
+      Logger.success('Runtime stopped');
+    } catch (err) {
+      errors.push(err);
+    }
+
+    // Cleanup upgrade listener
+    this._cleanupUpgradeListener(errors);
+
+    // Reset ALL state including runtime/editorApi
+    this._server = null;
+    this._upgradeListener = null;
+    this._settings = null;
+    this._util = null;
+    this._runtime = null;
+    this._editorApi = null;
+    this._state = LifecycleState.UNINITIALIZED;
+
+    if (errors.length > 0) {
+      Logger.warn(`Shutdown completed with ${errors.length} error(s)`);
+    }
+  }
+
+  /**
+   * Safely stop a component
+   * @private
+   */
+  async _safeStop(component, name) {
+    try {
+      if (component && typeof component.stop === 'function') {
+        await component.stop();
+      }
+    } catch (err) {
+      Logger.error(`${name} stop error:`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Cleanup upgrade listener
+   * @private
+   */
+  _cleanupUpgradeListener(errors) {
+    if (this._upgradeListener && this._server) {
+      try {
+        this._server.removeListener('upgrade', this._upgradeListener);
+        this._upgradeListener = null;
+        Logger.network('Listener removed');
+      } catch (err) {
+        Logger.error('Listener cleanup error:', err);
+        errors.push(err);
+      }
+    }
+  }
+
+  /**
+   * Create server proxy to intercept upgrade listener
+   * @private
    */
   _createServerProxy(server) {
     const self = this;
+
     return new Proxy(server, {
-      get: function (target, prop, receiver) {
+      get(target, prop, receiver) {
+        // Intercept event listener registration for 'upgrade' events
         if (prop === 'on' || prop === 'addListener') {
-          return function (event, listener) {
+          return function captureListener(event, listener) {
             if (event === 'upgrade') {
+              // Remove previous listener if exists
+              if (self._upgradeListener) {
+                try {
+                  target.removeListener('upgrade', self._upgradeListener);
+                } catch (err) {
+                  Logger.warn('Failed to remove old upgrade listener:', err);
+                }
+              }
               self._upgradeListener = listener;
             }
             return target[prop](event, listener);
@@ -160,9 +625,20 @@ class NodeRedManager {
       },
     });
   }
+
+  /**
+   * Execute function with state transition lock
+   * @private
+   */
+  async _withStateLock(fn) {
+    // Chain operations to prevent race conditions
+    this._stateTransitionLock = this._stateTransitionLock
+      .then(() => fn())
+      .catch(err => {
+        Logger.error('State transition error:', err);
+        throw err;
+      });
+
+    return this._stateTransitionLock;
+  }
 }
-
-const nodeRedManager = new NodeRedManager();
-
-// HMR: export the instance so the singleton persists across module reloads
-export default nodeRedManager;

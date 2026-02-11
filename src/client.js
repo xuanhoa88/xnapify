@@ -209,9 +209,9 @@ function restoreScrollPosition(location) {
 
 async function loadViews() {
   if (!cachedViews) {
-    cachedViews = await import('./bootstrap/views').then(m =>
-      m.default({ pluginManager }),
-    );
+    cachedViews = (await import('./bootstrap/views')).default({
+      pluginManager,
+    });
     log('✅ Views initialized');
   }
   return cachedViews;
@@ -240,7 +240,9 @@ async function initReactDOMClient() {
       typeof ReactDOMClient.createRoot !== 'function' ||
       typeof ReactDOMClient.hydrateRoot !== 'function'
     ) {
-      throw new Error('React DOM client not found');
+      const err = new Error('React DOM client not found');
+      err.name = 'ReactDOMClientNotFound';
+      throw err;
     }
 
     // Expose ReactDOMClient for plugins (Global Vendors Pattern)

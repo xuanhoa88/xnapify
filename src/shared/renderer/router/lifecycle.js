@@ -181,14 +181,16 @@ export function createAction(pageInfo, configs = [], layouts = []) {
       if (typeof module.getInitialProps === 'function') {
         try {
           initialProps = await module.getInitialProps(ctx);
-          Object.defineProperty(ctx, 'initialProps', {
-            value: initialProps,
-            writable: false,
-          });
         } catch (error) {
           log(`Error loading ${pageInfo.path}: ${error.message}`, 'error');
         }
       }
+      Object.defineProperty(ctx, 'initialProps', {
+        value: initialProps,
+        writable: false,
+        enumerable: true,
+        configurable: false,
+      });
 
       // 2. Get component
       const Page$ = module.default;

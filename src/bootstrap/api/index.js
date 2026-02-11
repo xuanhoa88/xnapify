@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import createProxyMiddleware from 'express-http-proxy';
 import { discoverModules, engines } from '../../shared/api';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
@@ -220,65 +219,9 @@ export default async function main(app, config = {}) {
     // Mount API routes with middleware stack
     guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
 
-    // API proxy (if configured)
-    const proxyUrl = process.env.RSK_API_PROXY_URL;
-    if (proxyUrl) {
-      try {
-        new URL(proxyUrl); // Validate URL
-        console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${proxyUrl}`);
-
-        // Compile regex once
-        const prefixRegex = new RegExp(`^${config.apiPrefix}`);
-
-        guardedApp.use(
-          config.apiPrefix,
-          createProxyMiddleware(proxyUrl, {
-            proxyReqPathResolver: req => req.url.replace(prefixRegex, ''),
-            proxyErrorHandler: (err, res, next) => {
-              console.error('❌ Proxy Error:', err.message);
-              // Set status and pass to error handler
-              err.status = err.status || 502;
-              err.isProxyError = true; // Flag for middleware
-              next(err);
-            },
-            userResHeaderDecorator: headers => {
-              // Only remove headers if they conflict with your app's policies
-              // Document WHY each header is being removed
-
-              // Remove X-Frame-Options only if your app needs to be embedded
-              // and the proxied service's policy is too restrictive
-              if (headers['x-frame-options']) {
-                console.warn(
-                  '⚠️ Removing X-Frame-Options from proxied response',
-                );
-                delete headers['x-frame-options'];
-              }
-
-              // Remove CSP only if it conflicts with your app's CSP
-              // Better: merge policies instead of removing
-              if (headers['content-security-policy']) {
-                console.warn(
-                  '⚠️ Removing Content-Security-Policy from proxied response',
-                );
-                delete headers['content-security-policy'];
-              }
-
-              // Optional: Add your own security headers
-              headers['x-content-type-options'] = 'nosniff';
-              headers['x-xss-protection'] = '1; mode=block';
-
-              // Optional: Remove server identification
-              delete headers['server'];
-              delete headers['x-powered-by'];
-
-              return headers;
-            },
-            timeout: 30_000,
-          }),
-        );
-      } catch {
-        console.error('❌ Invalid RSK_API_PROXY_URL:', proxyUrl);
-      }
+    // Setup Node-RED API proxy (if configured)
+    if (config.nodeRed) {
+      await config.nodeRed.setupApiProxy(guardedApp, config.apiPrefix);
     }
 
     // Catch 404 and forward to error handler (prevents fallthrough to SSR)

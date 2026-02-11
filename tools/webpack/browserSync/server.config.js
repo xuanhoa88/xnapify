@@ -118,7 +118,11 @@ function getServerUrl(server) {
 
   try {
     const { address, port } = server.address();
-    const host = address === '::' ? 'localhost' : address;
+    let host = address;
+    // Map IPv6 loopback addresses to localhost for browser compatibility
+    if (address === '::' || address === '::1') {
+      host = 'localhost';
+    }
     return `http://${host}:${port}`;
   } catch (error) {
     logError(`[BrowserSync] Failed to get server URL: ${error.message}`);
