@@ -42,7 +42,7 @@ import { createWebSocketServer } from './shared/ws/server';
 // =============================================================================
 
 const ssrCache = new Map();
-const nodeRed = new NodeRedManager();
+const nodeRED = new NodeRedManager();
 let wsServer = null;
 let cachedViews = null;
 
@@ -858,8 +858,8 @@ async function launch(app, server, baseUrl, port, host) {
   app.set('ws', wsServer);
 
   // Start Node-RED
-  nodeRed.start();
-  app.set('nodeRED', nodeRed);
+  nodeRED.start();
+  app.set('nodeRED', nodeRED);
 
   // Print server info
   const separator = '='.repeat(60);
@@ -878,7 +878,7 @@ async function launch(app, server, baseUrl, port, host) {
   console.info(`Base URL      : ${baseUrl}`);
   console.info(`API URL       : ${baseUrl}${config.apiPrefix}`);
   console.info(`WebSocket URL : ${wsUrl}${config.wsPath}`);
-  console.info(`Node-RED URL  : ${baseUrl}${nodeRed.settings.httpAdminRoot}`);
+  console.info(`Node-RED URL  : ${baseUrl}${nodeRED.settings.httpAdminRoot}`);
   console.info(separator);
 
   return server;
@@ -987,13 +987,34 @@ export async function bootstrap(app, server, options = {}) {
 
   // Static files with caching
   app.use(
-    express.static(publicDir || path.resolve('public'), {
-      maxAge: __DEV__ ? 0 : '1y',
-      etag: true,
-      lastModified: true,
-      index: false,
-      immutable: !__DEV__,
-    }),
+    express.static(
+      path.resolve(typeof publicDir === 'string' ? publicDir : 'public'),
+      {
+        dotfiles: 'ignore',
+        etag: true, // Strong validation
+        lastModified: true,
+        index: false,
+        redirect: false,
+        fallthrough: true,
+        cacheControl: true,
+
+        setHeaders(res, filePath) {
+          // Prevent MIME sniffing
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+
+          // If file looks fingerprinted (e.g. app.abc123.js)
+          if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
+            res.setHeader(
+              'Cache-Control',
+              'public, max-age=31536000, immutable',
+            );
+          } else {
+            // Non-versioned assets
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+          }
+        },
+      },
+    ),
   );
 
   // Request timeout middleware
@@ -1051,7 +1072,7 @@ export async function bootstrap(app, server, options = {}) {
   }
 
   // Initialize Node-RED
-  await nodeRed.init(app, server, {
+  await nodeRED.init(app, server, {
     ...config,
     port: port,
     host: normalizedHost,
@@ -1059,7 +1080,7 @@ export async function bootstrap(app, server, options = {}) {
 
   // Initialize API routes
   const api = await import('./bootstrap/api');
-  await api.default(app, { ...config, port, nodeRed, host: normalizedHost });
+  await api.default(app, { ...config, port, nodeRED, host: normalizedHost });
 
   app.get('/_health', (req, res) => {
     const health = {
@@ -1068,9 +1089,9 @@ export async function bootstrap(app, server, options = {}) {
       uptime: Math.floor(process.uptime()),
       env: config.nodeEnv,
       services: {
-        nodeRed: {
-          state: nodeRed.state,
-          ready: nodeRed.isReady,
+        nodeRED: {
+          state: nodeRED.state,
+          ready: nodeRED.isReady,
         },
         websocket: app.get('ws') ? 'active' : 'inactive',
       },
@@ -1091,7 +1112,7 @@ export async function bootstrap(app, server, options = {}) {
     };
 
     // Return 503 if critical services aren't ready
-    if (!nodeRed.isReady) {
+    if (!nodeRED.isReady) {
       return res.status(503).json({
         ...health,
         status: 'degraded',
@@ -1127,9 +1148,9 @@ export async function dispose(server) {
 
   // 1. Shutdown Node-RED
   try {
-    if (nodeRed) {
+    if (nodeRED) {
       console.info('   Shutting down Node-RED...');
-      await nodeRed.shutdown();
+      await nodeRED.shutdown();
       console.info('   ✔ Node-RED shutdown complete');
     }
   } catch (err) {

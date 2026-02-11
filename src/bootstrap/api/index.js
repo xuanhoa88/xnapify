@@ -220,9 +220,8 @@ export default async function main(app, config = {}) {
     guardedApp.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
 
     // Setup Node-RED API proxy (if configured)
-    if (config.nodeRed) {
-      await config.nodeRed.setupApiProxy(guardedApp, config.apiPrefix);
-    }
+    if (config.nodeRED)
+      await config.nodeRED.setupApiProxy(guardedApp, config.apiPrefix);
 
     // Catch 404 and forward to error handler (prevents fallthrough to SSR)
     guardedApp.use(config.apiPrefix, engines.http.notFoundHandler);
