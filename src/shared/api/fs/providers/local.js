@@ -9,7 +9,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import { createReadStream, createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
-import { FilesystemError } from '../utils';
+import { FilesystemError, UPLOAD_DIR } from '../utils';
 
 /**
  * Local Filesystem Provider
@@ -19,7 +19,7 @@ import { FilesystemError } from '../utils';
  */
 export class LocalFilesystemProvider {
   constructor(config = {}) {
-    this.basePath = config.basePath || path.join(process.cwd(), 'uploads');
+    this.basePath = config.basePath || UPLOAD_DIR;
     this.createDirectories = config.createDirectories !== false;
     this.maxFileSize = config.maxFileSize || 10 * 1024 * 1024; // 10MB default
     this.allowedExtensions = config.allowedExtensions || null; // null = allow all

@@ -13,6 +13,3 @@ export * from './connection';
 
 // Export database migrator
 export * from './migrator';
-
-// Export current working directory
-export const cwd = __dirname;

@@ -54,3 +54,6 @@ pnpm-lock.yaml
 
 # Uploads
 uploads/
+
+# Node-RED
+.node-red/

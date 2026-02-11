@@ -183,7 +183,17 @@ function restoreScrollPosition(location) {
   }
 
   if (location.hash) {
-    const el = document.querySelector(location.hash);
+    let el;
+    try {
+      el = document.querySelector(location.hash);
+    } catch (e) {
+      if (location.hash.startsWith('#')) {
+        el = document.getElementById(
+          decodeURIComponent(location.hash.slice(1)),
+        );
+      }
+    }
+
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
       return;

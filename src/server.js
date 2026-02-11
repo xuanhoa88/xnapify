@@ -9,12 +9,12 @@ import 'url-polyfill';
 import 'dotenv-flow/config';
 import path from 'path';
 import fs from 'fs/promises';
+import http from 'http';
 import crypto from 'crypto';
 import cookieParser from 'cookie-parser';
 import compression from 'compression';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
-import createProxy from 'express-http-proxy';
 import expressRequestLanguage from 'express-request-language';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
@@ -42,6 +42,7 @@ import App from './shared/renderer/App';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
+
 const LOCALHOST_IPS = new Set([
   '0.0.0.0',
   '127.0.0.1',
@@ -73,12 +74,19 @@ function parsePort(port, defaultPort) {
   return 1337;
 }
 
+function normalizePath(urlPath) {
+  return ('/' + urlPath)
+    .replace(/\/+/g, '/') // Replace multiple slashes with single slash
+    .replace(/\/$/, ''); // Remove trailing slash only
+}
+
 const config = Object.freeze({
   cwd: __dirname,
   nodeEnv: process.env.NODE_ENV || 'development',
   port: parsePort(process.env.RSK_PORT, 1337),
   host: normalizeHost(process.env.RSK_HOST || '127.0.0.1'),
-  apiPrefix: process.env.RSK_API_PREFIX || '/api',
+  wsPath: normalizePath(process.env.RSK_WS_PATH || 'ws'),
+  apiPrefix: normalizePath(process.env.RSK_API_PREFIX || 'api'),
 });
 
 // =============================================================================
@@ -496,24 +504,6 @@ function createSSRHandler(port, host) {
 // SERVER SETUP
 // =============================================================================
 
-function formatErrorResponse(err, status) {
-  // Development: include stack trace
-  if (__DEV__) {
-    return {
-      success: false,
-      error: err.message,
-      status,
-      stack: err.stack,
-    };
-  }
-  // Production: minimal error info
-  return {
-    success: false,
-    error: status === 500 ? 'Internal Server Error' : err.message,
-    status,
-  };
-}
-
 function createErrorHandler() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
@@ -555,7 +545,11 @@ function createErrorHandler() {
     }
 
     // Fallback to JSON response
-    res.status(status).json(formatErrorResponse(err, status));
+    res.status(status).json({
+      status,
+      success: false,
+      error: status === 500 ? 'Internal Server Error' : err.message,
+    });
   };
 }
 
@@ -582,65 +576,56 @@ function verifyWsToken(jwt, token) {
 // MAIN FUNCTIONS
 // =============================================================================
 
-export function serve(app, options = {}) {
-  // Destructure with defaults
+export async function serve(app, options = {}) {
   const { port = config.port, host = config.host } = options;
+  const httpServer = http.createServer(app);
+  const listenHost = normalizeHost(host || '127.0.0.1');
 
-  // WebSocket path
-  const wsPath = process.env.RSK_WS_PATH || '/ws';
-
-  return new Promise((resolve, reject) => {
-    const httpServer = app.listen(
-      port,
-      normalizeHost(host || '127.0.0.1'),
-      err => {
-        if (err) {
-          console.error('❌ Server start failed:', err.message);
-          return reject(err);
-        }
-
-        // Initialize WebSocket
-        const jwt = app.get('jwt');
-        const wsServer = createWebSocketServer(
-          {
-            path: wsPath,
-            enableLogging: !__DEV__,
-            onAuthentication: token => verifyWsToken(jwt, token),
-          },
-          httpServer,
-        );
-        app.set('ws', wsServer);
-
-        registerShutdownHandlers(httpServer, wsServer);
-
-        // Print server info
-        const serverUrl = getBaseUrl(port, host);
-        const wsProtocol = serverUrl.startsWith('https://')
-          ? 'wss://'
-          : 'ws://';
-        const wsUrl =
-          wsProtocol + serverUrl.replace(/^https?:\/\//, '') + wsPath;
-
-        console.info('='.repeat(50));
-        console.info(`🚀 Server started`);
-        console.info(`   URL: ${serverUrl}/`);
-        console.info(`   WebSocket: ${wsUrl}`);
-        console.info(`   Environment: ${config.nodeEnv}`);
-        console.info('='.repeat(50));
-
-        resolve(httpServer);
-      },
-    );
-
-    httpServer.on('error', err => {
+  // Listen — single-shot promise, avoids double-reject race
+  await new Promise((resolve, reject) => {
+    const onError = err => {
       console.error(
         err.code === 'EADDRINUSE'
           ? `❌ Port ${port} in use`
-          : `❌ Server error: ${err}`,
+          : `❌ Server start failed: ${err.message}`,
       );
       reject(err);
+    };
+
+    httpServer.once('error', onError);
+    httpServer.listen(port, listenHost, () => {
+      httpServer.removeListener('error', onError);
+      resolve();
     });
   });
+
+  // Initialize WebSocket server (Moved to main so it reloads on HMR)
+  const wsServer = createWebSocketServer(
+    {
+      path: config.wsPath,
+      enableLogging: !__DEV__,
+      onAuthentication: token => verifyWsToken(app.get('jwt'), token),
+    },
+    httpServer, // This attaches the upgrade listener
+  );
+  app.set('ws', wsServer);
+
+  // Register graceful shutdown
+  registerShutdownHandlers(httpServer, wsServer);
+
+  // Print server info
+  const serverUrl = getBaseUrl(port, host);
+  const isSecure = serverUrl.startsWith('https://');
+  const wsUrl = `${isSecure ? 'wss' : 'ws'}://${listenHost}:${port}${config.wsPath}`;
+
+  console.info('='.repeat(50));
+  console.info('🚀 Server started');
+  console.info(`   URL: ${serverUrl}/`);
+  console.info(`   WebSocket: ${wsUrl}`);
+  console.info(`   Environment: ${config.nodeEnv}`);
+  console.info('='.repeat(50));
+
+  return httpServer;
 }
 
 export default async function main(app, options = {}) {
@@ -760,41 +745,6 @@ export default async function main(app, options = {}) {
 
   // API routes
   await initializeAPI(app, config);
-
-  // API proxy (if configured)
-  const proxyUrl = process.env.RSK_API_PROXY_URL;
-  if (proxyUrl) {
-    try {
-      new URL(proxyUrl);
-      console.info(`🔀 API Proxy: ${config.apiPrefix}/* → ${proxyUrl}`);
-
-      app.use(
-        config.apiPrefix,
-        createProxy(proxyUrl, {
-          proxyReqPathResolver: req =>
-            req.url.replace(new RegExp(`^${config.apiPrefix}`), ''),
-          proxyErrorHandler: (err, res, next) => {
-            console.error('❌ Proxy Error:', err.message);
-            if (!res.headersSent) {
-              const status = 502;
-              err.status = status;
-              res.status(status).json(formatErrorResponse(err, status));
-            } else {
-              next(err);
-            }
-          },
-          userResHeaderDecorator: headers => {
-            delete headers['x-frame-options'];
-            delete headers['content-security-policy'];
-            return headers;
-          },
-          timeout: 30_000,
-        }),
-      );
-    } catch {
-      console.error('❌ Invalid RSK_API_PROXY_URL:', proxyUrl);
-    }
-  }
 
   // SSR handler
   app.get('*', createSSRHandler(port, host));

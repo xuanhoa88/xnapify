@@ -15,7 +15,7 @@ import path from 'path';
 import archiver from 'archiver';
 import unzipper from 'unzipper';
 import { FilesystemError } from './errors';
-import { ERROR_CODES } from './constants';
+import { ERROR_CODES, UPLOAD_DIR } from './constants';
 
 /**
  * Create ZIP archive from file information (streaming)
@@ -28,7 +28,7 @@ import { ERROR_CODES } from './constants';
  */
 export async function createZip(fileInfos, options = {}) {
   const {
-    basePath = '',
+    basePath = UPLOAD_DIR,
     compressionLevel = 6,
     zipName = 'files.zip',
   } = options;

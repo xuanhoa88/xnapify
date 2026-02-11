@@ -124,7 +124,10 @@ class WebSocketServer extends EventEmitter {
 
     // Handle HTTP upgrade
     if (httpServer) {
-      httpServer.on('upgrade', (request, socket, head) => {
+      // eslint-disable-next-line no-underscore-dangle
+      this._httpServer = httpServer;
+      // eslint-disable-next-line no-underscore-dangle
+      this._upgradeHandler = (request, socket, head) => {
         const { pathname } = new URL(
           request.url,
           `http://${request.headers.host}`,
@@ -134,7 +137,9 @@ class WebSocketServer extends EventEmitter {
             this.server.emit('connection', ws, request);
           });
         }
-      });
+      };
+      // eslint-disable-next-line no-underscore-dangle
+      httpServer.on('upgrade', this._upgradeHandler);
     }
 
     // Start heartbeat
@@ -170,6 +175,17 @@ class WebSocketServer extends EventEmitter {
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
+    }
+
+    // Remove HTTP upgrade listener
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._httpServer && this._upgradeHandler) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._httpServer.removeListener('upgrade', this._upgradeHandler);
+      // eslint-disable-next-line no-underscore-dangle
+      this._httpServer = null;
+      // eslint-disable-next-line no-underscore-dangle
+      this._upgradeHandler = null;
     }
 
     // Clear auth timeouts

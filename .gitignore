@@ -192,3 +192,6 @@ docker-compose.override.yml
 
 # Uploads
 uploads/
+
+# Node-RED
+.node-red/
