@@ -148,7 +148,10 @@ class WebSocketClient extends EventEmitter {
 
       this.ws.onerror = event => {
         this.logger.error('❌ Connection error', { error: event });
-        this.emit(EventType.ERROR, event);
+        // Only emit if there are listeners to prevent unhandled error
+        if (this.listenerCount(EventType.ERROR) > 0) {
+          this.emit(EventType.ERROR, event);
+        }
       };
 
       this.ws.onmessage = event => {
