@@ -463,6 +463,9 @@ function createWebpackConfig(name, options = {}) {
       resolve: {
         modules: [config.NODE_MODULES_DIR, config.APP_DIR],
         extensions: ['.js', '.jsx', '.json'],
+        fallback: {
+          events: require.resolve('events'),
+        },
       },
 
       module: {

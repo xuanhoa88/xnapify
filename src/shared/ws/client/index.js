@@ -601,4 +601,4 @@ export function createWebSocketClient(options = {}) {
 }
 
 // Re-export types for convenience
-export { EventType, MessageType, useWebSocket };
+export { EventType, MessageType, useWebSocket, setWebSocketClient };

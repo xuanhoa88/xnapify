@@ -20,6 +20,7 @@ import {
   createWebSocketClient,
   EventType,
   MessageType,
+  setWebSocketClient,
 } from './shared/ws/client';
 import pluginManager from './shared/plugin/manager/client';
 import App from './shared/renderer/App';
@@ -465,6 +466,7 @@ function cleanup() {
       wsClient.dispose();
     }
     wsClient = null;
+    setWebSocketClient(null);
   });
 
   // Remove event listeners
