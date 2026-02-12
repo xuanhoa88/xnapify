@@ -38,16 +38,7 @@ import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
 
 // =============================================================================
-// INITIALIZATION
-// =============================================================================
-
-const ssrCache = new Map();
-const nodeRED = new NodeRedManager();
-let wsServer = null;
-let cachedViews = null;
-
-// =============================================================================
-// CONFIGURATION
+// CONSTANTS
 // =============================================================================
 
 const LOCALHOST_IPS = new Set([
@@ -59,71 +50,241 @@ const LOCALHOST_IPS = new Set([
   'localhost',
 ]);
 
-const SSR_TIMEOUTS = Object.freeze({
+const TIMEOUTS = Object.freeze({
   STORE_INIT: 5_000,
   VIEWS_LOAD: 5_000,
   PAGE_RESOLVE: 3_000,
   RENDER: 10_000,
-  CLIENT_DISCONNECT: 30_000,
+  API_REQUEST: 30_000,
+  SSR_REQUEST: 60_000,
   SHUTDOWN: 30_000,
 });
 
-/**
- * Normalize host to standardized format
- * @param {string} host - Host to normalize
- * @returns {string} Normalized host
- */
-function normalizeHost(host) {
-  return LOCALHOST_IPS.has(host) ? '127.0.0.1' : host;
+// =============================================================================
+// STATE MANAGEMENT
+// =============================================================================
+
+const appState = {
+  ssrCache: new Map(),
+  viewsPromise: null,
+  wsServer: null,
+  nodeRED: new NodeRedManager(),
+};
+
+/** Clear all caches */
+function clearCaches() {
+  appState.ssrCache.clear();
+  appState.viewsPromise = null;
+  if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
-/**
- * Parse and validate port number
- * @param {string|number} port - Port to parse
- * @param {string|number} defaultPort - Fallback port
- * @returns {number} Valid port number
- */
-function parsePort(port, defaultPort) {
+// =============================================================================
+// CONFIGURATION
+// =============================================================================
+
+/** Parse and validate port number */
+function parsePort(port, defaultPort = 1337) {
   const parsed = parseInt(port, 10);
   if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 65535) {
     return parsed;
   }
-
   const parsedDefault = parseInt(defaultPort, 10);
-  if (
-    Number.isInteger(parsedDefault) &&
+  return Number.isInteger(parsedDefault) &&
     parsedDefault >= 0 &&
     parsedDefault <= 65535
-  ) {
-    return parsedDefault;
-  }
-
-  return 1337;
+    ? parsedDefault
+    : 1337;
 }
 
-/**
- * Normalize URL path
- * @param {string} urlPath - Path to normalize
- * @returns {string} Normalized path
- */
+/** Normalize host to standardized format (used for URL generation, not binding) */
+function normalizeHost(host) {
+  return LOCALHOST_IPS.has(host) ? '127.0.0.1' : host;
+}
+
+/** Normalize URL path */
 function normalizePath(urlPath) {
   return ('/' + urlPath)
-    .replace(/\/+/g, '/') // Replace multiple slashes with single slash
-    .replace(/\/$/, ''); // Remove trailing slash only
+    .replace(/\/+/g, '/') // collapse multiple slashes
+    .replace(/\/$/, ''); // strip trailing slash
 }
 
+const config = Object.freeze({
+  cwd: __dirname,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  protocol: process.env.RSK_HTTPS === 'true' ? 'https' : 'http',
+  port: parsePort(process.env.RSK_PORT, 1337),
+  host: normalizeHost(process.env.RSK_HOST || '127.0.0.1'),
+  wsPath: normalizePath(process.env.RSK_WS_PATH || 'ws'),
+  apiPrefix: normalizePath(process.env.RSK_API_PREFIX || 'api'),
+
+  // Performance
+  enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
+  compressionLevel:
+    parseInt(process.env.RSK_COMPRESSION_LEVEL, 10) || (__DEV__ ? 1 : 6),
+
+  // Security
+  enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
+  rateLimitWindow:
+    parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
+  rateLimitMax: parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
+
+  // SSR Cache
+  enableSSRCache: process.env.RSK_ENABLE_SSR_CACHE === 'true',
+  ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
+
+  // Request limits
+  jsonRequestLimit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb',
+  urlEncodedLimit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
+});
+
+// =============================================================================
+// PROVIDER GUARD
+// =============================================================================
+
 /**
- * Wrap promise with timeout
- * @param {Promise} promise - Promise to wrap
- * @param {number} timeoutMs - Timeout in milliseconds
- * @param {string} operationName - Name for error message
- * @returns {Promise} Wrapped promise
+ * Protect core providers from plugin mutation.
+ * Returns a guarded app proxy, a read-only plugin proxy, and lock/unlock controls.
+ *
+ * @param {object} app - Express app instance
+ * @param {string[]} providers - Additional provider keys
+ * @returns {{ app: Proxy, proxy: Proxy, unlock(): void, lock(): void }}
  */
+function createProviderGuard(app, providers = []) {
+  const CORE_PROVIDERS = new Set([
+    ...providers,
+    'cwd',
+    'env',
+    'jwt',
+    'i18n',
+    'ws',
+    'models',
+    'nodeRED',
+  ]);
+
+  app.settings = app.settings || {};
+
+  let unlocked = false;
+
+  const shouldBlock = key =>
+    CORE_PROVIDERS.has(key) && app.settings[key] == null && !unlocked;
+
+  const logBlocked = (operation, key) => {
+    const error = new Error();
+    error.name = 'ProviderGuardError';
+    const stack = error.stack
+      ? error.stack.split('\n').slice(2, 6).join('\n')
+      : '(stack unavailable)';
+    console.warn(
+      `⚠️  Provider guard blocked ${operation} on "${key}"\n${stack}`,
+    );
+  };
+
+  // WeakMap-cached settings proxy to avoid re-creating on every access
+  const settingsCache = new WeakMap();
+  const getSettingsProxy = settings => {
+    if (!settingsCache.has(settings)) {
+      settingsCache.set(
+        settings,
+        new Proxy(settings, {
+          set(target, key, value) {
+            if (shouldBlock(key)) {
+              logBlocked('set', key);
+              return true;
+            }
+            return Reflect.set(target, key, value);
+          },
+          deleteProperty(target, key) {
+            if (shouldBlock(key)) {
+              logBlocked('delete', key);
+              return true;
+            }
+            return Reflect.deleteProperty(target, key);
+          },
+        }),
+      );
+    }
+    return settingsCache.get(settings);
+  };
+
+  // Guard set / enable / disable
+  const guardMethod = (original, operation) =>
+    function (key, ...args) {
+      if (shouldBlock(key)) {
+        logBlocked(operation, key);
+        return this;
+      }
+      return original.call(app, key, ...args);
+    };
+
+  const guardedApp = new Proxy(app, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (prop === 'set' || prop === 'enable' || prop === 'disable') {
+        return guardMethod(value, prop);
+      }
+      if (prop === 'settings') {
+        return getSettingsProxy(value);
+      }
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+
+  // Read-only proxy exposed to plugins
+  const pluginProxy = new Proxy(Object.freeze({}), {
+    get(_target, prop) {
+      if (prop === 'get') {
+        return key => {
+          if (CORE_PROVIDERS.has(key)) return app.get(key);
+          const err = new Error(`Plugin access denied for: ${String(key)}`);
+          err.code = 'PLUGIN_ACCESS_DENIED';
+          err.key = key;
+          throw err;
+        };
+      }
+      const err = new Error(`Plugins cannot access app.${String(prop)}`);
+      err.code = 'PLUGIN_ACCESS_DENIED';
+      err.property = prop;
+      throw err;
+    },
+    ownKeys() {
+      return ['get'];
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      return prop === 'get'
+        ? { configurable: true, enumerable: true }
+        : undefined;
+    },
+  });
+
+  return {
+    app: guardedApp,
+    proxy: pluginProxy,
+    unlock() {
+      unlocked = true;
+    },
+    lock() {
+      unlocked = false;
+    },
+  };
+}
+
+// =============================================================================
+// UTILITY FUNCTIONS
+// =============================================================================
+
+/** Build base URL from port and host */
+function getBaseUrl(port, host) {
+  const normalizedHost = normalizeHost(host);
+  return `${config.protocol}://${normalizedHost}:${port}`;
+}
+
+/** Race a promise against a timeout; clears the timer on settlement */
 function withTimeout(promise, timeoutMs, operationName) {
+  let timeoutId;
   return Promise.race([
-    promise,
+    promise.finally(() => clearTimeout(timeoutId)),
     new Promise((_, reject) => {
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         const error = new Error(
           `${operationName} timeout (${timeoutMs}ms exceeded)`,
         );
@@ -135,15 +296,10 @@ function withTimeout(promise, timeoutMs, operationName) {
   ]);
 }
 
-/**
- * Extract metadata for SEO from page and request
- * @param {object} page - Page object
- * @param {object} req - Express request
- * @returns {object} Metadata object
- */
+/** Extract SEO metadata from a resolved page */
 function getMetadata(page, req) {
-  const rawHost = req.get('host') || 'localhost';
-  const host = rawHost.split(':')[0]; // strip port if present
+  const rawHost = req.get('host') || config.host;
+  const host = rawHost.split(':')[0];
 
   const metadata = {
     title: (page && page.title) || null,
@@ -159,86 +315,98 @@ function getMetadata(page, req) {
   return metadata;
 }
 
-const config = Object.freeze({
-  cwd: __dirname,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  protocol: process.env.RSK_HTTPS === 'true' ? 'https' : 'http',
-  port: parsePort(process.env.RSK_PORT, 1337),
-  host: normalizeHost(process.env.RSK_HOST),
-  wsPath: normalizePath(process.env.RSK_WS_PATH || 'ws'),
-  apiPrefix: normalizePath(process.env.RSK_API_PREFIX || 'api'),
-
-  // Performance settings
-  enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
-  compressionLevel:
-    parseInt(process.env.RSK_COMPRESSION_LEVEL, 10) || (__DEV__ ? 1 : 6),
-
-  // Security settings
-  enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
-  rateLimitWindow:
-    parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
-  rateLimitMax: parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
-
-  // SSR settings
-  enableSSRCache: process.env.RSK_ENABLE_SSR_CACHE === 'true',
-  ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
-
-  // Request size limits
-  jsonRequestLimit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb',
-  urlEncodedLimit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
-});
-
 // =============================================================================
-// HELPER FUNCTIONS
+// SSR CACHE
 // =============================================================================
 
-/**
- * Get base URL for the server
- * @param {number} port - Server port
- * @param {string} host - Server host
- * @returns {string} Base URL
- */
-function getBaseUrl(port, host) {
-  const normalizedHost = normalizeHost(host);
-  return `${config.protocol}://${normalizedHost}:${port}`;
+/** Generate a cache key for GET requests without query params */
+function getSSRCacheKey(req, baseUrl, locale, authHeader) {
+  if (req.method !== 'GET') return null;
+
+  const url = new URL(req.url, baseUrl);
+  const params = Array.from(url.searchParams.keys()).filter(
+    k => k !== LOCALE_COOKIE_NAME,
+  );
+  if (params.length > 0) return null;
+
+  return `${req.path}:${locale}:${crypto
+    .createHash('md5')
+    .update(authHeader)
+    .digest('hex')}`;
 }
 
-/**
- * Load view resolver (lazy-loaded and cached)
- * @returns {Promise<object>} View resolver
- */
-async function loadViews() {
-  if (!cachedViews) {
-    try {
-      cachedViews = (await import('./bootstrap/views')).default({
-        pluginManager,
-      });
-      if (__DEV__) console.log('✅ Views initialized');
-    } catch (err) {
-      console.error('❌ Failed to load views:', err);
-      throw err;
+/** Return cached SSR response if valid, or null */
+function getSSRCache(key) {
+  if (!config.enableSSRCache || !key) return null;
+
+  const cached = appState.ssrCache.get(key);
+  if (!cached) return null;
+
+  if (Date.now() - cached.timestamp > config.ssrCacheTTL) {
+    appState.ssrCache.delete(key);
+    return null;
+  }
+
+  return cached;
+}
+
+/** Store SSR response with eviction when the cache exceeds 1000 entries */
+function setSSRCache(key, data) {
+  if (!config.enableSSRCache || !key) return;
+
+  appState.ssrCache.set(key, {
+    ...data,
+    timestamp: Date.now(),
+  });
+
+  if (appState.ssrCache.size > 1000) {
+    const entries = Array.from(appState.ssrCache.entries()).sort(
+      (a, b) => a[1].timestamp - b[1].timestamp,
+    );
+
+    const toRemove = entries.slice(0, 50);
+    toRemove.forEach(([k]) => appState.ssrCache.delete(k));
+
+    if (__DEV__) {
+      console.log(`🗑️  Evicted ${toRemove.length} old cache entries`);
     }
   }
-  return cachedViews;
 }
 
-/**
- * Initialize Redux store with authentication attempt
- * @param {object} params - Store parameters
- * @param {string} locale - User locale
- * @returns {Promise<object>} Configured store
- */
+// =============================================================================
+// VIEW & STORE INITIALIZATION
+// =============================================================================
+
+/** Load view resolver (lazy, promise-cached to avoid duplicate imports) */
+async function loadViews() {
+  if (!appState.viewsPromise) {
+    appState.viewsPromise = import('./bootstrap/views')
+      .then(m => {
+        const views = m.default({ pluginManager });
+        if (__DEV__) console.log('✅ Views initialized');
+        return views;
+      })
+      .catch(err => {
+        appState.viewsPromise = null; // allow retry on failure
+        console.error('❌ Failed to load views:', err);
+        throw err;
+      });
+  }
+  return appState.viewsPromise;
+}
+
+/** Initialize Redux store with auth check */
 async function initReduxStore({ fetch, history }, locale) {
   const store = configureStore(
     { user: { data: null } },
     { fetch, history, i18n },
   );
 
-  // Try SSR auth - client will retry if this fails
+  // Silently fail for unauthenticated users
   try {
     await store.dispatch(me()).unwrap();
   } catch {
-    // Expected for unauthenticated users - silently continue
+    // expected
   }
 
   await store.dispatch(
@@ -255,246 +423,32 @@ async function initReduxStore({ fetch, history }, locale) {
   return store;
 }
 
-/**
- * Create restricted app proxy for plugins.
- * Only exposes app.get(key) for allowed providers - blocks everything else.
- *
- * @param {object} app - Express app instance
- * @param {Set<string>} appProviders - Set of allowed app providers
- * @returns {Proxy} Restricted proxy
- */
-function createPluginAppProxy(app, appProviders) {
-  return new Proxy(Object.freeze({}), {
-    get(target, prop) {
-      // Only allow app.get() for retrieving engines/providers
-      if (prop === 'get') {
-        return key => {
-          if (appProviders.has(key)) {
-            return app.get(key);
-          }
-          const err = new Error(`Plugin access denied for: ${String(key)}`);
-          err.code = 'PLUGIN_ACCESS_DENIED';
-          err.key = key;
-          throw err;
-        };
-      }
-
-      // Block everything else with explicit error
-      const err = new Error(`Plugins cannot access app.${String(prop)}`);
-      err.code = 'PLUGIN_ACCESS_DENIED';
-      err.property = prop;
-      throw err;
-    },
-
-    // Prevent property enumeration
-    ownKeys() {
-      return ['get'];
-    },
-
-    getOwnPropertyDescriptor(target, prop) {
-      if (prop === 'get') {
-        return { configurable: true, enumerable: true };
-      }
-      return undefined;
-    },
-  });
-}
-
-/**
- * Generate cache key for SSR cache
- * @param {object} req - Express request
- * @param {string} baseUrl - Base URL for SSR
- * @param {string} locale - Locale for SSR
- * @returns {string|null} Cache key or null if not cacheable
- */
-function getSSRCacheKey(req, baseUrl, locale, authHeader) {
-  // Only cache GET requests
-  if (req.method !== 'GET') return null;
-
-  // Don't cache requests with query params (except locale)
-  const url = new URL(req.url, baseUrl);
-  const params = Array.from(url.searchParams.keys()).filter(
-    k => k !== LOCALE_COOKIE_NAME,
-  );
-  if (params.length > 0) return null;
-
-  return `${req.path}:${locale}:${crypto
-    .createHash('md5')
-    .update(authHeader)
-    .digest('hex')}`;
-}
-
-/**
- * Get cached SSR response
- * @param {string} key - Cache key
- * @returns {object|null} Cached response or null
- */
-function getSSRCache(key) {
-  if (!config.enableSSRCache || !key) return null;
-
-  const cached = ssrCache.get(key);
-  if (!cached) return null;
-
-  if (Date.now() - cached.timestamp > config.ssrCacheTTL) {
-    ssrCache.delete(key);
-    return null;
-  }
-
-  return cached;
-}
-
-/**
- * Set SSR cache entry
- * @param {string} key - Cache key
- * @param {object} data - Data to cache
- */
-function setSSRCache(key, data) {
-  if (!config.enableSSRCache || !key) return;
-
-  ssrCache.set(key, {
-    ...data,
-    timestamp: Date.now(),
-  });
-
-  // Prevent unbounded cache growth
-  if (ssrCache.size > 1000) {
-    const entries = Array.from(ssrCache.entries()).sort(
-      (a, b) => a[1].timestamp - b[1].timestamp,
-    );
-
-    // Remove oldest 50 entries for efficiency
-    const toRemove = entries.slice(0, 50);
-    toRemove.forEach(([k]) => ssrCache.delete(k));
-
-    if (__DEV__) {
-      console.log(`🗑️  Evicted ${toRemove.length} old cache entries`);
-    }
-  }
-}
-
-/**
- * Clear SSR cache (useful for deployments)
- */
-function clearSSRCache() {
-  ssrCache.clear();
-  if (__DEV__) console.log('🗑️  SSR cache cleared');
-}
-
-// =============================================================================
-// PROCESS ERROR HANDLERS
-// =============================================================================
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  if (!__DEV__ && reason && reason.stack) {
-    // In production, log and continue (don't crash)
-    // Consider sending to error tracking service
-    console.error('Stack:', reason.stack);
-  }
-});
-
-process.on('uncaughtException', err => {
-  console.error('❌ Uncaught Exception:', err);
-  if (err && err.stack) {
-    console.error('Stack:', err.stack);
-  }
-  // Always exit on uncaught exception - app state is unknown
-  process.exit(1);
-});
-
-process.on('warning', warning => {
-  if (__DEV__) {
-    console.warn('⚠️  Node.js Warning:', warning.name, warning.message);
-  }
-});
-
-/**
- * Register graceful shutdown handlers
- * @param {object} server - HTTP server instance
- */
-function setupGracefulShutdown(server) {
-  let shutdownPromise = null;
-
-  const handleShutdown = async signal => {
-    // If already shutting down, return the existing promise
-    if (shutdownPromise) {
-      console.warn('⚠️  Shutdown already in progress, waiting...');
-      return shutdownPromise;
-    }
-
-    // Create shutdown promise
-    shutdownPromise = (async () => {
-      console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
-      const shutdownStart = Date.now();
-
-      // Set a hard timeout for shutdown
-      const forceExitTimer = setTimeout(() => {
-        console.error('❌ Forced shutdown after timeout');
-        process.exit(1);
-      }, SSR_TIMEOUTS.SHUTDOWN).unref();
-
-      // Exit code
-      let exitCode = 0;
-
-      try {
-        await dispose(server);
-      } catch (err) {
-        console.error('❌ Shutdown error:', err);
-        exitCode = 1;
-      } finally {
-        clearTimeout(forceExitTimer);
-
-        // Log shutdown duration
-        const duration = Date.now() - shutdownStart;
-        console.warn(`⚠️  Shutdown completed in ${duration}ms`);
-
-        // Exit process
-        process.exit(exitCode);
-      }
-    })();
-
-    return shutdownPromise;
-  };
-
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-
-  // Handle SIGUSR2 for nodemon/development restarts
-  if (__DEV__) {
-    process.once('SIGUSR2', () =>
-      handleShutdown('SIGUSR2').finally(() =>
-        process.kill(process.pid, 'SIGUSR2'),
-      ),
-    );
-  }
-}
-
 // =============================================================================
 // SSR RENDERING
 // =============================================================================
 
-/**
- * Render React app to HTML string
- * @param {object} params - Render parameters
- * @returns {Promise<string>} HTML string
- */
+/** Render a React page to a full HTML document string */
 async function render({ context, component, metadata = {} }) {
   const scriptLinks = [];
   const styleLinks = [];
 
+  // Load webpack stats (handles both webpack 4 string and webpack 5 object asset formats)
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
     const stats = await fs.readFile(statsPath, 'utf8');
     const { entrypoints } = JSON.parse(stats);
     const entryAssets =
-      (entrypoints && entrypoints.client && entrypoints.client.assets) || [];
+      entrypoints &&
+      entrypoints.client &&
+      Array.isArray(entrypoints.client.assets)
+        ? entrypoints.client.assets
+        : [];
     const assets = entryAssets.map(asset =>
       typeof asset === 'string' ? asset : asset.name,
     );
     scriptLinks.push(...assets.filter(f => /\.js$/i.test(f)));
     styleLinks.push(...assets.filter(f => /\.css$/i.test(f)));
 
-    // Add plugin CSS files
     const pluginCssUrls = pluginManager.getPluginCssUrls();
     if (pluginCssUrls.length > 0) {
       styleLinks.push(...pluginCssUrls);
@@ -505,7 +459,6 @@ async function render({ context, component, metadata = {} }) {
     }
   }
 
-  // FIXED: Import App and Html in correct order (App needed before renderToString)
   const App = (await import('./shared/renderer/App')).default;
   const Html = (await import('./shared/renderer/Html')).default;
 
@@ -516,7 +469,6 @@ async function render({ context, component, metadata = {} }) {
   const htmlData = {
     ...metadata,
     children,
-    // Add leading slash only if not already present (plugin CSS URLs already have it)
     styleLinks: styleLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
     scriptLinks: scriptLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
     appState: { redux: context.store.getState() },
@@ -526,30 +478,17 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-/**
- * Create SSR request handler
- * @param {string} baseUrl - Base URL for SSR
- * @param {Set<string>} appProviders - Set of allowed app providers
- * @returns {Function} Express middleware
- */
-function createSSRHandler(baseUrl, appProviders) {
+/** Create SSR request handler */
+function createSSRHandler(guardControl, baseUrl) {
   return async (req, res, next) => {
     const startTime = Date.now();
-
-    // Initialize store and context
-    let store;
-    let context;
-
-    // Get auth header from request
-    const authHeader = req.headers.cookie || '';
-
-    // Get locale from request
-    const locale = req.language || DEFAULT_LOCALE;
-
-    // Create abort controller for request cancellation
+    let store = null;
+    let context = null;
     const abortController = new AbortController();
 
-    // Handle client disconnect
+    const authHeader = req.headers.cookie || '';
+    const locale = req.language || DEFAULT_LOCALE;
+
     const handleClientDisconnect = () => {
       if (!res.headersSent) {
         if (__DEV__) console.info('Client disconnected:', req.path);
@@ -558,7 +497,7 @@ function createSSRHandler(baseUrl, appProviders) {
     };
 
     try {
-      // Check SSR cache first
+      // Check cache
       const cacheKey = getSSRCacheKey(req, baseUrl, locale, authHeader);
       const cached = getSSRCache(cacheKey);
 
@@ -570,11 +509,8 @@ function createSSRHandler(baseUrl, appProviders) {
       }
 
       res.setHeader('X-Cache', 'MISS');
-
-      // Handle client disconnect
       req.on('close', handleClientDisconnect);
 
-      // Create memory history
       const history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
         initialIndex: 0,
@@ -591,7 +527,6 @@ function createSSRHandler(baseUrl, appProviders) {
         },
       });
 
-      // Create context
       context = {
         fetch,
         i18n,
@@ -602,39 +537,38 @@ function createSSRHandler(baseUrl, appProviders) {
         signal: abortController.signal,
       };
 
-      // Initialize plugins (Server Side) with restricted app access
+      // Plugin init (restricted app access)
       try {
         await pluginManager.init({
           ...context,
           cwd: config.cwd,
-          app: createPluginAppProxy(req.app, appProviders),
+          app: guardControl.proxy,
         });
       } catch (err) {
-        // Log but don't fail the request
         if (__DEV__) {
           console.warn('⚠️  Plugin initialization failed:', err.message);
         }
       }
 
-      // Initialize store with timeout protection
+      // Store init
       store = await withTimeout(
         initReduxStore({ fetch, history }, locale),
-        SSR_TIMEOUTS.STORE_INIT,
+        TIMEOUTS.STORE_INIT,
         'Redux store initialization',
       );
       context.store = store;
 
-      // Load views with timeout protection
+      // Views
       const views = await withTimeout(
         loadViews(),
-        SSR_TIMEOUTS.VIEWS_LOAD,
+        TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
 
-      // Resolve page with timeout protection
+      // Resolve page
       const page = await withTimeout(
         views.resolve(context),
-        SSR_TIMEOUTS.PAGE_RESOLVE,
+        TIMEOUTS.PAGE_RESOLVE,
         'Page resolution',
       );
 
@@ -645,12 +579,10 @@ function createSSRHandler(baseUrl, appProviders) {
         throw err;
       }
 
-      // Handle redirect
       if (page.redirect) {
         return res.redirect(page.redirect);
       }
 
-      // Handle no component
       if (!page.component) {
         const err = new Error(`Page ${req.path} has no component`);
         err.name = 'PageHasNoComponent';
@@ -658,73 +590,60 @@ function createSSRHandler(baseUrl, appProviders) {
         throw err;
       }
 
-      // Render with timeout protection
+      // Render
       const html = await withTimeout(
         render({
           context,
           component: page.component,
           metadata: getMetadata(page, req),
         }),
-        SSR_TIMEOUTS.RENDER,
+        TIMEOUTS.RENDER,
         'SSR render',
       );
 
-      // Send response
       const renderTime = Date.now() - startTime;
       const status = page.status || 200;
 
       res.setHeader('X-Render-Time', `${renderTime}ms`);
       res.setHeader('X-SSR-Locale', locale);
 
-      // Cache successful responses
       if (status === 200 && cacheKey) {
         setSSRCache(cacheKey, { html, status, renderTime });
       }
 
       res.status(status).send(html);
 
-      // Log performance warnings
       if (__DEV__ && renderTime > 1000) {
         console.warn(`⚠️  Slow SSR: ${req.path} took ${renderTime}ms`);
       }
     } catch (err) {
-      // Handle abort errors gracefully
-      if (
-        err.name === 'AbortError' ||
-        (abortController && abortController.signal.aborted)
-      ) {
+      if (err.name === 'AbortError' || abortController.signal.aborted) {
         if (__DEV__) console.info('Request aborted:', req.path);
-        return; // Don't call next() - request was cancelled
+        return;
       }
 
-      // Handle timeout errors with detailed logging
       if (err.name === 'TimeoutError') {
         console.error(`⏱️  SSR Timeout: ${err.operation} - ${err.message}`);
-        err.status = 504; // Gateway Timeout
+        err.status = 504;
       }
 
       next(err);
     } finally {
-      // ALWAYS remove listener
       req.removeListener('close', handleClientDisconnect);
 
-      // Clean up Redux store
-      if (store) {
+      if (store && typeof store.close === 'function') {
         try {
-          if (typeof store.close === 'function') {
-            store.close();
-          }
+          store.close();
         } catch (cleanupErr) {
-          console.error('❌ Error closing Redux store:', cleanupErr.message);
+          console.error('❌ Error closing store:', cleanupErr.message);
         }
       }
 
-      // Clean up abort controller
-      if (abortController && !abortController.signal.aborted) {
+      if (!abortController.signal.aborted) {
         abortController.abort();
       }
 
-      // Clear context references to help GC
+      // Clear references for GC
       if (context) {
         context.fetch = null;
         context.store = null;
@@ -735,18 +654,15 @@ function createSSRHandler(baseUrl, appProviders) {
 }
 
 // =============================================================================
-// ERROR HANDLERS
+// ERROR HANDLING
 // =============================================================================
 
-/**
- * Create error handling middleware
- * @returns {Function} Express error middleware
- */
+/** Global error-handling middleware */
 function createErrorHandler() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
-    // Handle JWT errors
+    // JWT errors
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
@@ -759,7 +675,6 @@ function createErrorHandler() {
 
     const status = err.status || 500;
 
-    // Log error details with request context
     console.error('❌ Error:', {
       status,
       message: err.message,
@@ -770,7 +685,7 @@ function createErrorHandler() {
       ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    // Development: Show pretty error page
+    // Pretty error page in dev
     if (__DEV__) {
       try {
         const Youch = require('youch');
@@ -786,7 +701,6 @@ function createErrorHandler() {
       }
     }
 
-    // Fallback to JSON response
     res.status(status).json({
       status,
       success: false,
@@ -796,12 +710,7 @@ function createErrorHandler() {
   };
 }
 
-/**
- * Verify WebSocket token
- * @param {object} jwt - JWT instance
- * @param {string} token - Token to verify
- * @returns {object} Decoded token payload
- */
+/** Verify a WebSocket authentication token */
 function verifyWsToken(jwt, token) {
   if (!token) {
     const error = new Error('Token required');
@@ -822,14 +731,94 @@ function verifyWsToken(jwt, token) {
 }
 
 // =============================================================================
+// PROCESS ERROR HANDLERS
+// =============================================================================
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  if (!__DEV__ && reason && reason.stack) {
+    console.error('Stack:', reason.stack);
+  }
+});
+
+process.on('uncaughtException', err => {
+  console.error('❌ Uncaught Exception:', err);
+  if (err && err.stack) {
+    console.error('Stack:', err.stack);
+  }
+  process.exit(1);
+});
+
+process.on('warning', warning => {
+  if (__DEV__) {
+    console.warn('⚠️  Node.js Warning:', warning.name, warning.message);
+  }
+});
+
+// =============================================================================
+// GRACEFUL SHUTDOWN
+// =============================================================================
+
+/** Register SIGTERM/SIGINT/SIGUSR2 handlers for clean shutdown */
+function setupGracefulShutdown(server) {
+  let shutdownPromise = null;
+
+  const handleShutdown = async signal => {
+    if (shutdownPromise) {
+      console.warn('⚠️  Shutdown already in progress, waiting...');
+      return shutdownPromise;
+    }
+
+    shutdownPromise = (async () => {
+      console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
+      const shutdownStart = Date.now();
+
+      const forceExitTimer = setTimeout(() => {
+        console.error('❌ Forced shutdown after timeout');
+        process.exit(1);
+      }, TIMEOUTS.SHUTDOWN).unref();
+
+      let exitCode = 0;
+
+      try {
+        await dispose(server);
+      } catch (err) {
+        console.error('❌ Shutdown error:', err);
+        exitCode = 1;
+      } finally {
+        clearTimeout(forceExitTimer);
+        const duration = Date.now() - shutdownStart;
+        console.info(`✅ Shutdown completed in ${duration}ms`);
+        process.exit(exitCode);
+      }
+    })();
+
+    return shutdownPromise;
+  };
+
+  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+  process.on('SIGINT', () => handleShutdown('SIGINT'));
+
+  // SIGUSR2: used by nodemon — `once` is intentional for its restart protocol
+  if (__DEV__) {
+    process.once('SIGUSR2', () =>
+      handleShutdown('SIGUSR2').finally(() =>
+        process.kill(process.pid, 'SIGUSR2'),
+      ),
+    );
+  }
+}
+
+// =============================================================================
 // SERVER FUNCTIONS
 // =============================================================================
 
+/** Start listening and initialize background services (WS, Node-RED) */
 async function launch(app, server, baseUrl, port, host) {
   // Only listen if not already listening (HMR reuse)
   if (!server.listening) {
     await new Promise((resolve, reject) => {
-      const handleServerStartError = err => {
+      const handleError = err => {
         console.error(
           err.code === 'EADDRINUSE'
             ? `❌ Port ${port} already in use`
@@ -838,16 +827,16 @@ async function launch(app, server, baseUrl, port, host) {
         reject(err);
       };
 
-      server.once('error', handleServerStartError);
+      server.once('error', handleError);
       server.listen(port, host, () => {
-        server.removeListener('error', handleServerStartError);
+        server.removeListener('error', handleError);
         resolve();
       });
     });
   }
 
-  // Initialize WebSocket server (Moved from launch)
-  wsServer = createWebSocketServer(
+  // WebSocket
+  appState.wsServer = createWebSocketServer(
     {
       path: config.wsPath,
       enableLogging: !__DEV__,
@@ -855,13 +844,13 @@ async function launch(app, server, baseUrl, port, host) {
     },
     server,
   );
-  app.set('ws', wsServer);
+  app.set('ws', appState.wsServer);
 
-  // Start Node-RED
-  nodeRED.start();
-  app.set('nodeRED', nodeRED);
+  // Node-RED
+  appState.nodeRED.start();
+  app.set('nodeRED', appState.nodeRED);
 
-  // Print server info
+  // Print startup info
   const separator = '='.repeat(60);
   const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
 
@@ -871,48 +860,41 @@ async function launch(app, server, baseUrl, port, host) {
   console.info(
     `SSR Cache     : ${
       config.enableSSRCache
-        ? `enabled (TTL: ${config.ssrCacheTTL} ms)`
+        ? `enabled (TTL: ${config.ssrCacheTTL}ms)`
         : 'disabled'
     }`,
   );
   console.info(`Base URL      : ${baseUrl}`);
   console.info(`API URL       : ${baseUrl}${config.apiPrefix}`);
   console.info(`WebSocket URL : ${wsUrl}${config.wsPath}`);
-  console.info(`Node-RED URL  : ${baseUrl}${nodeRED.settings.httpAdminRoot}`);
+  console.info(
+    `Node-RED URL  : ${baseUrl}${appState.nodeRED.settings.httpAdminRoot}`,
+  );
   console.info(separator);
 
   return server;
 }
 
+/** Create Express app + HTTP server */
 export function init() {
   const app = express();
   const server = http.createServer(app);
   return { app, server };
 }
 
+/** Bootstrap middleware, providers, API, and SSR */
 export async function bootstrap(app, server, options = {}) {
-  // Destructure with defaults
   const { publicDir, port = config.port, host = config.host } = options;
-
-  // Normalize host
   const normalizedHost = normalizeHost(host);
-
-  // Get server URL
   const baseUrl = getBaseUrl(port, normalizedHost);
 
-  // Set current working directory
+  // Core providers
   app.set('cwd', config.cwd);
-
-  // Set environment
   app.set('env', config.nodeEnv);
-
-  // JWT Configuration
   app.set('jwt', configureJwt());
-
-  // Expose i18n to API routes
   app.set('i18n', i18n);
 
-  // Express configuration
+  // Express config
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
   app.disable('x-powered-by');
 
@@ -921,23 +903,22 @@ export async function bootstrap(app, server, options = {}) {
     app.use(
       compression({
         filter: (req, res) => {
-          // Don't compress responses if the request includes a cache-control: no-transform directive
           if (
-            req.headers['cache-control'] &&
-            /no-transform/i.test(req.headers['cache-control'])
+            req.headers &&
+            typeof req.headers['cache-control'] === 'string' &&
+            req.headers['cache-control'].includes('no-transform')
           ) {
             return false;
           }
-          // Use compression filter function
           return compression.filter(req, res);
         },
         level: config.compressionLevel,
-        threshold: 1024, // Only compress responses > 1KB
+        threshold: 1024,
       }),
     );
   }
 
-  // Security headers + Request ID
+  // Security headers + request ID
   app.use((req, res, next) => {
     req.id = crypto.randomUUID();
     res.setHeader('X-Request-Id', req.id);
@@ -945,7 +926,6 @@ export async function bootstrap(app, server, options = {}) {
     res.setHeader('X-Frame-Options', 'DENY');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-    // Add CSP in production
     if (!__DEV__) {
       res.setHeader(
         'Content-Security-Policy',
@@ -959,10 +939,7 @@ export async function bootstrap(app, server, options = {}) {
   // Request parsing
   app.use(express.json({ limit: config.jsonRequestLimit }));
   app.use(
-    express.urlencoded({
-      extended: true,
-      limit: config.urlEncodedLimit,
-    }),
+    express.urlencoded({ extended: true, limit: config.urlEncodedLimit }),
   );
 
   // Locale detection
@@ -985,31 +962,26 @@ export async function bootstrap(app, server, options = {}) {
     }),
   );
 
-  // Static files with caching
+  // Static files
   app.use(
     express.static(
       path.resolve(typeof publicDir === 'string' ? publicDir : 'public'),
       {
         dotfiles: 'ignore',
-        etag: true, // Strong validation
+        etag: true,
         lastModified: true,
         index: false,
         redirect: false,
         fallthrough: true,
         cacheControl: true,
-
         setHeaders(res, filePath) {
-          // Prevent MIME sniffing
           res.setHeader('X-Content-Type-Options', 'nosniff');
-
-          // If file looks fingerprinted (e.g. app.abc123.js)
           if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
             res.setHeader(
               'Cache-Control',
               'public, max-age=31536000, immutable',
             );
           } else {
-            // Non-versioned assets
             res.setHeader('Cache-Control', 'public, max-age=86400');
           }
         },
@@ -1017,12 +989,11 @@ export async function bootstrap(app, server, options = {}) {
     ),
   );
 
-  // Request timeout middleware
+  // Request timeout
   app.use((req, res, next) => {
-    // Set timeout based on request type
     const timeout = req.path.startsWith(config.apiPrefix)
-      ? 30_000 // API: 30 seconds
-      : 60_000; // SSR: 60 seconds
+      ? TIMEOUTS.API_REQUEST
+      : TIMEOUTS.SSR_REQUEST;
 
     const timeoutId = setTimeout(() => {
       if (!res.headersSent) {
@@ -1034,14 +1005,13 @@ export async function bootstrap(app, server, options = {}) {
       }
     }, timeout);
 
-    // Clear timeout when response finishes
     res.on('finish', () => clearTimeout(timeoutId));
     res.on('close', () => clearTimeout(timeoutId));
 
     next();
   });
 
-  // Rate limiter for API routes
+  // Rate limiter
   if (config.enableRateLimit) {
     app.use(
       config.apiPrefix,
@@ -1071,18 +1041,38 @@ export async function bootstrap(app, server, options = {}) {
     );
   }
 
-  // Initialize Node-RED
-  await nodeRED.init(app, server, {
+  // Load API
+  const api = await import('./bootstrap/api');
+
+  // Provider guard
+  const guardControl = createProviderGuard(
+    app,
+    Array.isArray(api.APP_PROVIDERS) ? api.APP_PROVIDERS : [],
+  );
+
+  // Node-RED
+  await appState.nodeRED.init(app, server, {
     ...config,
-    port: port,
+    port,
+    host: normalizedHost,
+    functionGlobalContext: {
+      app() {
+        return guardControl.proxy;
+      },
+    },
+  });
+
+  // API routes
+  await api.default(guardControl, {
+    ...config,
+    port,
+    nodeRED: appState.nodeRED,
     host: normalizedHost,
   });
 
-  // Initialize API routes
-  const api = await import('./bootstrap/api');
-  await api.default(app, { ...config, port, nodeRED, host: normalizedHost });
-
+  // Health check
   app.get('/_health', (req, res) => {
+    const mem = process.memoryUsage();
     const health = {
       status: 'ok',
       timestamp: Date.now(),
@@ -1090,29 +1080,28 @@ export async function bootstrap(app, server, options = {}) {
       env: config.nodeEnv,
       services: {
         nodeRED: {
-          state: nodeRED.state,
-          ready: nodeRED.isReady,
+          state: appState.nodeRED.state,
+          ready: appState.nodeRED.isReady,
         },
         websocket: app.get('ws') ? 'active' : 'inactive',
       },
       cache: {
         ssr: {
           enabled: config.enableSSRCache,
-          size: ssrCache.size,
+          size: appState.ssrCache.size,
           maxSize: 1000,
         },
-        views: cachedViews ? 'loaded' : 'not-loaded',
+        views: appState.viewsPromise ? 'loaded' : 'not-loaded',
       },
       memory: {
-        heapUsed: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
-        heapTotal: Math.round(process.memoryUsage().heapTotal / 1024 / 1024),
-        rss: Math.round(process.memoryUsage().rss / 1024 / 1024),
-        external: Math.round(process.memoryUsage().external / 1024 / 1024),
+        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
+        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
+        rss: Math.round(mem.rss / 1024 / 1024),
+        external: Math.round(mem.external / 1024 / 1024),
       },
     };
 
-    // Return 503 if critical services aren't ready
-    if (!nodeRED.isReady) {
+    if (!appState.nodeRED.isReady) {
       return res.status(503).json({
         ...health,
         status: 'degraded',
@@ -1123,28 +1112,8 @@ export async function bootstrap(app, server, options = {}) {
     res.json(health);
   });
 
-  // SSR handler (must be after API routes)
-  const ssrHandler = createSSRHandler(baseUrl, api.APP_PROVIDERS);
-
-  // Pre-compile route prefixes for better performance
-  const SKIP_SSR_PREFIXES = [
-    config.apiPrefix,
-    nodeRED.settings.httpAdminRoot,
-    nodeRED.settings.httpNodeRoot,
-  ].filter(Boolean); // Remove any undefined/null values
-
-  app.get('*', (req, res, next) => {
-    // Skip SSR for API and Node-RED routes
-    const shouldSkipSSR = SKIP_SSR_PREFIXES.some(prefix =>
-      req.path.startsWith(prefix),
-    );
-
-    if (shouldSkipSSR) {
-      return next();
-    }
-
-    return ssrHandler(req, res, next);
-  });
+  // SSR handler
+  app.get('*', createSSRHandler(guardControl, baseUrl));
 
   // Error handler (must be last)
   app.use(createErrorHandler());
@@ -1157,20 +1126,17 @@ export async function bootstrap(app, server, options = {}) {
   };
 }
 
-/**
- * Dispose of server resources (except HTTP server)
- * Useful for HMR and graceful shutdown
- */
+/** Dispose of all server resources */
 export async function dispose(server) {
-  console.info('   Stopping background services...');
+  console.info('🛑 Stopping background services...');
 
   const errors = [];
 
-  // 1. Shutdown Node-RED
+  // Node-RED
   try {
-    if (nodeRED) {
+    if (appState.nodeRED) {
       console.info('   Shutting down Node-RED...');
-      await nodeRED.shutdown();
+      await appState.nodeRED.shutdown();
       console.info('   ✔ Node-RED shutdown complete');
     }
   } catch (err) {
@@ -1178,21 +1144,28 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // 2. Shutdown WebSocket Server
+  // WebSocket
   try {
-    if (wsServer) {
-      // eslint-disable-next-line no-underscore-dangle
-      if (typeof wsServer.dispose === 'function') {
-        await wsServer.dispose();
-      }
-      wsServer = null;
+    if (appState.wsServer && typeof appState.wsServer.dispose === 'function') {
+      await appState.wsServer.dispose();
+      appState.wsServer = null;
     }
   } catch (err) {
     console.error('   ⚠️  WebSocket shutdown error:', err.message);
     errors.push(err);
   }
 
-  // 3. Shutdown HTTP server
+  // Plugin manager
+  try {
+    if (typeof pluginManager.destroy === 'function') {
+      await pluginManager.destroy();
+    }
+  } catch (err) {
+    console.error('   ⚠️  Plugin manager shutdown error:', err.message);
+    errors.push(err);
+  }
+
+  // HTTP server
   try {
     if (server && server.listening) {
       console.info('   Shutting down HTTP server...');
@@ -1213,9 +1186,8 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // 4. Clear internal caches
-  cachedViews = null;
-  clearSSRCache();
+  // Clear caches
+  clearCaches();
   console.info('   ✔ Caches cleared');
 
   if (errors.length > 0) {
@@ -1223,17 +1195,15 @@ export async function dispose(server) {
       `Dispose completed with errors: ${errors.map(e => e.message).join(', ')}`,
     );
     err.name = 'DisposeError';
-    err.originalError = errors;
+    err.originalErrors = errors;
     throw err;
   }
 }
 
-// -----------------------------------------------------------------------------
+// =============================================================================
 // HMR & STARTUP
-// -----------------------------------------------------------------------------
+// =============================================================================
 
-// Only run this block if this module is the main entry point (e.g. production)
-// AND we are not in development mode (where dev.js manages startup)
 if (module.hot) {
   module.hot.accept(err => {
     if (err) {
@@ -1241,13 +1211,10 @@ if (module.hot) {
       return;
     }
 
-    // Clear caches on HMR
-    cachedViews = null;
-    clearSSRCache();
+    clearCaches();
     console.log('🔄 HMR: Caches cleared');
   });
 
-  // Attach HMR runtime to default export so dev.js can find it
   exports.hot = module.hot;
 } else {
   // Production startup
