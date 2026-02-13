@@ -46,7 +46,8 @@ jest.mock('../utils/crypto', () => ({
 }));
 
 import {
-  listAllPlugins,
+  managePlugins,
+  getActivePlugins,
   createPlugin,
   togglePluginStatus,
 } from './plugin.service';
@@ -82,7 +83,7 @@ describe('Plugin Service', () => {
     mockCache.get.mockResolvedValue(null);
   });
 
-  describe('listAllPlugins', () => {
+  describe('managePlugins', () => {
     it('should list plugins from DB and FS', async () => {
       // Mock FS via imported mocked module
       fs.promises.readdir.mockResolvedValue([
@@ -117,7 +118,7 @@ describe('Plugin Service', () => {
         {
           id: 'db-1',
           key: 'db-plugin',
-          is_active: true, // Add this property
+          is_active: true,
           toJSON: () => ({
             name: 'DB Plugin',
             key: 'db-plugin',
@@ -126,7 +127,7 @@ describe('Plugin Service', () => {
         },
       ]);
 
-      const result = await listAllPlugins(mockContext);
+      const result = await managePlugins(mockContext);
 
       expect(result).toHaveLength(2);
 
@@ -146,6 +147,7 @@ describe('Plugin Service', () => {
         {
           id: 'db-1',
           key: 'missing-plugin',
+          is_active: true,
           toJSON: () => ({
             name: 'Missing Plugin',
             key: 'missing-plugin',
@@ -154,11 +156,49 @@ describe('Plugin Service', () => {
         },
       ]);
 
-      const result = await listAllPlugins(mockContext);
+      const result = await managePlugins(mockContext);
       const missingPlugin = result.find(p => p.key === 'missing-plugin');
       expect(missingPlugin).toBeDefined();
       expect(missingPlugin.isMissing).toBe(true);
       expect(missingPlugin.source).toBe('db');
+    });
+  });
+
+  describe('getActivePlugins', () => {
+    it('should return only active plugins from DB and verify FS', async () => {
+      // Mock DB to return only active plugins
+      mockModels.Plugin.findAll.mockResolvedValue([
+        {
+          id: 'active-1',
+          key: 'active-p',
+          is_active: true,
+          toJSON: () => ({ name: 'Active', key: 'active-p', is_active: true }),
+        },
+      ]);
+
+      // Mock FS check
+      fs.existsSync.mockReturnValue(true);
+      fs.promises.readFile.mockImplementation(path => {
+        if (path.includes('active-p')) {
+          return Promise.resolve(
+            JSON.stringify({
+              name: 'Active',
+              version: '1.0',
+              rapid_plugin: { key: 'active-p' },
+            }),
+          );
+        }
+        return Promise.reject('File not found');
+      });
+      // getActivePlugins uses readPluginManifest which uses fs.readFile
+
+      const result = await getActivePlugins(mockContext);
+
+      expect(mockModels.Plugin.findAll).toHaveBeenCalledWith({
+        where: { is_active: true },
+      });
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe('active-p');
     });
   });
 

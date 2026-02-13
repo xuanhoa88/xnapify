@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { encryptPluginId, decryptPluginId } from '../utils/crypto';
@@ -14,7 +15,7 @@ import { logPluginActivity } from '../utils/activity';
 const PLUGIN_PATH = process.env.RSK_PLUGIN_PATH || 'plugins';
 
 // Cache for plugin list
-const CACHE_KEY = 'plugins:list';
+
 const CACHE_TTL = 60 * 1000; // 1 minute
 
 /**
@@ -22,8 +23,8 @@ const CACHE_TTL = 60 * 1000; // 1 minute
  * @param {string} cwd - Current working directory
  * @returns {string} Plugins directory path
  */
-export function getPluginsDir(cwd) {
-  return path.resolve(cwd || process.cwd(), PLUGIN_PATH);
+export function getPluginsDir(cwd, pluginPath) {
+  return path.resolve(cwd || process.cwd(), pluginPath);
 }
 
 /**
@@ -32,7 +33,9 @@ export function getPluginsDir(cwd) {
  */
 export async function invalidateCache(cache) {
   if (cache) {
-    await cache.delete(CACHE_KEY);
+    if (cache) {
+      await cache.delete('plugins:list:all');
+    }
   }
 }
 
@@ -90,24 +93,16 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
 };
 
 /**
- * List all available plugins (Merged from DB and FS)
- * @param {object} context - Context with models, cache, cwd
- * @param {boolean} [options.forceRefresh=false] - Force fetch from database
+ * Get all plugins (Admin) - Merged from DB and FS
+ * @param {object} options - Options with models, cwd
+ * @param {object} options.models - Models instance
+ * @param {string} options.cwd - Current working directory
  * @returns {Promise<Array>} Array of plugin objects
  */
-export async function listAllPlugins(
-  { models, cache, cwd },
-  forceRefresh = false,
-) {
-  // Return cached result if valid
-  if (cache && !forceRefresh) {
-    const cached = await cache.get(CACHE_KEY);
-    if (cached) return cached;
-  }
-
-  const installedPluginsDir = getPluginsDir(cwd);
-  const localPluginsDir = path.resolve(
-    cwd || process.cwd(),
+export async function managePlugins({ models, cwd }) {
+  const installedPluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
+  const localPluginsDir = getPluginsDir(
+    cwd,
     process.env.RSK_LOCAL_PLUGIN_PATH || '.dev/plugins',
   );
 
@@ -122,40 +117,38 @@ export async function listAllPlugins(
   await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
 
   // 2. Fetch from DB
-  if (Plugin) {
-    const dbPlugins = await Plugin.findAll();
-    const dbPluginsMap = new Map();
-    dbPlugins.forEach(p => dbPluginsMap.set(p.key, p));
+  const dbPlugins = await Plugin.findAll();
+  const dbPluginsMap = new Map();
+  dbPlugins.forEach(p => dbPluginsMap.set(p.key, p));
 
-    // 2a. Process DB plugins
-    for (const dbPlugin of dbPlugins) {
-      const fsPlugin = fsPluginsMap.get(dbPlugin.key);
+  // 2a. Process DB plugins
+  for (const dbPlugin of dbPlugins) {
+    const fsPlugin = fsPluginsMap.get(dbPlugin.key);
 
-      if (fsPlugin) {
-        // Plugin exists in both DB and FS
-        // Merge DB data into FS data. DB is the source of truth for status.
-        fsPluginsMap.set(dbPlugin.key, {
-          ...fsPlugin,
-          ...dbPlugin.toJSON(), // Overrides FS properties (e.g. name, description from DB if updated)
-          id: dbPlugin.id, // Ensure we use DB ID
-          dbId: dbPlugin.id,
-          isActive: dbPlugin.is_active,
-          isInstalled: true,
-          source: 'db+fs',
-          isMissing: false,
-        });
-      } else {
-        // Plugin in DB but not on disk (Missing)
-        plugins.push({
-          ...dbPlugin.toJSON(),
-          id: dbPlugin.id,
-          isMissing: true,
-          source: 'db',
-          isActive: false, // Force inactive if missing? Or keep DB state?
-          // User might want to see it was active but missing.
-          // Let's keep DB state but flag as missing.
-        });
-      }
+    if (fsPlugin) {
+      // Plugin exists in both DB and FS
+      // Merge DB data into FS data. DB is the source of truth for status.
+      fsPluginsMap.set(dbPlugin.key, {
+        ...fsPlugin,
+        ...dbPlugin.toJSON(), // Overrides FS properties (e.g. name, description from DB if updated)
+        id: dbPlugin.id, // Ensure we use DB ID
+        dbId: dbPlugin.id,
+        isActive: dbPlugin.is_active,
+        isInstalled: true,
+        source: 'db+fs',
+        isMissing: false,
+      });
+    } else {
+      // Plugin in DB but not on disk (Missing)
+      plugins.push({
+        ...dbPlugin.toJSON(),
+        id: dbPlugin.id,
+        isMissing: true,
+        source: 'db',
+        isActive: false, // Force inactive if missing? Or keep DB state?
+        // User might want to see it was active but missing.
+        // Let's keep DB state but flag as missing.
+      });
     }
 
     // 2b. Process new plugins on disk (Not in DB)
@@ -180,9 +173,88 @@ export async function listAllPlugins(
   // Convert Map to Array
   plugins.push(...fsPluginsMap.values());
 
+  return plugins;
+}
+
+/**
+ * Get active plugins (Public/Loader)
+ * Optimised to only fetch active plugins from DB and verify FS presence.
+ * Does NOT scan the entire plugins directory.
+ * @param {object} options - Options with models, cache, cwd
+ * @param {object} options.models - Models instance
+ * @param {object} options.cache - Cache instance
+ * @param {string} options.cwd - Current working directory
+ * @returns {Promise<Array>} Array of active plugin objects
+ */
+export async function getActivePlugins({ models, cache, cwd }) {
+  const ACTIVE_PLUGINS_CACHE_KEY = 'plugins:list:active';
+
+  // Return cached result if valid
+  if (cache) {
+    const cached = await cache.get(ACTIVE_PLUGINS_CACHE_KEY);
+    if (cached) return cached;
+  }
+
+  const { Plugin } = models;
+  const installedPluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
+  const localPluginsDir = getPluginsDir(
+    cwd,
+    process.env.RSK_LOCAL_PLUGIN_PATH || '.dev/plugins',
+  );
+
+  // 1. Fetch only active plugins from DB
+  const dbPlugins = await Plugin.findAll({
+    where: { is_active: true },
+  });
+
+  const plugins = [];
+
+  // 2. Process each active plugin
+  for (const dbPlugin of dbPlugins) {
+    const { key } = dbPlugin;
+    let manifest = null;
+    let isLocal = false;
+
+    // Check Local first (dev override)
+    const localPath = path.join(localPluginsDir, key);
+    if (fs.existsSync(localPath)) {
+      manifest = await readPluginManifest(localPluginsDir, key);
+      isLocal = true;
+    }
+
+    // Check Installed if not found locally
+    if (!manifest) {
+      const installedPath = path.join(installedPluginsDir, key);
+      if (fs.existsSync(installedPath)) {
+        manifest = await readPluginManifest(installedPluginsDir, key);
+      }
+    }
+
+    if (manifest) {
+      // Plugin is in DB (Active) AND on Disk
+      plugins.push({
+        ...manifest,
+        ...dbPlugin.toJSON(),
+        id: dbPlugin.id,
+        dbId: dbPlugin.id,
+        isActive: true,
+        isInstalled: true,
+        source: isLocal ? 'local' : 'fs',
+        isLocal,
+        isMissing: false,
+      });
+    } else {
+      // Logic decision: If active in DB but missing on disk, do we return it?
+      // For frontend loader, a missing plugin cannot be loaded.
+      // So we skip it.
+      // Optionally log a warning.
+      console.warn(`Active plugin ${key} missing from disk.`);
+    }
+  }
+
   // Update Cache
   if (cache) {
-    await cache.set(CACHE_KEY, plugins, CACHE_TTL);
+    await cache.set(ACTIVE_PLUGINS_CACHE_KEY, plugins, CACHE_TTL);
   }
 
   return plugins;
@@ -203,12 +275,6 @@ export async function createPlugin(data, { models, cache, webhook, actorId }) {
   return plugin;
 }
 
-/**
- * Update a plugin
- * @param {string} id - Plugin UUID
- * @param {Object} data - Update data
- * @param {Object} context - App context
- */
 /**
  * Update a plugin (Called by Admin UI for metadata updates)
  * @param {string} id - Plugin UUID
@@ -232,11 +298,6 @@ export async function updatePlugin(
   return plugin;
 }
 
-/**
- * Delete a plugin from database
- * @param {string} id - Plugin UUID
- * @param {Object} context - App context
- */
 /**
  * Delete a plugin from database and FS
  * @param {string} id - Plugin UUID
@@ -371,10 +432,10 @@ export async function installPluginFromPackage(
 
   const { Plugin } = models;
   const tempPath = file.path;
-  const pluginsDir = path.resolve(cwd || process.cwd(), 'src/modules/plugins');
+  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
   const tempExtractDir = path.join(
-    cwd || process.cwd(),
-    'tmp/plugins',
+    os.tmpdir(),
+    PLUGIN_PATH,
     path.parse(file.originalname).name,
   );
 
@@ -496,9 +557,7 @@ export async function installPluginFromPackage(
 /**
  * Toggle plugin status
  */
-/**
- * Toggle plugin status
- */
+
 export async function togglePluginStatus(
   id,
   isActive,

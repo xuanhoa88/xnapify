@@ -101,7 +101,10 @@ export default function createSettings(options = {}) {
     host = '127.0.0.1',
     port = 1337,
     protocol = 'http',
-    userDir = path.join(process.cwd(), '.node-red'),
+    userDir = path.join(
+      process.env.RSK_NODE_RED_HOME || process.cwd(),
+      '.node-red',
+    ),
     httpAdminRoot = '/~/red/admin',
     httpNodeRoot = '/~/red',
     logLevel = 'info',

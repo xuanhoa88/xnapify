@@ -18,9 +18,9 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
  */
 export const fetchPlugins = createAsyncThunk(
   'admin/plugins/fetchPlugins',
-  async ({ force = false } = {}, { extra: { fetch }, rejectWithValue }) => {
+  async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/plugins?force=${force}`);
+      const { data } = await fetch('/api/plugins/admin');
       return data.plugins || [];
     } catch (error) {
       return rejectWithValue(error.message);

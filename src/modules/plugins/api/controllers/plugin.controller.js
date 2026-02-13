@@ -21,21 +21,18 @@ import * as pluginService from '../services/plugin.service';
  * @access  Public (Cached)
  */
 export const listPlugins = async (req, res) => {
+  const http = req.app.get('http');
   try {
-    const { force } = req.query;
-    const plugins = await pluginService.listAllPlugins(
-      {
-        models: req.app.get('models'),
-        cache: req.app.get('cache'),
-        cwd: req.app.get('cwd'),
-        webhook: req.app.get('webhook'),
-        actorId: req.user ? req.user.id : null,
-      },
-      force === 'true',
-    );
-    res.json({ success: true, data: { plugins } });
+    const plugins = await pluginService.getActivePlugins({
+      models: req.app.get('models'),
+      cache: req.app.get('cache'),
+      cwd: req.app.get('cwd'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+    return http.sendSuccess(res, { plugins });
   } catch (err) {
-    res.json({ success: false, data: { plugins: [] } });
+    return http.sendServerError(res, 'Failed to list plugins', err);
   }
 };
 
@@ -45,23 +42,15 @@ export const listPlugins = async (req, res) => {
  * @route   GET /api/plugins/:id
  */
 export const getPlugin = async (req, res) => {
+  const http = req.app.get('http');
   try {
-    // Attempt to get by ID (DB) or Encrypted ID (FS/Legacy)
-    // The service handles distinguishing or we try both?
-    // Current service `getPluginById` assumes Encrypted ID for loading.
-    // We might need a unified getter.
-    // For admin, we usually use UUID. For loader, Encrypted ID.
-    // Let's assume this endpoint is for Loader/Public metadata
     const pluginData = await pluginService.getPluginById(
       { cwd: req.app.get('cwd') },
       req.params.id,
     );
-    res.json({ success: true, data: pluginData });
+    return http.sendSuccess(res, pluginData);
   } catch (err) {
-    res.status(err.status || 500).json({
-      success: false,
-      message: err.message,
-    });
+    return http.sendServerError(res, 'Failed to get plugin details', err);
   }
 };
 
@@ -74,9 +63,31 @@ export const servePluginStatic = (req, res, next) => {
     req.params.id,
   );
   if (!root) {
-    return res.status(400).send('Invalid Plugin ID');
+    const http = req.app.get('http');
+    return http.sendError(res, 'Invalid Plugin ID', 400);
   }
   return express.static(root)(req, res, next);
+};
+
+/**
+ * List all plugins (Admin) - Including inactive/missing
+ *
+ * @route   GET /api/plugins/admin
+ * @access  Admin
+ */
+export const managePlugins = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const plugins = await pluginService.managePlugins({
+      models: req.app.get('models'),
+      cwd: req.app.get('cwd'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+    return http.sendSuccess(res, { plugins });
+  } catch (err) {
+    return http.sendServerError(res, 'Failed to manage plugins', err);
+  }
 };
 
 // ========================================================================

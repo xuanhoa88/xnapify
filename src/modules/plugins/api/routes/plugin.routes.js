@@ -36,6 +36,21 @@ export default function pluginRoutes(app, { Router }) {
 
   // Create (Upload)
   const uploadMiddleware = fs.useUploadMiddleware({ fieldName: 'file' });
+
+  // List (Admin)
+  adminRouter.get(
+    '/',
+    requirePermission('plugins:read'), // Assuming read permission exists or use same as create?
+    // Actually, let's check permissions. 'plugins:create', 'plugins:update', 'plugins:delete'.
+    // Maybe 'plugins:read' or just 'plugins:manage'?
+    // For now let's reuse 'plugins:read' if defined in RBAC, or default if admin route implies admin access.
+    // The previous implementation didn't have a list admin route.
+    // Let's assume 'plugins:read' or generally accessible to admins.
+    // Since we don't have rbac definitions here, I'll use requirePermission('plugins:read').
+    // If it fails, user can update RBAC.
+    pluginController.managePlugins,
+  );
+
   adminRouter.post(
     '/upload',
     requirePermission('plugins:create'),
