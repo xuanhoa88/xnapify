@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import * as userMiddlewares from './middlewares';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
@@ -38,8 +37,10 @@ const seedsContext = require.context(
  *
  * @param {Object} app - Express app instance
  * @param {Router} apiRouter - Main API Router
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
  */
-export async function init(app, apiRouter) {
+export async function init(app, apiRouter, { Router }) {
   const db = app.get('db');
 
   // Run database migrations
@@ -67,27 +68,30 @@ export async function init(app, apiRouter) {
   // ========================================================================
 
   // Authentication routes (public)
-  router.use('/', authRoutes(app));
+  router.use('/', authRoutes(app, { Router }));
 
   // Profile management routes (authenticated users)
-  router.use('/profile', profileRoutes(app, userMiddlewares));
+  router.use('/profile', profileRoutes(app, userMiddlewares, { Router }));
 
   // ========================================================================
   // ADMIN ROUTES
   // ========================================================================
 
   // User administration routes: /admin/users
-  router.use('/admin/users', userRoutes(app, userMiddlewares));
+  router.use('/admin/users', userRoutes(app, userMiddlewares, { Router }));
 
   // Role management routes: /admin/roles
-  router.use('/admin/roles', roleRoutes(app, userMiddlewares));
+  router.use('/admin/roles', roleRoutes(app, userMiddlewares, { Router }));
 
   // Permission management routes: /admin/permissions
-  router.use('/admin/permissions', permissionRoutes(app, userMiddlewares));
+  router.use(
+    '/admin/permissions',
+    permissionRoutes(app, userMiddlewares, { Router }),
+  );
 
   // Group management routes: /admin/groups
-  router.use('/admin/groups', groupRoutes(app, userMiddlewares));
+  router.use('/admin/groups', groupRoutes(app, userMiddlewares, { Router }));
 
-  // Mount module routes to the main API router
+  // Mount users module routes on the main API router at root level
   apiRouter.use(router);
 }

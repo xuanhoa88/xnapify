@@ -168,6 +168,14 @@ const iconPaths = Object.freeze({
     'M15 9L9 15',
     'M9 9L15 15',
   ],
+  extension: [
+    'M18 13V19H12M15 4L21 10',
+    'M12 19V15H18M4 12L10 6',
+    'M6 6H18',
+    'M6 18H18',
+    'M12 11V17',
+    'M12 11V17',
+  ],
 });
 
 // Available icon names (alphabetically ordered)

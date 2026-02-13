@@ -7,6 +7,7 @@
 
 import MemoryCache from './adapters/memory';
 import FileCache from './adapters/file';
+import NoOpCache from './adapters/noop';
 
 /**
  * Supported cache adapter types
@@ -173,18 +174,23 @@ export function withNamespace(namespace, baseCache) {
  * Creates a cache instance with the specified adapter and configuration.
  * Each instance has a withNamespace method for creating scoped caches.
  *
+ * **Auto-disable in Development Mode:**
+ * When __DEV__ is true, the factory automatically creates a NoOp cache adapter
+ * instead of the requested type. This ensures fresh data on every request during
+ * development, preventing stale cached data from interfering with development.
+ *
  * @param {CacheOptions} [options={}] - Cache configuration
  * @returns {CacheAdapter} Cache instance with withNamespace method
- * @throws {Error} If invalid cache type is specified
+ * @throws {Error} If invalid cache type is specified (production mode only)
  *
  * @example
- * // Create memory cache
+ * // Create memory cache (or NoOp cache if __DEV__ is true)
  * const memCache = createFactory({ type: 'memory', maxSize: 500 });
  * const userCache = memCache.withNamespace('users');
  * await userCache.set('123', { name: 'John' });
  *
  * @example
- * // Create file cache
+ * // Create file cache (or NoOp cache if __DEV__ is true)
  * const fileCache = createFactory({ type: 'file', directory: './cache' });
  * const sessionCache = fileCache.withNamespace('sessions');
  * await sessionCache.set('abc', { userId: '123' });
@@ -201,19 +207,24 @@ export function createFactory(options = {}) {
 
   let adapter;
 
-  switch (type) {
-    case 'file':
-      adapter = new FileCache(config);
-      break;
+  // Auto-disable cache in development mode
+  if (__DEV__) {
+    adapter = new NoOpCache(config);
+  } else {
+    switch (type) {
+      case 'file':
+        adapter = new FileCache(config);
+        break;
 
-    case 'memory':
-      adapter = new MemoryCache(config);
-      break;
+      case 'memory':
+        adapter = new MemoryCache(config);
+        break;
 
-    default:
-      throw new Error(
-        `Invalid cache type: "${type}". Supported types: memory, file`,
-      );
+      default:
+        throw new Error(
+          `Invalid cache type: "${type}". Supported types: memory, file`,
+        );
+    }
   }
 
   // Attach withNamespace method to the adapter instance

@@ -6,6 +6,8 @@
  */
 
 import express from 'express';
+import { validateForm, z } from '../../../../shared/validator';
+import { pluginFormSchema, pluginStatusSchema } from '../../validator/plugin';
 import * as pluginService from '../services/plugin.service';
 
 // ========================================================================
@@ -16,13 +18,21 @@ import * as pluginService from '../services/plugin.service';
  * List all available plugins
  *
  * @route   GET /api/plugins
- * @access  Public
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * @access  Public (Cached)
  */
 export const listPlugins = async (req, res) => {
   try {
-    const plugins = await pluginService.listAllPlugins(req.app);
+    const { force } = req.query;
+    const plugins = await pluginService.listAllPlugins(
+      {
+        models: req.app.get('models'),
+        cache: req.app.get('cache'),
+        cwd: req.app.get('cwd'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user ? req.user.id : null,
+      },
+      force === 'true',
+    );
     res.json({ success: true, data: { plugins } });
   } catch (err) {
     res.json({ success: false, data: { plugins: [] } });
@@ -30,17 +40,20 @@ export const listPlugins = async (req, res) => {
 };
 
 /**
- * Get plugin metadata and remote entry URL
+ * Get plugin details
  *
  * @route   GET /api/plugins/:id
- * @access  Public
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 export const getPlugin = async (req, res) => {
   try {
+    // Attempt to get by ID (DB) or Encrypted ID (FS/Legacy)
+    // The service handles distinguishing or we try both?
+    // Current service `getPluginById` assumes Encrypted ID for loading.
+    // We might need a unified getter.
+    // For admin, we usually use UUID. For loader, Encrypted ID.
+    // Let's assume this endpoint is for Loader/Public metadata
     const pluginData = await pluginService.getPluginById(
-      req.app,
+      { cwd: req.app.get('cwd') },
       req.params.id,
     );
     res.json({ success: true, data: pluginData });
@@ -53,21 +66,176 @@ export const getPlugin = async (req, res) => {
 };
 
 /**
- * Serve plugin static files using express.static
- *
- * @route   GET /api/plugins/:id/static/*
- * @access  Public
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- * @param {Function} next - Express next middleware
+ * Serve plugin static files
  */
 export const servePluginStatic = (req, res, next) => {
-  const root = pluginService.getPluginStaticDir(req.app, req.params.id);
-
+  const root = pluginService.getPluginStaticDir(
+    { cwd: req.app.get('cwd') },
+    req.params.id,
+  );
   if (!root) {
     return res.status(400).send('Invalid Plugin ID');
   }
-
-  // Use express.static to serve files from the plugin directory
   return express.static(root)(req, res, next);
+};
+
+// ========================================================================
+// ADMIN CONTROLLERS
+// ========================================================================
+
+/**
+ * Create/Import Plugin (Admin)
+ */
+export const createPlugin = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const i18n = req.app.get('i18n');
+    const schema = pluginFormSchema({ i18n, z });
+
+    const [isValid, errors, data] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, errors[0]);
+
+    const models = req.app.get('models');
+    const plugin = await pluginService.createPlugin(data, {
+      models,
+      cache: req.app.get('cache'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+
+    return http.sendSuccess(res, { plugin }, 201);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to create plugin', error);
+  }
+};
+
+/**
+ * Update Plugin (Admin)
+ */
+export const updatePlugin = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const models = req.app.get('models');
+    const i18n = req.app.get('i18n');
+
+    // Partial validation for update
+    const schema = pluginFormSchema({ i18n, z }).partial();
+    const [isValid, errors, data] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, errors[0]);
+
+    const plugin = await pluginService.updatePlugin(id, data, {
+      models,
+      cache: req.app.get('cache'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+    return http.sendSuccess(res, { plugin });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to update plugin', error);
+  }
+};
+
+/**
+ * Delete Plugin (Admin)
+ */
+export const deletePlugin = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const models = req.app.get('models');
+
+    await pluginService.deletePlugin(id, {
+      models,
+      cache: req.app.get('cache'),
+      fs: req.app.get('fs'), // We also need fs here for deletion if we implemented fs usage
+      cwd: req.app.get('cwd'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+    return http.sendSuccess(res, { message: 'Plugin deleted' });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to delete plugin', error);
+  }
+};
+
+// ========================================================================
+// UPLOAD & STATUS CONTROLLERS
+// ========================================================================
+
+/**
+ * Upload Plugin (Admin)
+ * Route: POST /api/admin/plugins/upload
+ */
+export const uploadPlugin = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const fs = req.app.get('fs');
+    const uploadResult = req[fs.MIDDLEWARES.UPLOAD];
+
+    if (!uploadResult || !uploadResult.success) {
+      const errorMsg =
+        (uploadResult && uploadResult.error) || 'No file uploaded';
+      return http.sendValidationError(res, { file: errorMsg });
+    }
+
+    const file = uploadResult.data;
+    if (!file) {
+      return http.sendValidationError(res, { file: 'File data missing' });
+    }
+
+    const models = req.app.get('models');
+    const plugin = await pluginService.installPluginFromPackage(file, {
+      models,
+      cache: req.app.get('cache'),
+      fs, // Pass fs instance to service
+      cwd: req.app.get('cwd'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+
+    return http.sendSuccess(
+      res,
+      { plugin, message: 'Plugin installed successfully' },
+      201,
+    );
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to upload plugin', error);
+  }
+};
+
+/**
+ * Update Plugin Status (Admin)
+ * Route: PATCH /api/admin/plugins/:id/status
+ */
+export const updatePluginStatus = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const i18n = req.app.get('i18n');
+    const schema = pluginStatusSchema({ i18n, z });
+    const [isValid, errors, data] = validateForm(() => schema, req.body);
+
+    if (!isValid) return http.sendValidationError(res, errors[0]);
+
+    const { enabled } = data; // Schema uses 'enabled', but route/service might use 'is_active' or we map it
+    // Service togglePluginStatus takes (id, isActive, ...)
+    // Let's assume schema matches payload.
+    // Original code expected 'is_active'.
+    // New schema defines 'enabled'.
+    // Logic: map enabled -> is_active if needed.
+    const is_active = enabled; // Schema key is 'enabled'
+
+    const models = req.app.get('models');
+    const plugin = await pluginService.togglePluginStatus(id, is_active, {
+      models,
+      cache: req.app.get('cache'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+
+    return http.sendSuccess(res, { plugin });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to update plugin status', error);
+  }
 };

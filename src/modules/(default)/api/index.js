@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import newsRoutes from './routes/news.routes';
 
 // =============================================================================
@@ -18,20 +17,22 @@ import newsRoutes from './routes/news.routes';
  *
  * @param {Object} app - Express app instance
  * @param {Router} apiRouter - Main API Router
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
  */
-export async function init(app, apiRouter) {
+export async function init(app, apiRouter, { Router }) {
   const auth = app.get('auth');
   const webhook = app.get('webhook');
   const router = Router();
 
   // Full path will be: /api/news
-  router.use('/news', newsRoutes());
+  router.use('/news', newsRoutes(app, { Router }));
 
   // Full path will be: /api/activities (authenticated)
   router.use(
     '/activities',
     auth.requireAuthMiddleware(),
-    webhook.createControllers(webhook),
+    webhook.createControllers(webhook, { Router }),
   );
 
   // Mount module routes to main API router

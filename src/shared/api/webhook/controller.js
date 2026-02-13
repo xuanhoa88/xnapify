@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import * as services from './services';
 
 /**
@@ -82,9 +81,11 @@ function getPagination(req) {
  * Create Webhook Router
  *
  * @param {Object} webhook - WebhookManager instance
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router
  */
-export function createControllers(webhook) {
+export function createControllers(webhook, { Router }) {
   const router = Router();
 
   // GET / - List webhooks

@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import * as userController from '../../controllers/admin/user.controller';
 import * as rbacController from '../../controllers/admin/rbac.controller';
 
@@ -19,9 +18,11 @@ import * as rbacController from '../../controllers/admin/rbac.controller';
  *
  * @param {Object} app - Express application instance
  * @param {Object} userMiddlewares - Authentication middlewares
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router with user admin routes
  */
-export default function userRoutes(app, userMiddlewares) {
+export default function userRoutes(app, userMiddlewares, { Router }) {
   const { requirePermission, requireAnyPermission } = userMiddlewares;
   const router = Router();
 

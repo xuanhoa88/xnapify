@@ -13,6 +13,10 @@ import { createFactory, withNamespace } from './factory';
  * Provides caching with multiple adapters: memory (default), file.
  * Default export is a singleton memory cache instance.
  *
+ * **Auto-disable in Development Mode:**
+ * When __DEV__ is true, the cache automatically uses a NoOp adapter that doesn't
+ * cache anything. This ensures fresh data on every request during development.
+ *
  * @example
  * // Use default singleton instance directly
  * await cache.set('key', 'value', 60000); // 60s TTL

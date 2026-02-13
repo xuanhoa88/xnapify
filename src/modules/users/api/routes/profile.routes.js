@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
 import * as profileController from '../controllers/profile.controller';
 
 /**
@@ -17,9 +16,11 @@ import * as profileController from '../controllers/profile.controller';
  * All routes require authentication.
  *
  * @param {Object} app - Express application instance
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router with profile routes
  */
-export default function profileRoutes(app) {
+export default function profileRoutes(app, userMiddlewares, { Router }) {
   const router = Router();
   const auth = app.get('auth');
   const fs = app.get('fs');

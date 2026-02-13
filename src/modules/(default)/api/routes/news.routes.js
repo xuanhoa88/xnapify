@@ -5,13 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
-
 /**
  * GET /news
  * Returns mock news data for the home page
+ *
+ * @param {Object} app - Express application instance
+ * @param {Object} options - Options
+ * @param {Function} options.Router - Express Router constructor
+ * @returns {Router} Express router with news routes
  */
-export default function newsRoutes() {
+export default function newsRoutes(app, { Router }) {
   const router = Router();
   router.get('/', (req, res) => {
     // Mock news data - Showcasing React Starter Kit features and updates
