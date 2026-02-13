@@ -18,6 +18,7 @@ import {
   info as infoService,
   preview as previewService,
   sync as syncService,
+  extract as extractService,
 } from './services';
 import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
 
@@ -195,6 +196,10 @@ class FilesystemManager {
 
   async sync(ops, options = {}) {
     return syncService(this, ops, options);
+  }
+
+  async extract(zipSource, extractPath, options = {}) {
+    return extractService(this, zipSource, extractPath, options);
   }
 
   // =============================================================================

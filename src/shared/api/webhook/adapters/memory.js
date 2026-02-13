@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from '../../../validator';
 import {
   createValidationErrorResponse,
   createSuccessResponse,

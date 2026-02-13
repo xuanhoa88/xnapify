@@ -265,12 +265,9 @@ describe('Worker Engine', () => {
       const processFunction = async data => ({ result: data });
       setupWorkerProcess(processFunction, 'TEST_TYPE', 'TestWorker');
 
-      const handlers = getWorkerProcess('TestWorker');
+      const isActive = getWorkerProcess('TestWorker');
 
-      expect(handlers).toBeDefined();
-      expect(handlers).toHaveProperty('message');
-      expect(handlers).toHaveProperty('uncaughtException');
-      expect(handlers).toHaveProperty('unhandledRejection');
+      expect(isActive).toBe(true);
 
       unregisterWorkerProcess('TestWorker');
 
@@ -282,10 +279,10 @@ describe('Worker Engine', () => {
       }
     });
 
-    it('should return null for non-existent process', () => {
-      const handlers = getWorkerProcess('NON_EXISTENT');
+    it('should return false for non-existent process', () => {
+      const isActive = getWorkerProcess('NON_EXISTENT');
 
-      expect(handlers).toBeNull();
+      expect(isActive).toBe(false);
     });
 
     it('should check if worker process is active', () => {

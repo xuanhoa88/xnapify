@@ -344,7 +344,7 @@ export async function down({ context: queryInterface }) {
 
 ```javascript
 // src/modules/{module}/api/utils/validation.js
-import { z } from 'zod';
+import { z } from '@/shared/validator';
 
 export const createPostSchema = z.object({
   title: z.string().min(3).max(255),

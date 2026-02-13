@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from 'zod';
+import { z } from '../../validator';
 import { HttpWebhookAdapter } from './adapters/http';
 import { MemoryWebhookAdapter } from './adapters/memory';
 import { DatabaseWebhookAdapter } from './adapters/database';

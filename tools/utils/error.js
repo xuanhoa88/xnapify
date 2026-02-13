@@ -7,6 +7,11 @@
 
 const { isVerbose, logError, logInfo } = require('./logger');
 
+// Store registered handlers for cleanup on the global object so they survive
+// module reloads (e.g. HMR). This prevents accumulating process listeners.
+const SHUTDOWN_SYMBOL = Symbol.for('__rsk.gracefulShutdownHandlers__');
+const SHUTDOWN_TIMEOUT = 10_000;
+
 /**
  * Custom error class with context information
  */
@@ -75,14 +80,14 @@ function setupGracefulShutdown(cleanupFn) {
   // Remove all event listeners to prevent duplicate handling
   const removeListeners = () => {
     signals.forEach(signal => {
-      process.removeListener(signal, signalHandler);
+      process.off(signal, handleSignal);
     });
-    process.removeListener('uncaughtException', uncaughtHandler);
-    process.removeListener('unhandledRejection', unhandledRejectionHandler);
+    process.off('uncaughtException', handleUncaughtException);
+    process.off('unhandledRejection', handleUnhandledRejection);
   };
 
   // Main shutdown handler
-  const shutdownHandler = async (signalOrError, isFatal) => {
+  const handleShutdown = async (signalOrError, isFatal) => {
     // Prevent multiple shutdown attempts
     if (isShuttingDown) {
       logInfo('⏳ Shutdown already in progress...');
@@ -91,6 +96,12 @@ function setupGracefulShutdown(cleanupFn) {
 
     isShuttingDown = true;
     let exitCode = isFatal ? 1 : 0;
+
+    // Force exit if cleanup hangs
+    const forceExitTimer = setTimeout(() => {
+      logError('❌ Forced shutdown after timeout');
+      process.exit(1);
+    }, SHUTDOWN_TIMEOUT).unref();
 
     try {
       // Log shutdown reason
@@ -109,8 +120,11 @@ function setupGracefulShutdown(cleanupFn) {
       logDetailedError(error, { phase: 'cleanup', signal: signalOrError });
       exitCode = 1;
     } finally {
-      // Remove listeners to prevent re-triggering
+      clearTimeout(forceExitTimer);
+
+      // Remove listeners and clear global ref to prevent re-triggering
       removeListeners();
+      delete global[SHUTDOWN_SYMBOL];
 
       // Exit cleanly
       process.exit(exitCode);
@@ -118,35 +132,58 @@ function setupGracefulShutdown(cleanupFn) {
   };
 
   // Signal handler wrapper
-  const signalHandler = signal => shutdownHandler(signal, false);
+  const handleSignal = signal => handleShutdown(signal, false);
 
   // Uncaught exception handler
-  const uncaughtHandler = error => {
+  const handleUncaughtException = error => {
     logError('💥 Uncaught Exception:', error);
-    shutdownHandler(error, true);
+    handleShutdown(error, true).catch(() => process.exit(1));
   };
 
   // Unhandled rejection handler
-  const unhandledRejectionHandler = (reason, promise) => {
+  const handleUnhandledRejection = (reason, promise) => {
     logError('💥 Unhandled Rejection at:', promise, 'reason:', reason);
     const error = reason instanceof Error ? reason : new Error(String(reason));
-    shutdownHandler(error, true);
+    handleShutdown(error, true).catch(() => process.exit(1));
   };
+
+  // Remove any previously-registered handlers saved on the global object
+  const previous = global[SHUTDOWN_SYMBOL];
+  if (previous) {
+    const {
+      handleSignal: prevSignal,
+      handleUncaughtException: prevException,
+      handleUnhandledRejection: prevRejection,
+    } = previous;
+    if (typeof prevSignal === 'function')
+      signals.forEach(signal => process.off(signal, prevSignal));
+    if (typeof prevException === 'function')
+      process.off('uncaughtException', prevException);
+    if (typeof prevRejection === 'function')
+      process.off('unhandledRejection', prevRejection);
+  }
 
   // Register signal handlers
   signals.forEach(signal => {
-    process.on(signal, signalHandler);
+    process.on(signal, handleSignal);
   });
 
   // Register error handlers
-  process.on('uncaughtException', uncaughtHandler);
-  process.on('unhandledRejection', unhandledRejectionHandler);
+  process.on('uncaughtException', handleUncaughtException);
+  process.on('unhandledRejection', handleUnhandledRejection);
+
+  // Persist the handler references so they can be removed on next HMR reload
+  global[SHUTDOWN_SYMBOL] = {
+    handleSignal,
+    handleUncaughtException,
+    handleUnhandledRejection,
+  };
 
   // Log that shutdown handler is ready
   logInfo('✓ Graceful shutdown handler registered');
 
   // Return manual shutdown trigger
-  return () => shutdownHandler('MANUAL', false);
+  return () => handleShutdown('MANUAL', false);
 }
 
 module.exports = {

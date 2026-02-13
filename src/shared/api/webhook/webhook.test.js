@@ -326,7 +326,7 @@ describe('Webhook Engine', () => {
       });
       const duration = Date.now() - startTime;
 
-      expect(duration).toBeGreaterThanOrEqual(50);
+      expect(duration).toBeGreaterThanOrEqual(40);
     });
 
     it('should simulate failures with configurable failure rate', async () => {

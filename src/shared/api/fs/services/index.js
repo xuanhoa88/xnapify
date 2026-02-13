@@ -14,3 +14,4 @@ export { rename } from './rename';
 export { info } from './info';
 export { preview } from './preview';
 export { sync } from './sync';
+export { extract } from './extract';

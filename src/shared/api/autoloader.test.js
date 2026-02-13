@@ -13,7 +13,11 @@ describe('shared/api/autoloader', () => {
   describe('validateCoreModules', () => {
     it('should not throw if all core modules are present', () => {
       const { validateCoreModules } = require('./autoloader');
-      const paths = ['./users/api/index.js', './other/api/index.js'];
+      const paths = [
+        './users/api/index.js',
+        './plugins/api/index.js',
+        './other/api/index.js',
+      ];
       // Default core module is 'users'
       expect(() => validateCoreModules(paths)).not.toThrow();
     });
@@ -36,7 +40,11 @@ describe('shared/api/autoloader', () => {
         /Missing required core module/,
       );
 
-      const validPaths = ['./users/api/index.js', './custom/api/index.js'];
+      const validPaths = [
+        './users/api/index.js',
+        './plugins/api/index.js',
+        './custom/api/index.js',
+      ];
       expect(() => validateCoreModules(validPaths)).not.toThrow();
     });
   });
@@ -109,6 +117,7 @@ describe('shared/api/autoloader', () => {
         './users/api/models/User.js',
         './users/api/models/Post.js',
         './users/api/index.js', // Lifecycle file
+        './plugins/api/index.js',
       ]);
 
       // Mock factories
@@ -136,6 +145,9 @@ describe('shared/api/autoloader', () => {
         if (key === './users/api/index.js') {
           return { init: lifecycle.init };
         }
+        if (key === './plugins/api/index.js') {
+          return { init: jest.fn() };
+        }
       });
 
       const { apiModels } = await discoverModules(mockContext, mockApp);
@@ -158,6 +170,7 @@ describe('shared/api/autoloader', () => {
         './users/api/models/index.js', // Should be skipped
         './users/api/models/User.test.js', // Should be skipped
         './users/api/index.js',
+        './plugins/api/index.js',
       ]);
 
       const userModel = {
@@ -172,6 +185,7 @@ describe('shared/api/autoloader', () => {
         if (key === './users/api/models/User.js')
           return { default: jest.fn().mockResolvedValue(userModel) };
         if (key === './users/api/index.js') return { init: lifecycle.init };
+        if (key === './plugins/api/index.js') return { init: jest.fn() };
         return { default: jest.fn() };
       });
 

@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from 'zod';
 import { fn, col, DataTypes, Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+import { z } from '../../../validator';
 import { WEBHOOK_STATUS } from '../utils/constants';
 import {
   createValidationErrorResponse,

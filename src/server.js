@@ -731,35 +731,10 @@ function verifyWsToken(jwt, token) {
 }
 
 // =============================================================================
-// PROCESS ERROR HANDLERS
-// =============================================================================
-
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-  if (!__DEV__ && reason && reason.stack) {
-    console.error('Stack:', reason.stack);
-  }
-});
-
-process.on('uncaughtException', err => {
-  console.error('❌ Uncaught Exception:', err);
-  if (err && err.stack) {
-    console.error('Stack:', err.stack);
-  }
-  process.exit(1);
-});
-
-process.on('warning', warning => {
-  if (__DEV__) {
-    console.warn('⚠️  Node.js Warning:', warning.name, warning.message);
-  }
-});
-
-// =============================================================================
 // GRACEFUL SHUTDOWN
 // =============================================================================
 
-/** Register SIGTERM/SIGINT/SIGUSR2 handlers for clean shutdown */
+/** Register signal and process error handlers for clean shutdown */
 function setupGracefulShutdown(server) {
   let shutdownPromise = null;
 
@@ -796,6 +771,7 @@ function setupGracefulShutdown(server) {
     return shutdownPromise;
   };
 
+  // Signal handlers
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
   process.on('SIGINT', () => handleShutdown('SIGINT'));
 
@@ -807,6 +783,33 @@ function setupGracefulShutdown(server) {
       ),
     );
   }
+
+  // Process error handlers
+  const handleUncaughtException = err => {
+    console.error('❌ Uncaught Exception:', err);
+    if (err && err.stack) {
+      console.error('Stack:', err.stack);
+    }
+    handleShutdown('uncaughtException').catch(() => process.exit(1));
+  };
+
+  const handleUnhandledRejection = (reason, promise) => {
+    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+    if (reason && reason.stack) {
+      console.error('Stack:', reason.stack);
+    }
+    handleShutdown('unhandledRejection').catch(() => process.exit(1));
+  };
+
+  const handleWarning = warning => {
+    const msg = `⚠️  Node.js Warning: ${warning.name} ${warning.message}`;
+    console.warn(msg);
+    if (__DEV__ && warning.stack) console.warn(warning.stack);
+  };
+
+  process.on('uncaughtException', handleUncaughtException);
+  process.on('unhandledRejection', handleUnhandledRejection);
+  process.on('warning', handleWarning);
 }
 
 // =============================================================================

@@ -49,7 +49,7 @@ function parseEnvCoreModules() {
  * Set of core modules that must be loaded.
  * 'users' is always required; additional modules come from RSK_MODULE_DEFAULTS.
  */
-const CORE_MODULES = new Set(['users', ...parseEnvCoreModules()]);
+const CORE_MODULES = new Set(['users', 'plugins', ...parseEnvCoreModules()]);
 
 // =============================================================================
 // HELPERS

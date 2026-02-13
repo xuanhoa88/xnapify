@@ -411,7 +411,7 @@ export async function getAll() {
 ```javascript
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { z } from '@/shared/validator';
 
 const schema = z.object({
   email: z.string().email(),
