@@ -1,32 +1,27 @@
-// Mock dependencies
+// Mock fs (for existsSync and fs.promises.rm, etc.)
 jest.mock('fs', () => {
-  const mockReaddir = jest.fn();
-  const mockReadFile = jest.fn();
-  const mockStat = jest.fn();
   const mockRm = jest.fn();
   const mockMkdir = jest.fn();
   const mockRename = jest.fn();
   const mockUnlink = jest.fn();
   const mockExistsSync = jest.fn();
+  const mockAccess = jest.fn();
 
   const mockFs = {
     promises: {
-      readdir: mockReaddir,
-      readFile: mockReadFile,
-      stat: mockStat,
       rm: mockRm,
       mkdir: mockMkdir,
       rename: mockRename,
       unlink: mockUnlink,
+      readdir: jest.fn(),
+      readFile: jest.fn(),
     },
-    readdir: mockReaddir,
-    readFile: mockReadFile,
-    stat: mockStat,
     rm: mockRm,
     mkdir: mockMkdir,
     rename: mockRename,
     unlink: mockUnlink,
     existsSync: mockExistsSync,
+    access: mockAccess,
   };
 
   return {
@@ -35,6 +30,13 @@ jest.mock('fs', () => {
     ...mockFs,
   };
 });
+
+// Mock fs/promises (the named imports used by readdir/readFile in the service)
+jest.mock('fs/promises', () => ({
+  __esModule: true,
+  readdir: jest.fn(),
+  readFile: jest.fn(),
+}));
 
 jest.mock('../utils/activity', () => ({
   logPluginActivity: jest.fn(),
@@ -53,6 +55,7 @@ import {
 } from './plugin.service';
 import * as activityUtils from '../utils/activity';
 import fs from 'fs';
+import { readdir, readFile } from 'fs/promises';
 
 const mockCache = {
   get: jest.fn(),
@@ -86,12 +89,12 @@ describe('Plugin Service', () => {
   describe('managePlugins', () => {
     it('should list plugins from DB and FS', async () => {
       // Mock FS via imported mocked module
-      fs.promises.readdir.mockResolvedValue([
+      readdir.mockResolvedValue([
         { name: 'fs-plugin', isDirectory: () => true },
         { name: 'db-plugin', isDirectory: () => true }, // Add db-plugin folder
       ]);
       fs.existsSync.mockReturnValue(true);
-      fs.promises.readFile.mockImplementation(path => {
+      readFile.mockImplementation(path => {
         if (path.includes('fs-plugin')) {
           return Promise.resolve(
             JSON.stringify({
@@ -142,7 +145,7 @@ describe('Plugin Service', () => {
     });
 
     it('should mark DB plugins as missing if not found on FS', async () => {
-      fs.promises.readdir.mockResolvedValue([]); // No files
+      readdir.mockResolvedValue([]); // No files
       mockModels.Plugin.findAll.mockResolvedValue([
         {
           id: 'db-1',
@@ -162,6 +165,35 @@ describe('Plugin Service', () => {
       expect(missingPlugin.isMissing).toBe(true);
       expect(missingPlugin.source).toBe('db');
     });
+
+    it('should list FS-only plugins when DB is empty', async () => {
+      readdir.mockResolvedValue([
+        { name: 'new-plugin', isDirectory: () => true },
+      ]);
+      fs.existsSync.mockReturnValue(true);
+      readFile.mockImplementation(p => {
+        if (p.includes('new-plugin')) {
+          return Promise.resolve(
+            JSON.stringify({
+              name: 'New Plugin',
+              version: '1.0.0',
+              rapid_plugin: { key: 'new-plugin' },
+            }),
+          );
+        }
+        return Promise.reject('File not found');
+      });
+
+      mockModels.Plugin.findAll.mockResolvedValue([]);
+
+      const result = await managePlugins(mockContext);
+
+      expect(result).toHaveLength(1);
+      const plugin = result[0];
+      expect(plugin.internalId).toBe('new-plugin');
+      expect(plugin.isInstalled).toBe(false);
+      expect(plugin.isActive).toBe(false);
+    });
   });
 
   describe('getActivePlugins', () => {
@@ -178,7 +210,7 @@ describe('Plugin Service', () => {
 
       // Mock FS check
       fs.existsSync.mockReturnValue(true);
-      fs.promises.readFile.mockImplementation(path => {
+      readFile.mockImplementation(path => {
         if (path.includes('active-p')) {
           return Promise.resolve(
             JSON.stringify({

@@ -13,6 +13,7 @@ import { logPluginActivity } from '../utils/activity';
 
 // Get plugin path from environment variable or use default
 const PLUGIN_PATH = process.env.RSK_PLUGIN_PATH || 'plugins';
+const DEV_PLUGIN_PATH = process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins';
 
 // Cache for plugin list
 
@@ -51,7 +52,7 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
       console.debug(`[managePlugins] ${source} dir not found: ${dirPath}`);
       return;
     }
-    const files = await fs.readdir(dirPath, { withFileTypes: true });
+    const files = await fs.promises.readdir(dirPath, { withFileTypes: true });
     console.debug(
       `[managePlugins] Found ${files.length} items in ${source} dir: ${dirPath}`,
     );
@@ -95,7 +96,7 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
 export async function readPluginManifest(pluginsDir, pluginName) {
   try {
     const manifestPath = path.join(pluginsDir, pluginName, 'package.json');
-    const manifestContent = await fs.readFile(manifestPath, 'utf8');
+    const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
     return JSON.parse(manifestContent);
   } catch (e) {
     console.debug(
@@ -114,10 +115,7 @@ export async function readPluginManifest(pluginsDir, pluginName) {
  */
 export async function managePlugins({ models, cwd }) {
   const installedPluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
-  const localPluginsDir = getPluginsDir(
-    cwd,
-    process.env.RSK_LOCAL_PLUGIN_PATH || '.cache/dev-plugins',
-  );
+  const localPluginsDir = getPluginsDir(cwd, DEV_PLUGIN_PATH);
 
   const { Plugin } = models;
 
@@ -143,8 +141,8 @@ export async function managePlugins({ models, cwd }) {
       // Merge DB data into FS data. DB is the source of truth for status.
       fsPluginsMap.set(dbPlugin.key, {
         ...fsPlugin,
-        ...dbPlugin.toJSON(), // Overrides FS properties (e.g. name, description from DB if updated)
-        id: dbPlugin.id, // Ensure we use DB ID
+        ...dbPlugin.toJSON(),
+        id: dbPlugin.id,
         dbId: dbPlugin.id,
         isActive: dbPlugin.is_active,
         isInstalled: true,
@@ -158,28 +156,21 @@ export async function managePlugins({ models, cwd }) {
         id: dbPlugin.id,
         isMissing: true,
         source: 'db',
-        isActive: false, // Force inactive if missing? Or keep DB state?
-        // User might want to see it was active but missing.
-        // Let's keep DB state but flag as missing.
+        isActive: false,
       });
     }
+  }
 
-    // 2b. Process new plugins on disk (Not in DB)
-    // These are already in fsPluginsMap, but we need to ensure they match our "inactive by default" rule
-    // if not already in DB.
-    for (const [key, fsPlugin] of fsPluginsMap.entries()) {
-      if (!dbPluginsMap.has(key)) {
-        // Found on disk, not in DB.
-        // Mark as inactive default.
-        fsPluginsMap.set(key, {
-          ...fsPlugin,
-          // id is currently encrypted ID from scanDirectory
-          isInstalled: false,
-          isActive: false, // Default inactive
-          source: fsPlugin.source,
-          isMissing: false,
-        });
-      }
+  // 2b. Process new plugins on disk (Not in DB)
+  for (const [key, fsPlugin] of fsPluginsMap.entries()) {
+    if (!dbPluginsMap.has(key)) {
+      fsPluginsMap.set(key, {
+        ...fsPlugin,
+        isInstalled: false,
+        isActive: false,
+        source: fsPlugin.source,
+        isMissing: false,
+      });
     }
   }
 
@@ -212,10 +203,7 @@ export async function getActivePlugins({ models, cache, cwd }) {
 
   const { Plugin } = models;
   const installedPluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
-  const localPluginsDir = getPluginsDir(
-    cwd,
-    process.env.RSK_LOCAL_PLUGIN_PATH || '.dev/plugins',
-  );
+  const localPluginsDir = getPluginsDir(cwd, DEV_PLUGIN_PATH);
 
   // 1. Fetch only active plugins from DB
   const dbPlugins = await Plugin.findAll({

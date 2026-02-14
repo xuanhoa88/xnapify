@@ -29,7 +29,7 @@ export function register({ store, i18n }) {
     registerMenu({
       ns: 'admin',
       item: {
-        ns: i18n.t('navigation.management', 'Management'),
+        ns: i18n.t('navigation.system', 'System'),
         path: '/admin/plugins',
         label: i18n.t('navigation.plugins', 'Plugins'),
         icon: 'extension', // or 'puzzle-piece' if available, checking lucide icons
