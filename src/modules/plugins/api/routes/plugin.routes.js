@@ -20,22 +20,15 @@ import * as pluginController from '../controllers/plugin.controller';
  */
 export default function pluginRoutes(app, { Router }) {
   const fs = app.get('fs');
+  const uploadMiddleware = fs.useUploadMiddleware({ fieldName: 'file' });
 
   const userMiddlewares = app.get('user.middlewares');
   const { requirePermission } = userMiddlewares;
 
   const router = Router();
 
-  // Public / Shared
-  router.get('/', pluginController.listPlugins);
-  router.get('/:id', pluginController.getPlugin);
-  router.use('/:id/static', pluginController.servePluginStatic);
-
   // Admin / Management
   const adminRouter = Router();
-
-  // Create (Upload)
-  const uploadMiddleware = fs.useUploadMiddleware({ fieldName: 'file' });
 
   // List (Admin)
   adminRouter.get(
@@ -56,13 +49,6 @@ export default function pluginRoutes(app, { Router }) {
     requirePermission('plugins:create'),
     uploadMiddleware,
     pluginController.uploadPlugin,
-  );
-
-  // Create (Manual - Optional if keeping manual form)
-  adminRouter.post(
-    '/',
-    requirePermission('plugins:create'),
-    pluginController.createPlugin,
   );
 
   // Update
@@ -86,8 +72,13 @@ export default function pluginRoutes(app, { Router }) {
     pluginController.deletePlugin,
   );
 
-  // Mount Admin routes
+  // Mount Admin routes FIRST to avoid collision with /:id
   router.use('/admin', adminRouter);
+
+  // Public / Shared
+  router.get('/', pluginController.listPlugins);
+  router.get('/:id', pluginController.getPlugin);
+  router.use('/:id/static', pluginController.servePluginStatic);
 
   return router;
 }

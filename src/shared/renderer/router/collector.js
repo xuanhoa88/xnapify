@@ -24,9 +24,14 @@ const COLLECTORS = Object.freeze({
       const [, moduleName, routePath] = m;
       const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
 
+      // Check if terminal segment is (default) before unwrapping
+      const rawSegments = routePath.split(ROUTE_SEPARATOR);
+      const isTerminalDefault =
+        rawSegments.length > 0 &&
+        rawSegments[rawSegments.length - 1] === '(default)';
+
       // Parse path segments, unwrapping route groups and converting params
-      const segments = routePath
-        .split(ROUTE_SEPARATOR)
+      const segments = rawSegments
         .map(s => {
           // Unwrap route groups: (admin) -> admin
           if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
@@ -40,6 +45,15 @@ const COLLECTORS = Object.freeze({
           return s;
         })
         .filter(s => s && s !== 'default');
+
+      // Auto-detect module-scoped paths for non-default modules:
+      // When terminal (default) is filtered out and only one segment remains
+      // (a section root like 'admin'), append the module name to prevent
+      // route collisions with the (default) module.
+      // e.g. plugins/views/admin/(default) -> /admin/plugins
+      if (!isDefaultModule && isTerminalDefault && segments.length === 1) {
+        segments.push(moduleName);
+      }
 
       // Build pathname based on module type
       let parts;
@@ -163,6 +177,12 @@ export function collect(source, type) {
 
     try {
       const module = source.load(filePath);
+      if (results.has(extracted.key)) {
+        log(
+          `Duplicate ${config.label} key "${extracted.key}" from ${filePath} (overwrites ${results.get(extracted.key).filePath})`,
+          'warn',
+        );
+      }
       results.set(extracted.key, { ...extracted.data, module, filePath });
     } catch (error) {
       log(`Error loading ${filePath}: ${error.message}`, 'error');

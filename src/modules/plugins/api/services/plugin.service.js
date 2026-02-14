@@ -23,7 +23,7 @@ const CACHE_TTL = 60 * 1000; // 1 minute
  * @param {string} cwd - Current working directory
  * @returns {string} Plugins directory path
  */
-export function getPluginsDir(cwd, pluginPath) {
+function getPluginsDir(cwd, pluginPath = PLUGIN_PATH) {
   return path.resolve(cwd || process.cwd(), pluginPath);
 }
 
@@ -31,27 +31,11 @@ export function getPluginsDir(cwd, pluginPath) {
  * Invalidate plugin list cache
  * @param {object} cache - Cache engine instance
  */
-export async function invalidateCache(cache) {
+async function invalidateCache(cache) {
   if (cache) {
     if (cache) {
       await cache.delete('plugins:list:all');
     }
-  }
-}
-
-/**
- * Read plugin manifest from directory
- * @param {string} pluginsDir - Plugins directory path
- * @param {string} pluginName - Plugin directory name
- * @returns {Promise<Object|null>} Plugin manifest or null if invalid
- */
-export async function readPluginManifest(pluginsDir, pluginName) {
-  try {
-    const manifestPath = path.join(pluginsDir, pluginName, 'package.json');
-    const manifestContent = await fs.readFile(manifestPath, 'utf8');
-    return JSON.parse(manifestContent);
-  } catch (e) {
-    return null;
   }
 }
 
@@ -63,12 +47,22 @@ export async function readPluginManifest(pluginsDir, pluginName) {
  */
 const scanDirectory = async (dirPath, source, fsPluginsMap) => {
   try {
-    if (!fs.existsSync(dirPath)) return;
+    if (!fs.existsSync(dirPath)) {
+      console.debug(`[managePlugins] ${source} dir not found: ${dirPath}`);
+      return;
+    }
     const files = await fs.readdir(dirPath, { withFileTypes: true });
+    console.debug(
+      `[managePlugins] Found ${files.length} items in ${source} dir: ${dirPath}`,
+    );
     for (const dirent of files) {
       if (dirent.isDirectory()) {
+        console.debug(
+          `[managePlugins] Scanning plugin: ${dirent.name} (${source})`,
+        );
         const manifest = await readPluginManifest(dirPath, dirent.name);
         if (manifest) {
+          console.debug(`[managePlugins] Added plugin: ${dirent.name}`);
           // Use directory name as ID for local plugins to keep it simple, or encrypt it
           // For consistency, we use the same encryption.
           // CAUTION: If a plugin exists in both, the last one scanned wins in the map.
@@ -93,6 +87,25 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
 };
 
 /**
+ * Read plugin manifest from directory
+ * @param {string} pluginsDir - Plugins directory path
+ * @param {string} pluginName - Plugin directory name
+ * @returns {Promise<Object|null>} Plugin manifest or null if invalid
+ */
+export async function readPluginManifest(pluginsDir, pluginName) {
+  try {
+    const manifestPath = path.join(pluginsDir, pluginName, 'package.json');
+    const manifestContent = await fs.readFile(manifestPath, 'utf8');
+    return JSON.parse(manifestContent);
+  } catch (e) {
+    console.debug(
+      `[readPluginManifest] Failed to read manifest for ${pluginName}: ${e.message}`,
+    );
+    return null;
+  }
+}
+
+/**
  * Get all plugins (Admin) - Merged from DB and FS
  * @param {object} options - Options with models, cwd
  * @param {object} options.models - Models instance
@@ -103,7 +116,7 @@ export async function managePlugins({ models, cwd }) {
   const installedPluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
   const localPluginsDir = getPluginsDir(
     cwd,
-    process.env.RSK_LOCAL_PLUGIN_PATH || '.dev/plugins',
+    process.env.RSK_LOCAL_PLUGIN_PATH || '.cache/dev-plugins',
   );
 
   const { Plugin } = models;
@@ -172,6 +185,8 @@ export async function managePlugins({ models, cwd }) {
 
   // Convert Map to Array
   plugins.push(...fsPluginsMap.values());
+
+  console.debug(`[managePlugins] Total plugins found: ${plugins.length}`);
 
   return plugins;
 }
@@ -319,7 +334,7 @@ export async function deletePlugin(
   // Current implementation just deletes DB record.
   // User requested "If delete, total remove files and db record".
 
-  const pluginsDir = getPluginsDir(cwd);
+  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
   const pluginDir = path.join(pluginsDir, plugin.key);
 
   // Safety check: Don't delete outside plugins dir?
@@ -358,7 +373,7 @@ export async function deletePlugin(
  * @throws {Error} If plugin ID is invalid or plugin not found
  */
 export async function getPluginById({ cwd }, encryptedId) {
-  const pluginsDir = getPluginsDir(cwd);
+  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
 
   // Decrypt ID
   const pluginId = decryptPluginId(encryptedId);
@@ -403,7 +418,7 @@ export async function getPluginById({ cwd }, encryptedId) {
  * @returns {string|null} Plugin static files directory path or null if invalid
  */
 export function getPluginStaticDir({ cwd }, encryptedId) {
-  const pluginsDir = getPluginsDir(cwd);
+  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
 
   // Decrypt ID
   const pluginId = decryptPluginId(encryptedId);
