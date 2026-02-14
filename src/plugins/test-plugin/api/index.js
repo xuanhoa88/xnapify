@@ -147,6 +147,15 @@ export default {
     const db = context.app.get('db');
     if (db) {
       try {
+        await db.connection.undoSeeds([
+          { context: seedsContext, prefix: 'test-plugin' },
+        ]);
+        console.log('[Test Plugin] Database seeds destroyed');
+      } catch (error) {
+        console.error('[Test Plugin] Database seed failed:', error.message);
+      }
+
+      try {
         console.log('[Test Plugin] Database migrations/seeds destroyed');
         await db.connection.revertMigrations([
           { context: migrationsContext, prefix: 'test-plugin' },
@@ -157,15 +166,6 @@ export default {
           '[Test Plugin] Database migration failed:',
           error.message,
         );
-      }
-
-      try {
-        await db.connection.undoSeeds([
-          { context: seedsContext, prefix: 'test-plugin' },
-        ]);
-        console.log('[Test Plugin] Database seeds destroyed');
-      } catch (error) {
-        console.error('[Test Plugin] Database seed failed:', error.message);
       }
     }
 
