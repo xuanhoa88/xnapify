@@ -20,7 +20,7 @@ export const fetchPlugins = createAsyncThunk(
   'admin/plugins/fetchPlugins',
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/plugins/admin');
+      const { data } = await fetch('/api/admin/plugins');
       return data.plugins || [];
     } catch (error) {
       return rejectWithValue(error.message);
@@ -38,7 +38,7 @@ export const uploadPlugin = createAsyncThunk(
       const formData = new FormData();
       formData.append('file', file);
 
-      const { data } = await fetch('/api/plugins/admin/upload', {
+      const { data } = await fetch('/api/admin/plugins/upload', {
         method: 'POST',
         body: formData,
       });
@@ -56,7 +56,7 @@ export const upgradePlugin = createAsyncThunk(
   'admin/plugins/upgradePlugin',
   async (id, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/plugins/admin/${id}/upgrade`, {
+      const { data } = await fetch(`/api/admin/plugins/${id}/upgrade`, {
         method: 'POST',
       });
       return data.plugin;
@@ -73,7 +73,7 @@ export const togglePluginStatus = createAsyncThunk(
   'admin/plugins/toggleStatus',
   async ({ id, isActive }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/plugins/admin/${id}/status`, {
+      const { data } = await fetch(`/api/admin/plugins/${id}/status`, {
         method: 'PATCH',
         body: { is_active: isActive },
       });
@@ -91,7 +91,7 @@ export const uninstallPlugin = createAsyncThunk(
   'admin/plugins/uninstall',
   async (id, { extra: { fetch }, rejectWithValue }) => {
     try {
-      await fetch(`/api/plugins/admin/${id}`, {
+      await fetch(`/api/admin/plugins/${id}`, {
         method: 'DELETE',
       });
       return id;

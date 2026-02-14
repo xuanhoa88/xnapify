@@ -29,13 +29,16 @@ function getPluginsDir(cwd, pluginPath = PLUGIN_PATH) {
 }
 
 /**
- * Invalidate plugin list cache
+ * Invalidate plugin caches
  * @param {object} cache - Cache engine instance
+ * @param {string} [pluginId] - Optional plugin ID to invalidate detail cache
  */
-async function invalidateCache(cache) {
+async function invalidateCache(cache, pluginId) {
   if (cache) {
-    if (cache) {
-      await cache.delete('plugins:list:all');
+    await cache.delete('plugins:list:all');
+    await cache.delete('plugins:list:active');
+    if (pluginId) {
+      await cache.delete(`plugins:detail:${pluginId}`);
     }
   }
 }
@@ -354,26 +357,51 @@ export async function deletePlugin(
 }
 
 /**
- * Get plugin by encrypted ID (Legacy/Loader support)
- * @param {object} context - Context with cwd
- * @param {string} encryptedId - Encrypted plugin ID
+ * Get plugin by ID (DB UUID or encrypted key)
+ * @param {object} context - Context with cwd, models, and cache
+ * @param {string} id - Plugin ID (DB UUID or encrypted key)
  * @returns {Promise<Object>} Plugin data with containerName and manifest
  * @throws {Error} If plugin ID is invalid or plugin not found
  */
-export async function getPluginById({ cwd }, encryptedId) {
-  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
+export async function getPluginById({ cwd, models, cache }, id) {
+  const cacheKey = `plugins:detail:${id}`;
 
-  // Decrypt ID
-  const pluginId = decryptPluginId(encryptedId);
-  if (!pluginId) {
+  // Return cached result if available
+  if (cache) {
+    const cached = await cache.get(cacheKey);
+    if (cached) return cached;
+  }
+
+  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
+  const localPluginsDir = getPluginsDir(cwd, DEV_PLUGIN_PATH);
+
+  // Try decrypting as encrypted key first
+  let pluginKey = decryptPluginId(id);
+
+  // If decryption failed, it might be a DB UUID
+  if (!pluginKey && models) {
+    const { Plugin } = models;
+    const dbPlugin = await Plugin.findByPk(id);
+    if (dbPlugin) {
+      pluginKey = dbPlugin.key;
+    }
+  }
+
+  if (!pluginKey) {
     const err = new Error('Invalid plugin ID');
     err.name = 'InvalidPluginId';
     err.status = 400;
     throw err;
   }
 
-  // Read manifest
-  const manifest = await readPluginManifest(pluginsDir, pluginId);
+  // Read manifest (check installed dir first, then local/dev)
+  let manifest = await readPluginManifest(pluginsDir, pluginKey);
+  let resolvedDir = pluginsDir;
+  if (!manifest) {
+    manifest = await readPluginManifest(localPluginsDir, pluginKey);
+    resolvedDir = localPluginsDir;
+  }
+
   if (!manifest) {
     const err = new Error('Plugin not found');
     err.name = 'PluginNotFound';
@@ -381,40 +409,63 @@ export async function getPluginById({ cwd }, encryptedId) {
     throw err;
   }
 
-  // Create safe container name from plugin ID (must match webpack config)
-  const containerName = `plugin_${pluginId.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  // Create safe container name from plugin key (must match webpack config)
+  const containerName = `plugin_${pluginKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
   try {
-    const assetsPath = path.join(pluginsDir, pluginId, 'plugin.css');
+    const assetsPath = path.join(resolvedDir, pluginKey, 'plugin.css');
     await fs.access(assetsPath);
     manifest.cssFiles = [path.basename(assetsPath)];
   } catch {
     // plugin.css might not exist if plugin has no CSS or build failed
   }
 
-  return {
+  const result = {
     containerName,
     manifest,
-    internalId: pluginId,
+    internalId: pluginKey,
   };
+
+  // Cache the result
+  if (cache) {
+    await cache.set(cacheKey, result, CACHE_TTL);
+  }
+
+  return result;
 }
 
 /**
  * Get plugin static files directory path
- * @param {object} context - Context with cwd
- * @param {string} encryptedId - Encrypted plugin ID
- * @returns {string|null} Plugin static files directory path or null if invalid
+ * @param {object} context - Context with cwd and models
+ * @param {string} id - Plugin ID (DB UUID or encrypted key)
+ * @returns {Promise<string|null>} Plugin static files directory path or null if invalid
  */
-export function getPluginStaticDir({ cwd }, encryptedId) {
+export async function getPluginStaticDir({ cwd, models }, id) {
   const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
+  const localPluginsDir = getPluginsDir(cwd, DEV_PLUGIN_PATH);
 
-  // Decrypt ID
-  const pluginId = decryptPluginId(encryptedId);
-  if (!pluginId) {
-    return null;
+  // Try decrypting as encrypted key first
+  let pluginKey = decryptPluginId(id);
+
+  // If decryption failed, it might be a DB UUID
+  if (!pluginKey && models) {
+    const { Plugin } = models;
+    const dbPlugin = await Plugin.findByPk(id);
+    if (dbPlugin) {
+      pluginKey = dbPlugin.key;
+    }
   }
 
-  return path.join(pluginsDir, pluginId);
+  if (!pluginKey) return null;
+
+  // Check installed dir first, then local/dev
+  const installedPath = path.join(pluginsDir, pluginKey);
+  if (fs.existsSync(installedPath)) return installedPath;
+
+  const localPath = path.join(localPluginsDir, pluginKey);
+  if (fs.existsSync(localPath)) return localPath;
+
+  return null;
 }
 
 /**
@@ -564,17 +615,57 @@ export async function installPluginFromPackage(
 export async function togglePluginStatus(
   id,
   isActive,
-  { models, cache, webhook, actorId },
+  { models, cache, cwd, webhook, actorId },
 ) {
   const { Plugin } = models;
+
+  // Try finding by DB primary key first (for installed plugins)
   let plugin = await Plugin.findByPk(id);
+
+  // If not found, the ID might be an encrypted plugin key (FS-only plugin)
+  if (!plugin) {
+    const pluginKey = decryptPluginId(id);
+    if (pluginKey) {
+      plugin = await Plugin.findOne({ where: { key: pluginKey } });
+
+      // FS-only plugin with no DB record yet — create one
+      if (!plugin && cwd) {
+        let manifest = await readPluginManifest(
+          getPluginsDir(cwd, PLUGIN_PATH),
+          pluginKey,
+        );
+
+        // Also check local/dev plugins directory
+        if (!manifest) {
+          manifest = await readPluginManifest(
+            getPluginsDir(cwd, DEV_PLUGIN_PATH),
+            pluginKey,
+          );
+        }
+
+        if (!manifest) {
+          throw new Error('Plugin not found on disk');
+        }
+
+        [plugin] = await Plugin.findOrCreate({
+          where: { key: pluginKey },
+          defaults: {
+            name: manifest.name || pluginKey,
+            description: manifest.description || '',
+            version: manifest.version || '0.0.0',
+            is_active: isActive,
+          },
+        });
+      }
+    }
+  }
 
   if (!plugin) {
     throw new Error('Plugin not found');
   }
 
   await plugin.update({ is_active: isActive });
-  if (cache) await invalidateCache(cache);
+  if (cache) await invalidateCache(cache, id);
 
   await logPluginActivity(
     webhook,

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRbac } from '../../../../../shared/renderer/components/Rbac';
@@ -19,7 +19,7 @@ import {
 import Button from '../../../../../shared/renderer/components/Button';
 import Card from '../../../../../shared/renderer/components/Card';
 import Tag from '../../../../../shared/renderer/components/Tag';
-import s from './Plugins.css';
+import PluginActionsDropdown from './components/PluginActionsDropdown';
 import {
   fetchPlugins,
   uploadPlugin,
@@ -30,6 +30,7 @@ import {
   isPluginsListLoading,
   isPluginUploading,
 } from './redux';
+import s from './Plugins.css';
 
 function Plugins() {
   const { t } = useTranslation();
@@ -45,6 +46,7 @@ function Plugins() {
 
   // Search state
   const [search, setSearch] = useState('');
+  const [activeDropdownId, setActiveDropdownId] = useState(null);
 
   // Modals & Refs
   const deleteModalRef = useRef();
@@ -56,6 +58,10 @@ function Plugins() {
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);
+  }, []);
+
+  const handleToggleDropdown = useCallback(id => {
+    setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
 
   const handleDelete = useCallback(plugin => {
@@ -81,12 +87,8 @@ function Plugins() {
           await dispatch(uploadPlugin(file)).unwrap();
           // Reset input
           event.target.value = null;
-          // Refresh list logic is handled by reducer update or re-fetch?
-          // Reducer updates the list optimistically or based on response.
-          // slice.js updates list.
         } catch (error) {
           console.error('Upload failed', error);
-          // TODO: Show toast error (global toast usually)
         }
       }
     },
@@ -118,16 +120,24 @@ function Plugins() {
   );
 
   // Filter plugins
-  const filteredPlugins = plugins.filter(
-    p =>
-      p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.key.toLowerCase().includes(search.toLowerCase()),
+  const filteredPlugins = useMemo(
+    () =>
+      plugins.filter(
+        p =>
+          (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
+          (p.key && p.key.toLowerCase().includes(search.toLowerCase())),
+      ),
+    [plugins, search],
   );
 
   if (loading && plugins.length === 0) {
     return (
       <div className={s.root}>
-        <Box.Header title={t('navigation.plugins', 'Plugins')} />
+        <Box.Header
+          icon={<Icon name='extension' size={24} />}
+          title={t('navigation.plugins', 'Plugins')}
+          subtitle='Manage system plugins'
+        />
         <Loader variant='cards' />
       </div>
     );
@@ -136,6 +146,7 @@ function Plugins() {
   return (
     <div className={s.root}>
       <Box.Header
+        icon={<Icon name='extension' size={24} />}
         title={t('navigation.plugins', 'Plugins')}
         subtitle='Manage system plugins'
       >
@@ -159,6 +170,7 @@ function Plugins() {
       </Box.Header>
 
       <Table.SearchBar
+        className={s.filters}
         value={search}
         onChange={handleSearchChange}
         placeholder='Search plugins...'
@@ -166,55 +178,41 @@ function Plugins() {
 
       <div className={s.grid}>
         {filteredPlugins.map(plugin => (
-          <Card key={plugin.id} className={s.card}>
-            <Card.Header>
-              <div className={s.cardTitle}>
-                <h3>{plugin.name}</h3>
-                <Tag variant={plugin.is_active ? 'success' : 'neutral'}>
-                  {plugin.version}
-                </Tag>
-              </div>
-              <div className={s.cardStatus}>
-                {/* Toggle Switch - Using simple button/checkbox for now or specialized switch if available */}
-                <label
-                  className={s.switch}
-                  disabled={!canUpdate}
-                  aria-disabled={!canUpdate}
-                  aria-label='Toggle plugin status'
-                >
-                  <input
-                    type='checkbox'
-                    checked={plugin.is_active}
-                    disabled={!canUpdate}
-                    onChange={e => handleToggleStatus(plugin, e.target.checked)}
+          <Card
+            key={plugin.id}
+            variant='default'
+            interactive
+            className={s.pluginCard}
+          >
+            <Card.Header
+              className={s.pluginCardHeader}
+              actions={
+                <div className={s.headerRight}>
+                  <div className={s.headerBadges}>
+                    <Tag variant='neutral'>v{plugin.version}</Tag>
+                    <Tag variant={plugin.is_active ? 'success' : 'neutral'}>
+                      {plugin.is_active ? 'Active' : 'Inactive'}
+                    </Tag>
+                  </div>
+                  <PluginActionsDropdown
+                    plugin={plugin}
+                    isOpen={activeDropdownId === plugin.id}
+                    onToggle={handleToggleDropdown}
+                    onToggleStatus={handleToggleStatus}
+                    onUpgrade={handleUpgrade}
+                    onDelete={handleDelete}
+                    canUpdate={canUpdate}
+                    canDelete={canDelete}
                   />
-                  <span className={s.slider}></span>
-                </label>
-              </div>
+                </div>
+              }
+            >
+              <h3 className={s.pluginName}>{plugin.name}</h3>
             </Card.Header>
-            <Card.Body>
-              <p className={s.description}>{plugin.description}</p>
-              <div className={s.actions}>
-                {canUpdate && (
-                  <Button
-                    size='small'
-                    variant='ghost'
-                    onClick={() => handleUpgrade(plugin)}
-                  >
-                    Upgrade
-                  </Button>
-                )}
-                {canDelete && (
-                  <Button
-                    size='small'
-                    variant='ghost'
-                    className={s.deleteBtn}
-                    onClick={() => handleDelete(plugin)}
-                  >
-                    Uninstall
-                  </Button>
-                )}
-              </div>
+            <Card.Body className={s.pluginCardBody}>
+              <p className={s.pluginDescription}>
+                {plugin.description || 'No description available'}
+              </p>
             </Card.Body>
           </Card>
         ))}

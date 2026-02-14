@@ -30,17 +30,10 @@ export default function pluginRoutes(app, { Router }) {
   // Admin / Management
   const adminRouter = Router();
 
-  // List (Admin)
+  // List all plugins (including inactive/missing)
   adminRouter.get(
     '/',
-    requirePermission('plugins:read'), // Assuming read permission exists or use same as create?
-    // Actually, let's check permissions. 'plugins:create', 'plugins:update', 'plugins:delete'.
-    // Maybe 'plugins:read' or just 'plugins:manage'?
-    // For now let's reuse 'plugins:read' if defined in RBAC, or default if admin route implies admin access.
-    // The previous implementation didn't have a list admin route.
-    // Let's assume 'plugins:read' or generally accessible to admins.
-    // Since we don't have rbac definitions here, I'll use requirePermission('plugins:read').
-    // If it fails, user can update RBAC.
+    requirePermission('plugins:read'),
     pluginController.managePlugins,
   );
 
@@ -73,12 +66,12 @@ export default function pluginRoutes(app, { Router }) {
   );
 
   // Mount Admin routes FIRST to avoid collision with /:id
-  router.use('/admin', adminRouter);
+  router.use('/admin/plugins', adminRouter);
 
   // Public / Shared
-  router.get('/', pluginController.listPlugins);
-  router.get('/:id', pluginController.getPlugin);
-  router.use('/:id/static', pluginController.servePluginStatic);
+  router.get('/plugins', pluginController.listPlugins);
+  router.get('/plugins/:id', pluginController.getPlugin);
+  router.use('/plugins/:id/static', pluginController.servePluginStatic);
 
   return router;
 }

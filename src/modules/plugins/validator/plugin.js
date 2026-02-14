@@ -57,9 +57,9 @@ export const pluginFormSchema = ({ i18n, z }) =>
  */
 export const pluginStatusSchema = ({ i18n, z }) =>
   z.object({
-    enabled: z.boolean({
+    is_active: z.boolean({
       required_error: i18n.t(
-        'zod:plugin.enabled_required',
+        'zod:plugin.status_required',
         'Status is required',
       ),
     }),

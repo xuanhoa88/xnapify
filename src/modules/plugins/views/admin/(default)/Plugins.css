@@ -1,108 +1,155 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../shared/renderer/components/variables.css';
+
 .root {
-  padding: var(--spacer-3);
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+/* Filters */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-4);
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4) var(--spacing-6);
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
 }
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: var(--spacer-3);
-  margin-top: var(--spacer-3);
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: var(--spacing-6);
 }
 
-.card {
+/* Plugin Card - Supplementary styles (Card component handles base styling) */
+.pluginCard {
   display: flex;
   flex-direction: column;
-  height: 100%;
 }
 
-.cardTitle {
+/* Card.Header customization for plugin cards */
+.pluginCardHeader {
+  border-bottom: none;
+}
+
+/* Card.Body customization for plugin cards */
+.pluginCardBody {
+  padding-top: 0;
+}
+
+.pluginName {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.pluginDescription {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+}
+
+.headerRight {
   display: flex;
   align-items: center;
-  gap: var(--spacer-2);
+  gap: var(--spacing-2);
+  flex-shrink: 0;
 }
 
-.cardStatus {
-  margin-left: auto;
-}
-
-.description {
-  color: var(--text-secondary);
-  font-size: var(--font-size-sm);
-  margin-bottom: var(--spacer-3);
-  display: box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  flex-grow: 1;
-}
-
-.actions {
+.headerBadges {
   display: flex;
-  gap: var(--spacer-2);
-  margin-top: auto;
-  border-top: 1px solid var(--border-color);
-  padding-top: var(--spacer-2);
+  gap: var(--spacing-2);
+  flex-wrap: nowrap;
 }
 
-.deleteBtn {
-  color: var(--color-danger);
-}
-
-.deleteBtn:hover {
-  background-color: var(--color-danger-bg);
-}
-
+/* Header Actions */
 .headerActions {
   display: flex;
-  gap: var(--spacer-2);
+  gap: var(--spacing-2);
 }
 
-/* Switch Toggle */
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 36px;
-  height: 20px;
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  /* Filters - 2-column grid */
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  /* Grid single column */
+  .grid {
+    grid-template-columns: 1fr;
+    gap: var(--spacing-4);
+  }
+
+  /* Plugin card compact - Card handles base styling */
+  .pluginCard {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .pluginName {
+    font-size: var(--font-size-base);
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .pluginDescription {
+    font-size: var(--font-size-xs);
+    min-height: auto;
+    margin-bottom: var(--spacing-3);
+    line-height: 1.5;
+  }
+
+  .headerRight {
+    gap: var(--spacing-2);
+  }
+
+  .headerBadges {
+    gap: var(--spacing-1);
+  }
 }
 
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
+/* Extra small mobile */
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
 
-.slider {
-  position: absolute;
-  cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: #ccc;
-  transition: 0.4s;
-  border-radius: 20px;
-}
+  .filters {
+    grid-template-columns: 1fr;
+  }
 
-.slider::before {
-  position: absolute;
-  content: '';
-  height: 16px;
-  width: 16px;
-  left: 2px;
-  bottom: 2px;
-  background-color: white;
-  transition: 0.4s;
-  border-radius: 50%;
-}
+  .pluginCard {
+    padding: var(--spacing-2);
+  }
 
-input:checked + .slider {
-  background-color: var(--color-primary);
-}
-
-input:focus + .slider {
-  box-shadow: 0 0 1px var(--color-primary);
-}
-
-input:checked + .slider::before {
-  transform: translateX(16px);
+  .pluginName {
+    font-size: var(--font-size-sm);
+  }
 }

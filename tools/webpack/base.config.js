@@ -486,7 +486,7 @@ function createWebpackConfig(name, options = {}) {
       cache: false,
       devtool: config.env(
         'WEBPACK_DEVTOOL',
-        isDebug ? 'cheap-module-source-map' : false,
+        isDebug ? 'eval-source-map' : false,
       ),
 
       plugins: [new webpack.EnvironmentPlugin({ NODE_ENV: nodeEnv })],

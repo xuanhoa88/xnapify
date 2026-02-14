@@ -37,21 +37,17 @@ export async function init(app, apiRouter, { Router }) {
   const db = app.get('db');
 
   // Run database migrations
-  // Important: Permissions table created by 'users' module creates 'permissions' table.
-  // Our migration '2026.02.12...create-plugins.js' creates 'plugins' and 'user_plugins' tables.
   await db.connection.runMigrations([
     { context: migrationsContext, prefix: 'plugins' },
   ]);
 
   // Run database seeds
-  // Seeds permissions for plugins module
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'plugins' }]);
 
   console.info('✅ [plugins] Migrations and seeds completed');
 
   // Mount plugin routes
-  // The route file handles /admin sub-routes
-  apiRouter.use('/plugins', pluginRoutes(app, { Router }));
+  apiRouter.use(pluginRoutes(app, { Router }));
 
   console.info('✅ [plugins] API routes registered');
 }

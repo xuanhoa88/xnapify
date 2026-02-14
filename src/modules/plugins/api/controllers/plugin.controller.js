@@ -45,7 +45,11 @@ export const getPlugin = async (req, res) => {
   const http = req.app.get('http');
   try {
     const pluginData = await pluginService.getPluginById(
-      { cwd: req.app.get('cwd') },
+      {
+        cwd: req.app.get('cwd'),
+        models: req.app.get('models'),
+        cache: req.app.get('cache'),
+      },
       req.params.id,
     );
     return http.sendSuccess(res, pluginData);
@@ -57,9 +61,9 @@ export const getPlugin = async (req, res) => {
 /**
  * Serve plugin static files
  */
-export const servePluginStatic = (req, res, next) => {
-  const root = pluginService.getPluginStaticDir(
-    { cwd: req.app.get('cwd') },
+export const servePluginStatic = async (req, res, next) => {
+  const root = await pluginService.getPluginStaticDir(
+    { cwd: req.app.get('cwd'), models: req.app.get('models') },
     req.params.id,
   );
   if (!root) {
@@ -72,7 +76,7 @@ export const servePluginStatic = (req, res, next) => {
 /**
  * List all plugins (Admin) - Including inactive/missing
  *
- * @route   GET /api/plugins/admin
+ * @route   GET /api/admin/plugins
  * @access  Admin
  */
 export const managePlugins = async (req, res) => {
@@ -103,11 +107,11 @@ export const createPlugin = async (req, res) => {
     const i18n = req.app.get('i18n');
     const schema = pluginFormSchema({ i18n, z });
 
-    const [isValid, errors, data] = validateForm(() => schema, req.body);
-    if (!isValid) return http.sendValidationError(res, errors[0]);
+    const [isValid, result] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, result);
 
     const models = req.app.get('models');
-    const plugin = await pluginService.createPlugin(data, {
+    const plugin = await pluginService.createPlugin(result, {
       models,
       cache: req.app.get('cache'),
       webhook: req.app.get('webhook'),
@@ -132,10 +136,10 @@ export const updatePlugin = async (req, res) => {
 
     // Partial validation for update
     const schema = pluginFormSchema({ i18n, z }).partial();
-    const [isValid, errors, data] = validateForm(() => schema, req.body);
-    if (!isValid) return http.sendValidationError(res, errors[0]);
+    const [isValid, result] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, result);
 
-    const plugin = await pluginService.updatePlugin(id, data, {
+    const plugin = await pluginService.updatePlugin(id, result, {
       models,
       cache: req.app.get('cache'),
       webhook: req.app.get('webhook'),
@@ -225,25 +229,21 @@ export const updatePluginStatus = async (req, res) => {
     const { id } = req.params;
     const i18n = req.app.get('i18n');
     const schema = pluginStatusSchema({ i18n, z });
-    const [isValid, errors, data] = validateForm(() => schema, req.body);
-
-    if (!isValid) return http.sendValidationError(res, errors[0]);
-
-    const { enabled } = data; // Schema uses 'enabled', but route/service might use 'is_active' or we map it
-    // Service togglePluginStatus takes (id, isActive, ...)
-    // Let's assume schema matches payload.
-    // Original code expected 'is_active'.
-    // New schema defines 'enabled'.
-    // Logic: map enabled -> is_active if needed.
-    const is_active = enabled; // Schema key is 'enabled'
+    const [isValid, result] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, result);
 
     const models = req.app.get('models');
-    const plugin = await pluginService.togglePluginStatus(id, is_active, {
-      models,
-      cache: req.app.get('cache'),
-      webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
-    });
+    const plugin = await pluginService.togglePluginStatus(
+      id,
+      result.is_active,
+      {
+        models,
+        cache: req.app.get('cache'),
+        cwd: req.app.get('cwd'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user ? req.user.id : null,
+      },
+    );
 
     return http.sendSuccess(res, { plugin });
   } catch (error) {

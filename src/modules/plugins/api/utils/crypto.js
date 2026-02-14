@@ -36,13 +36,17 @@ export function encryptPluginId(id) {
  * @returns {string|null} Plain plugin ID or null if invalid
  */
 export function decryptPluginId(token) {
+  // Encrypted IDs are pure hex — skip if it contains non-hex chars (e.g. UUID dashes)
+  if (!token || !/^[0-9a-f]+$/i.test(token)) {
+    return null;
+  }
+
   try {
     const decipher = crypto.createDecipheriv('aes-256-ecb', PLUGIN_KEY, null);
     let decrypted = decipher.update(token, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;
-  } catch (error) {
-    console.warn('Failed to decrypt plugin ID:', error.message);
+  } catch {
     return null;
   }
 }
