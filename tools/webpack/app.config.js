@@ -171,9 +171,8 @@ const serverConfig = createWebpackConfig('server', {
     path: config.BUILD_DIR,
     filename: '[name].js',
     libraryTarget: 'commonjs2',
-    sourceMapFilename: '[file].map',
   },
-  devtool: 'source-map',
+
   module: {
     rules: [createCSSRule({ exportOnlyLocals: true })],
   },
