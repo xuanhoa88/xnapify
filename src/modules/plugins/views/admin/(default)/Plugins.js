@@ -101,6 +101,7 @@ function Plugins() {
         await dispatch(
           togglePluginStatus({ id: plugin.id, isActive }),
         ).unwrap();
+        dispatch(fetchPlugins());
       } catch (error) {
         console.error('Toggle status failed', error);
       }
@@ -112,6 +113,7 @@ function Plugins() {
     async plugin => {
       try {
         await dispatch(upgradePlugin({ id: plugin.id })).unwrap();
+        dispatch(fetchPlugins());
       } catch (error) {
         console.error('Upgrade failed', error);
       }

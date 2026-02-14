@@ -414,7 +414,7 @@ export async function getPluginById({ cwd, models, cache }, id) {
 
   try {
     const assetsPath = path.join(resolvedDir, pluginKey, 'plugin.css');
-    await fs.access(assetsPath);
+    await fs.promises.access(assetsPath);
     manifest.cssFiles = [path.basename(assetsPath)];
   } catch {
     // plugin.css might not exist if plugin has no CSS or build failed
@@ -615,7 +615,7 @@ export async function installPluginFromPackage(
 export async function togglePluginStatus(
   id,
   isActive,
-  { models, cache, cwd, webhook, actorId },
+  { models, cache, cwd, pluginManager, webhook, actorId },
 ) {
   const { Plugin } = models;
 
@@ -666,6 +666,40 @@ export async function togglePluginStatus(
 
   await plugin.update({ is_active: isActive });
   if (cache) await invalidateCache(cache, id);
+
+  // Notify Plugin Manager to load/unload the plugin
+  if (pluginManager) {
+    try {
+      if (isActive) {
+        // Use reloadPlugin to ensure a clean load (handles stale state)
+        await pluginManager.reloadPlugin(plugin.id);
+
+        // If loadPlugin hit an early return (no server entry point),
+        // plugin:loaded may not have fired — manually emit it so the
+        // CSS entry-point handler in ServerPluginManager picks it up.
+        const metadata = pluginManager.getPluginMetadata(plugin.id);
+        if (
+          metadata &&
+          metadata.manifest &&
+          Array.isArray(metadata.manifest.cssFiles) &&
+          !pluginManager.isPluginLoaded(plugin.id)
+        ) {
+          await pluginManager.emit('plugin:loaded', { id: plugin.id });
+        }
+      } else if (pluginManager.isPluginLoaded(plugin.id)) {
+        // Plugin is actively loaded — full unload lifecycle
+        await pluginManager.unloadPlugin(plugin.id);
+      } else {
+        // Plugin was defined but not activated — emit event for cleanup
+        await pluginManager.emit('plugin:unloaded', { id: plugin.id });
+      }
+    } catch (err) {
+      console.warn(
+        `[pluginService] Failed to ${isActive ? 'load' : 'unload'} plugin ${plugin.id} via PluginManager:`,
+        err.message,
+      );
+    }
+  }
 
   await logPluginActivity(
     webhook,

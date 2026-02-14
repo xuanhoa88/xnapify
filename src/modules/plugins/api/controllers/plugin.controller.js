@@ -240,6 +240,7 @@ export const updatePluginStatus = async (req, res) => {
         models,
         cache: req.app.get('cache'),
         cwd: req.app.get('cwd'),
+        pluginManager: req.app.get('plugin manager'),
         webhook: req.app.get('webhook'),
         actorId: req.user ? req.user.id : null,
       },
