@@ -46,7 +46,7 @@ function PluginActionsDropdown({
           </ActionsDropdown.Item>
         )}
 
-        {canDelete && !plugin.isLocal && (
+        {canDelete && (
           <>
             <ActionsDropdown.Divider />
             <ActionsDropdown.Item

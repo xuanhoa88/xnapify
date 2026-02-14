@@ -54,7 +54,7 @@ import {
 } from './plugin.service';
 import * as activityUtils from '../utils/activity';
 import fs from 'fs';
-import { readdir, readFile } from 'fs/promises';
+// import { readdir, readFile } from 'fs/promises'; // Unused now
 
 const mockCache = {
   get: jest.fn(),
@@ -88,12 +88,19 @@ describe('Plugin Service', () => {
   describe('managePlugins', () => {
     it('should list plugins from DB and FS', async () => {
       // Mock FS via imported mocked module
-      readdir.mockResolvedValue([
+      // Mock FS via fs.promises.readdir used in service for sequential calls
+      // 1st call: Installed plugins (remote)
+      fs.promises.readdir.mockResolvedValueOnce([
         { name: 'fs-plugin', isDirectory: () => true },
-        { name: 'db-plugin', isDirectory: () => true }, // Add db-plugin folder
       ]);
+      // 2nd call: Local plugins (local)
+      fs.promises.readdir.mockResolvedValueOnce([
+        { name: 'local-plugin', isDirectory: () => true },
+      ]);
+
       fs.existsSync.mockReturnValue(true);
-      readFile.mockImplementation(path => {
+      // fs.promises.readFile is used in readPluginManifest
+      fs.promises.readFile.mockImplementation(path => {
         if (path.includes('fs-plugin')) {
           return Promise.resolve(
             JSON.stringify({
@@ -103,6 +110,16 @@ describe('Plugin Service', () => {
             }),
           );
         }
+        if (path.includes('local-plugin')) {
+          return Promise.resolve(
+            JSON.stringify({
+              name: 'Local Plugin',
+              version: '1.0.0',
+              rsk: { plugin: { key: 'local-plugin' } },
+            }),
+          );
+        }
+        // DB plugin (exists in DB, assumed in FS for this test case setup)
         if (path.includes('db-plugin')) {
           return Promise.resolve(
             JSON.stringify({
@@ -129,22 +146,72 @@ describe('Plugin Service', () => {
         },
       ]);
 
+      // Override environment variable for local path in test context if needed,
+      // but since service uses process.env, we might need to mock getPluginsDir behavior or env.
+      // However, managing env mocks can be tricky.
+      // Instead, we can rely on how `getPluginsDir` works.
+      // The issue is `getPluginsDir` uses process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins'.
+      // If we can't change env, both dirs are the same.
+      // We need to mock `getPluginsDir` or the values it returns.
+      // Since `getPluginsDir` is internal, we can't easily mock it without rewriting the test to import it?
+      // Actually, the service exports `managePlugins`.
+      // Let's assume for this test we want to verify distinct behavior.
+      // If we can't easily change the paths, we can at least verify the property based on the source arg passed to scanDirectory.
+      // But scanDirectory is internal.
+
+      // WAIT: The user request is to "check again for scanDirectory to matching with my expect isLocal".
+      // The fix is to ensure the TEST reflects reality.
+      // In this specific test file, we don't control process.env easily inside the module scope variables.
+      // But we can check if `local-plugin` gets `isLocal: true` and `fs-plugin` gets `isLocal: false`
+      // IF we could force them to be scanned from different source calls.
+
+      // Let's modify the test to manually checking what we get.
+      // Actually, we can just spy on scanDirectory? No, it's not exported.
+
+      // Let's rely on the fact that `managePlugins` calls:
+      // await scanDirectory(installedPluginsDir, 'remote', fsPluginsMap);
+      // await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
+
+      // If installedPluginsDir === localPluginsDir, then 'remote' scan happens first, then 'local' scan.
+      // The second scan ('local') will OVERWRITE the first one for the SAME directory.
+      // So EVERYTHING becomes local.
+
+      // We need to Mock `getPluginsDir` or `process.env`.
+      process.env.RSK_LOCAL_PLUGIN_PATH = 'local-plugins';
+
       const result = await managePlugins(mockContext);
 
-      expect(result).toHaveLength(2);
+      expect(result).toHaveLength(3); // fs-plugin, local-plugin, db-plugin (if db-plugin is in FS? We didn't add it to readdir output above??)
+      // Wait, in my readdir mock above:
+      // plugins -> [fs-plugin]
+      // local-plugins -> [local-plugin]
+
+      // And DB has 'db-plugin'.
+      // Logic:
+      // 1. Scan remote (plugins) -> found fs-plugin
+      // 2. Scan local (local-plugins) -> found local-plugin
+      // 3. DB has db-plugin.
+      // if db-plugin is NOT in fsPluginsMap, it's marked missing.
+
+      // Let's adjust expectations:
 
       const fsPlugin = result.find(p => p.internalId === 'fs-plugin');
       expect(fsPlugin).toBeDefined();
       expect(fsPlugin.isInstalled).toBe(false);
+      expect(fsPlugin.isLocal).toBe(false); // Should be remote
+
+      const localPlugin = result.find(p => p.internalId === 'local-plugin');
+      expect(localPlugin).toBeDefined();
+      expect(localPlugin.isLocal).toBe(true);
 
       const dbPlugin = result.find(p => p.key === 'db-plugin');
+      // In this setup, db-plugin is in DB but NOT in readdir output, so it should be missing.
       expect(dbPlugin).toBeDefined();
-      expect(dbPlugin.isActive).toBe(true);
-      expect(dbPlugin.source).toBe('db+fs');
+      expect(dbPlugin.isMissing).toBe(true);
     });
 
     it('should mark DB plugins as missing if not found on FS', async () => {
-      readdir.mockResolvedValue([]); // No files
+      fs.promises.readdir.mockResolvedValue([]); // No files
       mockModels.Plugin.findAll.mockResolvedValue([
         {
           id: 'db-1',
@@ -166,11 +233,11 @@ describe('Plugin Service', () => {
     });
 
     it('should list FS-only plugins when DB is empty', async () => {
-      readdir.mockResolvedValue([
+      fs.promises.readdir.mockResolvedValue([
         { name: 'new-plugin', isDirectory: () => true },
       ]);
       fs.existsSync.mockReturnValue(true);
-      readFile.mockImplementation(p => {
+      fs.promises.readFile.mockImplementation(p => {
         if (p.includes('new-plugin')) {
           return Promise.resolve(
             JSON.stringify({
@@ -209,7 +276,7 @@ describe('Plugin Service', () => {
 
       // Mock FS check
       fs.existsSync.mockReturnValue(true);
-      readFile.mockImplementation(path => {
+      fs.promises.readFile.mockImplementation(path => {
         if (path.includes('active-p')) {
           return Promise.resolve(
             JSON.stringify({

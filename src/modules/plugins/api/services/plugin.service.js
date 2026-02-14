@@ -79,7 +79,7 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
             id: encryptedId,
             internalId: dirent.name,
             isInstalled: false, // Default, will be overwritten by DB check
-            source, // 'fs' or 'local'
+            source, // 'remote' or 'local'
             isLocal: source === 'local',
           });
         }
@@ -125,9 +125,9 @@ export async function managePlugins({ models, cwd }) {
   const plugins = [];
   const fsPluginsMap = new Map();
 
-  // 1. Scan File Systems (FS & Local)
+  // 1. Scan File Systems (Remote & Local)
   // This populates fsPluginsMap with what's physically available
-  await scanDirectory(installedPluginsDir, 'fs', fsPluginsMap);
+  await scanDirectory(installedPluginsDir, 'remote', fsPluginsMap);
   await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
 
   // 2. Fetch from DB
@@ -149,7 +149,7 @@ export async function managePlugins({ models, cwd }) {
         dbId: dbPlugin.id,
         isActive: dbPlugin.is_active,
         isInstalled: true,
-        source: 'db+fs',
+        source: 'db+remote',
         isMissing: false,
       });
     } else {
@@ -245,7 +245,7 @@ export async function getActivePlugins({ models, cache, cwd }) {
         dbId: dbPlugin.id,
         isActive: true,
         isInstalled: true,
-        source: isLocal ? 'local' : 'fs',
+        source: isLocal ? 'local' : 'remote',
         isLocal,
         isMissing: false,
       });
