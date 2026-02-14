@@ -871,9 +871,10 @@ async function launch(app, server, baseUrl, port, host) {
   console.info(`Base URL      : ${baseUrl}`);
   console.info(`API URL       : ${baseUrl}${config.apiPrefix}`);
   console.info(`WebSocket URL : ${wsUrl}${config.wsPath}`);
-  console.info(
-    `Node-RED URL  : ${baseUrl}${appState.nodeRED.settings.httpAdminRoot}`,
-  );
+  const nodeRedRoot = appState.nodeRED.settings
+    ? appState.nodeRED.settings.httpAdminRoot
+    : '/~/red/admin';
+  console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
   console.info(separator);
 
   return server;
@@ -1071,7 +1072,6 @@ export async function bootstrap(app, server, options = {}) {
   await api.default(guardControl, {
     ...config,
     port,
-    nodeRED: appState.nodeRED,
     host: normalizedHost,
   });
 
@@ -1218,6 +1218,18 @@ if (module.hot) {
 
     clearCaches();
     console.log('🔄 HMR: Caches cleared');
+  });
+
+  // Explicitly shutdown Node-RED before the old module is replaced.
+  // The new module's bootstrap() will call nodeRED.init() which auto-starts
+  // since the server is already listening.
+  module.hot.dispose(() => {
+    if (appState.nodeRED) {
+      console.log('🔄 HMR: Shutting down Node-RED for restart...');
+      appState.nodeRED.shutdown().catch(err => {
+        console.warn('⚠️  HMR: Node-RED shutdown error:', err.message);
+      });
+    }
   });
 
   exports.hot = module.hot;

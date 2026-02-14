@@ -110,8 +110,9 @@ async function setupApiRoutes(app, config) {
  * @returns {Promise<void>}
  */
 async function setupNodeRED(app, config) {
-  if (config.nodeRED) {
-    await config.nodeRED.setupApiProxy(app, config.apiPrefix);
+  const nodeRED = app.get('nodeRED');
+  if (nodeRED) {
+    await nodeRED.setupApiProxy(app, config.apiPrefix);
   }
 }
 
@@ -125,7 +126,6 @@ async function setupNodeRED(app, config) {
  * @param {object} app - Express app instance
  * @param {object} config - Configuration object
  * @param {string} [config.apiPrefix='/api'] - API route prefix
- * @param {object} [config.nodeRED] - Node-RED configuration
  * @returns {Promise<object>} App instance
  * @throws {Error} If initialization fails
  */

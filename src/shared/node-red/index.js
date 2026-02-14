@@ -305,13 +305,6 @@ export class NodeRedManager {
    * Setup API proxy middleware
    */
   setupApiProxy(app, apiPrefix) {
-    if (!this._settings) {
-      throw new NodeRedError(
-        'Cannot setup proxy before initialization',
-        'NOT_INITIALIZED',
-      );
-    }
-
     app.use(apiPrefix, (req, res, next) => {
       if (!this.isReady) {
         return res.status(503).json({
@@ -337,7 +330,8 @@ export class NodeRedManager {
       }
     });
 
-    Logger.network(`Proxy: ${apiPrefix}/* → ${this._settings.httpNodeRoot}/*`);
+    const root = this._settings ? this._settings.httpNodeRoot : '(pending)';
+    Logger.network(`Proxy: ${apiPrefix}/* → ${root}/*`);
   }
 
   // ========================================================================
