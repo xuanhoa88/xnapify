@@ -267,81 +267,78 @@ export async function getActivePlugins({ models, cache, cwd }) {
 }
 
 /**
- * Create/Import a plugin into the database
- * @param {Object} data - Plugin data
+ * Delete (uninstall) a plugin — removes DB record and FS directory.
+ *
+ * Follows the same lookup pattern as `togglePluginStatus`:
+ *  1. Try `findByPk(id)` for installed plugins.
+ *  2. Fall back to `decryptPluginId` for FS-only plugins.
+ *  3. Unload via `pluginManager` before deletion.
+ *  4. Remove files from whichever directory the plugin lives in.
+ *
+ * @param {string} id - Plugin UUID or encrypted plugin key
  * @param {Object} context - App context
- */
-export async function createPlugin(data, { models, cache, webhook, actorId }) {
-  const { Plugin } = models;
-  const plugin = await Plugin.create(data);
-  if (cache) await invalidateCache(cache);
-
-  await logPluginActivity(webhook, 'created', plugin.id, data, actorId);
-
-  return plugin;
-}
-
-/**
- * Update a plugin (Called by Admin UI for metadata updates)
- * @param {string} id - Plugin UUID
- * @param {Object} data - Update data
- * @param {Object} context - App context with webhook and actorId
- */
-export async function updatePlugin(
-  id,
-  data,
-  { models, cache, webhook, actorId },
-) {
-  const { Plugin } = models;
-  const plugin = await Plugin.findByPk(id);
-  if (!plugin) throw new Error('Plugin not found');
-
-  await plugin.update(data);
-  if (cache) await invalidateCache(cache);
-
-  await logPluginActivity(webhook, 'updated', plugin.id, data, actorId);
-
-  return plugin;
-}
-
-/**
- * Delete a plugin from database and FS
- * @param {string} id - Plugin UUID
- * @param {Object} context - App context with webhook and actorId
  */
 export async function deletePlugin(
   id,
-  { models, cache, cwd, webhook, actorId },
+  { models, cache, cwd, pluginManager, webhook, actorId },
 ) {
   const { Plugin } = models;
-  const plugin = await Plugin.findByPk(id);
-  if (!plugin) throw new Error('Plugin not found');
 
-  // Delete from FS
-  // Start by finding the directory.
-  // We need to know if it's installed or local.
-  // Actually local plugins shouldn't be deleted via API?
-  // Let's assume we can only delete user installed plugins for now or check paths.
-  // Current implementation just deletes DB record.
-  // User requested "If delete, total remove files and db record".
+  // 1. Resolve plugin record (same pattern as togglePluginStatus)
+  let plugin = await Plugin.findByPk(id);
 
-  const pluginsDir = getPluginsDir(cwd, PLUGIN_PATH);
-  const pluginDir = path.join(pluginsDir, plugin.key);
-
-  // Safety check: Don't delete outside plugins dir?
-  // fs.remove should handle safety if implemented correctly, but explicit check is good.
-  const relative = path.relative(pluginsDir, pluginDir);
-  if (relative && !relative.startsWith('..') && !path.isAbsolute(relative)) {
-    if (fs.existsSync(pluginDir)) {
-      await fs.promises.rm(pluginDir, { recursive: true, force: true });
+  if (!plugin) {
+    const pluginKey = decryptPluginId(id);
+    if (pluginKey) {
+      plugin = await Plugin.findOne({ where: { key: pluginKey } });
     }
-  } else {
-    // If it's a local plugin (symlinked or mapped), we shouldn't delete the source?
-    // The key might not map to pluginsDir.
-    // Let's check where it is.
-    // For now, if it is in `src/modules/plugins`, we delete it.
   }
 
+  if (!plugin) {
+    throw new Error('Plugin not found');
+  }
+
+  // 2. Unload the plugin via PluginManager before deleting files
+  if (pluginManager) {
+    try {
+      if (pluginManager.isPluginLoaded(plugin.id)) {
+        await pluginManager.unloadPlugin(plugin.id);
+      } else {
+        await pluginManager.emit('plugin:unloaded', { id: plugin.id });
+      }
+    } catch (err) {
+      console.warn(
+        `[pluginService] Failed to unload plugin ${plugin.id} via PluginManager:`,
+        err.message,
+      );
+    }
+  }
+
+  // 3. Delete from FS — check both installed and dev directories
+  if (cwd) {
+    const dirs = [
+      getPluginsDir(cwd, PLUGIN_PATH),
+      getPluginsDir(cwd, DEV_PLUGIN_PATH),
+    ];
+
+    for (const baseDir of dirs) {
+      const pluginDir = path.join(baseDir, plugin.key);
+      const relative = path.relative(baseDir, pluginDir);
+
+      // Safety: only delete if the resolved path is inside the base dir
+      if (
+        relative &&
+        !relative.startsWith('..') &&
+        !path.isAbsolute(relative)
+      ) {
+        if (fs.existsSync(pluginDir)) {
+          await fs.promises.rm(pluginDir, { recursive: true, force: true });
+        }
+      }
+    }
+  }
+
+  // 4. Remove DB record and invalidate cache
   await plugin.destroy();
   if (cache) await invalidateCache(cache);
 
@@ -469,13 +466,23 @@ export async function getPluginStaticDir({ cwd, models }, id) {
 }
 
 /**
- * Install plugin from uploaded package (zip)
+ * Install a plugin from an uploaded package (zip).
+ *
+ * Steps:
+ *  1. Extract the zip to a temp directory.
+ *  2. Read and validate the manifest (package.json).
+ *  3. Move files to the final plugins directory.
+ *  4. Create or update the DB record.
+ *  5. Load the plugin via `pluginManager`.
+ *  6. Log activity and invalidate cache.
+ *
+ * @param {Object}  file    - Uploaded file object ({ path, originalname })
+ * @param {Object}  context - App context
  */
 export async function installPluginFromPackage(
   file,
-  context, // { models, cache, fs, cwd, webhook, actorId }
+  { models, cache, cwd, fs: fsEngine, pluginManager, webhook, actorId },
 ) {
-  const { models, cache, fs: fsEngine, cwd } = context;
   if (!file || !file.path) {
     throw new Error('No file provided');
   }
@@ -504,10 +511,10 @@ export async function installPluginFromPackage(
       await fs.promises.mkdir(tmpDir, { recursive: true });
     }
 
-    // 2. Extract using Shared FS Engine
+    // 2. Extract using shared FS engine
     await fsEngine.extract(tempPath, tempExtractDir);
 
-    // 3. Read package.json (manifest)
+    // 3. Read manifest (package.json)
     let manifestPath = path.join(tempExtractDir, 'package.json');
     let pluginRoot = tempExtractDir;
 
@@ -530,14 +537,14 @@ export async function installPluginFromPackage(
       await fs.promises.readFile(manifestPath, 'utf8'),
     );
 
-    // 4. Validate Manifest
-    if (!manifest.name || !manifest.version || !manifest.rapid_plugin) {
+    // 4. Validate manifest
+    if (!manifest.name || !manifest.version) {
       throw new Error(
-        'Invalid plugin manifest: missing required fields (name, version, rapid_plugin)',
+        'Invalid plugin manifest: missing required fields (name, version)',
       );
     }
     const pluginKey =
-      manifest.rapid_plugin.key ||
+      (manifest.rsk && manifest.rsk.plugin && manifest.rsk.plugin.key) ||
       manifest.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
     // 5. Move to final destination
@@ -549,7 +556,7 @@ export async function installPluginFromPackage(
 
     await fs.promises.rename(pluginRoot, finalPluginDir);
 
-    // 6. Create/Update DB Record
+    // 6. Create or update DB record
     const [plugin, created] = await Plugin.findOrCreate({
       where: { key: pluginKey },
       defaults: {
@@ -571,39 +578,57 @@ export async function installPluginFromPackage(
 
     if (cache) await invalidateCache(cache);
 
-    // Log Activity
-    // Note: installPluginFromPackage signature needs update currently doesn't accept webhook/actorId
-    // We'll update usage in controller
-    if (context.webhook) {
-      await logPluginActivity(
-        context.webhook,
-        created ? 'installed' : 'upgraded',
-        plugin.id,
-        { version: manifest.version },
-        context.actorId,
-      );
+    // 7. Load the plugin via PluginManager
+    if (pluginManager) {
+      try {
+        await pluginManager.reloadPlugin(plugin.id);
+
+        const metadata = pluginManager.getPluginMetadata(plugin.id);
+        if (
+          metadata &&
+          metadata.manifest &&
+          Array.isArray(metadata.manifest.cssFiles) &&
+          !pluginManager.isPluginLoaded(plugin.id)
+        ) {
+          await pluginManager.emit('plugin:loaded', { id: plugin.id });
+        }
+      } catch (err) {
+        console.warn(
+          `[pluginService] Failed to load plugin ${plugin.id} via PluginManager:`,
+          err.message,
+        );
+      }
     }
+
+    // 8. Log activity
+    await logPluginActivity(
+      webhook,
+      created ? 'installed' : 'upgraded',
+      plugin.id,
+      { version: manifest.version },
+      actorId,
+    );
+
     return plugin;
   } catch (err) {
     console.error('Plugin install error:', err);
     throw err;
   } finally {
-    // Cleanup temp
+    // Cleanup temp files
     try {
       if (fs.existsSync(tempExtractDir)) {
         await fs.promises.rm(tempExtractDir, { recursive: true, force: true });
       }
 
-      // Attempt to clean up uploaded file via fs engine if it provides remove
       if (file.fileName && fsEngine && typeof fsEngine.remove === 'function') {
         await fsEngine.remove(file.fileName);
       }
-      // Also try to unlink local path if it exists and wasn't removed (fallback)
+
       if (fs.existsSync(tempPath)) {
         await fs.promises.unlink(tempPath);
       }
-    } catch (e) {
-      /* ignore */
+    } catch (_) {
+      /* cleanup errors are non-fatal */
     }
   }
 }
@@ -708,6 +733,42 @@ export async function togglePluginStatus(
     { isActive },
     actorId,
   );
+
+  return plugin;
+}
+
+/**
+ * Upgrade plugin metadata
+ * @param {string} id - Plugin UUID or encrypted key
+ * @param {Object} data - Update data (name, description, version)
+ * @param {Object} context - App context
+ */
+export async function upgradePlugin(
+  id,
+  data,
+  { models, cache, webhook, actorId },
+) {
+  const { Plugin } = models;
+
+  // Try finding by DB primary key first (for installed plugins)
+  let plugin = await Plugin.findByPk(id);
+
+  // If not found, the ID might be an encrypted plugin key
+  if (!plugin) {
+    const pluginKey = decryptPluginId(id);
+    if (pluginKey) {
+      plugin = await Plugin.findOne({ where: { key: pluginKey } });
+    }
+  }
+
+  if (!plugin) {
+    throw new Error('Plugin not found');
+  }
+
+  await plugin.update(data);
+  if (cache) await invalidateCache(cache, id);
+
+  await logPluginActivity(webhook, 'upgraded', plugin.id, data, actorId);
 
   return plugin;
 }

@@ -33,49 +33,6 @@
 }
 
 /* Plugin Card - Supplementary styles (Card component handles base styling) */
-.pluginCard {
-  display: flex;
-  flex-direction: column;
-}
-
-/* Card.Header customization for plugin cards */
-.pluginCardHeader {
-  border-bottom: none;
-}
-
-/* Card.Body customization for plugin cards */
-.pluginCardBody {
-  padding-top: 0;
-}
-
-.pluginName {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
-  color: var(--color-text-primary);
-  line-height: 1.4;
-  word-break: break-word;
-}
-
-.pluginDescription {
-  margin: 0 0 var(--spacing-3) 0;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  font-size: var(--font-size-sm);
-}
-
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-2);
-  flex-shrink: 0;
-}
-
-.headerBadges {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: nowrap;
-}
 
 /* Header Actions */
 .headerActions {
@@ -106,33 +63,6 @@
     grid-template-columns: 1fr;
     gap: var(--spacing-4);
   }
-
-  /* Plugin card compact - Card handles base styling */
-  .pluginCard {
-    padding: var(--spacing-4);
-    border-radius: var(--radius-lg);
-  }
-
-  .pluginName {
-    font-size: var(--font-size-base);
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .pluginDescription {
-    font-size: var(--font-size-xs);
-    min-height: auto;
-    margin-bottom: var(--spacing-3);
-    line-height: 1.5;
-  }
-
-  .headerRight {
-    gap: var(--spacing-2);
-  }
-
-  .headerBadges {
-    gap: var(--spacing-1);
-  }
 }
 
 /* Extra small mobile */
@@ -143,13 +73,5 @@
 
   .filters {
     grid-template-columns: 1fr;
-  }
-
-  .pluginCard {
-    padding: var(--spacing-2);
-  }
-
-  .pluginName {
-    font-size: var(--font-size-sm);
   }
 }

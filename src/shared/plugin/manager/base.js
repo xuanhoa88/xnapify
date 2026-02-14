@@ -719,7 +719,19 @@ export class BasePluginManager {
               console.log(`[PluginManager] Initializing plugin: ${plugin.id}`);
             }
             if (typeof plugin.init === 'function') {
-              await plugin.init(reg, this[PLUGIN_CONTEXT]);
+              try {
+                await plugin.init(reg, this[PLUGIN_CONTEXT]);
+              } catch (error) {
+                console.error(
+                  `[PluginManager] Failed to initialize plugin ${plugin.id}:`,
+                  error,
+                );
+                await this.emit('plugin:init-error', {
+                  id: plugin.id,
+                  error,
+                  phase: 'init',
+                });
+              }
             } else if (__DEV__) {
               console.warn(
                 `[PluginManager] Plugin ${plugin.id} has no 'init' method`,
@@ -731,7 +743,19 @@ export class BasePluginManager {
               console.log(`[PluginManager] Destroying plugin: ${plugin.id}`);
             }
             if (typeof plugin.destroy === 'function') {
-              await plugin.destroy(reg, this[PLUGIN_CONTEXT]);
+              try {
+                await plugin.destroy(reg, this[PLUGIN_CONTEXT]);
+              } catch (error) {
+                console.error(
+                  `[PluginManager] Failed to destroy plugin ${plugin.id}:`,
+                  error,
+                );
+                await this.emit('plugin:destroy-error', {
+                  id: plugin.id,
+                  error,
+                  phase: 'destroy',
+                });
+              }
             } else if (__DEV__) {
               console.warn(
                 `[PluginManager] Plugin ${plugin.id} has no 'destroy' method`,

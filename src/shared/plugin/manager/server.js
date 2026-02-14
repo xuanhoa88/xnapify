@@ -27,19 +27,17 @@ class ServerPluginManager extends BasePluginManager {
 
     // Clean up API instances when plugin is unloaded
     this.on('plugin:unloaded', async ({ id }) => {
-      const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
-      if (apiPlugin && typeof apiPlugin.destroy === 'function') {
-        try {
+      try {
+        const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
+        if (apiPlugin && typeof apiPlugin.destroy === 'function') {
           await apiPlugin.destroy(registry, this[PLUGIN_CONTEXT]);
           if (__DEV__) {
             console.log(`[PluginManager] Destroyed API for: ${id}`);
           }
-        } catch (err) {
-          console.error(
-            `[PluginManager] Failed to destroy API for ${id}:`,
-            err,
-          );
         }
+      } catch (err) {
+        console.error(`[PluginManager] Failed to destroy API for ${id}:`, err);
+        this.emit('plugin:error', { id, error: err, phase: 'api-destroy' });
       }
       this[PLUGIN_API_INSTANCES].delete(id);
       this[PLUGIN_CSS_ENTRY_POINTS].delete(id);
@@ -47,14 +45,24 @@ class ServerPluginManager extends BasePluginManager {
 
     // Store CSS entry points when plugin is loaded
     this.on('plugin:loaded', async ({ id }) => {
-      const metadata = this[PLUGIN_METADATA].get(id);
-      const manifest = metadata && metadata.manifest;
+      try {
+        const metadata = this[PLUGIN_METADATA].get(id);
+        const manifest = metadata && metadata.manifest;
 
-      if (manifest && Array.isArray(manifest.cssFiles)) {
-        this[PLUGIN_CSS_ENTRY_POINTS].set(
-          id,
-          manifest.cssFiles.map(cssFile => this.getPluginAssetUrl(id, cssFile)),
+        if (manifest && Array.isArray(manifest.cssFiles)) {
+          this[PLUGIN_CSS_ENTRY_POINTS].set(
+            id,
+            manifest.cssFiles.map(cssFile =>
+              this.getPluginAssetUrl(id, cssFile),
+            ),
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[PluginManager] Failed to store CSS entry points for ${id}:`,
+          err,
         );
+        this.emit('plugin:error', { id, error: err, phase: 'css-setup' });
       }
     });
 
@@ -244,9 +252,17 @@ class ServerPluginManager extends BasePluginManager {
             if (__DEV__) {
               console.log(`[ServerPluginManager] Booting API for ${id}`);
             }
-            await pluginApi.init(registry, this[PLUGIN_CONTEXT]);
-            // Store API instance for destroy during unload
-            this[PLUGIN_API_INSTANCES].set(id, pluginApi);
+            try {
+              await pluginApi.init(registry, this[PLUGIN_CONTEXT]);
+              // Store API instance for destroy during unload
+              this[PLUGIN_API_INSTANCES].set(id, pluginApi);
+            } catch (error) {
+              console.error(
+                `[ServerPluginManager] Failed to boot API for ${id}:`,
+                error,
+              );
+              this.emit('plugin:error', { id, error, phase: 'api-boot' });
+            }
           } else {
             console.warn(
               `[ServerPluginManager] Plugin ${id} has no init method in API module`,

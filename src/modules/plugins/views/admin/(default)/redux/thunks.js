@@ -54,12 +54,13 @@ export const uploadPlugin = createAsyncThunk(
  */
 export const upgradePlugin = createAsyncThunk(
   'admin/plugins/upgradePlugin',
-  async (id, { extra: { fetch }, rejectWithValue }) => {
+  async ({ id, data }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/admin/plugins/${id}/upgrade`, {
-        method: 'POST',
+      const { data: responseData } = await fetch(`/api/admin/plugins/${id}`, {
+        method: 'PATCH',
+        body: data,
       });
-      return data.plugin;
+      return responseData.plugin;
     } catch (error) {
       return rejectWithValue(error.message);
     }

@@ -1,0 +1,154 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../../shared/renderer/components/variables.css';
+
+.root {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  transition: all 0.2s ease-in-out;
+}
+
+.root.loading {
+  pointer-events: none;
+}
+
+.header {
+  border-bottom: none;
+}
+
+.body {
+  padding-top: 0;
+}
+
+.name {
+  margin: 0;
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-bold);
+  color: var(--color-text-primary);
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.description {
+  margin: 0 0 var(--spacing-3) 0;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: var(--font-size-sm);
+}
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-2);
+  flex-shrink: 0;
+}
+
+.badges {
+  display: flex;
+  gap: var(--spacing-2);
+  flex-wrap: nowrap;
+}
+
+.version {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  font-family: var(--font-family-mono);
+  margin-right: var(--spacing-2);
+}
+
+/* Skeleton Styles */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-background-secondary) 0%,
+    var(--color-background-tertiary) 50%,
+    var(--color-background-secondary) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.skeletonTitle {
+  width: 120px;
+  height: 24px;
+}
+
+.skeletonText {
+  width: 100%;
+  height: 16px;
+  margin-bottom: var(--spacing-2);
+}
+
+.skeletonText:last-child {
+  width: 80%;
+}
+
+.skeletonBadge {
+  width: 60px;
+  height: 24px;
+  border-radius: var(--radius-full);
+}
+
+.skeletonVersion {
+  width: 40px;
+  height: 16px;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-4);
+    border-radius: var(--radius-lg);
+  }
+
+  .name {
+    font-size: var(--font-size-base);
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .description {
+    font-size: var(--font-size-xs);
+    min-height: auto;
+    margin-bottom: var(--spacing-3);
+    line-height: 1.5;
+  }
+
+  .headerRight {
+    gap: var(--spacing-2);
+  }
+
+  .badges {
+    gap: var(--spacing-1);
+  }
+}
+
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .name {
+    font-size: var(--font-size-sm);
+  }
+}

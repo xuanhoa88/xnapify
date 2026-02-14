@@ -19,6 +19,15 @@
   line-height: 1.4;
 }
 
+.interactive {
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.interactive:hover {
+  opacity: 0.8;
+}
+
 /* Variant: Primary (blue) */
 .variantPrimary {
   background: var(--color-primary-bg);

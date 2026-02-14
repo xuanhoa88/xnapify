@@ -17,27 +17,35 @@ class ClientPluginManager extends BasePluginManager {
 
     // Clean up DOM resources when plugin is unloaded
     this.on('plugin:unloaded', ({ id }) => {
-      // Remove CSS links (SSR-injected or dynamically added)
-      const cssLinks = document.querySelectorAll(
-        `link[href^="/api/plugins/${id}/static/"][rel="stylesheet"]`,
-      );
-      cssLinks.forEach(link => {
-        link.remove();
-        if (__DEV__) {
-          console.log(`[PluginManager] Removed CSS: ${link.href}`);
-        }
-      });
+      try {
+        // Remove CSS links (SSR-injected or dynamically added)
+        const cssLinks = document.querySelectorAll(
+          `link[href^="/api/plugins/${id}/static/"][rel="stylesheet"]`,
+        );
+        cssLinks.forEach(link => {
+          link.remove();
+          if (__DEV__) {
+            console.log(`[PluginManager] Removed CSS: ${link.href}`);
+          }
+        });
 
-      // Remove JS scripts (by plugin ID data attribute)
-      const scripts = document.querySelectorAll(
-        `script[data-plugin-id="${id}"]`,
-      );
-      scripts.forEach(script => {
-        script.remove();
-        if (__DEV__) {
-          console.log(`[PluginManager] Removed script for: ${id}`);
-        }
-      });
+        // Remove JS scripts (by plugin ID data attribute)
+        const scripts = document.querySelectorAll(
+          `script[data-plugin-id="${id}"]`,
+        );
+        scripts.forEach(script => {
+          script.remove();
+          if (__DEV__) {
+            console.log(`[PluginManager] Removed script for: ${id}`);
+          }
+        });
+      } catch (error) {
+        console.error(
+          `[PluginManager] Failed to remove resources for ${id}:`,
+          error,
+        );
+        this.emit('plugin:error', { id, error, phase: 'dom-cleanup' });
+      }
     });
   }
   /**

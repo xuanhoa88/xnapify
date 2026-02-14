@@ -21,7 +21,6 @@ function PluginActionsDropdown({
   plugin,
   isOpen,
   onToggle,
-  onToggleStatus,
   onUpgrade,
   onDelete,
   canUpdate,
@@ -37,20 +36,11 @@ function PluginActionsDropdown({
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
-        <ActionsDropdown.Item
-          onClick={() => onToggleStatus(plugin, !plugin.is_active)}
-          icon={
-            <Icon name={plugin.is_active ? 'x-circle' : 'check'} size={16} />
-          }
-          disabled={!canUpdate}
-        >
-          {plugin.is_active ? 'Disable' : 'Enable'}
-        </ActionsDropdown.Item>
-
         {canUpdate && (
           <ActionsDropdown.Item
             onClick={() => onUpgrade(plugin)}
             icon={<Icon name='arrowUp' size={16} />}
+            disabled={!plugin.isInstalled}
           >
             Check for Updates
           </ActionsDropdown.Item>
@@ -77,7 +67,6 @@ PluginActionsDropdown.propTypes = {
   plugin: PropTypes.object.isRequired,
   isOpen: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
-  onToggleStatus: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   canUpdate: PropTypes.bool,

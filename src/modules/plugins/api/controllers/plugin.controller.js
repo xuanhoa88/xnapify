@@ -7,7 +7,10 @@
 
 import express from 'express';
 import { validateForm, z } from '../../../../shared/validator';
-import { pluginFormSchema, pluginStatusSchema } from '../../validator/plugin';
+import {
+  pluginStatusSchema,
+  pluginUpgradeSchema,
+} from '../../validator/plugin';
 import * as pluginService from '../services/plugin.service';
 
 // ========================================================================
@@ -99,59 +102,6 @@ export const managePlugins = async (req, res) => {
 // ========================================================================
 
 /**
- * Create/Import Plugin (Admin)
- */
-export const createPlugin = async (req, res) => {
-  const http = req.app.get('http');
-  try {
-    const i18n = req.app.get('i18n');
-    const schema = pluginFormSchema({ i18n, z });
-
-    const [isValid, result] = validateForm(() => schema, req.body);
-    if (!isValid) return http.sendValidationError(res, result);
-
-    const models = req.app.get('models');
-    const plugin = await pluginService.createPlugin(result, {
-      models,
-      cache: req.app.get('cache'),
-      webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
-    });
-
-    return http.sendSuccess(res, { plugin }, 201);
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to create plugin', error);
-  }
-};
-
-/**
- * Update Plugin (Admin)
- */
-export const updatePlugin = async (req, res) => {
-  const http = req.app.get('http');
-  try {
-    const { id } = req.params;
-    const models = req.app.get('models');
-    const i18n = req.app.get('i18n');
-
-    // Partial validation for update
-    const schema = pluginFormSchema({ i18n, z }).partial();
-    const [isValid, result] = validateForm(() => schema, req.body);
-    if (!isValid) return http.sendValidationError(res, result);
-
-    const plugin = await pluginService.updatePlugin(id, result, {
-      models,
-      cache: req.app.get('cache'),
-      webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
-    });
-    return http.sendSuccess(res, { plugin });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to update plugin', error);
-  }
-};
-
-/**
  * Delete Plugin (Admin)
  */
 export const deletePlugin = async (req, res) => {
@@ -163,8 +113,8 @@ export const deletePlugin = async (req, res) => {
     await pluginService.deletePlugin(id, {
       models,
       cache: req.app.get('cache'),
-      fs: req.app.get('fs'), // We also need fs here for deletion if we implemented fs usage
       cwd: req.app.get('cwd'),
+      pluginManager: req.app.get('plugin manager'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
     });
@@ -203,8 +153,9 @@ export const uploadPlugin = async (req, res) => {
     const plugin = await pluginService.installPluginFromPackage(file, {
       models,
       cache: req.app.get('cache'),
-      fs, // Pass fs instance to service
       cwd: req.app.get('cwd'),
+      fs,
+      pluginManager: req.app.get('plugin manager'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
     });
@@ -249,5 +200,32 @@ export const updatePluginStatus = async (req, res) => {
     return http.sendSuccess(res, { plugin });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update plugin status', error);
+  }
+};
+
+/**
+ * Upgrade Plugin (Admin)
+ * Route: PATCH /api/admin/plugins/:id
+ */
+export const upgradePlugin = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const i18n = req.app.get('i18n');
+    const schema = pluginUpgradeSchema({ i18n, z });
+    const [isValid, result] = validateForm(() => schema, req.body);
+    if (!isValid) return http.sendValidationError(res, result);
+
+    const models = req.app.get('models');
+    const plugin = await pluginService.upgradePlugin(id, result, {
+      models,
+      cache: req.app.get('cache'),
+      webhook: req.app.get('webhook'),
+      actorId: req.user ? req.user.id : null,
+    });
+
+    return http.sendSuccess(res, { plugin });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to upgrade plugin', error);
   }
 };

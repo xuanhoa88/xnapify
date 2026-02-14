@@ -50,7 +50,6 @@ jest.mock('../utils/crypto', () => ({
 import {
   managePlugins,
   getActivePlugins,
-  createPlugin,
   togglePluginStatus,
 } from './plugin.service';
 import * as activityUtils from '../utils/activity';
@@ -100,7 +99,7 @@ describe('Plugin Service', () => {
             JSON.stringify({
               name: 'FS Plugin',
               version: '1.0.0',
-              rapid_plugin: { key: 'fs-plugin' },
+              rsk: { plugin: { key: 'fs-plugin' } },
             }),
           );
         }
@@ -109,7 +108,7 @@ describe('Plugin Service', () => {
             JSON.stringify({
               name: 'DB Plugin',
               version: '1.0.0',
-              rapid_plugin: { key: 'db-plugin' },
+              rsk: { plugin: { key: 'db-plugin' } },
             }),
           );
         }
@@ -177,7 +176,7 @@ describe('Plugin Service', () => {
             JSON.stringify({
               name: 'New Plugin',
               version: '1.0.0',
-              rapid_plugin: { key: 'new-plugin' },
+              rsk: { plugin: { key: 'new-plugin' } },
             }),
           );
         }
@@ -216,7 +215,7 @@ describe('Plugin Service', () => {
             JSON.stringify({
               name: 'Active',
               version: '1.0',
-              rapid_plugin: { key: 'active-p' },
+              rsk: { plugin: { key: 'active-p' } },
             }),
           );
         }
@@ -250,24 +249,6 @@ describe('Plugin Service', () => {
         'status_changed',
         'p1',
         { isActive: true },
-        'user-123',
-      );
-    });
-  });
-
-  describe('createPlugin', () => {
-    it('should create plugin and log activity', async () => {
-      const mockPlugin = { id: 'new-p' };
-      mockModels.Plugin.create.mockResolvedValue(mockPlugin);
-
-      await createPlugin({ name: 'test' }, mockContext);
-
-      expect(mockModels.Plugin.create).toHaveBeenCalled();
-      expect(activityUtils.logPluginActivity).toHaveBeenCalledWith(
-        mockWebhook,
-        'created',
-        'new-p',
-        { name: 'test' },
         'user-123',
       );
     });

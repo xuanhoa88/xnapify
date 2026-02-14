@@ -17,9 +17,7 @@ import {
   ConfirmModal,
 } from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
-import Card from '../../../../../shared/renderer/components/Card';
-import Tag from '../../../../../shared/renderer/components/Tag';
-import PluginActionsDropdown from './components/PluginActionsDropdown';
+import PluginCard from './components/PluginCard';
 import {
   fetchPlugins,
   uploadPlugin,
@@ -112,7 +110,7 @@ function Plugins() {
   const handleUpgrade = useCallback(
     async plugin => {
       try {
-        await dispatch(upgradePlugin({ id: plugin.id })).unwrap();
+        await dispatch(upgradePlugin({ id: plugin.id, data: {} })).unwrap();
         dispatch(fetchPlugins());
       } catch (error) {
         console.error('Upgrade failed', error);
@@ -180,43 +178,17 @@ function Plugins() {
 
       <div className={s.grid}>
         {filteredPlugins.map(plugin => (
-          <Card
+          <PluginCard
             key={plugin.id}
-            variant='default'
-            interactive
-            className={s.pluginCard}
-          >
-            <Card.Header
-              className={s.pluginCardHeader}
-              actions={
-                <div className={s.headerRight}>
-                  <div className={s.headerBadges}>
-                    <Tag variant='neutral'>v{plugin.version}</Tag>
-                    <Tag variant={plugin.is_active ? 'success' : 'neutral'}>
-                      {plugin.is_active ? 'Active' : 'Inactive'}
-                    </Tag>
-                  </div>
-                  <PluginActionsDropdown
-                    plugin={plugin}
-                    isOpen={activeDropdownId === plugin.id}
-                    onToggle={handleToggleDropdown}
-                    onToggleStatus={handleToggleStatus}
-                    onUpgrade={handleUpgrade}
-                    onDelete={handleDelete}
-                    canUpdate={canUpdate}
-                    canDelete={canDelete}
-                  />
-                </div>
-              }
-            >
-              <h3 className={s.pluginName}>{plugin.name}</h3>
-            </Card.Header>
-            <Card.Body className={s.pluginCardBody}>
-              <p className={s.pluginDescription}>
-                {plugin.description || 'No description available'}
-              </p>
-            </Card.Body>
-          </Card>
+            plugin={plugin}
+            activeDropdownId={activeDropdownId}
+            onToggleDropdown={handleToggleDropdown}
+            onToggleStatus={handleToggleStatus}
+            onUpgrade={handleUpgrade}
+            onDelete={handleDelete}
+            canUpdate={canUpdate}
+            canDelete={canDelete}
+          />
         ))}
       </div>
 

@@ -44,11 +44,11 @@ export default function pluginRoutes(app, { Router }) {
     pluginController.uploadPlugin,
   );
 
-  // Update
+  // Upgrade
   adminRouter.patch(
     '/:id',
     requirePermission('plugins:update'),
-    pluginController.updatePlugin,
+    pluginController.upgradePlugin,
   );
 
   // Status

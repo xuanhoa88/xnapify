@@ -27,12 +27,22 @@ const getVariantClass = variant => {
 /**
  * Tag component - displays a styled badge/tag
  */
-function Tag({ children, variant = 'neutral', className = '' }) {
-  const classes = [s.tag, getVariantClass(variant), className]
+function Tag({ children, variant = 'neutral', className = '', ...props }) {
+  const isInteractive = !!props.onClick;
+  const classes = [
+    s.tag,
+    getVariantClass(variant),
+    isInteractive && s.interactive,
+    className,
+  ]
     .filter(Boolean)
     .join(' ');
 
-  return <span className={classes}>{children}</span>;
+  return (
+    <span className={classes} {...props}>
+      {children}
+    </span>
+  );
 }
 
 Tag.propTypes = {
@@ -47,6 +57,7 @@ Tag.propTypes = {
     'neutral',
   ]),
   className: PropTypes.string,
+  onClick: PropTypes.func,
 };
 
 /**
