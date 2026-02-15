@@ -13,6 +13,7 @@ import {
   getUserDisplayName,
   getUserEmail,
   getUserAvatarUrl,
+  getUserProfile,
   logout,
 } from '../../../../../../../../shared/renderer/redux';
 import {
@@ -22,6 +23,7 @@ import {
 import { useWebSocket } from '../../../../../../../../shared/ws/client';
 import Icon from '../../../../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../../../../shared/renderer/components/Button';
+import { checkPermission } from '../../../../../../../../shared/renderer/components/Rbac';
 import s from './ProfileDropdown.css';
 
 /**
@@ -38,6 +40,7 @@ function ProfileDropdown() {
   const displayName = useSelector(getUserDisplayName);
   const email = useSelector(getUserEmail);
   const avatarUrl = useSelector(getUserAvatarUrl);
+  const userProfile = useSelector(getUserProfile);
 
   // Local state
   const [isOpen, setIsOpen] = useState(false);
@@ -142,6 +145,18 @@ function ProfileDropdown() {
             <Icon name='settings' size={16} />
             {t('navigation.admin', 'Admin Panel')}
           </Link>
+
+          {checkPermission(userProfile, 'nodered:admin') && (
+            <a
+              className={s.dropdownItem}
+              href='/~/red/admin'
+              onClick={handleClose}
+              role='menuitem'
+            >
+              <Icon name='extension' size={16} />
+              Node-RED
+            </a>
+          )}
 
           <div className={s.dropdownDivider} />
 

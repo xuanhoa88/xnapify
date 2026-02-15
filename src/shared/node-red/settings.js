@@ -7,6 +7,7 @@
 
 import path from 'path';
 import fs from 'fs';
+import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
 
 // Use __non_webpack_require__ if available (for Webpack environments)
 const moduleRequire =
@@ -76,6 +77,7 @@ function validateConfig(options) {
  * Create a Node-RED settings object from application config.
  *
  * @param {object} options - Configuration options
+ * @param {object} [options.app] - Express app instance (required for authentication)
  * @param {string} [options.host='127.0.0.1'] - Server host
  * @param {number} [options.port=1337] - Server port
  * @param {string} [options.protocol='http'] - Server protocol (http|https)
@@ -88,7 +90,6 @@ function validateConfig(options) {
  * @param {boolean} [options.enableAudit=false] - Enable audit logging
  * @param {object} [options.functionGlobalContext] - Additional global context modules
  * @param {object} [options.editorTheme] - Custom editor theme settings
- * @param {object} [options.adminAuth] - Admin authentication settings
  * @param {object} [options.additionalSettings] - Any additional Node-RED settings to merge
  * @returns {object} Frozen Node-RED settings
  */
@@ -98,6 +99,7 @@ export default function createSettings(options = {}) {
 
   // Destructure with defaults
   const {
+    app = null,
     host = '127.0.0.1',
     port = 1337,
     protocol = 'http',
@@ -113,7 +115,6 @@ export default function createSettings(options = {}) {
     enableAudit = false,
     functionGlobalContext = {},
     editorTheme = {},
-    adminAuth = null,
     additionalSettings = {},
   } = options;
 
@@ -144,27 +145,33 @@ export default function createSettings(options = {}) {
     zod: safeRequire('zod'),
   };
 
-  // Filter out null values (unavailable modules)
-  const availableGlobalContext = Object.fromEntries(
-    Object.entries(defaultGlobalContext).filter(([_, value]) => value !== null),
+  // Merge with user-provided global context
+  const mergedGlobalContext = Object.fromEntries(
+    Object.entries({
+      ...defaultGlobalContext,
+      ...functionGlobalContext,
+    }).filter(([_, value]) => value != null),
   );
 
-  // Merge with user-provided global context
-  const mergedGlobalContext = {
-    ...availableGlobalContext,
-    ...functionGlobalContext,
-  };
-
   // Build editor theme with defaults
+  const logoutConfig = createNodeRedLogoutConfig({ protocol, host, port });
   const mergedEditorTheme = {
     projects: {
       enabled: enableProjects,
     },
+    ...logoutConfig,
     ...editorTheme,
   };
 
+  // Attempt to get Node-RED version
+  const runtimePackage = safeRequire('@node-red/runtime/package.json');
+  const version = runtimePackage ? runtimePackage.version : '3.0.0';
+
   // Base settings object
   const settings = {
+    // Node-RED Version
+    version,
+
     // Protocol, host, and port for the Node-RED UI
     uiProtocol: protocol,
     uiHost: host,
@@ -228,10 +235,18 @@ export default function createSettings(options = {}) {
     },
   };
 
-  // Add admin authentication if provided
-  if (adminAuth) {
-    settings.adminAuth = adminAuth;
-  }
+  // Auto-configure authentication using app instance
+  settings.adminAuth = createNodeRedAuth(app);
+
+  // configure users to be a function that returns the user profile
+  // this strictly allows the user returned by the strategy to be accepted
+  // and allows Node-RED to generate a token for the user
+  settings.adminAuth.users = username => {
+    return Promise.resolve({
+      username: username,
+      permissions: '*', // RskAuthStrategy has already verified authorization
+    });
+  };
 
   // Log configuration summary
   console.log('⚙️  [Node-RED Settings] Configuration:');

@@ -18,8 +18,8 @@ import {
   SYSTEM_PERMISSIONS,
 } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
-import { collectUserRBACData } from '../../utils/rbac/collector';
 import { logActivity } from '../../utils/activity';
+import { fetchUserRBACData } from '../../middlewares/utils';
 
 /**
  * Log RBAC activity
@@ -635,102 +635,13 @@ export async function removeGroupFromUser(
  * @returns {Promise<string[]>} Array of permission strings (e.g., 'users:read')
  */
 export async function getUserPermissions(user_id, options = {}) {
-  const { forceRefresh = false, models, cache } = options;
+  const { models, cache } = options;
 
-  // Check cache first (unless force refresh requested)
-  if (!forceRefresh) {
-    const cached = rbacCache.getUser(user_id, cache);
-    if (cached) {
-      // Check for wildcard and expand if needed
-      if (
-        cached.permissions.includes(
-          `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
-        )
-      ) {
-        // Expand wildcard to all permissions for API response
-        const { Permission } = models;
-        const { sequelize } = Permission;
-        const { Op } = sequelize.Sequelize;
-        const allPermissions = await Permission.findAll({
-          where: {
-            [Op.not]: {
-              [Op.and]: [
-                { resource: DEFAULT_RESOURCES.ALL },
-                { action: DEFAULT_ACTIONS.MANAGE },
-              ],
-            },
-            is_active: true,
-          },
-        });
-        return allPermissions.map(p => `${p.resource}:${p.action}`);
-      }
-      return cached.permissions;
-    }
-  }
-
-  // Fetch from database
-  const { User, Role, Permission, Group } = models;
-  const { sequelize } = Permission;
-  const { Op } = sequelize.Sequelize;
-
-  const user = await User.findByPk(user_id, {
-    include: [
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+  // Fetch RBAC data using consolidated fetcher
+  const rbacData = await fetchUserRBACData(user_id, {
+    models,
+    cache,
   });
-
-  if (!user) {
-    const error = new Error('User not found');
-    error.name = 'UserNotFoundError';
-    error.status = 404;
-    throw error;
-  }
-
-  // Use shared RBAC data collector
-  const rbacData = collectUserRBACData(user);
-
-  // Cache the result (with wildcards for authorization)
-  rbacCache.setUser(user_id, rbacData, cache);
 
   // Check for wildcard and expand if present
   if (
@@ -739,6 +650,10 @@ export async function getUserPermissions(user_id, options = {}) {
     )
   ) {
     // Expand wildcard to ALL non-wildcard permissions from DB
+    const { Permission } = models;
+    const { sequelize } = Permission;
+    const { Op } = sequelize.Sequelize;
+
     const allPermissions = await Permission.findAll({
       where: {
         [Op.not]: {

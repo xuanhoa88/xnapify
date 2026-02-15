@@ -18,7 +18,7 @@ import { getUserRBACData } from './utils';
  * @param {Object} req - Express request object
  * @returns {Promise<string[]>} User's permission names
  */
-async function getUserPermissions(req) {
+export async function getUserPermissions(req) {
   const rbacData = await getUserRBACData(req);
   return rbacData.permissions;
 }
@@ -35,7 +35,7 @@ async function getUserPermissions(req) {
  * @param {string} requiredPermission - Required permission (e.g., 'users:read')
  * @returns {boolean} True if user has the permission
  */
-function hasPermission(userPermissions, requiredPermission) {
+export function hasPermission(userPermissions, requiredPermission) {
   // Invalid user permissions
   if (!Array.isArray(userPermissions)) {
     return false;

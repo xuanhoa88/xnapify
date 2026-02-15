@@ -359,8 +359,8 @@ export class NodeRedManager {
     try {
       this._validateInitArgs(app, server, config);
 
-      // Create settings
-      this._settings = createSettings(config);
+      // Create settings with app instance for authentication
+      this._settings = createSettings({ ...config, app });
 
       // Dynamic import for util
       this._util = (await import('@node-red/util')).default;

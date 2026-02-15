@@ -137,6 +137,12 @@ function Drawer() {
           icon: 'dashboard',
           exact: true,
         },
+        hasPermission(user, 'nodered:admin') && {
+          path: '/~/red/admin',
+          label: 'Node-RED',
+          icon: 'extension', // Using extension icon as placeholder
+          external: true,
+        },
       ],
       order: 0,
     },
@@ -170,16 +176,37 @@ function Drawer() {
               <ul className={s.menuList}>
                 {groupBy.items.map(item => (
                   <li key={item.path}>
-                    <Link
-                      to={item.path}
-                      className={clsx(s.menuLink, {
-                        [s.active]: isActive(item.path, item.exact),
-                      })}
-                      onClick={handleCloseDrawer}
-                    >
-                      <Icon name={item.icon} size={18} className={s.menuIcon} />
-                      <span className={s.menuLabel}>{item.label}</span>
-                    </Link>
+                    {item.external ? (
+                      <a
+                        href={item.path}
+                        className={clsx(s.menuLink, {
+                          [s.active]: isActive(item.path, item.exact),
+                        })}
+                        onClick={handleCloseDrawer}
+                      >
+                        <Icon
+                          name={item.icon}
+                          size={18}
+                          className={s.menuIcon}
+                        />
+                        <span className={s.menuLabel}>{item.label}</span>
+                      </a>
+                    ) : (
+                      <Link
+                        to={item.path}
+                        className={clsx(s.menuLink, {
+                          [s.active]: isActive(item.path, item.exact),
+                        })}
+                        onClick={handleCloseDrawer}
+                      >
+                        <Icon
+                          name={item.icon}
+                          size={18}
+                          className={s.menuIcon}
+                        />
+                        <span className={s.menuLabel}>{item.label}</span>
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>

@@ -113,6 +113,8 @@ async function setupNodeRED(app, config) {
   const nodeRED = app.get('nodeRED');
   if (nodeRED) {
     await nodeRED.setupApiProxy(app, config.apiPrefix);
+  } else {
+    console.warn('⚠️ Node-RED proxy not setup');
   }
 }
 

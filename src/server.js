@@ -852,7 +852,6 @@ async function launch(app, server, baseUrl, port, host) {
 
   // Node-RED
   appState.nodeRED.start();
-  app.set('nodeRED', appState.nodeRED);
 
   // Print startup info
   const separator = '='.repeat(60);
@@ -898,6 +897,7 @@ export async function bootstrap(app, server, options = {}) {
   app.set('env', config.nodeEnv);
   app.set('jwt', configureJwt());
   app.set('i18n', i18n);
+  app.set('nodeRED', appState.nodeRED);
   app.set('plugin manager', pluginManager);
 
   // Express config

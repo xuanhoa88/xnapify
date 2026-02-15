@@ -89,6 +89,7 @@ export const DEFAULT_RESOURCES = Object.freeze({
   ROLES: 'roles',
   GROUPS: 'groups',
   PERMISSIONS: 'permissions',
+  NODERED: 'nodered',
 });
 
 /**
@@ -189,5 +190,12 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
     resource: DEFAULT_RESOURCES.PERMISSIONS,
     action: DEFAULT_ACTIONS.DELETE,
     description: 'Delete permissions',
+  },
+
+  // Node-RED Access
+  {
+    resource: DEFAULT_RESOURCES.NODERED,
+    action: 'admin',
+    description: 'Access to Node-RED admin interface',
   },
 ]);
