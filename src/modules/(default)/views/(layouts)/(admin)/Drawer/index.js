@@ -137,17 +137,44 @@ function Drawer() {
           icon: 'dashboard',
           exact: true,
         },
-        hasPermission(user, 'nodered:admin') && {
-          path: '/~/red/admin',
-          label: 'Node-RED',
-          icon: 'extension', // Using extension icon as placeholder
-          external: true,
-        },
       ],
       order: 0,
     },
+    {
+      ns: t('navigation.system', 'System'),
+      items: [
+        hasPermission(user, 'nodered:admin') && {
+          path: '/~/red/admin',
+          label: 'Node-RED',
+          icon: 'node-red',
+          external: true,
+        },
+      ],
+      order: 100,
+    },
     ...formatMenus(dynamicMenus, user),
-  ];
+  ]
+    .reduce((acc, section) => {
+      if (!section) return acc;
+
+      // Filter out falsy items (e.g. permission check failures)
+      const validItems = section.items.filter(Boolean);
+      if (validItems.length === 0) return acc;
+
+      const existingSection = acc.find(sec => sec.ns === section.ns);
+      if (existingSection) {
+        existingSection.items.push(...validItems);
+        // Keep the lower order (higher priority)
+        existingSection.order = Math.min(existingSection.order, section.order);
+      } else {
+        acc.push({
+          ...section,
+          items: validItems,
+        });
+      }
+      return acc;
+    }, [])
+    .sort((a, b) => a.order - b.order);
 
   return (
     <>

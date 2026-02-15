@@ -236,17 +236,12 @@ export default function createSettings(options = {}) {
   };
 
   // Auto-configure authentication using app instance
-  settings.adminAuth = createNodeRedAuth(app);
+  settings.adminAuth = createNodeRedAuth({ app });
 
-  // configure users to be a function that returns the user profile
-  // this strictly allows the user returned by the strategy to be accepted
-  // and allows Node-RED to generate a token for the user
-  settings.adminAuth.users = username => {
-    return Promise.resolve({
-      username: username,
-      permissions: '*', // RskAuthStrategy has already verified authorization
-    });
-  };
+  // configure authenticate to directly return the user profile from the strategy
+  // this bypasses the default user lookup which only passes the username string
+  // and allows us to preserve the permissions calculated in the strategy
+  // authenticate function is now defined in createNodeRedAuth in auth.js
 
   // Log configuration summary
   console.log('⚙️  [Node-RED Settings] Configuration:');

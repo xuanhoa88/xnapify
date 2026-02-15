@@ -136,6 +136,18 @@ function ProfileDropdown() {
             {t('navigation.profile', 'Profile')}
           </Link>
 
+          {checkPermission(userProfile, 'nodered:admin') && (
+            <a
+              className={s.dropdownItem}
+              href='/~/red/admin'
+              onClick={handleClose}
+              role='menuitem'
+            >
+              <Icon name='node-red' size={16} />
+              Node-RED
+            </a>
+          )}
+
           <Link
             className={s.dropdownItem}
             to='/admin'
@@ -145,18 +157,6 @@ function ProfileDropdown() {
             <Icon name='settings' size={16} />
             {t('navigation.admin', 'Admin Panel')}
           </Link>
-
-          {checkPermission(userProfile, 'nodered:admin') && (
-            <a
-              className={s.dropdownItem}
-              href='/~/red/admin'
-              onClick={handleClose}
-              role='menuitem'
-            >
-              <Icon name='extension' size={16} />
-              Node-RED
-            </a>
-          )}
 
           <div className={s.dropdownDivider} />
 

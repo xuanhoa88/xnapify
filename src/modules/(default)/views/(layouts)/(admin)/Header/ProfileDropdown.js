@@ -149,18 +149,6 @@ function ProfileDropdown() {
             <div className={s.dropdownUserEmail}>{displayRole}</div>
           </div>
 
-          {checkPermission(userProfile, 'nodered:admin') && (
-            <a
-              className={s.dropdownItem}
-              href='/~/red/admin'
-              onClick={handleClose}
-              role='menuitem'
-            >
-              <Icon name='extension' size={16} />
-              Node-RED
-            </a>
-          )}
-
           <Link
             className={s.dropdownItem}
             to='/profile'
@@ -170,6 +158,18 @@ function ProfileDropdown() {
             <Icon name='user' size={16} />
             {t('navigation.profile', 'Profile')}
           </Link>
+
+          {checkPermission(userProfile, 'nodered:admin') && (
+            <a
+              className={s.dropdownItem}
+              href='/~/red/admin'
+              onClick={handleClose}
+              role='menuitem'
+            >
+              <Icon name='node-red' size={16} />
+              Node-RED
+            </a>
+          )}
 
           <Link
             className={s.dropdownItem}

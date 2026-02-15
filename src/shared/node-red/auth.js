@@ -61,6 +61,8 @@ class RskAuthStrategy extends Strategy {
       const token = auth.getTokenFromCookie(req);
 
       if (!token) {
+        console.warn('⚠️  [Node-RED Auth] No token found in request cookies');
+        console.warn('   Cookies present:', Object.keys(req.cookies || {}));
         // No token - user not authenticated
         return this.fail(401);
       }
@@ -70,11 +72,16 @@ class RskAuthStrategy extends Strategy {
       try {
         decoded = jwt.verifyTypedToken(token, 'access');
       } catch (tokenError) {
+        console.warn(
+          '⚠️  [Node-RED Auth] Token verification failed:',
+          tokenError.message,
+        );
         // Token invalid or expired
         return this.fail(401);
       }
 
       if (!decoded || !decoded.id) {
+        console.warn('⚠️  [Node-RED Auth] Token decoded but missing ID');
         return this.fail(401);
       }
 
@@ -102,12 +109,18 @@ class RskAuthStrategy extends Strategy {
         return this.fail(500);
       }
 
-      // Check if user has Node-RED admin permission
-      const hasNodeRedAccess = hasPermission(permissions, 'nodered:admin');
+      // Check if user has Node-RED permissions
+      const hasFullAccess = hasPermission(permissions, 'nodered:admin');
+      const hasReadAccess = hasPermission(permissions, 'nodered:read');
 
-      if (!hasNodeRedAccess) {
+      let scope;
+      if (hasFullAccess) {
+        scope = '*';
+      } else if (hasReadAccess) {
+        scope = 'read';
+      } else {
         console.warn(
-          `⚠️  [Node-RED Auth] User ${decoded.email} lacks nodered:admin permission`,
+          `⚠️  [Node-RED Auth] User ${decoded.email} lacks valid Node-RED permissions`,
         );
         return this.fail(403);
       }
@@ -116,7 +129,7 @@ class RskAuthStrategy extends Strategy {
       const userProfile = {
         username: decoded.email,
         image: decoded.picture || '',
-        permissions: '*', // Grant full admin access
+        permissions: scope,
       };
 
       this.verify(userProfile, (err, user) => {
@@ -135,7 +148,62 @@ class RskAuthStrategy extends Strategy {
   }
 }
 
-export function createNodeRedAuth(app) {
+/**
+ * Fetch user with permissions from database
+ * @param {Object} app - Express app instance
+ * @param {string} username - Email/username to look up
+ */
+async function getUserWithPermissions(app, username) {
+  try {
+    const { User } = app.get('models');
+    const { getUserPermissions, hasPermission } = app.get('user.middlewares');
+
+    if (!getUserPermissions || !hasPermission) {
+      console.error('❌ [Node-RED Auth] User middlewares not available');
+      return null;
+    }
+
+    // Find user to get ID
+    const user = await User.findOne({
+      where: { email: username },
+      attributes: ['id', 'email'],
+    });
+
+    if (!user) return null;
+
+    // Create mock request for permission middleware
+    const req = {
+      user: { id: user.id },
+      app,
+    };
+
+    // Get permissions using shared logic
+    const permissions = await getUserPermissions(req);
+
+    // Determine Node-RED scope
+    const hasFullAccess = hasPermission(permissions, 'nodered:admin');
+    const hasReadAccess = hasPermission(permissions, 'nodered:read');
+
+    let scope = '';
+    if (hasFullAccess) {
+      scope = '*';
+    } else if (hasReadAccess) {
+      scope = 'read';
+    }
+
+    // Return user profile with permissions
+    return {
+      username: user.email,
+      permissions: scope,
+    };
+  } catch (error) {
+    console.error('❌ [Node-RED Auth] User lookup failed:', error);
+    return null;
+  }
+}
+
+export function createNodeRedAuth(options = {}) {
+  const { app } = options;
   return {
     type: 'strategy',
     strategy: {
@@ -143,9 +211,17 @@ export function createNodeRedAuth(app) {
       label: 'Authentication',
       icon: 'icons/node-red.svg',
       strategy: RskAuthStrategy,
-      options: {
-        app, // Pass app instance to strategy
-      },
+      options,
+    },
+    // Define users function to support user lookup by BearerStrategy
+    // This is required because BearerStrategy verifies the user exists after validating the token
+    users(username) {
+      return getUserWithPermissions(app, username);
+    },
+    // Define authenticate function to pass-through user profile
+    // This allows the strategy to determine permissions and pass them to Node-RED
+    authenticate(userProfile) {
+      return Promise.resolve(userProfile);
     },
   };
 }
