@@ -484,11 +484,17 @@ export async function installPluginFromPackage(
   { models, cache, cwd, fs: fsEngine, pluginManager, webhook, actorId },
 ) {
   if (!file || !file.path) {
-    throw new Error('No file provided');
+    const err = new Error('No file provided');
+    err.name = 'InvalidPluginPackage';
+    err.status = 400;
+    throw err;
   }
 
   if (!fsEngine || typeof fsEngine.extract !== 'function') {
-    throw new Error('FS engine required for installation');
+    const err = new Error('FS engine required for installation');
+    err.name = 'InvalidPluginPackage';
+    err.status = 400;
+    throw err;
   }
 
   const { Plugin } = models;
@@ -497,7 +503,7 @@ export async function installPluginFromPackage(
   const tempExtractDir = path.join(
     os.tmpdir(),
     PLUGIN_PATH,
-    path.parse(file.originalname).name,
+    path.parse(file.originalName).name,
   );
 
   try {
@@ -523,6 +529,13 @@ export async function installPluginFromPackage(
         withFileTypes: true,
       });
       const subdirs = entries.filter(dirent => dirent.isDirectory());
+
+      console.debug('[installPluginFromPackage] Extracted contents:', {
+        tempExtractDir,
+        entries: entries.map(e => ({ name: e.name, isDir: e.isDirectory() })),
+        subdirs: subdirs.map(d => d.name),
+      });
+
       if (subdirs.length === 1) {
         pluginRoot = path.join(tempExtractDir, subdirs[0].name);
         manifestPath = path.join(pluginRoot, 'package.json');
@@ -530,7 +543,13 @@ export async function installPluginFromPackage(
     }
 
     if (!fs.existsSync(manifestPath)) {
-      throw new Error('Invalid plugin package: package.json not found');
+      const err = new Error(
+        'Invalid plugin package: package.json not found. ' +
+          'Ensure the zip contains package.json at the root, or in a single subdirectory.',
+      );
+      err.name = 'InvalidPluginPackage';
+      err.status = 400;
+      throw err;
     }
 
     const manifest = JSON.parse(
@@ -539,9 +558,12 @@ export async function installPluginFromPackage(
 
     // 4. Validate manifest
     if (!manifest.name || !manifest.version) {
-      throw new Error(
+      const err = new Error(
         'Invalid plugin manifest: missing required fields (name, version)',
       );
+      err.name = 'InvalidPluginPackage';
+      err.status = 400;
+      throw err;
     }
     const pluginKey =
       (manifest.rsk && manifest.rsk.plugin && manifest.rsk.plugin.key) ||
