@@ -118,6 +118,13 @@ export const deletePlugin = async (req, res) => {
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
     });
+
+    const ws = req.app.get('ws');
+    ws.sendToPublicChannel('plugin:updated', {
+      type: 'PLUGIN_UNINSTALLED',
+      pluginId: id,
+    });
+
     return http.sendSuccess(res, { message: 'Plugin deleted' });
   } catch (error) {
     return http.sendServerError(res, 'Failed to delete plugin', error);
@@ -160,6 +167,13 @@ export const uploadPlugin = async (req, res) => {
       actorId: req.user ? req.user.id : null,
     });
 
+    const ws = req.app.get('ws');
+    ws.sendToPublicChannel('plugin:updated', {
+      type: 'PLUGIN_INSTALLED',
+      pluginId: plugin.id,
+      data: { manifest: plugin },
+    });
+
     return http.sendSuccess(
       res,
       { plugin, message: 'Plugin installed successfully' },
@@ -197,6 +211,13 @@ export const updatePluginStatus = async (req, res) => {
       },
     );
 
+    const ws = req.app.get('ws');
+    ws.sendToPublicChannel('plugin:updated', {
+      type: result.is_active ? 'PLUGIN_INSTALLED' : 'PLUGIN_UNINSTALLED',
+      pluginId: id,
+      data: { manifest: plugin },
+    });
+
     return http.sendSuccess(res, { plugin });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update plugin status', error);
@@ -222,6 +243,12 @@ export const upgradePlugin = async (req, res) => {
       cache: req.app.get('cache'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
+    });
+
+    const ws = req.app.get('ws');
+    ws.sendToPublicChannel('plugin:updated', {
+      type: 'PLUGIN_UPDATED',
+      pluginId: id,
     });
 
     return http.sendSuccess(res, { plugin });

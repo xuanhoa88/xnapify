@@ -543,6 +543,10 @@ async function initializeApp() {
         log(`⚠️ WebSocket error: ${error}`, 'error');
       });
 
+      wsClient.on('plugin:updated', event => {
+        pluginManager.handleEvent(event);
+      });
+
       wsClient.connect();
     }
   } catch (error) {

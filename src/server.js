@@ -839,17 +839,6 @@ async function launch(app, server, baseUrl, port, host) {
     });
   }
 
-  // WebSocket
-  appState.wsServer = createWebSocketServer(
-    {
-      path: config.wsPath,
-      enableLogging: !__DEV__,
-      onAuthentication: token => verifyWsToken(app.get('jwt'), token),
-    },
-    server,
-  );
-  app.set('ws', appState.wsServer);
-
   // Node-RED
   appState.nodeRED.start();
 
@@ -892,12 +881,23 @@ export async function bootstrap(app, server, options = {}) {
   const normalizedHost = normalizeHost(host);
   const baseUrl = getBaseUrl(port, normalizedHost);
 
+  // WebSocket
+  appState.wsServer = createWebSocketServer(
+    {
+      path: config.wsPath,
+      enableLogging: !__DEV__,
+      onAuthentication: token => verifyWsToken(app.get('jwt'), token),
+    },
+    server,
+  );
+
   // Core providers
   app.set('cwd', config.cwd);
   app.set('env', config.nodeEnv);
   app.set('jwt', configureJwt());
   app.set('i18n', i18n);
   app.set('nodeRED', appState.nodeRED);
+  app.set('ws', appState.wsServer);
   app.set('plugin manager', pluginManager);
 
   // Express config
