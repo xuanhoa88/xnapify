@@ -7,7 +7,9 @@
 
 import path from 'path';
 import fs from 'fs';
+import merge from 'lodash/merge';
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
+import backToAdminScript from './client-scripts/back-to-admin';
 
 // Use __non_webpack_require__ if available (for Webpack environments)
 const moduleRequire =
@@ -107,10 +109,10 @@ export default function createSettings(options = {}) {
       process.env.RSK_NODE_RED_HOME || process.cwd(),
       '.node-red',
     ),
+    logLevel = process.env.RSK_NODE_RED_LOG_LEVEL || 'info',
+    enableProjects = process.env.RSK_NODE_RED_ENABLE_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',
     httpNodeRoot = '/~/red',
-    logLevel = 'info',
-    enableProjects = false,
     enableMetrics = false,
     enableAudit = false,
     functionGlobalContext = {},
@@ -165,7 +167,7 @@ export default function createSettings(options = {}) {
 
   // Attempt to get Node-RED version
   const runtimePackage = safeRequire('@node-red/runtime/package.json');
-  const version = runtimePackage ? runtimePackage.version : '3.0.0';
+  const version = (runtimePackage && runtimePackage.version) || '3.0.0';
 
   // Base settings object
   const settings = {
@@ -226,22 +228,42 @@ export default function createSettings(options = {}) {
     debugUseColors: true,
 
     // Palette settings
-    editorTheme: {
-      ...mergedEditorTheme,
-      palette: {
-        allowInstall: true,
-        catalogues: ['https://catalogue.nodered.org/catalogue.json'],
-      },
-    },
+    editorTheme: (() => {
+      // Write the "Back to Admin" label script to userDir so Node-RED
+      // can serve it via its native theme system (requires absolute fs paths).
+      const rskScriptPath = path.join(userDir, 'rsk-admin-script.js');
+      try {
+        fs.writeFileSync(rskScriptPath, backToAdminScript, 'utf8');
+      } catch (err) {
+        console.warn(
+          '⚠️  [Node-RED Settings] Failed to write RSK admin script:',
+          err.message,
+        );
+      }
+
+      return merge({}, mergedEditorTheme, {
+        page: {
+          scripts: [rskScriptPath], // Absolute path — required by Node-RED
+        },
+        logout: {
+          redirect: '/admin', // Clicking "Logout" (now "Back to Admin") returns to admin panel
+        },
+        codeEditor: {
+          lib: 'monaco',
+          options: {
+            theme: 'vs',
+          },
+        },
+        palette: {
+          allowInstall: true,
+          catalogues: ['https://catalogue.nodered.org/catalogue.json'],
+        },
+      });
+    })(),
   };
 
   // Auto-configure authentication using app instance
   settings.adminAuth = createNodeRedAuth({ app });
-
-  // configure authenticate to directly return the user profile from the strategy
-  // this bypasses the default user lookup which only passes the username string
-  // and allows us to preserve the permissions calculated in the strategy
-  // authenticate function is now defined in createNodeRedAuth in auth.js
 
   // Log configuration summary
   console.log('⚙️  [Node-RED Settings] Configuration:');
@@ -252,53 +274,16 @@ export default function createSettings(options = {}) {
   console.log(
     `   - Global Context Modules: ${Object.keys(mergedGlobalContext).length}`,
   );
+  console.log(
+    '   - Editor Theme:',
+    JSON.stringify(settings.editorTheme, null, 2),
+  );
 
   // Return frozen settings to prevent accidental mutations
   return Object.freeze({
     ...settings,
     ...additionalSettings,
   });
-}
-
-/**
- * Create settings with environment variable overrides
- * Useful for containerized deployments
- *
- * Environment variables:
- * - NODE_RED_HOST
- * - NODE_RED_PORT
- * - NODE_RED_PROTOCOL
- * - NODE_RED_LOG_LEVEL
- * - NODE_RED_ENABLE_PROJECTS
- * - NODE_RED_USER_DIR
- *
- * @param {object} baseOptions - Base configuration options
- * @returns {object} Settings with environment overrides
- */
-export function createSettingsFromEnv(baseOptions = {}) {
-  const envOptions = {
-    host: process.env.NODE_RED_HOST,
-    port: process.env.NODE_RED_PORT
-      ? parseInt(process.env.NODE_RED_PORT, 10)
-      : undefined,
-    protocol: process.env.NODE_RED_PROTOCOL,
-    logLevel: process.env.NODE_RED_LOG_LEVEL,
-    enableProjects: process.env.NODE_RED_ENABLE_PROJECTS === 'true',
-    userDir: process.env.NODE_RED_USER_DIR,
-  };
-
-  // Filter out undefined values
-  const cleanedEnvOptions = Object.fromEntries(
-    Object.entries(envOptions).filter(([_, value]) => value !== undefined),
-  );
-
-  // Merge base options with environment overrides
-  const mergedOptions = {
-    ...baseOptions,
-    ...cleanedEnvOptions,
-  };
-
-  return createSettings(mergedOptions);
 }
 
 /**
@@ -313,7 +298,6 @@ export function createProductionSettings(options = {}) {
     logLevel: 'warn', // Less verbose logging
     enableMetrics: true, // Enable performance metrics
     enableAudit: true, // Enable security audit
-    enableProjects: false, // Disable projects for simplicity
     ...options,
     additionalSettings: {
       // Disable diagnostic endpoints in production
@@ -327,7 +311,7 @@ export function createProductionSettings(options = {}) {
       // Additional security
       httpNodeCors: {
         origin: '*',
-        methods: 'GET,PUT,POST,DELETE',
+        methods: ['GET', 'PUT', 'POST', 'DELETE'].join(','),
       },
       ...(options.additionalSettings || {}),
     },
@@ -346,7 +330,7 @@ export function createDevelopmentSettings(options = {}) {
     logLevel: 'debug', // Verbose logging
     enableMetrics: true, // Performance insights
     enableAudit: true, // Track changes
-    enableProjects: true, // Enable projects feature
+    enableProjects: false, // Disabled to avoid welcome dialog on every load
     ...options,
     additionalSettings: {
       // Enable diagnostic endpoints

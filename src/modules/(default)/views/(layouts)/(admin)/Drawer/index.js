@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useMemo } from 'react';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -74,107 +74,112 @@ function Drawer() {
     state.ui.menus && state.ui.menus.admin ? state.ui.menus.admin : [],
   );
 
-  const hasPermission = (user, permission) => {
-    // If no permission required, allow
-    if (!permission) return true;
+  const menuItems = useMemo(() => {
+    const hasPermission = (user, permission) => {
+      // If no permission required, allow
+      if (!permission) return true;
 
-    // If user is not logged in, deny
-    if (!user) return false;
+      // If user is not logged in, deny
+      if (!user) return false;
 
-    // Admin bypass
-    if (user.is_admin) return true;
+      // Admin bypass
+      if (user.is_admin) return true;
 
-    // Use shared RBAC logic for permission matching (supports wildcards)
-    return checkPermission(user, permission);
-  };
+      // Use shared RBAC logic for permission matching (supports wildcards)
+      return checkPermission(user, permission);
+    };
 
-  const formatMenus = (items, user) => {
-    // Process the menus to ensure they have the correct structure
-    const sections = {};
+    const formatMenus = (items, user) => {
+      // Process the menus to ensure they have the correct structure
+      const sections = {};
 
-    items.forEach(item => {
-      if (!item || !item.ns) return;
+      items.forEach(item => {
+        if (!item || !item.ns) return;
 
-      // Permission check
-      if (!hasPermission(user, item.permission)) return;
+        // Permission check
+        if (!hasPermission(user, item.permission)) return;
 
-      const key = item.ns;
-      if (!sections[key]) {
-        sections[key] = {
-          ns: item.ns,
-          items: [],
-          order: item.order || 99,
-          seenPaths: new Set(),
-        };
-      }
+        const key = item.ns;
+        if (!sections[key]) {
+          sections[key] = {
+            ns: item.ns,
+            items: [],
+            order: item.order || 99,
+            seenPaths: new Set(),
+          };
+        }
 
-      // Deduplication check
-      if (item.path && !sections[key].seenPaths.has(item.path)) {
-        sections[key].seenPaths.add(item.path);
-        sections[key].items.push(item);
-      }
-    });
+        // Deduplication check
+        if (item.path && !sections[key].seenPaths.has(item.path)) {
+          sections[key].seenPaths.add(item.path);
+          sections[key].items.push(item);
+        }
+      });
 
-    return Object.values(sections)
-      .map(groupBy => {
-        // Only return sections that have items
-        if (groupBy.items.length === 0) return null;
+      return Object.values(sections)
+        .map(groupBy => {
+          // Only return sections that have items
+          if (groupBy.items.length === 0) return null;
 
-        const { seenPaths: _, ...cleanSection } = groupBy;
-        return cleanSection;
-      })
-      .filter(Boolean)
+          const { seenPaths: _, ...cleanSection } = groupBy;
+          return cleanSection;
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.order - b.order);
+    };
+
+    return [
+      {
+        ns: t('navigation.main', 'Main'),
+        items: [
+          {
+            path: '/admin',
+            label: t('navigation.dashboard', 'Dashboard'),
+            icon: 'dashboard',
+            exact: true,
+          },
+        ],
+        order: 0,
+      },
+      {
+        ns: t('navigation.system', 'System'),
+        items: [
+          hasPermission(user, 'nodered:admin') && {
+            path: '/~/red/admin',
+            label: 'Node-RED',
+            icon: 'node-red',
+            external: true,
+          },
+        ],
+        order: 100,
+      },
+      ...formatMenus(dynamicMenus, user),
+    ]
+      .reduce((acc, section) => {
+        if (!section) return acc;
+
+        // Filter out falsy items (e.g. permission check failures)
+        const validItems = section.items.filter(Boolean);
+        if (validItems.length === 0) return acc;
+
+        const existingSection = acc.find(sec => sec.ns === section.ns);
+        if (existingSection) {
+          existingSection.items.push(...validItems);
+          // Keep the lower order (higher priority)
+          existingSection.order = Math.min(
+            existingSection.order,
+            section.order,
+          );
+        } else {
+          acc.push({
+            ...section,
+            items: validItems,
+          });
+        }
+        return acc;
+      }, [])
       .sort((a, b) => a.order - b.order);
-  };
-
-  const menuItems = [
-    {
-      ns: t('navigation.main', 'Main'),
-      items: [
-        {
-          path: '/admin',
-          label: t('navigation.dashboard', 'Dashboard'),
-          icon: 'dashboard',
-          exact: true,
-        },
-      ],
-      order: 0,
-    },
-    {
-      ns: t('navigation.system', 'System'),
-      items: [
-        hasPermission(user, 'nodered:admin') && {
-          path: '/~/red/admin',
-          label: 'Node-RED',
-          icon: 'node-red',
-          external: true,
-        },
-      ],
-      order: 100,
-    },
-    ...formatMenus(dynamicMenus, user),
-  ]
-    .reduce((acc, section) => {
-      if (!section) return acc;
-
-      // Filter out falsy items (e.g. permission check failures)
-      const validItems = section.items.filter(Boolean);
-      if (validItems.length === 0) return acc;
-
-      const existingSection = acc.find(sec => sec.ns === section.ns);
-      if (existingSection) {
-        existingSection.items.push(...validItems);
-        // Keep the lower order (higher priority)
-        existingSection.order = Math.min(existingSection.order, section.order);
-      } else {
-        acc.push({
-          ...section,
-          items: validItems,
-        });
-      }
-      return acc;
-    }, [])
-    .sort((a, b) => a.order - b.order);
+  }, [t, user, dynamicMenus]);
 
   return (
     <>

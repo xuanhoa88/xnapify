@@ -6,7 +6,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import createSettings from './settings';
+import {
+  createProductionSettings,
+  createDevelopmentSettings,
+} from './settings';
 
 // This prevents the instance from being lost during HMR
 const kNodeRedInstance = Symbol.for('__rsk.nodeREDInstance__');
@@ -360,7 +363,9 @@ export class NodeRedManager {
       this._validateInitArgs(app, server, config);
 
       // Create settings with app instance for authentication
-      this._settings = createSettings({ ...config, app });
+      this._settings = __DEV__
+        ? createDevelopmentSettings({ ...config, app })
+        : createProductionSettings({ ...config, app });
 
       // Dynamic import for util
       this._util = (await import('@node-red/util')).default;
@@ -457,6 +462,7 @@ export class NodeRedManager {
    */
   _mountRoutes(app) {
     try {
+      // Serve Node-RED admin and runtime
       app.use(this._settings.httpAdminRoot, this._editorApi.httpAdmin);
       app.use(this._settings.httpNodeRoot, this._runtime.httpNode);
 
