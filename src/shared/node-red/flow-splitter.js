@@ -22,9 +22,7 @@ import path from 'path';
 
 const PLUGIN_NAME = 'rsk-flow-splitter';
 const PLUGIN_LOG_PREFIX = `[${PLUGIN_NAME}]`;
-
 const SPLIT_CONFIG_FILE = '.config.flow-splitter.json';
-
 const DEFAULT_CONFIG = Object.freeze({
   fileFormat: 'json',
   destinationFolder: 'src',
