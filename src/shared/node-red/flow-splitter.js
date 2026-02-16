@@ -114,40 +114,28 @@ function dirsAreEqual(dirA, dirB) {
 function saveMigration(splitDir, adapter, RED) {
   if (!fs.existsSync(splitDir)) return;
 
-  // Resolve the migrations directory from the adapter
-  // adapter.resolve() returns webpack module IDs, so we derive the dir from it
-  const adapterFiles = adapter.files();
-
-  // Get the latest migration timestamp from bundled files
-  const timestamps = new Set();
-  for (const key of adapterFiles) {
-    // Keys look like: ./2026.02.16T15.30.00/tabs/test-hello.json
-    const match = key.match(/^\.\/(\d{4}\.\d{2}\.\d{2}T\d{2}\.\d{2}\.\d{2})/);
-    if (match) timestamps.add(match[1]);
+  const migrationsDir = path.join(__dirname, 'migrations');
+  if (!fs.existsSync(migrationsDir)) {
+    fs.mkdirSync(migrationsDir, { recursive: true });
   }
 
-  // For saving, we need filesystem path — resolve from any existing key
-  let migrationsDir;
-  if (adapterFiles.length > 0) {
-    const resolvedPath = adapter.resolve(adapterFiles[0]);
-    // Resolve to the migrations root directory
-    // resolvedPath is like: /abs/path/src/shared/node-red/migrations/timestamp/subdir/file.json
-    // We need: /abs/path/src/shared/node-red/migrations/
-    const firstKey = adapterFiles[0].replace(/^\.[/\\]/, ''); // remove ./
-    migrationsDir = resolvedPath.replace(firstKey, '').replace(/[/\\]$/, '');
-  } else {
-    // No existing migrations — derive from __dirname or cwd
-    migrationsDir = path.join(__dirname, 'migrations');
-  }
+  // Get the latest migration timestamp from the filesystem (on disk)
+  // This is more accurate than the bundled webpack context for live sessions
+  const existingDirs = fs
+    .readdirSync(migrationsDir)
+    .filter(
+      d =>
+        fs.statSync(path.join(migrationsDir, d)).isDirectory() &&
+        /^\d{4}\.\d{2}\.\d{2}T\d{2}\.\d{2}\.\d{2}$/.test(d),
+    )
+    .sort();
 
-  fs.mkdirSync(migrationsDir, { recursive: true });
-
-  // Check if content differs from latest existing migration
-  const sortedTimestamps = Array.from(timestamps).sort();
-  if (sortedTimestamps.length > 0) {
-    const latestTimestamp = sortedTimestamps[sortedTimestamps.length - 1];
-    const latestDir = path.join(migrationsDir, latestTimestamp);
-    if (fs.existsSync(latestDir) && dirsAreEqual(splitDir, latestDir)) {
+  if (existingDirs.length > 0) {
+    const latestDir = path.join(
+      migrationsDir,
+      existingDirs[existingDirs.length - 1],
+    );
+    if (dirsAreEqual(splitDir, latestDir)) {
       RED.log.info(
         `${PLUGIN_LOG_PREFIX} No flow changes detected, skipping migration`,
       );
@@ -158,8 +146,14 @@ function saveMigration(splitDir, adapter, RED) {
   const timestamp = generateTimestamp();
   const migrationDir = path.join(migrationsDir, timestamp);
 
-  copyDirSync(splitDir, migrationDir);
-  RED.log.info(`${PLUGIN_LOG_PREFIX} 💾 Migration saved: ${timestamp}`);
+  try {
+    copyDirSync(splitDir, migrationDir);
+    RED.log.info(`${PLUGIN_LOG_PREFIX} 💾 Migration saved: ${timestamp}`);
+  } catch (err) {
+    RED.log.error(
+      `${PLUGIN_LOG_PREFIX} Failed to save migration: ${err.message}`,
+    );
+  }
 }
 
 /**
