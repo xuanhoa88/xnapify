@@ -10,7 +10,11 @@ import {
   createProductionSettings,
   createDevelopmentSettings,
 } from './settings';
+import { createContextAdapter } from '../context';
 import flowSplitterPlugin from './flow-splitter';
+
+// Bundle all migration JSON files at build time
+const migrationsContext = require.context('./migrations', true, /\.json$/i);
 
 // This prevents the instance from being lost during HMR
 const kNodeRedInstance = Symbol.for('__rsk.nodeREDInstance__');
@@ -663,6 +667,7 @@ export class NodeRedManager {
         settings: {
           userDir: settings.userDir,
           flowFile: settings.flowFile || 'flows.json',
+          migrationsAdapter: createContextAdapter(migrationsContext),
         },
         nodes: internal.nodes,
       };

@@ -17,8 +17,8 @@
  * @param {object} RED - Node-RED runtime
  */
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
 
 const PLUGIN_NAME = 'rsk-flow-splitter';
 const PLUGIN_LOG_PREFIX = `[${PLUGIN_NAME}]`;
@@ -30,6 +30,188 @@ const DEFAULT_CONFIG = Object.freeze({
   destinationFolder: 'src',
   tabsOrder: [],
 });
+
+/**
+ * Generate a migration timestamp in the format: YYYY.MM.DDThh.mm.ss
+ * @returns {string}
+ */
+function generateTimestamp() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return [
+    now.getFullYear(),
+    '.',
+    pad(now.getMonth() + 1),
+    '.',
+    pad(now.getDate()),
+    'T',
+    pad(now.getHours()),
+    '.',
+    pad(now.getMinutes()),
+    '.',
+    pad(now.getSeconds()),
+  ].join('');
+}
+
+/**
+ * Recursively copy a directory
+ * @param {string} src - Source directory
+ * @param {string} dest - Destination directory
+ */
+function copyDirSync(src, dest) {
+  if (!fs.existsSync(src)) return;
+  fs.mkdirSync(dest, { recursive: true });
+  for (const entry of fs.readdirSync(src, { withFileTypes: true })) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+    if (entry.isDirectory()) {
+      copyDirSync(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
+}
+
+/**
+ * Check if two directories have identical file contents
+ * @param {string} dirA - First directory
+ * @param {string} dirB - Second directory
+ * @returns {boolean} True if contents are identical
+ */
+function dirsAreEqual(dirA, dirB) {
+  if (!fs.existsSync(dirA) || !fs.existsSync(dirB)) return false;
+
+  for (const subdir of ['tabs', 'subflows', 'config-nodes']) {
+    const aDirPath = path.join(dirA, subdir);
+    const bDirPath = path.join(dirB, subdir);
+    const aExists = fs.existsSync(aDirPath);
+    const bExists = fs.existsSync(bDirPath);
+
+    if (!aExists && !bExists) continue;
+    if (aExists !== bExists) return false;
+
+    const aFiles = fs.readdirSync(aDirPath).sort();
+    const bFiles = fs.readdirSync(bDirPath).sort();
+
+    if (aFiles.length !== bFiles.length) return false;
+    if (aFiles.join(',') !== bFiles.join(',')) return false;
+
+    for (const file of aFiles) {
+      const aContent = fs.readFileSync(path.join(aDirPath, file), 'utf8');
+      const bContent = fs.readFileSync(path.join(bDirPath, file), 'utf8');
+      if (aContent !== bContent) return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Save current split files as a timestamped migration snapshot
+ * @param {string} splitDir - The split files source (.node-red/src)
+ * @param {object} adapter - Webpack context adapter with files(), load(), resolve()
+ * @param {object} RED - Node-RED runtime (for logging)
+ */
+function saveMigration(splitDir, adapter, RED) {
+  if (!fs.existsSync(splitDir)) return;
+
+  // Resolve the migrations directory from the adapter
+  // adapter.resolve() returns webpack module IDs, so we derive the dir from it
+  const adapterFiles = adapter.files();
+
+  // Get the latest migration timestamp from bundled files
+  const timestamps = new Set();
+  for (const key of adapterFiles) {
+    // Keys look like: ./2026.02.16T15.30.00/tabs/test-hello.json
+    const match = key.match(/^\.\/(\d{4}\.\d{2}\.\d{2}T\d{2}\.\d{2}\.\d{2})/);
+    if (match) timestamps.add(match[1]);
+  }
+
+  // For saving, we need filesystem path — resolve from any existing key
+  let migrationsDir;
+  if (adapterFiles.length > 0) {
+    const resolvedPath = adapter.resolve(adapterFiles[0]);
+    // Resolve to the migrations root directory
+    // resolvedPath is like: /abs/path/src/shared/node-red/migrations/timestamp/subdir/file.json
+    // We need: /abs/path/src/shared/node-red/migrations/
+    const firstKey = adapterFiles[0].replace(/^\.[/\\]/, ''); // remove ./
+    migrationsDir = resolvedPath.replace(firstKey, '').replace(/[/\\]$/, '');
+  } else {
+    // No existing migrations — derive from __dirname or cwd
+    migrationsDir = path.join(__dirname, 'migrations');
+  }
+
+  fs.mkdirSync(migrationsDir, { recursive: true });
+
+  // Check if content differs from latest existing migration
+  const sortedTimestamps = Array.from(timestamps).sort();
+  if (sortedTimestamps.length > 0) {
+    const latestTimestamp = sortedTimestamps[sortedTimestamps.length - 1];
+    const latestDir = path.join(migrationsDir, latestTimestamp);
+    if (fs.existsSync(latestDir) && dirsAreEqual(splitDir, latestDir)) {
+      RED.log.info(
+        `${PLUGIN_LOG_PREFIX} No flow changes detected, skipping migration`,
+      );
+      return;
+    }
+  }
+
+  const timestamp = generateTimestamp();
+  const migrationDir = path.join(migrationsDir, timestamp);
+
+  copyDirSync(splitDir, migrationDir);
+  RED.log.info(`${PLUGIN_LOG_PREFIX} 💾 Migration saved: ${timestamp}`);
+}
+
+/**
+ * Apply the latest migration to the split files directory using webpack context adapter
+ * @param {string} splitDir - The split files destination (.node-red/src)
+ * @param {object} adapter - Webpack context adapter with files(), load(), resolve()
+ * @param {object} RED - Node-RED runtime (for logging)
+ * @returns {boolean} True if a migration was applied
+ */
+function applyLatestMigration(splitDir, adapter, RED) {
+  const allKeys = adapter.files();
+  if (allKeys.length === 0) return false;
+
+  // Parse migration timestamps from keys
+  // Keys look like: ./2026.02.16T15.30.00/tabs/test-hello.json
+  const migrationMap = new Map(); // timestamp -> [{key, subdir, filename}]
+
+  for (const key of allKeys) {
+    const match = key.match(
+      /^\.\/(\d{4}\.\d{2}\.\d{2}T\d{2}\.\d{2}\.\d{2})\/(tabs|subflows|config-nodes)\/(.+\.json)$/,
+    );
+    if (match) {
+      const [, timestamp, subdir, filename] = match;
+      if (!migrationMap.has(timestamp)) migrationMap.set(timestamp, []);
+      migrationMap.get(timestamp).push({ key, subdir, filename });
+    }
+  }
+
+  if (migrationMap.size === 0) return false;
+
+  // Find the latest migration
+  const timestamps = Array.from(migrationMap.keys()).sort();
+  const latest = timestamps[timestamps.length - 1];
+  const files = migrationMap.get(latest);
+
+  RED.log.info(`${PLUGIN_LOG_PREFIX} 📦 Applying migration: ${latest}`);
+
+  // Write each file from the adapter to the split dir
+  for (const { key, subdir, filename } of files) {
+    const content = adapter.load(key);
+    const destDir = path.join(splitDir, subdir);
+    fs.mkdirSync(destDir, { recursive: true });
+
+    const destPath = path.join(destDir, filename);
+    // content from require() of a JSON file is already a JS object
+    fs.writeFileSync(destPath, JSON.stringify(content, null, 2));
+    RED.log.info(`${PLUGIN_LOG_PREFIX} Restored: ${subdir}/${filename}`);
+  }
+
+  RED.log.info(`${PLUGIN_LOG_PREFIX} ✅ Migration applied: ${latest}`);
+  return true;
+}
 
 /**
  * Normalize a string to a safe filename
@@ -328,6 +510,13 @@ module.exports = function flowSplitterPlugin(RED) {
         `${PLUGIN_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
       );
 
+      // Try to apply latest migration if no split files exist
+      const splitDir = path.join(rootPath, config.destinationFolder);
+      const adapter = RED.settings.migrationsAdapter;
+      if (adapter && !fs.existsSync(splitDir)) {
+        applyLatestMigration(splitDir, adapter, RED);
+      }
+
       const rebuilt = rebuildFlows(config, rootPath, RED);
       if (!rebuilt) {
         RED.log.info(
@@ -363,6 +552,13 @@ module.exports = function flowSplitterPlugin(RED) {
 
     splitFlows(flowsFromEvent, config, rootPath, RED);
     writeConfig(config, rootPath);
+
+    // Auto-save migration snapshot
+    const { migrationsAdapter } = RED.settings;
+    if (migrationsAdapter) {
+      const splitDir = path.join(rootPath, config.destinationFolder);
+      saveMigration(splitDir, migrationsAdapter, RED);
+    }
 
     // Delete the monolith file after splitting
     const monolithPath = path.join(rootPath, config.monolithFilename);
