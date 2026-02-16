@@ -233,7 +233,11 @@ export default function createSettings(options = {}) {
       // can serve it via its native theme system (requires absolute fs paths).
       const rskScriptPath = path.join(userDir, 'rsk-admin-script.js');
       try {
-        fs.writeFileSync(rskScriptPath, backToAdminScript, 'utf8');
+        fs.writeFileSync(
+          rskScriptPath,
+          backToAdminScript('/admin', 'Admin', 'Back to Admin'),
+          'utf8',
+        );
       } catch (err) {
         console.warn(
           '⚠️  [Node-RED Settings] Failed to write RSK admin script:',
