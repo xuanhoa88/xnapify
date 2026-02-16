@@ -5,10 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { registry } from '../Registry';
 import {
   BasePluginManager,
   LOADED_VERSIONS,
+  PLUGIN_CONTEXT,
   PLUGIN_MANAGER_INIT,
+  PLUGIN_METADATA,
 } from './base';
 
 class ClientPluginManager extends BasePluginManager {
@@ -45,6 +48,32 @@ class ClientPluginManager extends BasePluginManager {
           error,
         );
         this.emit('plugin:error', { id, error, phase: 'dom-cleanup' });
+      }
+    });
+
+    // Inject CSS when plugin is loaded dynamically
+    this.on('plugin:loaded', ({ id, manifest }) => {
+      try {
+        if (manifest && Array.isArray(manifest.cssFiles)) {
+          manifest.cssFiles.forEach(cssFile => {
+            const href = this.getPluginAssetUrl(id, cssFile);
+            // Skip if already present (e.g. SSR-injected)
+            if (document.querySelector(`link[href="${href}"]`)) {
+              return;
+            }
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.href = href;
+            link.setAttribute('data-plugin-id', id);
+            document.head.appendChild(link);
+            if (__DEV__) {
+              console.log(`[PluginManager] Injected CSS: ${href}`);
+            }
+          });
+        }
+      } catch (error) {
+        console.error(`[PluginManager] Failed to inject CSS for ${id}:`, error);
+        this.emit('plugin:error', { id, error, phase: 'css-inject' });
       }
     });
   }
@@ -318,9 +347,33 @@ class ClientPluginManager extends BasePluginManager {
           await this.loadPlugin(pluginId, data && data.manifest);
           break;
 
-        case 'PLUGIN_UNINSTALLED':
-          await this.unloadPlugin(pluginId);
+        case 'PLUGIN_UNINSTALLED': {
+          // Resolve the registry plugin name (logical name differs from UUID)
+          const metadata = this[PLUGIN_METADATA].get(pluginId);
+          const manifestName =
+            (data && data.manifest && data.manifest.name) ||
+            (metadata && metadata.manifest && metadata.manifest.name);
+
+          // Try unloading via ACTIVE_PLUGINS (uses logical name from loadNamespace)
+          if (manifestName && this.isPluginLoaded(manifestName)) {
+            await this.unloadPlugin(manifestName);
+          } else if (manifestName) {
+            // Plugin was defined but not activated in a namespace.
+            // Clean up registry (slots, hooks) and emit unloaded for DOM cleanup.
+            await registry.unregister(manifestName, this[PLUGIN_CONTEXT]);
+          }
+
+          // Remove definition to prevent re-loading via loadNamespace
+          if (manifestName) {
+            registry.undefine(manifestName);
+          }
+
+          // Clean up metadata and DOM resources (using UUID)
+          this[PLUGIN_METADATA].delete(pluginId);
+          this[LOADED_VERSIONS].delete(pluginId);
+          await this.emit('plugin:unloaded', { id: pluginId });
           break;
+        }
 
         case 'PLUGIN_UPDATED':
           await this.reloadPlugin(pluginId);

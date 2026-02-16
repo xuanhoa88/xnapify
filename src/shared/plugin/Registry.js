@@ -208,6 +208,25 @@ class PluginRegistry {
   }
 
   /**
+   * Remove a plugin definition by ID across all namespaces
+   * @param {string} id - Plugin ID
+   * @returns {boolean} True if any definition was removed
+   */
+  undefine(id) {
+    let removed = false;
+    for (const [, definitions] of this[DEFINITIONS]) {
+      for (const def of definitions) {
+        if (def.id === id) {
+          definitions.delete(def);
+          removed = true;
+          // Don't break here, as plugin might be defined in multiple namespaces
+        }
+      }
+    }
+    return removed;
+  }
+
+  /**
    * Get all plugin definitions for a namespace
    * @param {string} ns - Namespace
    * @returns {Set|null} Set of plugin definitions or null

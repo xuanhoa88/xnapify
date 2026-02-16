@@ -442,7 +442,7 @@ export class BasePluginManager {
       if (__DEV__) {
         console.log(`[PluginManager] Successfully loaded plugin: ${id}`);
       }
-      await this.emit('plugin:loaded', { id, plugin });
+      await this.emit('plugin:loaded', { id, plugin, manifest });
 
       return plugin;
     } catch (error) {
