@@ -10,6 +10,7 @@ import {
   createProductionSettings,
   createDevelopmentSettings,
 } from './settings';
+import flowSplitterPlugin from './flow-splitter';
 
 // This prevents the instance from being lost during HMR
 const kNodeRedInstance = Symbol.for('__rsk.nodeREDInstance__');
@@ -447,6 +448,9 @@ export class NodeRedManager {
         this._runtime.storage,
         this._runtime,
       );
+
+      // Register the flow splitter plugin
+      this._registerFlowSplitter();
     } catch (error) {
       throw new NodeRedError(
         'Component initialization failed',
@@ -640,5 +644,33 @@ export class NodeRedManager {
       });
 
     return this._stateTransitionLock;
+  }
+
+  /**
+   * Register the flow splitter plugin
+   * @private
+   */
+  _registerFlowSplitter() {
+    try {
+      // Build a RED-like facade using verified runtime internal APIs
+      const runtime = this._runtime;
+      const settings = this._settings;
+      const internal = runtime._;
+
+      const RED = {
+        events: runtime.events,
+        log: internal.log,
+        settings: {
+          userDir: settings.userDir,
+          flowFile: settings.flowFile || 'flows.json',
+        },
+        nodes: internal.nodes,
+      };
+
+      flowSplitterPlugin(RED);
+      Logger.success('Flow splitter plugin registered');
+    } catch (err) {
+      Logger.warn('Failed to register flow splitter plugin:', err.message);
+    }
   }
 }
