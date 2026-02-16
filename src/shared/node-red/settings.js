@@ -8,8 +8,20 @@
 import path from 'path';
 import fs from 'fs';
 import merge from 'lodash/merge';
+import { createContextAdapter } from '../context';
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
-import backToAdminScript from './client-scripts/back-to-admin';
+
+// Auto-discover all custom Node-RED node modules in ./nodes/
+// Each module must export: getNodeJS() and getNodeHTML()
+const nodesAdapter = createContextAdapter(
+  require.context('./nodes', false, /\.[cm]?[jt]s$/i),
+);
+
+// Auto-discover all client-side editor scripts in ./client-scripts/
+// Each module must export: getScript() => string
+const clientScriptsAdapter = createContextAdapter(
+  require.context('./client-scripts', false, /\.[cm]?[jt]s$/i),
+);
 
 // Use __non_webpack_require__ if available (for Webpack environments)
 const moduleRequire =
@@ -44,6 +56,117 @@ function ensureDir(dirPath) {
     fs.mkdirSync(dirPath, { recursive: true });
     console.log(`📁 [Node-RED Settings] Created directory: ${dirPath}`);
   }
+}
+
+/**
+ * Write custom Node-RED nodes to userDir so they can be loaded from disk.
+ * Node-RED requires real files on the filesystem (it cannot load from a webpack bundle).
+ *
+ * Auto-discovers all modules in ./nodes/ that export getNodeJS() and getNodeHTML().
+ * Each module's basename becomes the filename written to <userDir>/nodes/rsk/.
+ *
+ * @param {string} userDir - Node-RED user directory
+ * @returns {string} Path to the nodes directory
+ */
+function writeCustomNodes(userDir) {
+  const nodesDir = path.join(userDir, 'nodes');
+  const rskDir = path.join(nodesDir, 'rsk');
+  ensureDir(rskDir);
+
+  const modulePaths = nodesAdapter.files();
+  const seen = new Set();
+
+  modulePaths.forEach(modulePath => {
+    // Extract basename without extension, e.g. './rsk-middleware.js' → 'rsk-middleware'
+    const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
+    if (seen.has(baseName)) return;
+    seen.add(baseName);
+
+    try {
+      const mod = nodesAdapter.load(modulePath);
+      const getJS = mod.getNodeJS || (mod.default && mod.default.getNodeJS);
+      const getHTML =
+        mod.getNodeHTML || (mod.default && mod.default.getNodeHTML);
+
+      if (typeof getJS !== 'function' || typeof getHTML !== 'function') {
+        console.warn(
+          `⚠️  [Node-RED Settings] Skipping "${baseName}" — missing getNodeJS() or getNodeHTML()`,
+        );
+        return;
+      }
+
+      fs.writeFileSync(path.join(rskDir, `${baseName}.js`), getJS(), 'utf8');
+      fs.writeFileSync(
+        path.join(rskDir, `${baseName}.html`),
+        getHTML(),
+        'utf8',
+      );
+
+      console.log(
+        `📦 [Node-RED Settings] Node "${baseName}" written to`,
+        rskDir,
+      );
+    } catch (err) {
+      console.warn(
+        `⚠️  [Node-RED Settings] Failed to write node "${baseName}":`,
+        err.message,
+      );
+    }
+  });
+
+  return nodesDir;
+}
+
+/**
+ * Write client-side editor scripts to userDir so Node-RED can serve them.
+ *
+ * Auto-discovers all modules in ./client-scripts/ that export getScript().
+ * Each module's basename becomes the filename written to <userDir>/scripts/.
+ *
+ * @param {string} userDir - Node-RED user directory
+ * @returns {string[]} Array of absolute paths to written script files
+ */
+function writeClientScripts(userDir) {
+  const scriptsDir = path.join(userDir, 'scripts');
+  ensureDir(scriptsDir);
+
+  const scriptPaths = [];
+  const modulePaths = clientScriptsAdapter.files();
+  const seen = new Set();
+
+  modulePaths.forEach(modulePath => {
+    const baseName = path.basename(modulePath).replace(/\.[cm]?[jt]s$/i, '');
+    if (seen.has(baseName)) return;
+    seen.add(baseName);
+
+    try {
+      const mod = clientScriptsAdapter.load(modulePath);
+      const getScript = mod.getScript || (mod.default && mod.default.getScript);
+
+      if (typeof getScript !== 'function') {
+        console.warn(
+          `\u26a0\ufe0f  [Node-RED Settings] Skipping script "${baseName}" \u2014 missing getScript()`,
+        );
+        return;
+      }
+
+      const outputPath = path.join(scriptsDir, `${baseName}.js`);
+      fs.writeFileSync(outputPath, getScript(), 'utf8');
+      scriptPaths.push(outputPath);
+
+      console.log(
+        `\ud83d\udcdc [Node-RED Settings] Script "${baseName}" written to`,
+        scriptsDir,
+      );
+    } catch (err) {
+      console.warn(
+        `\u26a0\ufe0f  [Node-RED Settings] Failed to write script "${baseName}":`,
+        err.message,
+      );
+    }
+  });
+
+  return scriptPaths;
 }
 
 /**
@@ -227,30 +350,20 @@ export default function createSettings(options = {}) {
     debugMaxLength: 1000,
     debugUseColors: true,
 
+    // Custom nodes — write to userDir so Node-RED can load from disk
+    nodesDir: writeCustomNodes(userDir),
+
     // Palette settings
     editorTheme: (() => {
-      // Write the "Back to Admin" label script to userDir so Node-RED
-      // can serve it via its native theme system (requires absolute fs paths).
-      const rskScriptPath = path.join(userDir, 'rsk-admin-script.js');
-      try {
-        fs.writeFileSync(
-          rskScriptPath,
-          backToAdminScript('/admin', 'Admin', 'Back to Admin'),
-          'utf8',
-        );
-      } catch (err) {
-        console.warn(
-          '⚠️  [Node-RED Settings] Failed to write RSK admin script:',
-          err.message,
-        );
-      }
+      // Write all client-side editor scripts to userDir
+      const scriptPaths = writeClientScripts(userDir);
 
       return merge({}, mergedEditorTheme, {
         page: {
-          scripts: [rskScriptPath], // Absolute path — required by Node-RED
+          scripts: scriptPaths, // Absolute paths — required by Node-RED
         },
         logout: {
-          redirect: '/admin', // Clicking "Logout" (now "Back to Admin") returns to admin panel
+          redirect: '/admin',
         },
         codeEditor: {
           lib: 'monaco',

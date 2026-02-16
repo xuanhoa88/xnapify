@@ -11,8 +11,17 @@
  *
  * This runs as a page script injected via editorTheme.page.scripts.
  * The logout redirect is configured in settings.js to point to /admin.
+ *
+ * Follows the auto-discovery contract: export getScript() => string
+ *
+ * @returns {string} Client-side JavaScript source
  */
-export default (url = '/admin', label = 'Admin', title = 'Back to Admin') => `
+export function getScript() {
+  const url = '/admin';
+  const label = 'Admin';
+  const title = 'Back to Admin';
+
+  return `
 (function () {
   var interval = setInterval(function () {
     var userBtn = document.getElementById('red-ui-header-button-user');
@@ -35,11 +44,11 @@ export default (url = '/admin', label = 'Admin', title = 'Back to Admin') => `
       backBtn.appendChild(icon);
 
       // Add label text
-      var label = document.createElement('span');
-      label.className = 'red-ui-header-button-label';
-      label.textContent = '${label}';
-      label.style.marginLeft = '6px';
-      backBtn.appendChild(label);
+      var labelEl = document.createElement('span');
+      labelEl.className = 'red-ui-header-button-label';
+      labelEl.textContent = '${label}';
+      labelEl.style.marginLeft = '6px';
+      backBtn.appendChild(labelEl);
 
       // Insert the back button where the user button was
       userBtn.parentNode.insertBefore(backBtn, userBtn);
@@ -47,3 +56,4 @@ export default (url = '/admin', label = 'Admin', title = 'Back to Admin') => `
   }, 200);
 })();
 `;
+}

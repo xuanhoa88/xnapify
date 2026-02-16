@@ -15,7 +15,8 @@ export async function up({ context }) {
     { type: queryInterface.sequelize.QueryTypes.SELECT },
   );
 
-  let permissionId = existingPermissions[0]?.id;
+  let permissionId =
+    existingPermissions && existingPermissions[0] && existingPermissions[0].id;
 
   if (!permissionId) {
     // Insert 'nodered:admin' permission
@@ -39,7 +40,7 @@ export async function up({ context }) {
     { type: queryInterface.sequelize.QueryTypes.SELECT },
   );
 
-  const roleId = roles[0]?.id;
+  const roleId = roles && roles[0] && roles[0].id;
 
   if (roleId && permissionId) {
     // 3. Check if assignment already exists
@@ -77,7 +78,7 @@ export async function down({ context }) {
     { type: queryInterface.sequelize.QueryTypes.SELECT },
   );
 
-  const permissionId = permissions[0]?.id;
+  const permissionId = permissions && permissions[0] && permissions[0].id;
 
   if (permissionId) {
     // 2. Remove from role_permissions
