@@ -13,9 +13,10 @@ Modern React SSR application with Express backend, Redux state management, and c
 ## Features
 
 - ✨ **Server-Side Rendering (SSR)** - Fast initial page loads with React 18
+- 🧩 **Plugin System** - Extensible architecture with hooks, slots, and registry
 - 🔐 **Role-Based Access Control (RBAC)** - Comprehensive permissions, roles, and groups system
 - 🔌 **WebSocket Support** - Real-time bidirectional communication
-- 🎨 **Node-RED Integration** - Visual flow-based programming for automation
+- 🎨 **Node-RED Integration** - Visual flow-based programming with Git-friendly flow management
 - 📦 **Code Splitting** - Automatic route-based code splitting with Loadable Components
 - 🔄 **Hot Module Replacement** - Fast development with instant updates
 - 🧪 **Testing Ready** - Jest configured with React Testing Library
@@ -66,14 +67,15 @@ src/
 │   ├── fetch/        # API client
 │   ├── ws/           # WebSocket client
 │   ├── i18n/         # i18n utilities
-│   └── validator/    # SSR validator utilities
+│   ├── validator/    # SSR validator utilities
+│   └── node-red/     # Node-RED integration & migrations
 ├── client.js         # Client entry point
 └── server.js         # Server entry point
 tools/
 ├── tasks/            # Build tasks (build, clean, dev, etc.)
 ├── utils/            # Build utilities
 ├── jest/             # Jest configuration
-└── webpack/          # Webpack configurations
+├── webpack/          # Webpack configurations
 ```
 
 ## Environment Variables

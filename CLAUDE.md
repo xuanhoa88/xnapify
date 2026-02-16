@@ -26,6 +26,7 @@ react-starter-kit/
 │   ├── ws/                       # WebSocket client
 │   ├── i18n/                     # i18n utilities
 │   └── validator/                # SSR validator utilities
+│   └── node-red/                 # Node-RED integration & migrations
 ├── client.js                     # Client entry point
 ├── server.js                     # Server entry point
 ├── tools/                        # Build tools and tasks
@@ -177,7 +178,64 @@ The application uses an auto-discovery system for both API modules and page comp
 - Client connects via `src/shared/ws/`
 - Server implementation in `src/server.js` (`initWebSocket`)
 
-### 7. Worker Pattern
+### 7. Plugin System
+
+The application features a robust plugin system (`src/shared/plugin`) for extending functionality without modifying core code.
+
+**Core Concepts:**
+
+- **Registry:** Singleton managing all plugins, slots, and hooks.
+- **Slots:** UI extension points where plugins can render components.
+- **Hooks:** Logic extension points for modifying data or schema.
+
+**Using Plugins:**
+
+```javascript
+// Register a plugin
+import { registry } from '@/shared/plugin';
+
+registry.register('my-plugin', {
+  init: async (reg, context) => {
+    // Register UI slot
+    reg.registerSlot('profile.actions', MyButton, { order: 10 });
+
+    // Register Logic hook
+    reg.registerHook('user.validate', myValidator);
+  },
+});
+
+// Render a Slot (in your component)
+import { PluginSlot } from '@/shared/plugin';
+
+<PluginSlot name='profile.actions' props={userData} />;
+
+// Execute Hooks (in your logic)
+import { usePluginHooks } from '@/shared/plugin';
+
+const hooks = usePluginHooks();
+const results = await hooks.execute('user.validate', userData);
+```
+
+### 8. Node-RED Integration
+
+The application embeds Node-RED (`src/shared/node-red`) for visual workflow automation, fully integrated with the app's authentication and deployment lifecycle.
+
+**Key Features:**
+
+- **Embedded Architecture:** Runs as middleware within the Express app, sharing the same port and server instance.
+- **Unified Authentication:** Uses the application's RBAC system. Users need `nodered:read` or `nodered:admin` permissions to access the editor.
+- **Flow Splitter Plugin:** Automatically splits the monolithic `flows.json` and creates versioned snapshots in `src/shared/node-red/migrations/`.
+  - **Development:** Edits in the UI are split and saved as a new migration timestamp on deploy.
+  - **Production:** Rebuilds `flows.json` from the latest migration snapshot on startup.
+
+**Configuration:**
+
+Controlled via `src/shared/node-red/settings.js` and environment variables.
+
+- **Dev:** Verbose logging, diagnostic endpoints enabled.
+- **Prod:** Minimal logging, metrics enabled, admin endpoints secured.
+
+### 9. Worker Pattern
 
 For heavy processing, use the Worker Engine:
 
