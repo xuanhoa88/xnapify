@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
+import { formatDistanceToNow } from 'date-fns';
 import {
   Box,
   Icon,
@@ -25,27 +26,6 @@ import {
   getDashboardError,
 } from './redux';
 import s from './Dashboard.css';
-
-/**
- * Format date to relative time (e.g., "2 mins ago")
- *
- * @param {string} dateString - ISO date string
- * @returns {string} Formatted relative time
- */
-const formatRelativeTime = dateString => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  const now = new Date();
-  const diffMs = now - date;
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 1) return 'Just now';
-  if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-  if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-  return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-};
 
 /**
  * Get status badge style
@@ -164,7 +144,11 @@ function Dashboard() {
                             {statusBadge.label}
                           </span>
                         </td>
-                        <td>{formatRelativeTime(activity.created_at)}</td>
+                        <td>
+                          {formatDistanceToNow(new Date(activity.created_at), {
+                            addSuffix: true,
+                          })}
+                        </td>
                       </tr>
                     );
                   })}

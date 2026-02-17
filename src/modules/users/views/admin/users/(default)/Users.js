@@ -8,6 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+import { format } from 'date-fns';
 import { getUserProfile } from '../../../../../../shared/renderer/redux';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {
@@ -43,16 +44,6 @@ import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
 import RoleTag from '../components/RoleTag';
 import GroupTag from '../components/GroupTag';
 import s from './Users.css';
-
-const formatDate = dateString => {
-  if (!dateString) return 'N/A';
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-};
 
 function Users() {
   const { t } = useTranslation();
@@ -485,7 +476,7 @@ function Users() {
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Tag>
                 </td>
-                <td>{formatDate(user.created_at)}</td>
+                <td>{format(user.created_at, 'MMM dd, yyyy')}</td>
                 <td>
                   <div className={s.actions}>
                     <Button
