@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import cn from 'clsx';
 import { useRbac } from '../../../../../../../shared/renderer/components/Rbac';
+import { useDebounce } from '../../../../../../../shared/renderer/components/InfiniteScroll';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';
 import {
   Box,
@@ -39,10 +40,12 @@ import {
   clearApiKeyCreateError,
   clearNewApiKey,
 } from '../../redux';
+import { showSuccessMessage } from '../../../../../../../shared/renderer/redux';
+import { fetchPermissions } from '../../../permissions/redux';
 import { createApiKeyFormSchema } from '../../../../../validator/admin';
 import s from './UserApiKeys.css';
 
-const DEFAULT_FORM_VALUES = { name: '', expiresIn: 365, scopes: '' };
+const DEFAULT_FORM_VALUES = { name: '', expiresIn: 365, scopes: [] };
 
 export default function UserApiKeys({ userId }) {
   const { t } = useTranslation();
@@ -70,6 +73,14 @@ export default function UserApiKeys({ userId }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const confirmRevokeRef = useRef(null);
 
+  // Permissions List State
+  const [permissions, setPermissions] = useState([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(false);
+  const [permissionsHasMore, setPermissionsHasMore] = useState(false);
+  const [permissionsPage, setPermissionsPage] = useState(1);
+  const [permissionSearch, setPermissionSearch] = useState('');
+  const permissionsLimit = 20;
+
   // =========================================================================
   // DATA FETCHING
   // =========================================================================
@@ -80,6 +91,61 @@ export default function UserApiKeys({ userId }) {
       dispatch(fetchApiKeys(userId));
     }
   }, [dispatch, userId]);
+
+  // Load Permissions
+  const loadPermissions = useCallback(
+    async (page, search = '', reset = false) => {
+      if (reset) setPermissionsLoading(true);
+
+      try {
+        const result = await dispatch(
+          fetchPermissions({ page, limit: permissionsLimit, search }),
+        ).unwrap();
+        const newPermissions = result.permissions || [];
+        const { pagination } = result;
+
+        if (reset) {
+          setPermissions(newPermissions);
+        } else {
+          setPermissions(prev => [...prev, ...newPermissions]);
+        }
+
+        setPermissionsHasMore(pagination && pagination.page < pagination.pages);
+        setPermissionsPage(page);
+      } catch (_error) {
+        // ignore
+      } finally {
+        setPermissionsLoading(false);
+      }
+    },
+    [dispatch],
+  );
+
+  // Initial load when modal opens
+  useEffect(() => {
+    if (isCreateOpen) {
+      loadPermissions(1, '', true);
+    }
+  }, [isCreateOpen, loadPermissions]);
+
+  // Debounced search
+  useDebounce(permissionSearch, 300, debouncedSearch => {
+    if (isCreateOpen) {
+      loadPermissions(1, debouncedSearch, true);
+    }
+  });
+
+  const handleLoadMorePermissions = useCallback(() => {
+    if (!permissionsLoading && permissionsHasMore) {
+      loadPermissions(permissionsPage + 1, permissionSearch, false);
+    }
+  }, [
+    permissionsLoading,
+    permissionsHasMore,
+    permissionsPage,
+    permissionSearch,
+    loadPermissions,
+  ]);
 
   // =========================================================================
   // ACTIONS
@@ -120,9 +186,17 @@ export default function UserApiKeys({ userId }) {
     confirmRevokeRef.current.open(key);
   }, []);
 
-  const handleCopy = useCallback(text => {
-    navigator.clipboard.writeText(text);
-  }, []);
+  const handleCopy = useCallback(
+    text => {
+      navigator.clipboard.writeText(text);
+      dispatch(
+        showSuccessMessage({
+          message: t('apiKeys.copied', 'Copied to clipboard'),
+        }),
+      );
+    },
+    [dispatch, t],
+  );
 
   const handleCloseCreate = useCallback(() => {
     setIsCreateOpen(false);
@@ -142,19 +216,19 @@ export default function UserApiKeys({ userId }) {
       icon={<Icon name='key' size={24} />}
       title={
         user
-          ? t('API Keys: {{name}}', {
+          ? t('apiKeys.headerTitle', 'API Keys: {{name}}', {
               name: user.display_name || user.email,
             })
-          : t('User API Keys')
+          : t('apiKeys.headerTitle', 'User API Keys')
       }
-      subtitle={t('Manage API keys for this user')}
+      subtitle={t('apiKeys.headerSubtitle', 'Manage API keys for this user')}
     >
       <div style={{ display: 'flex', gap: '8px' }}>
         <Button
           variant='secondary'
           onClick={() => history.push('/admin/users')}
         >
-          {t('← Back to Users')}
+          {t('apiKeys.backToUsers', '← Back to Users')}
         </Button>
         <Button
           variant='primary'
@@ -162,7 +236,7 @@ export default function UserApiKeys({ userId }) {
           disabled={!canCreateApiKey}
         >
           <Icon name='plus' size={16} />
-          {t('Generate Key')}
+          {t('apiKeys.generateKey', 'Generate Key')}
         </Button>
       </div>
     </Box.Header>
@@ -176,7 +250,10 @@ export default function UserApiKeys({ userId }) {
     return (
       <div className={s.root}>
         {getHeader()}
-        <Loader variant='skeleton' message={t('Loading user...')} />
+        <Loader
+          variant='skeleton'
+          message={t('apiKeys.loading', 'Loading...')}
+        />
       </div>
     );
   }
@@ -187,12 +264,12 @@ export default function UserApiKeys({ userId }) {
         {getHeader()}
         <div className={s.content}>
           <div className={s.error}>
-            {userError || t('User not found')}
+            {userError || t('apiKeys.userNotFoundError', 'User not found')}
             <Button
               variant='secondary'
               onClick={() => history.push('/admin/users')}
             >
-              {t('Back to Users')}
+              {t('apiKeys.backToUsers', 'Back to Users')}
             </Button>
           </div>
         </div>
@@ -209,17 +286,22 @@ export default function UserApiKeys({ userId }) {
         {newKey && (
           <div className={s.newKeyAlert}>
             <div className={s.alertHeader}>
-              <strong>{t('New API Key Generated!')}</strong>
+              <strong>
+                {t('apiKeys.newKeyGenerated', 'New API Key Generated!')}
+              </strong>
               <button
                 className={s.closeBtn}
                 onClick={handleCloseNewKeyAlert}
-                aria-label={t('Close')}
+                aria-label={t('apiKeys.close', 'Close')}
               >
                 ×
               </button>
             </div>
             <p className={s.alertText}>
-              {t('Please copy this key now. It will not be shown again.')}
+              {t(
+                'apiKeys.newKeyGeneratedText',
+                'Please copy this key now. It will not be shown again.',
+              )}
             </p>
             <div className={s.tokenDisplay}>
               <code>{newKey.token}</code>
@@ -228,8 +310,8 @@ export default function UserApiKeys({ userId }) {
                 size='small'
                 onClick={() => handleCopy(newKey.token)}
               >
-                <Icon name='copy' size={14} />
-                {t('Copy')}
+                <Icon name='clipboard' size={14} />
+                {t('apiKeys.copy', 'Copy')}
               </Button>
             </div>
           </div>
@@ -243,19 +325,19 @@ export default function UserApiKeys({ userId }) {
         ) : keys.length === 0 ? (
           <div className={s.emptyState}>
             <Icon name='key' size={32} />
-            <p>{t('No API keys yet')}</p>
+            <p>{t('apiKeys.emptyState', 'No API keys yet')}</p>
           </div>
         ) : (
           <div className={s.tableContainer}>
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>{t('Name')}</th>
-                  <th>{t('Prefix')}</th>
-                  <th>{t('Created')}</th>
-                  <th>{t('Last Used')}</th>
-                  <th>{t('Status')}</th>
-                  <th className={s.actionsCol}>{t('Actions')}</th>
+                  <th>{t('apiKeys.name', 'Name')}</th>
+                  <th>{t('apiKeys.prefix', 'Prefix')}</th>
+                  <th>{t('apiKeys.created', 'Created')}</th>
+                  <th>{t('apiKeys.lastUsed', 'Last Used')}</th>
+                  <th>{t('apiKeys.status', 'Status')}</th>
+                  <th className={s.actionsCol}></th>
                 </tr>
               </thead>
               <tbody>
@@ -268,7 +350,11 @@ export default function UserApiKeys({ userId }) {
                     <td>
                       <code>{key.token_prefix}…</code>
                     </td>
-                    <td>{format(new Date(key.created_at), 'yyyy-MM-dd')}</td>
+                    <td>
+                      {key.created_at
+                        ? format(new Date(key.created_at), 'yyyy-MM-dd')
+                        : '—'}
+                    </td>
                     <td>
                       {key.last_used_at
                         ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
@@ -281,7 +367,9 @@ export default function UserApiKeys({ userId }) {
                           key.is_active ? s.badgeActive : s.badgeRevoked,
                         )}
                       >
-                        {key.is_active ? t('Active') : t('Revoked')}
+                        {key.is_active
+                          ? t('apiKeys.statusActive', 'Active')
+                          : t('apiKeys.statusRevoked', 'Revoked')}
                       </span>
                     </td>
                     <td>
@@ -292,7 +380,7 @@ export default function UserApiKeys({ userId }) {
                             size='small'
                             iconOnly
                             onClick={() => handleRevoke(key)}
-                            title={t('Revoke')}
+                            title={t('apiKeys.revoke', 'Revoke')}
                           >
                             <Icon name='trash' size={16} />
                           </Button>
@@ -310,62 +398,98 @@ export default function UserApiKeys({ userId }) {
       {/* Create key modal */}
       <Modal isOpen={isCreateOpen} onClose={handleCloseCreate}>
         <Modal.Header onClose={handleCloseCreate}>
-          {t('Generate New API Key')}
+          {t('apiKeys.generateNewKey', 'Generate New API Key')}
         </Modal.Header>
         <Modal.Body error={createError}>
           <Form
+            id='create-api-key-form'
             onSubmit={handleCreate}
             schema={createApiKeyFormSchema}
             defaultValues={DEFAULT_FORM_VALUES}
           >
             <div className={s.modalField}>
-              <Form.Field name='name' label={t('Key Name')}>
-                <Form.Input placeholder={t('e.g. CI/CD Pipeline')} />
+              <Form.Field name='name' label={t('apiKeys.keyName', 'Key Name')}>
+                <Form.Input
+                  placeholder={t(
+                    'apiKeys.keyNamePlaceholder',
+                    'e.g. CI/CD Pipeline',
+                  )}
+                />
               </Form.Field>
             </div>
-
             <div className={s.modalField}>
-              <Form.Field name='expiresIn' label={t('Expiration')}>
+              <Form.Field
+                name='expiresIn'
+                label={t('apiKeys.expiration', 'Expiration')}
+              >
                 <Form.Select
                   options={[
-                    { value: 7, label: t('7 Days') },
-                    { value: 14, label: t('14 Days') },
-                    { value: 30, label: t('30 Days') },
-                    { value: 60, label: t('60 Days') },
-                    { value: 90, label: t('90 Days') },
-                    { value: 180, label: t('180 Days') },
-                    { value: 365, label: t('1 Year') },
+                    { value: 7, label: t('apiKeys.7Days', '7 Days') },
+                    { value: 14, label: t('apiKeys.14Days', '14 Days') },
+                    { value: 30, label: t('apiKeys.30Days', '30 Days') },
+                    { value: 60, label: t('apiKeys.60Days', '60 Days') },
+                    { value: 90, label: t('apiKeys.90Days', '90 Days') },
+                    { value: 180, label: t('apiKeys.180Days', '180 Days') },
+                    { value: 365, label: t('apiKeys.1Year', '1 Year') },
                   ]}
                 />
               </Form.Field>
             </div>
-
             <div className={s.modalField}>
               <Form.Field
                 name='scopes'
-                label={t('Scopes (comma separated)')}
-                description={t('e.g. users:read, users:write')}
+                label={t('apiKeys.permissions', 'Permissions')}
+                description={t(
+                  'apiKeys.permissionsDescription',
+                  'Select permissions for this API key',
+                )}
               >
-                <Form.Input placeholder={t('users:read, users:write')} />
+                <Form.CheckboxList
+                  items={permissions}
+                  valueKey='id'
+                  labelKey='description'
+                  groupBy='resource'
+                  loading={permissionsLoading}
+                  hasMore={permissionsHasMore}
+                  onLoadMore={handleLoadMorePermissions}
+                  searchable
+                  searchPlaceholder={t(
+                    'apiKeys.permissionsSearchPlaceholder',
+                    'Search e.g. users, users:read, :create',
+                  )}
+                  onSearch={setPermissionSearch}
+                  emptyMessage={t(
+                    'apiKeys.permissionsEmptyMessage',
+                    'No permissions found',
+                  )}
+                />
               </Form.Field>
             </div>
-
-            <Modal.Actions>
-              <Modal.Button variant='secondary' onClick={handleCloseCreate}>
-                {t('Cancel')}
-              </Modal.Button>
-              <Modal.Button variant='primary' type='submit' disabled={creating}>
-                {creating ? t('Generating…') : t('Generate')}
-              </Modal.Button>
-            </Modal.Actions>
           </Form>
         </Modal.Body>
+        <Modal.Footer>
+          <Modal.Actions>
+            <Modal.Button variant='secondary' onClick={handleCloseCreate}>
+              {t('apiKeys.cancel', 'Cancel')}
+            </Modal.Button>
+            <Modal.Button
+              variant='primary'
+              type='submit'
+              form='create-api-key-form'
+              disabled={creating}
+            >
+              {creating
+                ? t('apiKeys.generating', 'Generating…')
+                : t('apiKeys.generate', 'Generate')}
+            </Modal.Button>
+          </Modal.Actions>
+        </Modal.Footer>
       </Modal>
 
       {/* Revoke confirmation modal */}
       <ConfirmModal.Delete
         ref={confirmRevokeRef}
-        title={t('Revoke API Key')}
+        title={t('apiKeys.revokeTitle', 'Revoke API Key')}
         getItemName={key => key.name}
         onDelete={onRevoke}
       />

@@ -219,14 +219,5 @@ export const createApiKeyFormSchema = ({ i18n, z }) =>
         message: i18n.t('zod:admin.apiKey.NAME_MAX', 'Name is too long'),
       }),
     expiresIn: z.coerce.number().int().positive().nullable().optional(), // Days
-    scopes: z.preprocess(
-      val =>
-        typeof val === 'string'
-          ? val
-              .split(',')
-              .map(s => s.trim())
-              .filter(Boolean)
-          : val,
-      z.array(z.string()).optional(),
-    ),
+    scopes: z.array(z.string()).optional(),
   });

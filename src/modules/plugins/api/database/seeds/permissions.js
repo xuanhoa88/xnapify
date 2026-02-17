@@ -60,15 +60,6 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
-    {
-      id: pluginPermissionIds.pluginsInstall,
-      resource: 'plugins',
-      action: 'install',
-      description: 'Install/Uninstall plugins for self',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
   ];
 
   await queryInterface.bulkInsert('permissions', permissions);

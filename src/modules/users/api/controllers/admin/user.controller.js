@@ -398,6 +398,7 @@ export async function createApiKey(req, res) {
     const [isValid, errors] = validateForm(createApiKeyFormSchema, {
       name,
       expiresIn: expiresIn || null,
+      scopes,
     });
 
     if (!isValid) {

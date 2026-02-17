@@ -145,9 +145,14 @@ function Dashboard() {
                           </span>
                         </td>
                         <td>
-                          {formatDistanceToNow(new Date(activity.created_at), {
-                            addSuffix: true,
-                          })}
+                          {activity.created_at
+                            ? formatDistanceToNow(
+                                new Date(activity.created_at),
+                                {
+                                  addSuffix: true,
+                                },
+                              )
+                            : 'N/A'}
                         </td>
                       </tr>
                     );

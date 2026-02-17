@@ -476,7 +476,11 @@ function Users() {
                     {user.is_active ? 'Active' : 'Inactive'}
                   </Tag>
                 </td>
-                <td>{format(user.created_at, 'MMM dd, yyyy')}</td>
+                <td>
+                  {user.created_at
+                    ? format(new Date(user.created_at), 'MMM dd, yyyy')
+                    : '—'}
+                </td>
                 <td>
                   <div className={s.actions}>
                     <Button

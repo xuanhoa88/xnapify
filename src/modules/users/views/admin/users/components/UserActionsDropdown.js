@@ -62,7 +62,6 @@ function UserActionsDropdown({
             Manage API Keys
           </ActionsDropdown.Item>
         )}
-        <ActionsDropdown.Divider />
         <ActionsDropdown.Item
           onClick={() => onManageGroups(user)}
           icon={<Icon name='folder' size={16} />}
