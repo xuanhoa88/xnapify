@@ -43,6 +43,34 @@ const history = createBrowserHistory({
   basename: process.env.PUBLIC_URL || '',
 });
 
+// Monkey-patch history to support silent reload on navigation
+const originalPush = history.push;
+const originalReplace = history.replace;
+
+// Helper to get full URL from path/location
+const getNavUrl = (path, state) => {
+  if (typeof path === 'string') {
+    return history.createHref({ pathname: path, state });
+  }
+  return history.createHref({ ...path, state: state || path.state });
+};
+
+history.push = (path, state) => {
+  if (pluginManager.needsReload) {
+    window.location.href = getNavUrl(path, state);
+    return;
+  }
+  originalPush.call(history, path, state);
+};
+
+history.replace = (path, state) => {
+  if (pluginManager.needsReload) {
+    window.location.replace(getNavUrl(path, state));
+    return;
+  }
+  originalReplace.call(history, path, state);
+};
+
 // Abort controller for request cancellation
 let fetchAbortController = new AbortController();
 

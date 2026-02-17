@@ -14,9 +14,14 @@ import {
   PLUGIN_METADATA,
 } from './base';
 
+// Private symbol for reload state
+const NEEDS_RELOAD = Symbol('__rsk.needsReload__');
+
 class ClientPluginManager extends BasePluginManager {
   constructor() {
     super();
+
+    this[NEEDS_RELOAD] = false;
 
     // Clean up DOM resources when plugin is unloaded
     this.on('plugin:unloaded', ({ id }) => {
@@ -77,6 +82,17 @@ class ClientPluginManager extends BasePluginManager {
       }
     });
   }
+
+  /** Whether a full page reload is required on next navigation */
+  get needsReload() {
+    return this[NEEDS_RELOAD];
+  }
+
+  /** @private */
+  set needsReload(value) {
+    this[NEEDS_RELOAD] = value;
+  }
+
   /**
    * Load a script dynamically
    * @param {string} url - Script URL
@@ -345,6 +361,7 @@ class ClientPluginManager extends BasePluginManager {
       switch (type) {
         case 'PLUGIN_INSTALLED':
           await this.loadPlugin(pluginId, data && data.manifest);
+          this.needsReload = true;
           break;
 
         case 'PLUGIN_UNINSTALLED': {
@@ -372,12 +389,21 @@ class ClientPluginManager extends BasePluginManager {
           this[PLUGIN_METADATA].delete(pluginId);
           this[LOADED_VERSIONS].delete(pluginId);
           await this.emit('plugin:unloaded', { id: pluginId });
+
+          this.needsReload = true;
           break;
         }
 
-        case 'PLUGIN_UPDATED':
-          await this.reloadPlugin(pluginId);
+        case 'PLUGIN_UPDATED': {
+          // If plugin is loaded, unload it first
+          if (this.isPluginLoaded(pluginId)) {
+            await this.unloadPlugin(pluginId);
+          }
+          // Then install the new version
+          await this.loadPlugin(pluginId, data && data.manifest);
+          this.needsReload = true;
           break;
+        }
 
         default:
           console.warn(`[ClientPluginManager] Unknown event type: ${type}`);
