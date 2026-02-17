@@ -46,7 +46,7 @@ export function generateToken(payload, secret, options = {}) {
   // Add standard claims
   const tokenPayload = {
     ...payload,
-    jti: crypto.randomBytes(16).toString('hex'), // JWT ID
+    jti: payload.jti || crypto.randomBytes(16).toString('hex'), // JWT ID
     iat: Math.floor(Date.now() / 1000), // Issued at
   };
 

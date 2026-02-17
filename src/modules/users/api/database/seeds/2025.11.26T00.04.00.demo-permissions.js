@@ -32,6 +32,11 @@ export const demoPermissionIds = {
   permissionsRead: uuidv4(),
   permissionsUpdate: uuidv4(),
   permissionsDelete: uuidv4(),
+  // API Keys CRUD
+  apiKeysCreate: uuidv4(),
+  apiKeysRead: uuidv4(),
+  apiKeysUpdate: uuidv4(),
+  apiKeysDelete: uuidv4(),
 };
 
 /**
@@ -200,6 +205,43 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
+    // API Keys CRUD
+    {
+      id: demoPermissionIds.apiKeysCreate,
+      resource: DEFAULT_RESOURCES.API_KEYS,
+      action: DEFAULT_ACTIONS.CREATE,
+      description: 'Create API keys',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.apiKeysRead,
+      resource: DEFAULT_RESOURCES.API_KEYS,
+      action: DEFAULT_ACTIONS.READ,
+      description: 'View API keys',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.apiKeysUpdate,
+      resource: DEFAULT_RESOURCES.API_KEYS,
+      action: DEFAULT_ACTIONS.UPDATE,
+      description: 'Update API keys',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.apiKeysDelete,
+      resource: DEFAULT_RESOURCES.API_KEYS,
+      action: DEFAULT_ACTIONS.DELETE,
+      description: 'Delete API keys',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
   ];
 
   await queryInterface.bulkInsert('permissions', permissions);
@@ -236,6 +278,11 @@ export async function down({ context, Sequelize }) {
       { resource: 'permissions', action: 'read' },
       { resource: 'permissions', action: 'update' },
       { resource: 'permissions', action: 'delete' },
+      // API Keys CRUD
+      { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.CREATE },
+      { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.READ },
+      { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.UPDATE },
+      { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.DELETE },
     ],
   });
 }

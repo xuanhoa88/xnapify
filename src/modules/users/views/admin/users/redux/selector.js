@@ -230,3 +230,56 @@ export const getUserAssignGroupsError = state => {
   const op = getOperationState(state, 'assignGroups');
   return (op && op.error) || null;
 };
+// =============================================================================
+// API KEY SELECTORS
+// =============================================================================
+
+const getApiKeysState = state => {
+  const normalized = normalizeState(state && state[SLICE_NAME]);
+  return normalized.apikeys;
+};
+
+export const getApiKeys = state => {
+  const apiKeys = getApiKeysState(state);
+  return (apiKeys && apiKeys.items) || [];
+};
+
+export const getApiKeysUserId = state => {
+  const apiKeys = getApiKeysState(state);
+  return (apiKeys && apiKeys.userId) || null;
+};
+
+export const getNewApiKey = state => {
+  const apiKeys = getApiKeysState(state);
+  return (apiKeys && apiKeys.newKey) || null;
+};
+
+export const isApiKeysListLoading = state => {
+  const op = getOperationState(state, 'apiKeysList');
+  return !!(op && op.loading);
+};
+
+export const getApiKeysListError = state => {
+  const op = getOperationState(state, 'apiKeysList');
+  return (op && op.error) || null;
+};
+
+export const isApiKeyCreateLoading = state => {
+  const op = getOperationState(state, 'apiKeyCreate');
+  return !!(op && op.loading);
+};
+
+export const getApiKeyCreateError = state => {
+  const op = getOperationState(state, 'apiKeyCreate');
+  return (op && op.error) || null;
+};
+
+export const isApiKeyRevokeLoading = state => {
+  const op = getOperationState(state, 'apiKeyRevoke');
+  return !!(op && op.loading);
+};
+
+export const getApiKeyRevokeError = state => {
+  const op = getOperationState(state, 'apiKeyRevoke');
+  return (op && op.error) || null;
+};

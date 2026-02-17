@@ -11,7 +11,7 @@ import {
   createDevelopmentSettings,
 } from './settings';
 import { createContextAdapter } from '../context';
-import flowSplitterPlugin from './flow-splitter';
+import initFlowSplitter from './flow-splitter';
 
 // Bundle all migration JSON files at build time
 const migrationsContext = require.context('./migrations', true, /\.json$/i);
@@ -672,7 +672,7 @@ export class NodeRedManager {
         nodes: internal.nodes,
       };
 
-      flowSplitterPlugin(RED);
+      initFlowSplitter(RED);
       Logger.success('Flow splitter plugin registered');
     } catch (err) {
       Logger.warn('Failed to register flow splitter plugin:', err.message);

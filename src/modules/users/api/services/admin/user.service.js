@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import dayjs from 'dayjs';
+import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_ROLE } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
 import { logUserActivity } from '../../utils/activity';
@@ -717,4 +719,95 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
     deleted: deletedIds.length,
     deletedIds,
   };
+}
+
+/**
+ * List API keys for a user
+ *
+ * @param {string} userId - User ID
+ * @param {Object} models - Database models
+ * @returns {Promise<Array>} List of API keys
+ */
+export async function listApiKeys(userId, models) {
+  const { UserApiKey } = models;
+  return UserApiKey.findAll({
+    where: { user_id: userId },
+    order: [['created_at', 'DESC']],
+  });
+}
+
+/**
+ * Create a new API key for a user
+ *
+ * @param {Object} user - User object
+ * @param {Object} data - Key data
+ * @param {string} data.name - Key name
+ * @param {string[]} [data.scopes] - Scopes
+ * @param {number} [data.expiresIn] - Expiration in days
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {Object} options.jwt - JWT service
+ * @returns {Promise<Object>} Created key and raw token
+ */
+export async function createApiKey(user, data, { models, jwt }) {
+  const { name, scopes = [], expiresIn } = data;
+  const { UserApiKey } = models;
+
+  // Generate a UUID that links the JWT to the DB record
+  const keyId = uuidv4();
+
+  // Calculate expiration (default to 365 days if not provided)
+  const days = expiresIn || 365;
+  const expiresAt = dayjs().add(days, 'day').toDate();
+
+  // Generate JWT with type: 'api_key' and our DB id as jti
+  const token = jwt.generateToken(
+    {
+      id: user.id,
+      email: user.email,
+      jti: keyId,
+      scopes,
+      type: 'api_key',
+    },
+    { expiresIn: `${days}d` },
+  );
+
+  // Store metadata in DB
+  const newKey = await UserApiKey.create({
+    id: keyId,
+    user_id: user.id,
+    name,
+    scopes,
+    is_active: true,
+    expires_at: expiresAt,
+    token_prefix: token.substring(0, 10),
+  });
+
+  return { key: newKey, token };
+}
+
+/**
+ * Revoke an API key
+ *
+ * @param {string} userId - User ID
+ * @param {string} keyId - API Key ID
+ * @param {Object} models - Database models
+ * @returns {Promise<void>}
+ * @throws {Error} If key not found
+ */
+export async function revokeApiKey(userId, keyId, models) {
+  const { UserApiKey } = models;
+
+  const key = await UserApiKey.findOne({
+    where: { id: keyId, user_id: userId },
+  });
+
+  if (!key) {
+    const error = new Error('API Key not found');
+    error.name = 'ApiKeyNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  await key.update({ is_active: false });
 }

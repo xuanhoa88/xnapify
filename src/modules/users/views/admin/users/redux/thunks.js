@@ -203,3 +203,69 @@ export const bulkDeleteUsers = createAsyncThunk(
     }
   },
 );
+
+// ========================================================================
+// API KEY THUNKS
+// ========================================================================
+
+/**
+ * Fetch API keys for a user
+ */
+export const fetchApiKeys = createAsyncThunk(
+  'admin/users/fetchApiKeys',
+  async (userId, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/api-keys`);
+      return data.keys || [];
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+/**
+ * Create a new API key for a user
+ */
+export const createApiKey = createAsyncThunk(
+  'admin/users/createApiKey',
+  async (
+    { userId, name, expiresIn, scopes },
+    { dispatch, extra: { fetch }, rejectWithValue },
+  ) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/api-keys`, {
+        method: 'POST',
+        body: { name, expiresIn, scopes },
+      });
+
+      dispatch(fetchApiKeys(userId));
+
+      return data;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+/**
+ * Revoke an API key
+ */
+export const revokeApiKey = createAsyncThunk(
+  'admin/users/revokeApiKey',
+  async (
+    { userId, keyId },
+    { dispatch, extra: { fetch }, rejectWithValue },
+  ) => {
+    try {
+      await fetch(`/api/admin/users/${userId}/api-keys/${keyId}`, {
+        method: 'DELETE',
+      });
+
+      dispatch(fetchApiKeys(userId));
+
+      return keyId;
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);

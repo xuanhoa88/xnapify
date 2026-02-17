@@ -16,6 +16,9 @@ import {
   fetchUserPermissions,
   assignRolesToUser,
   assignGroupsToUser,
+  fetchApiKeys,
+  createApiKey,
+  revokeApiKey,
 } from './thunks';
 
 /**
@@ -62,6 +65,9 @@ const createFreshOperations = () => ({
   permissions: createOperationState(),
   assignRoles: createOperationState(),
   assignGroups: createOperationState(),
+  apiKeysList: createOperationState(),
+  apiKeyCreate: createOperationState(),
+  apiKeyRevoke: createOperationState(),
 });
 
 /**
@@ -85,10 +91,20 @@ const createFreshPermissions = () => ({
   items: [],
 });
 
+/**
+ * Create fresh api keys object
+ */
+const createFreshApiKeys = () => ({
+  userId: null,
+  items: [],
+  newKey: null,
+});
+
 // Initial state with fresh operations
 const initialState = {
   data: createFreshData(),
   permissions: createFreshPermissions(),
+  apikeys: createFreshApiKeys(),
   operations: createFreshOperations(),
 };
 
@@ -104,6 +120,7 @@ export const normalizeState = state => {
     return {
       data: createFreshData(),
       permissions: createFreshPermissions(),
+      apikeys: createFreshApiKeys(),
       operations: createFreshOperations(),
     };
   }
@@ -113,6 +130,7 @@ export const normalizeState = state => {
     return {
       data: state.data || createFreshData(),
       permissions: state.permissions || createFreshPermissions(),
+      apikeys: state.apikeys || createFreshApiKeys(),
       operations: { ...createFreshOperations(), ...state.operations },
     };
   }
@@ -125,6 +143,7 @@ export const normalizeState = state => {
         pagination: state.pagination || null,
       },
       permissions: state.permissions || createFreshPermissions(),
+      apikeys: state.apikeys || createFreshApiKeys(),
       operations: createFreshOperations(),
     };
   }
@@ -133,6 +152,7 @@ export const normalizeState = state => {
   return {
     data: createFreshData(),
     permissions: createFreshPermissions(),
+    apikeys: createFreshApiKeys(),
     operations: createFreshOperations(),
   };
 };
@@ -224,6 +244,30 @@ const usersSlice = createSlice({
     clearUserPermissions: state => {
       const normalized = normalizeState(state);
       normalized.permissions = createFreshPermissions();
+      Object.assign(state, normalized);
+    },
+
+    /**
+     * API Keys - Clear Errrors & State
+     */
+    clearApiKeysListError: state => {
+      const normalized = normalizeState(state);
+      normalized.operations.apiKeysList.error = null;
+      Object.assign(state, normalized);
+    },
+    clearApiKeyCreateError: state => {
+      const normalized = normalizeState(state);
+      normalized.operations.apiKeyCreate.error = null;
+      Object.assign(state, normalized);
+    },
+    clearApiKeyRevokeError: state => {
+      const normalized = normalizeState(state);
+      normalized.operations.apiKeyRevoke.error = null;
+      Object.assign(state, normalized);
+    },
+    clearNewApiKey: state => {
+      const normalized = normalizeState(state);
+      normalized.apikeys.newKey = null;
       Object.assign(state, normalized);
     },
 
@@ -403,6 +447,52 @@ const usersSlice = createSlice({
         assignGroupsToUser.rejected,
         createRejectedHandler('assignGroups'),
       );
+
+    // =========================================================================
+    // API KEYS
+    // =========================================================================
+
+    // Fetch API Keys
+    builder
+      .addCase(fetchApiKeys.pending, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.apikeys.userId = action.meta.arg;
+        normalized.operations.apiKeysList = { loading: true, error: null };
+        Object.assign(state, normalized);
+      })
+      .addCase(fetchApiKeys.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.apikeys.items = action.payload;
+        normalized.operations.apiKeysList = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(fetchApiKeys.rejected, createRejectedHandler('apiKeysList'));
+
+    // Create API Key
+    builder
+      .addCase(createApiKey.pending, createPendingHandler('apiKeyCreate'))
+      .addCase(createApiKey.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.apikeys.newKey = action.payload; // Store new key temporarily for display
+        normalized.operations.apiKeyCreate = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(createApiKey.rejected, createRejectedHandler('apiKeyCreate'));
+
+    // Revoke API Key
+    builder
+      .addCase(revokeApiKey.pending, createPendingHandler('apiKeyRevoke'))
+      .addCase(revokeApiKey.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        const keyId = action.payload;
+        const key = normalized.apikeys.items.find(k => k.id === keyId);
+        if (key) {
+          key.is_active = false;
+        }
+        normalized.operations.apiKeyRevoke = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(revokeApiKey.rejected, createRejectedHandler('apiKeyRevoke'));
   },
 });
 
@@ -414,6 +504,10 @@ export const {
   clearUserBulkStatusError,
   clearUserBulkDeleteError,
   clearUserPermissionsError,
+  clearApiKeysListError,
+  clearApiKeyCreateError,
+  clearApiKeyRevokeError,
+  clearNewApiKey,
   clearUserPermissions,
   resetUsersState,
 } = usersSlice.actions;

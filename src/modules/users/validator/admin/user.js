@@ -200,3 +200,33 @@ export const assignGroupsToUserFormSchema = ({ i18n, z }) =>
       ),
     }),
   });
+
+/**
+ * Create API Key schema - callable factory function
+ *
+ * Used by:
+ * - Frontend: Create API key form
+ * - Backend: POST /api/admin/users/:id/api-keys
+ */
+export const createApiKeyFormSchema = ({ i18n, z }) =>
+  z.object({
+    name: z
+      .string()
+      .min(1, {
+        message: i18n.t('zod:admin.apiKey.NAME_REQUIRED', 'Name is required'),
+      })
+      .max(50, {
+        message: i18n.t('zod:admin.apiKey.NAME_MAX', 'Name is too long'),
+      }),
+    expiresIn: z.coerce.number().int().positive().nullable().optional(), // Days
+    scopes: z.preprocess(
+      val =>
+        typeof val === 'string'
+          ? val
+              .split(',')
+              .map(s => s.trim())
+              .filter(Boolean)
+          : val,
+      z.array(z.string()).optional(),
+    ),
+  });

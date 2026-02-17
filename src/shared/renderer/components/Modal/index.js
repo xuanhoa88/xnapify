@@ -142,6 +142,7 @@ const ModalButton = ({
   disabled,
   onClick,
   variant = 'secondary',
+  ...props
 }) => (
   <Button
     variant={variant}
@@ -151,6 +152,7 @@ const ModalButton = ({
     )}
     onClick={onClick}
     disabled={disabled}
+    {...props}
   >
     {children}
   </Button>

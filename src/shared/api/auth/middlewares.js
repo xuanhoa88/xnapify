@@ -86,11 +86,55 @@ export function requireAuthMiddleware(options = {}) {
 
       if (includeUser) {
         const jwt = req.app.get('jwt');
-        const decoded = jwt.verifyTypedToken(token, tokenType);
-        req.user = decoded;
+
+        // Verify signature and decode
+        const decoded = jwt.verifyToken(token);
+
+        if (decoded.type === 'api_key') {
+          // API Key flow
+          const models = req.app.get('models');
+          const apiKey = await models.UserApiKey.findOne({
+            where: {
+              id: decoded.jti,
+              user_id: decoded.id,
+              is_active: true,
+            },
+          });
+
+          if (!apiKey) {
+            const error = new Error('Invalid or revoked API Key');
+            error.name = 'InvalidApiKeyError';
+            error.status = 401;
+            throw error;
+          }
+
+          // Check expiration if DB has it (JWT exp is already checked by verifyToken)
+          if (apiKey.expires_at && new Date() > apiKey.expires_at) {
+            const error = new Error('API Key expired');
+            error.name = 'ApiKeyExpiredError';
+            error.status = 401;
+            throw error;
+          }
+
+          // Update last used (fire and forget to not block response time too much, or await)
+          // Ideally should be async/background, but for now await is safer
+          await apiKey.update({ last_used_at: new Date() });
+
+          // Set user from payload (or fetch full user if needed)
+          req.user = decoded;
+          req.authMethod = 'api_key';
+          req.apiKey = apiKey;
+        } else {
+          // Standard User Token flow
+          // Verify typed token (checks type === tokenType e.g. 'access')
+          const verified = jwt.verifyTypedToken(token, tokenType);
+          req.user = verified;
+          req.authMethod = 'jwt';
+        }
       }
+
       req.token = token;
-      req.authMethod = 'jwt';
+      if (!req.authMethod) req.authMethod = 'jwt'; // Default fallback
       req.authenticated = true;
 
       next();

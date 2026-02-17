@@ -475,7 +475,7 @@ function writeConfig(config, rootPath) {
  * Main plugin export
  * @param {object} RED - Node-RED runtime
  */
-module.exports = function flowSplitterPlugin(RED) {
+export default function flowSplitter(RED) {
   RED.log.info(`${PLUGIN_LOG_PREFIX} Initializing...`);
 
   // Listen for flow start events (deploy or boot)
@@ -571,4 +571,4 @@ module.exports = function flowSplitterPlugin(RED) {
 
     RED.log.info(`${PLUGIN_LOG_PREFIX} Split complete ✅`);
   });
-};
+}

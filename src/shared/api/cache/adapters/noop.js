@@ -24,9 +24,9 @@
 export default class NoOpCache {
   /**
    * Create a new NoOp cache instance
-   * @param {Object} [options] - Unused, provided for interface compatibility
+   * @param {Object} [_options] - Unused, provided for interface compatibility
    */
-  constructor(options = {}) {
+  constructor(_options = {}) {
     // No-op
   }
 
@@ -34,10 +34,10 @@ export default class NoOpCache {
    * Get a value from cache
    * Always returns null since nothing is cached
    *
-   * @param {string} key - Cache key (ignored)
+   * @param {string} _key - Cache key (ignored)
    * @returns {null} Always null
    */
-  get(key) {
+  get(_key) {
     return null;
   }
 
@@ -45,12 +45,12 @@ export default class NoOpCache {
    * Set a value in cache
    * No-op, nothing is cached
    *
-   * @param {string} key - Cache key (ignored)
-   * @param {*} value - Value to cache (ignored)
-   * @param {number} [ttl] - TTL in ms (ignored)
+   * @param {string} _key - Cache key (ignored)
+   * @param {*} _value - Value to cache (ignored)
+   * @param {number} [_ttl] - TTL in ms (ignored)
    * @returns {undefined}
    */
-  set(key, value, ttl) {
+  set(_key, _value, _ttl) {
     // No-op
   }
 
@@ -58,10 +58,10 @@ export default class NoOpCache {
    * Delete a value from cache
    * Returns true immediately since there's nothing to delete
    *
-   * @param {string} key - Cache key (ignored)
+   * @param {string} _key - Cache key (ignored)
    * @returns {true}
    */
-  delete(key) {
+  delete(_key) {
     return true;
   }
 
@@ -69,10 +69,10 @@ export default class NoOpCache {
    * Check if a key exists in cache
    * Always returns false since nothing is cached
    *
-   * @param {string} key - Cache key (ignored)
+   * @param {string} _key - Cache key (ignored)
    * @returns {false}
    */
-  has(key) {
+  has(_key) {
     return false;
   }
 

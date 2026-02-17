@@ -11,6 +11,7 @@ import {
   createUserFormSchema,
   bulkUpdateUserStatusFormSchema,
   bulkDeleteUserFormSchema,
+  createApiKeyFormSchema,
 } from '../../../validator/admin';
 import * as userAdminService from '../../services/admin/user.service';
 
@@ -346,5 +347,95 @@ export async function bulkDelete(req, res) {
     });
   } catch (error) {
     return http.sendServerError(res, 'Failed to bulk delete users', error);
+  }
+}
+
+// ========================================================================
+// API KEY MANAGEMENT CONTROLLERS
+// ========================================================================
+
+/**
+ * List API keys for a specific user
+ *
+ * @route   GET /api/admin/users/:id/api-keys
+ * @access  Admin
+ */
+export async function listApiKeys(req, res) {
+  const http = req.app.get('http');
+  const models = req.app.get('models');
+  const { id } = req.params;
+
+  try {
+    const keys = await userAdminService.listApiKeys(id, models);
+
+    return http.sendSuccess(res, { keys });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to list API keys', error);
+  }
+}
+
+/**
+ * Create a new API key for a user
+ *
+ * @route   POST /api/admin/users/:id/api-keys
+ * @access  Admin
+ */
+export async function createApiKey(req, res) {
+  const http = req.app.get('http');
+  const models = req.app.get('models');
+  const jwt = req.app.get('jwt');
+  const { id } = req.params;
+  const { name, scopes = [], expiresIn } = req.body;
+
+  try {
+    // Verify user exists
+    const user = await models.User.findByPk(id);
+    if (!user) {
+      return http.sendNotFound(res, 'User not found');
+    }
+
+    // Validate with Zod schema
+    const [isValid, errors] = validateForm(createApiKeyFormSchema, {
+      name,
+      expiresIn: expiresIn || null,
+    });
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
+
+    // Create API key via service
+    const result = await userAdminService.createApiKey(
+      user,
+      { name, scopes, expiresIn },
+      { models, jwt },
+    );
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to create API key', error);
+  }
+}
+
+/**
+ * Revoke (disable) an API key
+ *
+ * @route   DELETE /api/admin/users/:id/api-keys/:keyId
+ * @access  Admin
+ */
+export async function revokeApiKey(req, res) {
+  const http = req.app.get('http');
+  const models = req.app.get('models');
+  const { id, keyId } = req.params;
+
+  try {
+    await userAdminService.revokeApiKey(id, keyId, models);
+
+    return http.sendSuccess(res, { message: 'API Key revoked' });
+  } catch (error) {
+    if (error.name === 'ApiKeyNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+    return http.sendServerError(res, 'Failed to revoke API key', error);
   }
 }

@@ -8,11 +8,13 @@
 import { useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
 import { getUserId } from '../../../../../../shared/renderer/redux';
 import {
   Icon,
   Table,
 } from '../../../../../../shared/renderer/components/Admin';
+import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 
 const { ActionsDropdown } = Table;
 
@@ -34,6 +36,8 @@ function UserActionsDropdown({
   onDeactivate,
 }) {
   const currentUserId = useSelector(getUserId);
+  const { hasPermission } = useRbac();
+  const history = useHistory();
 
   const handleToggle = useCallback(() => {
     onToggle(isOpen ? null : user.id);
@@ -50,6 +54,15 @@ function UserActionsDropdown({
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
+        {hasPermission('api_keys:read') && (
+          <ActionsDropdown.Item
+            onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
+            icon={<Icon name='key' size={16} />}
+          >
+            Manage API Keys
+          </ActionsDropdown.Item>
+        )}
+        <ActionsDropdown.Divider />
         <ActionsDropdown.Item
           onClick={() => onManageGroups(user)}
           icon={<Icon name='folder' size={16} />}
@@ -65,7 +78,7 @@ function UserActionsDropdown({
         <ActionsDropdown.Divider />
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(user)}
-          icon={<Icon name='key' size={16} />}
+          icon={<Icon name='lock' size={16} />}
         >
           View Permissions
         </ActionsDropdown.Item>

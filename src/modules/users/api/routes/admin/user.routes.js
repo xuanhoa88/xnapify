@@ -159,5 +159,47 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
     rbacController.checkUserPermission,
   );
 
+  // ========================================================================
+  // API KEY ROUTES
+  // ========================================================================
+
+  /**
+   * @route   GET /:id/api-keys
+   * @desc    List API keys for a user
+   * @access  Admin only
+   * @param   {string} id - User ID
+   */
+  router.get(
+    '/:id/api-keys',
+    requirePermission('api_keys:read'),
+    userController.listApiKeys,
+  );
+
+  /**
+   * @route   POST /:id/api-keys
+   * @desc    Create a new API key for a user
+   * @access  Admin only
+   * @param   {string} id - User ID
+   * @body    { name, scopes? }
+   */
+  router.post(
+    '/:id/api-keys',
+    requirePermission('api_keys:create'),
+    userController.createApiKey,
+  );
+
+  /**
+   * @route   DELETE /:id/api-keys/:keyId
+   * @desc    Revoke an API key
+   * @access  Admin only
+   * @param   {string} id - User ID
+   * @param   {string} keyId - API Key ID
+   */
+  router.delete(
+    '/:id/api-keys/:keyId',
+    requirePermission('api_keys:delete'),
+    userController.revokeApiKey,
+  );
+
   return router;
 }
