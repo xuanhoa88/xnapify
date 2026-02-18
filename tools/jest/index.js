@@ -110,7 +110,7 @@ module.exports = {
    * Note: NODE_ENV is automatically set to 'test' by Jest.
    */
   globals: {
-    __DEV__: true,
+    __DEV__: false,
     __TEST__: true,
   },
 

@@ -156,7 +156,7 @@ function createProviderGuard(app, providers = []) {
     'env',
     'jwt',
     'i18n',
-    'plugin manager',
+    'plugin',
     'ws',
     'models',
     'nodeRED',
@@ -898,7 +898,7 @@ export async function bootstrap(app, server, options = {}) {
   app.set('i18n', i18n);
   app.set('nodeRED', appState.nodeRED);
   app.set('ws', appState.wsServer);
-  app.set('plugin manager', pluginManager);
+  app.set('plugin', pluginManager);
 
   // Express config
   app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');

@@ -114,7 +114,7 @@ export const deletePlugin = async (req, res) => {
       models,
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
-      pluginManager: req.app.get('plugin manager'),
+      pluginManager: req.app.get('plugin'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
     });
@@ -162,7 +162,7 @@ export const uploadPlugin = async (req, res) => {
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
       fs,
-      pluginManager: req.app.get('plugin manager'),
+      pluginManager: req.app.get('plugin'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
     });
@@ -205,7 +205,7 @@ export const updatePluginStatus = async (req, res) => {
         models,
         cache: req.app.get('cache'),
         cwd: req.app.get('cwd'),
-        pluginManager: req.app.get('plugin manager'),
+        pluginManager: req.app.get('plugin'),
         webhook: req.app.get('webhook'),
         actorId: req.user ? req.user.id : null,
       },

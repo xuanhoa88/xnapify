@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { HTTP_STATUS } from '../constants';
 import {
   HttpError,
   BadRequestError,
@@ -69,6 +70,38 @@ export function errorHandler(err, req, res, next) {
 
   // Handle Sequelize/Database errors
   if (err.name && err.name.includes('Sequelize')) {
+    if (err.name === 'SequelizeUniqueConstraintError') {
+      const message =
+        err.errors && err.errors.length > 0
+          ? err.errors[0].message
+          : 'Resource already exists';
+      const conflictError = new HttpError(
+        message,
+        HTTP_STATUS.CONFLICT,
+        'CONFLICT',
+      ); // Using generic for now, or could import ConflictError if available
+      return res.status(HTTP_STATUS.CONFLICT).json({
+        success: false,
+        error: conflictError.message,
+        code: conflictError.code,
+        timestamp: conflictError.timestamp,
+      });
+    }
+
+    if (err.name === 'SequelizeValidationError') {
+      const validationError = new ValidationError(
+        'Validation Failed',
+        err.errors,
+      );
+      return res.status(validationError.statusCode).json({
+        success: false,
+        error: validationError.message,
+        errors: validationError.errors,
+        code: validationError.code,
+        timestamp: validationError.timestamp,
+      });
+    }
+
     const dbError = new DatabaseError('Database operation failed', err);
     return res.status(dbError.statusCode).json({
       success: false,

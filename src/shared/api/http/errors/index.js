@@ -12,7 +12,7 @@ export * from './classes';
 export * from './factory';
 
 // Error middleware
-export * from './middleware';
+export * from './middlewares';
 
 // Error utilities
 export * from './utils';

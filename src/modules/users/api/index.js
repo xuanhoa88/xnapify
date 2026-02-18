@@ -12,6 +12,7 @@ import userRoutes from './routes/admin/user.routes';
 import roleRoutes from './routes/admin/role.routes';
 import permissionRoutes from './routes/admin/permission.routes';
 import groupRoutes from './routes/admin/group.routes';
+import { authenticate as apiKeyAuth } from './auth/apiKey';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
@@ -55,6 +56,10 @@ export async function init(app, apiRouter, { Router }) {
 
   // Register global middlewares in app settings for reuse by other modules
   app.set('user.middlewares', userMiddlewares);
+
+  // Register auth strategies
+  app.set('auth.strategy.api_key', apiKeyAuth);
+
   console.info('✅ [users] Middlewares registered');
 
   // =========================================================================

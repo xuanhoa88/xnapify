@@ -84,62 +84,52 @@ export function requireAuthMiddleware(options = {}) {
         throw error;
       }
 
+      req.token = token;
+      // Default fallback; updated if verification succeeds
+      req.authMethod = 'token';
+
       if (includeUser) {
         const jwt = req.app.get('jwt');
 
-        // Verify signature and decode
-        const decoded = jwt.verifyToken(token);
+        // Decode without verifying first to check type
+        // This avoids double verification for standard tokens
+        const decodedToken = jwt.decodeToken(token);
 
-        if (decoded.type === 'api_key') {
-          // API Key flow
-          const models = req.app.get('models');
-          const apiKey = await models.UserApiKey.findOne({
-            where: {
-              id: decoded.jti,
-              user_id: decoded.id,
-              is_active: true,
-            },
-          });
+        if (!decodedToken || !decodedToken.payload) {
+          const error = new Error('Invalid token format');
+          error.name = 'InvalidTokenFormatError';
+          error.status = 401;
+          throw error;
+        }
 
-          if (!apiKey) {
-            const error = new Error('Invalid or revoked API Key');
-            error.name = 'InvalidApiKeyError';
-            error.status = 401;
-            throw error;
-          }
+        const { payload } = decodedToken;
+        const strategyKey =
+          payload && payload.type ? `auth.strategy.${payload.type}` : null;
+        const strategy = strategyKey ? req.app.get(strategyKey) : null;
 
-          // Check expiration if DB has it (JWT exp is already checked by verifyToken)
-          if (apiKey.expires_at && new Date() > apiKey.expires_at) {
-            const error = new Error('API Key expired');
-            error.name = 'ApiKeyExpiredError';
-            error.status = 401;
-            throw error;
-          }
-
-          // Update last used (fire and forget to not block response time too much, or await)
-          // Ideally should be async/background, but for now await is safer
-          await apiKey.update({ last_used_at: new Date() });
-
-          // Set user from payload (or fetch full user if needed)
-          req.user = decoded;
-          req.authMethod = 'api_key';
-          req.apiKey = apiKey;
+        if (typeof strategy === 'function') {
+          // Delegate to registered strategy
+          const result = await strategy(req, token, payload, { jwt });
+          Object.assign(req, result);
         } else {
-          // Standard User Token flow
-          // Verify typed token (checks type === tokenType e.g. 'access')
+          // Standard User Token flow (fallback)
+          // Verify typed token (checks signature + type === tokenType)
+          // Only ONE verification call
           const verified = jwt.verifyTypedToken(token, tokenType);
           req.user = verified;
           req.authMethod = 'jwt';
         }
-      }
 
-      req.token = token;
-      if (!req.authMethod) req.authMethod = 'jwt'; // Default fallback
-      req.authenticated = true;
+        // Only set authenticated if we successfully verified
+        req.authenticated = true;
+      }
 
       next();
     } catch (error) {
-      error.status = 401;
+      // Only set status if not already set (preserve 500s)
+      if (!error.status) {
+        error.status = 401;
+      }
 
       // Determine error code based on error type
       if (!error.code) {
