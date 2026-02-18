@@ -10,7 +10,7 @@ import UserApiKeys from './UserApiKeys';
 import { addBreadcrumb } from '../../../../../../../shared/renderer/redux';
 import { requirePermission } from '../../../../../../../shared/renderer/components/Rbac';
 
-export const middleware = requirePermission('api_keys:read');
+export const middleware = requirePermission('apiKeys:read');
 
 /**
  * Page metadata

@@ -171,7 +171,7 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
    */
   router.get(
     '/:id/api-keys',
-    requirePermission('api_keys:read'),
+    requirePermission('apiKeys:read'),
     userController.listApiKeys,
   );
 
@@ -184,7 +184,7 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
    */
   router.post(
     '/:id/api-keys',
-    requirePermission('api_keys:create'),
+    requirePermission('apiKeys:create'),
     userController.createApiKey,
   );
 
@@ -197,7 +197,7 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
    */
   router.delete(
     '/:id/api-keys/:keyId',
-    requirePermission('api_keys:delete'),
+    requirePermission('apiKeys:delete'),
     userController.revokeApiKey,
   );
 

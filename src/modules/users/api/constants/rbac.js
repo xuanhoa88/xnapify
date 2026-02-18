@@ -89,7 +89,7 @@ export const DEFAULT_RESOURCES = Object.freeze({
   ROLES: 'roles',
   GROUPS: 'groups',
   PERMISSIONS: 'permissions',
-  API_KEYS: 'api_keys',
+  API_KEYS: 'apiKeys',
   NODERED: 'nodered',
 });
 
@@ -207,7 +207,7 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
       'Grants read-only access to the Node-RED editor and Admin API, allowing users to view flows, nodes, and settings without making changes.',
   },
 
-  // API Key management (CRUD)
+  // API Key management
   {
     resource: DEFAULT_RESOURCES.API_KEYS,
     action: DEFAULT_ACTIONS.CREATE,

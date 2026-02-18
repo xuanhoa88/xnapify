@@ -54,7 +54,7 @@ function UserActionsDropdown({
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
-        {hasPermission('api_keys:read') && (
+        {hasPermission('apiKeys:read') && (
           <ActionsDropdown.Item
             onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
             icon={<Icon name='key' size={16} />}

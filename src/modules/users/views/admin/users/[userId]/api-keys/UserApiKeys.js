@@ -54,7 +54,7 @@ export default function UserApiKeys({ userId }) {
   const { hasPermission } = useRbac();
 
   // Permissions
-  const canCreateApiKey = hasPermission('api_keys:create');
+  const canCreateApiKey = hasPermission('apiKeys:create');
 
   // User Context State
   const user = useSelector(getFetchedUser);
