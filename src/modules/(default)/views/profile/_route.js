@@ -23,7 +23,7 @@ export async function getInitialProps({ i18n }) {
 export async function middleware({ store, pathname }, next) {
   const state = store.getState();
   if (!isAuthenticated(state)) {
-    return { redirect: `/login?next=${encodeURIComponent(pathname)}` };
+    return { redirect: `/login?returnTo=${encodeURIComponent(pathname)}` };
   }
   return next();
 }

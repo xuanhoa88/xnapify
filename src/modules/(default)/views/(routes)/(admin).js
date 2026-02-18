@@ -41,7 +41,7 @@ export function mount({ store, i18n }) {
 export function middleware({ store, pathname }, next) {
   const state = store.getState();
   if (!isAuthenticated(state)) {
-    return { redirect: `/login?next=${encodeURIComponent(pathname)}` };
+    return { redirect: `/login?returnTo=${encodeURIComponent(pathname)}` };
   }
   return next();
 }
