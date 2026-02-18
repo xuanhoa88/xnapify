@@ -27,6 +27,7 @@ import {
   getPlugins,
   isPluginsListLoading,
   isPluginUploading,
+  isPluginsInitialized,
 } from './redux';
 import s from './Plugins.css';
 
@@ -41,6 +42,7 @@ function Plugins() {
   const plugins = useSelector(getPlugins);
   const loading = useSelector(isPluginsListLoading);
   const uploading = useSelector(isPluginUploading);
+  const initialized = useSelector(isPluginsInitialized);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -130,7 +132,7 @@ function Plugins() {
     [plugins, search],
   );
 
-  if (loading && plugins.length === 0) {
+  if (!initialized || (loading && plugins.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header
