@@ -115,8 +115,8 @@ export function requireAuthMiddleware(options = {}) {
           // Standard User Token flow (fallback)
           // Verify typed token (checks signature + type === tokenType)
           // Only ONE verification call
-          const verified = jwt.verifyTypedToken(token, tokenType);
-          req.user = verified;
+          const decoded = jwt.verifyTypedToken(token, tokenType);
+          req.user = decoded;
           req.authMethod = 'jwt';
         }
 
@@ -175,12 +175,31 @@ export function optionalAuthMiddleware(options = {}) {
 
       if (includeUser) {
         const jwt = req.app.get('jwt');
-        const decoded = jwt.verifyTypedToken(token, tokenType);
-        req.user = decoded;
+        const decodedToken = jwt.decodeToken(token);
+
+        if (decodedToken && decodedToken.payload) {
+          const { payload } = decodedToken;
+          const strategyKey =
+            payload && payload.type ? `auth.strategy.${payload.type}` : null;
+          const strategy = strategyKey ? req.app.get(strategyKey) : null;
+
+          if (typeof strategy === 'function') {
+            // Delegate to registered strategy
+            const result = await strategy(req, token, payload, { jwt });
+            Object.assign(req, result);
+          } else {
+            // Standard User Token flow (fallback)
+            const decoded = jwt.verifyTypedToken(token, tokenType);
+            req.user = decoded;
+            req.authMethod = 'jwt';
+          }
+        }
       }
 
+      if (!req.authMethod) {
+        req.authMethod = 'jwt';
+      }
       req.token = token;
-      req.authMethod = 'jwt';
       req.authenticated = true;
 
       next();

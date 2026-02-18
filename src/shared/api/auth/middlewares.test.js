@@ -1,4 +1,4 @@
-import { requireAuthMiddleware } from './middlewares';
+import { requireAuthMiddleware, optionalAuthMiddleware } from './middlewares';
 
 describe('requireAuthMiddleware', () => {
   let req, res, next;
@@ -196,5 +196,104 @@ describe('requireAuthMiddleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
     });
+  });
+});
+
+describe('optionalAuthMiddleware', () => {
+  let req, res, next;
+  let jwtMock;
+
+  beforeEach(() => {
+    req = {
+      headers: {},
+      cookies: {},
+      query: {},
+      app: {
+        get: jest.fn(),
+      },
+    };
+    res = {};
+    next = jest.fn();
+
+    jwtMock = {
+      decodeToken: jest.fn(),
+      verifyTypedToken: jest.fn(),
+    };
+
+    req.app.get.mockImplementation(key => {
+      if (key === 'jwt') return jwtMock;
+      return null;
+    });
+  });
+
+  const withToken = token => {
+    req.headers.authorization = `Bearer ${token}`;
+  };
+
+  test('should pass through if no token provided', async () => {
+    const middleware = optionalAuthMiddleware();
+    await middleware(req, res, next);
+    expect(next).toHaveBeenCalled();
+    expect(req.authenticated).toBeUndefined();
+  });
+
+  test('should authenticate valid user token', async () => {
+    const token = 'valid-token';
+    withToken(token);
+    jwtMock.decodeToken.mockReturnValue({ payload: { type: 'access' } });
+    jwtMock.verifyTypedToken.mockReturnValue({ id: 1 });
+
+    const middleware = optionalAuthMiddleware();
+    await middleware(req, res, next);
+
+    expect(req.user).toEqual({ id: 1 });
+    expect(req.authenticated).toBe(true);
+    expect(req.authMethod).toBe('jwt');
+    expect(next).toHaveBeenCalled();
+  });
+
+  test('should support API key strategy', async () => {
+    const token = 'api-key';
+    withToken(token);
+    jwtMock.decodeToken.mockReturnValue({ payload: { type: 'api_key' } });
+
+    const mockStrategy = jest.fn().mockResolvedValue({
+      user: { id: 1, type: 'api_key' },
+      authMethod: 'api_key',
+    });
+
+    req.app.get.mockImplementation(key => {
+      if (key === 'jwt') return jwtMock;
+      if (key === 'auth.strategy.api_key') return mockStrategy;
+      return null;
+    });
+
+    const middleware = optionalAuthMiddleware();
+    await middleware(req, res, next);
+
+    expect(mockStrategy).toHaveBeenCalled();
+    expect(req.authenticated).toBe(true);
+    expect(req.authMethod).toBe('api_key');
+    expect(next).toHaveBeenCalled();
+  });
+
+  test('should fail gracefully if strategy fails', async () => {
+    const token = 'api-key';
+    withToken(token);
+    jwtMock.decodeToken.mockReturnValue({ payload: { type: 'api_key' } });
+
+    const mockStrategy = jest.fn().mockRejectedValue(new Error('Invalid key'));
+
+    req.app.get.mockImplementation(key => {
+      if (key === 'jwt') return jwtMock;
+      if (key === 'auth.strategy.api_key') return mockStrategy;
+      return null;
+    });
+
+    const middleware = optionalAuthMiddleware();
+    await middleware(req, res, next);
+
+    expect(req.authenticated).toBe(false);
+    expect(next).toHaveBeenCalled();
   });
 });

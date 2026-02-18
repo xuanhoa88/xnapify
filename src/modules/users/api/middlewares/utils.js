@@ -119,10 +119,28 @@ export async function fetchUserRBACData(userId, { models, cache }) {
  * @throws {Error} If database models are not available or user is not found
  */
 export async function getUserRBACData(req) {
+  // If authenticated via API Key, use scopes as permissions
+  // Bypass DB lookup for user roles/permissions
+  if (req.authMethod === 'api_key' && req.apiKey) {
+    const scopes = req.apiKey.scopes || [];
+    const rbacData = {
+      roles: [],
+      groups: [],
+      permissions: scopes,
+    };
+
+    // Attach to request
+    req.user = {
+      ...req.user,
+      ...rbacData,
+    };
+
+    return rbacData;
+  }
+
   const userId = req.user.id;
-  const { app } = req;
-  const models = app.get('models');
-  const cache = app.get('cache');
+  const models = req.app.get('models');
+  const cache = req.app.get('cache');
 
   // Use consolidated fetcher
   const rbacData = await fetchUserRBACData(userId, { models, cache });
