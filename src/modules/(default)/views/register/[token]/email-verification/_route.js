@@ -22,10 +22,10 @@ export async function getInitialProps({ i18n }) {
  * Guard function - redirect authenticated users
  */
 export async function middleware(context, next) {
-  const { store } = context;
+  const { store, query } = context;
   const state = store.getState();
   if (isAuthenticated(state)) {
-    return { redirect: '/' };
+    return { redirect: query.returnTo || '/' };
   }
   return next();
 }
