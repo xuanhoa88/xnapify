@@ -197,6 +197,30 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
   {
     resource: DEFAULT_RESOURCES.NODERED,
     action: 'admin',
-    description: 'Access to Node-RED admin interface',
+    description:
+      'Grants full access to the Node-RED editor and Admin API, allowing users to view, modify, and deploy flows, nodes, and settings.',
+  },
+  {
+    resource: DEFAULT_RESOURCES.NODERED,
+    action: 'read',
+    description:
+      'Grants read-only access to the Node-RED editor and Admin API, allowing users to view flows, nodes, and settings without making changes.',
+  },
+
+  // API Key management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.API_KEYS,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create API keys',
+  },
+  {
+    resource: DEFAULT_RESOURCES.API_KEYS,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View API keys',
+  },
+  {
+    resource: DEFAULT_RESOURCES.API_KEYS,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete API keys',
   },
 ]);

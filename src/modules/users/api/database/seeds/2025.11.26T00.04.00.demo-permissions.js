@@ -32,10 +32,12 @@ export const demoPermissionIds = {
   permissionsRead: uuidv4(),
   permissionsUpdate: uuidv4(),
   permissionsDelete: uuidv4(),
-  // API Keys CRUD
+  // Node-RED
+  nodeRedAdmin: uuidv4(),
+  nodeRedReadOnly: uuidv4(),
+  // API Keys
   apiKeysCreate: uuidv4(),
   apiKeysRead: uuidv4(),
-  apiKeysUpdate: uuidv4(),
   apiKeysDelete: uuidv4(),
 };
 
@@ -205,7 +207,28 @@ export async function up({ context }) {
       created_at: now,
       updated_at: now,
     },
-    // API Keys CRUD
+    // Node-RED
+    {
+      id: demoPermissionIds.nodeRedAdmin,
+      resource: DEFAULT_RESOURCES.NODE_RED,
+      action: DEFAULT_ACTIONS.MANAGE,
+      description:
+        'Grants full access to the Node-RED editor and Admin API, allowing users to view, modify, and deploy flows, nodes, and settings.',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: demoPermissionIds.nodeRedReadOnly,
+      resource: DEFAULT_RESOURCES.NODE_RED,
+      action: DEFAULT_ACTIONS.READ,
+      description:
+        'Grants read-only access to the Node-RED editor and Admin API, allowing users to view flows, nodes, and settings without making changes.',
+      is_active: true,
+      created_at: now,
+      updated_at: now,
+    },
+    // API Keys
     {
       id: demoPermissionIds.apiKeysCreate,
       resource: DEFAULT_RESOURCES.API_KEYS,
@@ -220,15 +243,6 @@ export async function up({ context }) {
       resource: DEFAULT_RESOURCES.API_KEYS,
       action: DEFAULT_ACTIONS.READ,
       description: 'View API keys',
-      is_active: true,
-      created_at: now,
-      updated_at: now,
-    },
-    {
-      id: demoPermissionIds.apiKeysUpdate,
-      resource: DEFAULT_RESOURCES.API_KEYS,
-      action: DEFAULT_ACTIONS.UPDATE,
-      description: 'Update API keys',
       is_active: true,
       created_at: now,
       updated_at: now,
