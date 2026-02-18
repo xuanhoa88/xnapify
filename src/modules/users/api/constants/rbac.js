@@ -90,7 +90,7 @@ export const DEFAULT_RESOURCES = Object.freeze({
   GROUPS: 'groups',
   PERMISSIONS: 'permissions',
   API_KEYS: 'apiKeys',
-  NODERED: 'nodered',
+  NODE_RED: 'nodered',
 });
 
 /**
@@ -195,13 +195,13 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
 
   // Node-RED Access
   {
-    resource: DEFAULT_RESOURCES.NODERED,
+    resource: DEFAULT_RESOURCES.NODE_RED,
     action: 'admin',
     description:
       'Grants full access to the Node-RED editor and Admin API, allowing users to view, modify, and deploy flows, nodes, and settings.',
   },
   {
-    resource: DEFAULT_RESOURCES.NODERED,
+    resource: DEFAULT_RESOURCES.NODE_RED,
     action: 'read',
     description:
       'Grants read-only access to the Node-RED editor and Admin API, allowing users to view flows, nodes, and settings without making changes.',

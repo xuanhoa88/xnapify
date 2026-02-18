@@ -62,8 +62,8 @@ export async function up({ context }) {
     // Users CRUD
     {
       id: demoPermissionIds.usersCreate,
-      resource: 'users',
-      action: 'create',
+      resource: DEFAULT_RESOURCES.USERS,
+      action: DEFAULT_ACTIONS.CREATE,
       description: 'Create users',
       is_active: true,
       created_at: now,
@@ -71,8 +71,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.usersRead,
-      resource: 'users',
-      action: 'read',
+      resource: DEFAULT_RESOURCES.USERS,
+      action: DEFAULT_ACTIONS.READ,
       description: 'View users',
       is_active: true,
       created_at: now,
@@ -80,8 +80,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.usersUpdate,
-      resource: 'users',
-      action: 'update',
+      resource: DEFAULT_RESOURCES.USERS,
+      action: DEFAULT_ACTIONS.UPDATE,
       description: 'Update users',
       is_active: true,
       created_at: now,
@@ -89,8 +89,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.usersDelete,
-      resource: 'users',
-      action: 'delete',
+      resource: DEFAULT_RESOURCES.USERS,
+      action: DEFAULT_ACTIONS.DELETE,
       description: 'Delete users',
       is_active: true,
       created_at: now,
@@ -99,8 +99,8 @@ export async function up({ context }) {
     // Roles CRUD
     {
       id: demoPermissionIds.rolesCreate,
-      resource: 'roles',
-      action: 'create',
+      resource: DEFAULT_RESOURCES.ROLES,
+      action: DEFAULT_ACTIONS.CREATE,
       description: 'Create roles',
       is_active: true,
       created_at: now,
@@ -108,8 +108,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.rolesRead,
-      resource: 'roles',
-      action: 'read',
+      resource: DEFAULT_RESOURCES.ROLES,
+      action: DEFAULT_ACTIONS.READ,
       description: 'View roles',
       is_active: true,
       created_at: now,
@@ -117,8 +117,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.rolesUpdate,
-      resource: 'roles',
-      action: 'update',
+      resource: DEFAULT_RESOURCES.ROLES,
+      action: DEFAULT_ACTIONS.UPDATE,
       description: 'Update roles',
       is_active: true,
       created_at: now,
@@ -126,8 +126,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.rolesDelete,
-      resource: 'roles',
-      action: 'delete',
+      resource: DEFAULT_RESOURCES.ROLES,
+      action: DEFAULT_ACTIONS.DELETE,
       description: 'Delete roles',
       is_active: true,
       created_at: now,
@@ -136,8 +136,8 @@ export async function up({ context }) {
     // Groups CRUD
     {
       id: demoPermissionIds.groupsCreate,
-      resource: 'groups',
-      action: 'create',
+      resource: DEFAULT_RESOURCES.GROUPS,
+      action: DEFAULT_ACTIONS.CREATE,
       description: 'Create groups',
       is_active: true,
       created_at: now,
@@ -145,8 +145,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.groupsRead,
-      resource: 'groups',
-      action: 'read',
+      resource: DEFAULT_RESOURCES.GROUPS,
+      action: DEFAULT_ACTIONS.READ,
       description: 'View groups',
       is_active: true,
       created_at: now,
@@ -154,8 +154,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.groupsUpdate,
-      resource: 'groups',
-      action: 'update',
+      resource: DEFAULT_RESOURCES.GROUPS,
+      action: DEFAULT_ACTIONS.UPDATE,
       description: 'Update groups',
       is_active: true,
       created_at: now,
@@ -163,8 +163,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.groupsDelete,
-      resource: 'groups',
-      action: 'delete',
+      resource: DEFAULT_RESOURCES.GROUPS,
+      action: DEFAULT_ACTIONS.DELETE,
       description: 'Delete groups',
       is_active: true,
       created_at: now,
@@ -173,8 +173,8 @@ export async function up({ context }) {
     // Permissions CRUD
     {
       id: demoPermissionIds.permissionsCreate,
-      resource: 'permissions',
-      action: 'create',
+      resource: DEFAULT_RESOURCES.PERMISSIONS,
+      action: DEFAULT_ACTIONS.CREATE,
       description: 'Create permissions',
       is_active: true,
       created_at: now,
@@ -182,8 +182,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.permissionsRead,
-      resource: 'permissions',
-      action: 'read',
+      resource: DEFAULT_RESOURCES.PERMISSIONS,
+      action: DEFAULT_ACTIONS.READ,
       description: 'View permissions',
       is_active: true,
       created_at: now,
@@ -191,8 +191,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.permissionsUpdate,
-      resource: 'permissions',
-      action: 'update',
+      resource: DEFAULT_RESOURCES.PERMISSIONS,
+      action: DEFAULT_ACTIONS.UPDATE,
       description: 'Update permissions',
       is_active: true,
       created_at: now,
@@ -200,8 +200,8 @@ export async function up({ context }) {
     },
     {
       id: demoPermissionIds.permissionsDelete,
-      resource: 'permissions',
-      action: 'delete',
+      resource: DEFAULT_RESOURCES.PERMISSIONS,
+      action: DEFAULT_ACTIONS.DELETE,
       description: 'Delete permissions',
       is_active: true,
       created_at: now,
@@ -273,29 +273,40 @@ export async function down({ context, Sequelize }) {
     [Op.or]: [
       { resource: DEFAULT_RESOURCES.ALL, action: DEFAULT_ACTIONS.MANAGE },
       // Users CRUD
-      { resource: 'users', action: 'create' },
-      { resource: 'users', action: 'read' },
-      { resource: 'users', action: 'update' },
-      { resource: 'users', action: 'delete' },
+      { resource: DEFAULT_RESOURCES.USERS, action: DEFAULT_ACTIONS.CREATE },
+      { resource: DEFAULT_RESOURCES.USERS, action: DEFAULT_ACTIONS.READ },
+      { resource: DEFAULT_RESOURCES.USERS, action: DEFAULT_ACTIONS.UPDATE },
+      { resource: DEFAULT_RESOURCES.USERS, action: DEFAULT_ACTIONS.DELETE },
       // Roles CRUD
-      { resource: 'roles', action: 'create' },
-      { resource: 'roles', action: 'read' },
-      { resource: 'roles', action: 'update' },
-      { resource: 'roles', action: 'delete' },
+      { resource: DEFAULT_RESOURCES.ROLES, action: DEFAULT_ACTIONS.CREATE },
+      { resource: DEFAULT_RESOURCES.ROLES, action: DEFAULT_ACTIONS.READ },
+      { resource: DEFAULT_RESOURCES.ROLES, action: DEFAULT_ACTIONS.UPDATE },
+      { resource: DEFAULT_RESOURCES.ROLES, action: DEFAULT_ACTIONS.DELETE },
       // Groups CRUD
-      { resource: 'groups', action: 'create' },
-      { resource: 'groups', action: 'read' },
-      { resource: 'groups', action: 'update' },
-      { resource: 'groups', action: 'delete' },
+      { resource: DEFAULT_RESOURCES.GROUPS, action: DEFAULT_ACTIONS.CREATE },
+      { resource: DEFAULT_RESOURCES.GROUPS, action: DEFAULT_ACTIONS.READ },
+      { resource: DEFAULT_RESOURCES.GROUPS, action: DEFAULT_ACTIONS.UPDATE },
+      { resource: DEFAULT_RESOURCES.GROUPS, action: DEFAULT_ACTIONS.DELETE },
       // Permissions CRUD
-      { resource: 'permissions', action: 'create' },
-      { resource: 'permissions', action: 'read' },
-      { resource: 'permissions', action: 'update' },
-      { resource: 'permissions', action: 'delete' },
+      {
+        resource: DEFAULT_RESOURCES.PERMISSIONS,
+        action: DEFAULT_ACTIONS.CREATE,
+      },
+      { resource: DEFAULT_RESOURCES.PERMISSIONS, action: DEFAULT_ACTIONS.READ },
+      {
+        resource: DEFAULT_RESOURCES.PERMISSIONS,
+        action: DEFAULT_ACTIONS.UPDATE,
+      },
+      {
+        resource: DEFAULT_RESOURCES.PERMISSIONS,
+        action: DEFAULT_ACTIONS.DELETE,
+      },
+      // Node-RED
+      { resource: DEFAULT_RESOURCES.NODE_RED, action: DEFAULT_ACTIONS.MANAGE },
+      { resource: DEFAULT_RESOURCES.NODE_RED, action: DEFAULT_ACTIONS.READ },
       // API Keys CRUD
       { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.CREATE },
       { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.READ },
-      { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.UPDATE },
       { resource: DEFAULT_RESOURCES.API_KEYS, action: DEFAULT_ACTIONS.DELETE },
     ],
   });
