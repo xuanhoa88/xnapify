@@ -11,8 +11,5 @@ export * from './classes';
 // Error factory
 export * from './factory';
 
-// Error middleware
-export * from './middlewares';
-
 // Error utilities
 export * from './utils';

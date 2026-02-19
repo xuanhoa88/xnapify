@@ -82,40 +82,16 @@ function createApiMiddlewareStack(app) {
 /**
  * Setup API routes and error handlers
  * @param {object} app - Express app instance
- * @param {object} config - Configuration object
- * @returns {Promise<void>}
+ * @returns {Promise<Array>} Array of middleware functions
  */
-async function setupApiRoutes(app, config) {
+async function setupApiRoutes(app) {
   // Create API middleware stack
   const apiMiddlewares = createApiMiddlewareStack(app);
 
   // Discover and register module routes
   const { apiRouter } = await discoverModules(modulesContext, app);
 
-  // Mount API routes
-  app.use(config.apiPrefix, ...apiMiddlewares, apiRouter);
-
-  // Setup Node-RED if configured
-  await setupNodeRED(app, config);
-
-  // Setup error handlers (must be last)
-  app.use(config.apiPrefix, engines.http.notFoundHandler);
-  app.use(config.apiPrefix, engines.http.errorHandler);
-}
-
-/**
- * Setup Node-RED integration if configured
- * @param {object} app - Express app instance
- * @param {object} config - Configuration object
- * @returns {Promise<void>}
- */
-async function setupNodeRED(app, config) {
-  const nodeRED = app.get('nodeRED');
-  if (nodeRED) {
-    await nodeRED.setupApiProxy(app, config.apiPrefix);
-  } else {
-    console.warn('⚠️ Node-RED proxy not setup');
-  }
+  return [...apiMiddlewares, apiRouter];
 }
 
 // =============================================================================
@@ -128,7 +104,7 @@ async function setupNodeRED(app, config) {
  * @param {object} app - Express app instance
  * @param {object} config - Configuration object
  * @param {string} [config.apiPrefix='/api'] - API route prefix
- * @returns {Promise<object>} App instance
+ * @returns {Promise<Array>} Array of middleware functions
  * @throws {Error} If initialization fails
  */
 export default async function bootstrap(guardControl, config = {}) {
@@ -148,9 +124,11 @@ export default async function bootstrap(guardControl, config = {}) {
     setupGlobalMiddleware(guardControl.app);
 
     // Setup API routes
-    await setupApiRoutes(guardControl.app, config);
+    const apiMiddlewares = await setupApiRoutes(guardControl.app);
 
     console.info('✅ API bootstrap completed successfully');
+
+    return apiMiddlewares;
   } catch (error) {
     console.error('❌ API bootstrap failed:', error);
 

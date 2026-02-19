@@ -35,6 +35,8 @@ const {
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
 } = require('../webpack/app.config');
+const clean = require('./clean');
+const buildPlugins = require('./plugin');
 
 // Build configuration
 
@@ -318,6 +320,15 @@ async function main() {
     // Define build steps with uniform task functions
     const buildSteps = [
       {
+        name: 'clean',
+        task: () =>
+          withBuildRetry(() => clean(), {
+            operation: 'clean',
+            verbose,
+          }),
+        description: 'Cleaning build directory',
+      },
+      {
         name: 'copy',
         task: () =>
           withBuildRetry(() => copyFiles(), {
@@ -325,6 +336,15 @@ async function main() {
             verbose,
           }),
         description: 'Copying static files',
+      },
+      {
+        name: 'plugins',
+        task: () =>
+          withBuildRetry(() => buildPlugins(), {
+            operation: 'build-plugins',
+            verbose,
+          }),
+        description: 'Building plugins',
       },
       {
         name: 'bundle',

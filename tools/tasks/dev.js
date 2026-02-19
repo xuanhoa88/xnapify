@@ -27,6 +27,8 @@ const {
   notifyReady: notifyBrowserSyncReady,
   onClientConnected: onBrowserSyncClientConnected,
 } = require('../webpack/browserSync/server.config');
+const clean = require('./clean');
+const buildPlugins = require('./plugin');
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
@@ -522,8 +524,14 @@ async function main() {
     });
   });
 
+  // Clean before starting
+  await clean();
+
   // Generate JWT
   await generateJWT(config.CWD);
+
+  // Build plugins
+  await buildPlugins({ watch: true });
 
   try {
     // Setup webpack compilers

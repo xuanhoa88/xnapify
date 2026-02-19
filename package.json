@@ -42,8 +42,8 @@
     "test:ci": "node tools/run test --ci",
     "clean": "node tools/run clean",
     "plugin": "node tools/run plugin",
-    "build": "npm run clean && npm run plugin && node tools/run build",
-    "dev": "npm run clean && concurrently -k -n PLUGINS,APP -c green,blue \"npm run plugin -- --watch\" \"node tools/run dev\""
+    "build": "node tools/run build",
+    "dev": "node tools/run dev"
   },
   "dependencies": {
     "@hookform/resolvers": "3.9.1",
@@ -118,7 +118,6 @@
     "babel-jest": "24.9.0",
     "babel-loader": "8.0.0",
     "babel-plugin-transform-react-remove-prop-types": "0.4.13",
-    "concurrently": "8.2.2",
     "core-js": "3.46.0",
     "css-loader": "6.11.0",
     "eslint": "8.57.0",

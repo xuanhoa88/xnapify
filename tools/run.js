@@ -235,7 +235,7 @@ function executeTask(taskName) {
     logDebug(`Spawning: node ${taskArgs.join(' ')}`);
 
     // Spawn task in child process using node
-    const taskProcess = spawn('node', taskArgs, {
+    const taskProcess = spawn('node', [...process.execArgv, ...taskArgs], {
       stdio: 'inherit', // Inherit stdin, stdout, stderr
       env: taskEnv,
       cwd: config.CWD,

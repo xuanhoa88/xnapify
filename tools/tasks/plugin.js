@@ -113,10 +113,14 @@ function handleBuildResult(err, stats, isWatch) {
 
 /**
  * Bundle plugins using Webpack
+ * @param {Object} options - Build options
+ * @param {boolean} options.watch - Whether to watch for changes
  * @returns {Promise<void>}
  */
-async function buildPlugins() {
-  const isWatch = process.argv.includes('--watch');
+async function buildPlugins(options = {}) {
+  const isWatch =
+    process.env.NODE_ENV === 'development' &&
+    (options.watch || process.argv.includes('--watch'));
   const plugins = discoverPlugins();
 
   if (plugins.length === 0) {
@@ -165,7 +169,7 @@ async function buildPlugins() {
                   );
                   compiler.close(() => {
                     // Restart with real plugins
-                    buildPlugins();
+                    buildPlugins(options);
                   });
                 }
               });
@@ -175,8 +179,24 @@ async function buildPlugins() {
       };
 
       const watcher = webpack(watchConfig);
-      return new Promise(() => {
-        watcher.watch({ aggregateTimeout: 300 }, () => {});
+      // specific return for empty watch case?
+      // Current logic strictly returned a promise that never resolves (watcher.watch)
+      // For dev server, we probably want it to resolve immediately if no plugins so server can start.
+      // But if we return, the process might exit if not held open?
+      // tools/run.js waits for the promise.
+      // If we resolve, run.js finishes this task.
+      // If called from dev.js, we want to proceed.
+      // So resolving is good. The watcher keeps the process alive?
+      // No, watcher.watch returns a Watching object.
+      // If we don't return a pending promise, the task function returns.
+      // If run via tools/run.js, it finishes.
+      // If run via dev.js, it continues to next step.
+
+      return new Promise(resolve => {
+        watcher.watch({ aggregateTimeout: 300 }, () => {
+          // Resolve on first build (even if placeholder)
+          resolve();
+        });
       });
     }
     return;
@@ -193,6 +213,8 @@ async function buildPlugins() {
   );
 
   return new Promise((resolve, reject) => {
+    let initialBuildComplete = false;
+
     const onBuild = (err, stats) => {
       const error = handleBuildResult(err, stats, isWatch);
 
@@ -211,6 +233,9 @@ async function buildPlugins() {
           if (closeErr) console.error('Failed to close compiler:', closeErr);
           resolve();
         });
+      } else if (!initialBuildComplete) {
+        initialBuildComplete = true;
+        resolve();
       }
     };
 

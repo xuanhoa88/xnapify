@@ -30,6 +30,8 @@ module.exports = function (RED) {
     node.authType = config.authType || 'required';
     node.role = config.role || '';
     node.permission = config.permission || '';
+    node.group = config.group || '';
+    node.ownerParam = config.ownerParam || 'userId';
 
     // ---------------------------------------------------------------
     // Retrieve the Express app proxy via functionGlobalContext.
@@ -74,55 +76,57 @@ module.exports = function (RED) {
 
       try {
         var app = getApp();
+
+        // Single access point for all auth middlewares
+        var auth = app.get('auth');
+        if (!auth || !auth.middlewares) {
+          node.error('app.get("auth").middlewares is not available');
+          done(new Error('auth middlewares provider missing'));
+          return;
+        }
+        var mw = auth.middlewares;
         var middleware;
 
         switch (node.middlewareType) {
-          case 'auth': {
-            var auth = app.get('auth');
-            if (!auth) {
-              node.error('app.get("auth") is not available');
-              done(new Error('auth provider missing'));
-              return;
-            }
+          case 'auth':
             middleware = node.authType === 'optional'
-              ? auth.middlewares.optionalAuth()
-              : auth.middlewares.requireAuth();
+              ? mw.optionalAuth()
+              : mw.requireAuth();
             break;
-          }
 
-          case 'role': {
-            var authMw = app.get('auth');
-            if (!authMw || !authMw.middlewares || typeof authMw.middlewares.requireRole !== 'function') {
-              node.error('app.get("auth").middlewares.requireRole is not available');
-              done(new Error('auth middlewares provider missing'));
-              return;
-            }
+          case 'role':
             if (!node.role) {
               node.warn('Role not configured — skipping');
               send(msg);
               done();
               return;
             }
-            middleware = authMw.middlewares.requireRole(node.role);
+            middleware = mw.requireRole(node.role);
             break;
-          }
 
-          case 'permission': {
-            var authMw2 = app.get('auth');
-            if (!authMw2 || !authMw2.middlewares || typeof authMw2.middlewares.requirePermission !== 'function') {
-              node.error('app.get("auth").middlewares.requirePermission is not available');
-              done(new Error('auth middlewares provider missing'));
-              return;
-            }
+          case 'permission':
             if (!node.permission) {
               node.warn('Permission not configured — skipping');
               send(msg);
               done();
               return;
             }
-            middleware = authMw2.middlewares.requirePermission(node.permission);
+            middleware = mw.requirePermission(node.permission);
             break;
-          }
+
+          case 'group':
+            if (!node.group) {
+              node.warn('Group not configured — skipping');
+              send(msg);
+              done();
+              return;
+            }
+            middleware = mw.requireGroup(node.group);
+            break;
+
+          case 'ownership':
+            middleware = mw.requireOwnership({ param: node.ownerParam });
+            break;
 
           default:
             node.warn('Unknown middleware type: ' + node.middlewareType);
@@ -170,7 +174,9 @@ export function getNodeHTML() {
       middlewareType:  { value: 'auth' },
       authType:       { value: 'required' },
       role:           { value: '' },
-      permission:     { value: '' }
+      permission:     { value: '' },
+      group:          { value: '' },
+      ownerParam:     { value: 'userId' }
     },
     inputs:  1,
     outputs: 1,
@@ -184,6 +190,10 @@ export function getNodeHTML() {
           return 'Role: ' + (this.role || 'Any');
         case 'permission':
           return 'Perm: ' + (this.permission || 'Any');
+        case 'group':
+          return 'Group: ' + (this.group || 'Any');
+        case 'ownership':
+          return 'Owner: ' + (this.ownerParam || 'userId');
         default:
           return 'RSK Middleware';
       }
@@ -211,6 +221,8 @@ export function getNodeHTML() {
       <option value="auth">Authentication</option>
       <option value="role">Role Check</option>
       <option value="permission">Permission Check</option>
+      <option value="group">Group Check</option>
+      <option value="ownership">Ownership Check</option>
     </select>
   </div>
   <div class="form-row rsk-mw-row" id="rsk-mw-auth">
@@ -228,20 +240,32 @@ export function getNodeHTML() {
     <label for="node-input-permission"><i class="fa fa-key"></i> Permission</label>
     <input type="text" id="node-input-permission" placeholder="e.g. users:read">
   </div>
+  <div class="form-row rsk-mw-row" id="rsk-mw-group" style="display:none">
+    <label for="node-input-group"><i class="fa fa-users"></i> Group</label>
+    <input type="text" id="node-input-group" placeholder="e.g. engineering">
+  </div>
+  <div class="form-row rsk-mw-row" id="rsk-mw-ownership" style="display:none">
+    <label for="node-input-ownerParam"><i class="fa fa-user-circle"></i> Param</label>
+    <input type="text" id="node-input-ownerParam" placeholder="e.g. userId">
+  </div>
 </script>
 
 <script type="text/html" data-help-name="rsk-middleware">
-  <p>Applies RSK Express middlewares (auth, role, permission) to the incoming HTTP request.</p>
+  <p>Applies RSK Express middlewares (auth, role, permission, group, ownership) to the incoming HTTP request.</p>
   <h3>Configuration</h3>
   <dl class="message-properties">
     <dt>Type</dt>
-    <dd>Authentication, Role Check, or Permission Check.</dd>
+    <dd>Authentication, Role Check, Permission Check, Group Check, or Ownership Check.</dd>
     <dt>Authentication</dt>
     <dd><b>Required</b>: blocks unauthenticated requests (401). <b>Optional</b>: attaches user if token present.</dd>
     <dt>Role</dt>
     <dd>Requires user to have the specified role.</dd>
     <dt>Permission</dt>
     <dd>Requires user to have the specified permission (e.g. <code>users:read</code>).</dd>
+    <dt>Group</dt>
+    <dd>Requires user to belong to the specified group.</dd>
+    <dt>Ownership</dt>
+    <dd>Checks if the authenticated user owns the resource identified by the route param (default: <code>userId</code>).</dd>
   </dl>
   <h3>Details</h3>
   <p>Place between an <b>Http In</b> node and your handler to enforce middleware checks.</p>

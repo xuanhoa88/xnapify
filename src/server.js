@@ -908,7 +908,7 @@ export async function bootstrap(app, server, options = {}) {
   if (config.enableCompression) {
     app.use(
       compression({
-        filter: (req, res) => {
+        filter(req, res) {
           if (
             req.headers &&
             typeof req.headers['cache-control'] === 'string' &&
@@ -1019,27 +1019,29 @@ export async function bootstrap(app, server, options = {}) {
 
   // Rate limiter
   if (config.enableRateLimit) {
+    const windowMs = __DEV__ ? 60_000 : config.rateLimitWindow;
+    const max = __DEV__ ? 100 : config.rateLimitMax;
     app.use(
       config.apiPrefix,
       rateLimit({
-        windowMs: __DEV__ ? 60_000 : config.rateLimitWindow,
-        max: __DEV__ ? 100 : config.rateLimitMax,
+        windowMs,
+        max,
         standardHeaders: true,
         legacyHeaders: false,
-        skip: req => {
+        skip(req) {
           const ip = req.ip || req.socket.remoteAddress || '';
           return !req.headers['x-forwarded-for'] && LOCALHOST_IPS.has(ip);
         },
-        handler: (req, res, _next, rateLimitInfo) => {
-          res.status(rateLimitInfo.statusCode).json({
+        handler(req, res, _next, rateLimitInfo) {
+          res.status(rateLimitInfo.statusCode || 429).json({
             success: false,
             error: i18n.t(
               'common.tooManyRequests',
               'Too many requests from this IP, please try again later.',
             ),
-            retryAfter: Math.ceil(rateLimitInfo.windowMs / 60_000) + ' minutes',
-            limit: rateLimitInfo.max,
-            current: req.rateLimit.used,
+            retryAfter: Math.ceil(windowMs / 60_000) + ' minutes',
+            limit: max,
+            current: (req.rateLimit && req.rateLimit.used) || 0,
             requestId: req.id,
           });
         },
@@ -1068,54 +1070,16 @@ export async function bootstrap(app, server, options = {}) {
     },
   });
 
-  // API routes
-  await api.default(guardControl, {
+  // Setup API routes
+  const apiMiddlewares = await api.default(guardControl, {
     ...config,
     port,
     host: normalizedHost,
   });
+  app.use(config.apiPrefix, ...apiMiddlewares);
 
-  // Health check
-  app.get('/_health', (req, res) => {
-    const mem = process.memoryUsage();
-    const health = {
-      status: 'ok',
-      timestamp: Date.now(),
-      uptime: Math.floor(process.uptime()),
-      env: config.nodeEnv,
-      services: {
-        nodeRED: {
-          state: appState.nodeRED.state,
-          ready: appState.nodeRED.isReady,
-        },
-        websocket: app.get('ws') ? 'active' : 'inactive',
-      },
-      cache: {
-        ssr: {
-          enabled: config.enableSSRCache,
-          size: appState.ssrCache.size,
-          maxSize: 1000,
-        },
-        views: appState.viewsPromise ? 'loaded' : 'not-loaded',
-      },
-      memory: {
-        heapUsed: Math.round(mem.heapUsed / 1024 / 1024),
-        heapTotal: Math.round(mem.heapTotal / 1024 / 1024),
-        rss: Math.round(mem.rss / 1024 / 1024),
-        external: Math.round(mem.external / 1024 / 1024),
-      },
-    };
-
-    if (!appState.nodeRED.isReady) {
-      return res.status(503).json({
-        ...health,
-        status: 'degraded',
-        message: 'Node-RED not ready',
-      });
-    }
-
-    res.json(health);
-  });
+  // Setup Node-RED API proxy
+  await appState.nodeRED.setupApiProxy(app, config.apiPrefix);
 
   // SSR handler
   app.get('*', createSSRHandler(guardControl, baseUrl));
