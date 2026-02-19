@@ -16,13 +16,12 @@ import * as rbacController from '../../controllers/admin/rbac.controller';
  * All routes require authentication and specific permissions.
  *
  * @param {Object} app - Express application instance
- * @param {Object} userMiddlewares - Authentication and authorization middlewares
  * @param {Object} options - Options
  * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router with role routes
  */
-export default function rbacRoutes(app, userMiddlewares, { Router }) {
-  const { requirePermission } = userMiddlewares;
+export default function rbacRoutes(app, { Router }) {
+  const { requirePermission } = app.get('auth').middlewares;
   const router = Router();
 
   /**

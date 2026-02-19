@@ -22,8 +22,9 @@ export default function pluginRoutes(app, { Router }) {
   const fs = app.get('fs');
   const uploadMiddleware = fs.useUploadMiddleware({ fieldName: 'file' });
 
-  const userMiddlewares = app.get('user.middlewares');
-  const { requirePermission } = userMiddlewares;
+  const {
+    middlewares: { requirePermission },
+  } = app.get('auth');
 
   const router = Router();
 

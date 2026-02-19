@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as userMiddlewares from './middlewares';
 import authRoutes from './routes/auth.routes';
 import profileRoutes from './routes/profile.routes';
 import userRoutes from './routes/admin/user.routes';
@@ -13,6 +12,7 @@ import roleRoutes from './routes/admin/role.routes';
 import permissionRoutes from './routes/admin/permission.routes';
 import groupRoutes from './routes/admin/group.routes';
 import { authenticate as handleApiKeyStrategy } from './auth/apiKey';
+import { getUserRBACData } from './utils/rbac/fetcher';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
@@ -54,11 +54,22 @@ export async function init(app, apiRouter, { Router }) {
 
   console.info('✅ [users] Migrations and seeds completed');
 
-  // Register global middlewares in app settings for reuse by other modules
-  app.set('user.middlewares', userMiddlewares);
-
   // Register auth strategies
-  app.get('hook').on('auth.strategy.api_key', handleApiKeyStrategy);
+  app
+    .get('hook')('auth.strategy.api_key')
+    .on('authenticate', handleApiKeyStrategy);
+
+  // Register permission resolver — populates req.user.permissions from DB
+  app.get('hook')('auth.permissions').on('resolve', getUserRBACData);
+
+  // Register role resolver — populates req.user.roles from DB
+  app.get('hook')('auth.roles').on('resolve', getUserRBACData);
+
+  // Register group resolver — populates req.user.groups from DB
+  app.get('hook')('auth.groups').on('resolve', getUserRBACData);
+
+  // Register ownership resolver — sets req.isOwner from DB
+  app.get('hook')('auth.ownership').on('resolve', getUserRBACData);
 
   console.info('✅ [users] Middlewares registered');
 
@@ -76,26 +87,23 @@ export async function init(app, apiRouter, { Router }) {
   router.use('/', authRoutes(app, { Router }));
 
   // Profile management routes (authenticated users)
-  router.use('/profile', profileRoutes(app, userMiddlewares, { Router }));
+  router.use('/profile', profileRoutes(app, { Router }));
 
   // ========================================================================
   // ADMIN ROUTES
   // ========================================================================
 
   // User administration routes: /admin/users
-  router.use('/admin/users', userRoutes(app, userMiddlewares, { Router }));
+  router.use('/admin/users', userRoutes(app, { Router }));
 
   // Role management routes: /admin/roles
-  router.use('/admin/roles', roleRoutes(app, userMiddlewares, { Router }));
+  router.use('/admin/roles', roleRoutes(app, { Router }));
 
   // Permission management routes: /admin/permissions
-  router.use(
-    '/admin/permissions',
-    permissionRoutes(app, userMiddlewares, { Router }),
-  );
+  router.use('/admin/permissions', permissionRoutes(app, { Router }));
 
   // Group management routes: /admin/groups
-  router.use('/admin/groups', groupRoutes(app, userMiddlewares, { Router }));
+  router.use('/admin/groups', groupRoutes(app, { Router }));
 
   // Mount users module routes on the main API router at root level
   apiRouter.use(router);

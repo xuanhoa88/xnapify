@@ -11,7 +11,7 @@ import {
   hasRole as checkRole,
   hasGroup as checkGroup,
   isOwner as checkOwner,
-} from './utils';
+} from './middlewares';
 
 // ========================================================================
 // HOOK: useRbac

@@ -19,7 +19,7 @@ import {
 } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
 import { logActivity } from '../../utils/activity';
-import { fetchUserRBACData } from '../../middlewares/utils';
+import { fetchUserRBACData } from '../../utils/rbac/fetcher';
 
 /**
  * Log RBAC activity

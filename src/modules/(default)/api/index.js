@@ -31,7 +31,7 @@ export async function init(app, apiRouter, { Router }) {
   // Full path will be: /api/activities (authenticated)
   router.use(
     '/activities',
-    auth.requireAuthMiddleware(),
+    auth.middlewares.requireAuth(),
     webhook.createControllers(webhook, { Router }),
   );
 

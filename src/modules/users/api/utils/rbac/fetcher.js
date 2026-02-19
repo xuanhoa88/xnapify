@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as rbacCache from '../utils/rbac/cache';
-import { collectUserRBACData } from '../utils/rbac/collector';
+import * as rbacCache from './cache';
+import { collectUserRBACData } from './collector';
 
 /**
  * Get user's complete RBAC data (roles, groups, permissions) from cache or database

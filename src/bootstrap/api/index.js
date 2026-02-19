@@ -71,8 +71,8 @@ function createApiMiddlewareStack(app) {
 
   if (jwt) {
     middlewares.push(
-      engines.auth.refreshTokenMiddleware(),
-      engines.auth.optionalAuthMiddleware(),
+      engines.auth.middlewares.refreshToken(),
+      engines.auth.middlewares.optionalAuth(),
     );
   }
 

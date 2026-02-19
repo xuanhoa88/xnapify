@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { checkPermission, hasRole, hasGroup, isOwner } from './utils';
+import { checkPermission, hasRole, hasGroup, isOwner } from './middlewares';
 
 describe('RBAC Utilities', () => {
   describe('checkPermission', () => {

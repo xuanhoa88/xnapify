@@ -17,13 +17,15 @@ import * as rbacController from '../../controllers/admin/rbac.controller';
  * All routes require admin privileges.
  *
  * @param {Object} app - Express application instance
- * @param {Object} userMiddlewares - Authentication middlewares
  * @param {Object} options - Options
  * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router with user admin routes
  */
-export default function userRoutes(app, userMiddlewares, { Router }) {
-  const { requirePermission, requireAnyPermission } = userMiddlewares;
+export default function userRoutes(app, { Router }) {
+  const {
+    middlewares: { requirePermission, requireAnyPermission },
+  } = app.get('auth');
+
   const router = Router();
 
   // ========================================================================
@@ -141,7 +143,7 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
    */
   router.get(
     '/:id/permissions',
-    requireAnyPermission(['users:read', 'users:update']),
+    requireAnyPermission('users:read', 'users:update'),
     rbacController.getUserPermissions,
   );
 
@@ -155,7 +157,7 @@ export default function userRoutes(app, userMiddlewares, { Router }) {
    */
   router.get(
     '/:id/permissions/:resource/:action?',
-    requireAnyPermission(['users:read', 'users:update']),
+    requireAnyPermission('users:read', 'users:update'),
     rbacController.checkUserPermission,
   );
 

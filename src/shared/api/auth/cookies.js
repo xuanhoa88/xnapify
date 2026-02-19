@@ -288,3 +288,49 @@ export function clearAllAuthCookies(res, options = {}) {
     }),
   );
 }
+
+/**
+ * Extract token from various sources
+ *
+ * @param {Object} req - Express request object
+ * @param {Object} [options] - Extraction options
+ * @returns {string|null} Extracted token or null
+ */
+export function extractToken(req, options = {}) {
+  const {
+    sources = ['cookie', 'header', 'query'],
+    headerName = 'authorization',
+    headerPrefix = 'Bearer ',
+    queryParam = 'token',
+  } = options || {};
+
+  for (const source of sources) {
+    let token = null;
+
+    switch (source) {
+      case 'cookie': {
+        token = getTokenFromCookie(req);
+        break;
+      }
+
+      case 'header': {
+        const authHeader = req.headers[headerName.toLowerCase()];
+        if (authHeader && authHeader.startsWith(headerPrefix)) {
+          token = authHeader.slice(headerPrefix.length);
+        }
+        break;
+      }
+
+      case 'query': {
+        token = req.query[queryParam];
+        break;
+      }
+    }
+
+    if (token) {
+      return token;
+    }
+  }
+
+  return null;
+}

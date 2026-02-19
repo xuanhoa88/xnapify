@@ -24,7 +24,7 @@ export default function authRoutes(app, { Router }) {
   const auth = app.get('auth');
 
   // Create requireAuth middleware
-  const requireAuth = auth.requireAuthMiddleware();
+  const requireAuth = auth.middlewares.requireAuth();
 
   const router = Router();
 

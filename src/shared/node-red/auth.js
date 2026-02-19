@@ -85,22 +85,28 @@ class RskAuthStrategy extends Strategy {
         return this.fail(401);
       }
 
-      // Import RBAC helpers from registered middlewares
-      const { getUserPermissions, hasPermission } = app.get('user.middlewares');
+      // Resolve permissions via hook system
+      const {
+        middlewares: { hasPermission },
+      } = app.get('auth');
 
-      if (!getUserPermissions || !hasPermission) {
-        console.error('❌ [Node-RED Auth] User middlewares not available');
+      if (!hasPermission) {
+        console.error('❌ [Node-RED Auth] Auth middlewares not available');
         return this.fail(500);
       }
 
-      // Attach user to request for getUserPermissions
+      // Attach user to request for hook resolution
       req.user = { id: decoded.id };
       req.app = app; // Ensure app is available on request
 
-      // Get user's permissions using shared middleware logic
+      // Get user's permissions using hook system
       let permissions;
       try {
-        permissions = await getUserPermissions(req);
+        const hook = app.get('hook');
+        if (hook && hook.has('auth.permissions')) {
+          await hook('auth.permissions').emit('resolve', req);
+        }
+        permissions = req.user.permissions || [];
       } catch (permError) {
         console.error(
           '❌ [Node-RED Auth] Failed to get user permissions:',
@@ -156,10 +162,10 @@ class RskAuthStrategy extends Strategy {
 async function getUserWithPermissions(app, username) {
   try {
     const { User } = app.get('models');
-    const { getUserPermissions, hasPermission } = app.get('user.middlewares');
+    const { hasPermission } = app.get('auth').middlewares;
 
-    if (!getUserPermissions || !hasPermission) {
-      console.error('❌ [Node-RED Auth] User middlewares not available');
+    if (!hasPermission) {
+      console.error('❌ [Node-RED Auth] Auth middlewares not available');
       return null;
     }
 
@@ -171,14 +177,18 @@ async function getUserWithPermissions(app, username) {
 
     if (!user) return null;
 
-    // Create mock request for permission middleware
+    // Create mock request for hook resolution
     const req = {
       user: { id: user.id },
       app,
     };
 
-    // Get permissions using shared logic
-    const permissions = await getUserPermissions(req);
+    // Get permissions using hook system
+    const hook = app.get('hook');
+    if (hook && hook.has('auth.permissions')) {
+      await hook('auth.permissions').emit('resolve', req);
+    }
+    const permissions = req.user.permissions || [];
 
     // Determine Node-RED scope
     const hasFullAccess = hasPermission(permissions, 'nodered:admin');

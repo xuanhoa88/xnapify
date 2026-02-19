@@ -20,13 +20,13 @@ import * as profileController from '../controllers/profile.controller';
  * @param {Function} options.Router - Express Router constructor
  * @returns {Router} Express router with profile routes
  */
-export default function profileRoutes(app, userMiddlewares, { Router }) {
+export default function profileRoutes(app, { Router }) {
   const router = Router();
   const auth = app.get('auth');
   const fs = app.get('fs');
 
   // Create requireAuth middleware
-  const requireAuth = auth.requireAuthMiddleware();
+  const requireAuth = auth.middlewares.requireAuth();
 
   // Create upload middleware for avatar
   const avatarUpload = fs.useUploadMiddleware({

@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export * from './middlewares';
-export * from './useRbac';
-export { default } from './Rbac';
+// Constants to avoid circular dependencies if possible, or duplicate values
+export const ADMIN_ROLE = 'admin';
+export const ALL_RESOURCE = '*';
+export const MANAGE_ACTION = '*';

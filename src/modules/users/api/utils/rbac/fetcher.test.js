@@ -1,12 +1,12 @@
-import { getUserRBACData } from './utils';
+import { getUserRBACData } from './fetcher';
 
 // Mock dependencies
-jest.mock('../utils/rbac/cache', () => ({
+jest.mock('./cache', () => ({
   getUser: jest.fn(),
   setUser: jest.fn(),
 }));
 
-jest.mock('../utils/rbac/collector', () => ({
+jest.mock('./collector', () => ({
   collectUserRBACData: jest.fn(user => ({
     roles: user.roles ? user.roles.map(r => r.name) : [],
     groups: user.groups ? user.groups.map(g => g.name) : [],
@@ -14,7 +14,7 @@ jest.mock('../utils/rbac/collector', () => ({
   })),
 }));
 
-describe('Middleware Utils', () => {
+describe('RBAC Fetcher', () => {
   let req;
   let modelsMock;
   let cacheMock;

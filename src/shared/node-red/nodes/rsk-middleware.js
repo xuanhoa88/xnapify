@@ -85,16 +85,16 @@ module.exports = function (RED) {
               return;
             }
             middleware = node.authType === 'optional'
-              ? auth.optionalAuthMiddleware()
-              : auth.requireAuthMiddleware();
+              ? auth.middlewares.optionalAuth()
+              : auth.middlewares.requireAuth();
             break;
           }
 
           case 'role': {
-            var userMw = app.get('user.middlewares');
-            if (!userMw || typeof userMw.requireRole !== 'function') {
-              node.error('app.get("user.middlewares").requireRole is not available');
-              done(new Error('user.middlewares provider missing'));
+            var authMw = app.get('auth');
+            if (!authMw || !authMw.middlewares || typeof authMw.middlewares.requireRole !== 'function') {
+              node.error('app.get("auth").middlewares.requireRole is not available');
+              done(new Error('auth middlewares provider missing'));
               return;
             }
             if (!node.role) {
@@ -103,15 +103,15 @@ module.exports = function (RED) {
               done();
               return;
             }
-            middleware = userMw.requireRole(node.role);
+            middleware = authMw.middlewares.requireRole(node.role);
             break;
           }
 
           case 'permission': {
-            var userMw2 = app.get('user.middlewares');
-            if (!userMw2 || typeof userMw2.requirePermission !== 'function') {
-              node.error('app.get("user.middlewares").requirePermission is not available');
-              done(new Error('user.middlewares provider missing'));
+            var authMw2 = app.get('auth');
+            if (!authMw2 || !authMw2.middlewares || typeof authMw2.middlewares.requirePermission !== 'function') {
+              node.error('app.get("auth").middlewares.requirePermission is not available');
+              done(new Error('auth middlewares provider missing'));
               return;
             }
             if (!node.permission) {
@@ -120,7 +120,7 @@ module.exports = function (RED) {
               done();
               return;
             }
-            middleware = userMw2.requirePermission(node.permission);
+            middleware = authMw2.middlewares.requirePermission(node.permission);
             break;
           }
 
