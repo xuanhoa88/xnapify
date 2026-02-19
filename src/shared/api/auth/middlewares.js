@@ -105,12 +105,10 @@ export function requireAuthMiddleware(options = {}) {
         const { payload } = decodedToken;
         const strategyKey =
           payload && payload.type ? `auth.strategy.${payload.type}` : null;
-        const strategy = strategyKey ? req.app.get(strategyKey) : null;
-
-        if (typeof strategy === 'function') {
-          // Delegate to registered strategy
-          const result = await strategy(req, token, payload, { jwt });
-          Object.assign(req, result);
+        const hook = req.app.get('hook');
+        if (strategyKey && hook.has(strategyKey)) {
+          // Delegate to registered strategy (event-based)
+          await hook.emit(strategyKey, req, { jwt, token, payload });
         } else {
           // Standard User Token flow (fallback)
           // Verify typed token (checks signature + type === tokenType)
@@ -181,12 +179,10 @@ export function optionalAuthMiddleware(options = {}) {
           const { payload } = decodedToken;
           const strategyKey =
             payload && payload.type ? `auth.strategy.${payload.type}` : null;
-          const strategy = strategyKey ? req.app.get(strategyKey) : null;
-
-          if (typeof strategy === 'function') {
-            // Delegate to registered strategy
-            const result = await strategy(req, token, payload, { jwt });
-            Object.assign(req, result);
+          const hook = req.app.get('hook');
+          if (strategyKey && hook.has(strategyKey)) {
+            // Delegate to registered strategy (event-based)
+            await hook.emit(strategyKey, req, { jwt, token, payload });
           } else {
             // Standard User Token flow (fallback)
             const decoded = jwt.verifyTypedToken(token, tokenType);

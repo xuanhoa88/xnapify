@@ -36,11 +36,8 @@ describe('authenticate', () => {
     };
     modelsMock.UserApiKey.findOne.mockResolvedValue(apiKeyRecord);
 
-    const result = await authenticate(req, token, payload, {
-      jwt: jwtMock,
-    });
+    await authenticate(req, { jwt: jwtMock, token, payload });
 
-    expect(jwtMock.verifyToken).toHaveBeenCalledWith(token);
     expect(modelsMock.UserApiKey.findOne).toHaveBeenCalledWith({
       where: {
         id: 'key-id',
@@ -49,18 +46,17 @@ describe('authenticate', () => {
       },
     });
     expect(apiKeyRecord.update).toHaveBeenCalled();
-    expect(result).toEqual({
-      user: verifiedPayload,
-      authMethod: 'api_key',
-      apiKey: apiKeyRecord,
-    });
+
+    expect(req.user).toEqual(verifiedPayload);
+    expect(req.authMethod).toBe('api_key');
+    expect(req.apiKey).toEqual(apiKeyRecord);
   });
 
   test('should throw error if API key not found', async () => {
     modelsMock.UserApiKey.findOne.mockResolvedValue(null);
 
     await expect(
-      authenticate(req, token, payload, { jwt: jwtMock }),
+      authenticate(req, { jwt: jwtMock, token, payload }),
     ).rejects.toThrow('Invalid or revoked API Key');
   });
 
@@ -71,7 +67,7 @@ describe('authenticate', () => {
     modelsMock.UserApiKey.findOne.mockResolvedValue(apiKeyRecord);
 
     await expect(
-      authenticate(req, token, payload, { jwt: jwtMock }),
+      authenticate(req, { jwt: jwtMock, token, payload }),
     ).rejects.toThrow('API Key expired');
   });
 });

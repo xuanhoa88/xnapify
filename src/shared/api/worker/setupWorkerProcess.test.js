@@ -257,7 +257,7 @@ describe('Worker Engine - setupWorkerProcess Extended', () => {
 
     setupWorkerProcess(processFunc, 'TEST', 'Test8', {
       maxRetries: 3,
-      retryDelayMs: 50,
+      retryDelayMs: 100,
       enableLogging: false,
     });
 
@@ -272,8 +272,8 @@ describe('Worker Engine - setupWorkerProcess Extended', () => {
     const delay2 = retryTimings[2] - retryTimings[1];
 
     // Check if delay2 is significantly larger than delay1 (exponential)
-    // Allow for some execution time variance
-    expect(delay2).toBeGreaterThan(delay1);
+    // Should be roughly 2x, so we check for at least 1.5x to account for variance
+    expect(delay2).toBeGreaterThan(delay1 * 1.5);
   });
 
   test('Test 9: Custom Timeout Override', async () => {

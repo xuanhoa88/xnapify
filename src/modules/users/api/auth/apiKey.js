@@ -6,7 +6,7 @@
  */
 
 // Handle API Key strategy for request authentication
-export const authenticate = async (req, token, payload, { jwt }) => {
+export const authenticate = async (req, { token, jwt }) => {
   // Verify explicitly for API key flow (checks signature + expiration)
   const verifiedPayload = jwt.verifyToken(token);
 
@@ -40,10 +40,8 @@ export const authenticate = async (req, token, payload, { jwt }) => {
   // Update last used (fire and forget to not block response time too much, or await)
   await apiKey.update({ last_used_at: new Date() });
 
-  // Return the authentication result
-  return {
-    user: verifiedPayload,
-    authMethod: 'api_key',
-    apiKey,
-  };
+  // Return the authentication result (mutate req for hook)
+  req.user = verifiedPayload;
+  req.authMethod = 'api_key';
+  req.apiKey = apiKey;
 };
