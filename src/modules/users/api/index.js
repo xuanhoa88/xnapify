@@ -43,6 +43,7 @@ const seedsContext = require.context(
  */
 export async function init(app, apiRouter, { Router }) {
   const db = app.get('db');
+  const hook = app.get('hook');
 
   // Run database migrations
   await db.connection.runMigrations([
@@ -55,21 +56,19 @@ export async function init(app, apiRouter, { Router }) {
   console.info('✅ [users] Migrations and seeds completed');
 
   // Register auth strategies
-  app
-    .get('hook')('auth.strategy.api_key')
-    .on('authenticate', handleApiKeyStrategy);
+  hook('auth.strategy.api_key').on('authenticate', handleApiKeyStrategy);
 
   // Register permission resolver — populates req.user.permissions from DB
-  app.get('hook')('auth.permissions').on('resolve', getUserRBACData);
+  hook('auth.permissions').on('resolve', getUserRBACData);
 
   // Register role resolver — populates req.user.roles from DB
-  app.get('hook')('auth.roles').on('resolve', getUserRBACData);
+  hook('auth.roles').on('resolve', getUserRBACData);
 
   // Register group resolver — populates req.user.groups from DB
-  app.get('hook')('auth.groups').on('resolve', getUserRBACData);
+  hook('auth.groups').on('resolve', getUserRBACData);
 
   // Register ownership resolver — sets req.isOwner from DB
-  app.get('hook')('auth.ownership').on('resolve', getUserRBACData);
+  hook('auth.ownership').on('resolve', getUserRBACData);
 
   console.info('✅ [users] Middlewares registered');
 
