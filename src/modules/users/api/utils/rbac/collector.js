@@ -57,6 +57,8 @@ export function collectUserRBACData(user) {
   }
 
   return {
+    id: user.id,
+    email: user.email,
     roles: [...roles],
     permissions: [...permissions],
     groups: [...groups],

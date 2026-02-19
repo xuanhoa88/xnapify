@@ -388,12 +388,6 @@ export async function createApiKey(req, res) {
   const { name, scopes = [], expiresIn } = req.body;
 
   try {
-    // Verify user exists
-    const user = await models.User.findByPk(id);
-    if (!user) {
-      return http.sendNotFound(res, 'User not found');
-    }
-
     // Validate with Zod schema
     const [isValid, errors] = validateForm(createApiKeyFormSchema, {
       name,
@@ -406,9 +400,10 @@ export async function createApiKey(req, res) {
     }
 
     // Create API key via service
+    const cache = req.app.get('cache');
     const result = await userAdminService.createApiKey(
-      user,
-      { name, scopes, expiresIn },
+      id,
+      { name, scopes, expiresIn, cache },
       { models, jwt },
     );
 

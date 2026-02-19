@@ -5,14 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { format } from 'date-fns';
 import cn from 'clsx';
 import { useRbac } from '../../../../../../../shared/renderer/components/Rbac';
-import { useDebounce } from '../../../../../../../shared/renderer/components/InfiniteScroll';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';
 import {
   Box,
@@ -39,9 +38,11 @@ import {
   getApiKeyCreateError,
   clearApiKeyCreateError,
   clearNewApiKey,
+  fetchUserPermissions,
+  getUserPermissions,
+  isUserPermissionsOperationLoading,
 } from '../../redux';
 import { showSuccessMessage } from '../../../../../../../shared/renderer/redux';
-import { fetchPermissions } from '../../../permissions/redux';
 import { createApiKeyFormSchema } from '../../../../../validator/admin';
 import s from './UserApiKeys.css';
 
@@ -73,13 +74,9 @@ export default function UserApiKeys({ userId }) {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const confirmRevokeRef = useRef(null);
 
-  // Permissions List State
-  const [permissions, setPermissions] = useState([]);
-  const [permissionsLoading, setPermissionsLoading] = useState(false);
-  const [permissionsHasMore, setPermissionsHasMore] = useState(false);
-  const [permissionsPage, setPermissionsPage] = useState(1);
-  const [permissionSearch, setPermissionSearch] = useState('');
-  const permissionsLimit = 20;
+  // User Permissions State (for scope selection)
+  const userPermissionStrings = useSelector(getUserPermissions);
+  const permissionsLoading = useSelector(isUserPermissionsOperationLoading);
 
   // =========================================================================
   // DATA FETCHING
@@ -92,60 +89,26 @@ export default function UserApiKeys({ userId }) {
     }
   }, [dispatch, userId]);
 
-  // Load Permissions
-  const loadPermissions = useCallback(
-    async (page, search = '', reset = false) => {
-      if (reset) setPermissionsLoading(true);
-
-      try {
-        const result = await dispatch(
-          fetchPermissions({ page, limit: permissionsLimit, search }),
-        ).unwrap();
-        const newPermissions = result.permissions || [];
-        const { pagination } = result;
-
-        if (reset) {
-          setPermissions(newPermissions);
-        } else {
-          setPermissions(prev => [...prev, ...newPermissions]);
-        }
-
-        setPermissionsHasMore(pagination && pagination.page < pagination.pages);
-        setPermissionsPage(page);
-      } catch (_error) {
-        // ignore
-      } finally {
-        setPermissionsLoading(false);
-      }
-    },
-    [dispatch],
-  );
-
-  // Initial load when modal opens
+  // Load user's effective permissions when modal opens
   useEffect(() => {
-    if (isCreateOpen) {
-      loadPermissions(1, '', true);
+    if (isCreateOpen && userId) {
+      dispatch(fetchUserPermissions(userId));
     }
-  }, [isCreateOpen, loadPermissions]);
+  }, [isCreateOpen, userId, dispatch]);
 
-  // Debounced search
-  useDebounce(permissionSearch, 300, debouncedSearch => {
-    if (isCreateOpen) {
-      loadPermissions(1, debouncedSearch, true);
-    }
-  });
-
-  const handleLoadMorePermissions = useCallback(() => {
-    if (!permissionsLoading && permissionsHasMore) {
-      loadPermissions(permissionsPage + 1, permissionSearch, false);
-    }
-  }, [
-    permissionsLoading,
-    permissionsHasMore,
-    permissionsPage,
-    permissionSearch,
-    loadPermissions,
-  ]);
+  // Transform permission strings into items for CheckboxList
+  const permissions = useMemo(() => {
+    if (!Array.isArray(userPermissionStrings)) return [];
+    return userPermissionStrings.map(perm => {
+      const [resource, action] = perm.split(':');
+      return {
+        value: perm,
+        label: perm,
+        resource,
+        action,
+      };
+    });
+  }, [userPermissionStrings]);
 
   // =========================================================================
   // ACTIONS
@@ -446,18 +409,15 @@ export default function UserApiKeys({ userId }) {
               >
                 <Form.CheckboxList
                   items={permissions}
-                  valueKey='id'
-                  labelKey='description'
+                  valueKey='value'
+                  labelKey='label'
                   groupBy='resource'
                   loading={permissionsLoading}
-                  hasMore={permissionsHasMore}
-                  onLoadMore={handleLoadMorePermissions}
                   searchable
                   searchPlaceholder={t(
                     'apiKeys.permissionsSearchPlaceholder',
                     'Search e.g. users, users:read, :create',
                   )}
-                  onSearch={setPermissionSearch}
                   emptyMessage={t(
                     'apiKeys.permissionsEmptyMessage',
                     'No permissions found',

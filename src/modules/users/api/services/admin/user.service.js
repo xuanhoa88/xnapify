@@ -9,6 +9,7 @@ import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 import { DEFAULT_ROLE } from '../../constants/rbac';
 import * as rbacCache from '../../utils/rbac/cache';
+import { fetchUserRBACData } from '../../utils/rbac/fetcher';
 import { logUserActivity } from '../../utils/activity';
 
 /**
@@ -739,7 +740,7 @@ export async function listApiKeys(userId, models) {
 /**
  * Create a new API key for a user
  *
- * @param {Object} user - User object
+ * @param {string} userId - User ID
  * @param {Object} data - Key data
  * @param {string} data.name - Key name
  * @param {string[]} [data.scopes] - Scopes
@@ -749,9 +750,19 @@ export async function listApiKeys(userId, models) {
  * @param {Object} options.jwt - JWT service
  * @returns {Promise<Object>} Created key and raw token
  */
-export async function createApiKey(user, data, { models, jwt }) {
-  const { name, scopes = [], expiresIn } = data;
+export async function createApiKey(userId, data, { models, jwt }) {
+  const { name, scopes: requestedScopes = [], expiresIn, cache } = data;
   const { UserApiKey } = models;
+
+  // Fetch user's effective permissions (resource:action format)
+  const rbacData = await fetchUserRBACData(userId, { models, cache });
+  const userPermissions = rbacData.permissions;
+
+  // Intersect requested scopes with user's permissions, or inherit all if none selected
+  const scopes =
+    requestedScopes.length > 0
+      ? requestedScopes.filter(s => userPermissions.includes(s))
+      : userPermissions;
 
   // Generate a UUID that links the JWT to the DB record
   const keyId = uuidv4();
@@ -763,8 +774,8 @@ export async function createApiKey(user, data, { models, jwt }) {
   // Generate JWT with type: 'api_key' and our DB id as jti
   const token = jwt.generateToken(
     {
-      id: user.id,
-      email: user.email,
+      id: userId,
+      email: rbacData.email,
       jti: keyId,
       scopes,
       type: 'api_key',
@@ -775,7 +786,7 @@ export async function createApiKey(user, data, { models, jwt }) {
   // Store metadata in DB
   const newKey = await UserApiKey.create({
     id: keyId,
-    user_id: user.id,
+    user_id: userId,
     name,
     scopes,
     is_active: true,
