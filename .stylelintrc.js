@@ -43,4 +43,11 @@ module.exports = {
     // Allow any naming style: CamelCase, PascalCase, kebab-case, etc.
     'keyframes-name-pattern': null,
   },
+
+  overrides: [
+    {
+      files: ['**/*.scss'],
+      customSyntax: 'postcss-scss',
+    },
+  ],
 };
