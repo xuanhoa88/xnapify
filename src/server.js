@@ -935,7 +935,14 @@ export async function bootstrap(app, server, options = {}) {
     if (!__DEV__) {
       res.setHeader(
         'Content-Security-Policy',
-        "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'",
+        [
+          "default-src 'self'",
+          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+          "style-src 'self' 'unsafe-inline'",
+          "img-src 'self' https: data: blob:",
+          "font-src 'self' data:",
+          "connect-src 'self' ws: wss:",
+        ].join('; '),
       );
     }
 
