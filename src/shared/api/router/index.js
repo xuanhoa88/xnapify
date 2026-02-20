@@ -5,15 +5,23 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_MOUNT_KEY, ROUTE_UNMOUNT_KEY } from './constants';
-import { decodeUrl, isDescendant } from './utils';
+import { ROUTE_MOUNT_KEY } from './constants';
 import { collect } from './collector';
 import { runInit, runMount } from './lifecycle';
-import { createMatcher, clearMatchCache } from './matcher';
+import { createMatchCache, clearMatchCache, findRoute } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
-const ROUTE_SOURCE_KEY = Symbol('__rsk.apiRouteSource__');
+/** @type {symbol} Tag for tracking which adapter a route came from */
+const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
 
+/** @type {symbol} Per-instance radix tree cache */
+const ROUTE_CACHE_KEY = Symbol('__rsk.routeCache__');
+
+/**
+ * Recursively tags all routes with their source adapter.
+ * @param {Object} route - Route node to tag
+ * @param {Object} source - The adapter that produced this route
+ */
 function tagRoutes(route, source) {
   if (!route || typeof route !== 'object') return;
   route[ROUTE_SOURCE_KEY] = source;
@@ -22,6 +30,11 @@ function tagRoutes(route, source) {
   }
 }
 
+/**
+ * Validates that an adapter has the required files() and load() methods.
+ * @param {Object} adapter
+ * @throws {TypeError}
+ */
 function validateAdapter(adapter) {
   if (!adapter) {
     throw new TypeError('adapter must have files() and load() methods');
@@ -35,14 +48,37 @@ function validateAdapter(adapter) {
   return true;
 }
 
+/**
+ * @typedef {Object} RouterOptions
+ * @property {string} [baseUrl=''] - Base URL prefix for all routes
+ * @property {Function} [onRouteInit] - Hook called before route initialization
+ * @property {Function} [onRouteMount] - Hook called on route mount
+ */
+
+/**
+ * File-based dynamic API router for Express.
+ * Resolves incoming requests against a radix tree compiled from filesystem routes.
+ *
+ * @class
+ * @example
+ * const router = new Router(adapter, { baseUrl: '/api' });
+ * app.use('/api', router.expressMiddleware);
+ */
 export class Router {
+  /**
+   * @param {Object} adapter - Module loader with files() and load() methods
+   * @param {RouterOptions} [options={}]
+   */
   constructor(adapter, options) {
+    /** @type {RouterOptions} */
     this.options = options || {};
+    /** @type {string} */
     this.baseUrl = this.options.baseUrl || '';
+    /** @type {import('./matcher').MatchCache} */
+    this[ROUTE_CACHE_KEY] = createMatchCache();
 
     validateAdapter(adapter);
 
-    // Note: API matches middlewares instead of layout configs
     this.routes = buildRoutes(
       collect(adapter, 'routes'),
       collect(adapter, 'configs'),
@@ -51,13 +87,18 @@ export class Router {
 
     validateConfig(this.routes);
     this.routes.forEach(route => linkParents(route));
-    this.routes.forEach(route => tagRoutes(route, adapter || null));
-    clearMatchCache();
+    this.routes.forEach(route => tagRoutes(route, adapter));
+    clearMatchCache(this[ROUTE_CACHE_KEY]);
 
     // Bind expressMiddleware so it can be passed directly to app.use()
     this.expressMiddleware = this.expressMiddleware.bind(this);
   }
 
+  /**
+   * Dynamically adds routes from a new adapter (e.g. a plugin).
+   * @param {Object} adapter - Module loader for the new routes
+   * @returns {Object[]} The newly added route nodes
+   */
   add(adapter) {
     validateAdapter(adapter);
 
@@ -93,10 +134,15 @@ export class Router {
       }
     }
 
-    clearMatchCache();
+    clearMatchCache(this[ROUTE_CACHE_KEY]);
     return newRoutes;
   }
 
+  /**
+   * Removes all routes originating from the given adapter.
+   * @param {Object} adapter - The adapter whose routes should be removed
+   * @returns {boolean} True if any routes were removed
+   */
   remove(adapter) {
     if (!adapter) return false;
 
@@ -127,110 +173,66 @@ export class Router {
 
     if (removed) {
       this.routes.forEach(route => linkParents(route));
-      clearMatchCache();
+      clearMatchCache(this[ROUTE_CACHE_KEY]);
     }
 
     return removed;
   }
 
   /**
-   * Returns an Express middleware that handles incoming requests.
-   * Matches the URL path to the compiled route tree, populating req.params,
-   * then calls the action chain.
+   * Express middleware that matches incoming requests against the radix tree
+   * and executes the matched route's action pipeline.
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   * @param {import('express').NextFunction} next
+   * @returns {Promise<*>}
    */
-  expressMiddleware(req, res, next) {
-    // Determine path relative to router's base URL (e.g. req.path in Express
-    // is already trimmed of app mounting points depending on how it's mounted,
-    // but typically for API router we take req.path)
+  async expressMiddleware(req, res, next) {
+    // Strip baseUrl prefix so routes are matched relative to the mount point
     let pathname = req.path;
+    if (this.baseUrl && pathname.startsWith(this.baseUrl)) {
+      pathname = pathname.slice(this.baseUrl.length) || '/';
+    }
 
-    // Provide a mocked application context equivalent to 'ctx' for hooks
+    const match = findRoute(this.routes, pathname, this[ROUTE_CACHE_KEY]);
+
+    if (!match) {
+      return next(); // No route matched, pass to Express
+    }
+
+    const { route, params } = match;
+
+    // Inject matched params onto req.params
+    Object.assign(req.params, params || {});
+
+    // Provide a mocked application context for lifecycle hooks
     const ctx = {
       app: req.app,
       req,
       res,
       pathname,
+      route,
+      params,
       _instance: this,
       [ROUTE_MOUNT_KEY]: new Set(),
-      [ROUTE_UNMOUNT_KEY]: new Set(),
     };
 
-    const matcher = createMatcher(
-      { children: this.routes },
-      this.baseUrl,
-      {
-        decode: decodeUrl,
-        ...this.options,
-      },
-      pathname,
-    );
+    try {
+      await runInit(route, ctx);
+      await runMount(route, ctx);
 
-    // Recursively resolve matching route (similar to SSR mechanism)
-    const state = {
-      matches: matcher.next(),
-      cachedMatch: null,
-      current: null,
-    };
+      // Execute the action (composed middlewares + handler)
+      const actionResult = await route.action(req, res, err => {
+        if (err) throw err;
+        // If action calls next() without error, route didn't handle the request
+        return next();
+      });
 
-    const resolveNext = async (resume = false, parent = null) => {
-      if (
-        resume &&
-        state.matches &&
-        state.matches.value &&
-        !state.matches.done
-      ) {
-        parent = state.matches.value.route;
-      }
-
-      state.matches = state.cachedMatch || matcher.next();
-      state.cachedMatch = null;
-
-      if (!resume) {
-        if (
-          state.matches.done ||
-          (parent && !isDescendant(parent, state.matches.value.route))
-        ) {
-          state.cachedMatch = state.matches;
-          return null; // Signals failure to match at this current depth
-        }
-      }
-
-      if (state.matches.done) {
-        return false; // No more routes to try
-      }
-
-      state.current = { ...ctx, ...state.matches.value };
-
-      // Inject matched params onto req.params instead of ctx
-      Object.assign(req.params, state.current.params || {});
-
-      try {
-        await runInit(state.current.route, state.current);
-        await runMount(state.current.route, state.current);
-
-        // Let the action (composed middlewares + export) take over
-        // Action is responsible for calling next() if it doesn't terminate request
-        const actionResult = await state.current.route.action(req, res, err => {
-          if (err) throw err;
-          // If action calls next() with no err, it means it didn't fulfill the response.
-          // In API routing, we must continue trying to match sibling/child routes or give up.
-          return resolveNext(true, parent);
-        });
-
-        return actionResult;
-      } catch (err) {
-        return next(err);
-      }
-    };
-
-    return resolveNext()
-      .then(handled => {
-        if (handled === false || handled === null) {
-          // No route handled the request fully
-          next();
-        }
-      })
-      .catch(next);
+      return actionResult;
+    } catch (err) {
+      return next(err);
+    }
   }
 }
 

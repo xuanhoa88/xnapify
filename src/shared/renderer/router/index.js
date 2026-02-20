@@ -14,7 +14,7 @@ import {
 import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
 import { runInit, runMount, runUnmount } from './lifecycle';
-import { createMatcher, clearMatchCache } from './matcher';
+import { createMatcher } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
 // Tag routes with their source adapter for dynamic add/remove tracking
@@ -243,7 +243,6 @@ export class Router {
     validateConfig(this.routes);
     this.routes.forEach(route => linkParents(route));
     this.routes.forEach(route => tagRoutes(route, adapter || null));
-    clearMatchCache();
   }
 
   /**
@@ -372,7 +371,6 @@ export class Router {
     }
 
     // 4. Clear matcher cache so new URLs resolve correctly
-    clearMatchCache();
 
     return newRoutes;
   }
@@ -422,7 +420,6 @@ export class Router {
     if (removed) {
       // Re-link parents after structural changes
       this.routes.forEach(route => linkParents(route));
-      clearMatchCache();
     }
 
     return removed;

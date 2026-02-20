@@ -13,8 +13,10 @@ import {
   useState,
   useRef,
 } from 'react';
-import { match as matchPath, compile as compilePath } from 'path-to-regexp';
 import { HistoryContext } from '../../Providers/History';
+
+/** @type {{ matched: false, params: {} }} Reusable no-match sentinel */
+const NO_MATCH = Object.freeze({ matched: false, params: {} });
 
 /**
  * Hook to access history instance from context
@@ -24,9 +26,12 @@ import { HistoryContext } from '../../Providers/History';
 export function useHistory() {
   const history = useContext(HistoryContext);
   if (!history) {
-    const error = new Error('useHistory must be used within a HistoryProvider');
-    error.name = 'HistoryContextError';
-    throw error;
+    throw __DEV__
+      ? Object.assign(
+          new Error('useHistory must be used within a HistoryProvider'),
+          { name: 'HistoryContextError' },
+        )
+      : new Error('HistoryContextError');
   }
   return history;
 }
@@ -115,11 +120,11 @@ export function useNavigate() {
   const history = useHistory();
   return useMemo(
     () => ({
-      push: (path, state) => history.push(path, state),
-      replace: (path, state) => history.replace(path, state),
-      go: n => history.go(n),
-      back: () => history.back(),
-      forward: () => history.forward(),
+      push: history.push.bind(history),
+      replace: history.replace.bind(history),
+      go: history.go.bind(history),
+      back: history.back.bind(history),
+      forward: history.forward.bind(history),
     }),
     [history],
   );
@@ -167,9 +172,8 @@ export function useSetQuery() {
 
 /**
  * Hook to check if a pathname matches a route pattern
- * Uses path-to-regexp for pattern matching with param extraction
+ * Supports static segments, named params (:id), and trailing wildcards (*)
  * @param {string} pattern - Route pattern (e.g., '/users/:id', '/admin/*')
- * @param {Object} [options] - Options for path-to-regexp match()
  * @returns {{ matched: boolean, params: Object }} Match result and extracted params
  * @example
  * // URL: /users/123
@@ -184,21 +188,32 @@ export function useSetQuery() {
  * const { matched } = useMatch('/users/:id');
  * // matched: false, params: {}
  */
-export function useMatch(pattern, options = {}) {
+export function useMatch(pattern) {
   const pathname = usePathname();
 
   return useMemo(() => {
-    const matcher = matchPath(pattern, {
-      decode: decodeURIComponent,
-      ...options,
-    });
-    const result = matcher(pathname);
+    const patternSegs = pattern.split('/').filter(Boolean);
+    const pathSegs = pathname.split('/').filter(Boolean);
+    const params = {};
 
-    if (result) {
-      return { matched: true, params: result.params || {} };
+    const hasWildcard =
+      patternSegs.length > 0 && patternSegs[patternSegs.length - 1] === '*';
+    const segsToMatch = hasWildcard ? patternSegs.slice(0, -1) : patternSegs;
+
+    if (!hasWildcard && segsToMatch.length !== pathSegs.length) return NO_MATCH;
+    if (hasWildcard && pathSegs.length < segsToMatch.length) return NO_MATCH;
+
+    for (let i = 0; i < segsToMatch.length; i++) {
+      const seg = segsToMatch[i];
+      if (seg.startsWith(':')) {
+        params[seg.slice(1)] = decodeURIComponent(pathSegs[i]);
+      } else if (seg !== pathSegs[i]) {
+        return NO_MATCH;
+      }
     }
-    return { matched: false, params: {} };
-  }, [pathname, pattern, options]);
+
+    return { matched: true, params };
+  }, [pathname, pattern]);
 }
 
 /**
@@ -234,49 +249,34 @@ export function usePreviousLocation() {
 }
 
 /**
- * Hook to build URLs with route params and query params
- * Uses path-to-regexp compile for route param substitution
- * @returns {Function} Function to build URLs
+ * Builds a URL from a pattern, query params, and options.
+ * Pure utility — no React hooks needed.
+ * @param {string} pattern - URL pattern with optional :param placeholders
+ * @param {Object} [options={}] - Additional options
+ * @param {Object} [options.params={}] - Route param values to substitute
+ * @param {Object} [options.query={}] - Query params as key-value pairs (arrays supported)
+ * @param {string} [options.hash=''] - URL hash fragment
+ * @returns {string} Built URL
  * @example
- * const buildUrl = useBuildUrl();
- *
- * // Simple query params
- * buildUrl('/products', { category: 'electronics' });
- * // '/products?category=electronics'
- *
- * // Route params (path-to-regexp syntax)
- * buildUrl('/users/:id', {}, { params: { id: 123 } });
- * // '/users/123'
- *
- * // Combined route params + query
- * buildUrl('/users/:id/posts', { page: 2 }, { params: { id: 123 } });
- * // '/users/123/posts?page=2'
- *
- * // Array values
- * buildUrl('/search', { tag: ['js', 'react'] });
- * // '/search?tag=js&tag=react'
- *
- * // With hash
- * buildUrl('/docs', { section: 'api' }, { hash: 'installation' });
- * // '/docs?section=api#installation'
+ * buildUrl('/users/:id/posts', { params: { id: 123 }, query: { page: 2 }, hash: 'section-2' });
+ * // '/users/123/posts?page=2#section-2'
  */
-export function useBuildUrl() {
-  return useCallback((pattern, query = {}, options = {}) => {
-    const { params = {}, hash = '' } = options || {};
+export function buildUrl(pattern, options = {}) {
+  try {
+    const { params = {}, query = {}, hash = '' } = options;
 
-    // Compile route params if any
-    let pathname = pattern;
-    if (Object.keys(params).length > 0) {
-      const toPath = compilePath(pattern, { encode: encodeURIComponent });
-      pathname = toPath(params);
-    }
+    // Substitute route params
+    const pathname =
+      Object.keys(params).length > 0
+        ? pattern.replace(/:([^/]+)/g, (_, key) =>
+            encodeURIComponent(params[key] != null ? params[key] : ''),
+          )
+        : pattern;
 
     // Build query string
     const searchParams = new URLSearchParams();
     Object.entries(query).forEach(([key, value]) => {
       if (value == null) return;
-
-      // Handle arrays
       if (Array.isArray(value)) {
         value.forEach(v => searchParams.append(key, String(v)));
       } else {
@@ -288,5 +288,8 @@ export function useBuildUrl() {
     const hashStr = hash ? `#${hash.replace(/^#/, '')}` : '';
 
     return `${pathname}${search.length > 0 ? `?${search}` : ''}${hashStr}`;
-  }, []);
+  } catch (error) {
+    console.error('Error building URL:', error);
+    return pattern;
+  }
 }

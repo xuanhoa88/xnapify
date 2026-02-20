@@ -15,7 +15,10 @@ import {
 } from './lifecycle';
 
 /**
- * Finds config modules for a given route based on root segment
+ * Finds config modules for a given route based on root segment.
+ * @param {Map<string, Object>} configs - Map of config keys to modules
+ * @param {string|null} rootSegment - The first path segment (module name)
+ * @returns {Object[]} Matching config entries
  */
 function findConfigs(configs, rootSegment) {
   const sectionKey = rootSegment
@@ -29,7 +32,13 @@ function findConfigs(configs, rootSegment) {
 }
 
 /**
- * Finds layout modules for a given route based on root segment and path hierarchy
+ * Finds layout modules for a given route based on root segment and path hierarchy.
+ * Supports theme/global layouts and colocated path-based layouts.
+ * @param {Map<string, Object>} layouts - Map of layout keys to modules
+ * @param {string|null} rootSegment - The first path segment
+ * @param {string} pathname - Full route pathname
+ * @param {Object} module - The route module (to check for layout opt-out)
+ * @returns {Object[]} Matching layout entries in render order
  */
 function findLayouts(layouts, rootSegment, pathname, module) {
   // 0. Explicit opt-out
@@ -85,6 +94,13 @@ function findParentPath(pathname, routeMap) {
   return ROUTE_SEPARATOR;
 }
 
+/**
+ * Builds a structured route tree from collected pages, configs, and layouts.
+ * @param {Map<string, Object>} pages - Collected route page modules
+ * @param {Map<string, Object>} [configs=new Map()] - Collected config modules
+ * @param {Map<string, Object>} [layouts=new Map()] - Collected layout modules
+ * @returns {Object[]} Array of top-level route tree nodes
+ */
 export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
   const routeMap = new Map();
 
@@ -131,6 +147,12 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
   return tree;
 }
 
+/**
+ * Validates that a route tree has correct structure.
+ * @param {Object|Object[]} routes - Route tree to validate
+ * @param {string} [trace=''] - Path trace for error messages
+ * @throws {TypeError} If route structure is invalid
+ */
 export function validateConfig(routes, trace = '') {
   const items = Array.isArray(routes) ? routes : [routes];
 
@@ -153,6 +175,11 @@ export function validateConfig(routes, trace = '') {
   }
 }
 
+/**
+ * Recursively links each route to its parent, enabling upward traversal.
+ * @param {Object} route - Route node to link
+ * @param {Object|null} [parent=null] - Parent route node
+ */
 export function linkParents(route, parent = null) {
   route.parent = parent;
   if (Array.isArray(route.children)) {

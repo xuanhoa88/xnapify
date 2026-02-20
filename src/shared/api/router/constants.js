@@ -5,9 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/** @type {string} Empty string representing the root path in matching */
 export const ROUTE_PATH_ROOT = '';
+/** @type {string} Forward slash path separator */
 export const ROUTE_SEPARATOR = '/';
+/** @type {string} Default module/config placeholder name */
 export const ROUTE_PATH_DEFAULT = '(default)';
-export const ROUTE_INIT_KEY = Symbol('__rsk.apiRouteInitKey__');
-export const ROUTE_MOUNT_KEY = Symbol('__rsk.apiRouteMountKey__');
-export const ROUTE_UNMOUNT_KEY = Symbol('__rsk.apiRouteUnmountKey__');
+/** @type {symbol} Tracks whether a route's init() has been called */
+export const ROUTE_INIT_KEY = Symbol('__rsk.routeInitKey__');
+/** @type {symbol} Tracks mounted config modules to prevent double-mounting */
+export const ROUTE_MOUNT_KEY = Symbol('__rsk.routeMountKey__');

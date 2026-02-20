@@ -6,9 +6,12 @@
  */
 
 /**
- * Koa-style middleware composition
- * @param {Array} middleware - Array of middleware functions
- * @returns {Function} Composed middleware function
+ * Composes an array of Koa-style middleware functions into a single function.
+ * Each middleware receives `(context, next)` where `next` advances to the next middleware.
+ *
+ * @param {Array<Function>} middleware - Array of (context, next) => Promise middleware fns
+ * @returns {Function} Composed middleware (context, next) => Promise
+ * @throws {TypeError} If input is not an array or contains non-functions
  */
 export function composeMiddleware(middleware) {
   if (!Array.isArray(middleware)) {

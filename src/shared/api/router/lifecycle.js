@@ -5,12 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  ROUTE_INIT_KEY,
-  ROUTE_MOUNT_KEY,
-  ROUTE_UNMOUNT_KEY,
-} from './constants';
-import { log } from './utils';
+import { ROUTE_INIT_KEY, ROUTE_MOUNT_KEY } from './constants';
+import { log, normalizeError } from './utils';
 import { composeMiddleware } from './composer';
 
 /**
@@ -83,46 +79,6 @@ export function createMount(configs, routeMount) {
 }
 
 /**
- * Creates a combined unmount function for cleanup
- */
-export function createUnmount(configs, routeUnmount) {
-  const unmountableConfigs = configs.filter(
-    c => typeof c.module.unmount === 'function',
-  );
-
-  if (unmountableConfigs.length === 0 && typeof routeUnmount !== 'function') {
-    return undefined;
-  }
-
-  return async function (ctx) {
-    if (!ctx[ROUTE_UNMOUNT_KEY]) {
-      ctx[ROUTE_UNMOUNT_KEY] = new Set();
-    }
-
-    if (typeof routeUnmount === 'function') {
-      try {
-        await routeUnmount(ctx);
-      } catch (error) {
-        log(`Route unmount error: ${error.message}`, 'error');
-      }
-    }
-
-    for (const config of unmountableConfigs) {
-      if (ctx[ROUTE_UNMOUNT_KEY].has(config.module)) {
-        continue;
-      }
-      ctx[ROUTE_UNMOUNT_KEY].add(config.module);
-
-      try {
-        await config.module.unmount(ctx);
-      } catch (error) {
-        log(`Config unmount error: ${error.message}`, 'error');
-      }
-    }
-  };
-}
-
-/**
  * Creates a middleware runner for the route
  */
 export function createMiddlewareRunner(configs, routeMiddlewares) {
@@ -156,7 +112,7 @@ export function createMiddlewareRunner(configs, routeMiddlewares) {
 export function createAction(pageInfo, configs = [], middlewares = []) {
   const { module } = pageInfo;
 
-  // Generic/inherited route middleware chain
+  // Generic/inherited route middleware chain + Custom route parsers
   const baseMiddleware = createMiddlewareRunner(configs, middlewares);
 
   return function (req, res, next) {
@@ -209,21 +165,22 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
 
     return runMethodPipeline(req, res, err => {
       // If error from middleware, pass to next error handler
-      if (err) return next(err);
+      if (err) return next(normalizeError(err));
 
       // Execute route handler
       try {
-        // Note: Express handlers don't typically return promises to the router,
-        // but handling async routes is standard pattern nowadays.
         const result = handler(req, res, next);
 
-        // If Promise, catch errors and forward
+        // If handler returns a Promise, catch errors and delegate to Express
         if (result && typeof result.then === 'function') {
-          result.catch(next);
+          return result.catch(err2 => {
+            next(normalizeError(err2));
+          });
         }
-        return result;
+
+        return Promise.resolve(result);
       } catch (handlerErr) {
-        return next(handlerErr);
+        next(normalizeError(handlerErr));
       }
     });
   };
@@ -292,39 +249,5 @@ export async function runMount(route, ctx) {
   } catch (error) {
     log(`Mount error for "${route.path}": ${error.message}`, 'error');
     return null;
-  }
-}
-
-export async function runUnmount(route, ctx) {
-  let current = route;
-  while (current) {
-    if (typeof current.unmount === 'function') {
-      try {
-        await current.unmount(ctx);
-      } catch (error) {
-        log(`Unmount error for "${current.path}": ${error.message}`, 'error');
-      }
-    }
-
-    if (
-      // eslint-disable-next-line no-underscore-dangle
-      ctx._instance &&
-      // eslint-disable-next-line no-underscore-dangle
-      ctx._instance.options &&
-      // eslint-disable-next-line no-underscore-dangle
-      typeof ctx._instance.options.onRouteUnmount === 'function'
-    ) {
-      try {
-        // eslint-disable-next-line no-underscore-dangle
-        await ctx._instance.options.onRouteUnmount(current, ctx);
-      } catch (error) {
-        log(
-          `onRouteUnmount error for "${current.path}": ${error.message}`,
-          'error',
-        );
-      }
-    }
-
-    current = current.parent;
   }
 }

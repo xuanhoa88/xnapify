@@ -7,15 +7,13 @@
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import { getRootSegment } from './utils';
-import {
-  createInit,
-  createMount,
-  createUnmount,
-  createAction,
-} from './lifecycle';
+import { createInit, createMount, createAction } from './lifecycle';
 
 /**
- * Finds config modules for a given route based on root segment
+ * Finds config modules for a given route based on root segment.
+ * @param {Map<string, Object>} configs - Map of config keys to modules
+ * @param {string|null} rootSegment - The first path segment (module name)
+ * @returns {Object[]} Matching config entries
  */
 function findConfigs(configs, rootSegment) {
   const sectionKey = rootSegment
@@ -29,7 +27,13 @@ function findConfigs(configs, rootSegment) {
 }
 
 /**
- * Finds middleware modules for a given API route based on root segment and path hierarchy
+ * Finds middleware modules for a given API route based on root segment and path hierarchy.
+ * Supports global/theme middlewares and colocated path-based middlewares.
+ * @param {Map<string, Object>} middlewares - Map of middleware keys to modules
+ * @param {string|null} rootSegment - The first path segment
+ * @param {string} pathname - Full route pathname
+ * @param {Object} module - The route module (to check for middleware opt-out)
+ * @returns {Object[]} Matching middleware entries in execution order
  */
 function findMiddlewares(middlewares, rootSegment, pathname, module) {
   if (module && module.middleware !== undefined) {
@@ -97,6 +101,13 @@ function findParentPath(pathname, routeMap) {
   return ROUTE_SEPARATOR;
 }
 
+/**
+ * Builds a structured route tree from collected pages, configs, and middlewares.
+ * @param {Map<string, Object>} pages - Collected route page modules
+ * @param {Map<string, Object>} [configs=new Map()] - Collected config modules
+ * @param {Map<string, Object>} [middlewares=new Map()] - Collected middleware modules
+ * @returns {Object[]} Array of top-level route tree nodes
+ */
 export function buildRoutes(
   pages,
   configs = new Map(),
@@ -122,7 +133,6 @@ export function buildRoutes(
       action: createAction(pageInfo, matchedConfigs, matchedMiddlewares),
       init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),
-      unmount: createUnmount(matchedConfigs, module.unmount),
     });
   });
 
@@ -147,6 +157,12 @@ export function buildRoutes(
   return tree;
 }
 
+/**
+ * Validates that a route tree has correct structure.
+ * @param {Object|Object[]} routes - Route tree to validate
+ * @param {string} [trace=''] - Path trace for error messages
+ * @throws {TypeError} If route structure is invalid
+ */
 export function validateConfig(routes, trace = '') {
   const items = Array.isArray(routes) ? routes : [routes];
 
@@ -169,6 +185,11 @@ export function validateConfig(routes, trace = '') {
   }
 }
 
+/**
+ * Recursively links each route to its parent, enabling upward traversal.
+ * @param {Object} route - Route node to link
+ * @param {Object|null} [parent=null] - Parent route node
+ */
 export function linkParents(route, parent = null) {
   route.parent = parent;
   if (Array.isArray(route.children)) {

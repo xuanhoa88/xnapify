@@ -5,7 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Router from './index';
+import Router from '.';
+import { RouterError, normalizeError } from './utils';
 
 const mockModuleLoader = {
   files: () => [
@@ -23,7 +24,13 @@ const mockModuleLoader = {
     }
     if (path.includes('plugins/[id]')) {
       return {
-        get: (req, res) => res.json({ plugin: req.params.id }),
+        // Handlers must explicitly call res.json() — no auto-formatting
+        get: (req, res) => {
+          res.json({
+            plugin: req.params.id,
+            hasMiddleware: req.hasPluginMiddleware || false,
+          });
+        },
       };
     }
     if (path.includes('_middleware')) {
@@ -59,7 +66,6 @@ describe('Router Engine', () => {
     const router = new Router(mockModuleLoader);
     const { expressMiddleware } = router;
 
-    // Mock Express request/response
     const req = {
       method: 'POST',
       path: '/auth/users',
@@ -91,16 +97,18 @@ describe('Router Engine', () => {
     const res = {
       json: jest.fn(),
     };
-
     const next = jest.fn();
 
     await expressMiddleware(req, res, next);
 
-    expect(res.json).toHaveBeenCalledWith({ plugin: 'my-plugin-id' });
+    expect(res.json).toHaveBeenCalledWith({
+      plugin: 'my-plugin-id',
+      hasMiddleware: true,
+    });
     expect(req.params.id).toBe('my-plugin-id');
   });
 
-  it('should execute collocated middlewares', async () => {
+  it('should execute collocated middlewares sequentially', async () => {
     const router = new Router(mockModuleLoader);
     const { expressMiddleware } = router;
 
@@ -113,16 +121,18 @@ describe('Router Engine', () => {
     const res = {
       json: jest.fn(),
     };
-
     const next = jest.fn();
 
     await expressMiddleware(req, res, next);
 
     expect(req.hasPluginMiddleware).toBe(true);
-    expect(res.json).toHaveBeenCalledWith({ plugin: 'my-plugin-id' });
+    expect(res.json).toHaveBeenCalledWith({
+      plugin: 'my-plugin-id',
+      hasMiddleware: true,
+    });
   });
 
-  it('should fallback to 404 (next) if method not found on route', async () => {
+  it('should fallback to 404 handler if method not found on route', async () => {
     const router = new Router(mockModuleLoader);
 
     const req = {
@@ -140,6 +150,363 @@ describe('Router Engine', () => {
     await router.expressMiddleware(req, res, next);
 
     expect(res.json).not.toHaveBeenCalled();
-    expect(next).toHaveBeenCalled(); // Should proceed to normal 404 handler
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('Error Normalization', () => {
+  it('should normalize a standard Error into RouterError', () => {
+    const err = new Error('something broke');
+    err.status = 422;
+    const normalized = normalizeError(err);
+
+    expect(normalized).toBeInstanceOf(RouterError);
+    expect(normalized.message).toBe('something broke');
+    expect(normalized.status).toBe(422);
+    expect(normalized.code).toBe('INTERNAL_ERROR');
+  });
+
+  it('should return RouterError instance as-is', () => {
+    const err = new RouterError('already normalized', 400, {
+      code: 'BAD_REQUEST',
+    });
+    expect(normalizeError(err)).toBe(err);
+  });
+
+  it('should normalize a string throw', () => {
+    const normalized = normalizeError('string error');
+    expect(normalized).toBeInstanceOf(RouterError);
+    expect(normalized.message).toBe('string error');
+    expect(normalized.status).toBe(500);
+  });
+
+  it('should normalize null/undefined', () => {
+    const normalized = normalizeError(null);
+    expect(normalized).toBeInstanceOf(RouterError);
+    expect(normalized.status).toBe(500);
+    expect(normalized.message).toBe('Internal Server Error');
+  });
+});
+
+describe('Router.add() — Dynamic Plugin Injection', () => {
+  it('should add plugin routes that are reachable', async () => {
+    const router = new Router(mockModuleLoader);
+
+    const pluginAdapter = {
+      files: () => ['./(default)/api/routes/stats/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ stats: true }),
+      }),
+    };
+
+    const added = router.add(pluginAdapter);
+    expect(added.length).toBeGreaterThan(0);
+
+    const req = { method: 'GET', path: '/stats', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ stats: true });
+  });
+
+  it('should merge children into existing parent routes', async () => {
+    const router = new Router(mockModuleLoader);
+
+    const pluginAdapter = {
+      files: () => ['./(default)/api/routes/extra/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ extra: true }),
+      }),
+    };
+
+    router.add(pluginAdapter);
+    // Root route should still exist; the new route merges as a child
+    const rootRoute = router.routes.find(r => r.path === '/');
+    expect(rootRoute).toBeDefined();
+
+    const req = { method: 'GET', path: '/extra', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ extra: true });
+  });
+
+  it('should return empty array when adapter has no matching files', () => {
+    const router = new Router(mockModuleLoader);
+
+    const emptyAdapter = {
+      files: () => [],
+      load: () => ({}),
+    };
+
+    const added = router.add(emptyAdapter);
+    expect(added).toEqual([]);
+  });
+});
+
+describe('Router.remove() — Plugin Route Removal', () => {
+  it('should remove routes from a specific adapter', async () => {
+    const router = new Router(mockModuleLoader);
+
+    const pluginAdapter = {
+      files: () => ['./(default)/api/routes/removable/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ removable: true }),
+      }),
+    };
+
+    router.add(pluginAdapter);
+
+    // Verify it was added
+    let req = { method: 'GET', path: '/removable', params: {} };
+    let res = { json: jest.fn() };
+    let next = jest.fn();
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ removable: true });
+
+    // Remove it
+    const removed = router.remove(pluginAdapter);
+    expect(removed).toBe(true);
+
+    // Verify it's gone
+    req = { method: 'GET', path: '/removable', params: {} };
+    res = { json: jest.fn() };
+    next = jest.fn();
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+  });
+
+  it('should return false when adapter has no matching routes', () => {
+    const router = new Router(mockModuleLoader);
+
+    const unknownAdapter = {
+      files: () => [],
+      load: () => ({}),
+    };
+
+    expect(router.remove(unknownAdapter)).toBe(false);
+  });
+
+  it('should return false for null adapter', () => {
+    const router = new Router(mockModuleLoader);
+    expect(router.remove(null)).toBe(false);
+  });
+});
+
+describe('Middleware opt-out (middleware = false)', () => {
+  it('should skip parent middlewares when route exports middleware = false', async () => {
+    const adapter = {
+      files: () => [
+        './(default)/api/routes/(default)/_route.js',
+        './(default)/api/routes/public/_route.js',
+        './(default)/api/routes/_middleware.js',
+      ],
+      load: path => {
+        if (path.includes('_middleware')) {
+          return (req, res, next) => {
+            req.middlewareRan = true;
+            next();
+          };
+        }
+        if (path.includes('public')) {
+          return {
+            middleware: false,
+            get: (req, res) =>
+              res.json({ public: true, middlewareRan: !!req.middlewareRan }),
+          };
+        }
+        return {
+          default: (req, res) =>
+            res.json({ middlewareRan: !!req.middlewareRan }),
+        };
+      },
+    };
+
+    const router = new Router(adapter);
+
+    // Public route should NOT run the middleware
+    const req = { method: 'GET', path: '/public', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({
+      public: true,
+      middlewareRan: false,
+    });
+  });
+});
+
+describe('Method-specific middleware arrays', () => {
+  it('should run method-specific middlewares only for that method', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/items/_route.js'],
+      load: () => ({
+        middleware: false,
+        get: (req, res) => res.json({ method: 'get', auth: !!req.authed }),
+        post: [
+          (req, res, next) => {
+            req.authed = true;
+            next();
+          },
+          (req, res) => res.json({ method: 'post', auth: !!req.authed }),
+        ],
+      }),
+    };
+
+    const router = new Router(adapter);
+
+    // GET should NOT have auth middleware
+    let req = { method: 'GET', path: '/items', params: {} };
+    let res = { json: jest.fn() };
+    let next = jest.fn();
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ method: 'get', auth: false });
+
+    // POST should have auth middleware
+    req = { method: 'POST', path: '/items', params: {} };
+    res = { json: jest.fn() };
+    next = jest.fn();
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ method: 'post', auth: true });
+  });
+});
+
+describe('Wildcard catch-all routes', () => {
+  it('should match wildcard catch-all segments [...slug]', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/files/[...path]/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ filePath: req.params.path }),
+      }),
+    };
+
+    const router = new Router(adapter);
+
+    const req = {
+      method: 'GET',
+      path: '/files/docs/readme/intro',
+      params: {},
+    };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({
+      filePath: 'docs/readme/intro',
+    });
+  });
+});
+
+describe('Lifecycle hooks', () => {
+  it('should call onRouteInit and onRouteMount hooks', async () => {
+    const onRouteInit = jest.fn();
+    const onRouteMount = jest.fn();
+
+    const adapter = {
+      files: () => ['./(default)/api/routes/(default)/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ ok: true }),
+      }),
+    };
+
+    const router = new Router(adapter, { onRouteInit, onRouteMount });
+
+    const req = { method: 'GET', path: '/', params: {}, app: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+
+    expect(onRouteInit).toHaveBeenCalledTimes(1);
+    expect(onRouteInit.mock.calls[0][0]).toHaveProperty('path', '/');
+    expect(onRouteMount).toHaveBeenCalledTimes(1);
+    expect(onRouteMount.mock.calls[0][0]).toHaveProperty('path', '/');
+  });
+});
+
+describe('baseUrl stripping', () => {
+  it('should strip baseUrl prefix before matching routes', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/items/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ items: true }),
+      }),
+    };
+
+    const router = new Router(adapter, { baseUrl: '/api' });
+
+    // Simulate Express behavior: req.path includes the full mount path
+    const req = { method: 'GET', path: '/api/items', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ items: true });
+  });
+
+  it('should fall through when path does not start with baseUrl', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/items/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ items: true }),
+      }),
+    };
+
+    const router = new Router(adapter, { baseUrl: '/api' });
+
+    const req = { method: 'GET', path: '/other/items', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.expressMiddleware(req, res, next);
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('Instance-level cache isolation', () => {
+  it('should maintain separate caches for different Router instances', async () => {
+    const adapter1 = {
+      files: () => ['./(default)/api/routes/(default)/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ router: 1 }),
+      }),
+    };
+
+    const adapter2 = {
+      files: () => ['./(default)/api/routes/other/_route.js'],
+      load: () => ({
+        get: (req, res) => res.json({ router: 2 }),
+      }),
+    };
+
+    const router1 = new Router(adapter1);
+    const router2 = new Router(adapter2);
+
+    // Router1 should match /
+    let req = { method: 'GET', path: '/', params: {} };
+    let res = { json: jest.fn() };
+    let next = jest.fn();
+    await router1.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ router: 1 });
+
+    // Router2 should match /other, not /
+    req = { method: 'GET', path: '/other', params: {} };
+    res = { json: jest.fn() };
+    next = jest.fn();
+    await router2.expressMiddleware(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ router: 2 });
+
+    // Router2 should NOT match / (it should have its own cache)
+    req = { method: 'GET', path: '/', params: {} };
+    res = { json: jest.fn() };
+    next = jest.fn();
+    await router2.expressMiddleware(req, res, next);
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalled();
   });
 });

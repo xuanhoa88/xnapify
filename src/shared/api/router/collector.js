@@ -9,7 +9,17 @@ import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import { log } from './utils';
 
 /**
- * Collector configuration for API routes, configs, and middlewares
+ * @typedef {Object} CollectorConfig
+ * @property {boolean} optional - Whether missing files are acceptable
+ * @property {RegExp} pattern - File path matching pattern
+ * @property {Function} extract - Extracts route key and metadata from a file path
+ * @property {string} label - Human-readable label for log messages
+ */
+
+/**
+ * Collector configuration for API routes, configs, and middlewares.
+ * Defines how file paths are matched and parsed into route entries.
+ * @type {Object<string, CollectorConfig>}
  */
 const COLLECTORS = Object.freeze({
   routes: {
@@ -159,6 +169,13 @@ const COLLECTORS = Object.freeze({
   },
 });
 
+/**
+ * Collects and loads modules from the adapter by scanning file paths.
+ * @param {Object} source - Module loader adapter with files() and load() methods
+ * @param {'routes'|'configs'|'middlewares'} type - Which collector to use
+ * @returns {Map<string, Object>} Map of route keys to loaded module info
+ * @throws {Error} If type is unknown
+ */
 export function collect(source, type) {
   const config = COLLECTORS[type];
   if (!config) throw new Error(`Unknown API collector type: ${type}`);

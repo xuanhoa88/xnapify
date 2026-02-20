@@ -6,6 +6,19 @@ A file-based dynamic routing engine for Express, modeled after Next.js and the R
 
 The API router maps the file system directory structure directly into URL endpoints, allowing you to intuitively organize backend code. It heavily mirrors the `src/shared/renderer/router` so developers can use the same mental model for both frontend React pages and backend Express APIs.
 
+### Architecture
+
+| Component      | Purpose                                                          |
+| -------------- | ---------------------------------------------------------------- |
+| `collector.js` | Scans file paths for `_route.js`, `_middleware.js`, and configs  |
+| `builder.js`   | Constructs a structured route tree from collected modules        |
+| `radix.js`     | Radix tree (compressed trie) for O(log n) URL matching           |
+| `matcher.js`   | Caches the radix tree and exposes `findRoute()`                  |
+| `lifecycle.js` | Composes middleware chains and executes route handlers           |
+| `composer.js`  | Koa-style middleware composition for correct async/sync handling |
+| `index.js`     | `Router` class — the public API                                  |
+| `utils.js`     | Logging, error normalization (`RouterError`), path utilities     |
+
 ## How to Use
 
 ### 1. Creating API Endpoints (`_route.js`)
@@ -135,7 +148,31 @@ export const post = [
 ];
 ```
 
-### 5. Registering with Express
+### 5. Error Handling
+
+Route handler errors are automatically normalized into a consistent `RouterError` shape with `status`, `message`, `code`, and `details` properties, then passed to Express error middleware via `next(err)`.
+
+```javascript
+import { createError } from 'rapid-rsk/shared/api/router/utils';
+
+export function get(req, res) {
+  // Throw a structured error — automatically normalized
+  throw createError('Resource not found', 404, { code: 'NOT_FOUND' });
+}
+```
+
+Define a global Express error handler to format these consistently:
+
+```javascript
+app.use((err, req, res, next) => {
+  res.status(err.status || 500).json({
+    error: err.message,
+    code: err.code,
+  });
+});
+```
+
+### 6. Registering with Express
 
 Depending on your loader, you instantiate the router and link it via Express's `app.use()`.
 
@@ -149,7 +186,7 @@ const apiRouter = new Router(apiAdapter, { baseUrl: '/api' });
 app.use('/api', apiRouter.expressMiddleware);
 ```
 
-### 6. Dynamic Plugins (Add / Remove Base Routes)
+### 7. Dynamic Plugins (Add / Remove Base Routes)
 
 If your app supports loading external plugin modules on the fly, you can dynamically attach or detach them.
 
