@@ -70,7 +70,7 @@ export const logout = createAsyncThunk(
   'user/logout',
   async (_, { extra: { fetch } }) => {
     try {
-      await fetch('/api/logout', { method: 'POST' });
+      await fetch('/api/logout');
     } catch {
       // Ignore logout API errors - always clear state
     }

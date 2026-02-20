@@ -1065,7 +1065,15 @@ export async function bootstrap(app, server, options = {}) {
     Array.isArray(api.APP_PROVIDERS) ? api.APP_PROVIDERS : [],
   );
 
-  // Node-RED
+  // Setup API routes
+  const apiMiddlewares = await api.default(guardControl, {
+    ...config,
+    port,
+    host: normalizedHost,
+  });
+  app.use(config.apiPrefix, ...apiMiddlewares);
+
+  // Setup Node-RED
   await appState.nodeRED.init(app, server, {
     ...config,
     port,
@@ -1077,15 +1085,7 @@ export async function bootstrap(app, server, options = {}) {
     },
   });
 
-  // Setup API routes
-  const apiMiddlewares = await api.default(guardControl, {
-    ...config,
-    port,
-    host: normalizedHost,
-  });
-  app.use(config.apiPrefix, ...apiMiddlewares);
-
-  // Setup Node-RED API proxy
+  // Setup reverse proxy for Node-RED API
   await appState.nodeRED.setupApiProxy(app, config.apiPrefix);
 
   // SSR handler

@@ -63,8 +63,8 @@ class RskAuthStrategy extends Strategy {
       if (!token) {
         console.warn('⚠️  [Node-RED Auth] No token found in request cookies');
         console.warn('   Cookies present:', Object.keys(req.cookies || {}));
-        // No token - user not authenticated
-        return this.fail(401);
+        // No token — redirect to main app login
+        return this.redirect('/admin');
       }
 
       // Verify token
@@ -76,13 +76,13 @@ class RskAuthStrategy extends Strategy {
           '⚠️  [Node-RED Auth] Token verification failed:',
           tokenError.message,
         );
-        // Token invalid or expired
-        return this.fail(401);
+        // Token invalid or expired — redirect to main app login
+        return this.redirect('/admin');
       }
 
       if (!decoded || !decoded.id) {
         console.warn('⚠️  [Node-RED Auth] Token decoded but missing ID');
-        return this.fail(401);
+        return this.redirect('/admin');
       }
 
       // Resolve permissions via hook system
@@ -161,8 +161,9 @@ class RskAuthStrategy extends Strategy {
  */
 async function getUserWithPermissions(app, username) {
   try {
-    const { User } = app.get('models');
-    const { hasPermission } = app.get('auth').middlewares;
+    const {
+      middlewares: { hasPermission },
+    } = app.get('auth');
 
     if (!hasPermission) {
       console.error('❌ [Node-RED Auth] Auth middlewares not available');
@@ -170,6 +171,7 @@ async function getUserWithPermissions(app, username) {
     }
 
     // Find user to get ID
+    const { User } = app.get('models');
     const user = await User.findOne({
       where: { email: username },
       attributes: ['id', 'email'],
@@ -179,8 +181,8 @@ async function getUserWithPermissions(app, username) {
 
     // Create mock request for hook resolution
     const req = {
-      user: { id: user.id },
       app,
+      user: { id: user.id },
     };
 
     // Get permissions using hook system

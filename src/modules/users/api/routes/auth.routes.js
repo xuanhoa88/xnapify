@@ -45,11 +45,11 @@ export default function authRoutes(app, { Router }) {
   router.post('/login', authController.login);
 
   /**
-   * @route   POST /logout
+   * @route   GET /logout
    * @desc    Logout user and clear JWT cookie
    * @access  Public
    */
-  router.post('/logout', requireAuth, authController.logout);
+  router.get('/logout', requireAuth, authController.logout);
 
   /**
    * @route   GET /me

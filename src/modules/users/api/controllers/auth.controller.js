@@ -178,7 +178,7 @@ export async function login(req, res) {
 /**
  * Logout user
  *
- * @route   POST /api/logout
+ * @route   GET /api/logout
  * @access  Public
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object

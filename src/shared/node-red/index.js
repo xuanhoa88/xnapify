@@ -470,6 +470,36 @@ export class NodeRedManager {
    */
   _mountRoutes(app) {
     try {
+      // Cookie-guard: ensure main app session is still valid.
+      // When the main app's JWT cookie is cleared (user logged out
+      // from /admin), strip the Node-RED bearer token from the request
+      // so Node-RED's own auth fails naturally and shows the login dialog.
+      app.use(this._settings.httpAdminRoot, (req, res, next) => {
+        const auth = app.get('auth');
+        const jwt = app.get('jwt');
+
+        // Skip guard if auth services aren't available yet
+        if (!auth || !jwt) return next();
+
+        // Check for main app's JWT cookie
+        const token = auth.getTokenFromCookie(req);
+        if (token) {
+          try {
+            jwt.verifyTypedToken(token, 'access');
+            // Cookie is valid — proceed normally
+            return next();
+          } catch {
+            // Token invalid/expired — fall through to invalidation
+          }
+        }
+
+        // Main app session gone: strip Node-RED's bearer token so its
+        // own BearerStrategy fails, triggering the login dialog which
+        // then redirects to /admin via RskAuthStrategy
+        delete req.headers.authorization;
+        return next();
+      });
+
       // Serve Node-RED admin and runtime
       app.use(this._settings.httpAdminRoot, this._editorApi.httpAdmin);
       app.use(this._settings.httpNodeRoot, this._runtime.httpNode);
