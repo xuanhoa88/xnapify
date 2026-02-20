@@ -222,6 +222,7 @@ export function createNodeRedAuth(options = {}) {
       name: 'rsk-auth',
       label: 'Authentication',
       icon: 'icons/node-red.svg',
+      autoLogin: true,
       strategy: RskAuthStrategy,
       options,
     },
