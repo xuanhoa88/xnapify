@@ -7,7 +7,7 @@
 
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
-import { createContextAdapter } from '../../context';
+import { createContextAdapter } from '../../../context';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(

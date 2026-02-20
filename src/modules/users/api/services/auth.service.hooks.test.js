@@ -1,5 +1,5 @@
 import { logoutUser } from './auth.service';
-import { createFactory } from '../../../../shared/api/hook/factory';
+import { createFactory } from '../../../../shared/api/engines/hook/factory';
 
 describe('auth.service hook emits', () => {
   test('logoutUser emits logout on auth channel and handler receives bound context', async () => {

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from '../../../validator';
+import { z } from '../../../../validator';
 
 /**
  * Email Validation - Zod Schema

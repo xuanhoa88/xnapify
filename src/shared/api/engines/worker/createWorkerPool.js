@@ -20,7 +20,7 @@
 import { fork } from 'child_process';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import { createContextAdapter } from '../../context';
+import { createContextAdapter } from '../../../context';
 import { WorkerError } from './errors';
 
 /**
