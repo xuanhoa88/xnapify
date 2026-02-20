@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import ApiRouter from './index';
+import Router from './index';
 
 const mockModuleLoader = {
   files: () => [
@@ -38,9 +38,9 @@ const mockModuleLoader = {
   },
 };
 
-describe('ApiRouter Engine', () => {
+describe('Router Engine', () => {
   it('should build routes correctly including dynamic params and middlewares', () => {
-    const router = new ApiRouter(mockModuleLoader);
+    const router = new Router(mockModuleLoader);
 
     // Root should exist
     const rootRoute = router.routes.find(r => r.path === '/');
@@ -56,7 +56,7 @@ describe('ApiRouter Engine', () => {
   });
 
   it('should handle routing to an exact method explicitly', async () => {
-    const router = new ApiRouter(mockModuleLoader);
+    const router = new Router(mockModuleLoader);
     const { expressMiddleware } = router;
 
     // Mock Express request/response
@@ -79,7 +79,7 @@ describe('ApiRouter Engine', () => {
   });
 
   it('should extract dynamic route parameters correctly', async () => {
-    const router = new ApiRouter(mockModuleLoader);
+    const router = new Router(mockModuleLoader);
     const { expressMiddleware } = router;
 
     const req = {
@@ -101,7 +101,7 @@ describe('ApiRouter Engine', () => {
   });
 
   it('should execute collocated middlewares', async () => {
-    const router = new ApiRouter(mockModuleLoader);
+    const router = new Router(mockModuleLoader);
     const { expressMiddleware } = router;
 
     const req = {
@@ -123,7 +123,7 @@ describe('ApiRouter Engine', () => {
   });
 
   it('should fallback to 404 (next) if method not found on route', async () => {
-    const router = new ApiRouter(mockModuleLoader);
+    const router = new Router(mockModuleLoader);
 
     const req = {
       method: 'DELETE', // not implemented

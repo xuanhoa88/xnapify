@@ -156,34 +156,60 @@ export function createMiddlewareRunner(configs, routeMiddlewares) {
 export function createAction(pageInfo, configs = [], middlewares = []) {
   const { module } = pageInfo;
 
-  // Create middleware chain containing route-level middlewares
-  const runMiddleware = createMiddlewareRunner(configs, middlewares);
+  // Generic/inherited route middleware chain
+  const baseMiddleware = createMiddlewareRunner(configs, middlewares);
 
   return function (req, res, next) {
-    return runMiddleware(req, res, err => {
+    // Determine the active method
+    const method = req.method.toLowerCase(); // 'get', 'post', 'put', 'patch', 'delete'
+
+    // Check if module exports a handler for this method directly
+    let handlerExport = module[method] || module[method.toUpperCase()];
+
+    // Fallback to default export if direct method not found
+    if (handlerExport === undefined && module.default !== undefined) {
+      handlerExport = module.default;
+    }
+    // If module is a function (CommonJS export =)
+    if (handlerExport === undefined && typeof module === 'function') {
+      handlerExport = module;
+    }
+
+    if (handlerExport === undefined) {
+      // Log explicitly about missing method handler
+      log(`No handler found for ${req.method} ${req.path}`, 'warn');
+      return next(); // Not treated as error, let Express 404 handler catch it
+    }
+
+    let routeMiddlewares = [];
+    let handler;
+
+    if (Array.isArray(handlerExport)) {
+      if (handlerExport.length === 0) {
+        log(`No handler found for ${req.method} ${req.path}`, 'warn');
+        return next();
+      }
+      // The last item in the array is the route handler, preceding items are middlewares
+      handler = handlerExport[handlerExport.length - 1];
+      routeMiddlewares = handlerExport.slice(0, -1);
+    } else {
+      handler = handlerExport;
+    }
+
+    if (typeof handler !== 'function') {
+      log(`No handler found for ${req.method} ${req.path}`, 'warn');
+      return next();
+    }
+
+    // Compile the final action pipeline for this specific incoming method!
+    const runMethodPipeline =
+      routeMiddlewares.length > 0
+        ? composeMiddleware([baseMiddleware, ...routeMiddlewares])
+        : baseMiddleware;
+
+    return runMethodPipeline(req, res, err => {
       // If error from middleware, pass to next error handler
       if (err) return next(err);
-
-      // Determine method from request
-      const method = req.method.toLowerCase(); // 'get', 'post', 'put', 'patch', 'delete'
-
-      // Check if module exports a handler for this method directly
-      let handler = module[method] || module[method.toUpperCase()];
-
-      // Fallback to default export if direct method not found
-      if (!handler && typeof module.default === 'function') {
-        handler = module.default;
-      }
-      // If module is a function (CommonJS export =)
-      if (!handler && typeof module === 'function') {
-        handler = module;
-      }
-
-      if (!handler) {
-        // Log explicitly about missing method handler
-        log(`No handler found for ${req.method} ${req.path}`, 'warn');
-        return next(); // Not treated as error, let Express 404 handler catch it
-      }
 
       // Execute route handler
       try {

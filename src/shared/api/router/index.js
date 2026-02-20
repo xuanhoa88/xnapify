@@ -35,7 +35,7 @@ function validateAdapter(adapter) {
   return true;
 }
 
-export class ApiRouter {
+export class Router {
   constructor(adapter, options) {
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
@@ -234,4 +234,4 @@ export class ApiRouter {
   }
 }
 
-export default ApiRouter;
+export default Router;

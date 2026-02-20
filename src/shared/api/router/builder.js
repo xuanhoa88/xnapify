@@ -32,8 +32,19 @@ function findConfigs(configs, rootSegment) {
  * Finds middleware modules for a given API route based on root segment and path hierarchy
  */
 function findMiddlewares(middlewares, rootSegment, pathname, module) {
-  if (module && module.middleware === false) {
-    return [];
+  if (module && module.middleware !== undefined) {
+    if (module.middleware === false) {
+      return [];
+    }
+    if (
+      typeof module.middleware === 'function' ||
+      Array.isArray(module.middleware)
+    ) {
+      // If the route explicitly exports its own middleware, bypass inheritance
+      // from parent _middleware.js files. The local createMiddlewareRunner
+      // will pick up the exported middleware natively from the config module.
+      return [];
+    }
   }
 
   const result = [];

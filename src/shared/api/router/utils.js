@@ -9,7 +9,7 @@ import { ROUTE_SEPARATOR } from './constants';
 
 export function log(message, level = 'log') {
   if (process.env.NODE_ENV !== 'production') {
-    console[level](`[ApiRouter] ${message}`);
+    console[level](`[Router] ${message}`);
   }
 }
 
