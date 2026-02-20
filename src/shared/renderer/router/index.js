@@ -17,6 +17,41 @@ import { runInit, runMount, runUnmount } from './lifecycle';
 import { createMatcher, clearMatchCache } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
+// Tag routes with their source adapter for dynamic add/remove tracking
+const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
+
+/**
+ * Recursively tag routes with a source identifier
+ * @param {Object} route - Route to tag
+ * @param {*} source - Source identifier (adapter reference or null)
+ */
+function tagRoutes(route, source) {
+  if (!route || typeof route !== 'object') return;
+  route[ROUTE_SOURCE_KEY] = source;
+  if (Array.isArray(route.children)) {
+    route.children.forEach(child => tagRoutes(child, source));
+  }
+}
+
+/**
+ * Validate that an adapter has the required interface
+ * @param {Object} adapter - Adapter to validate
+ * @returns {boolean} True if adapter is valid
+ * @throws {TypeError} If adapter is missing required methods
+ */
+function validateAdapter(adapter) {
+  if (!adapter) {
+    throw new TypeError('adapter must have files() and load() methods');
+  }
+  if (
+    typeof adapter.files !== 'function' ||
+    typeof adapter.load !== 'function'
+  ) {
+    throw new TypeError('adapter must have files() and load() methods');
+  }
+  return true;
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -170,7 +205,6 @@ export class Router {
   constructor(adapter, options) {
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
-    this.routes = [];
 
     // Track previous route for unmount lifecycle (CSR only)
     this[ROUTE_PREV_KEY] = null;
@@ -199,18 +233,16 @@ export class Router {
         ? this.options.autoRegister
         : true;
 
-    if (adapter) {
-      this.routes = buildRoutes(
-        collect(adapter, 'routes'),
-        collect(adapter, 'configs'),
-        collect(adapter, 'layouts'),
-      );
-    } else if (this.options.routes) {
-      this.routes = this.options.routes;
-    }
+    validateAdapter(adapter);
+    this.routes = buildRoutes(
+      collect(adapter, 'routes'),
+      collect(adapter, 'configs'),
+      collect(adapter, 'layouts'),
+    );
 
     validateConfig(this.routes);
     this.routes.forEach(route => linkParents(route));
+    this.routes.forEach(route => tagRoutes(route, adapter || null));
     clearMatchCache();
   }
 
@@ -282,6 +314,118 @@ export class Router {
       log(`Error during unregistration: ${err.message}`, 'error');
       throw err;
     }
+  }
+
+  /**
+   * Dynamically add routes from a module adapter.
+   * Uses the same collect/buildRoutes pipeline as the constructor to
+   * auto-detect routes, configs, and layouts from the adapter.
+   *
+   * If the new tree shares a root path with an existing route (e.g. '/'),
+   * children are merged into the existing route instead of creating a duplicate.
+   *
+   * @param {Object} adapter - Adapter with files() and load() methods
+   * @returns {Object[]} The newly built route trees
+   */
+  add(adapter) {
+    validateAdapter(adapter);
+
+    // 1. Build new routes using the same pipeline as the constructor
+    const newRoutes = buildRoutes(
+      collect(adapter, 'routes'),
+      collect(adapter, 'configs'),
+      collect(adapter, 'layouts'),
+    );
+
+    if (newRoutes.length === 0) return newRoutes;
+
+    // 2. Tag all new routes with the adapter source
+    newRoutes.forEach(route => tagRoutes(route, adapter));
+
+    // 3. Merge into existing tree
+    // If a new top-level route shares a path with an existing route,
+    // append its children to the existing route instead of duplicating
+    for (const newRoute of newRoutes) {
+      const existing = this.routes.find(r => r.path === newRoute.path);
+
+      if (
+        existing &&
+        Array.isArray(newRoute.children) &&
+        newRoute.children.length > 0
+      ) {
+        // Merge children into the existing route
+        existing.children = existing.children || [];
+        for (const child of newRoute.children) {
+          existing.children.push(child);
+        }
+        // Re-link parents for the merged children
+        newRoute.children.forEach(child => linkParents(child, existing));
+      } else if (existing) {
+        // New route has same path but no children — skip to avoid duplicate
+        continue;
+      } else {
+        // No overlap, add as new top-level route
+        this.routes.push(newRoute);
+        validateConfig([newRoute]);
+        linkParents(newRoute);
+      }
+    }
+
+    // 4. Clear matcher cache so new URLs resolve correctly
+    clearMatchCache();
+
+    return newRoutes;
+  }
+
+  /**
+   * Dynamically remove all routes previously added by a specific adapter.
+   *
+   * @param {Object} adapter - The same adapter reference passed to add()
+   * @returns {boolean} True if any routes were removed
+   */
+  remove(adapter) {
+    if (!adapter) return false;
+
+    let removed = false;
+
+    /**
+     * Recursively filter out routes tagged with the given adapter
+     * @param {Object[]} routes - Route array to filter
+     * @returns {Object[]} Filtered routes
+     */
+    const filterRoutes = routes => {
+      const result = [];
+      for (const route of routes) {
+        if (route[ROUTE_SOURCE_KEY] === adapter) {
+          // This entire route (and its children) came from this adapter
+          removed = true;
+          continue;
+        }
+
+        // Keep the route, but filter its children
+        if (Array.isArray(route.children) && route.children.length > 0) {
+          const originalLength = route.children.length;
+          route.children = filterRoutes(route.children);
+          if (route.children.length !== originalLength) {
+            removed = true;
+          }
+        }
+
+        result.push(route);
+      }
+      return result;
+    };
+
+    // Filter the top-level routes
+    this.routes = filterRoutes(this.routes);
+
+    if (removed) {
+      // Re-link parents after structural changes
+      this.routes.forEach(route => linkParents(route));
+      clearMatchCache();
+    }
+
+    return removed;
   }
 
   /**
