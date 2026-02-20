@@ -62,7 +62,7 @@ function validateAdapter(adapter) {
  * @class
  * @example
  * const router = new Router(adapter, { baseUrl: '/api' });
- * app.use('/api', router.expressMiddleware);
+ * app.use('/api', router.resolve);
  */
 export class Router {
   /**
@@ -90,8 +90,8 @@ export class Router {
     this.routes.forEach(route => tagRoutes(route, adapter));
     clearMatchCache(this[ROUTE_CACHE_KEY]);
 
-    // Bind expressMiddleware so it can be passed directly to app.use()
-    this.expressMiddleware = this.expressMiddleware.bind(this);
+    // Bind resolve so it can be passed directly to app.use()
+    this.resolve = this.resolve.bind(this);
   }
 
   /**
@@ -188,7 +188,7 @@ export class Router {
    * @param {import('express').NextFunction} next
    * @returns {Promise<*>}
    */
-  async expressMiddleware(req, res, next) {
+  async resolve(req, res, next) {
     // Strip baseUrl prefix so routes are matched relative to the mount point
     let pathname = req.path;
     if (this.baseUrl && pathname.startsWith(this.baseUrl)) {

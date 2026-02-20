@@ -64,7 +64,7 @@ describe('Router Engine', () => {
 
   it('should handle routing to an exact method explicitly', async () => {
     const router = new Router(mockModuleLoader);
-    const { expressMiddleware } = router;
+    const { resolve } = router;
 
     const req = {
       method: 'POST',
@@ -78,7 +78,7 @@ describe('Router Engine', () => {
 
     const next = jest.fn();
 
-    await expressMiddleware(req, res, next);
+    await resolve(req, res, next);
 
     expect(res.json).toHaveBeenCalledWith({ action: 'login' });
     expect(next).not.toHaveBeenCalled();
@@ -86,7 +86,7 @@ describe('Router Engine', () => {
 
   it('should extract dynamic route parameters correctly', async () => {
     const router = new Router(mockModuleLoader);
-    const { expressMiddleware } = router;
+    const { resolve } = router;
 
     const req = {
       method: 'GET',
@@ -99,7 +99,7 @@ describe('Router Engine', () => {
     };
     const next = jest.fn();
 
-    await expressMiddleware(req, res, next);
+    await resolve(req, res, next);
 
     expect(res.json).toHaveBeenCalledWith({
       plugin: 'my-plugin-id',
@@ -110,7 +110,7 @@ describe('Router Engine', () => {
 
   it('should execute collocated middlewares sequentially', async () => {
     const router = new Router(mockModuleLoader);
-    const { expressMiddleware } = router;
+    const { resolve } = router;
 
     const req = {
       method: 'GET',
@@ -123,7 +123,7 @@ describe('Router Engine', () => {
     };
     const next = jest.fn();
 
-    await expressMiddleware(req, res, next);
+    await resolve(req, res, next);
 
     expect(req.hasPluginMiddleware).toBe(true);
     expect(res.json).toHaveBeenCalledWith({
@@ -147,7 +147,7 @@ describe('Router Engine', () => {
 
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
 
     expect(res.json).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
@@ -206,7 +206,7 @@ describe('Router.add() — Dynamic Plugin Injection', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ stats: true });
   });
 
@@ -229,7 +229,7 @@ describe('Router.add() — Dynamic Plugin Injection', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ extra: true });
   });
 
@@ -263,7 +263,7 @@ describe('Router.remove() — Plugin Route Removal', () => {
     let req = { method: 'GET', path: '/removable', params: {} };
     let res = { json: jest.fn() };
     let next = jest.fn();
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ removable: true });
 
     // Remove it
@@ -274,7 +274,7 @@ describe('Router.remove() — Plugin Route Removal', () => {
     req = { method: 'GET', path: '/removable', params: {} };
     res = { json: jest.fn() };
     next = jest.fn();
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
@@ -332,7 +332,7 @@ describe('Middleware opt-out (middleware = false)', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({
       public: true,
       middlewareRan: false,
@@ -363,14 +363,14 @@ describe('Method-specific middleware arrays', () => {
     let req = { method: 'GET', path: '/items', params: {} };
     let res = { json: jest.fn() };
     let next = jest.fn();
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ method: 'get', auth: false });
 
     // POST should have auth middleware
     req = { method: 'POST', path: '/items', params: {} };
     res = { json: jest.fn() };
     next = jest.fn();
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ method: 'post', auth: true });
   });
 });
@@ -394,7 +394,7 @@ describe('Wildcard catch-all routes', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({
       filePath: 'docs/readme/intro',
     });
@@ -419,7 +419,7 @@ describe('Lifecycle hooks', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
 
     expect(onRouteInit).toHaveBeenCalledTimes(1);
     expect(onRouteInit.mock.calls[0][0]).toHaveProperty('path', '/');
@@ -444,7 +444,7 @@ describe('baseUrl stripping', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ items: true });
   });
 
@@ -462,7 +462,7 @@ describe('baseUrl stripping', () => {
     const res = { json: jest.fn() };
     const next = jest.fn();
 
-    await router.expressMiddleware(req, res, next);
+    await router.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });
@@ -491,21 +491,21 @@ describe('Instance-level cache isolation', () => {
     let req = { method: 'GET', path: '/', params: {} };
     let res = { json: jest.fn() };
     let next = jest.fn();
-    await router1.expressMiddleware(req, res, next);
+    await router1.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ router: 1 });
 
     // Router2 should match /other, not /
     req = { method: 'GET', path: '/other', params: {} };
     res = { json: jest.fn() };
     next = jest.fn();
-    await router2.expressMiddleware(req, res, next);
+    await router2.resolve(req, res, next);
     expect(res.json).toHaveBeenCalledWith({ router: 2 });
 
     // Router2 should NOT match / (it should have its own cache)
     req = { method: 'GET', path: '/', params: {} };
     res = { json: jest.fn() };
     next = jest.fn();
-    await router2.expressMiddleware(req, res, next);
+    await router2.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
   });

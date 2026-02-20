@@ -143,11 +143,7 @@ export class Router {
    * Express middleware that matches incoming requests against the radix tree
    * and executes the matched route's action pipeline.
    */
-  expressMiddleware(
-    req: Request,
-    res: Response,
-    next: NextFunction,
-  ): Promise<any>;
+  resolve(req: Request, res: Response, next: NextFunction): Promise<any>;
 
   /** Dynamically append new routes at runtime from a module source adapter */
   add(adapter: ModuleAdapter): RouteNode[];

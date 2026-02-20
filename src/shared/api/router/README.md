@@ -183,7 +183,7 @@ import Router from './router';
 const apiAdapter = createContextAdapter(modulesContext);
 const apiRouter = new Router(apiAdapter, { baseUrl: '/api' });
 
-app.use('/api', apiRouter.expressMiddleware);
+app.use('/api', apiRouter.resolve);
 ```
 
 ### 7. Dynamic Plugins (Add / Remove Base Routes)
