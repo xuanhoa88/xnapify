@@ -428,46 +428,6 @@ describe('Lifecycle hooks', () => {
   });
 });
 
-describe('baseUrl stripping', () => {
-  it('should strip baseUrl prefix before matching routes', async () => {
-    const adapter = {
-      files: () => ['./(default)/api/routes/items/_route.js'],
-      load: () => ({
-        get: (req, res) => res.json({ items: true }),
-      }),
-    };
-
-    const router = new Router(adapter, { baseUrl: '/api' });
-
-    // Simulate Express behavior: req.path includes the full mount path
-    const req = { method: 'GET', path: '/api/items', params: {} };
-    const res = { json: jest.fn() };
-    const next = jest.fn();
-
-    await router.resolve(req, res, next);
-    expect(res.json).toHaveBeenCalledWith({ items: true });
-  });
-
-  it('should fall through when path does not start with baseUrl', async () => {
-    const adapter = {
-      files: () => ['./(default)/api/routes/items/_route.js'],
-      load: () => ({
-        get: (req, res) => res.json({ items: true }),
-      }),
-    };
-
-    const router = new Router(adapter, { baseUrl: '/api' });
-
-    const req = { method: 'GET', path: '/other/items', params: {} };
-    const res = { json: jest.fn() };
-    const next = jest.fn();
-
-    await router.resolve(req, res, next);
-    expect(res.json).not.toHaveBeenCalled();
-    expect(next).toHaveBeenCalled();
-  });
-});
-
 describe('Instance-level cache isolation', () => {
   it('should maintain separate caches for different Router instances', async () => {
     const adapter1 = {

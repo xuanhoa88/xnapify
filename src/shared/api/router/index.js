@@ -50,7 +50,6 @@ function validateAdapter(adapter) {
 
 /**
  * @typedef {Object} RouterOptions
- * @property {string} [baseUrl=''] - Base URL prefix for all routes
  * @property {Function} [onRouteInit] - Hook called before route initialization
  * @property {Function} [onRouteMount] - Hook called on route mount
  */
@@ -61,7 +60,7 @@ function validateAdapter(adapter) {
  *
  * @class
  * @example
- * const router = new Router(adapter, { baseUrl: '/api' });
+ * const router = new Router(adapter);
  * app.use('/api', router.resolve);
  */
 export class Router {
@@ -72,8 +71,6 @@ export class Router {
   constructor(adapter, options) {
     /** @type {RouterOptions} */
     this.options = options || {};
-    /** @type {string} */
-    this.baseUrl = this.options.baseUrl || '';
     /** @type {import('./matcher').MatchCache} */
     this[ROUTE_CACHE_KEY] = createMatchCache();
 
@@ -189,13 +186,7 @@ export class Router {
    * @returns {Promise<*>}
    */
   async resolve(req, res, next) {
-    // Strip baseUrl prefix so routes are matched relative to the mount point
-    let pathname = req.path;
-    if (this.baseUrl && pathname.startsWith(this.baseUrl)) {
-      pathname = pathname.slice(this.baseUrl.length) || '/';
-    }
-
-    const match = findRoute(this.routes, pathname, this[ROUTE_CACHE_KEY]);
+    const match = findRoute(this.routes, req.path, this[ROUTE_CACHE_KEY]);
 
     if (!match) {
       return next(); // No route matched, pass to Express
@@ -211,7 +202,7 @@ export class Router {
       app: req.app,
       req,
       res,
-      pathname,
+      pathname: req.path,
       route,
       params,
       _instance: this,

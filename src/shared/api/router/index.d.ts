@@ -116,8 +116,6 @@ export interface RouteNode {
 // ---------------------------------------------------------------------------
 
 export interface RouterOptions {
-  /** Base URL prepended to all generated routes (default: '') */
-  baseUrl?: string;
   /** Hook called before route initialization */
   onRouteInit?: (route: RouteNode, ctx: any) => Promise<void> | void;
   /** Hook called on route mount */

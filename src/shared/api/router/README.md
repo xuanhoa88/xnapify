@@ -181,7 +181,7 @@ import Router from './router';
 
 // In autoloader's discoverModules setup:
 const apiAdapter = createContextAdapter(modulesContext);
-const apiRouter = new Router(apiAdapter, { baseUrl: '/api' });
+const apiRouter = new Router(apiAdapter);
 
 app.use('/api', apiRouter.resolve);
 ```

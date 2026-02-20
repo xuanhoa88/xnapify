@@ -173,8 +173,8 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
 
         // If handler returns a Promise, catch errors and delegate to Express
         if (result && typeof result.then === 'function') {
-          return result.catch(err2 => {
-            next(normalizeError(err2));
+          return result.catch(asyncErr => {
+            next(normalizeError(asyncErr));
           });
         }
 
