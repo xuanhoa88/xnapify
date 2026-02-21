@@ -14,7 +14,6 @@ import {
   Icon,
   Table,
 } from '../../../../../../shared/renderer/components/Admin';
-import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
 
 const { ActionsDropdown } = Table;
 
@@ -36,7 +35,6 @@ function UserActionsDropdown({
   onDeactivate,
 }) {
   const currentUserId = useSelector(getUserId);
-  const { hasPermission } = useRbac();
   const history = useHistory();
 
   const handleToggle = useCallback(() => {
@@ -54,23 +52,24 @@ function UserActionsDropdown({
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
-        {hasPermission('apiKeys:read') && (
-          <ActionsDropdown.Item
-            onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
-            icon={<Icon name='key' size={16} />}
-          >
-            Manage API Keys
-          </ActionsDropdown.Item>
-        )}
+        <ActionsDropdown.Item
+          onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
+          icon={<Icon name='key' size={16} />}
+          permission='apiKeys:read'
+        >
+          Manage API Keys
+        </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageGroups(user)}
           icon={<Icon name='folder' size={16} />}
+          permission='groups:*'
         >
           Manage Groups
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageRoles(user)}
           icon={<Icon name='shield' size={16} />}
+          permission='roles:*'
         >
           Manage Roles
         </ActionsDropdown.Item>
@@ -78,6 +77,7 @@ function UserActionsDropdown({
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(user)}
           icon={<Icon name='lock' size={16} />}
+          permission='permissions:read'
         >
           View Permissions
         </ActionsDropdown.Item>
@@ -89,6 +89,7 @@ function UserActionsDropdown({
                 onClick={() => onDeactivate(user)}
                 icon={<Icon name='close' size={16} />}
                 variant='danger'
+                permission={['users:update', 'users:delete']}
               >
                 Deactivate
               </ActionsDropdown.Item>
@@ -96,6 +97,7 @@ function UserActionsDropdown({
               <ActionsDropdown.Item
                 onClick={() => onActivate(user)}
                 icon={<Icon name='check' size={16} />}
+                permission={['users:update', 'users:delete']}
               >
                 Activate
               </ActionsDropdown.Item>

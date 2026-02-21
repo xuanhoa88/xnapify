@@ -50,7 +50,7 @@ function Users() {
   const dispatch = useDispatch();
   const history = useHistory();
   const { hasPermission } = useRbac();
-  const canCreateUser = hasPermission('users:create');
+  const canCreate = hasPermission('users:create');
   const users = useSelector(getUsers);
   const pagination = useSelector(getUsersPagination);
   const loading = useSelector(isUsersListLoading);
@@ -301,9 +301,9 @@ function Users() {
         <Button
           variant='primary'
           onClick={() => history.push('/admin/users/create')}
-          disabled={!canCreateUser}
+          disabled={!canCreate}
           title={
-            !canCreateUser
+            !canCreate
               ? t(
                   'users.noPermissionToCreate',
                   'You do not have permission to create users',
@@ -542,9 +542,9 @@ function Users() {
           <Button
             variant='primary'
             onClick={() => history.push('/admin/users/create')}
-            disabled={!canCreateUser}
+            disabled={!canCreate}
             title={
-              !canCreateUser
+              !canCreate
                 ? t(
                     'users.noPermissionToCreate',
                     'You do not have permission to create users',

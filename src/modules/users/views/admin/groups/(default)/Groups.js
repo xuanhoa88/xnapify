@@ -50,7 +50,7 @@ function Groups() {
   const dispatch = useDispatch();
   const history = useHistory();
   const { hasPermission } = useRbac();
-  const canCreateGroup = hasPermission('groups:create');
+  const canCreate = hasPermission('groups:create');
   const groups = useSelector(getGroups);
   const loading = useSelector(isGroupsListLoading);
   const initialized = useSelector(isGroupsListInitialized);
@@ -223,9 +223,9 @@ function Groups() {
         <Button
           variant='primary'
           onClick={handleAddGroup}
-          disabled={!canCreateGroup}
+          disabled={!canCreate}
           title={
-            !canCreateGroup
+            !canCreate
               ? t(
                   'groups.noPermissionToCreate',
                   'You do not have permission to create groups',
@@ -282,9 +282,9 @@ function Groups() {
           <Button
             variant='primary'
             onClick={handleAddGroup}
-            disabled={!canCreateGroup}
+            disabled={!canCreate}
             title={
-              !canCreateGroup
+              !canCreate
                 ? t(
                     'groups.noPermissionToCreate',
                     'You do not have permission to create groups',

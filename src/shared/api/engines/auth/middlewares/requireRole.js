@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE } from '../constants';
-
 /**
  * Hook channel name for role resolution.
  * Modules can register a listener on this channel to populate `req.user.roles`.
@@ -129,7 +127,7 @@ export function requireAnyRole(...roles) {
  * router.use('/admin', requireAdmin(), controller.admin);
  */
 export function requireAdmin() {
-  return requireRole(ADMIN_ROLE);
+  return requireRole('admin');
 }
 
 /**

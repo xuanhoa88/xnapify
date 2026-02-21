@@ -22,7 +22,6 @@ function PluginCard({
   onUpgrade,
   onDelete,
   canUpdate,
-  canDelete,
 }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
@@ -76,8 +75,6 @@ function PluginCard({
                 onToggle={onToggleDropdown}
                 onUpgrade={onUpgrade}
                 onDelete={onDelete}
-                canUpdate={canUpdate}
-                canDelete={canDelete}
               />
             )}
           </div>
@@ -119,7 +116,6 @@ PluginCard.propTypes = {
   onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   canUpdate: PropTypes.bool,
-  canDelete: PropTypes.bool,
 };
 
 export default PluginCard;

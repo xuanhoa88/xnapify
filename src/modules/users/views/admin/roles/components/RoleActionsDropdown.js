@@ -47,18 +47,21 @@ function RoleActionsDropdown({
         <ActionsDropdown.Item
           onClick={() => onViewUsers(role)}
           icon={<Icon name='users' size={16} />}
+          permission='users:read'
         >
           {t('roles.viewUsers', 'View Users')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewGroups(role)}
           icon={<Icon name='folder' size={16} />}
+          permission='groups:read'
         >
           {t('roles.viewGroups', 'View Groups')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(role)}
           icon={<Icon name='key' size={16} />}
+          permission='permissions:read'
         >
           {t('roles.viewPermissions', 'View Permissions')}
         </ActionsDropdown.Item>
@@ -66,6 +69,7 @@ function RoleActionsDropdown({
         <ActionsDropdown.Item
           onClick={() => onEdit(role)}
           icon={<Icon name='edit' size={16} />}
+          permission='roles:update'
         >
           {t('roles.editRole', 'Edit Role')}
         </ActionsDropdown.Item>
@@ -73,6 +77,7 @@ function RoleActionsDropdown({
           onClick={() => onDelete(role)}
           icon={<Icon name='trash' size={16} />}
           variant='danger'
+          permission='roles:delete'
         >
           {t('roles.deleteRole', 'Delete Role')}
         </ActionsDropdown.Item>

@@ -37,7 +37,6 @@ function Plugins() {
   const { hasPermission } = useRbac();
   const canCreate = hasPermission('plugins:create');
   const canUpdate = hasPermission('plugins:update');
-  const canDelete = hasPermission('plugins:delete');
 
   const plugins = useSelector(getPlugins);
   const loading = useSelector(isPluginsListLoading);
@@ -189,7 +188,6 @@ function Plugins() {
             onUpgrade={handleUpgrade}
             onDelete={handleDelete}
             canUpdate={canUpdate}
-            canDelete={canDelete}
           />
         ))}
       </div>

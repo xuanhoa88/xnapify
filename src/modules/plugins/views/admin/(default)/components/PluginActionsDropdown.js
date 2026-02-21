@@ -23,8 +23,6 @@ function PluginActionsDropdown({
   onToggle,
   onUpgrade,
   onDelete,
-  canUpdate,
-  canDelete,
 }) {
   const handleToggle = useCallback(() => {
     onToggle(isOpen ? null : plugin.id);
@@ -36,28 +34,23 @@ function PluginActionsDropdown({
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
-        {canUpdate && (
-          <ActionsDropdown.Item
-            onClick={() => onUpgrade(plugin)}
-            icon={<Icon name='arrowUp' size={16} />}
-            disabled={!plugin.isInstalled}
-          >
-            Check for Updates
-          </ActionsDropdown.Item>
-        )}
-
-        {canDelete && (
-          <>
-            <ActionsDropdown.Divider />
-            <ActionsDropdown.Item
-              onClick={() => onDelete(plugin)}
-              icon={<Icon name='trash' size={16} />}
-              variant='danger'
-            >
-              Uninstall
-            </ActionsDropdown.Item>
-          </>
-        )}
+        <ActionsDropdown.Item
+          onClick={() => onUpgrade(plugin)}
+          icon={<Icon name='arrowUp' size={16} />}
+          disabled={!plugin.isInstalled}
+          permission='plugins:update'
+        >
+          Check for Updates
+        </ActionsDropdown.Item>
+        <ActionsDropdown.Divider />
+        <ActionsDropdown.Item
+          onClick={() => onDelete(plugin)}
+          icon={<Icon name='trash' size={16} />}
+          variant='danger'
+          permission='plugins:delete'
+        >
+          Uninstall
+        </ActionsDropdown.Item>
       </ActionsDropdown.Menu>
     </ActionsDropdown>
   );
@@ -69,8 +62,6 @@ PluginActionsDropdown.propTypes = {
   onToggle: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
-  canUpdate: PropTypes.bool,
-  canDelete: PropTypes.bool,
 };
 
 export default PluginActionsDropdown;

@@ -57,7 +57,7 @@ function Roles() {
   const dispatch = useDispatch();
   const history = useHistory();
   const { hasPermission } = useRbac();
-  const canCreateRole = hasPermission('roles:create');
+  const canCreate = hasPermission('roles:create');
   const roles = useSelector(getRoles);
   const loading = useSelector(isRolesListLoading);
   const initialized = useSelector(isRolesListInitialized);
@@ -193,9 +193,9 @@ function Roles() {
         <Button
           variant='primary'
           onClick={handleAddRole}
-          disabled={!canCreateRole}
+          disabled={!canCreate}
           title={
-            !canCreateRole
+            !canCreate
               ? t(
                   'roles.noPermissionToCreate',
                   'You do not have permission to create roles',
@@ -228,9 +228,9 @@ function Roles() {
           <Button
             variant='primary'
             onClick={handleAddRole}
-            disabled={!canCreateRole}
+            disabled={!canCreate}
             title={
-              !canCreateRole
+              !canCreate
                 ? t(
                     'roles.noPermissionToCreate',
                     'You do not have permission to create roles',

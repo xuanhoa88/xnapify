@@ -17,6 +17,7 @@ import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import Button from '../../../Button';
+import { useRbac } from '../../../Rbac/useRbac';
 // eslint-disable-next-line css-modules/no-unused-class -- right, left, danger, warning are accessed dynamically
 import s from './ActionsDropdown.css';
 
@@ -173,9 +174,14 @@ function Item({
   variant,
   disabled,
   className,
+  permission,
+  roles,
+  groups,
+  ownerId,
   ...props
 }) {
   const ctx = useContext(ActionsDropdownContext);
+  const { hasPermission, hasRole, hasGroup, isOwner } = useRbac();
 
   const handleClick = useCallback(
     e => {
@@ -187,6 +193,26 @@ function Item({
     },
     [onClick, disabled, ctx],
   );
+
+  // Check permissions if provided
+  if (permission && !hasPermission(permission)) {
+    return null;
+  }
+
+  // Check roles if provided
+  if (roles && !hasRole(roles)) {
+    return null;
+  }
+
+  // Check groups if provided
+  if (groups && !hasGroup(groups)) {
+    return null;
+  }
+
+  // Check ownership if provided
+  if (ownerId && !isOwner(ownerId)) {
+    return null;
+  }
 
   return (
     <Button
@@ -209,6 +235,19 @@ Item.propTypes = {
   variant: PropTypes.oneOf(['danger', 'warning']),
   disabled: PropTypes.bool,
   className: PropTypes.string,
+  permission: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.arrayOf(PropTypes.string),
+  ]),
+  roles: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.arrayOf(PropTypes.string),
+  ]),
+  groups: PropTypes.oneOfType([
+    PropTypes.string,
+    PropTypes.arrayOf(PropTypes.string),
+  ]),
+  ownerId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
 };
 
 // Divider

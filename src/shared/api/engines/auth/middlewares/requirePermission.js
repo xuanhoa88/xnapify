@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ADMIN_ROLE, ALL_RESOURCE, MANAGE_ACTION } from '../constants';
-
 /**
  * Hook channel name for permission resolution.
  * Modules can register a listener on this channel to populate `req.user.permissions`.
@@ -61,17 +59,17 @@ export function hasPermission(userPermissions, requiredPermission) {
     }
 
     // Super admin: *:* matches everything
-    if (resource === ALL_RESOURCE && action === MANAGE_ACTION) {
+    if (resource === '*' && action === '*') {
       return true;
     }
 
     // Resource wildcard: users:* matches users:read, users:write, etc.
-    if (resource === requiredResource && action === MANAGE_ACTION) {
+    if (resource === requiredResource && action === '*') {
       return true;
     }
 
     // Action wildcard: *:read matches users:read, groups:read, etc.
-    if (resource === ALL_RESOURCE && action === requiredAction) {
+    if (resource === '*' && action === requiredAction) {
       return true;
     }
 
@@ -96,7 +94,7 @@ async function resolvePermissions(req) {
   }
 
   // 2. Admin role bypasses all checks
-  if (Array.isArray(req.user.roles) && req.user.roles.includes(ADMIN_ROLE)) {
+  if (Array.isArray(req.user.roles) && req.user.roles.includes('admin')) {
     return { skip: true, isAdmin: true, error: null };
   }
 

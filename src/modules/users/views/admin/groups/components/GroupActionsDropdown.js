@@ -44,18 +44,21 @@ function GroupActionsDropdown({
         <ActionsDropdown.Item
           onClick={() => onViewUsers(group)}
           icon={<Icon name='users' size={16} />}
+          permission='users:read'
         >
           View Users
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageRoles(group)}
           icon={<Icon name='shield' size={16} />}
+          permission='roles:*'
         >
           Manage Roles
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(group)}
           icon={<Icon name='key' size={16} />}
+          permission='permissions:read'
         >
           View Permissions
         </ActionsDropdown.Item>
@@ -63,6 +66,7 @@ function GroupActionsDropdown({
         <ActionsDropdown.Item
           onClick={() => onEdit(group)}
           icon={<Icon name='edit' size={16} />}
+          permission='groups:update'
         >
           Edit Group
         </ActionsDropdown.Item>
@@ -70,6 +74,7 @@ function GroupActionsDropdown({
           onClick={() => onDelete(group)}
           icon={<Icon name='trash' size={16} />}
           variant='danger'
+          permission='groups:delete'
         >
           Delete Group
         </ActionsDropdown.Item>

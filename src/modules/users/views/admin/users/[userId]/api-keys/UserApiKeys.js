@@ -55,7 +55,7 @@ export default function UserApiKeys({ userId }) {
   const { hasPermission } = useRbac();
 
   // Permissions
-  const canCreateApiKey = hasPermission('apiKeys:create');
+  const canCreate = hasPermission('apiKeys:create');
 
   // User Context State
   const user = useSelector(getFetchedUser);
@@ -196,7 +196,15 @@ export default function UserApiKeys({ userId }) {
         <Button
           variant='primary'
           onClick={() => setIsCreateOpen(true)}
-          disabled={!canCreateApiKey}
+          disabled={!canCreate}
+          title={
+            !canCreate
+              ? t(
+                  'apiKeys.noPermissionToCreate',
+                  'You do not have permission to create API keys',
+                )
+              : t('apiKeys.generateKey', 'Generate Key')
+          }
         >
           <Icon name='plus' size={16} />
           {t('apiKeys.generateKey', 'Generate Key')}

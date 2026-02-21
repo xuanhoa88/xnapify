@@ -40,7 +40,7 @@ function Permissions() {
   const dispatch = useDispatch();
   const history = useHistory();
   const { hasPermission } = useRbac();
-  const canCreatePermission = hasPermission('permissions:create');
+  const canCreate = hasPermission('permissions:create');
   const permissions = useSelector(getPermissions);
   const loading = useSelector(isPermissionsListLoading);
   const initialized = useSelector(isPermissionsListInitialized);
@@ -278,9 +278,9 @@ function Permissions() {
         <Button
           variant='primary'
           onClick={handleAdd}
-          disabled={!canCreatePermission}
+          disabled={!canCreate}
           title={
-            !canCreatePermission
+            !canCreate
               ? t(
                   'permissions.noPermissionToCreate',
                   'You do not have permission to create permissions',
@@ -354,9 +354,9 @@ function Permissions() {
           <Button
             variant='primary'
             onClick={search ? () => handleSearchChange('') : handleAdd}
-            disabled={!search && !canCreatePermission}
+            disabled={!search && !canCreate}
             title={
-              !search && !canCreatePermission
+              !search && !canCreate
                 ? t(
                     'permissions.noPermissionToCreate',
                     'You do not have permission to create permissions',
