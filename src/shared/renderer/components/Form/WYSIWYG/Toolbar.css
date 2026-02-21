@@ -46,13 +46,12 @@
 }
 
 .toolbarBtn:hover:not(:disabled) {
-  background-color: var(--color-background-secondary);
   color: var(--color-text-primary);
 }
 
 .toolbarBtn.toolbarBtnActive {
   background-color: var(--color-primary-light);
-  color: var(--color-white);
+  color: var(--color-white, #fff);
 }
 
 .toolbarBtn:disabled {

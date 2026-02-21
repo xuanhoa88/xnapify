@@ -7,7 +7,9 @@
 
 import {
   forwardRef,
+  useState,
   useEffect,
+  useRef,
   useImperativeHandle,
   useCallback,
   useMemo,
@@ -20,9 +22,23 @@ import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
+import TaskList from '@tiptap/extension-task-list';
+import TaskItem from '@tiptap/extension-task-item';
+import {
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+} from '@tiptap/extension-table';
+import { Link } from '@tiptap/extension-link';
+import { Image } from '@tiptap/extension-image';
+import { Youtube } from '@tiptap/extension-youtube';
+import { Video, Audio } from './MediaExtensions';
 import { useFormField, useMergeRefs } from '../FormContext';
 import createSuggestion from './suggestion';
+import { DetailsExtension } from './DetailsExtension';
 import Toolbar from './Toolbar';
+import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
 
 /**
@@ -53,7 +69,39 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     field: { onChange, onBlur, value, ref: registerRef },
   } = useController({ name });
 
+  const [isFullScreen, setIsFullScreen] = useState(false);
+  const toggleFullScreen = useCallback(
+    () => setIsFullScreen(prev => !prev),
+    [],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = e => {
+      if (e.key === 'Escape' && isFullScreen) {
+        setIsFullScreen(false);
+      }
+    };
+
+    if (isFullScreen) {
+      document.body.style.overflow = 'hidden';
+      document.addEventListener('keydown', handleKeyDown);
+    } else {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    }
+
+    return () => {
+      document.body.style.overflow = '';
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullScreen]);
+
   const handleRef = useMergeRefs(registerRef, forwardedRef);
+
+  // Track whether the editor's own onUpdate caused the latest value change.
+  // This prevents a feedback loop: type → onUpdate → value changes → useEffect
+  // → setContent → onUpdate → …
+  const isInternalUpdate = useRef(false);
 
   // Stable handler that chains both react-hook-form's onChange and the optional
   // consumer-supplied onChange prop.
@@ -71,9 +119,32 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
   // Only include the Mention extension when a query callback is provided.
   const extensions = useMemo(() => {
     const exts = [
-      StarterKit,
+      StarterKit.configure({
+        // We add Link and Underline separately with custom options
+        link: false,
+        underline: false,
+      }),
       Underline,
       Placeholder.configure({ placeholder }),
+      TaskList,
+      TaskItem.configure({ nested: true }),
+      Table.configure({ resizable: true }),
+      TableRow,
+      TableHeader,
+      TableCell,
+      DetailsExtension,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+      }),
+      Image.configure({
+        inline: true,
+      }),
+      Youtube.configure({
+        inline: false,
+      }),
+      Video,
+      Audio,
     ];
 
     if (onMentionQuery) {
@@ -90,10 +161,11 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
 
   const editor = useEditor({
     extensions,
-    content: value || '',
+    content: markdownToHtml(value || ''),
     editable: !disabled,
     onUpdate: ({ editor: e }) => {
-      handleChange(e.getHTML());
+      isInternalUpdate.current = true;
+      handleChange(htmlToMarkdown(e.getHTML()));
     },
     onBlur: () => {
       onBlur();
@@ -106,6 +178,21 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       editor.setEditable(!disabled);
     }
   }, [editor, disabled]);
+
+  // Sync external value changes (markdown) into the editor (HTML).
+  // Only runs for programmatic changes (form reset, setValue) — not for
+  // the user's own keystrokes, which are tracked via isInternalUpdate.
+  useEffect(() => {
+    if (!editor || value === undefined) return;
+
+    // Skip if this value change originated from our own onUpdate handler
+    if (isInternalUpdate.current) {
+      isInternalUpdate.current = false;
+      return;
+    }
+
+    editor.commands.setContent(markdownToHtml(value), false);
+  }, [editor, value]);
 
   // Expose a pseudo-imperative API so that consumers can programmatically
   // focus the editor or access the underlying Tiptap instance.
@@ -122,13 +209,21 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     <div
       className={clsx(
         s.wysiwygWrapper,
-        { [s.wysiwygError]: error, [s.wysiwygDisabled]: disabled },
+        {
+          [s.wysiwygError]: error,
+          [s.wysiwygDisabled]: disabled,
+          [s.wysiwygFullScreen]: isFullScreen,
+        },
         className,
       )}
       ref={handleRef}
       id={id}
     >
-      <Toolbar editor={editor} />
+      <Toolbar
+        editor={editor}
+        isFullScreen={isFullScreen}
+        onToggleFullScreen={toggleFullScreen}
+      />
       <div className={s.editorContent}>
         <EditorContent editor={editor} className={s.contentEditable} />
       </div>

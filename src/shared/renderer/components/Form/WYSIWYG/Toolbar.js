@@ -216,6 +216,250 @@ const icons = {
       <path d='M20.49 15C19.8416 16.8404 18.6127 18.4202 16.9883 19.5014C15.364 20.5826 13.4323 21.1066 11.4843 20.9945C9.53634 20.8823 7.67737 20.1402 6.18786 18.878C4.69835 17.6159 3.65875 15.9001 3.22699 13.9945C2.79522 12.0888 2.99474 10.0975 3.79625 8.31469C4.59775 6.53191 5.95793 5.05296 7.66787 4.10423C9.37782 3.1555 11.3448 2.78808 13.2779 3.0558C15.211 3.32353 17.0047 4.21163 18.36 5.58L23 10' />
     </svg>
   ),
+  taskList: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <polyline points='9 11 12 14 22 4'></polyline>
+      <path d='M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'></path>
+    </svg>
+  ),
+  table: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect x='3' y='3' width='18' height='18' rx='2' ry='2' />
+      <line x1='3' y1='9' x2='21' y2='9' />
+      <line x1='3' y1='15' x2='21' y2='15' />
+      <line x1='9' y1='3' x2='9' y2='21' />
+      <line x1='15' y1='3' x2='15' y2='21' />
+    </svg>
+  ),
+  tableRow: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect
+        x='3'
+        y='9'
+        width='18'
+        height='6'
+        rx='1'
+        ry='1'
+        fill='currentColor'
+        fillOpacity='0.3'
+      />
+      <rect x='3' y='3' width='18' height='18' rx='2' ry='2' />
+      <line x1='9' y1='3' x2='9' y2='21' />
+    </svg>
+  ),
+  tableCol: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect
+        x='9'
+        y='3'
+        width='6'
+        height='18'
+        rx='1'
+        ry='1'
+        fill='currentColor'
+        fillOpacity='0.3'
+      />
+      <rect x='3' y='3' width='18' height='18' rx='2' ry='2' />
+      <line x1='3' y1='9' x2='21' y2='9' />
+    </svg>
+  ),
+  tableDelete: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect x='3' y='3' width='18' height='18' rx='2' ry='2' />
+      <line x1='3' y1='9' x2='21' y2='9' />
+      <line x1='9' y1='3' x2='9' y2='21' />
+      <line x1='8' y1='8' x2='16' y2='16' stroke='#ef4444' strokeWidth='3' />
+      <line x1='16' y1='8' x2='8' y2='16' stroke='#ef4444' strokeWidth='3' />
+    </svg>
+  ),
+  details: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <line x1='8' y1='6' x2='21' y2='6'></line>
+      <line x1='8' y1='12' x2='21' y2='12'></line>
+      <line x1='8' y1='18' x2='21' y2='18'></line>
+      <polyline points='3 4 5 6 3 8'></polyline>
+      <polyline points='3 10 5 12 3 14'></polyline>
+      <polyline points='3 16 5 18 3 20'></polyline>
+    </svg>
+  ),
+  link: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71'></path>
+      <path d='M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71'></path>
+    </svg>
+  ),
+  unlink: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M18.84 12.25l1.72-1.71a5.002 5.002 0 0 0-7.07-7.07l-1.72 1.71'></path>
+      <path d='M5.17 11.75l-1.71 1.71a5.004 5.004 0 0 0 7.07 7.07l1.71-1.71'></path>
+      <line x1='8' y1='2' x2='8' y2='5'></line>
+      <line x1='2' y1='8' x2='5' y2='8'></line>
+      <line x1='16' y1='19' x2='16' y2='22'></line>
+      <line x1='19' y1='16' x2='22' y2='16'></line>
+    </svg>
+  ),
+  image: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect>
+      <circle cx='8.5' cy='8.5' r='1.5'></circle>
+      <polyline points='21 15 16 10 5 21'></polyline>
+    </svg>
+  ),
+  video: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <polygon points='23 7 16 12 23 17 23 7'></polygon>
+      <rect x='1' y='5' width='15' height='14' rx='2' ry='2'></rect>
+    </svg>
+  ),
+  audio: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M9 18V5l12-2v13'></path>
+      <circle cx='6' cy='18' r='3'></circle>
+      <circle cx='18' cy='16' r='3'></circle>
+    </svg>
+  ),
+  youtube: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M22.54 6.42a2.78 2.78 0 0 0-1.94-2C18.88 4 12 4 12 4s-6.88 0-8.6.46a2.78 2.78 0 0 0-1.94 2A29 29 0 0 0 1 11.75a29 29 0 0 0 .46 5.33A2.78 2.78 0 0 0 3.4 19c1.72.46 8.6.46 8.6.46s6.88 0 8.6-.46a2.78 2.78 0 0 0 1.94-2 29 29 0 0 0 .46-5.25 29 29 0 0 0-.46-5.33z'></path>
+      <polygon points='9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02'></polygon>
+    </svg>
+  ),
+  fullscreen: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3'></path>
+    </svg>
+  ),
+  minimize: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <path d='M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3'></path>
+    </svg>
+  ),
 };
 
 /**
@@ -251,9 +495,12 @@ ToolbarButton.propTypes = {
  * Renders a horizontal bar of formatting buttons that call editor commands.
  * The buttons reflect the current selection state (active/inactive).
  *
- * @param {{ editor: import('@tiptap/react').Editor | null }} props
+ * @param {Object} props
+ * @param {import('@tiptap/react').Editor | null} props.editor
+ * @param {boolean} [props.isFullScreen]
+ * @param {Function} [props.onToggleFullScreen]
  */
-export default function Toolbar({ editor }) {
+export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
   const { t } = useTranslation();
   const btn = useCallback(
     (key, title, command, activeCheck) => (
@@ -318,10 +565,58 @@ export default function Toolbar({ editor }) {
           'orderedList',
         )}
         {btn(
+          'taskList',
+          t('shared:form.wysiwyg.taskList', 'Task list'),
+          () => editor.chain().focus().toggleTaskList().run(),
+          'taskList',
+        )}
+        {btn(
           'blockquote',
           t('shared:form.wysiwyg.blockquote', 'Blockquote'),
           () => editor.chain().focus().toggleBlockquote().run(),
           'blockquote',
+        )}
+        {btn(
+          'details',
+          t('shared:form.wysiwyg.details', 'Collapsible Details'),
+          () => editor.chain().focus().setDetails().run(),
+          'details',
+        )}
+      </div>
+
+      <div className={s.toolbarDivider} />
+
+      {/* Table tools */}
+      <div className={s.toolbarGroup}>
+        {btn(
+          'table',
+          t('shared:form.wysiwyg.table', 'Insert Table'),
+          () =>
+            editor
+              .chain()
+              .focus()
+              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+              .run(),
+          'table',
+        )}
+        {editor.isActive('table') && (
+          <>
+            {btn(
+              'tableRow',
+              t('shared:form.wysiwyg.tableRow', 'Add Row After'),
+              () => editor.chain().focus().addRowAfter().run(),
+            )}
+            {btn(
+              'tableCol',
+              t('shared:form.wysiwyg.tableCol', 'Add Column After'),
+              () => editor.chain().focus().addColumnAfter().run(),
+            )}
+            {btn(
+              'tableDelete',
+              t('shared:form.wysiwyg.tableDelete', 'Delete Table'),
+              () => editor.chain().focus().deleteTable().run(),
+            )}
+          </>
         )}
       </div>
 
@@ -344,6 +639,61 @@ export default function Toolbar({ editor }) {
 
       <div className={s.toolbarDivider} />
 
+      {/* Links & Media Group */}
+      <div className={s.toolbarGroup}>
+        {btn(
+          'link',
+          t('shared:form.wysiwyg.link', 'Add Link'),
+          () => {
+            const previousUrl = editor.getAttributes('link').href;
+            const url = window.prompt('URL', previousUrl || '');
+
+            // cancelled
+            if (url == null) {
+              return;
+            }
+
+            // empty
+            if (url.trim().length === 0) {
+              editor.chain().focus().extendMarkRange('link').unsetLink().run();
+              return;
+            }
+
+            // update link
+            editor
+              .chain()
+              .focus()
+              .extendMarkRange('link')
+              .setLink({ href: url })
+              .run();
+          },
+          'link',
+        )}
+        {editor.isActive('link') &&
+          btn('unlink', t('shared:form.wysiwyg.unlink', 'Remove Link'), () =>
+            editor.chain().focus().unsetLink().run(),
+          )}
+
+        {btn('image', t('shared:form.wysiwyg.image', 'Image'), () => {
+          const url = window.prompt('Image URL');
+          if (url) editor.chain().focus().setImage({ src: url }).run();
+        })}
+        {btn('video', t('shared:form.wysiwyg.video', 'Video'), () => {
+          const url = window.prompt('Video URL (MP4, WebM, etc.)');
+          if (url) editor.chain().focus().setVideo({ src: url }).run();
+        })}
+        {btn('audio', t('shared:form.wysiwyg.audio', 'Audio'), () => {
+          const url = window.prompt('Audio URL (MP3, WAV, etc.)');
+          if (url) editor.chain().focus().setAudio({ src: url }).run();
+        })}
+        {btn('youtube', t('shared:form.wysiwyg.youtube', 'YouTube'), () => {
+          const url = window.prompt('YouTube Video URL');
+          if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+        })}
+      </div>
+
+      <div className={s.toolbarDivider} />
+
       {/* Undo / Redo */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
@@ -359,10 +709,25 @@ export default function Toolbar({ editor }) {
           disabled={!editor.can().redo()}
         />
       </div>
+      {/* View Options */}
+      <div className={s.toolbarGroup}>
+        <ToolbarButton
+          icon={isFullScreen ? icons.minimize : icons.fullscreen}
+          title={
+            isFullScreen
+              ? t('shared:form.wysiwyg.exitFullScreen', 'Exit full screen')
+              : t('shared:form.wysiwyg.fullScreen', 'Full screen')
+          }
+          onClick={onToggleFullScreen}
+          isActive={isFullScreen}
+        />
+      </div>
     </div>
   );
 }
 
 Toolbar.propTypes = {
   editor: PropTypes.object,
+  isFullScreen: PropTypes.bool,
+  onToggleFullScreen: PropTypes.func,
 };
