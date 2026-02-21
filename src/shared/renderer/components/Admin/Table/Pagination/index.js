@@ -8,6 +8,7 @@
 import { useMemo, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import Button from '../../../Button';
 import s from './Pagination.css';
 
@@ -31,9 +32,16 @@ function Pagination({
   onPageChange,
   loading = false,
   showInfo = true,
-  prevLabel = '‹ Prev',
-  nextLabel = 'Next ›',
+  prevLabel,
+  nextLabel,
 }) {
+  const { t } = useTranslation();
+
+  const displayPrevLabel =
+    prevLabel || t('shared:components.table.pagination.prev', '‹ Prev');
+  const displayNextLabel =
+    nextLabel || t('shared:components.table.pagination.next', 'Next ›');
+
   // Generate page numbers with ellipsis
   const pageNumbers = useMemo(() => {
     const pages = [];
@@ -92,7 +100,15 @@ function Pagination({
     <div className={s.root}>
       {showInfo && totalItems != null && (
         <span className={s.info}>
-          {totalItems} total · Page {currentPage} of {totalPages}
+          {t(
+            'shared:components.table.pagination.info',
+            '{{total}} total · Page {{current}} of {{pages}}',
+            {
+              total: totalItems,
+              current: currentPage,
+              pages: totalPages,
+            },
+          )}
         </span>
       )}
 
@@ -102,7 +118,7 @@ function Pagination({
         onClick={handlePrev}
         disabled={currentPage === 1 || loading}
       >
-        {prevLabel}
+        {displayPrevLabel}
       </Button>
 
       <div className={s.pageNumbers}>
@@ -132,7 +148,7 @@ function Pagination({
         onClick={handleNext}
         disabled={currentPage >= totalPages || loading}
       >
-        {nextLabel}
+        {displayNextLabel}
       </Button>
     </div>
   );

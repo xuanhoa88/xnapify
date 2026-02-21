@@ -73,7 +73,9 @@ function EditGroup({ groupId }) {
         ).unwrap();
         history.push('/admin/groups');
       } catch (err) {
-        setError(err || t('errors.updateGroup', 'Failed to update group'));
+        setError(
+          err || t('admin:errors.updateGroup', 'Failed to update group'),
+        );
       }
     },
     [dispatch, group, history, t],
@@ -92,14 +94,14 @@ function EditGroup({ groupId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='folder' size={24} />}
-          title='Edit Group'
-          subtitle='Modify group details'
+          title={t('admin:groups.edit.title', 'Edit Group')}
+          subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Groups
+            {t('admin:groups.backToGroups', '← Back to Groups')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -118,24 +120,29 @@ function EditGroup({ groupId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='folder' size={24} />}
-          title='Edit Group'
-          subtitle='Modify group details'
+          title={t('admin:groups.edit.title', 'Edit Group')}
+          subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Groups
+            {t('admin:groups.backToGroups', '← Back to Groups')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <div className={s.formError}>Failed to load group data</div>
+          <div className={s.formError}>
+            {t(
+              'admin:errors.failedToLoadGroupData',
+              'Failed to load group data',
+            )}
+          </div>
           <div className={s.formActions}>
             <Button
               variant='secondary'
               onClick={() => handleCancel(isDirtyRef.current)}
             >
-              Back to Groups
+              {t('admin:groups.backToGroups', 'Back to Groups')}
             </Button>
           </div>
         </div>
@@ -160,14 +167,14 @@ function EditGroup({ groupId }) {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='folder' size={24} />}
-        title='Edit Group'
-        subtitle='Modify group details'
+        title={t('admin:groups.edit.title', 'Edit Group')}
+        subtitle={t('admin:groups.edit.subtitle', 'Modify group details')}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Groups
+          {t('admin:groups.backToGroups', '← Back to Groups')}
         </Button>
       </Box.Header>
 
@@ -200,6 +207,7 @@ function EditGroup({ groupId }) {
  */
 function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
@@ -272,32 +280,64 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Group Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:groups.edit.groupInformation', 'Group Information')}
+        </h3>
 
-        <Form.Field name='name' label='Group Name' required>
-          <Form.Input placeholder='e.g., Engineering, Marketing, Support' />
+        <Form.Field
+          name='name'
+          label={t('admin:groups.edit.groupName', 'Group Name')}
+          required
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:groups.edit.groupNamePlaceholder',
+              'e.g., Engineering, Marketing, Support',
+            )}
+          />
         </Form.Field>
 
-        <Form.Field name='description' label='Description'>
+        <Form.Field
+          name='description'
+          label={t('admin:groups.edit.description', 'Description')}
+        >
           <Form.Textarea
-            placeholder='Describe what this group is for...'
+            placeholder={t(
+              'admin:groups.edit.descriptionPlaceholder',
+              'Describe what this group is for...',
+            )}
             rows={3}
           />
         </Form.Field>
 
         <div className={s.formRow}>
-          <Form.Field name='category' label='Category'>
-            <Form.Input placeholder='e.g., System, Organization, Department' />
+          <Form.Field
+            name='category'
+            label={t('admin:groups.edit.category', 'Category')}
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:groups.edit.categoryPlaceholder',
+                'e.g., System, Organization, Department',
+              )}
+            />
           </Form.Field>
-          <Form.Field name='type' label='Type'>
-            <Form.Input placeholder='e.g., Security, Organizational, Functional' />
+          <Form.Field name='type' label={t('admin:groups.edit.type', 'Type')}>
+            <Form.Input
+              placeholder={t(
+                'admin:groups.edit.typePlaceholder',
+                'e.g., Security, Organizational, Functional',
+              )}
+            />
           </Form.Field>
         </div>
       </div>
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          Roles ({selectedRoles.length} selected)
+          {t('admin:groups.edit.rolesCount', 'Roles ({count} selected)', {
+            count: selectedRoles.length,
+          })}
         </h3>
 
         <Form.Field name='roles'>
@@ -310,20 +350,28 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
             hasMore={rolesHasMore}
             onLoadMore={handleLoadMoreRoles}
             searchable
-            searchPlaceholder='Search roles...'
+            searchPlaceholder={t(
+              'admin:groups.edit.searchRoles',
+              'Search roles...',
+            )}
             onSearch={setRoleSearch}
-            emptyMessage='No roles found'
-            loadingMessage='Loading roles...'
+            emptyMessage={t('admin:groups.edit.noRolesFound', 'No roles found')}
+            loadingMessage={t(
+              'admin:groups.edit.loadingRoles',
+              'Loading roles...',
+            )}
           />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel} disabled={loading}>
-          Cancel
+          {t('admin:groups.edit.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading
+            ? t('admin:groups.edit.saving', 'Saving...')
+            : t('admin:groups.edit.saveChanges', 'Save Changes')}
         </Button>
       </div>
     </>

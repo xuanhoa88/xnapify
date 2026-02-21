@@ -73,7 +73,7 @@ function EditRole({ roleId }) {
         ).unwrap();
         history.push('/admin/roles');
       } catch (err) {
-        setError(err || t('errors.updateRole', 'Failed to update role'));
+        setError(err || t('admin:errors.updateRole', 'Failed to update role'));
       }
     },
     [dispatch, role, history, t],
@@ -92,18 +92,24 @@ function EditRole({ roleId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='shield' size={24} />}
-          title='Edit Role'
-          subtitle='Modify role permissions'
+          title={t('admin:roles.edit.editRole', 'Edit Role')}
+          subtitle={t(
+            'admin:roles.edit.modifyRolePermissions',
+            'Modify role permissions',
+          )}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Roles
+            {t('admin:buttons.backToRoles', '← Back to Roles')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <Loader variant='spinner' message='Loading role data...' />
+          <Loader
+            variant='spinner'
+            message={t('admin:roles.loadingRoleData', 'Loading role data...')}
+          />
         </div>
         <ConfirmModal.Back
           ref={confirmBackModalRef}
@@ -118,24 +124,29 @@ function EditRole({ roleId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='shield' size={24} />}
-          title='Edit Role'
-          subtitle='Modify role permissions'
+          title={t('admin:roles.edit.editRole', 'Edit Role')}
+          subtitle={t(
+            'admin:roles.edit.modifyRolePermissions',
+            'Modify role permissions',
+          )}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Roles
+            {t('admin:buttons.backToRoles', '← Back to Roles')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <div className={s.formError}>Failed to load role data</div>
+          <div className={s.formError}>
+            {t('admin:errors.failedToLoadRoleData', 'Failed to load role data')}
+          </div>
           <div className={s.formActions}>
             <Button
               variant='secondary'
               onClick={() => handleCancel(isDirtyRef.current)}
             >
-              Back to Roles
+              {t('admin:buttons.backToRoles', 'Back to Roles')}
             </Button>
           </div>
         </div>
@@ -160,14 +171,17 @@ function EditRole({ roleId }) {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='shield' size={24} />}
-        title='Edit Role'
-        subtitle='Modify role permissions'
+        title={t('admin:roles.edit.editRole', 'Edit Role')}
+        subtitle={t(
+          'admin:roles.edit.modifyRolePermissions',
+          'Modify role permissions',
+        )}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Roles
+          {t('admin:buttons.backToRoles', '← Back to Roles')}
         </Button>
       </Box.Header>
 
@@ -199,6 +213,7 @@ function EditRole({ roleId }) {
  * EditRoleFormFields - Form fields component that uses react-hook-form context
  */
 function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const {
     watch,
@@ -278,15 +293,32 @@ function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Role Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:roles.edit.roleInformation', 'Role Information')}
+        </h3>
 
-        <Form.Field name='name' label='Role Name' required>
-          <Form.Input placeholder='e.g., editor, moderator, viewer' />
+        <Form.Field
+          name='name'
+          label={t('admin:roles.edit.roleName', 'Role Name')}
+          required
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:roles.edit.roleNamePlaceholder',
+              'e.g., editor, moderator, viewer',
+            )}
+          />
         </Form.Field>
 
-        <Form.Field name='description' label='Description'>
+        <Form.Field
+          name='description'
+          label={t('admin:roles.edit.description', 'Description')}
+        >
           <Form.Textarea
-            placeholder='Describe what this role is for...'
+            placeholder={t(
+              'admin:roles.edit.descriptionPlaceholder',
+              'Describe what this role is for...',
+            )}
             rows={3}
           />
         </Form.Field>
@@ -294,7 +326,13 @@ function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          Permissions ({selectedPermissions.length} selected)
+          {t(
+            'admin:roles.edit.permissionsCount',
+            'Permissions ({count} selected)',
+            {
+              count: selectedPermissions.length,
+            },
+          )}
         </h3>
 
         <Form.Field name='permissions'>
@@ -307,20 +345,31 @@ function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
             hasMore={permissionsHasMore}
             onLoadMore={handleLoadMorePermissions}
             searchable
-            searchPlaceholder='Search e.g. users, users:read, :create'
+            searchPlaceholder={t(
+              'admin:roles.edit.permissionsSearchPlaceholder',
+              'Search e.g. users, users:read, :create',
+            )}
             onSearch={setPermissionSearch}
-            emptyMessage='No permissions found'
-            loadingMessage='Loading permissions...'
+            emptyMessage={t(
+              'admin:roles.edit.permissionsEmptyMessage',
+              'No permissions found',
+            )}
+            loadingMessage={t(
+              'admin:roles.edit.permissionsLoadingMessage',
+              'Loading permissions...',
+            )}
           />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel} disabled={loading}>
-          Cancel
+          {t('admin:buttons.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading
+            ? t('admin:buttons.saving', 'Saving...')
+            : t('admin:buttons.saveChanges', 'Save Changes')}
         </Button>
       </div>
     </>

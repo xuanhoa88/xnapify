@@ -155,5 +155,6 @@
   "modal": {
     "itemSelected_one": "Đã chọn {{count}} mục",
     "itemSelected_other": "Đã chọn {{count}} mục"
-  }
+  },
+  "admin": {}
 }

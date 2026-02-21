@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../../../shared/renderer/components/Modal';
 import { bulkUpdatePermissionStatus } from '../redux';
@@ -20,6 +21,7 @@ import { bulkUpdatePermissionStatus } from '../redux';
  *   changeStatusModalRef.current.close();
  */
 const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Internal state
@@ -68,26 +70,42 @@ const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(data);
     } catch (err) {
-      setError(err);
+      setError(
+        err ||
+          t(
+            'admin:permissions.statusChangeError',
+            'Failed to change permission status',
+          ),
+      );
     } finally {
       setProcessing(false);
     }
-  }, [dispatch, data, resetState, onSuccess]);
+  }, [dispatch, data, resetState, onSuccess, t]);
 
   const count = data && data.ids ? data.ids.length : 0;
   const isActive = data && data.isActive;
-  const actionText = isActive ? 'activate' : 'deactivate';
-  const buttonText = isActive ? 'Activate' : 'Deactivate';
-  const processingText = isActive ? 'Activating...' : 'Deactivating...';
+  const actionText = isActive
+    ? t('admin:common.activate', 'activate')
+    : t('admin:common.deactivate', 'deactivate');
+  const buttonText = isActive
+    ? t('admin:common.activateBtn', 'Activate')
+    : t('admin:common.deactivateBtn', 'Deactivate');
+  const processingText = isActive
+    ? t('admin:common.activating', 'Activating...')
+    : t('admin:common.deactivating', 'Deactivating...');
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Change Permission Status
+        {t('admin:permissions.changeStatusTitle', 'Change Permission Status')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to {actionText} {count} permission(s)?
+          {t(
+            'admin:permissions.changeStatusConfirmation',
+            'Are you sure you want to {{actionText}} {{count}} permission(s)?',
+            { actionText, count },
+          )}
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
@@ -97,7 +115,7 @@ const ChangeStatusPermissionModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={processing}
           >
-            Cancel
+            {t('admin:common.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'

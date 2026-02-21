@@ -103,7 +103,11 @@ function AdminNotifications() {
             <span className={s.dropdownTitle}>
               {t('common.notifications', 'Notifications')}
             </span>
-            <span className={s.dropdownCount}>{unreadCount} new</span>
+            <span className={s.dropdownCount}>
+              {t('common.newNotificationsCount', '{{count}} new', {
+                count: unreadCount,
+              })}
+            </span>
           </div>
 
           <div className={s.dropdownList}>

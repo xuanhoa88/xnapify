@@ -20,7 +20,7 @@ export function init({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.dashboard', 'Dashboard'),
+    title: i18n.t('admin:navigation.dashboard', 'Dashboard'),
   };
 }
 

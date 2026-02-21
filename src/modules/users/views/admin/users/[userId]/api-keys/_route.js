@@ -17,7 +17,7 @@ export const middleware = requirePermission('apiKeys:read');
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.apiKeys', 'API Keys'),
+    title: i18n.t('admin:navigation.apiKeys', 'API Keys'),
   };
 }
 
@@ -28,7 +28,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.apiKeys', 'API Keys'),
+        label: i18n.t('admin:navigation.apiKeys', 'API Keys'),
         url: path,
       },
       'admin',

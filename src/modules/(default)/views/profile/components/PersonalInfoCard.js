@@ -154,7 +154,10 @@ function PersonalInfoFormFields({ loading }) {
 
   return (
     <>
-      <Form.Field name='display_name' label={t('profile.displayName')}>
+      <Form.Field
+        name='display_name'
+        label={t('profile.displayName', 'Display Name')}
+      >
         <Form.Input
           type='text'
           placeholder={t(
@@ -166,7 +169,10 @@ function PersonalInfoFormFields({ loading }) {
 
       <div className={s.row}>
         <div className={s.col}>
-          <Form.Field name='first_name' label={t('profile.firstName')}>
+          <Form.Field
+            name='first_name'
+            label={t('profile.firstName', 'First Name')}
+          >
             <Form.Input
               type='text'
               placeholder={t('profile.firstNamePlaceholder', 'First name')}
@@ -174,7 +180,10 @@ function PersonalInfoFormFields({ loading }) {
           </Form.Field>
         </div>
         <div className={s.col}>
-          <Form.Field name='last_name' label={t('profile.lastName')}>
+          <Form.Field
+            name='last_name'
+            label={t('profile.lastName', 'Last Name')}
+          >
             <Form.Input
               type='text'
               placeholder={t('profile.lastNamePlaceholder', 'Last name')}
@@ -183,21 +192,21 @@ function PersonalInfoFormFields({ loading }) {
         </div>
       </div>
 
-      <Form.Field name='bio' label={t('profile.bio')}>
+      <Form.Field name='bio' label={t('profile.bio', 'Bio')}>
         <Form.Textarea
           rows={3}
           placeholder={t('profile.bioPlaceholder', 'Tell us about yourself...')}
         />
       </Form.Field>
 
-      <Form.Field name='location' label={t('profile.location')}>
+      <Form.Field name='location' label={t('profile.location', 'Location')}>
         <Form.Input
           type='text'
           placeholder={t('profile.locationPlaceholder', 'Your location')}
         />
       </Form.Field>
 
-      <Form.Field name='website' label={t('profile.website')}>
+      <Form.Field name='website' label={t('profile.website', 'Website')}>
         <Form.Input
           type='url'
           placeholder={t(
@@ -220,7 +229,9 @@ function PersonalInfoFormFields({ loading }) {
         className={s.button}
         loading={loading || isSubmitting}
       >
-        {loading ? t('profile.saving') : t('profile.saveChanges')}
+        {loading
+          ? t('profile.saving', 'Saving...')
+          : t('profile.saveChanges', 'Save Changes')}
       </Button>
     </>
   );

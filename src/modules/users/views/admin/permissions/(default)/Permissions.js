@@ -243,10 +243,16 @@ function Permissions() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='key' size={24} />}
-          title='Permission Management'
-          subtitle='Configure granular access controls'
+          title={t('admin:permissions.title', 'Permission Management')}
+          subtitle={t(
+            'admin:permissions.subtitle',
+            'Configure granular access controls',
+          )}
         />
-        <Loader variant='skeleton' message='Loading permissions...' />
+        <Loader
+          variant='skeleton'
+          message={t('admin:permissions.loading', 'Loading permissions...')}
+        />
       </div>
     );
   }
@@ -256,11 +262,17 @@ function Permissions() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='key' size={24} />}
-          title='Permission Management'
-          subtitle='Configure granular access controls'
+          title={t('admin:permissions.title', 'Permission Management')}
+          subtitle={t(
+            'admin:permissions.subtitle',
+            'Configure granular access controls',
+          )}
         />
         <Table.Error
-          title={t('permissions.errorLoading', 'Error loading permissions')}
+          title={t(
+            'admin:permissions.errorLoading',
+            'Error loading permissions',
+          )}
           error={error}
           onRetry={refreshPermissions}
         />
@@ -272,8 +284,11 @@ function Permissions() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='key' size={24} />}
-        title='Permission Management'
-        subtitle='Configure granular access controls'
+        title={t('admin:permissions.title', 'Permission Management')}
+        subtitle={t(
+          'admin:permissions.subtitle',
+          'Configure granular access controls',
+        )}
       >
         <Button
           variant='primary'
@@ -282,14 +297,14 @@ function Permissions() {
           title={
             !canCreate
               ? t(
-                  'permissions.noPermissionToCreate',
+                  'admin:permissions.noPermissionToCreate',
                   'You do not have permission to create permissions',
                 )
               : undefined
           }
         >
           <Icon name='plus' size={16} />
-          Add Permission
+          {t('admin:permissions.addPermission', 'Add Permission')}
         </Button>
       </Box.Header>
 
@@ -297,11 +312,21 @@ function Permissions() {
       {selectedPermissions.length > 0 && (
         <Table.BulkActionsBar
           count={selectedPermissions.length}
-          itemLabel='permission'
+          itemLabel={t('admin:permissions.itemLabel', 'permission')}
           actions={[
-            { label: 'Activate', onClick: handleBulkActivate },
-            { label: 'Deactivate', onClick: handleBulkDeactivate },
-            { label: 'Delete', onClick: handleBulkDelete, variant: 'danger' },
+            {
+              label: t('admin:permissions.activate', 'Activate'),
+              onClick: handleBulkActivate,
+            },
+            {
+              label: t('admin:permissions.deactivate', 'Deactivate'),
+              onClick: handleBulkDeactivate,
+            },
+            {
+              label: t('admin:permissions.delete', 'Delete'),
+              onClick: handleBulkDelete,
+              variant: 'danger',
+            },
           ]}
           onClear={clearSelection}
         />
@@ -312,19 +337,37 @@ function Permissions() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder='Search e.g. users, users:read, :create'
+        placeholder={t(
+          'admin:permissions.searchPlaceholder',
+          'Search e.g. users, users:read, :create',
+        )}
         debounce={300}
       >
         <SearchableSelect
           className={s.filterSearchableSelect}
           options={[
-            { value: '', label: 'All Status' },
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
+            {
+              value: '',
+              label: t(
+                'admin:permissions.statusFilterPlaceholder',
+                'All Status',
+              ),
+            },
+            {
+              value: 'active',
+              label: t('admin:permissions.statusFilterPlaceholder', 'Active'),
+            },
+            {
+              value: 'inactive',
+              label: t('admin:permissions.statusFilterPlaceholder', 'Inactive'),
+            },
           ]}
           value={statusFilter}
           onChange={setStatusFilter}
-          placeholder='All Status'
+          placeholder={t(
+            'admin:permissions.statusFilterPlaceholder',
+            'All Status',
+          )}
           showSearch={false}
         />
         <div className={s.filterActions}>
@@ -335,7 +378,7 @@ function Permissions() {
               type='button'
               onClick={handleClearFilters}
             >
-              ✕ Clear Filters
+              {t('admin:permissions.clearFilters', '✕ Clear Filters')}
             </Button>
           )}
         </div>
@@ -344,11 +387,25 @@ function Permissions() {
       {permissions.length === 0 ? (
         <Table.Empty
           icon='key'
-          title={search ? 'No matches found' : 'No permissions found'}
+          title={
+            search
+              ? t('admin:permissions.noMatchesFound', 'No matches found')
+              : t(
+                  'admin:permissions.noPermissionsFound',
+                  'No permissions found',
+                )
+          }
           description={
             search
-              ? `No permissions match "${search}". Try a different search.`
-              : 'Create granular permissions to control access to resources.'
+              ? t(
+                  'admin:permissions.noMatchesFound',
+                  'No permissions match "{search}". Try a different search.',
+                  { search },
+                )
+              : t(
+                  'admin:permissions.noPermissionsFound',
+                  'Create granular permissions to control access to resources.',
+                )
           }
         >
           <Button
@@ -358,7 +415,7 @@ function Permissions() {
             title={
               !search && !canCreate
                 ? t(
-                    'permissions.noPermissionToCreate',
+                    'admin:permissions.noPermissionToCreate',
                     'You do not have permission to create permissions',
                   )
                 : undefined
@@ -383,10 +440,10 @@ function Permissions() {
                     onChange={handleSelectAll}
                   />
                 </th>
-                <th>Resource</th>
-                <th>Action</th>
-                <th>Description</th>
-                <th>Status</th>
+                <th>{t('admin:permissions.resource', 'Resource')}</th>
+                <th>{t('admin:permissions.action', 'Action')}</th>
+                <th>{t('admin:permissions.description', 'Description')}</th>
+                <th>{t('admin:permissions.status', 'Status')}</th>
                 <th />
               </tr>
             </thead>
@@ -427,7 +484,9 @@ function Permissions() {
                       <Tag
                         variant={permission.is_active ? 'success' : 'neutral'}
                       >
-                        {permission.is_active ? 'Active' : 'Inactive'}
+                        {permission.is_active
+                          ? t('admin:permissions.active', 'Active')
+                          : t('admin:permissions.inactive', 'Inactive')}
                       </Tag>
                     </td>
                     <td>
@@ -436,7 +495,7 @@ function Permissions() {
                           variant='ghost'
                           size='small'
                           iconOnly
-                          title='Edit'
+                          title={t('admin:permissions.edit', 'Edit')}
                           onClick={() => handleEdit(permission.id)}
                         >
                           <Icon name='edit' size={16} />
@@ -445,7 +504,7 @@ function Permissions() {
                           variant='ghost'
                           size='small'
                           iconOnly
-                          title='Delete'
+                          title={t('admin:permissions.delete', 'Delete')}
                           onClick={() => handleDelete(permission)}
                         >
                           <Icon name='trash' size={16} />
@@ -473,7 +532,7 @@ function Permissions() {
 
       <ConfirmModal.Delete
         ref={deleteModalRef}
-        title='Delete Permission(s)'
+        title={t('admin:permissions.delete', 'Delete Permission(s)')}
         getItemName={getDeleteName}
         onDelete={handleDeleteConfirm}
         onSuccess={handleRefreshPermissions}

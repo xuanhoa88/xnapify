@@ -8,6 +8,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';
 import {
   fetchPermissionById,
@@ -33,6 +34,7 @@ import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const history = useHistory();
   const loading = useSelector(isPermissionFetchLoading);
   const saving = useSelector(isPermissionUpdateLoading);
@@ -106,18 +108,27 @@ export default function EditPermission({ permissionId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='key' size={24} />}
-          title='Edit Permission'
-          subtitle='Modify permission rule'
+          title={t('admin:permissions.edit.title', 'Edit Permission')}
+          subtitle={t(
+            'admin:permissions.edit.subtitle',
+            'Modify permission rule',
+          )}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Permissions
+            {t('admin:permissions.backToPermissions', '← Back to Permissions')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <Loader variant='spinner' message='Loading permission...' />
+          <Loader
+            variant='spinner'
+            message={t(
+              'admin:permissions.edit.loadingPermission',
+              'Loading permission...',
+            )}
+          />
         </div>
       </div>
     );
@@ -128,24 +139,32 @@ export default function EditPermission({ permissionId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='key' size={24} />}
-          title='Edit Permission'
-          subtitle='Modify permission rule'
+          title={t('admin:permissions.edit.title', 'Edit Permission')}
+          subtitle={t(
+            'admin:permissions.edit.subtitle',
+            'Modify permission rule',
+          )}
         >
           <Button
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            ← Back to Permissions
+            {t('admin:permissions.backToPermissions', '← Back to Permissions')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <div className={s.formError}>Failed to load permission data</div>
+          <div className={s.formError}>
+            {t(
+              'admin:permissions.edit.loadPermissionError',
+              'Failed to load permission data',
+            )}
+          </div>
           <div className={s.formActions}>
             <Button
               variant='secondary'
               onClick={() => handleCancel(isDirtyRef.current)}
             >
-              Back to Permissions
+              {t('admin:permissions.backToPermissions', 'Back to Permissions')}
             </Button>
           </div>
         </div>
@@ -157,14 +176,17 @@ export default function EditPermission({ permissionId }) {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='key' size={24} />}
-        title='Edit Permission'
-        subtitle='Modify permission rule'
+        title={t('admin:permissions.edit.title', 'Edit Permission')}
+        subtitle={t(
+          'admin:permissions.edit.subtitle',
+          'Modify permission rule',
+        )}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Permissions
+          {t('admin:permissions.backToPermissions', '← Back to Permissions')}
         </Button>
       </Box.Header>
 
@@ -196,6 +218,7 @@ export default function EditPermission({ permissionId }) {
  * EditPermissionFormFields - Form fields component that uses react-hook-form context
  */
 function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
@@ -217,50 +240,91 @@ function EditPermissionFormFields({ onCancel, saving, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Permission Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t(
+            'admin:permissions.edit.permissionInformation',
+            'Permission Information',
+          )}
+        </h3>
 
         <div className={s.formRow}>
-          <Form.Field name='resource' label='Resource' required>
-            <Form.Input placeholder='e.g. users, posts, comments' />
+          <Form.Field
+            name='resource'
+            label={t('admin:permissions.edit.resource', 'Resource')}
+            required
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:permissions.edit.resourcePlaceholder',
+                'e.g. users, posts, comments',
+              )}
+            />
           </Form.Field>
-          <Form.Field name='action' label='Action' required>
-            <Form.Input placeholder='e.g. read, write, delete' />
+          <Form.Field
+            name='action'
+            label={t('admin:permissions.edit.action', 'Action')}
+            required
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:permissions.edit.actionPlaceholder',
+                'e.g. read, write, delete',
+              )}
+            />
           </Form.Field>
         </div>
 
-        <Form.Field name='description' label='Description'>
+        <Form.Field
+          name='description'
+          label={t('admin:permissions.edit.description', 'Description')}
+        >
           <Form.Textarea
-            placeholder='Describe what this permission allows...'
+            placeholder={t(
+              'admin:permissions.edit.descriptionPlaceholder',
+              'Describe what this permission allows...',
+            )}
             rows={3}
           />
         </Form.Field>
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Status</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:permissions.edit.status', 'Status')}
+        </h3>
 
         <Form.Field name='is_active'>
-          <Form.Checkbox label='Active' />
+          <Form.Checkbox label={t('admin:permissions.edit.active', 'Active')} />
         </Form.Field>
         <p className={s.checkboxHint}>
-          Inactive permissions will not be enforced in authorization checks
+          {t(
+            'admin:permissions.edit.inactivePermission',
+            'Inactive permissions will not be enforced in authorization checks',
+          )}
         </p>
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Generated Name</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:permissions.edit.generatedName', 'Generated Name')}
+        </h3>
         <div className={s.previewName}>{generatedName}</div>
         <p className={s.previewHint}>
-          Permission name is auto-generated from resource and action
+          {t(
+            'admin:permissions.edit.generatedNameHint',
+            'Permission name is auto-generated from resource and action',
+          )}
         </p>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel} disabled={saving}>
-          Cancel
+          {t('admin:permissions.edit.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={saving}>
-          {saving ? 'Saving...' : 'Save Changes'}
+          {saving
+            ? t('admin:permissions.edit.saving', 'Saving...')
+            : t('admin:permissions.edit.saveChanges', 'Save Changes')}
         </Button>
       </div>
     </>

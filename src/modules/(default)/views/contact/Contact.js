@@ -91,32 +91,44 @@ function ContactFormFields({ loading }) {
   return (
     <>
       <div className={s.formRow}>
-        <Form.Field name='email' label={t('contact.form.email')} required>
+        <Form.Field
+          name='email'
+          label={t('contact.form.email', 'Email')}
+          required
+        >
           <Form.Input
             type='email'
-            placeholder={t('contact.form.emailPlaceholder')}
+            placeholder={t('contact.form.emailPlaceholder', 'Email')}
           />
         </Form.Field>
 
-        <Form.Field name='phone' label={t('contact.form.phone')}>
+        <Form.Field name='phone' label={t('contact.form.phone', 'Phone')}>
           <Form.Input
             type='phone'
-            placeholder={t('contact.form.phonePlaceholder')}
+            placeholder={t('contact.form.phonePlaceholder', 'Phone')}
           />
         </Form.Field>
       </div>
 
-      <Form.Field name='subject' label={t('contact.form.subject')} required>
+      <Form.Field
+        name='subject'
+        label={t('contact.form.subject', 'Subject')}
+        required
+      >
         <Form.Input
           type='text'
-          placeholder={t('contact.form.subjectPlaceholder')}
+          placeholder={t('contact.form.subjectPlaceholder', 'Subject')}
         />
       </Form.Field>
 
-      <Form.Field name='message' label={t('contact.form.message')} required>
+      <Form.Field
+        name='message'
+        label={t('contact.form.message', 'Message')}
+        required
+      >
         <Form.Textarea
           rows={5}
-          placeholder={t('contact.form.messagePlaceholder')}
+          placeholder={t('contact.form.messagePlaceholder', 'Message')}
         />
       </Form.Field>
 
@@ -127,7 +139,9 @@ function ContactFormFields({ loading }) {
         className={s.submitButton}
         loading={loading}
       >
-        {loading ? t('contact.form.sending') : t('contact.form.submit')}
+        {loading
+          ? t('contact.form.sending', 'Sending...')
+          : t('contact.form.submit', 'Submit')}
       </Button>
     </>
   );

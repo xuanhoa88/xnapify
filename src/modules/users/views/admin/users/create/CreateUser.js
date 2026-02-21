@@ -63,7 +63,9 @@ function CreateUser() {
         await dispatch(createUser(data)).unwrap();
         history.push('/admin/users');
       } catch (err) {
-        setError(err || t('errors.createUser', 'Failed to create user'));
+        setError(
+          err || t('admin:users.errors.createUser', 'Failed to create user'),
+        );
       }
     },
     [dispatch, history, t],
@@ -85,14 +87,14 @@ function CreateUser() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='users' size={24} />}
-        title='Create New User'
-        subtitle='Add a new user account'
+        title={t('admin:users.create.title', 'Create New User')}
+        subtitle={t('admin:users.create.subtitle', 'Add a new user account')}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Users
+          {t('admin:users.create.backToUsers', '← Back to Users')}
         </Button>
       </Box.Header>
       <div className={s.formContainer}>
@@ -268,14 +270,18 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
       dispatch(
         showSuccessMessage({
           message: t(
-            'admin.users.passwordGenerated',
+            'admin:users.passwordGenerated',
             'Password generated successfully!',
           ),
         }),
       );
     } catch (err) {
       setError(
-        err || t('errors.generatePassword', 'Failed to generate password'),
+        err ||
+          t(
+            'admin:users.errors.generatePassword',
+            'Failed to generate password',
+          ),
       );
     } finally {
       setGeneratingPassword(false);
@@ -285,18 +291,48 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Account Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.create.accountInfo', 'Account Information')}
+        </h3>
 
-        <Form.Field name='email' label='Email' required>
-          <Form.Input type='email' placeholder='user@example.com' />
+        <Form.Field
+          name='email'
+          label={t('admin:users.create.email', 'Email')}
+          required
+        >
+          <Form.Input
+            type='email'
+            placeholder={t(
+              'admin:users.create.emailPlaceholder',
+              'user@example.com',
+            )}
+          />
         </Form.Field>
 
         <div className={s.formRow}>
-          <Form.Field name='password' label='Password' required>
-            <Form.Password placeholder='Enter password' />
+          <Form.Field
+            name='password'
+            label={t('admin:users.create.password', 'Password')}
+            required
+          >
+            <Form.Password
+              placeholder={t(
+                'admin:users.create.passwordPlaceholder',
+                'Enter password',
+              )}
+            />
           </Form.Field>
-          <Form.Field name='confirm_password' label='Confirm Password' required>
-            <Form.Password placeholder='Confirm password' />
+          <Form.Field
+            name='confirm_password'
+            label={t('admin:users.create.confirmPassword', 'Confirm Password')}
+            required
+          >
+            <Form.Password
+              placeholder={t(
+                'admin:users.create.confirmPasswordPlaceholder',
+                'Confirm password',
+              )}
+            />
           </Form.Field>
         </div>
 
@@ -309,12 +345,12 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             className={s.generateBtn}
           >
             {generatingPassword ? (
-              t('admin.users.generatingPassword', 'Generating...')
+              t('admin:users.generatingPassword', 'Generating...')
             ) : (
               <>
                 <Icon name='key' size={14} />
                 {t(
-                  'admin.users.generateSecurePassword',
+                  'admin:users.generateSecurePassword',
                   'Generate Secure Password',
                 )}
               </>
@@ -324,28 +360,54 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Personal Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.create.personalInfo', 'Personal Information')}
+        </h3>
 
         <div className={s.formRow}>
-          <Form.Field name='first_name' label='First Name'>
-            <Form.Input placeholder='John' />
+          <Form.Field
+            name='first_name'
+            label={t('admin:users.create.firstName', 'First Name')}
+          >
+            <Form.Input
+              placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
+            />
           </Form.Field>
-          <Form.Field name='last_name' label='Last Name'>
-            <Form.Input placeholder='Doe' />
+          <Form.Field
+            name='last_name'
+            label={t('admin:users.create.lastName', 'Last Name')}
+          >
+            <Form.Input
+              placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
+            />
           </Form.Field>
         </div>
 
-        <Form.Field name='display_name' label='Display Name'>
-          <Form.Input placeholder='John Doe' />
+        <Form.Field
+          name='display_name'
+          label={t('admin:users.create.displayName', 'Display Name')}
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:users.create.displayNamePlaceholder',
+              'John Doe',
+            )}
+          />
         </Form.Field>
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Access &amp; Permissions</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
+        </h3>
 
         <Form.Field
           name='roles'
-          label={`Roles (${selectedRoles.length} selected)`}
+          label={t(
+            'admin:users.create.rolesSelected',
+            'Roles ({{count}} selected)',
+            { count: selectedRoles.length },
+          )}
         >
           <Form.CheckboxList
             items={roles}
@@ -356,18 +418,31 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchable
             searchValue={roleSearch}
             onSearch={setRoleSearch}
-            searchPlaceholder='Search roles...'
+            searchPlaceholder={t(
+              'admin:users.create.searchRoles',
+              'Search roles...',
+            )}
             valueKey='name'
             labelKey='name'
             itemDescription='description'
-            emptyMessage='No roles found'
-            loadingMessage='Loading roles...'
+            emptyMessage={t(
+              'admin:users.create.noRolesFound',
+              'No roles found',
+            )}
+            loadingMessage={t(
+              'admin:users.create.loadingRoles',
+              'Loading roles...',
+            )}
           />
         </Form.Field>
 
         <Form.Field
           name='groups'
-          label={`Groups (${selectedGroups.length} selected)`}
+          label={t(
+            'admin:users.create.groupsSelected',
+            'Groups ({{count}} selected)',
+            { count: selectedGroups.length },
+          )}
         >
           <Form.CheckboxList
             items={groups}
@@ -378,26 +453,37 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchable
             searchValue={groupSearch}
             onSearch={setGroupSearch}
-            searchPlaceholder='Search groups...'
+            searchPlaceholder={t(
+              'admin:users.create.searchGroups',
+              'Search groups...',
+            )}
             valueKey='id'
             labelKey='name'
             itemDescription='description'
-            emptyMessage='No groups found'
-            loadingMessage='Loading groups...'
+            emptyMessage={t(
+              'admin:users.create.noGroupsFound',
+              'No groups found',
+            )}
+            loadingMessage={t(
+              'admin:users.create.loadingGroups',
+              'Loading groups...',
+            )}
           />
         </Form.Field>
 
         <Form.Field name='is_active'>
-          <Form.Checkbox label='Active' />
+          <Form.Checkbox label={t('admin:users.create.active', 'Active')} />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel}>
-          Cancel
+          {t('admin:users.create.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Creating...' : 'Create User'}
+          {loading
+            ? t('admin:users.create.creating', 'Creating...')
+            : t('admin:users.create.submit', 'Create User')}
         </Button>
       </div>
     </>

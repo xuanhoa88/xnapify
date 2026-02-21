@@ -87,7 +87,9 @@ function EditUser({ userId }) {
         ).unwrap();
         history.push('/admin/users');
       } catch (err) {
-        setError(err || t('errors.updateUser', 'Failed to update user'));
+        setError(
+          err || t('admin:users.errors.updateUser', 'Failed to update user'),
+        );
       }
     },
     [dispatch, user, history, t],
@@ -123,15 +125,21 @@ function EditUser({ userId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='users' size={24} />}
-          title='Edit User'
-          subtitle='Modify user account details'
+          title={t('admin:users.edit.title', 'Edit User')}
+          subtitle={t(
+            'admin:users.edit.subtitle',
+            'Modify user account details',
+          )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            ← Back to Users
+            {t('admin:users.edit.backToUsers', '← Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <Loader variant='spinner' message='Loading user data...' />
+          <Loader
+            variant='spinner'
+            message={t('admin:users.edit.loadingUser', 'Loading user data...')}
+          />
         </div>
       </div>
     );
@@ -142,18 +150,23 @@ function EditUser({ userId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='users' size={24} />}
-          title='Edit User'
-          subtitle='Modify user account details'
+          title={t('admin:users.edit.title', 'Edit User')}
+          subtitle={t(
+            'admin:users.edit.subtitle',
+            'Modify user account details',
+          )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            ← Back to Users
+            {t('admin:users.edit.backToUsers', '← Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
-          <div className={s.formError}>Failed to load user data</div>
+          <div className={s.formError}>
+            {t('admin:users.edit.failedToLoad', 'Failed to load user data')}
+          </div>
           <div className={s.formActions}>
             <Button variant='secondary' onClick={() => handleCancel(false)}>
-              Back to Users
+              {t('admin:users.edit.backBtn', 'Back to Users')}
             </Button>
           </div>
         </div>
@@ -167,26 +180,29 @@ function EditUser({ userId }) {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='users' size={24} />}
-          title='Edit User'
-          subtitle='Modify user account details'
+          title={t('admin:users.edit.title', 'Edit User')}
+          subtitle={t(
+            'admin:users.edit.subtitle',
+            'Modify user account details',
+          )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            ← Back to Users
+            {t('admin:users.edit.backToUsers', '← Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
           <div className={s.formError}>
             {t(
-              'errors.cannotEditSelf',
+              'admin:users.errors.cannotEditSelf',
               'You cannot edit your own account from the admin panel. Please use your profile settings instead.',
             )}
           </div>
           <div className={s.formActions}>
             <Button variant='secondary' onClick={() => handleCancel(false)}>
-              Back to Users
+              {t('admin:users.edit.backBtn', 'Back to Users')}
             </Button>
             <Button variant='primary' onClick={() => history.push('/profile')}>
-              Go to Profile Settings
+              {t('admin:users.edit.goToProfile', 'Go to Profile Settings')}
             </Button>
           </div>
         </div>
@@ -198,14 +214,14 @@ function EditUser({ userId }) {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='users' size={24} />}
-        title='Edit User'
-        subtitle='Modify user account details'
+        title={t('admin:users.edit.title', 'Edit User')}
+        subtitle={t('admin:users.edit.subtitle', 'Modify user account details')}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Users
+          {t('admin:users.edit.backToUsers', '← Back to Users')}
         </Button>
       </Box.Header>
 
@@ -381,14 +397,18 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
       dispatch(
         showSuccessMessage({
           message: t(
-            'admin.users.passwordGenerated',
+            'admin:users.passwordGenerated',
             'Password generated successfully!',
           ),
         }),
       );
     } catch (err) {
       setError(
-        err || t('errors.generatePassword', 'Failed to generate password'),
+        err ||
+          t(
+            'admin:users.errors.generatePassword',
+            'Failed to generate password',
+          ),
       );
     } finally {
       setGeneratingPassword(false);
@@ -398,18 +418,39 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Account Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.edit.accountInfo', 'Account Information')}
+        </h3>
 
-        <Form.Field name='email' label='Email'>
+        <Form.Field name='email' label={t('admin:users.edit.email', 'Email')}>
           <Form.Input type='email' disabled />
         </Form.Field>
 
-        <Form.Field name='password' label='New Password (optional)'>
-          <Form.Password placeholder='Leave empty to keep current password' />
+        <Form.Field
+          name='password'
+          label={t('admin:users.edit.newPassword', 'New Password (optional)')}
+        >
+          <Form.Password
+            placeholder={t(
+              'admin:users.edit.newPasswordPlaceholder',
+              'Leave empty to keep current password',
+            )}
+          />
         </Form.Field>
 
-        <Form.Field name='password_confirmation' label='Confirm New Password'>
-          <Form.Password placeholder='Confirm new password' />
+        <Form.Field
+          name='password_confirmation'
+          label={t(
+            'admin:users.edit.confirmNewPassword',
+            'Confirm New Password',
+          )}
+        >
+          <Form.Password
+            placeholder={t(
+              'admin:users.edit.confirmNewPasswordPlaceholder',
+              'Confirm new password',
+            )}
+          />
         </Form.Field>
 
         <div className={s.generatePasswordLink}>
@@ -421,11 +462,11 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             className={s.generateBtn}
           >
             {generatingPassword ? (
-              t('admin.users.generatingPassword', 'Generating...')
+              t('admin:users.generatingPassword', 'Generating...')
             ) : (
               <>
                 <Icon name='key' size={14} />
-                {t('admin.users.generateNewPassword', 'Generate New Password')}
+                {t('admin:users.generateNewPassword', 'Generate New Password')}
               </>
             )}
           </Button>
@@ -433,28 +474,54 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Personal Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.edit.personalInfo', 'Personal Information')}
+        </h3>
 
         <div className={s.formRow}>
-          <Form.Field name='first_name' label='First Name'>
-            <Form.Input placeholder='John' />
+          <Form.Field
+            name='first_name'
+            label={t('admin:users.edit.firstName', 'First Name')}
+          >
+            <Form.Input
+              placeholder={t('admin:users.edit.firstNamePlaceholder', 'John')}
+            />
           </Form.Field>
-          <Form.Field name='last_name' label='Last Name'>
-            <Form.Input placeholder='Doe' />
+          <Form.Field
+            name='last_name'
+            label={t('admin:users.edit.lastName', 'Last Name')}
+          >
+            <Form.Input
+              placeholder={t('admin:users.edit.lastNamePlaceholder', 'Doe')}
+            />
           </Form.Field>
         </div>
 
-        <Form.Field name='display_name' label='Display Name'>
-          <Form.Input placeholder='John Doe' />
+        <Form.Field
+          name='display_name'
+          label={t('admin:users.edit.displayName', 'Display Name')}
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:users.edit.displayNamePlaceholder',
+              'John Doe',
+            )}
+          />
         </Form.Field>
       </div>
 
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Access &amp; Permissions</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:users.edit.accessAndPermissions', 'Access & Permissions')}
+        </h3>
 
         <Form.Field
           name='roles'
-          label={`Roles (${selectedRoles.length} selected)`}
+          label={t(
+            'admin:users.edit.rolesSelected',
+            'Roles ({{count}} selected)',
+            { count: selectedRoles.length },
+          )}
         >
           <Form.CheckboxList
             items={roles}
@@ -465,18 +532,28 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchable
             searchValue={roleSearch}
             onSearch={setRoleSearch}
-            searchPlaceholder='Search roles...'
+            searchPlaceholder={t(
+              'admin:users.edit.searchRoles',
+              'Search roles...',
+            )}
             valueKey='name'
             labelKey='name'
             itemDescription='description'
-            emptyMessage='No roles found'
-            loadingMessage='Loading roles...'
+            emptyMessage={t('admin:users.edit.noRolesFound', 'No roles found')}
+            loadingMessage={t(
+              'admin:users.edit.loadingRoles',
+              'Loading roles...',
+            )}
           />
         </Form.Field>
 
         <Form.Field
           name='groups'
-          label={`Groups (${selectedGroups.length} selected)`}
+          label={t(
+            'admin:users.edit.groupsSelected',
+            'Groups ({{count}} selected)',
+            { count: selectedGroups.length },
+          )}
         >
           <Form.CheckboxList
             items={groups}
@@ -487,26 +564,37 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchable
             searchValue={groupSearch}
             onSearch={setGroupSearch}
-            searchPlaceholder='Search groups...'
+            searchPlaceholder={t(
+              'admin:users.edit.searchGroups',
+              'Search groups...',
+            )}
             valueKey='id'
             labelKey='name'
             itemDescription='description'
-            emptyMessage='No groups found'
-            loadingMessage='Loading groups...'
+            emptyMessage={t(
+              'admin:users.edit.noGroupsFound',
+              'No groups found',
+            )}
+            loadingMessage={t(
+              'admin:users.edit.loadingGroups',
+              'Loading groups...',
+            )}
           />
         </Form.Field>
 
         <Form.Field name='is_active'>
-          <Form.Checkbox label='Active' />
+          <Form.Checkbox label={t('admin:users.edit.active', 'Active')} />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel}>
-          Cancel
+          {t('admin:users.edit.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Saving...' : 'Save Changes'}
+          {loading
+            ? t('admin:users.edit.saving', 'Saving...')
+            : t('admin:users.edit.saveChanges', 'Save Changes')}
         </Button>
       </div>
     </>

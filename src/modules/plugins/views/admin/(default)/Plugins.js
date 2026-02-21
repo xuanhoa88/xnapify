@@ -136,8 +136,8 @@ function Plugins() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='extension' size={24} />}
-          title={t('navigation.plugins', 'Plugins')}
-          subtitle='Manage system plugins'
+          title={t('admin:navigation.plugins', 'Plugins')}
+          subtitle={t('admin:plugins.subtitle', 'Manage system plugins')}
         />
         <Loader variant='cards' />
       </div>
@@ -148,8 +148,8 @@ function Plugins() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='extension' size={24} />}
-        title={t('navigation.plugins', 'Plugins')}
-        subtitle='Manage system plugins'
+        title={t('admin:navigation.plugins', 'Plugins')}
+        subtitle={t('admin:plugins.subtitle', 'Manage system plugins')}
       >
         <div className={s.headerActions}>
           <input
@@ -165,7 +165,9 @@ function Plugins() {
             disabled={!canCreate || uploading}
           >
             <Icon name='plus' size={16} />
-            {uploading ? 'Uploading...' : 'Upload Plugin'}
+            {uploading
+              ? t('admin:plugins.uploading', 'Uploading...')
+              : t('admin:plugins.upload', 'Upload Plugin')}
           </Button>
         </div>
       </Box.Header>
@@ -174,7 +176,7 @@ function Plugins() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder='Search plugins...'
+        placeholder={t('admin:plugins.search', 'Search plugins...')}
       />
 
       <div className={s.grid}>
@@ -194,8 +196,11 @@ function Plugins() {
 
       <ConfirmModal.Delete
         ref={deleteModalRef}
-        title='Uninstall Plugin'
-        message='Are you sure you want to uninstall this plugin? This will remove it from the database.'
+        title={t('admin:plugins.uninstall', 'Uninstall Plugin')}
+        message={t(
+          'admin:plugins.uninstall_message',
+          'Are you sure you want to uninstall this plugin? This will remove it from the database.',
+        )}
         getItemName={p => p.name}
         onDelete={handleDeleteAction}
       />

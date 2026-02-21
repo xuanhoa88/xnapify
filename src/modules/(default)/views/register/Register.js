@@ -150,18 +150,21 @@ function RegisterFormFields({ loading }) {
 
   return (
     <>
-      <Form.Field name='email' label={t('register.email')}>
+      <Form.Field name='email' label={t('register.email', 'Email')}>
         <Form.Input
           type='email'
           placeholder={t('register.emailPlaceholder', 'your.email@example.com')}
         />
       </Form.Field>
 
-      <Form.Field name='password' label={t('register.password')}>
+      <Form.Field name='password' label={t('register.password', 'Password')}>
         <Form.Password />
       </Form.Field>
 
-      <Form.Field name='confirmPassword' label={t('register.confirmPassword')}>
+      <Form.Field
+        name='confirmPassword'
+        label={t('register.confirmPassword', 'Confirm Password')}
+      >
         <Form.Password />
       </Form.Field>
 
@@ -172,7 +175,9 @@ function RegisterFormFields({ loading }) {
         className={s.submitButton}
         loading={loading || isSubmitting}
       >
-        {loading ? t('register.loading') : t('register.submit')}
+        {loading
+          ? t('register.loading', 'Loading...')
+          : t('register.submit', 'Register')}
       </Button>
     </>
   );

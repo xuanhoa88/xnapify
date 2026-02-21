@@ -150,17 +150,23 @@ function SecurityFormFields({ loading, dispatch }) {
 
   return (
     <>
-      <Form.Field name='currentPassword' label={t('profile.currentPassword')}>
+      <Form.Field
+        name='currentPassword'
+        label={t('profile.currentPassword', 'Current Password')}
+      >
         <Form.Password />
       </Form.Field>
 
-      <Form.Field name='newPassword' label={t('profile.newPassword')}>
+      <Form.Field
+        name='newPassword'
+        label={t('profile.newPassword', 'New Password')}
+      >
         <Form.Password />
       </Form.Field>
 
       <Form.Field
         name='confirmNewPassword'
-        label={t('profile.confirmNewPassword')}
+        label={t('profile.confirmNewPassword', 'Confirm New Password')}
       >
         <Form.Password />
       </Form.Field>
@@ -190,7 +196,9 @@ function SecurityFormFields({ loading, dispatch }) {
         className={s.buttonSecondary}
         loading={loading || isSubmitting}
       >
-        {loading ? t('profile.changingPassword') : t('profile.updatePassword')}
+        {loading
+          ? t('profile.changingPassword', 'Changing Password...')
+          : t('profile.updatePassword', 'Update Password')}
       </Button>
     </>
   );

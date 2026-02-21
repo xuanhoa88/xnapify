@@ -71,7 +71,7 @@ function Users() {
     dataKey: 'roles',
     mapOption: r => ({ value: r.name, label: r.name }),
     includeAllOption: true,
-    allOptionLabel: 'All Roles',
+    allOptionLabel: t('admin:users.list.allRoles', 'All Roles'),
   });
 
   const {
@@ -86,7 +86,7 @@ function Users() {
     dataKey: 'groups',
     mapOption: g => ({ value: g.name, label: g.name }),
     includeAllOption: true,
-    allOptionLabel: 'All Groups',
+    allOptionLabel: t('admin:users.list.allGroups', 'All Groups'),
   });
 
   // Filter state
@@ -266,10 +266,16 @@ function Users() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='users' size={24} />}
-          title='User Management'
-          subtitle='Manage users, roles, and permissions'
+          title={t('admin:users.list.title', 'User Management')}
+          subtitle={t(
+            'admin:users.list.subtitle',
+            'Manage users, roles, and permissions',
+          )}
         />
-        <Loader variant='skeleton' message='Loading users...' />
+        <Loader
+          variant='skeleton'
+          message={t('admin:users.list.loadingUsers', 'Loading users...')}
+        />
       </div>
     );
   }
@@ -279,11 +285,14 @@ function Users() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='users' size={24} />}
-          title='User Management'
-          subtitle='Manage users, roles, and permissions'
+          title={t('admin:users.list.title', 'User Management')}
+          subtitle={t(
+            'admin:users.list.subtitle',
+            'Manage users, roles, and permissions',
+          )}
         />
         <Table.Error
-          title={t('users.errorLoading', 'Error loading users')}
+          title={t('admin:users.errors.loadUsers', 'Error loading users')}
           error={error}
           onRetry={refreshUsers}
         />
@@ -295,8 +304,11 @@ function Users() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='users' size={24} />}
-        title='User Management'
-        subtitle='Manage users, roles, and permissions'
+        title={t('admin:users.list.title', 'User Management')}
+        subtitle={t(
+          'admin:users.list.subtitle',
+          'Manage users, roles, and permissions',
+        )}
       >
         <Button
           variant='primary'
@@ -305,13 +317,13 @@ function Users() {
           title={
             !canCreate
               ? t(
-                  'users.noPermissionToCreate',
+                  'admin:users.noPermissionToCreate',
                   'You do not have permission to create users',
                 )
               : undefined
           }
         >
-          Add User
+          {t('admin:users.list.addUser', 'Add User')}
         </Button>
       </Box.Header>
 
@@ -319,24 +331,30 @@ function Users() {
         <Table.BulkActionsBar
           count={selectedUsers.length}
           actions={[
-            { label: 'Assign Roles', onClick: openBulkRolesModal },
-            { label: 'Assign Groups', onClick: openBulkGroupsModal },
+            {
+              label: t('admin:users.list.assignRoles', 'Assign Roles'),
+              onClick: openBulkRolesModal,
+            },
+            {
+              label: t('admin:users.list.assignGroups', 'Assign Groups'),
+              onClick: openBulkGroupsModal,
+            },
           ]}
           moreActions={[
             {
-              label: 'Activate',
+              label: t('admin:users.list.activate', 'Activate'),
               icon: <Icon name='check' size={16} />,
               onClick: handleBulkActivate,
             },
             {
-              label: 'Deactivate',
+              label: t('admin:users.list.deactivate', 'Deactivate'),
               icon: <Icon name='close' size={16} />,
               variant: 'warning',
               onClick: handleBulkDeactivate,
             },
             { type: 'divider' },
             {
-              label: 'Delete',
+              label: t('admin:users.list.delete', 'Delete'),
               icon: <Icon name='trash' size={16} />,
               variant: 'danger',
               onClick: handleBulkDelete,
@@ -350,7 +368,7 @@ function Users() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder='Search users...'
+        placeholder={t('admin:users.list.searchUsers', 'Search users...')}
       >
         <SearchableSelect
           className={s.filterSearchableSelect}
@@ -362,8 +380,11 @@ function Users() {
           hasMore={rolesHasMore}
           loading={rolesLoading}
           loadingMore={rolesLoadingMore}
-          placeholder='All Roles'
-          searchPlaceholder='Search roles...'
+          placeholder={t('admin:users.list.allRoles', 'All Roles')}
+          searchPlaceholder={t(
+            'admin:users.list.searchRoles',
+            'Search roles...',
+          )}
         />
         <SearchableSelect
           className={s.filterSearchableSelect}
@@ -375,19 +396,28 @@ function Users() {
           hasMore={groupsHasMore}
           loading={groupsLoading}
           loadingMore={groupsLoadingMore}
-          placeholder='All Groups'
-          searchPlaceholder='Search groups...'
+          placeholder={t('admin:users.list.allGroups', 'All Groups')}
+          searchPlaceholder={t(
+            'admin:users.list.searchGroups',
+            'Search groups...',
+          )}
         />
         <SearchableSelect
           className={s.filterSearchableSelect}
           options={[
-            { value: '', label: 'All Status' },
-            { value: 'active', label: 'Active' },
-            { value: 'inactive', label: 'Inactive' },
+            { value: '', label: t('admin:users.list.allStatus', 'All Status') },
+            {
+              value: 'active',
+              label: t('admin:users.list.statusActive', 'Active'),
+            },
+            {
+              value: 'inactive',
+              label: t('admin:users.list.statusInactive', 'Inactive'),
+            },
           ]}
           value={statusFilter}
           onChange={handleStatusFilterChange}
-          placeholder='All Status'
+          placeholder={t('admin:users.list.allStatus', 'All Status')}
           showSearch={false}
         />
         <div className={s.filterActions}>
@@ -397,9 +427,9 @@ function Users() {
               size='small'
               onClick={handleClearAllFilters}
               type='button'
-              title='Reset all filters'
+              title={t('admin:users.list.resetAllFilters', 'Reset all filters')}
             >
-              ✕ Clear Filters
+              ✕ {t('admin:users.list.clearFilters', 'Clear Filters')}
             </Button>
           )}
         </div>
@@ -419,12 +449,12 @@ function Users() {
                   onChange={handleSelectAll}
                 />
               </th>
-              <th>User</th>
-              <th>Email</th>
-              <th>Roles</th>
-              <th>Groups</th>
-              <th>Status</th>
-              <th>Joined</th>
+              <th>{t('admin:users.list.user', 'User')}</th>
+              <th>{t('admin:users.list.email', 'Email')}</th>
+              <th>{t('admin:users.list.roles', 'Roles')}</th>
+              <th>{t('admin:users.list.groups', 'Groups')}</th>
+              <th>{t('admin:users.list.status', 'Status')}</th>
+              <th>{t('admin:users.list.joined', 'Joined')}</th>
               <th />
             </tr>
           </thead>
@@ -448,14 +478,22 @@ function Users() {
                     <span>
                       {user.display_name || user.email}
                       {currentUser && currentUser.id === user.id && (
-                        <span className={s.youBadge}> (You)</span>
+                        <span className={s.youBadge}>
+                          {' '}
+                          {t('admin:users.list.you', '(You)')}
+                        </span>
                       )}
                     </span>
                   </div>
                 </td>
                 <td>{user.email}</td>
                 <td>
-                  <Tag.List emptyText='No roles assigned'>
+                  <Tag.List
+                    emptyText={t(
+                      'admin:users.list.noRolesAssigned',
+                      'No roles assigned',
+                    )}
+                  >
                     {user.roles &&
                       user.roles.length > 0 &&
                       user.roles.map(role => (
@@ -464,7 +502,12 @@ function Users() {
                   </Tag.List>
                 </td>
                 <td>
-                  <Tag.List emptyText='No groups assigned'>
+                  <Tag.List
+                    emptyText={t(
+                      'admin:users.list.noGroupsAssigned',
+                      'No groups assigned',
+                    )}
+                  >
                     {user.groups &&
                       user.groups.map(group => (
                         <GroupTag key={group.id} name={group.name} />
@@ -473,7 +516,9 @@ function Users() {
                 </td>
                 <td>
                   <Tag variant={user.is_active ? 'success' : 'error'}>
-                    {user.is_active ? 'Active' : 'Inactive'}
+                    {user.is_active
+                      ? t('admin:users.list.statusActive', 'Active')
+                      : t('admin:users.list.statusInactive', 'Inactive')}
                   </Tag>
                 </td>
                 <td>
@@ -489,8 +534,11 @@ function Users() {
                       iconOnly
                       title={
                         currentUser && currentUser.id === user.id
-                          ? 'Cannot edit your own account'
-                          : 'Edit'
+                          ? t(
+                              'admin:users.list.cannotEditSelf',
+                              'Cannot edit your own account',
+                            )
+                          : t('admin:users.list.edit', 'Edit')
                       }
                       disabled={currentUser && currentUser.id === user.id}
                       onClick={() =>
@@ -505,8 +553,11 @@ function Users() {
                       iconOnly
                       title={
                         currentUser && currentUser.id === user.id
-                          ? 'Cannot delete your own account'
-                          : 'Delete'
+                          ? t(
+                              'admin:users.list.cannotDeleteSelf',
+                              'Cannot delete your own account',
+                            )
+                          : t('admin:users.list.delete', 'Delete')
                       }
                       disabled={currentUser && currentUser.id === user.id}
                       onClick={() => handleDelete(user)}
@@ -536,8 +587,11 @@ function Users() {
       {users.length === 0 && (
         <Table.Empty
           icon='users'
-          title='No users found'
-          description='Try adjusting your search or filter criteria, or add a new user to get started.'
+          title={t('admin:users.list.noUsersFound', 'No users found')}
+          description={t(
+            'admin:users.list.noUsersFoundDescription',
+            'Try adjusting your search or filter criteria, or add a new user to get started.',
+          )}
         >
           <Button
             variant='primary'
@@ -546,13 +600,13 @@ function Users() {
             title={
               !canCreate
                 ? t(
-                    'users.noPermissionToCreate',
+                    'admin:users.noPermissionToCreate',
                     'You do not have permission to create users',
                   )
                 : undefined
             }
           >
-            Add User
+            {t('admin:users.list.addUser', 'Add User')}
           </Button>
         </Table.Empty>
       )}

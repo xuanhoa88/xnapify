@@ -7,6 +7,7 @@
 
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import {
   Icon,
   Table,
@@ -24,13 +25,17 @@ function PluginActionsDropdown({
   onUpgrade,
   onDelete,
 }) {
+  const { t } = useTranslation();
+
   const handleToggle = useCallback(() => {
     onToggle(isOpen ? null : plugin.id);
   }, [isOpen, plugin.id, onToggle]);
 
   return (
     <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger title='More actions'>
+      <ActionsDropdown.Trigger
+        title={t('admin:common.moreActions', 'More actions')}
+      >
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
@@ -40,7 +45,7 @@ function PluginActionsDropdown({
           disabled={!plugin.isInstalled}
           permission='plugins:update'
         >
-          Check for Updates
+          {t('admin:plugins.checkForUpdates', 'Check for Updates')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Divider />
         <ActionsDropdown.Item
@@ -49,7 +54,7 @@ function PluginActionsDropdown({
           variant='danger'
           permission='plugins:delete'
         >
-          Uninstall
+          {t('admin:plugins.uninstall', 'Uninstall')}
         </ActionsDropdown.Item>
       </ActionsDropdown.Menu>
     </ActionsDropdown>

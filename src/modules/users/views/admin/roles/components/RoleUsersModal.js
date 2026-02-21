@@ -72,7 +72,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
           setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadUsers', 'Failed to load users'));
+        setError(err || t('admin:errors.loadUsers', 'Failed to load users'));
       } finally {
         setUsersLoading(false);
       }
@@ -127,30 +127,39 @@ const RoleUsersModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Users with &quot;{(role && role.name) || t('common.unknown', 'Unknown')}
-        &quot; Role
+        {t('admin:roles.usersWithRole', 'Users with "{{roleName}}" Role', {
+          roleName: (role && role.name) || t('admin:common.unknown', 'Unknown'),
+        })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          View all users that have this role assigned.
+          {t(
+            'admin:roles.viewUsersDescription',
+            'View all users that have this role assigned.',
+          )}
         </Modal.Description>
 
         {/* Search Input */}
         <Table.SearchBar
           value={search}
           onChange={handleSearchChange}
-          placeholder={t('common.searchUsers', 'Search users...')}
+          placeholder={t('admin:common.searchUsers', 'Search users...')}
           className={s.modalSearchBar}
         />
 
         <div className={s.usersList}>
           {usersLoading ? (
-            <div className={s.noUsers}>Loading users...</div>
+            <div className={s.noUsers}>
+              {t('admin:common.loadingUsers', 'Loading users...')}
+            </div>
           ) : users.length === 0 ? (
             <div className={s.noUsers}>
               {search
-                ? 'No users match your search'
-                : t('roles.noUsersWithRole', 'No users found with this role')}
+                ? t('admin:roles.noUsersMatch', 'No users match your search')
+                : t(
+                    'admin:roles.noUsersWithRole',
+                    'No users found with this role',
+                  )}
             </div>
           ) : (
             users.map(user => (
@@ -168,15 +177,15 @@ const RoleUsersModal = forwardRef((props, ref) => {
                   <span className={s.userName}>
                     {(user.profile && user.profile.display_name) ||
                       user.display_name ||
-                      'N/A'}
+                      t('admin:common.na', 'N/A')}
                   </span>
                   <span className={s.userEmail}>{user.email}</span>
                 </div>
                 <div className={s.userMeta}>
                   <Tag variant={user.is_active ? 'success' : 'error'}>
                     {user.is_active
-                      ? t('common.active', 'Active')
-                      : t('common.inactive', 'Inactive')}
+                      ? t('admin:common.active', 'Active')
+                      : t('admin:common.inactive', 'Inactive')}
                   </Tag>
                 </div>
               </div>
@@ -197,7 +206,9 @@ const RoleUsersModal = forwardRef((props, ref) => {
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Close</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:common.close', 'Close')}
+          </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
     </Modal>

@@ -67,7 +67,7 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(role);
     } catch (err) {
-      setError(err || t('roles.deleteError', 'Failed to delete role'));
+      setError(err || t('admin:roles.deleteError', 'Failed to delete role'));
     } finally {
       setDeleting(false);
     }
@@ -76,12 +76,12 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('roles.deleteTitle', 'Delete Role')}
+        {t('admin:roles.deleteTitle', 'Delete Role')}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
           {t(
-            'roles.deleteConfirmation',
+            'admin:roles.deleteConfirmation',
             'Are you sure you want to delete the role "{{roleName}}"?',
             { roleName: role && role.name },
           )}
@@ -94,7 +94,7 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={deleting}
           >
-            {t('common.cancel', 'Cancel')}
+            {t('admin:common.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -102,8 +102,8 @@ const DeleteRoleModal = forwardRef(({ onSuccess }, ref) => {
             disabled={deleting}
           >
             {deleting
-              ? t('common.deleting', 'Deleting...')
-              : t('common.delete', 'Delete')}
+              ? t('admin:common.deleting', 'Deleting...')
+              : t('admin:common.delete', 'Delete')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

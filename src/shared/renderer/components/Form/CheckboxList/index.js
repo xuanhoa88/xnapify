@@ -17,10 +17,11 @@ import {
 import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { useInfiniteScroll } from '../../InfiniteScroll';
-import { useFormField, useMergeRefs } from '../FormContext';
 import Icon from '../../Icon';
 import Button from '../../Button';
+import { useFormField, useMergeRefs } from '../FormContext';
 import s from './FormCheckboxList.css';
 
 /**
@@ -189,6 +190,16 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
   },
   forwardedRef,
 ) {
+  const { t } = useTranslation();
+
+  const displayEmptyMessage =
+    emptyMessage || t('shared:components.checkboxList.empty', 'No items found');
+  const displayLoadingMessage =
+    loadingMessage || t('shared:components.checkboxList.loading', 'Loading...');
+  const displaySearchPlaceholder =
+    searchPlaceholder ||
+    t('shared:components.checkboxList.searchPlaceholder', 'Search...');
+
   const { id, name, error } = useFormField();
   const { watch, setValue, getValues } = useFormContext();
   const containerRef = useRef(null);
@@ -428,12 +439,12 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
           </span>
           <input
             type='text'
-            placeholder={searchPlaceholder}
+            placeholder={displaySearchPlaceholder}
             value={effectiveSearchValue}
             onChange={handleSearchChange}
             className={s.searchInput}
             disabled={disabled}
-            aria-label={searchPlaceholder}
+            aria-label={displaySearchPlaceholder}
           />
           {effectiveSearchValue && (
             <Button
@@ -442,7 +453,10 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
               iconOnly
               className={s.searchClear}
               onClick={handleClearSearch}
-              title='Clear search'
+              title={t(
+                'shared:components.checkboxList.clearSearch',
+                'Clear search',
+              )}
               disabled={disabled}
             >
               ✕
@@ -452,7 +466,7 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
       )}
 
       {loading ? (
-        <div className={s.loading}>{loadingMessage}</div>
+        <div className={s.loading}>{displayLoadingMessage}</div>
       ) : (
         <div
           ref={handleRef}
@@ -491,11 +505,16 @@ const FormCheckboxList = forwardRef(function FormCheckboxList$(
                 : // Flat rendering
                   items.map(renderCheckboxItem)}
               {loadingMore && (
-                <div className={s.loadingMore}>Loading more...</div>
+                <div className={s.loadingMore}>
+                  {t(
+                    'shared:components.checkboxList.loadingMore',
+                    'Loading more...',
+                  )}
+                </div>
               )}
             </>
           ) : (
-            <div className={s.empty}>{emptyMessage}</div>
+            <div className={s.empty}>{displayEmptyMessage}</div>
           )}
         </div>
       )}

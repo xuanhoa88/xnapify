@@ -146,7 +146,7 @@ function Drawer() {
         items: [
           hasPermission(user, 'nodered:admin') && {
             path: '/~/red/admin',
-            label: 'Node-RED',
+            label: t('navigation.nodeRed', 'Node-RED'),
             icon: 'node-red',
             external: true,
           },
@@ -194,7 +194,7 @@ function Drawer() {
             variant='ghost'
             iconOnly
             onClick={handleCloseDrawer}
-            title='Close menu'
+            title={t('common.closeMenu', 'Close menu')}
           >
             <Icon name='close' size={20} />
           </Button>
@@ -275,7 +275,7 @@ function Drawer() {
               </div>
               <div className={s.userDetails}>
                 <span className={s.userName}>
-                  {user.display_name || 'Admin'}
+                  {user.display_name || t('common.admin', 'Admin')}
                 </span>
                 <span className={s.userRole}>{user.email}</span>
               </div>

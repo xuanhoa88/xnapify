@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   getLocale,
@@ -22,6 +23,7 @@ import s from './LanguageSwitcher.css';
  * Dropdown-based language switcher for the main header
  */
 function LanguageSwitcher() {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentLocale = useSelector(getLocale);
   const availableLocales = useSelector(getAvailableLocales);
@@ -77,7 +79,7 @@ function LanguageSwitcher() {
         variant='unstyled'
         className={s.trigger}
         onClick={handleToggle}
-        title='Language switcher'
+        title={t('common.languageSwitcher', 'Language switcher')}
       >
         <Icon name='globe' size={18} className={s.globeIcon} />
         <span className={s.langName}>{currentLanguageName}</span>

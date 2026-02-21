@@ -80,7 +80,9 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
           setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadGroups', 'Failed to load groups'));
+        setError(
+          err || t('admin:users.errors.loadGroups', 'Failed to load groups'),
+        );
       } finally {
         setGroupsLoading(false);
       }
@@ -178,7 +180,9 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
       onSuccess && onSuccess();
       handleClose();
     } catch (err) {
-      setError(err || t('errors.assignGroups', 'Failed to assign groups'));
+      setError(
+        err || t('admin:users.errors.assignGroups', 'Failed to assign groups'),
+      );
     }
   }, [
     dispatch,
@@ -192,15 +196,29 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   ]);
 
   const description = isBulk
-    ? 'Select groups to assign to the selected users.'
-    : 'Select groups for this user. The user will inherit roles from these groups.';
+    ? t(
+        'admin:users.groups.assignGroupsBulkDesc',
+        'Select groups to assign to the selected users.',
+      )
+    : t(
+        'admin:users.groups.assignGroupsDesc',
+        'Select groups for this user. The user will inherit roles from these groups.',
+      );
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
         {isBulk
-          ? `Assign Groups to ${bulkUserIds.length} Users`
-          : `Manage Groups for "${user && (user.display_name || user.email)}"`}
+          ? t(
+              'admin:users.groups.assignGroupsBulk',
+              'Assign Groups to {{count}} Users',
+              { count: bulkUserIds.length },
+            )
+          : t(
+              'admin:users.groups.manageGroups',
+              'Manage Groups for "{{name}}"',
+              { name: user && (user.display_name || user.email) },
+            )}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>{description}</Modal.Description>
@@ -209,19 +227,27 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
         <Table.SearchBar
           value={searchTerm}
           onChange={handleSearchChange}
-          placeholder='Search groups...'
+          placeholder={t('admin:users.groups.searchGroups', 'Search groups...')}
           debounce={300}
           className={s.modalSearchBar}
         />
 
         <div className={s.checkboxList}>
           {groupsLoading ? (
-            <div className={s.noItems}>Loading groups...</div>
+            <div className={s.noItems}>
+              {t('admin:users.groups.loadingGroups', 'Loading groups...')}
+            </div>
           ) : groups.length === 0 ? (
             <div className={s.noItems}>
               {searchTerm
-                ? 'No groups match your search'
-                : 'No groups available'}
+                ? t(
+                    'admin:users.groups.noGroupsMatch',
+                    'No groups match your search',
+                  )
+                : t(
+                    'admin:users.groups.noGroupsAvailable',
+                    'No groups available',
+                  )}
             </div>
           ) : (
             groups.map(group => (
@@ -275,13 +301,17 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Footer>
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:users.groups.cancel', 'Cancel')}
+          </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleSave}
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading
+              ? t('admin:users.groups.saving', 'Saving...')
+              : t('admin:users.groups.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

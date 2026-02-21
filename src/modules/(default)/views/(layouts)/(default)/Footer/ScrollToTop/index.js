@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../../../../../shared/renderer/components/Icon';
 import Button from '../../../../../../../shared/renderer/components/Button';
 import s from './ScrollToTop.css';
@@ -16,6 +17,7 @@ import s from './ScrollToTop.css';
  * Floating button that appears when user scrolls down
  */
 function ScrollToTop() {
+  const { t } = useTranslation();
   const [showScroll, setShowScroll] = useState(false);
 
   useEffect(() => {
@@ -68,7 +70,7 @@ function ScrollToTop() {
       iconOnly
       className={clsx(s.scrollToTop, { [s.visible]: showScroll })}
       onClick={scrollToTop}
-      title='Scroll to top'
+      title={t('common.scrollToTop', 'Scroll to top')}
     >
       <Icon name='arrowUp' size={24} className={s.icon} />
     </Button>

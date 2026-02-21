@@ -73,7 +73,7 @@ const RoleGroupsModal = forwardRef((props, ref) => {
           setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadGroups', 'Failed to load groups'));
+        setError(err || t('admin:errors.loadGroups', 'Failed to load groups'));
       } finally {
         setGroupsLoading(false);
       }
@@ -128,31 +128,39 @@ const RoleGroupsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Groups with &quot;
-        {(role && role.name) || t('common.unknown', 'Unknown')}
-        &quot; Role
+        {t('admin:roles.groupsWithRole', 'Groups with "{{roleName}}" Role', {
+          roleName: (role && role.name) || t('admin:common.unknown', 'Unknown'),
+        })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          View all groups that have this role assigned.
+          {t(
+            'admin:roles.viewGroupsDescription',
+            'View all groups that have this role assigned.',
+          )}
         </Modal.Description>
 
         {/* Search Input */}
         <Table.SearchBar
           value={search}
           onChange={handleSearchChange}
-          placeholder={t('common.searchGroups', 'Search groups...')}
+          placeholder={t('admin:common.searchGroups', 'Search groups...')}
           className={s.modalSearchBar}
         />
 
         <div className={s.groupsList}>
           {groupsLoading ? (
-            <div className={s.noGroups}>Loading groups...</div>
+            <div className={s.noGroups}>
+              {t('admin:common.loadingGroups', 'Loading groups...')}
+            </div>
           ) : groups.length === 0 ? (
             <div className={s.noGroups}>
               {search
-                ? 'No groups match your search'
-                : t('roles.noGroupsWithRole', 'No groups found with this role')}
+                ? t('admin:roles.noGroupsMatch', 'No groups match your search')
+                : t(
+                    'admin:roles.noGroupsWithRole',
+                    'No groups found with this role',
+                  )}
             </div>
           ) : (
             groups.map(group => (
@@ -163,12 +171,15 @@ const RoleGroupsModal = forwardRef((props, ref) => {
                 <div className={s.groupInfo}>
                   <span className={s.groupName}>{group.name}</span>
                   <span className={s.groupDesc}>
-                    {group.description || 'No description'}
+                    {group.description ||
+                      t('admin:common.noDescription', 'No description')}
                   </span>
                 </div>
                 <div className={s.groupMeta}>
                   <span className={s.userCount}>
-                    {group.userCount || 0} users
+                    {t('admin:common.usersCount', '{{count}} users', {
+                      count: group.userCount || 0,
+                    })}
                   </span>
                 </div>
               </div>
@@ -189,7 +200,9 @@ const RoleGroupsModal = forwardRef((props, ref) => {
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Close</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:common.close', 'Close')}
+          </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
     </Modal>

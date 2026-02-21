@@ -7,6 +7,7 @@
 
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../Icon';
 import Button from '../../../Button';
 import s from './Error.css';
@@ -19,22 +20,29 @@ import s from './Error.css';
  */
 function Error({
   icon = 'alert-circle',
-  title = 'Error loading data',
+  title,
   error,
-  retryLabel = 'Retry',
+  retryLabel,
   onRetry,
   className,
 }) {
+  const { t } = useTranslation();
+
+  const displayTitle =
+    title || t('shared:components.table.error.title', 'Error loading data');
+  const displayRetryLabel =
+    retryLabel || t('shared:components.table.error.retry', 'Retry');
+
   return (
     <div className={clsx(s.root, className)}>
       <div className={s.iconWrapper}>
         <Icon name={icon} size={48} />
       </div>
-      <h3 className={s.title}>{title}</h3>
+      <h3 className={s.title}>{displayTitle}</h3>
       {error && <p className={s.error}>{String(error)}</p>}
       {onRetry && (
         <Button variant='primary' onClick={onRetry}>
-          {retryLabel}
+          {displayRetryLabel}
         </Button>
       )}
     </div>

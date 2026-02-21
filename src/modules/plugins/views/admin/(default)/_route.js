@@ -29,9 +29,9 @@ export function register({ store, i18n }) {
     registerMenu({
       ns: 'admin',
       item: {
-        ns: i18n.t('navigation.system', 'System'),
+        ns: i18n.t('admin:navigation.system', 'System'),
         path: '/admin/plugins',
-        label: i18n.t('navigation.plugins', 'Plugins'),
+        label: i18n.t('admin:navigation.plugins', 'Plugins'),
         icon: 'extension', // or 'puzzle-piece' if available, checking lucide icons
         permission: 'plugins:read',
         order: 30,
@@ -57,7 +57,7 @@ export function unregister({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.plugins', 'Plugins'),
+    title: i18n.t('admin:navigation.plugins', 'Plugins'),
   };
 }
 
@@ -68,7 +68,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.plugins', 'Plugins'),
+        label: i18n.t('admin:navigation.plugins', 'Plugins'),
         url: path,
       },
       'admin',

@@ -114,13 +114,16 @@ function DeleteAccountFormFields({ loading }) {
 
   return (
     <>
-      <Form.Field name='password' label={t('profile.currentPassword')}>
+      <Form.Field
+        name='password'
+        label={t('profile.currentPassword', 'Current Password')}
+      >
         <Form.Password />
       </Form.Field>
 
       <Form.Field
         name='confirmPassword'
-        label={t('profile.confirmCurrentPassword')}
+        label={t('profile.confirmCurrentPassword', 'Confirm Current Password')}
       >
         <Form.Password />
       </Form.Field>
@@ -132,7 +135,7 @@ function DeleteAccountFormFields({ loading }) {
         loading={loading || isSubmitting}
       >
         {loading
-          ? t('profile.deletingAccount')
+          ? t('profile.deletingAccount', 'Deleting Account...')
           : t('profile.deleteAccountButton', 'Delete My Account')}
       </Button>
     </>

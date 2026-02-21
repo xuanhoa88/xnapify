@@ -24,9 +24,9 @@ export function register({ store, i18n }) {
     registerMenu({
       ns: 'admin',
       item: {
-        ns: i18n.t('navigation.management', 'Management'),
+        ns: i18n.t('admin:navigation.management', 'Management'),
         path: '/admin/permissions',
-        label: i18n.t('navigation.permissions', 'Permissions'),
+        label: i18n.t('admin:navigation.permissions', 'Permissions'),
         icon: 'key',
         permission: 'permissions:read',
         order: 40,
@@ -59,7 +59,7 @@ export function init({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.permissions', 'Permissions'),
+    title: i18n.t('admin:navigation.permissions', 'Permissions'),
   };
 }
 
@@ -70,7 +70,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.permissions', 'Permissions'),
+        label: i18n.t('admin:navigation.permissions', 'Permissions'),
         url: path,
       },
       'admin',

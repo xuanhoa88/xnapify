@@ -188,10 +188,16 @@ function Groups() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='folder' size={24} />}
-          title='Group Management'
-          subtitle='Organize users into groups for easier access control'
+          title={t('admin:groups.title', 'Group Management')}
+          subtitle={t(
+            'admin:groups.subtitle',
+            'Organize users into groups for easier access control',
+          )}
         />
-        <Loader variant='cards' message='Loading groups...' />
+        <Loader
+          variant='cards'
+          message={t('admin:groups.loading', 'Loading groups...')}
+        />
       </div>
     );
   }
@@ -201,11 +207,14 @@ function Groups() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='folder' size={24} />}
-          title='Group Management'
-          subtitle='Organize users into groups for easier access control'
+          title={t('admin:groups.title', 'Group Management')}
+          subtitle={t(
+            'admin:groups.subtitle',
+            'Organize users into groups for easier access control',
+          )}
         />
         <Table.Error
-          title={t('groups.errorLoading', 'Error loading groups')}
+          title={t('admin:groups.errorLoading', 'Error loading groups')}
           error={error}
           onRetry={refreshGroups}
         />
@@ -217,8 +226,11 @@ function Groups() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='folder' size={24} />}
-        title='Group Management'
-        subtitle='Organize users into groups for easier access control'
+        title={t('admin:groups.title', 'Group Management')}
+        subtitle={t(
+          'admin:groups.subtitle',
+          'Organize users into groups for easier access control',
+        )}
       >
         <Button
           variant='primary'
@@ -227,14 +239,14 @@ function Groups() {
           title={
             !canCreate
               ? t(
-                  'groups.noPermissionToCreate',
+                  'admin:groups.noPermissionToCreate',
                   'You do not have permission to create groups',
                 )
               : undefined
           }
         >
           <Icon name='plus' size={16} />
-          Add Group
+          {t('admin:groups.addGroup', 'Add Group')}
         </Button>
       </Box.Header>
 
@@ -243,7 +255,7 @@ function Groups() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder='Search groups...'
+        placeholder={t('admin:groups.search', 'Search groups...')}
       >
         <SearchableSelect
           className={s.filterSearchableSelect}
@@ -255,8 +267,8 @@ function Groups() {
           hasMore={rolesHasMore}
           loading={rolesLoading}
           loadingMore={rolesLoadingMore}
-          placeholder='All Roles'
-          searchPlaceholder='Search roles...'
+          placeholder={t('admin:groups.allRoles', 'All Roles')}
+          searchPlaceholder={t('admin:groups.searchRoles', 'Search roles...')}
         />
         <div className={s.filterActions}>
           {hasActiveFilters && (
@@ -265,9 +277,9 @@ function Groups() {
               size='small'
               onClick={handleClearFilters}
               type='button'
-              title='Reset all filters'
+              title={t('admin:groups.clearFilters', 'Reset all filters')}
             >
-              ✕ Clear Filters
+              {t('admin:groups.clearFilters', '✕ Clear Filters')}
             </Button>
           )}
         </div>
@@ -276,8 +288,11 @@ function Groups() {
       {groups.length === 0 ? (
         <Table.Empty
           icon='folder'
-          title='No groups found'
-          description='Create a new group to organize users and assign roles.'
+          title={t('admin:groups.noGroupsFound', 'No groups found')}
+          description={t(
+            'admin:groups.noGroupsDescription',
+            'Create a new group to organize users and assign roles.',
+          )}
         >
           <Button
             variant='primary'
@@ -286,13 +301,13 @@ function Groups() {
             title={
               !canCreate
                 ? t(
-                    'groups.noPermissionToCreate',
+                    'admin:groups.noPermissionToCreate',
                     'You do not have permission to create groups',
                   )
                 : undefined
             }
           >
-            Add Group
+            {t('admin:groups.addGroup', 'Add Group')}
           </Button>
         </Table.Empty>
       ) : (
@@ -353,7 +368,12 @@ function Groups() {
                   {/* Roles Section */}
                   <div className={s.rolesSection}>
                     <span className={s.sectionLabel}>Roles:</span>
-                    <Tag.List emptyText='No roles assigned'>
+                    <Tag.List
+                      emptyText={t(
+                        'admin:groups.noRolesAssigned',
+                        'No roles assigned',
+                      )}
+                    >
                       {visibleRoles.map(role => (
                         <RoleTag key={role} name={role} className={s.roleTag} />
                       ))}
@@ -385,7 +405,9 @@ function Groups() {
                         )}
                       </div>
                     ) : (
-                      <span className={s.noUsers}>No users yet</span>
+                      <span className={s.noUsers}>
+                        {t('admin:groups.noUsers', 'No users yet')}
+                      </span>
                     )}
                   </div>
                 </Card.Body>
@@ -418,7 +440,7 @@ function Groups() {
       {/* Delete Confirmation Modal */}
       <ConfirmModal.Delete
         ref={deleteModalRef}
-        title='Delete Group'
+        title={t('admin:groups.deleteTitle', 'Delete Group')}
         getItemName={getGroupName}
         onDelete={handleDeleteGroupAction}
         onSuccess={refreshGroups}

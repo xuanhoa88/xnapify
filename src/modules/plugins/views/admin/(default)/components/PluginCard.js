@@ -59,12 +59,16 @@ function PluginCard({
                 <Tag
                   variant={plugin.is_active ? 'success' : 'neutral'}
                   {...(canUpdate && {
-                    title: plugin.is_active ? 'Deactivate' : 'Activate',
+                    title: plugin.is_active
+                      ? t('admin:common.deactivate', 'Deactivate')
+                      : t('admin:common.activate', 'Activate'),
                     onClick: handleToggleStatus,
                   })}
                   style={loading ? { cursor: 'wait' } : {}}
                 >
-                  {plugin.is_active ? 'Active' : 'Inactive'}
+                  {plugin.is_active
+                    ? t('admin:common.active', 'Active')
+                    : t('admin:common.inactive', 'Inactive')}
                 </Tag>
               </div>
             )}
@@ -94,7 +98,11 @@ function PluginCard({
           </div>
         ) : (
           <p className={s.description}>
-            {plugin.description || t('plugins.noDescriptionAvailable')}
+            {plugin.description ||
+              t(
+                'admin:plugins.noDescriptionAvailable',
+                'No description available',
+              )}
           </p>
         )}
       </Card.Body>

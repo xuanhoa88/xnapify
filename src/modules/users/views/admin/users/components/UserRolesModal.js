@@ -79,7 +79,9 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
           setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadRoles', 'Failed to load roles'));
+        setError(
+          err || t('admin:users.errors.loadRoles', 'Failed to load roles'),
+        );
       } finally {
         setRolesLoading(false);
       }
@@ -179,7 +181,9 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
       onSuccess && onSuccess();
       handleClose();
     } catch (err) {
-      setError(err || t('errors.assignRoles', 'Failed to assign roles'));
+      setError(
+        err || t('admin:users.errors.assignRoles', 'Failed to assign roles'),
+      );
     }
   }, [
     dispatch,
@@ -193,15 +197,27 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   ]);
 
   const description = isBulk
-    ? 'Select roles to assign to the selected users.'
-    : "Select roles to assign to this user. The user's permissions will be based on these roles.";
+    ? t(
+        'admin:users.roles.assignRolesBulkDesc',
+        'Select roles to assign to the selected users.',
+      )
+    : t(
+        'admin:users.roles.assignRolesDesc',
+        "Select roles to assign to this user. The user's permissions will be based on these roles.",
+      );
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
         {isBulk
-          ? `Assign Roles to ${bulkUserIds.length} Users`
-          : `Manage Roles for "${user && (user.display_name || user.email)}"`}
+          ? t(
+              'admin:users.roles.assignRolesBulk',
+              'Assign Roles to {{count}} Users',
+              { count: bulkUserIds.length },
+            )
+          : t('admin:users.roles.manageRoles', 'Manage Roles for "{{name}}"', {
+              name: user && (user.display_name || user.email),
+            })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>{description}</Modal.Description>
@@ -210,17 +226,24 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
         <Table.SearchBar
           value={searchTerm}
           onChange={handleSearchChange}
-          placeholder='Search roles...'
+          placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
           debounce={300}
           className={s.modalSearchBar}
         />
 
         <div className={s.checkboxList}>
           {rolesLoading ? (
-            <div className={s.noItems}>Loading roles...</div>
+            <div className={s.noItems}>
+              {t('admin:users.roles.loadingRoles', 'Loading roles...')}
+            </div>
           ) : roles.length === 0 ? (
             <div className={s.noItems}>
-              {searchTerm ? 'No roles match your search' : 'No roles available'}
+              {searchTerm
+                ? t(
+                    'admin:users.roles.noRolesMatch',
+                    'No roles match your search',
+                  )
+                : t('admin:users.roles.noRolesAvailable', 'No roles available')}
             </div>
           ) : (
             roles.map(role => (
@@ -274,13 +297,17 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Footer>
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:users.roles.cancel', 'Cancel')}
+          </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleSave}
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading
+              ? t('admin:users.roles.saving', 'Saving...')
+              : t('admin:users.roles.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

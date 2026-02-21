@@ -160,5 +160,6 @@
   "modal": {
     "itemSelected_one": "{{count}} item selected",
     "itemSelected_other": "{{count}} items selected"
-  }
+  },
+  "admin": {}
 }

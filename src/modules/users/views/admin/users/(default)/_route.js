@@ -24,9 +24,9 @@ export function register({ store, i18n }) {
     registerMenu({
       ns: 'admin',
       item: {
-        ns: i18n.t('navigation.management', 'Management'),
+        ns: i18n.t('admin:navigation.management', 'Management'),
         path: '/admin/users',
-        label: i18n.t('navigation.users', 'Users'),
+        label: i18n.t('admin:navigation.users', 'Users'),
         icon: 'users',
         permission: 'users:read',
         order: 10,
@@ -59,7 +59,7 @@ export function init({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.users', 'Users'),
+    title: i18n.t('admin:navigation.users', 'Users'),
   };
 }
 
@@ -69,7 +69,7 @@ export async function getInitialProps({ i18n }) {
 export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
-      { label: i18n.t('navigation.users', 'Users'), url: path },
+      { label: i18n.t('admin:navigation.users', 'Users'), url: path },
       'admin',
     ),
   );

@@ -146,12 +146,12 @@ function Roles() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='shield' size={24} />}
-          title={t('roles.title', 'Role Management')}
+          title={t('admin:roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
         />
         <Loader
           variant='cards'
-          message={t('roles.loading', 'Loading roles...')}
+          message={t('admin:roles.loading', 'Loading roles...')}
         />
       </div>
     );
@@ -162,13 +162,13 @@ function Roles() {
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='shield' size={24} />}
-          title={t('roles.title', 'Role Management')}
+          title={t('admin:roles.title', 'Role Management')}
           subtitle='Define access levels and permissions'
         />
         <Table.Error
-          title={t('roles.errorLoading', 'Error loading roles')}
+          title={t('admin:roles.errorLoading', 'Error loading roles')}
           error={error}
-          retryLabel={t('common.retry', 'Retry')}
+          retryLabel={t('admin:common.retry', 'Retry')}
           onRetry={() =>
             dispatch(
               fetchRoles({
@@ -187,7 +187,7 @@ function Roles() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='shield' size={24} />}
-        title={t('roles.title', 'Role Management')}
+        title={t('admin:roles.title', 'Role Management')}
         subtitle='Define access levels and permissions'
       >
         <Button
@@ -197,14 +197,14 @@ function Roles() {
           title={
             !canCreate
               ? t(
-                  'roles.noPermissionToCreate',
+                  'admin:roles.noPermissionToCreate',
                   'You do not have permission to create roles',
                 )
               : undefined
           }
         >
           <Icon name='plus' size={16} />
-          {t('roles.addRole', 'Add Role')}
+          {t('admin:roles.addRole', 'Add Role')}
         </Button>
       </Box.Header>
 
@@ -213,15 +213,15 @@ function Roles() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder={t('roles.searchPlaceholder', 'Search roles...')}
+        placeholder={t('admin:roles.searchPlaceholder', 'Search roles...')}
       />
 
       {roles.length === 0 ? (
         <Table.Empty
           icon='shield'
-          title={t('roles.noRolesFound', 'No roles found')}
+          title={t('admin:roles.noRolesFound', 'No roles found')}
           description={t(
-            'roles.noRolesDescription',
+            'admin:roles.noRolesDescription',
             'Create a new role to define access levels and permissions.',
           )}
         >
@@ -232,13 +232,13 @@ function Roles() {
             title={
               !canCreate
                 ? t(
-                    'roles.noPermissionToCreate',
+                    'admin:roles.noPermissionToCreate',
                     'You do not have permission to create roles',
                   )
                 : undefined
             }
           >
-            {t('roles.addRole', 'Add Role')}
+            {t('admin:roles.addRole', 'Add Role')}
           </Button>
         </Table.Empty>
       ) : (
@@ -273,24 +273,24 @@ function Roles() {
               <Card.Body className={s.roleCardBody}>
                 <p className={s.roleDescription}>
                   {role.description ||
-                    t('roles.noDescription', 'No description available')}
+                    t('admin:roles.noDescription', 'No description available')}
                 </p>
                 <div className={s.roleStats}>
                   <div className={s.stat}>
                     <span className={s.statLabel}>
-                      {t('roles.users', 'Users')}:
+                      {t('admin:roles.users', 'Users')}:
                     </span>
                     <span className={s.statValue}>{role.usersCount || 0}</span>
                   </div>
                   <div className={s.stat}>
                     <span className={s.statLabel}>
-                      {t('roles.groups', 'Groups')}:
+                      {t('admin:roles.groups', 'Groups')}:
                     </span>
                     <span className={s.statValue}>{role.groupsCount || 0}</span>
                   </div>
                   <div className={s.stat}>
                     <span className={s.statLabel}>
-                      {t('roles.permissions', 'Permissions')}:
+                      {t('admin:roles.permissions', 'Permissions')}:
                     </span>
                     <span className={s.statValue}>
                       {role.permissionsCount || 0}

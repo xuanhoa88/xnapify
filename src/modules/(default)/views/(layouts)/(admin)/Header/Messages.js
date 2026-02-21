@@ -121,7 +121,11 @@ function AdminMessages() {
             <span className={s.dropdownTitle}>
               {t('common.messages', 'Messages')}
             </span>
-            <span className={s.dropdownCount}>{unreadCount} new</span>
+            <span className={s.dropdownCount}>
+              {t('common.newMessagesCount', '{{count}} new', {
+                count: unreadCount,
+              })}
+            </span>
           </div>
 
           <div className={s.dropdownList}>

@@ -16,7 +16,7 @@ export const middleware = requirePermission('groups:create');
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.create', 'Create'),
+    title: i18n.t('admin:navigation.create', 'Create'),
   };
 }
 
@@ -27,7 +27,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.create', 'Create'),
+        label: i18n.t('admin:navigation.create', 'Create'),
         url: path,
       },
       'admin',

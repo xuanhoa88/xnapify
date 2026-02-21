@@ -40,7 +40,9 @@ function RoleActionsDropdown({
 
   return (
     <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger title={t('common.moreActions', 'More actions')}>
+      <ActionsDropdown.Trigger
+        title={t('admin:common.moreActions', 'More actions')}
+      >
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
@@ -49,21 +51,21 @@ function RoleActionsDropdown({
           icon={<Icon name='users' size={16} />}
           permission='users:read'
         >
-          {t('roles.viewUsers', 'View Users')}
+          {t('admin:roles.viewUsers', 'View Users')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewGroups(role)}
           icon={<Icon name='folder' size={16} />}
           permission='groups:read'
         >
-          {t('roles.viewGroups', 'View Groups')}
+          {t('admin:roles.viewGroups', 'View Groups')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(role)}
           icon={<Icon name='key' size={16} />}
           permission='permissions:read'
         >
-          {t('roles.viewPermissions', 'View Permissions')}
+          {t('admin:roles.viewPermissions', 'View Permissions')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Divider />
         <ActionsDropdown.Item
@@ -71,7 +73,7 @@ function RoleActionsDropdown({
           icon={<Icon name='edit' size={16} />}
           permission='roles:update'
         >
-          {t('roles.editRole', 'Edit Role')}
+          {t('admin:roles.editRole', 'Edit Role')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onDelete(role)}
@@ -79,7 +81,7 @@ function RoleActionsDropdown({
           variant='danger'
           permission='roles:delete'
         >
-          {t('roles.deleteRole', 'Delete Role')}
+          {t('admin:roles.deleteRole', 'Delete Role')}
         </ActionsDropdown.Item>
       </ActionsDropdown.Menu>
     </ActionsDropdown>

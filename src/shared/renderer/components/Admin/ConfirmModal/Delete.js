@@ -75,11 +75,23 @@ const ConfirmDeleteModal = forwardRef(
           resetState();
           onSuccess && onSuccess(item);
         } else {
-          setError(result.error || t('errors.delete', 'Failed to delete'));
+          setError(
+            result.error ||
+              t(
+                'shared:components.confirmModal.delete.error.failed',
+                'Failed to delete',
+              ),
+          );
         }
       } catch (err) {
         setDeleting(false);
-        setError(err.message || t('errors.delete', 'An error occurred'));
+        setError(
+          err.message ||
+            t(
+              'shared:components.confirmModal.delete.error.occurred',
+              'An error occurred',
+            ),
+        );
       }
     }, [item, onDelete, resetState, onSuccess, t]);
 
@@ -90,8 +102,11 @@ const ConfirmDeleteModal = forwardRef(
         <Modal.Header onClose={handleClose}>{title}</Modal.Header>
         <Modal.Body error={error}>
           <Modal.Description>
-            Are you sure you want to delete &quot;{itemName}&quot;? This action
-            cannot be undone.
+            {t(
+              'shared:components.confirmModal.delete.description',
+              'Are you sure you want to delete "{{name}}"? This action cannot be undone.',
+              { name: itemName },
+            )}
           </Modal.Description>
         </Modal.Body>
         <Modal.Footer>
@@ -101,14 +116,19 @@ const ConfirmDeleteModal = forwardRef(
               onClick={handleClose}
               disabled={deleting}
             >
-              Cancel
+              {t('shared:components.confirmModal.delete.cancel', 'Cancel')}
             </Modal.Button>
             <Modal.Button
               variant='primary'
               onClick={handleConfirm}
               disabled={deleting}
             >
-              {deleting ? 'Deleting...' : 'Delete'}
+              {deleting
+                ? t(
+                    'shared:components.confirmModal.delete.deleting',
+                    'Deleting...',
+                  )
+                : t('shared:components.confirmModal.delete.delete', 'Delete')}
             </Modal.Button>
           </Modal.Actions>
         </Modal.Footer>

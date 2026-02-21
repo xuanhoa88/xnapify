@@ -7,6 +7,7 @@
 
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import Icon from '../../../Icon';
 
 import s from './Empty.css';
@@ -17,19 +18,18 @@ import s from './Empty.css';
  * A professional empty state component for admin pages.
  * Displays an icon, message, description, and optional action button.
  */
-function Empty({
-  icon = 'inbox',
-  title = 'No items found',
-  description,
-  children,
-  className,
-}) {
+function Empty({ icon = 'inbox', title, description, children, className }) {
+  const { t } = useTranslation();
+
+  const displayTitle =
+    title || t('shared:components.table.empty.title', 'No items found');
+
   return (
     <div className={clsx(s.root, className)}>
       <div className={s.iconWrapper}>
         <Icon name={icon} size={48} />
       </div>
-      <h3 className={s.title}>{title}</h3>
+      <h3 className={s.title}>{displayTitle}</h3>
       {description && <p className={s.description}>{description}</p>}
       {children}
     </div>

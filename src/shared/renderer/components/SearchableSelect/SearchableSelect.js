@@ -8,6 +8,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import Icon from '../Icon';
 import Button from '../Button';
 import s from './SearchableSelect.css';
@@ -40,6 +41,15 @@ function SearchableSelect({
   showSearch = true,
   clearable = false,
 }) {
+  const { t } = useTranslation();
+
+  const displayPlaceholder =
+    placeholder ||
+    t('shared:components.searchableSelect.placeholder', 'Select...');
+  const displaySearchPlaceholder =
+    searchPlaceholder ||
+    t('shared:components.searchableSelect.searchPlaceholder', 'Search...');
+
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const containerRef = useRef(null);
@@ -64,13 +74,20 @@ function SearchableSelect({
     if (multiple) {
       if (selectedValues.length === 1) {
         const opt = options.find(o => o.value === selectedValues[0]);
-        return (opt && opt.label) || '1 selected';
+        return (
+          (opt && opt.label) ||
+          t('shared:components.searchableSelect.oneSelected', '1 selected')
+        );
       }
-      return `${selectedValues.length} selected`;
+      return t(
+        'shared:components.searchableSelect.multipleSelected',
+        '{{count}} selected',
+        { count: selectedValues.length },
+      );
     }
-    const selectedOption = options.find(opt => opt.value === value);
+    const selectedOption = options.find(opt => opt && opt.value === value);
     return (selectedOption && selectedOption.label) || null;
-  }, [hasValue, multiple, selectedValues, options, value]);
+  }, [hasValue, multiple, selectedValues, options, value, t]);
 
   // Check if an option is selected
   const isSelected = useCallback(
@@ -204,13 +221,13 @@ function SearchableSelect({
         onClick={handleToggle}
         role='button'
         tabIndex={disabled ? -1 : 0}
-        aria-label={displayText || placeholder}
+        aria-label={displayText || displayPlaceholder}
         aria-haspopup='listbox'
         aria-expanded={isOpen}
         onKeyDown={handleKeyDown}
       >
         <span className={clsx(s.value, { [s.placeholder]: !displayText })}>
-          {displayText || placeholder}
+          {displayText || displayPlaceholder}
         </span>
         <div className={s.controlRight}>
           {showClearButton && (
@@ -220,7 +237,10 @@ function SearchableSelect({
               iconOnly
               className={s.clearBtn}
               onClick={handleClear}
-              title='Clear selection'
+              title={t(
+                'shared:components.searchableSelect.clearSelection',
+                'Clear selection',
+              )}
             >
               <Icon name='close' size={12} />
             </Button>
@@ -239,7 +259,7 @@ function SearchableSelect({
                 className={s.searchInput}
                 value={searchTerm}
                 onChange={handleSearchChange}
-                placeholder={searchPlaceholder}
+                placeholder={displaySearchPlaceholder}
                 onClick={e => e.stopPropagation()}
                 onKeyDown={e => e.key === 'Escape' && setIsOpen(false)}
               />
@@ -256,7 +276,9 @@ function SearchableSelect({
             aria-multiselectable={multiple}
           >
             {loading ? (
-              <li className={s.noOptions}>Loading...</li>
+              <li className={s.noOptions}>
+                {t('shared:components.searchableSelect.loading', 'Loading...')}
+              </li>
             ) : filteredOptions.length > 0 ? (
               <>
                 {filteredOptions.map(option => {
@@ -286,14 +308,29 @@ function SearchableSelect({
                   );
                 })}
                 {loadingMore && (
-                  <li className={s.loadingMore}>Loading more...</li>
+                  <li className={s.loadingMore}>
+                    {t(
+                      'shared:components.searchableSelect.loadingMore',
+                      'Loading more...',
+                    )}
+                  </li>
                 )}
                 {!loadingMore && hasMore && (
-                  <li className={s.loadMoreHint}>Scroll for more</li>
+                  <li className={s.loadMoreHint}>
+                    {t(
+                      'shared:components.searchableSelect.scrollForMore',
+                      'Scroll for more',
+                    )}
+                  </li>
                 )}
               </>
             ) : (
-              <li className={s.noOptions}>No options found</li>
+              <li className={s.noOptions}>
+                {t(
+                  'shared:components.searchableSelect.noOptions',
+                  'No options found',
+                )}
+              </li>
             )}
           </ul>
         </div>

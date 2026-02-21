@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import Modal from '../../Modal';
 
 /**
@@ -18,6 +19,7 @@ import Modal from '../../Modal';
  *   confirmBackModalRef.current.close();   // Close modal
  */
 const ConfirmBackModal = forwardRef(({ onConfirm }, ref) => {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(false);
 
   // Expose methods via ref
@@ -41,20 +43,24 @@ const ConfirmBackModal = forwardRef(({ onConfirm }, ref) => {
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Unsaved Changes</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        {t('shared:components.confirmModal.back.title', 'Unsaved Changes')}
+      </Modal.Header>
       <Modal.Body>
         <Modal.Description>
-          You have unsaved changes. Are you sure you want to leave? Your changes
-          will be lost.
+          {t(
+            'shared:components.confirmModal.back.description',
+            'You have unsaved changes. Are you sure you want to leave? Your changes will be lost.',
+          )}
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>
           <Modal.Button variant='secondary' onClick={handleClose}>
-            Stay
+            {t('shared:components.confirmModal.back.stay', 'Stay')}
           </Modal.Button>
           <Modal.Button variant='primary' onClick={handleConfirm}>
-            Leave
+            {t('shared:components.confirmModal.back.leave', 'Leave')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

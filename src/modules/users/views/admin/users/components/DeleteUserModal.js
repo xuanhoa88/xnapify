@@ -13,6 +13,7 @@ import {
   useMemo,
 } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../../../shared/renderer/components/Modal';
 import { bulkDeleteUsers } from '../redux';
@@ -28,6 +29,7 @@ import { getUserProfile } from '../../../../../../shared/renderer/redux';
  *   deleteModalRef.current.close();
  */
 const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentUser = useSelector(getUserProfile);
 
@@ -75,7 +77,12 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
       : data.ids;
 
     if (idsToDelete.length === 0) {
-      setError('You cannot delete your own account.');
+      setError(
+        t(
+          'admin:users.errors.cannotDeleteSelf',
+          'You cannot delete your own account.',
+        ),
+      );
       return;
     }
 
@@ -90,7 +97,7 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
     } finally {
       setDeleting(false);
     }
-  }, [dispatch, data, resetState, onSuccess, currentUser]);
+  }, [dispatch, data, resetState, onSuccess, currentUser, t]);
 
   // Generate display name
   const displayName = useMemo(() => {
@@ -99,24 +106,32 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
       return `"${user.display_name || user.email}"`;
     }
     const count = data && data.ids ? data.ids.length : 0;
-    return `${count} user(s)`;
-  }, [data]);
+    return t('admin:users.list.userCount', '{{count}} user(s)', { count });
+  }, [data, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Delete User(s)</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        {t('admin:users.list.deleteUserHeader', 'Delete User(s)')}
+      </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete {displayName}? This action cannot be
-          undone.
+          {t(
+            'admin:users.list.deleteUserConfirm',
+            'Are you sure you want to delete {{name}}? This action cannot be undone.',
+            { name: displayName },
+          )}
         </Modal.Description>
         {currentUser &&
           data &&
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>Note:</strong> Your own account will be excluded from
-              deletion.
+              <strong>{t('admin:users.list.note', 'Note:')}</strong>{' '}
+              {t(
+                'admin:users.list.excludeSelfDeletion',
+                'Your own account will be excluded from deletion.',
+              )}
             </Modal.Description>
           )}
       </Modal.Body>
@@ -127,14 +142,16 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={deleting}
           >
-            Cancel
+            {t('admin:users.list.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
             disabled={deleting}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting
+              ? t('admin:users.list.deleting', 'Deleting...')
+              : t('admin:users.list.delete', 'Delete')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

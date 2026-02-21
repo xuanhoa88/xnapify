@@ -180,7 +180,7 @@ function LoginFormFields({ loading }) {
 
   return (
     <>
-      <Form.Field name='email' label={t('login.email')}>
+      <Form.Field name='email' label={t('login.email', 'Email')}>
         <Form.Input
           type='email'
           placeholder={t('login.emailPlaceholder', 'your.email@example.com')}
@@ -189,9 +189,9 @@ function LoginFormFields({ loading }) {
 
       <Form.Field name='password' showError={false}>
         <div className={s.labelRow}>
-          <Form.Label>{t('login.password')}</Form.Label>
+          <Form.Label>{t('login.password', 'Password')}</Form.Label>
           <Link to='/reset-password' className={s.forgotLink}>
-            {t('login.forgotPassword')}
+            {t('login.forgotPassword', 'Forgot password?')}
           </Link>
         </div>
         <Form.Password />
@@ -209,7 +209,9 @@ function LoginFormFields({ loading }) {
         className={s.submitButton}
         loading={loading}
       >
-        {loading ? t('login.loading') : t('login.submit')}
+        {loading
+          ? t('login.loading', 'Loading...')
+          : t('login.submit', 'Submit')}
       </Button>
     </>
   );

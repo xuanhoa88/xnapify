@@ -24,9 +24,9 @@ export function register({ store, i18n }) {
     registerMenu({
       ns: 'admin',
       item: {
-        ns: i18n.t('navigation.management', 'Management'),
+        ns: i18n.t('admin:navigation.management', 'Management'),
         path: '/admin/roles',
-        label: i18n.t('navigation.roles', 'Roles'),
+        label: i18n.t('admin:navigation.roles', 'Roles'),
         icon: 'shield',
         permission: 'roles:read',
         order: 30,
@@ -59,7 +59,7 @@ export function init({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.roles', 'Roles'),
+    title: i18n.t('admin:navigation.roles', 'Roles'),
   };
 }
 
@@ -70,7 +70,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.roles', 'Roles'),
+        label: i18n.t('admin:navigation.roles', 'Roles'),
         url: path,
       },
       'admin',

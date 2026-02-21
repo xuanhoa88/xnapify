@@ -6,6 +6,7 @@
  */
 
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import s from './Tag.css';
 
 /**
@@ -63,13 +64,17 @@ Tag.propTypes = {
 /**
  * TagList component - displays a list of tags with empty state
  */
-function TagList({ children, emptyText = '—', className = '' }) {
+function TagList({ children, emptyText, className = '' }) {
+  const { t } = useTranslation();
+  const displayEmptyText =
+    emptyText || t('shared:components.tagList.empty', '—');
+
   const hasChildren = Array.isArray(children)
     ? children.filter(Boolean).length > 0
     : Boolean(children);
 
   if (!hasChildren) {
-    return <span className={s.empty}>{emptyText}</span>;
+    return <span className={s.empty}>{displayEmptyText}</span>;
   }
 
   const classes = [s.tagList, className].filter(Boolean).join(' ');

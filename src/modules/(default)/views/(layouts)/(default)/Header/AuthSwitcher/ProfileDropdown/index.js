@@ -144,7 +144,7 @@ function ProfileDropdown() {
               role='menuitem'
             >
               <Icon name='node-red' size={16} />
-              Node-RED
+              {t('navigation.nodeRed', 'Node-RED')}
             </a>
           )}
 

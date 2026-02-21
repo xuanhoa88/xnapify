@@ -68,14 +68,22 @@ function Dashboard() {
   const renderContent = () => {
     // Loading state
     if (loading && !activities) {
-      return <Loader variant='cards' message='Loading activities...' />;
+      return (
+        <Loader
+          variant='cards'
+          message={t(
+            'admin:dashboard.loadingActivities',
+            'Loading activities...',
+          )}
+        />
+      );
     }
 
     // Error state
     if (error) {
       return (
         <Table.Error
-          title={t('dashboard.errorLoading', 'Error loading activities')}
+          title={t('admin:dashboard.errorLoading', 'Error loading activities')}
           error={error}
           onRetry={() => dispatch(fetchDashboard())}
         />
@@ -88,7 +96,8 @@ function Dashboard() {
         <Card variant='default' className={s.fullWidthCard}>
           <Card.Header className={s.tableCardHeader}>
             <h3 className={s.cardTitle}>
-              Recent Activities {total > 0 && <span>({total})</span>}
+              {t('admin:dashboard.recentActivities', 'Recent Activities')}
+              {total > 0 && <span>({total})</span>}
             </h3>
           </Card.Header>
           <Card.Body className={s.tableCardBody}>
@@ -96,7 +105,10 @@ function Dashboard() {
               <Table.SearchBar
                 value={search}
                 onChange={handleSearch}
-                placeholder='Search events or metadata...'
+                placeholder={t(
+                  'admin:dashboard.searchEvents',
+                  'Search events or metadata...',
+                )}
                 className={s.searchBar}
               />
             </div>
@@ -104,11 +116,11 @@ function Dashboard() {
               <table className={s.table}>
                 <thead>
                   <tr>
-                    <th>Event</th>
-                    <th>Entity</th>
-                    <th>Action</th>
-                    <th>Status</th>
-                    <th>Time</th>
+                    <th>{t('admin:dashboard.event', 'Event')}</th>
+                    <th>{t('admin:dashboard.entity', 'Entity')}</th>
+                    <th>{t('admin:dashboard.action', 'Action')}</th>
+                    <th>{t('admin:dashboard.status', 'Status')}</th>
+                    <th>{t('admin:dashboard.time', 'Time')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -162,8 +174,14 @@ function Dashboard() {
             ) : (
               <Table.Empty
                 icon='activity'
-                title='No recent activity'
-                description='Activity will appear here as users interact with the system.'
+                title={t(
+                  'admin:dashboard.noRecentActivity',
+                  'No recent activity',
+                )}
+                description={t(
+                  'admin:dashboard.noRecentActivityDescription',
+                  'Activity will appear here as users interact with the system.',
+                )}
               />
             )}
           </Card.Body>
@@ -186,8 +204,11 @@ function Dashboard() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='dashboard' size={24} />}
-        title='Dashboard'
-        subtitle='Overview of your system activity'
+        title={t('admin:dashboard.title', 'Dashboard')}
+        subtitle={t(
+          'admin:dashboard.subtitle',
+          'Overview of your system activity',
+        )}
       />
       {renderContent()}
     </div>

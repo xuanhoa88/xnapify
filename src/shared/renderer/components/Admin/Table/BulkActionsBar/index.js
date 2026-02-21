@@ -44,7 +44,7 @@ function BulkActionsBar({
   return (
     <div className={s.bulkActions}>
       <span className={s.bulkInfo}>
-        {t(itemCountLabel || 'table.bulkActions.itemSelected', {
+        {t(itemCountLabel || 'shared:components.bulkActions.itemSelected', {
           count,
           defaultValue_one: '{{count}} item selected',
           defaultValue_other: '{{count}} items selected',
@@ -75,7 +75,10 @@ function BulkActionsBar({
           >
             <ActionsDropdown.Trigger
               className={s.moreButton}
-              title='More actions'
+              title={t(
+                'shared:components.bulkActions.moreActions',
+                'More actions',
+              )}
             >
               <Icon name='more-vertical' size={16} />
             </ActionsDropdown.Trigger>
@@ -105,7 +108,7 @@ function BulkActionsBar({
         onClick={onClear}
       >
         <Icon name='close' size={14} />
-        Clear
+        {t('shared:components.bulkActions.clear', 'Clear')}
       </Button>
     </div>
   );

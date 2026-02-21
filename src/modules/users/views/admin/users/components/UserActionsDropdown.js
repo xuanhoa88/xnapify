@@ -8,6 +8,7 @@
 import { useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
 import { getUserId } from '../../../../../../shared/renderer/redux';
 import {
@@ -34,6 +35,7 @@ function UserActionsDropdown({
   onActivate,
   onDeactivate,
 }) {
+  const { t } = useTranslation();
   const currentUserId = useSelector(getUserId);
   const history = useHistory();
 
@@ -48,7 +50,9 @@ function UserActionsDropdown({
 
   return (
     <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger title='More actions'>
+      <ActionsDropdown.Trigger
+        title={t('admin:users.list.moreActions', 'More actions')}
+      >
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
@@ -57,21 +61,21 @@ function UserActionsDropdown({
           icon={<Icon name='key' size={16} />}
           permission='apiKeys:read'
         >
-          Manage API Keys
+          {t('admin:users.list.manageApiKeys', 'Manage API Keys')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageGroups(user)}
           icon={<Icon name='folder' size={16} />}
           permission='groups:*'
         >
-          Manage Groups
+          {t('admin:users.list.manageGroups', 'Manage Groups')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageRoles(user)}
           icon={<Icon name='shield' size={16} />}
           permission='roles:*'
         >
-          Manage Roles
+          {t('admin:users.list.manageRoles', 'Manage Roles')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Divider />
         <ActionsDropdown.Item
@@ -79,7 +83,7 @@ function UserActionsDropdown({
           icon={<Icon name='lock' size={16} />}
           permission='permissions:read'
         >
-          View Permissions
+          {t('admin:users.list.viewPermissions', 'View Permissions')}
         </ActionsDropdown.Item>
         {!isCurrentUser && (
           <>
@@ -91,7 +95,7 @@ function UserActionsDropdown({
                 variant='danger'
                 permission={['users:update', 'users:delete']}
               >
-                Deactivate
+                {t('admin:users.list.deactivate', 'Deactivate')}
               </ActionsDropdown.Item>
             ) : (
               <ActionsDropdown.Item
@@ -99,7 +103,7 @@ function UserActionsDropdown({
                 icon={<Icon name='check' size={16} />}
                 permission={['users:update', 'users:delete']}
               >
-                Activate
+                {t('admin:users.list.activate', 'Activate')}
               </ActionsDropdown.Item>
             )}
           </>

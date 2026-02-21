@@ -85,23 +85,24 @@ const RolePermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        {t('roles.permissionsFor', 'Permissions for')}&nbsp;&quot;
-        {(role && role.name) || t('common.unknown', 'Unknown')}&quot;
+        {t('admin:roles.permissionsFor', 'Permissions for')}&nbsp;&quot;
+        {(role && role.name) || t('admin:common.unknown', 'Unknown')}&quot;
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>
           {t(
-            'roles.permissionsDescription',
+            'admin:roles.permissionsDescription',
             'These are the permissions assigned to this role.',
           )}
         </Modal.Description>
 
         {loading ? (
-          <p>{t('common.loading', 'Loading...')}</p>
+          <p>{t('admin:common.loading', 'Loading...')}</p>
         ) : (
           <div className={s.permissionsSection}>
             <h4 className={s.sectionTitle}>
-              {t('roles.permissions', 'Permissions')} ({permissions.length})
+              {t('admin:roles.permissions', 'Permissions')} (
+              {permissions.length})
             </h4>
             {permissions.length > 0 ? (
               <div className={s.permissionsList}>
@@ -114,7 +115,7 @@ const RolePermissionsModal = forwardRef((props, ref) => {
             ) : (
               <p className={s.noPermissions}>
                 {t(
-                  'roles.noPermissionsAssigned',
+                  'admin:roles.noPermissionsAssigned',
                   'No permissions assigned to this role.',
                 )}
               </p>
@@ -124,7 +125,7 @@ const RolePermissionsModal = forwardRef((props, ref) => {
       </Modal.Body>
       <Modal.Footer>
         <Modal.Button onClick={handleClose}>
-          {t('common.close', 'Close')}
+          {t('admin:common.close', 'Close')}
         </Modal.Button>
       </Modal.Footer>
     </Modal>

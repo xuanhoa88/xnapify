@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../../../shared/renderer/components/Modal';
 import { bulkUpdateUserStatus } from '../redux';
@@ -21,6 +22,7 @@ import { getUserProfile } from '../../../../../../shared/renderer/redux';
  *   changeStatusModalRef.current.close();
  */
 const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentUser = useSelector(getUserProfile);
 
@@ -68,7 +70,12 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
       : data.ids;
 
     if (idsToUpdate.length === 0) {
-      setError('You cannot change your own account status.');
+      setError(
+        t(
+          'admin:users.errors.cannotChangeSelfStatus',
+          'You cannot change your own account status.',
+        ),
+      );
       return;
     }
 
@@ -85,28 +92,45 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
     } finally {
       setProcessing(false);
     }
-  }, [dispatch, data, resetState, onSuccess, currentUser]);
+  }, [dispatch, data, resetState, onSuccess, currentUser, t]);
 
   const count = data && data.ids ? data.ids.length : 0;
   const isActive = data && data.isActive;
-  const actionText = isActive ? 'activate' : 'deactivate';
-  const buttonText = isActive ? 'Activate' : 'Deactivate';
-  const processingText = isActive ? 'Activating...' : 'Deactivating...';
+
+  // Dynamic text based on action
+  const actionText = isActive
+    ? t('admin:users.list.activateText', 'activate')
+    : t('admin:users.list.deactivateText', 'deactivate');
+  const buttonText = isActive
+    ? t('admin:users.list.activate', 'Activate')
+    : t('admin:users.list.deactivate', 'Deactivate');
+  const processingText = isActive
+    ? t('admin:users.list.activating', 'Activating...')
+    : t('admin:users.list.deactivating', 'Deactivating...');
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Change User Status</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        {t('admin:users.list.changeStatusHeader', 'Change User Status')}
+      </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to {actionText} {count} user(s)?
+          {t(
+            'admin:users.list.changeStatusConfirm',
+            'Are you sure you want to {{action}} {{count}} user(s)?',
+            { action: actionText, count },
+          )}
         </Modal.Description>
         {currentUser &&
           data &&
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>Note:</strong> Your own account will be excluded from this
-              action.
+              <strong>{t('admin:users.list.note', 'Note:')}</strong>{' '}
+              {t(
+                'admin:users.list.excludeSelfStatus',
+                'Your own account will be excluded from this action.',
+              )}
             </Modal.Description>
           )}
       </Modal.Body>
@@ -117,7 +141,7 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={processing}
           >
-            Cancel
+            {t('admin:users.list.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'

@@ -58,7 +58,7 @@ function CreateRole() {
         await dispatch(createRole(data)).unwrap();
         history.push('/admin/roles');
       } catch (err) {
-        setError(err || t('errors.createRole', 'Failed to create role'));
+        setError(err || t('admin:errors.createRole', 'Failed to create role'));
       }
     },
     [dispatch, history, t],
@@ -74,14 +74,14 @@ function CreateRole() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='shield' size={24} />}
-        title='Create New Role'
-        subtitle='Define a new access level'
+        title={t('admin:roles.create.title', 'Create New Role')}
+        subtitle={t('admin:roles.create.subtitle', 'Define a new access level')}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Roles
+          {t('admin:buttons.backToRoles', '← Back to Roles')}
         </Button>
       </Box.Header>
 
@@ -114,6 +114,7 @@ function CreateRole() {
  */
 function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
@@ -192,15 +193,32 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Role Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:roles.create.roleInformation', 'Role Information')}
+        </h3>
 
-        <Form.Field name='name' label='Role Name' required>
-          <Form.Input placeholder='e.g., editor, moderator, viewer' />
+        <Form.Field
+          name='name'
+          label={t('admin:roles.create.roleName', 'Role Name')}
+          required
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:roles.create.roleNamePlaceholder',
+              'e.g., editor, moderator, viewer',
+            )}
+          />
         </Form.Field>
 
-        <Form.Field name='description' label='Description'>
+        <Form.Field
+          name='description'
+          label={t('admin:roles.create.description', 'Description')}
+        >
           <Form.Textarea
-            placeholder='Describe what this role is for...'
+            placeholder={t(
+              'admin:roles.create.descriptionPlaceholder',
+              'Describe what this role is for...',
+            )}
             rows={3}
           />
         </Form.Field>
@@ -208,7 +226,11 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          Permissions ({selectedPermissions.length} selected)
+          {t(
+            'admin:roles.create.permissionsCount',
+            'Permissions ({count} selected)',
+            { count: selectedPermissions.length },
+          )}
         </h3>
 
         <Form.Field name='permissions'>
@@ -221,20 +243,31 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
             hasMore={permissionsHasMore}
             onLoadMore={handleLoadMorePermissions}
             searchable
-            searchPlaceholder='Search e.g. users, users:read, :create'
+            searchPlaceholder={t(
+              'admin:roles.create.searchPlaceholder',
+              'Search e.g. users, users:read, :create',
+            )}
             onSearch={setPermissionSearch}
-            emptyMessage='No permissions found'
-            loadingMessage='Loading permissions...'
+            emptyMessage={t(
+              'admin:roles.create.noPermissionsFound',
+              'No permissions found',
+            )}
+            loadingMessage={t(
+              'admin:roles.create.loadingPermissions',
+              'Loading permissions...',
+            )}
           />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel} disabled={loading}>
-          Cancel
+          {t('admin:buttons.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Creating...' : 'Create Role'}
+          {loading
+            ? t('admin:buttons.creating', 'Creating...')
+            : t('admin:buttons.createRole', 'Create Role')}
         </Button>
       </div>
     </>

@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../../../shared/renderer/components/Modal';
 import { bulkDeletePermissions } from '../redux';
@@ -20,6 +21,7 @@ import { bulkDeletePermissions } from '../redux';
  *   deleteModalRef.current.close();             // Close modal
  */
 const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Internal state
@@ -65,20 +67,31 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(permission);
     } catch (err) {
-      setError(err);
+      setError(
+        err ||
+          t('admin:permissions.deleteError', 'Failed to delete permission'),
+      );
     } finally {
       setDeleting(false);
     }
-  }, [dispatch, permission, resetState, onSuccess]);
+  }, [dispatch, permission, resetState, onSuccess, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Delete Permission</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        {t('admin:permissions.deleteTitle', 'Delete Permission')}
+      </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete the permission &quot;
-          {permission && `${permission.resource}:${permission.action}`}
-          &quot;? This action cannot be undone.
+          {t(
+            'admin:permissions.deleteConfirmation',
+            'Are you sure you want to delete the permission "{{permissionName}}"? This action cannot be undone.',
+            {
+              permissionName: permission
+                ? `${permission.resource}:${permission.action}`
+                : '',
+            },
+          )}
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
@@ -88,14 +101,16 @@ const DeletePermissionModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={deleting}
           >
-            Cancel
+            {t('admin:common.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
             disabled={deleting}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting
+              ? t('admin:common.deleting', 'Deleting...')
+              : t('admin:common.delete', 'Delete')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

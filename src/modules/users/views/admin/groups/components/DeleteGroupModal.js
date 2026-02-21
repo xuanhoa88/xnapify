@@ -7,6 +7,7 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
 import Modal from '../../../../../../shared/renderer/components/Modal';
 import { deleteGroup } from '../redux';
@@ -20,6 +21,7 @@ import { deleteGroup } from '../redux';
  *   deleteModalRef.current.close();        // Close modal
  */
 const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
+  const { t } = useTranslation();
   const dispatch = useDispatch();
 
   // Internal state
@@ -65,19 +67,24 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
       resetState();
       onSuccess && onSuccess(group);
     } catch (err) {
-      setError(err);
+      setError(err || t('admin:groups.deleteError', 'Failed to delete group'));
     } finally {
       setDeleting(false);
     }
-  }, [dispatch, group, resetState, onSuccess]);
+  }, [dispatch, group, resetState, onSuccess, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
-      <Modal.Header onClose={handleClose}>Delete Group</Modal.Header>
+      <Modal.Header onClose={handleClose}>
+        {t('admin:groups.deleteTitle', 'Delete Group')}
+      </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Are you sure you want to delete the group &quot;{group && group.name}
-          &quot;? This action cannot be undone.
+          {t(
+            'admin:groups.deleteConfirmation',
+            'Are you sure you want to delete the group "{{groupName}}"? This action cannot be undone.',
+            { groupName: group && group.name },
+          )}
         </Modal.Description>
       </Modal.Body>
       <Modal.Footer>
@@ -87,14 +94,16 @@ const DeleteGroupModal = forwardRef(({ onSuccess }, ref) => {
             onClick={handleClose}
             disabled={deleting}
           >
-            Cancel
+            {t('admin:common.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleConfirm}
             disabled={deleting}
           >
-            {deleting ? 'Deleting...' : 'Delete'}
+            {deleting
+              ? t('admin:common.deleting', 'Deleting...')
+              : t('admin:common.delete', 'Delete')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

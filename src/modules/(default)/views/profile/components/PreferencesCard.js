@@ -241,7 +241,7 @@ function PreferencesFormFields({ loading }) {
         loading={loading || isSubmitting}
       >
         {loading
-          ? t('profile.saving')
+          ? t('profile.saving', 'Saving...')
           : t('profile.savePreferences', 'Save Preferences')}
       </Button>
     </>

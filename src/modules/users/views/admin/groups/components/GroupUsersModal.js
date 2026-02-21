@@ -76,7 +76,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
           setTotalItems(data.pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadUsers', 'Failed to load users'));
+        setError(err || t('admin:errors.loadUsers', 'Failed to load users'));
       } finally {
         setUsersLoading(false);
       }
@@ -131,28 +131,35 @@ const GroupUsersModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Users in &quot;
-        {(group && group.name) || t('common.unknown', 'Unknown')}&quot;
+        {t('admin:groups.usersInGroup', 'Users in "{{groupName}}"', {
+          groupName:
+            (group && group.name) || t('admin:common.unknown', 'Unknown'),
+        })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          View all users that belong to this group.
+          {t(
+            'admin:groups.viewUsersDescription',
+            'View all users that belong to this group.',
+          )}
         </Modal.Description>
 
         {/* Search Input */}
         <Table.SearchBar
           value={search}
           onChange={handleSearchChange}
-          placeholder={t('common.searchUsers', 'Search users...')}
+          placeholder={t('admin:common.searchUsers', 'Search users...')}
           className={s.modalSearchBar}
         />
 
         <div className={s.usersList}>
           {usersLoading ? (
-            <div className={s.noUsers}>Loading users...</div>
+            <div className={s.noUsers}>
+              {t('admin:common.loadingUsers', 'Loading users...')}
+            </div>
           ) : users.length === 0 ? (
             <div className={s.noUsers}>
-              {t('groups.noUsersInGroup', 'No users found in this group')}
+              {t('admin:groups.noUsersInGroup', 'No users found in this group')}
             </div>
           ) : (
             users.map(user => (
@@ -170,15 +177,15 @@ const GroupUsersModal = forwardRef((props, ref) => {
                   <span className={s.userName}>
                     {(user.profile && user.profile.display_name) ||
                       user.display_name ||
-                      'N/A'}
+                      t('admin:common.na', 'N/A')}
                   </span>
                   <span className={s.userEmail}>{user.email}</span>
                 </div>
                 <div className={s.userMeta}>
                   <Tag variant={user.is_active ? 'success' : 'error'}>
                     {user.is_active
-                      ? t('common.active', 'Active')
-                      : t('common.inactive', 'Inactive')}
+                      ? t('admin:common.active', 'Active')
+                      : t('admin:common.inactive', 'Inactive')}
                   </Tag>
                 </div>
               </div>
@@ -199,7 +206,9 @@ const GroupUsersModal = forwardRef((props, ref) => {
       </Modal.Body>
       <Modal.Footer>
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Close</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:common.close', 'Close')}
+          </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
     </Modal>

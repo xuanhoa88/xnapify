@@ -7,6 +7,7 @@
 
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import {
   Icon,
   Table,
@@ -31,13 +32,17 @@ function GroupActionsDropdown({
   onEdit,
   onDelete,
 }) {
+  const { t } = useTranslation();
+
   const handleToggle = useCallback(() => {
     onToggle(isOpen ? null : group.id);
   }, [isOpen, group.id, onToggle]);
 
   return (
     <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger title='More actions'>
+      <ActionsDropdown.Trigger
+        title={t('admin:common.moreActions', 'More actions')}
+      >
         <Icon name='more-vertical' size={18} />
       </ActionsDropdown.Trigger>
       <ActionsDropdown.Menu>
@@ -46,21 +51,21 @@ function GroupActionsDropdown({
           icon={<Icon name='users' size={16} />}
           permission='users:read'
         >
-          View Users
+          {t('admin:groups.viewUsers', 'View Users')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onManageRoles(group)}
           icon={<Icon name='shield' size={16} />}
           permission='roles:*'
         >
-          Manage Roles
+          {t('admin:groups.manageRoles', 'Manage Roles')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onViewPermissions(group)}
           icon={<Icon name='key' size={16} />}
           permission='permissions:read'
         >
-          View Permissions
+          {t('admin:groups.viewPermissions', 'View Permissions')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Divider />
         <ActionsDropdown.Item
@@ -68,7 +73,7 @@ function GroupActionsDropdown({
           icon={<Icon name='edit' size={16} />}
           permission='groups:update'
         >
-          Edit Group
+          {t('admin:groups.editGroup', 'Edit Group')}
         </ActionsDropdown.Item>
         <ActionsDropdown.Item
           onClick={() => onDelete(group)}
@@ -76,7 +81,7 @@ function GroupActionsDropdown({
           variant='danger'
           permission='groups:delete'
         >
-          Delete Group
+          {t('admin:groups.deleteGroup', 'Delete Group')}
         </ActionsDropdown.Item>
       </ActionsDropdown.Menu>
     </ActionsDropdown>

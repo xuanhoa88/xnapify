@@ -17,7 +17,7 @@ export const middleware = requirePermission('permissions:update');
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('navigation.edit', 'Edit'),
+    title: i18n.t('admin:navigation.edit', 'Edit'),
   };
 }
 
@@ -28,7 +28,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('navigation.edit', 'Edit'),
+        label: i18n.t('admin:navigation.edit', 'Edit'),
         url: path,
       },
       'admin',

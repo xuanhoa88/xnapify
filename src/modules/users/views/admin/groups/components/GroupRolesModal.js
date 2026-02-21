@@ -79,7 +79,7 @@ const GroupRolesModal = forwardRef((props, ref) => {
           setTotalItems(pagination.total || 0);
         }
       } catch (err) {
-        setError(err || t('errors.loadRoles', 'Failed to load roles'));
+        setError(err || t('admin:errors.loadRoles', 'Failed to load roles'));
       } finally {
         setRolesLoading(false);
       }
@@ -162,37 +162,45 @@ const GroupRolesModal = forwardRef((props, ref) => {
       dispatch(fetchGroups({ page: 1 }));
       handleClose();
     } catch (err) {
-      setError(err || t('errors.assignRoles', 'An error occurred'));
+      setError(err || t('admin:errors.assignRoles', 'An error occurred'));
     }
   }, [dispatch, group, selections, handleClose, t]);
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Manage Roles for &quot;
-        {(group && group.name) || t('common.unknown', 'Unknown')}&quot;
+        {t('admin:groups.manageRolesFor', 'Manage Roles for "{{groupName}}"', {
+          groupName:
+            (group && group.name) || t('admin:common.unknown', 'Unknown'),
+        })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>
-          Select roles to assign to this group. All users of the group will
-          inherit these roles.
+          {t(
+            'admin:groups.manageRolesDescription',
+            'Select roles to assign to this group. All users of the group will inherit these roles.',
+          )}
         </Modal.Description>
 
         {/* Search Input */}
         <Table.SearchBar
           value={searchTerm}
           onChange={handleSearchChange}
-          placeholder='Search roles...'
+          placeholder={t('admin:common.searchRoles', 'Search roles...')}
           debounce={300}
           className={s.modalSearchBar}
         />
 
         <div className={s.checkboxList}>
           {rolesLoading ? (
-            <div className={s.noItems}>Loading roles...</div>
+            <div className={s.noItems}>
+              {t('admin:common.loadingRoles', 'Loading roles...')}
+            </div>
           ) : roles.length === 0 ? (
             <div className={s.noItems}>
-              {searchTerm ? 'No roles match your search' : 'No roles available'}
+              {searchTerm
+                ? t('admin:roles.noRolesMatch', 'No roles match your search')
+                : t('admin:roles.noRolesAvailable', 'No roles available')}
             </div>
           ) : (
             roles.map(role => (
@@ -246,13 +254,17 @@ const GroupRolesModal = forwardRef((props, ref) => {
       <Modal.Footer>
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
-          <Modal.Button onClick={handleClose}>Cancel</Modal.Button>
+          <Modal.Button onClick={handleClose}>
+            {t('admin:common.cancel', 'Cancel')}
+          </Modal.Button>
           <Modal.Button
             variant='primary'
             onClick={handleSave}
             disabled={loading}
           >
-            {loading ? 'Saving...' : 'Save'}
+            {loading
+              ? t('admin:common.saving', 'Saving...')
+              : t('admin:common.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

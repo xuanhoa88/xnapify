@@ -100,33 +100,43 @@ const UserPermissionsModal = forwardRef((props, ref) => {
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
       <Modal.Header onClose={handleClose}>
-        Permissions for &quot;
-        {(user && (user.display_name || user.email)) ||
-          t('common.unknown', 'Unknown')}
-        &quot;
+        {t('admin:users.permissions.title', 'Permissions for "{{name}}"', {
+          name:
+            (user && (user.display_name || user.email)) ||
+            t('admin:common.unknown', 'Unknown'),
+        })}
       </Modal.Header>
       <Modal.Body>
         <Modal.Description>
-          These permissions are inherited from the user&apos;s assigned roles
-          and groups.
+          {t(
+            'admin:users.permissions.description',
+            "These permissions are inherited from the user's assigned roles and groups.",
+          )}
         </Modal.Description>
 
         {loading ? (
-          <p>Loading permissions...</p>
+          <p>
+            {t('admin:users.permissions.loading', 'Loading permissions...')}
+          </p>
         ) : (
           <>
             {/* Role breakdown */}
             {roleDetails.length > 0 && (
               <div className={s.roleBreakdown}>
-                <h4 className={s.sectionTitle}>Assigned Roles</h4>
+                <h4 className={s.sectionTitle}>
+                  {t('admin:users.permissions.assignedRoles', 'Assigned Roles')}
+                </h4>
                 <div className={s.rolesList}>
                   {roleDetails.map(role => (
                     <div key={role.id || role.name} className={s.roleItem}>
                       <span className={s.roleName}>{role.name}</span>
                       {role.permissionCount > 0 && (
                         <span className={s.rolePermCount}>
-                          {role.permissionCount} permission
-                          {role.permissionCount !== 1 ? 's' : ''}
+                          {t(
+                            'admin:users.permissions.permissionCount',
+                            '{{count}} permission(s)',
+                            { count: role.permissionCount },
+                          )}
                         </span>
                       )}
                     </div>
@@ -138,7 +148,11 @@ const UserPermissionsModal = forwardRef((props, ref) => {
             {/* All permissions */}
             <div className={s.permissionsSection}>
               <h4 className={s.sectionTitle}>
-                Effective Permissions ({permissions.length})
+                {t(
+                  'admin:users.permissions.effectivePermissions',
+                  'Effective Permissions ({{count}})',
+                  { count: permissions.length },
+                )}
               </h4>
               {permissions.length > 0 ? (
                 <div className={s.permissionsList}>
@@ -150,7 +164,10 @@ const UserPermissionsModal = forwardRef((props, ref) => {
                 </div>
               ) : (
                 <p className={s.noPermissions}>
-                  No permissions. Assign roles to grant permissions.
+                  {t(
+                    'admin:users.permissions.noPermissions',
+                    'No permissions. Assign roles to grant permissions.',
+                  )}
                 </p>
               )}
             </div>
@@ -158,7 +175,9 @@ const UserPermissionsModal = forwardRef((props, ref) => {
         )}
       </Modal.Body>
       <Modal.Footer>
-        <Modal.Button onClick={handleClose}>Close</Modal.Button>
+        <Modal.Button onClick={handleClose}>
+          {t('admin:users.permissions.close', 'Close')}
+        </Modal.Button>
       </Modal.Footer>
     </Modal>
   );

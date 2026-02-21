@@ -58,7 +58,9 @@ function CreateGroup() {
         await dispatch(createGroup(data)).unwrap();
         history.push('/admin/groups');
       } catch (err) {
-        setError(err || t('errors.createGroup', 'Failed to create group'));
+        setError(
+          err || t('admin:errors.createGroup', 'Failed to create group'),
+        );
       }
     },
     [dispatch, history, t],
@@ -76,14 +78,17 @@ function CreateGroup() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='folder' size={24} />}
-        title='Create New Group'
-        subtitle='Organize users into a new group'
+        title={t('admin:groups.create.title', 'Create New Group')}
+        subtitle={t(
+          'admin:groups.create.subtitle',
+          'Organize users into a new group',
+        )}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          ← Back to Groups
+          {t('admin:groups.backToGroups', '← Back to Groups')}
         </Button>
       </Box.Header>
 
@@ -116,6 +121,7 @@ function CreateGroup() {
  */
 function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
+  const { t } = useTranslation();
   const {
     watch,
     formState: { isDirty },
@@ -188,32 +194,64 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
   return (
     <>
       <div className={s.formSection}>
-        <h3 className={s.sectionTitle}>Group Information</h3>
+        <h3 className={s.sectionTitle}>
+          {t('admin:groups.create.groupInformation', 'Group Information')}
+        </h3>
 
-        <Form.Field name='name' label='Group Name' required>
-          <Form.Input placeholder='e.g., Engineering, Marketing, Support' />
+        <Form.Field
+          name='name'
+          label={t('admin:groups.create.name', 'Group Name')}
+          required
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:groups.create.namePlaceholder',
+              'e.g., Engineering, Marketing, Support',
+            )}
+          />
         </Form.Field>
 
-        <Form.Field name='description' label='Description'>
+        <Form.Field
+          name='description'
+          label={t('admin:groups.create.description', 'Description')}
+        >
           <Form.Textarea
-            placeholder='Describe what this group is for...'
+            placeholder={t(
+              'admin:groups.create.descriptionPlaceholder',
+              'Describe what this group is for...',
+            )}
             rows={3}
           />
         </Form.Field>
 
         <div className={s.formRow}>
-          <Form.Field name='category' label='Category'>
-            <Form.Input placeholder='e.g., System, Organization, Department' />
+          <Form.Field
+            name='category'
+            label={t('admin:groups.create.category', 'Category')}
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:groups.create.categoryPlaceholder',
+                'e.g., System, Organization, Department',
+              )}
+            />
           </Form.Field>
-          <Form.Field name='type' label='Type'>
-            <Form.Input placeholder='e.g., Security, Organizational, Functional' />
+          <Form.Field name='type' label={t('admin:groups.create.type', 'Type')}>
+            <Form.Input
+              placeholder={t(
+                'admin:groups.create.typePlaceholder',
+                'e.g., Security, Organizational, Functional',
+              )}
+            />
           </Form.Field>
         </div>
       </div>
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          Roles ({selectedRoles.length} selected)
+          {t('admin:groups.create.rolesCount', 'Roles ({count} selected)', {
+            count: selectedRoles.length,
+          })}
         </h3>
 
         <Form.Field name='roles'>
@@ -226,20 +264,28 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
             hasMore={rolesHasMore}
             onLoadMore={handleLoadMoreRoles}
             searchable
-            searchPlaceholder='Search roles...'
+            searchPlaceholder={t(
+              'admin:groups.create.searchRoles',
+              'Search roles...',
+            )}
             onSearch={setRoleSearch}
-            emptyMessage='No roles found'
-            loadingMessage='Loading roles...'
+            emptyMessage={t('admin:groups.create.emptyRoles', 'No roles found')}
+            loadingMessage={t(
+              'admin:groups.create.loadingRoles',
+              'Loading roles...',
+            )}
           />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel} disabled={loading}>
-          Cancel
+          {t('admin:groups.create.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
-          {loading ? 'Creating...' : 'Create Group'}
+          {loading
+            ? t('admin:groups.create.creating', 'Creating...')
+            : t('admin:groups.create.createGroup', 'Create Group')}
         </Button>
       </div>
     </>

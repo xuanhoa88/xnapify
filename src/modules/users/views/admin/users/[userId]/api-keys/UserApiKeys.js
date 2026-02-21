@@ -100,7 +100,7 @@ export default function UserApiKeys({ userId }) {
   const permissions = useMemo(() => {
     if (!Array.isArray(userPermissionStrings)) return [];
     return userPermissionStrings.map(perm => {
-      const [resource, action] = perm.split(':');
+      const [resource, action] = perm.split('admin:.');
       return {
         value: perm,
         label: perm,
@@ -154,7 +154,7 @@ export default function UserApiKeys({ userId }) {
       navigator.clipboard.writeText(text);
       dispatch(
         showSuccessMessage({
-          message: t('apiKeys.copied', 'Copied to clipboard'),
+          message: t('admin:users.apiKeys.copied', 'Copied to clipboard'),
         }),
       );
     },
@@ -179,19 +179,22 @@ export default function UserApiKeys({ userId }) {
       icon={<Icon name='key' size={24} />}
       title={
         user
-          ? t('apiKeys.headerTitle', 'API Keys: {{name}}', {
+          ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
               name: user.display_name || user.email,
             })
-          : t('apiKeys.headerTitle', 'User API Keys')
+          : t('admin:users.apiKeys.headerTitle', 'User API Keys')
       }
-      subtitle={t('apiKeys.headerSubtitle', 'Manage API keys for this user')}
+      subtitle={t(
+        'admin:users.apiKeys.headerSubtitle',
+        'Manage API keys for this user',
+      )}
     >
       <div style={{ display: 'flex', gap: '8px' }}>
         <Button
           variant='secondary'
           onClick={() => history.push('/admin/users')}
         >
-          {t('apiKeys.backToUsers', '← Back to Users')}
+          {t('admin:users.apiKeys.backToUsers', '← Back to Users')}
         </Button>
         <Button
           variant='primary'
@@ -200,14 +203,14 @@ export default function UserApiKeys({ userId }) {
           title={
             !canCreate
               ? t(
-                  'apiKeys.noPermissionToCreate',
+                  'admin:users.apiKeys.noPermissionToCreate',
                   'You do not have permission to create API keys',
                 )
-              : t('apiKeys.generateKey', 'Generate Key')
+              : t('admin:users.apiKeys.generateKey', 'Generate Key')
           }
         >
           <Icon name='plus' size={16} />
-          {t('apiKeys.generateKey', 'Generate Key')}
+          {t('admin:users.apiKeys.generateKey', 'Generate Key')}
         </Button>
       </div>
     </Box.Header>
@@ -223,7 +226,7 @@ export default function UserApiKeys({ userId }) {
         {getHeader()}
         <Loader
           variant='skeleton'
-          message={t('apiKeys.loading', 'Loading...')}
+          message={t('admin:users.apiKeys.loading', 'Loading...')}
         />
       </div>
     );
@@ -235,12 +238,13 @@ export default function UserApiKeys({ userId }) {
         {getHeader()}
         <div className={s.content}>
           <div className={s.error}>
-            {userError || t('apiKeys.userNotFoundError', 'User not found')}
+            {userError ||
+              t('admin:users.apiKeys.userNotFoundError', 'User not found')}
             <Button
               variant='secondary'
               onClick={() => history.push('/admin/users')}
             >
-              {t('apiKeys.backToUsers', 'Back to Users')}
+              {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
             </Button>
           </div>
         </div>
@@ -258,19 +262,22 @@ export default function UserApiKeys({ userId }) {
           <div className={s.newKeyAlert}>
             <div className={s.alertHeader}>
               <strong>
-                {t('apiKeys.newKeyGenerated', 'New API Key Generated!')}
+                {t(
+                  'admin:users.apiKeys.newKeyGenerated',
+                  'New API Key Generated!',
+                )}
               </strong>
               <button
                 className={s.closeBtn}
                 onClick={handleCloseNewKeyAlert}
-                aria-label={t('apiKeys.close', 'Close')}
+                aria-label={t('admin:users.apiKeys.close', 'Close')}
               >
                 ×
               </button>
             </div>
             <p className={s.alertText}>
               {t(
-                'apiKeys.newKeyGeneratedText',
+                'admin:users.apiKeys.newKeyGeneratedText',
                 'Please copy this key now. It will not be shown again.',
               )}
             </p>
@@ -282,7 +289,7 @@ export default function UserApiKeys({ userId }) {
                 onClick={() => handleCopy(newKey.token)}
               >
                 <Icon name='clipboard' size={14} />
-                {t('apiKeys.copy', 'Copy')}
+                {t('admin:users.apiKeys.copy', 'Copy')}
               </Button>
             </div>
           </div>
@@ -296,18 +303,18 @@ export default function UserApiKeys({ userId }) {
         ) : keys.length === 0 ? (
           <div className={s.emptyState}>
             <Icon name='key' size={32} />
-            <p>{t('apiKeys.emptyState', 'No API keys yet')}</p>
+            <p>{t('admin:users.apiKeys.emptyState', 'No API keys yet')}</p>
           </div>
         ) : (
           <div className={s.tableContainer}>
             <table className={s.table}>
               <thead>
                 <tr>
-                  <th>{t('apiKeys.name', 'Name')}</th>
-                  <th>{t('apiKeys.prefix', 'Prefix')}</th>
-                  <th>{t('apiKeys.created', 'Created')}</th>
-                  <th>{t('apiKeys.lastUsed', 'Last Used')}</th>
-                  <th>{t('apiKeys.status', 'Status')}</th>
+                  <th>{t('admin:users.apiKeys.name', 'Name')}</th>
+                  <th>{t('admin:users.apiKeys.prefix', 'Prefix')}</th>
+                  <th>{t('admin:users.apiKeys.created', 'Created')}</th>
+                  <th>{t('admin:users.apiKeys.lastUsed', 'Last Used')}</th>
+                  <th>{t('admin:users.apiKeys.status', 'Status')}</th>
                   <th className={s.actionsCol}></th>
                 </tr>
               </thead>
@@ -339,8 +346,8 @@ export default function UserApiKeys({ userId }) {
                         )}
                       >
                         {key.is_active
-                          ? t('apiKeys.statusActive', 'Active')
-                          : t('apiKeys.statusRevoked', 'Revoked')}
+                          ? t('admin:users.apiKeys.statusActive', 'Active')
+                          : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
                       </span>
                     </td>
                     <td>
@@ -351,7 +358,7 @@ export default function UserApiKeys({ userId }) {
                             size='small'
                             iconOnly
                             onClick={() => handleRevoke(key)}
-                            title={t('apiKeys.revoke', 'Revoke')}
+                            title={t('admin:users.apiKeys.revoke', 'Revoke')}
                           >
                             <Icon name='trash' size={16} />
                           </Button>
@@ -369,7 +376,7 @@ export default function UserApiKeys({ userId }) {
       {/* Create key modal */}
       <Modal isOpen={isCreateOpen} onClose={handleCloseCreate}>
         <Modal.Header onClose={handleCloseCreate}>
-          {t('apiKeys.generateNewKey', 'Generate New API Key')}
+          {t('admin:users.apiKeys.generateNewKey', 'Generate New API Key')}
         </Modal.Header>
         <Modal.Body error={createError}>
           <Form
@@ -379,10 +386,13 @@ export default function UserApiKeys({ userId }) {
             defaultValues={DEFAULT_FORM_VALUES}
           >
             <div className={s.modalField}>
-              <Form.Field name='name' label={t('apiKeys.keyName', 'Key Name')}>
+              <Form.Field
+                name='name'
+                label={t('admin:users.apiKeys.keyName', 'Key Name')}
+              >
                 <Form.Input
                   placeholder={t(
-                    'apiKeys.keyNamePlaceholder',
+                    'admin:users.apiKeys.keyNamePlaceholder',
                     'e.g. CI/CD Pipeline',
                   )}
                 />
@@ -391,17 +401,38 @@ export default function UserApiKeys({ userId }) {
             <div className={s.modalField}>
               <Form.Field
                 name='expiresIn'
-                label={t('apiKeys.expiration', 'Expiration')}
+                label={t('admin:users.apiKeys.expiration', 'Expiration')}
               >
                 <Form.Select
                   options={[
-                    { value: 7, label: t('apiKeys.7Days', '7 Days') },
-                    { value: 14, label: t('apiKeys.14Days', '14 Days') },
-                    { value: 30, label: t('apiKeys.30Days', '30 Days') },
-                    { value: 60, label: t('apiKeys.60Days', '60 Days') },
-                    { value: 90, label: t('apiKeys.90Days', '90 Days') },
-                    { value: 180, label: t('apiKeys.180Days', '180 Days') },
-                    { value: 365, label: t('apiKeys.1Year', '1 Year') },
+                    {
+                      value: 7,
+                      label: t('admin:users.apiKeys.7Days', '7 Days'),
+                    },
+                    {
+                      value: 14,
+                      label: t('admin:users.apiKeys.14Days', '14 Days'),
+                    },
+                    {
+                      value: 30,
+                      label: t('admin:users.apiKeys.30Days', '30 Days'),
+                    },
+                    {
+                      value: 60,
+                      label: t('admin:users.apiKeys.60Days', '60 Days'),
+                    },
+                    {
+                      value: 90,
+                      label: t('admin:users.apiKeys.90Days', '90 Days'),
+                    },
+                    {
+                      value: 180,
+                      label: t('admin:users.apiKeys.180Days', '180 Days'),
+                    },
+                    {
+                      value: 365,
+                      label: t('admin:users.apiKeys.1Year', '1 Year'),
+                    },
                   ]}
                 />
               </Form.Field>
@@ -409,9 +440,9 @@ export default function UserApiKeys({ userId }) {
             <div className={s.modalField}>
               <Form.Field
                 name='scopes'
-                label={t('apiKeys.permissions', 'Permissions')}
+                label={t('admin:users.apiKeys.permissions', 'Permissions')}
                 description={t(
-                  'apiKeys.permissionsDescription',
+                  'admin:users.apiKeys.permissionsDescription',
                   'Select permissions for this API key',
                 )}
               >
@@ -423,11 +454,11 @@ export default function UserApiKeys({ userId }) {
                   loading={permissionsLoading}
                   searchable
                   searchPlaceholder={t(
-                    'apiKeys.permissionsSearchPlaceholder',
+                    'admin:users.apiKeys.permissionsSearchPlaceholder',
                     'Search e.g. users, users:read, :create',
                   )}
                   emptyMessage={t(
-                    'apiKeys.permissionsEmptyMessage',
+                    'admin:users.apiKeys.permissionsEmptyMessage',
                     'No permissions found',
                   )}
                 />
@@ -438,7 +469,7 @@ export default function UserApiKeys({ userId }) {
         <Modal.Footer>
           <Modal.Actions>
             <Modal.Button variant='secondary' onClick={handleCloseCreate}>
-              {t('apiKeys.cancel', 'Cancel')}
+              {t('admin:users.apiKeys.cancel', 'Cancel')}
             </Modal.Button>
             <Modal.Button
               variant='primary'
@@ -447,8 +478,8 @@ export default function UserApiKeys({ userId }) {
               disabled={creating}
             >
               {creating
-                ? t('apiKeys.generating', 'Generating…')
-                : t('apiKeys.generate', 'Generate')}
+                ? t('admin:users.apiKeys.generating', 'Generating…')
+                : t('admin:users.apiKeys.generate', 'Generate')}
             </Modal.Button>
           </Modal.Actions>
         </Modal.Footer>
@@ -457,7 +488,7 @@ export default function UserApiKeys({ userId }) {
       {/* Revoke confirmation modal */}
       <ConfirmModal.Delete
         ref={confirmRevokeRef}
-        title={t('apiKeys.revokeTitle', 'Revoke API Key')}
+        title={t('admin:users.apiKeys.revokeTitle', 'Revoke API Key')}
         getItemName={key => key.name}
         onDelete={onRevoke}
       />
