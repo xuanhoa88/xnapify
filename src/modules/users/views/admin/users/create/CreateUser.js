@@ -94,7 +94,8 @@ function CreateUser() {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:users.create.backToUsers', '← Back to Users')}
+          <Icon name='arrowLeft' />
+          {t('admin:users.create.backToUsers', 'Back to Users')}
         </Button>
       </Box.Header>
       <div className={s.formContainer}>

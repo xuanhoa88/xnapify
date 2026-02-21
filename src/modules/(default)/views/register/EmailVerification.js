@@ -26,6 +26,7 @@ import Form, {
 } from '../../../../shared/renderer/components/Form';
 import { emailVerificationFormSchema } from '../../../users/validator/auth';
 import s from './EmailVerification.css';
+import Icon from '../../../../shared/renderer/components/Icon';
 
 /**
  * Email Verification Page Component
@@ -116,7 +117,8 @@ function EmailVerification({ token: initialToken }) {
 
           <div className={s.backLink}>
             <Link to='/login' className={s.link}>
-              {t('emailVerification.backToLogin', '← Back to Login')}
+              <Icon name='arrowLeft' />
+              {t('emailVerification.backToLogin', 'Back to Login')}
             </Link>
           </div>
         </div>

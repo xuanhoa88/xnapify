@@ -81,7 +81,8 @@ function CreateRole() {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:buttons.backToRoles', '← Back to Roles')}
+          <Icon name='arrowLeft' />
+          {t('admin:buttons.backToRoles', 'Back to Roles')}
         </Button>
       </Box.Header>
 
@@ -228,7 +229,7 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
         <h3 className={s.sectionTitle}>
           {t(
             'admin:roles.create.permissionsCount',
-            'Permissions ({count} selected)',
+            'Permissions ({{count}} selected)',
             { count: selectedPermissions.length },
           )}
         </h3>

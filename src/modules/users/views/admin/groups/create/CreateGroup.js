@@ -88,7 +88,8 @@ function CreateGroup() {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:groups.backToGroups', '← Back to Groups')}
+          <Icon name='arrowLeft' />
+          {t('admin:groups.backToGroups', 'Back to Groups')}
         </Button>
       </Box.Header>
 
@@ -249,7 +250,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:groups.create.rolesCount', 'Roles ({count} selected)', {
+          {t('admin:groups.create.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
         </h3>

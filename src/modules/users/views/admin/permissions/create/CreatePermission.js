@@ -82,9 +82,10 @@ export default function CreatePermission() {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
+          <Icon name='arrowLeft' />
           {t(
             'admin:permissions.create.backToPermissions',
-            '← Back to Permissions',
+            'Back to Permissions',
           )}
         </Button>
       </Box.Header>

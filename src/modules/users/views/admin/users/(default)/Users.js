@@ -479,7 +479,6 @@ function Users() {
                       {user.display_name || user.email}
                       {currentUser && currentUser.id === user.id && (
                         <span className={s.youBadge}>
-                          {' '}
                           {t('admin:users.list.you', '(You)')}
                         </span>
                       )}

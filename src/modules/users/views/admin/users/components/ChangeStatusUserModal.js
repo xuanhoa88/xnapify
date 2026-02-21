@@ -126,7 +126,7 @@ const ChangeStatusUserModal = forwardRef(({ onSuccess }, ref) => {
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>{t('admin:users.list.note', 'Note:')}</strong>{' '}
+              <strong>{t('admin:users.list.note', 'Note:')}</strong>
               {t(
                 'admin:users.list.excludeSelfStatus',
                 'Your own account will be excluded from this action.',

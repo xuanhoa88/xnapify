@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '../../../../shared/renderer/components/History';
 import { featuresData } from './data';
 import s from './FeatureDetails.css';
+import Icon from '../../../../shared/renderer/components/Icon';
 
 function FeatureDetails({ featureId }) {
   const { t } = useTranslation();
@@ -31,7 +32,8 @@ function FeatureDetails({ featureId }) {
               )}
             </p>
             <Link to='/features' className={s.btnPrimary}>
-              {t('features.backToFeatures', '← Back to Features')}
+              <Icon name='arrowLeft' />
+              {t('features.backToFeatures', 'Back to Features')}
             </Link>
           </div>
         </section>
@@ -45,7 +47,8 @@ function FeatureDetails({ featureId }) {
       <section className={s.hero}>
         <div className={s.heroContent}>
           <Link to='/features' className={s.backLink}>
-            {t('features.backToFeatures', '← Back to Features')}
+            <Icon name='arrowLeft' />
+            {t('features.backToFeatures', 'Back to Features')}
           </Link>
           <div className={s.heroIcon}>{feature.icon}</div>
           <h1 className={s.heroTitle}>{feature.name}</h1>

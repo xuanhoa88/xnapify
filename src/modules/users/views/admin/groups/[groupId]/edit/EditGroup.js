@@ -101,7 +101,8 @@ function EditGroup({ groupId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:groups.backToGroups', '← Back to Groups')}
+            <Icon name='arrowLeft' />
+            {t('admin:groups.backToGroups', 'Back to Groups')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -127,7 +128,8 @@ function EditGroup({ groupId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:groups.backToGroups', '← Back to Groups')}
+            <Icon name='arrowLeft' />
+            {t('admin:groups.backToGroups', 'Back to Groups')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -174,7 +176,8 @@ function EditGroup({ groupId }) {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:groups.backToGroups', '← Back to Groups')}
+          <Icon name='arrowLeft' />
+          {t('admin:groups.backToGroups', 'Back to Groups')}
         </Button>
       </Box.Header>
 
@@ -335,7 +338,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:groups.edit.rolesCount', 'Roles ({count} selected)', {
+          {t('admin:groups.edit.rolesCount', 'Roles ({{count}} selected)', {
             count: selectedRoles.length,
           })}
         </h3>

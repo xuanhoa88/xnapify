@@ -22,6 +22,7 @@ import Form, {
 } from '../../../../shared/renderer/components/Form';
 import { passwordResetRequestFormSchema } from '../../../users/validator/auth';
 import s from './ResetPasswordRequest.css';
+import Icon from '../../../../shared/renderer/components/Icon';
 
 /**
  * Reset Password Request Page Component
@@ -83,7 +84,8 @@ function ResetPasswordRequest() {
 
           <div className={s.backLink}>
             <Link to='/login' className={s.link}>
-              {t('resetPassword.backToLogin', '← Back to Login')}
+              <Icon name='arrowLeft' />
+              {t('resetPassword.backToLogin', 'Back to Login')}
             </Link>
           </div>
         </div>

@@ -127,7 +127,7 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
           data.ids &&
           data.ids.includes(currentUser.id) && (
             <Modal.Description>
-              <strong>{t('admin:users.list.note', 'Note:')}</strong>{' '}
+              <strong>{t('admin:users.list.note', 'Note:')}</strong>
               {t(
                 'admin:users.list.excludeSelfDeletion',
                 'Your own account will be excluded from deletion.',

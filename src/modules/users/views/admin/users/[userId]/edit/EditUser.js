@@ -132,7 +132,8 @@ function EditUser({ userId }) {
           )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            {t('admin:users.edit.backToUsers', '← Back to Users')}
+            <Icon name='arrowLeft' />
+            {t('admin:users.edit.backToUsers', 'Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -157,7 +158,8 @@ function EditUser({ userId }) {
           )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            {t('admin:users.edit.backToUsers', '← Back to Users')}
+            <Icon name='arrowLeft' />
+            {t('admin:users.edit.backToUsers', 'Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -187,7 +189,8 @@ function EditUser({ userId }) {
           )}
         >
           <Button variant='secondary' onClick={() => handleCancel(false)}>
-            {t('admin:users.edit.backToUsers', '← Back to Users')}
+            <Icon name='arrowLeft' />
+            {t('admin:users.edit.backToUsers', 'Back to Users')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -221,7 +224,8 @@ function EditUser({ userId }) {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:users.edit.backToUsers', '← Back to Users')}
+          <Icon name='arrowLeft' />
+          {t('admin:users.edit.backToUsers', 'Back to Users')}
         </Button>
       </Box.Header>
 

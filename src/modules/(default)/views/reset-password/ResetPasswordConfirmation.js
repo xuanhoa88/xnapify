@@ -117,7 +117,8 @@ function ResetPasswordConfirmation({ token }) {
 
           <div className={s.backLink}>
             <Link to='/login' className={s.link}>
-              {t('resetPasswordConfirmation.backToLogin', '← Back to Login')}
+              <Icon name='arrowLeft' />
+              {t('resetPasswordConfirmation.backToLogin', 'Back to Login')}
             </Link>
           </div>
         </div>

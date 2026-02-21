@@ -6,6 +6,7 @@
  */
 
 import s from './NestedPage.css';
+import Icon from '../../../../../shared/renderer/components/Icon';
 
 export default function NestedTestPage() {
   return (
@@ -15,7 +16,7 @@ export default function NestedTestPage() {
       <div className={s.card}>
         <h2>Layout Nesting Test</h2>
         <p>
-          This page is explicitly wrapped by the <code>TestLayout</code>{' '}
+          This page is explicitly wrapped by the <code>TestLayout</code>
           component. You should see a blue dashed border around this content.
         </p>
 
@@ -31,7 +32,9 @@ export default function NestedTestPage() {
         <ol>
           <li>Root Layout (if exists)</li>
           <li>
-            TestLayout (Explicit Wrapper) ← <strong>Wraps this page</strong>
+            TestLayout (Explicit Wrapper)
+            <Icon name='arrowLeft' />
+            <strong>Wraps this page</strong>
           </li>
           <li>This page content</li>
         </ol>
@@ -39,7 +42,7 @@ export default function NestedTestPage() {
 
       <div className={s.backLink}>
         <a href='/test-nextjs' className={s.link}>
-          ← Back to Test Home
+          <Icon name='arrowLeft' /> Back to Test Home
         </a>
       </div>
     </div>

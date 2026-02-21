@@ -194,7 +194,8 @@ export default function UserApiKeys({ userId }) {
           variant='secondary'
           onClick={() => history.push('/admin/users')}
         >
-          {t('admin:users.apiKeys.backToUsers', '← Back to Users')}
+          <Icon name='arrowLeft' />
+          {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
         </Button>
         <Button
           variant='primary'

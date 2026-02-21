@@ -118,7 +118,8 @@ export default function EditPermission({ permissionId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:permissions.backToPermissions', '← Back to Permissions')}
+            <Icon name='arrowLeft' />
+            {t('admin:permissions.backToPermissions', 'Back to Permissions')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -149,7 +150,8 @@ export default function EditPermission({ permissionId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:permissions.backToPermissions', '← Back to Permissions')}
+            <Icon name='arrowLeft' />
+            {t('admin:permissions.backToPermissions', 'Back to Permissions')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -186,7 +188,8 @@ export default function EditPermission({ permissionId }) {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:permissions.backToPermissions', '← Back to Permissions')}
+          <Icon name='arrowLeft' />
+          {t('admin:permissions.backToPermissions', 'Back to Permissions')}
         </Button>
       </Box.Header>
 

@@ -137,11 +137,13 @@ const GroupPermissionsModal = forwardRef((props, ref) => {
             {/* All permissions */}
             <div className={s.permissionsSection}>
               <h4 className={s.sectionTitle}>
-                {t(
-                  'admin:groups.effectivePermissions',
-                  'Effective Permissions',
-                )}{' '}
-                ({permissions.length})
+                <span>
+                  {t(
+                    'admin:groups.effectivePermissions',
+                    'Effective Permissions',
+                  )}
+                </span>
+                <span>({permissions.length})</span>
               </h4>
               {permissions.length > 0 ? (
                 <div className={s.permissionsList}>

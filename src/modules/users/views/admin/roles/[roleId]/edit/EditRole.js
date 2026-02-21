@@ -102,7 +102,8 @@ function EditRole({ roleId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:buttons.backToRoles', '← Back to Roles')}
+            <Icon name='arrowLeft' />
+            {t('admin:buttons.backToRoles', 'Back to Roles')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -134,7 +135,8 @@ function EditRole({ roleId }) {
             variant='secondary'
             onClick={() => handleCancel(isDirtyRef.current)}
           >
-            {t('admin:buttons.backToRoles', '← Back to Roles')}
+            <Icon name='arrowLeft' />
+            {t('admin:buttons.backToRoles', 'Back to Roles')}
           </Button>
         </Box.Header>
         <div className={s.formContainer}>
@@ -181,7 +183,8 @@ function EditRole({ roleId }) {
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
-          {t('admin:buttons.backToRoles', '← Back to Roles')}
+          <Icon name='arrowLeft' />
+          {t('admin:buttons.backToRoles', 'Back to Roles')}
         </Button>
       </Box.Header>
 
@@ -328,7 +331,7 @@ function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
         <h3 className={s.sectionTitle}>
           {t(
             'admin:roles.edit.permissionsCount',
-            'Permissions ({count} selected)',
+            'Permissions ({{count}} selected)',
             {
               count: selectedPermissions.length,
             },
