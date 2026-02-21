@@ -239,30 +239,36 @@
 .contentEditable ol[data-type='taskList'] {
   list-style: none;
   padding: 0;
+  margin: 0;
 }
 
-.contentEditable li[data-type='taskItem'] {
+.contentEditable li[data-type='taskItem'],
+.contentEditable li[data-checked] {
   display: flex;
+  flex-direction: row;
   flex-wrap: nowrap;
   align-items: flex-start;
+  gap: var(--spacing-2);
   margin-bottom: var(--spacing-2);
 }
 
-.contentEditable li[data-type='taskItem'] > label {
+.contentEditable li[data-type='taskItem'] > label,
+.contentEditable li[data-checked] > label {
   flex: 0 0 auto;
-  margin-right: var(--spacing-3);
   user-select: none;
-  margin-top: 0.1rem;
+  margin-top: 0.4em;
+  line-height: 1;
 }
 
-.contentEditable li[data-type='taskItem'] > div {
-  flex: 1 1 0%;
+.contentEditable li[data-type='taskItem'] > div,
+.contentEditable li[data-checked] > div {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.contentEditable li[data-type='taskItem'] > div > p {
-  margin-top: 0;
-  margin-bottom: 0;
+.contentEditable li[data-type='taskItem'] > div > p,
+.contentEditable li[data-checked] > div > p {
+  margin: 0;
 }
 
 /* Tables */
