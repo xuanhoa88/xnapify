@@ -1,0 +1,269 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../variables.css';
+
+/* =============================================================================
+   WYSIWYG WRAPPER — mirrors FormInput.css / FormTextarea.css tokens
+   ============================================================================= */
+
+.wysiwygWrapper {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background-color: var(--color-background);
+  outline: 0;
+  transition: var(--transition-base);
+  overflow: hidden;
+  position: relative;
+}
+
+/* Base Editor Area */
+.editorContent {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.contentEditable {
+  min-height: 100px;
+  font-family: var(--font-family-base);
+  font-size: var(--font-size-sm);
+  line-height: 1.5;
+  color: var(--color-text-primary);
+  background: transparent;
+  word-wrap: break-word;
+}
+
+/*
+   Tiptap renders a `.tiptap.ProseMirror` contenteditable div inside
+   `<EditorContent>`. We suppress its native browser outline so the
+   focus ring on `.wysiwygWrapper` is the only visible indicator.
+*/
+.contentEditable :global(.tiptap) {
+  padding: var(--spacing-3) var(--spacing-4);
+  min-height: 100px;
+  outline: none;
+}
+
+.contentEditable :global(.tiptap:focus) {
+  outline: none;
+}
+
+.contentEditable :global(.tiptap:focus-visible) {
+  outline: none;
+}
+
+/*
+   Tiptap placeholder extension sets the "data-placeholder"
+   and "is-editor-empty" class when the editor is totally empty.
+*/
+.contentEditable :global(p.is-editor-empty:first-child)::before {
+  color: var(--color-text-tertiary);
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   STATES — identical to FormInput.css / FormTextarea.css
+   ============================================================================= */
+
+/* Hover */
+.wysiwygWrapper:hover:not(.wysiwygDisabled, .wysiwygError) {
+  border-color: var(--color-border-hover);
+}
+
+/* Focus */
+.wysiwygWrapper:focus-within:not(.wysiwygError) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+}
+
+/* Error */
+.wysiwygWrapper.wysiwygError {
+  border-color: var(--color-error);
+}
+
+.wysiwygWrapper.wysiwygError:focus-within {
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 15%);
+}
+
+/* Disabled */
+.wysiwygWrapper.wysiwygDisabled {
+  background-color: var(--color-background-tertiary);
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.wysiwygDisabled .contentEditable {
+  pointer-events: none;
+}
+
+/* =============================================================================
+   CONTENT STYLES
+   ============================================================================= */
+
+/* Typography */
+.contentEditable p {
+  margin: var(--spacing-2) 0;
+}
+
+.contentEditable h1,
+.contentEditable h2,
+.contentEditable h3,
+.contentEditable h4,
+.contentEditable h5,
+.contentEditable h6 {
+  margin-top: var(--spacing-4);
+  margin-bottom: var(--spacing-2);
+  line-height: var(--line-height-1);
+}
+
+.contentEditable h1 {
+  font-size: var(--font-size-3xl);
+  font-weight: 700;
+}
+
+.contentEditable h2 {
+  font-size: var(--font-size-2xl);
+  font-weight: 600;
+}
+
+.contentEditable h3 {
+  font-size: var(--font-size-xl);
+  font-weight: 600;
+}
+
+/* Emphasize */
+.contentEditable strong {
+  font-weight: 600;
+}
+
+.contentEditable em {
+  font-style: italic;
+}
+
+.contentEditable u {
+  text-decoration: underline;
+}
+
+/* Blockquotes */
+.contentEditable blockquote {
+  margin: var(--spacing-3) 0;
+  padding-left: var(--spacing-3);
+  border-left: 4px solid var(--color-border);
+  color: var(--color-text-secondary);
+  font-style: italic;
+}
+
+/* Lists */
+.contentEditable ul,
+.contentEditable ol {
+  margin: var(--spacing-2) 0;
+  padding-left: var(--spacing-6);
+}
+
+.contentEditable li {
+  margin-bottom: var(--spacing-1);
+}
+
+/* Links */
+.contentEditable a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.contentEditable a:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Images */
+.contentEditable img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-sm);
+  display: block;
+  margin: var(--spacing-3) auto;
+}
+
+/* Inline code */
+.contentEditable code {
+  background-color: var(--color-background-tertiary);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-family: var(
+    --font-family-mono,
+    'Menlo',
+    'Monaco',
+    'Consolas',
+    monospace
+  );
+  font-size: 0.9em;
+}
+
+/* Code Block */
+.contentEditable pre {
+  background-color: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-3) var(--spacing-4);
+  margin: 0.5em 0;
+  overflow-x: auto;
+  font-family: var(
+    --font-family-mono,
+    'Menlo',
+    'Monaco',
+    'Consolas',
+    monospace
+  );
+  font-size: var(--font-size-xs);
+  line-height: 1.6;
+}
+
+.contentEditable pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+/* Horizontal Rule */
+.contentEditable hr {
+  border: none;
+  border-top: 2px solid var(--color-border);
+  margin: var(--spacing-4) 0;
+}
+
+/* Mentions (inline) */
+.contentEditable :global(.mention) {
+  background-color: var(--color-primary-light);
+  border-radius: var(--radius-sm);
+  padding: 1px 4px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-white);
+  box-decoration-break: clone;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .contentEditable {
+    min-height: 80px;
+  }
+
+  .contentEditable :global(.tiptap) {
+    padding: var(--spacing-2) var(--spacing-3);
+    min-height: 80px;
+  }
+}

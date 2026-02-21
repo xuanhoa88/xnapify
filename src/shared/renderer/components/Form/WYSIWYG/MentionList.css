@@ -1,0 +1,49 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/*
+   NOTE: This component is rendered by tippy.js into document.body, OUTSIDE
+   the normal React tree.  CSS Module class names still work (they're applied
+   via `s.mentionList` in JSX), but CSS custom-property references that depend
+   on an ancestor `:root` scope should use hardcoded fallbacks to be safe.
+*/
+
+.mentionList {
+  padding: 4px;
+  min-width: 180px;
+}
+
+.mentionItem {
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  display: block;
+  margin: 0;
+  padding: 6px 10px;
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.4;
+  color: #18181b;
+  transition: background 0.15s ease;
+}
+
+.mentionItem:hover {
+  background: #f4f4f5;
+}
+
+.mentionItem.isSelected {
+  background: #e4e4e7;
+}
+
+.mentionEmpty {
+  padding: 8px 12px;
+  color: #a1a1aa;
+  font-size: 13px;
+  text-align: center;
+}

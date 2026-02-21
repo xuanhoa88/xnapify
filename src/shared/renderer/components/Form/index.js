@@ -24,6 +24,7 @@ import FormFileUpload from './FileUpload';
 import FormError from './Error';
 import FormSearchableSelect from './SearchableSelect';
 import FormCheckboxList from './CheckboxList';
+import FormWYSIWYG from './WYSIWYG';
 import { useFormValidation, useFormField } from './FormContext';
 
 // Attach sub-components
@@ -44,6 +45,7 @@ Form.Switch = FormSwitch;
 Form.Radio = FormRadio;
 Form.FileUpload = FormFileUpload;
 Form.Error = FormError;
+Form.WYSIWYG = FormWYSIWYG;
 
 // Export hooks for custom usage
 export { useFormContext, useFormValidation, useFormField, Controller };

@@ -193,8 +193,7 @@ function PersonalInfoFormFields({ loading }) {
       </div>
 
       <Form.Field name='bio' label={t('profile.bio', 'Bio')}>
-        <Form.Textarea
-          rows={3}
+        <Form.WYSIWYG
           placeholder={t('profile.bioPlaceholder', 'Tell us about yourself...')}
         />
       </Form.Field>

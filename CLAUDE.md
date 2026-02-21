@@ -582,7 +582,7 @@ export RSK_JWT_SECRET=$(openssl rand -base64 32)
 export RSK_DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
 
 # Start server
-node server.js
+npm start
 
 # Or use Docker
 docker build -t rapid-rsk .

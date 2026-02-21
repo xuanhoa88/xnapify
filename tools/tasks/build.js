@@ -68,6 +68,9 @@ async function copyFiles() {
           version: pkg.version || `0.0.1-${BUILD_TIMESTAMP}`,
           engines: pkg.engines,
           dependencies: pkg.dependencies,
+          scripts: {
+            start: 'node server.js',
+          },
         },
         null,
         2,
@@ -90,6 +93,24 @@ async function copyFiles() {
 
     // 4. Generate JWT and copy .env to build directory
     await generateJWT(config.CWD, config.BUILD_DIR);
+
+    // 5. Copy .npmrc if it exists
+    const npmrcPath = path.join(config.CWD, '.npmrc');
+    const normalizedNpmrcContent = [
+      '# Force production mode for npm install --production',
+      'production=true',
+    ];
+    if (await pathExists(npmrcPath)) {
+      const npmrcContent = await readFile(npmrcPath, 'utf-8');
+      normalizedNpmrcContent.unshift(
+        npmrcContent.replace(/^production\s*=\s*.+$/m, '').trimEnd(),
+      );
+    }
+    await writeFile(
+      path.join(config.BUILD_DIR, '.npmrc'),
+      normalizedNpmrcContent.join('\n'),
+    );
+    logDebug('Copied .npmrc');
 
     logInfo('✅ Static files copied');
   } catch (error) {
@@ -382,7 +403,7 @@ async function main() {
         '',
         '  2️⃣ Test locally:',
         `     cd '${config.BUILD_DIR}'`,
-        '     NODE_ENV=production node server.js',
+        '     npm start',
         '',
         '  3️⃣ Deploy:',
         '     • Docker: See Dockerfile in project root',

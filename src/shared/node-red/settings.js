@@ -268,6 +268,7 @@ export default function createSettings(options = {}) {
     uuid: safeRequire('uuid'),
     dayjs: safeRequire('dayjs'),
     zod: safeRequire('zod'),
+    liquidjs: require('liquidjs'),
   };
 
   // Merge with user-provided global context

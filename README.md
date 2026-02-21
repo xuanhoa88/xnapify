@@ -123,7 +123,7 @@ cd build
 npm install --production
 
 # Start production server
-NODE_ENV=production node server.js
+npm start
 ```
 
 > **Note**: The JWT secret is auto-generated during the build process if not already set in `.env`.
