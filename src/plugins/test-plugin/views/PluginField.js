@@ -7,12 +7,18 @@ import s from './PluginField.scss';
 export default function PluginField({ register }) {
   const { t } = useTranslation(PLUGIN_ID);
   return (
-    <Form.Field name='nickname' label={t('nickname', 'Nickname')}>
-      <Form.Input {...register('nickname')} />
-      <div className={s.formText}>
-        {t('nickname_hint', 'This field requires a minimum of 3 characters')}
-      </div>
-    </Form.Field>
+    <>
+      <Form.Field name='nickname' label={t('nickname', 'Nickname')}>
+        <Form.Input {...register('nickname')} />
+        <div className={s.formText}>
+          {t('nickname_hint', 'This field requires a minimum of 3 characters')}
+        </div>
+      </Form.Field>
+
+      <Form.Field name='birthday' label={t('birthday', 'Birthday')}>
+        <Form.Date />
+      </Form.Field>
+    </>
   );
 }
 

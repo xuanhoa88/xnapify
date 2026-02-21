@@ -24,12 +24,11 @@ const handleProfileSubmit = async (data, _context) => {
 };
 
 const handleProfileDefaults = async user => {
-  if (!user || !user.nickname) {
-    return {
-      nickname: 'Anonymous User',
-    };
-  }
-  return {};
+  const prefs = (user && user.preferences) || {};
+  return {
+    nickname: (user && user.nickname) || 'Anonymous User',
+    birthday: prefs.birthday || '',
+  };
 };
 
 // Plugin definition

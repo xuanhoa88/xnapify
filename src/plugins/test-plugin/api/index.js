@@ -90,47 +90,61 @@ export default {
     };
     hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
-    // Handler to intercept profile update and save nickname to preferences
+    // Handler to intercept profile update and save nickname + birthday to preferences
     this[HANDLERS].updating = function (data) {
       const { formData, user } = data;
 
-      // If nickname is provided, move it to preferences
+      // Get existing preferences from the user's profile
+      const existingPreferences =
+        (user && user.profile && user.profile.preferences) || {};
+
+      // Collect plugin fields to move into preferences
+      const pluginPrefs = {};
+
       if (formData && 'nickname' in formData) {
-        const { nickname } = formData;
-        delete formData.nickname; // Remove from top-level
+        pluginPrefs.nickname = formData.nickname;
+        delete formData.nickname;
+        console.log(
+          '[Test Plugin] Saved nickname to preferences:',
+          pluginPrefs.nickname,
+        );
+      }
 
-        // Get existing preferences from the user's profile
-        const existingPreferences =
-          (user && user.profile && user.profile.preferences) || {};
+      if (formData && 'birthday' in formData) {
+        pluginPrefs.birthday = formData.birthday;
+        delete formData.birthday;
+        console.log(
+          '[Test Plugin] Saved birthday to preferences:',
+          pluginPrefs.birthday,
+        );
+      }
 
-        // Merge nickname into existing preferences
+      if (Object.keys(pluginPrefs).length > 0) {
         formData.preferences = {
           ...existingPreferences,
           ...(formData.preferences || {}),
-          nickname,
+          ...pluginPrefs,
         };
-        console.log('[Test Plugin] Saved nickname to preferences:', nickname);
       }
     };
     hook('profile').on('updating', this[HANDLERS].updating);
 
-    // Handler to read nickname from preferences and add to response
+    // Handler to read nickname + birthday from preferences and add to response
     this[HANDLERS].formatResponse = function (data) {
       const { user, profile, result } = data;
 
-      // Read nickname from preferences JSON field
-      let nickname = null;
-      if (profile) {
-        const preferences = profile.preferences || {};
-        nickname = preferences.nickname || null;
-      }
+      const preferences = (profile && profile.preferences) || {};
 
-      // Set default nickname from email if not present
+      // Read nickname from preferences
+      let nickname = preferences.nickname || null;
       if (!nickname && user && user.email) {
         nickname = user.email.split('@')[0];
       }
-
       result.nickname = nickname || null;
+
+      // Read birthday from preferences
+      result.birthday = preferences.birthday || null;
+
       console.log(
         '[Test Plugin] Added nickname to response: ' + result.nickname,
       );

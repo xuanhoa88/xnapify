@@ -11,6 +11,19 @@ import PropTypes from 'prop-types';
 import { FormFieldContext } from '../FormContext';
 import s from './FormError.css';
 
+// Find the first nested error with a message
+const findMessage = errObj => {
+  if (!errObj || typeof errObj !== 'object') return null;
+  if (typeof errObj.message === 'string') return errObj.message;
+  for (const key in errObj) {
+    if (Object.prototype.hasOwnProperty.call(errObj, key)) {
+      const msg = findMessage(errObj[key]);
+      if (msg) return msg;
+    }
+  }
+  return null;
+};
+
 /**
  * FormError - Displays error message
  *
@@ -28,7 +41,17 @@ function FormError({ message, className }) {
 
   // If inside Form.Field, use field error; otherwise use message prop
   const error = fieldContext && fieldContext.error;
-  const displayMessage = message || (error && error.message);
+
+  // Get error message
+  const displayMessage = useMemo(() => {
+    if (!message && error) {
+      if (typeof error.message === 'string') {
+        return error.message;
+      }
+      return findMessage(error);
+    }
+    return message;
+  }, [error, message]);
 
   // Use different style for form-level vs field-level errors
   const isFieldError = useMemo(
