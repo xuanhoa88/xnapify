@@ -9,6 +9,7 @@ import { useCallback } from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+import EmojiPickerButton from './EmojiPickerButton';
 import s from './Toolbar.css';
 
 /**
@@ -432,6 +433,23 @@ const icons = {
       <polygon points='9.75 15.02 15.5 11.75 9.75 8.48 9.75 15.02'></polygon>
     </svg>
   ),
+  emoji: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2.5'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <circle cx='12' cy='12' r='10'></circle>
+      <path d='M8 14s1.5 2 4 2 4-2 4-2'></path>
+      <line x1='9' y1='9' x2='9.01' y2='9'></line>
+      <line x1='15' y1='9' x2='15.01' y2='9'></line>
+    </svg>
+  ),
   fullscreen: (
     <svg
       width='16'
@@ -690,6 +708,11 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
           const url = window.prompt('YouTube Video URL');
           if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
         })}
+        <EmojiPickerButton
+          title={t('shared:form.wysiwyg.emoji', 'Emoji')}
+          onSelect={emoji => editor.chain().focus().insertContent(emoji).run()}
+          disabled={!editor.can().chain().focus().run()}
+        />
       </div>
 
       <div className={s.toolbarDivider} />

@@ -6,131 +6,31 @@
  */
 
 import { Extension, textInputRule } from '@tiptap/core';
+import { EMOJI_DICTIONARY } from './constants';
 
-/**
- * A lightweight custom Emoji extension that uses ProseMirror's textInputRules
- * to convert common text emoticons and shortcodes to native Unicode emojis on the fly.
- */
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}
+
 export const Emoji = Extension.create({
   name: 'emojiNative',
 
   addInputRules() {
-    return [
-      // Basic Emoticons
-      textInputRule({
-        find: /(?:^|\s)(:-?\)) $/,
-        replace: '🙂',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(;-?\)) $/,
-        replace: '😉',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:-?D) $/,
-        replace: '😃',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:-?\() $/,
-        replace: '🙁',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:-?[pP]) $/,
-        replace: '😛',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:-?[oO]) $/,
-        replace: '😮',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:-?\|) $/,
-        replace: '😐',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(<3) $/,
-        replace: '❤️',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(<\/?3) $/,
-        replace: '💔',
-      }),
+    const rules = [];
 
-      // Common Shortcodes
-      textInputRule({
-        find: /(?:^|\s)(:smile:) $/,
-        replace: '😄',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:laughing:) $/,
-        replace: '😆',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:joy:) $/,
-        replace: '😂',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:rofl:) $/,
-        replace: '🤣',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:sunglasses:) $/,
-        replace: '😎',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:heart_eyes:) $/,
-        replace: '😍',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:thumbsup:|:\+1:) $/,
-        replace: '👍',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:thumbsdown:|:-1:) $/,
-        replace: '👎',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:pray:) $/,
-        replace: '🙏',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:clap:) $/,
-        replace: '👏',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:fire:) $/,
-        replace: '🔥',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:100:) $/,
-        replace: '💯',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:sparkles:) $/,
-        replace: '✨',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:star:) $/,
-        replace: '⭐',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:check:) $/,
-        replace: '✅',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:x:) $/,
-        replace: '❌',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:warning:) $/,
-        replace: '⚠️',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:rocket:) $/,
-        replace: '🚀',
-      }),
-      textInputRule({
-        find: /(?:^|\s)(:eyes:) $/,
-        replace: '👀',
-      }),
-    ];
+    Object.entries(EMOJI_DICTIONARY).forEach(([shortcode, emoji]) => {
+      // Only create input rules for strings that are actually shortcodes/emoticons
+      // (not the raw emojis that we added just to populate the grid list)
+      if (shortcode === emoji) return;
+
+      rules.push(
+        textInputRule({
+          find: new RegExp(`(?:^|\\s)(${escapeRegExp(shortcode)}) $`),
+          replace: emoji,
+        }),
+      );
+    });
+
+    return rules;
   },
 });
