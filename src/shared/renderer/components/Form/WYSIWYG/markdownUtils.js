@@ -66,6 +66,31 @@ function createTurndownService() {
     },
   });
 
+  // ── YouTube videos ────────────────────────────────────────────────────────
+  // Tiptap's youtube wrapper uses <div data-youtube-video><iframe src="..."></iframe></div>
+  td.addRule('youtubeVideo', {
+    filter(node) {
+      return node.nodeName === 'DIV' && node.hasAttribute('data-youtube-video');
+    },
+    replacement(_content, node) {
+      const iframe = node.querySelector('iframe');
+      if (!iframe) return '';
+      const src = iframe.getAttribute('src');
+      if (!src) return '';
+
+      const width = iframe.getAttribute('width');
+      const height = iframe.getAttribute('height');
+      const start = iframe.getAttribute('start');
+
+      let html = `<youtube src="${src}"`;
+      if (width) html += ` width="${width}"`;
+      if (height) html += ` height="${height}"`;
+      if (start) html += ` start="${start}"`;
+      html += '></youtube>\n';
+      return html;
+    },
+  });
+
   // ── Enhanced images — keep as raw HTML ─────────────────────────────────────
   // Data-URI images produce extremely long ![](data:...) strings that break
   // marked's parser on round-trip. Standard Markdown also drops width/height.
@@ -291,6 +316,19 @@ export function markdownToHtml(markdown) {
   );
 
   let html = marked.parse(processed);
+
+  // Post-process: marked incorrectly wraps block-level raw HTML elements (like audio, video)
+  // inside <p> tags. This makes Tiptap split the invalid <p> into floating empty paragraphs.
+  html = html.replace(
+    /<p>\s*(<(?:audio|video|iframe|youtube|details)[\s\S]*?>[\s\S]*?<\/(?:audio|video|iframe|youtube|details)>|<(?:audio|video|iframe|youtube|source)[^>]*>)\s*<\/p>/gi,
+    '$1',
+  );
+
+  // Post-process: Convert custom <youtube> tags back into Tiptap's expected iframe wrapper
+  html = html.replace(
+    /<youtube\s([^>]*)>(.*?<\/youtube>)?/gi,
+    '<div data-youtube-video><iframe $1></iframe></div>',
+  );
 
   // Post-process: Tiptap's Image extension uses inline: true, so ProseMirror
   // silently drops <img> tags that aren't inside a block parent like <p>.
