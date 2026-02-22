@@ -31,15 +31,20 @@ import {
   TableCell,
 } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
-import { Image } from '@tiptap/extension-image';
 import { Youtube } from '@tiptap/extension-youtube';
-import { Video, Audio } from './MediaExtensions';
+import { Image } from '@tiptap/extension-image';
 import { useFormField, useMergeRefs } from '../FormContext';
 import createSuggestion from './suggestion';
 import { DetailsExtension } from './DetailsExtension';
+import { Video, Audio } from './MediaExtensions';
+import { Emoji } from './EmojiExtension';
 import Toolbar from './Toolbar';
 import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
+
+// Lightweight check: does the string contain common markdown syntax?
+const MD_PATTERNS =
+  /^\s*(#{1,6}\s|>\s|[-*+]\s|\d+\.\s|- \[[ x]\]|\*{1,3}|_{1,3}|~{2}|```|!\[|\[.*\]\()/m;
 
 /**
  * FormWYSIWYG — A rich-text editor field powered by Tiptap.
@@ -137,8 +142,11 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
         openOnClick: false,
         autolink: true,
       }),
+      Emoji,
       Image.configure({
         inline: true,
+        allowBase64: true,
+        resize: { enabled: true },
       }),
       Youtube.configure({
         inline: false,
@@ -163,6 +171,79 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     extensions,
     content: markdownToHtml(value || ''),
     editable: !disabled,
+    editorProps: {
+      handlePaste: (view, event) => {
+        const { clipboardData } = event;
+        if (!clipboardData) return false;
+
+        // Helper: insert an image node at the current cursor position
+        const insertImage = src => {
+          const { state } = view;
+          const node = state.schema.nodes.image.create({ src });
+          const tr = state.tr.replaceSelectionWith(node);
+          view.dispatch(tr);
+        };
+
+        // 1. Handle actual image files (e.g., copied from a local file or screenshot)
+        const items = Array.from(clipboardData.items);
+        for (const item of items) {
+          if (item.type.indexOf('image') === 0) {
+            const file = item.getAsFile();
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = e => {
+                insertImage(e.target.result);
+              };
+              reader.readAsDataURL(file);
+              return true; // Stop default paste
+            }
+          }
+        }
+
+        // 3. Handle pasted plain text that looks like Markdown
+        const text = clipboardData.getData('text/plain');
+        if (text) {
+          const trimmed = text.trim();
+
+          // 3a. Raw base64 image data URI
+          if (
+            trimmed.startsWith('data:image/') &&
+            trimmed.includes(';base64,')
+          ) {
+            insertImage(trimmed);
+            return true;
+          }
+
+          // 3b. Markdown syntax detected — parse and insert as rich content
+          //     Only if there is NO HTML version on the clipboard (which means
+          //     the user is pasting from a code editor or plain text source).
+          const hasHtml = clipboardData.types.includes('text/html');
+          if (!hasHtml && MD_PATTERNS.test(trimmed)) {
+            // We set a flag on the event object so transformPastedHTML knows
+            // to process this specific paste as Markdown. We can't parse it
+            // manually here without losing context, which causes ProseMirror
+            // to escape valid HTML tags (like <img>) into literal text.
+            event.isMarkdownTextPaste = trimmed;
+            return false; // Let ProseMirror continue so it calls transformPasted
+          }
+        }
+
+        return false; // Let ProseMirror handle everything else
+      },
+      transformPastedHTML: html => {
+        // If our handlePaste handler flagged this event as a Markdown text paste,
+        // we completely replace the empty clipboard HTML with our parsed HTML.
+        // This ensures ProseMirror routes it through its standard HTML parser
+        // with the correct block context instead of trying to insert it as raw text.
+        const { event } = window;
+        if (event && event.isMarkdownTextPaste) {
+          const mdHtml = markdownToHtml(event.isMarkdownTextPaste);
+          event.isMarkdownTextPaste = null; // clear flag
+          return mdHtml;
+        }
+        return html;
+      },
+    },
     onUpdate: ({ editor: e }) => {
       isInternalUpdate.current = true;
       handleChange(htmlToMarkdown(e.getHTML()));

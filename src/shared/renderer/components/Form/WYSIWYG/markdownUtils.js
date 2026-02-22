@@ -42,6 +42,7 @@ function createTurndownService() {
     'audio',
     'iframe',
     'source',
+    'youtube',
   ]);
 
   // ── Tiptap-specific wrapper divs ─────────────────────────────────────────
@@ -62,6 +63,42 @@ function createTurndownService() {
     },
     replacement(content) {
       return content;
+    },
+  });
+
+  // ── Enhanced images — keep as raw HTML ─────────────────────────────────────
+  // Data-URI images produce extremely long ![](data:...) strings that break
+  // marked's parser on round-trip. Standard Markdown also drops width/height.
+  td.addRule('enhancedImage', {
+    filter(node) {
+      if (node.nodeName !== 'IMG') return false;
+      const src = node.getAttribute('src');
+      if (!src) return false;
+
+      // Preserve as HTML if it's base64 (to prevent marked explosion)
+      if (src.startsWith('data:')) return true;
+
+      // Preserve as HTML if it has custom dimensions
+      if (node.hasAttribute('width') && node.getAttribute('width') !== 'auto')
+        return true;
+      if (node.hasAttribute('height') && node.getAttribute('height') !== 'auto')
+        return true;
+
+      return false;
+    },
+    replacement(_content, node) {
+      const src = node.getAttribute('src');
+      const alt = node.getAttribute('alt') || '';
+      const title = node.getAttribute('title') || '';
+      const width = node.getAttribute('width');
+      const height = node.getAttribute('height');
+
+      let html = `<img src="${src}" alt="${alt}"`;
+      if (title) html += ` title="${title}"`;
+      if (width && width !== 'auto') html += ` width="${width}"`;
+      if (height && height !== 'auto') html += ` height="${height}"`;
+      html += '>';
+      return html;
     },
   });
 
@@ -245,8 +282,22 @@ export function htmlToMarkdown(html, service = turndownService) {
 export function markdownToHtml(markdown) {
   if (!markdown || typeof markdown !== 'string') return '';
 
-  const raw = marked.parse(markdown);
-  return rewriteTaskLists(raw);
+  // Pre-process: Convert any ![alt](data:image/...) markdown images to raw
+  // <img> tags BEFORE passing to marked, because marked may fail to parse
+  // very long data URIs inside the image syntax.
+  let processed = markdown.replace(
+    /!\[([^\]]*)\]\((data:image\/[^)]+)\)/g,
+    '<img src="$2" alt="$1">',
+  );
+
+  let html = marked.parse(processed);
+
+  // Post-process: Tiptap's Image extension uses inline: true, so ProseMirror
+  // silently drops <img> tags that aren't inside a block parent like <p>.
+  // Wrap any standalone <img> tags (not already inside <p>) in <p> tags.
+  html = html.replace(/^(<img\s[^>]*>)$/gm, '<p>$1</p>');
+
+  return rewriteTaskLists(html);
 }
 
 /**

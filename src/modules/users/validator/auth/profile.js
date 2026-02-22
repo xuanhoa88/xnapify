@@ -74,10 +74,7 @@ export const updateProfileFormSchema = ({ i18n, z }) =>
       .string()
       .max(50, i18n.t('zod:profile.LAST_NAME_MAX', 'Last name is too long'))
       .optional(),
-    bio: z
-      .string()
-      .max(500, i18n.t('zod:profile.BIO_MAX', 'Bio is too long'))
-      .optional(),
+    bio: z.string().optional(),
     location: z
       .string()
       .max(100, i18n.t('zod:profile.LOCATION_MAX', 'Location is too long'))

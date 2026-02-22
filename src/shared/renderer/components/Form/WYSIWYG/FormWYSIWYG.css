@@ -410,3 +410,45 @@
     min-height: 80px;
   }
 }
+
+/* =============================================================================
+   NATIVE TIPTAP RESIZE HANDLES
+   ============================================================================= */
+
+.contentEditable :global(.tiptap) div[data-resize-wrapper] img {
+  display: block;
+  max-width: 100%;
+  height: auto !important; /* Forces aspect ratio maintenance even if Tiptap hardcodes height */
+  border: 1px solid transparent;
+  transition: border-color var(--transition-base);
+}
+
+.contentEditable :global(.tiptap) div[data-resize-wrapper] {
+  display: inline-block !important;
+  max-width: 100%;
+}
+
+.contentEditable :global(.tiptap) div[data-resize-container='true'] img,
+.contentEditable :global(.tiptap) div[data-resize-state='true'] img {
+  border-color: var(--color-primary);
+}
+
+.contentEditable :global(.tiptap) div[data-resize-handle] {
+  width: 8px;
+  height: 8px;
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-background);
+  border-radius: 50%;
+  z-index: 10;
+  box-sizing: border-box;
+}
+
+.contentEditable :global(.tiptap) div[data-resize-handle='top-left'],
+.contentEditable :global(.tiptap) div[data-resize-handle='bottom-right'] {
+  cursor: nwse-resize;
+}
+
+.contentEditable :global(.tiptap) div[data-resize-handle='top-right'],
+.contentEditable :global(.tiptap) div[data-resize-handle='bottom-left'] {
+  cursor: nesw-resize;
+}
