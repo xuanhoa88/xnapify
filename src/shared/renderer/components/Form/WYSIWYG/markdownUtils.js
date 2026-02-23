@@ -58,7 +58,8 @@ function createTurndownService() {
     filter(node) {
       return (
         node.nodeName === 'DIV' &&
-        Array.from(node.classList).some(c => TIPTAP_DIV_CLASSES.has(c))
+        (Array.from(node.classList).some(c => TIPTAP_DIV_CLASSES.has(c)) ||
+          node.hasAttribute('data-details-content'))
       );
     },
     replacement(content) {
@@ -243,6 +244,14 @@ const turndownService = createTurndownService();
  */
 const BLOCK_TAGS = /^<(p|ul|ol|li|blockquote|pre|div|h[1-6])/i;
 
+/**
+ * Rewrite marked's GFM task-list HTML into Tiptap's expected structure.
+ *
+ * NOTE: The regex uses a non-greedy match for <ul>...</ul> which means
+ * nested <ul> tags inside a task list will cause the match to close too
+ * early. This is a known limitation of regex-based HTML processing.
+ * A proper fix would require a stack-based parser or DOM manipulation.
+ */
 function rewriteTaskLists(html) {
   // Match a <ul> that contains at least one checkbox input.
   return html.replace(/<ul>([\s\S]*?)<\/ul>/g, (ulMatch, inner) => {
@@ -326,14 +335,14 @@ export function markdownToHtml(markdown) {
 
   // Post-process: Convert custom <youtube> tags back into Tiptap's expected iframe wrapper
   html = html.replace(
-    /<youtube\s([^>]*)>(.*?<\/youtube>)?/gi,
+    /<youtube\s([^>]*)>\s*<\/youtube>/gi,
     '<div data-youtube-video><iframe $1></iframe></div>',
   );
 
   // Post-process: Tiptap's Image extension uses inline: true, so ProseMirror
   // silently drops <img> tags that aren't inside a block parent like <p>.
   // Wrap any standalone <img> tags (not already inside <p>) in <p> tags.
-  html = html.replace(/^(<img\s[^>]*>)$/gm, '<p>$1</p>');
+  html = html.replace(/^\s*(<img\s[^>]*>)\s*$/gm, '<p>$1</p>');
 
   return rewriteTaskLists(html);
 }
