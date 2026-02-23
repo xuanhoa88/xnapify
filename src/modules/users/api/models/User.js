@@ -17,6 +17,9 @@ function flattenProfileEAV(instance) {
     // attr.attribute_value is already parsed to native JS types by UserProfile's getter
     flat[attr.attribute_key] = attr.attribute_value;
   });
+  if (instance.dataValues) {
+    instance.dataValues.profile = flat;
+  }
   instance.profile = flat;
 }
 
@@ -33,7 +36,7 @@ function expandProfileEAV(instance) {
   ) {
     const eavArray = [];
     for (const [key, value] of Object.entries(instance.profile)) {
-      if (value !== undefined) {
+      if (value !== undefined && value !== null) {
         eavArray.push({
           attribute_key: key,
           attribute_value: value,

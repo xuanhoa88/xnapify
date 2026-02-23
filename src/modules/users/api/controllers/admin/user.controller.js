@@ -106,10 +106,8 @@ export async function getUserList(req, res) {
     // Get user list
     const result = await userAdminService.getUserList(
       { page, limit, search, role, status, group },
-      models,
+      { models, hook: req.app.get('hook').withContext(req.app) },
     );
-
-    // Format users to include roles and groups arrays
 
     return http.sendSuccess(res, {
       users: result.users,

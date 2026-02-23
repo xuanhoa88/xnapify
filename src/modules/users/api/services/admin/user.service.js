@@ -51,7 +51,13 @@ export async function createUser(userData, { models, webhook, actorId }) {
       },
     },
     {
-      include: [{ model: UserProfile, as: 'profile' }],
+      include: [
+        {
+          model: UserProfile,
+          as: 'profile',
+          required: false,
+        },
+      ],
     },
   );
 
@@ -84,7 +90,11 @@ export async function createUser(userData, { models, webhook, actorId }) {
   // Reload with associations
   await user.reload({
     include: [
-      { model: UserProfile, as: 'profile' },
+      {
+        model: UserProfile,
+        as: 'profile',
+        required: false,
+      },
       {
         model: Role,
         as: 'roles',
@@ -135,10 +145,13 @@ export async function createUser(userData, { models, webhook, actorId }) {
  * @param {string} options.search - Search term (default: '')
  * @param {string} options.role - Filter by role (default: '')
  * @param {string} options.status - Filter by status (default: '')
- * @param {Object} models - Database models
+ * @param {string} options.group - Filter by group (default: '')
+ * @param {Object} ctx - Context
+ * @param {Object} ctx.models - Database models
+ * @param {Object} ctx.hook - Webhook engine for activity logging
  * @returns {Promise<Object>} Users with pagination info
  */
-export async function getUserList(options, models) {
+export async function getUserList(options, ctx) {
   const {
     page = 1,
     limit = 10,
@@ -148,25 +161,34 @@ export async function getUserList(options, models) {
     group = '',
   } = options;
   const offset = (page - 1) * limit;
-  const { User, UserProfile, Role, Group } = models;
+  const { User, UserProfile, Role, Group } = ctx.models;
 
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
 
   // Build where conditions
   const whereConditions = {};
-  const profileWhereConditions = {};
   const roleWhereConditions = {};
   const groupWhereConditions = {};
 
   // Search in email and display name
   if (search) {
-    whereConditions[Op.or] = [{ email: { [Op.like]: `%${search}%` } }];
-    profileWhereConditions[Op.or] = [
-      {
-        attribute_key: ['display_name', 'first_name', 'last_name'],
-        attribute_value: { [Op.like]: `%${search}%` },
-      },
+    // Correlated subquery — no round-trip, no memory overhead
+    const profileSubquery = sequelize.dialect.queryGenerator
+      .selectQuery(UserProfile.tableName, {
+        attributes: ['user_id'],
+        where: {
+          attribute_key: {
+            [Op.in]: ['display_name', 'first_name', 'last_name'],
+          },
+          attribute_value: { [Op.like]: `%${search}%` },
+        },
+      })
+      .slice(0, -1); // strip trailing semicolon
+
+    whereConditions[Op.or] = [
+      { email: { [Op.like]: `%${search}%` } },
+      { id: { [Op.in]: sequelize.literal(`(${profileSubquery})`) } },
     ];
   }
 
@@ -189,64 +211,89 @@ export async function getUserList(options, models) {
     whereConditions.is_locked = true;
   }
 
-  const { count, rows: users } = await User.findAndCountAll({
-    where: whereConditions,
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-        where: search ? profileWhereConditions : undefined,
-        required: false,
-      },
-      {
-        model: Role,
-        as: 'roles',
-        where: role ? roleWhereConditions : undefined,
-        required: !!role,
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        where: group ? groupWhereConditions : undefined,
-        required: !!group,
-        attributes: ['id', 'name', 'description', 'category', 'type'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
-    distinct: true,
-    limit: parseInt(limit),
-    offset: parseInt(offset),
-    order: [['created_at', 'DESC']],
-  });
+  // Emit event for plugins to modify where conditions
+  await ctx
+    .hook('admin:users')
+    .emit('list:before', whereConditions, { sequelize });
+
+  // Get users with pagination and search
+  const [count, users] = await Promise.all([
+    User.count({
+      where: whereConditions,
+      include: [
+        role && {
+          model: Role,
+          as: 'roles',
+          where: roleWhereConditions,
+          required: true,
+        },
+        group && {
+          model: Group,
+          as: 'groups',
+          where: groupWhereConditions,
+          required: true,
+        },
+      ].filter(Boolean),
+      distinct: true,
+      col: 'id',
+    }),
+    User.findAll({
+      where: whereConditions,
+      include: [
+        {
+          model: UserProfile,
+          as: 'profile',
+          // Do not filter the include itself, otherwise the returned Profile object
+          // will only contain the matching attributes instead of the full profile.
+          required: false,
+        },
+        {
+          model: Role,
+          as: 'roles',
+          where: role ? roleWhereConditions : undefined,
+          required: !!role,
+          attributes: ['id', 'name', 'description'],
+          through: { attributes: [] },
+        },
+        {
+          model: Group,
+          as: 'groups',
+          where: group ? groupWhereConditions : undefined,
+          required: !!group,
+          attributes: ['id', 'name', 'description', 'category', 'type'],
+          through: { attributes: [] },
+          include: [
+            {
+              model: Role,
+              as: 'roles',
+              attributes: ['id', 'name', 'description'],
+              through: { attributes: [] },
+            },
+          ],
+        },
+      ],
+      distinct: true,
+      col: 'id',
+      limit: parseInt(limit),
+      offset: parseInt(offset),
+      order: [['created_at', 'DESC']],
+    }),
+  ]);
 
   const formattedUsers = users.map(user => {
+    const plain = user.toJSON();
     return {
-      id: user.id,
-      email: user.email,
-      email_confirmed: user.email_confirmed,
-      is_active: user.is_active,
-      is_locked: user.is_locked,
-      failed_login_attempts: user.failed_login_attempts,
-      created_at: user.created_at,
-      updated_at: user.updated_at,
-      profile: user.profile || {},
+      ...plain,
       roles:
-        Array.isArray(user.roles) && user.roles.length > 0
-          ? user.roles.map(r => r.name)
+        Array.isArray(plain.roles) && plain.roles.length > 0
+          ? plain.roles.map(r => r.name)
           : [DEFAULT_ROLE],
-      groups: user.groups || [],
+      groups: plain.groups || [],
     };
   });
+
+  // Emit event for plugins to modify formatted users
+  await ctx.hook('admin:users').emit('list:after', formattedUsers);
 
   return {
     users: formattedUsers,
@@ -275,6 +322,7 @@ export async function getUserById(user_id, models) {
       {
         model: UserProfile,
         as: 'profile',
+        required: false,
       },
       {
         model: Role,
@@ -352,7 +400,13 @@ export async function updateUserById(
     userData.profile || {};
 
   const user = await User.findByPk(user_id, {
-    include: [{ model: UserProfile, as: 'profile' }],
+    include: [
+      {
+        model: UserProfile,
+        as: 'profile',
+        required: false,
+      },
+    ],
   });
 
   if (!user) {
@@ -445,7 +499,11 @@ export async function updateUserById(
   // Reload user with updated data
   await user.reload({
     include: [
-      { model: UserProfile, as: 'profile' },
+      {
+        model: UserProfile,
+        as: 'profile',
+        required: false,
+      },
       {
         model: Role,
         as: 'roles',

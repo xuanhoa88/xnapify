@@ -61,7 +61,13 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
       },
     },
     {
-      include: [{ model: UserProfile, as: 'profile' }],
+      include: [
+        {
+          model: UserProfile,
+          as: 'profile',
+          required: false,
+        },
+      ],
     },
   );
 

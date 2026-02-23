@@ -9,8 +9,8 @@
  * UserProfile Model Factory
  *
  * Creates the UserProfile model with the provided Sequelize instance.
- * Stores additional user profile information.
- * One-to-one relationship with User model.
+ * Stores additional user profile attributes as EAV (Entity-Attribute-Value) rows.
+ * One-to-Many relationship with User model (one user has many attribute rows).
  *
  * @param {Object} connection - Sequelize connection instance
  * @returns {Model} UserProfile model
@@ -34,7 +34,7 @@ export default function createUserProfileModel({ connection, DataTypes }) {
 
       attribute_value: {
         type: DataTypes.TEXT,
-        allowNull: false,
+        allowNull: true,
         comment: 'Attribute value stored as text',
         get() {
           const rawValue = this.getDataValue('attribute_value');
@@ -59,7 +59,10 @@ export default function createUserProfileModel({ connection, DataTypes }) {
           }
         },
         set(value) {
-          if (value instanceof Date) {
+          if (value === null || value === undefined) {
+            this.setDataValue('attribute_type', 'string');
+            this.setDataValue('attribute_value', null);
+          } else if (value instanceof Date) {
             this.setDataValue('attribute_type', 'date');
             this.setDataValue('attribute_value', value.toISOString());
           } else if (typeof value === 'object' && value !== null) {
