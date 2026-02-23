@@ -15,21 +15,23 @@ import { PLUGIN_ID } from '../constants';
  */
 export const profileSchema = zod => {
   return zod.object({
-    nickname: zod
-      .string()
-      .min(3, {
-        params: { i18n: `${PLUGIN_ID}:validations.nickname_too_short` },
-      })
-      .max(50)
-      .regex(/^[a-zA-Z0-9_]+$/, {
-        params: { i18n: 'zod:validations.alphanum' },
-      }),
-    birthday: zod
-      .string()
-      .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
-        message: 'Birthday must be in DD/MM/YYYY format',
-      })
-      .optional()
-      .or(zod.literal('')),
+    profile: zod.object({
+      nickname: zod
+        .string()
+        .min(3, {
+          params: { i18n: `${PLUGIN_ID}:validations.nickname_too_short` },
+        })
+        .max(50)
+        .regex(/^[a-zA-Z0-9_]+$/, {
+          params: { i18n: 'zod:validations.alphanum' },
+        }),
+      birthday: zod
+        .string()
+        .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
+          message: 'Birthday must be in DD/MM/YYYY format',
+        })
+        .optional()
+        .or(zod.literal('')),
+    }),
   });
 };

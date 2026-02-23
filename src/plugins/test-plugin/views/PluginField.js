@@ -8,15 +8,15 @@ export default function PluginField({ register }) {
   const { t } = useTranslation(PLUGIN_ID);
   return (
     <>
-      <Form.Field name='nickname' label={t('nickname', 'Nickname')}>
-        <Form.Input {...register('nickname')} />
+      <Form.Field name='profile.nickname' label={t('nickname', 'Nickname')}>
+        <Form.Input {...register('profile.nickname')} />
         <div className={s.formText}>
           {t('nickname_hint', 'This field requires a minimum of 3 characters')}
         </div>
       </Form.Field>
 
-      <Form.Field name='birthday' label={t('birthday', 'Birthday')}>
-        <Form.Date />
+      <Form.Field name='profile.birthday' label={t('birthday', 'Birthday')}>
+        <Form.Date {...register('profile.birthday')} />
       </Form.Field>
     </>
   );

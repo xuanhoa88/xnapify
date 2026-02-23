@@ -59,31 +59,38 @@ export const deleteAccountFormSchema = ({ i18n, z }) =>
  */
 export const updateProfileFormSchema = ({ i18n, z }) =>
   z.object({
-    display_name: z
-      .string()
-      .max(
-        100,
-        i18n.t('zod:profile.DISPLAY_NAME_MAX', 'Display name is too long'),
-      )
+    profile: z
+      .object({
+        display_name: z
+          .string()
+          .max(
+            100,
+            i18n.t('zod:profile.DISPLAY_NAME_MAX', 'Display name is too long'),
+          )
+          .optional(),
+        first_name: z
+          .string()
+          .max(
+            50,
+            i18n.t('zod:profile.FIRST_NAME_MAX', 'First name is too long'),
+          )
+          .optional(),
+        last_name: z
+          .string()
+          .max(50, i18n.t('zod:profile.LAST_NAME_MAX', 'Last name is too long'))
+          .optional(),
+        bio: z.string().optional(),
+        location: z
+          .string()
+          .max(100, i18n.t('zod:profile.LOCATION_MAX', 'Location is too long'))
+          .optional(),
+        website: z
+          .string()
+          .url(i18n.t('zod:profile.WEBSITE_INVALID', 'Website is invalid'))
+          .optional()
+          .or(z.literal('')),
+      })
       .optional(),
-    first_name: z
-      .string()
-      .max(50, i18n.t('zod:profile.FIRST_NAME_MAX', 'First name is too long'))
-      .optional(),
-    last_name: z
-      .string()
-      .max(50, i18n.t('zod:profile.LAST_NAME_MAX', 'Last name is too long'))
-      .optional(),
-    bio: z.string().optional(),
-    location: z
-      .string()
-      .max(100, i18n.t('zod:profile.LOCATION_MAX', 'Location is too long'))
-      .optional(),
-    website: z
-      .string()
-      .url(i18n.t('zod:profile.WEBSITE_INVALID', 'Website is invalid'))
-      .optional()
-      .or(z.literal('')),
   });
 
 /**

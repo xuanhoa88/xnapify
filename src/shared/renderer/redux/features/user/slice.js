@@ -31,7 +31,7 @@ import {
  *
  * State shape:
  * {
- *   data: { id, email, display_name, role, preferences, picture, ... } | null,
+ *   data: { id, email, profile: { display_name, picture, language, ... }, role, ... } | null,
  *   operations: {
  *     auth: { loading: boolean, error: string | null },
  *     emailVerification: { loading: boolean, error: string | null },
@@ -285,7 +285,10 @@ const userSlice = createSlice({
       .addCase(uploadUserAvatar.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         if (normalized.data) {
-          normalized.data.picture = action.payload.picture;
+          normalized.data.profile = {
+            ...normalized.data.profile,
+            picture: action.payload.picture,
+          };
         }
         normalized.operations.avatar = createOperationState();
         Object.assign(state, normalized);
@@ -316,7 +319,10 @@ const userSlice = createSlice({
       .addCase(getUserPreferences.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         if (normalized.data) {
-          normalized.data.preferences = action.payload.preferences;
+          normalized.data.profile = {
+            ...normalized.data.profile,
+            ...action.payload.preferences,
+          };
         }
         normalized.operations.preferences = createOperationState();
         Object.assign(state, normalized);
@@ -337,7 +343,10 @@ const userSlice = createSlice({
       .addCase(updateUserPreferences.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         if (normalized.data) {
-          normalized.data.preferences = action.payload.preferences;
+          normalized.data.profile = {
+            ...normalized.data.profile,
+            ...action.payload.preferences,
+          };
         }
         normalized.operations.preferences = createOperationState();
         Object.assign(state, normalized);

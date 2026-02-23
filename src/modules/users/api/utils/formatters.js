@@ -15,26 +15,21 @@ import { DEFAULT_ROLE } from '../constants/rbac';
  * Extracts user data, profile fields, and RBAC information into
  * a consistent response structure.
  *
- * Plugins can extend the response by listening to the 'profile.formatResponse'
- * hook event and modifying the result object.
- *
  * @param {Object} user - Sequelize User model instance with associations
  * @param {Object} [options] - Formatting options
  * @param {Object} [options.rbacData] - Pre-collected RBAC data (skips collection)
  * @param {boolean} [options.includePermissions=true] - Include detailed permissions
- * @param {Function} [options.hook] - Hook factory for plugin extensions
  * @returns {Promise<Object>} Formatted user object
  */
 export async function formatUserResponse(user, options) {
   const opts = options || {};
   const { rbacData } = opts;
   const includePermissions = opts.includePermissions !== false;
-  const { hook } = opts;
 
   // Collect RBAC data if not provided
   const rbac = rbacData || collectUserRBACData(user);
 
-  // Extract profile fields with proper null handling
+  // Ensure profile is a flat object
   const profile = user.profile || {};
 
   const result = {
@@ -46,14 +41,8 @@ export async function formatUserResponse(user, options) {
     created_at: user.created_at,
     updated_at: user.updated_at,
 
-    // Profile fields
-    display_name: profile.display_name || null,
-    first_name: profile.first_name || null,
-    last_name: profile.last_name || null,
-    picture: profile.picture || null,
-    bio: profile.bio || null,
-    location: profile.location || null,
-    website: profile.website || null,
+    // Profile fields (nested under profile)
+    profile,
 
     // RBAC fields
     is_admin: isAdmin({ roles: rbac.roles }),
@@ -64,16 +53,6 @@ export async function formatUserResponse(user, options) {
   // Optionally include permissions
   if (includePermissions) {
     result.permissions = rbac.permissions;
-  }
-
-  // Allow plugins to extend the response via hook
-  // Plugins can add custom fields by modifying result object
-  if (hook) {
-    await hook('profile').emit('formatResponse', {
-      user: user,
-      profile: profile,
-      result: result,
-    });
   }
 
   return result;

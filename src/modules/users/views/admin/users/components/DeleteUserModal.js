@@ -103,7 +103,7 @@ const DeleteUserModal = forwardRef(({ onSuccess }, ref) => {
   const displayName = useMemo(() => {
     if (data && data.items && data.items.length === 1) {
       const user = data.items[0];
-      return `"${user.display_name || user.email}"`;
+      return `"${(user.profile && user.profile.display_name) || user.email}"`;
     }
     const count = data && data.ids ? data.ids.length : 0;
     return t('admin:users.list.userCount', '{{count}} user(s)', { count });

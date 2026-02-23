@@ -6,6 +6,7 @@
  */
 
 import * as authController from '../controllers/auth.controller';
+import * as profileController from '../controllers/profile.controller';
 
 /**
  * Authentication Routes
@@ -56,7 +57,7 @@ export default function authRoutes(app, { Router }) {
    * @desc    Get current authenticated user
    * @access  Private (requires authentication)
    */
-  router.get('/me', requireAuth, authController.me);
+  router.get('/me', requireAuth, profileController.getProfile);
 
   /**
    * @route   POST /refresh-token

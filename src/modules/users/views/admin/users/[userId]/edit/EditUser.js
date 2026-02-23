@@ -102,9 +102,11 @@ function EditUser({ userId }) {
       user
         ? {
             email: user.email || '',
-            display_name: user.display_name || '',
-            first_name: user.first_name || '',
-            last_name: user.last_name || '',
+            profile: {
+              display_name: (user.profile && user.profile.display_name) || '',
+              first_name: (user.profile && user.profile.first_name) || '',
+              last_name: (user.profile && user.profile.last_name) || '',
+            },
             roles:
               Array.isArray(user.roles) && user.roles.length > 0
                 ? user.roles
@@ -484,7 +486,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
 
         <div className={s.formRow}>
           <Form.Field
-            name='first_name'
+            name='profile.first_name'
             label={t('admin:users.edit.firstName', 'First Name')}
           >
             <Form.Input
@@ -492,7 +494,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             />
           </Form.Field>
           <Form.Field
-            name='last_name'
+            name='profile.last_name'
             label={t('admin:users.edit.lastName', 'Last Name')}
           >
             <Form.Input
@@ -502,7 +504,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
         </div>
 
         <Form.Field
-          name='display_name'
+          name='profile.display_name'
           label={t('admin:users.edit.displayName', 'Display Name')}
         >
           <Form.Input

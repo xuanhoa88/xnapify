@@ -57,7 +57,7 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
       is_locked: false,
       failed_login_attempts: 0,
       profile: {
-        display_name: email.split('@')[0],
+        display_name: userData.display_name || email.split('@')[0],
       },
     },
     {
@@ -81,7 +81,6 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
 
   // Return formatted user data with default RBAC for new user
   return formatUserResponse(user, {
-    hook,
     rbacData: {
       roles: [DEFAULT_ROLE],
       permissions: [],
@@ -242,10 +241,10 @@ export async function authenticateUser(
   await hook('auth').emit('login', {
     user_id: user.id,
     activityData,
-    user: await formatUserResponse(user, { hook }),
+    user: await formatUserResponse(user),
   });
 
-  return formatUserResponse(user, { hook });
+  return formatUserResponse(user);
 }
 
 /**

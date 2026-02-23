@@ -166,9 +166,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
               <div key={user.id} className={s.userItem}>
                 <Avatar
                   name={
-                    (user.profile && user.profile.display_name) ||
-                    user.display_name ||
-                    user.email
+                    (user.profile && user.profile.display_name) || user.email
                   }
                   size='small'
                   className={s.userAvatar}
@@ -176,7 +174,6 @@ const RoleUsersModal = forwardRef((props, ref) => {
                 <div className={s.userInfo}>
                   <span className={s.userName}>
                     {(user.profile && user.profile.display_name) ||
-                      user.display_name ||
                       t('admin:common.na', 'N/A')}
                   </span>
                   <span className={s.userEmail}>{user.email}</span>

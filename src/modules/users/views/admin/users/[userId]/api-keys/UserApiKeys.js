@@ -180,7 +180,7 @@ export default function UserApiKeys({ userId }) {
       title={
         user
           ? t('admin:users.apiKeys.headerTitle', 'API Keys: {{name}}', {
-              name: user.display_name || user.email,
+              name: (user.profile && user.profile.display_name) || user.email,
             })
           : t('admin:users.apiKeys.headerTitle', 'User API Keys')
       }

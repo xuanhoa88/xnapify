@@ -26,7 +26,7 @@ export function mount({ store, i18n }) {
     setBreadcrumbs({
       admin: [
         {
-          label: i18n.t('navigation.dashboard', 'Dashboard'),
+          label: i18n.t('admin:navigation.dashboard', 'Dashboard'),
           url: '/admin',
         },
       ],

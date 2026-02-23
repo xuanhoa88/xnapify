@@ -25,60 +25,19 @@ export async function up({ context, Sequelize }) {
       onDelete: 'CASCADE',
       comment: 'User this profile belongs to',
     },
-    display_name: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'User display name',
-    },
-    first_name: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'User first name',
-    },
-    last_name: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'User last name',
-    },
-    picture: {
+    attribute_key: {
       type: DataTypes.STRING(255),
-      allowNull: true,
-      comment: 'Profile picture URL',
+      primaryKey: true,
+      allowNull: false,
     },
-    gender: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-      comment: 'User gender',
-    },
-    location: {
-      type: DataTypes.STRING(100),
-      allowNull: true,
-      comment: 'User location',
-    },
-    website: {
-      type: DataTypes.STRING(255),
-      allowNull: true,
-      comment: 'User website URL',
-    },
-    bio: {
+    attribute_value: {
       type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'User biography',
+      allowNull: false,
     },
-    preferences: {
-      type: DataTypes.JSON,
-      allowNull: true,
-      defaultValue: {
-        language: 'en-US',
-        timezone: 'UTC',
-        theme: 'system',
-        notifications: {
-          email: true,
-          push: true,
-          sms: false,
-        },
-      },
-      comment: 'User preferences (language, timezone, theme, notifications)',
+    attribute_type: {
+      type: DataTypes.ENUM('string', 'number', 'boolean', 'json', 'date'),
+      allowNull: false,
+      defaultValue: 'string',
     },
     created_at: {
       type: DataTypes.DATE,
@@ -92,8 +51,8 @@ export async function up({ context, Sequelize }) {
     },
   });
 
-  // Add index on userId (foreign key)
-  await queryInterface.addIndex('user_profiles', ['user_id']);
+  // Add index on attribute_key
+  await queryInterface.addIndex('user_profiles', ['attribute_key']);
 }
 
 /**

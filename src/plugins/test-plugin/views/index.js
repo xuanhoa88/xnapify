@@ -11,23 +11,29 @@ import PluginField from './PluginField';
 
 // Extract handlers for cleanup
 const extendProfileValidator = (schema, validator) => {
-  // Merge plugin schema with base schema
-  // We use the exported profileSchema which uses the shared Zod instance
+  // Deep-merge the profile sub-object so we extend it, not replace it
   const extension = profileSchema(validator);
-  return schema.merge(extension);
+  const baseProfile = schema.shape.profile;
+  const extProfile = extension.shape.profile;
+  // Unwrap .optional() wrapper if present, merge, then re-wrap
+  const inner = baseProfile.unwrap
+    ? baseProfile.unwrap().merge(extProfile)
+    : baseProfile.merge(extProfile);
+  return schema.extend({ profile: inner.optional() });
 };
 
 const handleProfileSubmit = async (data, _context) => {
-  if (data.nickname) {
-    console.log(`[Test Plugin] Hello, ${data.nickname}!`);
+  if (data.profile.nickname) {
+    console.log(`[Test Plugin] Hello, ${data.profile.nickname}!`);
   }
 };
 
 const handleProfileDefaults = async user => {
-  const prefs = (user && user.preferences) || {};
   return {
-    nickname: (user && user.nickname) || 'Anonymous User',
-    birthday: prefs.birthday || '',
+    profile: {
+      nickname: (user && user.profile.nickname) || 'Anonymous User',
+      birthday: (user && user.profile.birthday) || '',
+    },
   };
 };
 

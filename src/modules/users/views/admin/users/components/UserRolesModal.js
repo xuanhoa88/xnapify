@@ -216,7 +216,9 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
               { count: bulkUserIds.length },
             )
           : t('admin:users.roles.manageRoles', 'Manage Roles for "{{name}}"', {
-              name: user && (user.display_name || user.email),
+              name:
+                user &&
+                ((user.profile && user.profile.display_name) || user.email),
             })}
       </Modal.Header>
       <Modal.Body error={error}>

@@ -29,21 +29,25 @@ import { formatUserResponse } from '../utils/formatters';
  */
 export async function getProfile(req, res) {
   const http = req.app.get('http');
+  const hook = req.app.get('hook').withContext(req.app);
   try {
     const user = await profileService.getUserWithProfile(req.user.id, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
     });
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
     }
 
-    return http.sendSuccess(res, {
-      profile: await formatUserResponse(user, {
-        hook: req.app.get('hook').withContext(req.app),
-      }),
+    // Format user response
+    const normalizedUser = await formatUserResponse(user, {
+      hook: req.app.get('hook').withContext(req.app),
     });
+
+    // Emit hook event for plugins to modify the response
+    await hook('profile').emit('retrieved', normalizedUser);
+
+    return http.sendSuccess(res, { user: normalizedUser });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user profile', error);
   }
@@ -87,24 +91,23 @@ export async function updateProfile(req, res) {
       return http.sendValidationError(res, dataOrErrors[0]);
     }
 
-    const validatedData = dataOrErrors;
-
     // 4. Update user profile with validated data
     const user = await profileService.updateUserProfile(
       req.user.id,
-      validatedData,
+      dataOrErrors,
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        hook: hook,
+        hook,
       },
     );
 
-    return http.sendSuccess(res, {
-      profile: await formatUserResponse(user, {
-        hook: hook,
-      }),
-    });
+    // Format user response and emit retrieved hook (same as getProfile)
+    // so plugins can format the response data consistently
+    const normalizedUser = await formatUserResponse(user, { hook });
+    await hook('profile').emit('retrieved', normalizedUser);
+
+    return http.sendSuccess(res, { profile: normalizedUser });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update profile', error);
   }
@@ -145,18 +148,17 @@ export async function uploadAvatar(req, res) {
     // Get user with profile
     const user = await profileService.getUserWithProfile(req.user.id, {
       models,
-      hook: req.app.get('hook').withContext(req.app),
     });
 
     // Store old avatar for cleanup
     const oldAvatarPath = user.profile && user.profile.picture;
 
-    // Update profile with new avatar
-    if (user.profile) {
-      await user.profile.update({ picture: fileName });
-    } else {
-      await UserProfile.create({ user_id: req.user.id, picture: fileName });
-    }
+    // Update profile with new avatar via EAV upsert
+    await UserProfile.upsert({
+      user_id: req.user.id,
+      attribute_key: 'picture',
+      attribute_value: fileName,
+    });
 
     // Delete old avatar if different
     if (oldAvatarPath && oldAvatarPath !== fileName) {
@@ -216,7 +218,8 @@ export async function previewAvatar(req, res) {
 
   try {
     // Get avatar path from query param (for updated avatar) or from auth token
-    const avatarPath = req.query.fileName || req.user.picture;
+    const avatarPath =
+      req.query.fileName || (req.user.profile && req.user.profile.picture);
 
     // No avatar - redirect to default
     if (typeof avatarPath !== 'string' || avatarPath.trim().length === 0) {
@@ -259,19 +262,22 @@ export async function previewAvatar(req, res) {
 export async function removeAvatar(req, res) {
   const http = req.app.get('http');
   const fs = req.app.get('fs');
+  const models = req.app.get('models');
+  const { UserProfile } = models;
 
   try {
     // Get user with profile to find current avatar
     const user = await profileService.getUserWithProfile(req.user.id, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
     });
 
     if (!user) {
       return http.sendNotFound(res, 'User not found');
     }
 
-    if (!user.profile || !user.profile.picture) {
+    const pictureAttrValue = user.profile && user.profile.picture;
+
+    if (!pictureAttrValue) {
       return http.sendValidationError(res, {
         avatar: 'No avatar to remove',
       });
@@ -279,16 +285,16 @@ export async function removeAvatar(req, res) {
 
     // Delete the avatar file using fs.remove()
     try {
-      if (user.profile.picture) {
-        await fs.remove(user.profile.picture);
-      }
+      await fs.remove(pictureAttrValue);
     } catch (error) {
       // Log warning but continue - file may already be deleted
       console.warn('Failed to delete avatar file:', error.message);
     }
 
-    // Update profile to remove avatar reference
-    await user.profile.update({ picture: null });
+    // Remove avatar EAV row
+    await UserProfile.destroy({
+      where: { user_id: req.user.id, attribute_key: 'picture' },
+    });
 
     return http.sendSuccess(res, {
       message: 'Avatar removed successfully',

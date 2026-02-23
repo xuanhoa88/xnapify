@@ -7,6 +7,43 @@
 
 import { hashPassword } from '../utils/password';
 
+// =========================================================================
+// afterFind hook: auto-flatten EAV profile rows into a plain object
+// =========================================================================
+function flattenProfileEAV(instance) {
+  if (!instance || !Array.isArray(instance.profile)) return;
+  const flat = {};
+  instance.profile.forEach(attr => {
+    // attr.attribute_value is already parsed to native JS types by UserProfile's getter
+    flat[attr.attribute_key] = attr.attribute_value;
+  });
+  instance.profile = flat;
+}
+
+// =========================================================================
+// beforeValidate hook: auto-expand a flat profile object into an EAV array
+// so that User.create(..., { include: [{ model: UserProfile, as: 'profile' }] })
+// works with flat `{ display_name: 'foo' }` structures.
+// =========================================================================
+function expandProfileEAV(instance) {
+  if (
+    instance.profile &&
+    typeof instance.profile === 'object' &&
+    !Array.isArray(instance.profile)
+  ) {
+    const eavArray = [];
+    for (const [key, value] of Object.entries(instance.profile)) {
+      if (value !== undefined) {
+        eavArray.push({
+          attribute_key: key,
+          attribute_value: value,
+        });
+      }
+    }
+    instance.profile = eavArray;
+  }
+}
+
 /**
  * User Model Factory
  *
@@ -150,8 +187,8 @@ export default function createUserModel({ connection, DataTypes }) {
       onDelete: 'cascade',
     });
 
-    // User <-> UserProfile (One-to-One)
-    User.hasOne(models.UserProfile, {
+    // User <-> UserProfile (One-to-Many via EAV)
+    User.hasMany(models.UserProfile, {
       foreignKey: 'user_id',
       as: 'profile',
       onUpdate: 'cascade',
@@ -182,6 +219,17 @@ export default function createUserModel({ connection, DataTypes }) {
       onDelete: 'CASCADE',
     });
   };
+
+  User.addHook('afterFind', 'flattenProfileEAV', results => {
+    if (!results) return;
+    if (Array.isArray(results)) {
+      results.forEach(flattenProfileEAV);
+    } else {
+      flattenProfileEAV(results);
+    }
+  });
+
+  User.addHook('beforeValidate', 'expandProfileEAV', expandProfileEAV);
 
   return User;
 }

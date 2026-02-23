@@ -69,9 +69,8 @@ export const getUserEmail = state => {
 export const getUserDisplayName = state => {
   const user = getUserState(state);
   if (!user) return null;
-  if (user.display_name) return user.display_name;
-  if (user.profile && user.profile.display_name)
-    return user.profile.display_name;
+  const profile = user.profile || {};
+  if (profile.display_name) return profile.display_name;
   return user.email;
 };
 
@@ -80,9 +79,10 @@ export const getUserDisplayName = state => {
  */
 export const getUserAvatarUrl = state => {
   const user = getUserState(state);
-  if (!user || !user.picture) return null;
-  if (/^https?:\/\//i.test(user.picture)) return user.picture;
-  return '/api/profile/avatar?fileName=' + encodeURIComponent(user.picture);
+  const picture = user && user.profile && user.profile.picture;
+  if (!picture) return null;
+  if (/^https?:\/\//i.test(picture)) return picture;
+  return '/api/profile/avatar?fileName=' + encodeURIComponent(picture);
 };
 
 /**
@@ -90,7 +90,15 @@ export const getUserAvatarUrl = state => {
  */
 export const getUserPreferencesData = state => {
   const user = getUserState(state);
-  return (user && user.preferences) || null;
+  if (!user || !user.profile) return null;
+  const p = user.profile;
+  // Preferences are now individual profile keys
+  const prefs = {};
+  if (p.language) prefs.language = p.language;
+  if (p.timezone) prefs.timezone = p.timezone;
+  if (p.theme) prefs.theme = p.theme;
+  if (p.notifications) prefs.notifications = p.notifications;
+  return Object.keys(prefs).length > 0 ? prefs : null;
 };
 
 /**

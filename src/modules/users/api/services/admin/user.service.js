@@ -25,16 +25,9 @@ import { logUserActivity } from '../../utils/activity';
  */
 export async function createUser(userData, { models, webhook, actorId }) {
   const { User, UserProfile, Role, Group } = models;
-  const {
-    email,
-    password,
-    display_name,
-    first_name,
-    last_name,
-    roles,
-    groups,
-    is_active = true,
-  } = userData;
+  const { email, password, roles, groups, is_active = true } = userData;
+
+  const { display_name, first_name, last_name } = userData.profile || {};
 
   // Check if user exists
   const existingUser = await User.findOne({ where: { email } });
@@ -44,21 +37,23 @@ export async function createUser(userData, { models, webhook, actorId }) {
     throw error;
   }
 
-  // Create user (password hashed automatically by model hook)
-  const user = await User.create({
-    email,
-    password,
-    is_active,
-    email_confirmed: true, // Admin created users are auto-confirmed
-  });
-
-  // Create profile
-  await UserProfile.create({
-    user_id: user.id,
-    display_name: display_name || email.split('@')[0],
-    first_name,
-    last_name,
-  });
+  // Create user with profile (password hashed automatically by model hook)
+  const user = await User.create(
+    {
+      email,
+      password,
+      is_active,
+      email_confirmed: true, // Admin created users are auto-confirmed
+      profile: {
+        display_name: display_name || email.split('@')[0],
+        ...(first_name && { first_name }),
+        ...(last_name && { last_name }),
+      },
+    },
+    {
+      include: [{ model: UserProfile, as: 'profile' }],
+    },
+  );
 
   // Assign role
   if (Array.isArray(roles) && roles.length > 0) {
@@ -122,7 +117,7 @@ export async function createUser(userData, { models, webhook, actorId }) {
     email_confirmed: user.email_confirmed,
     is_active: user.is_active,
     created_at: user.created_at,
-    display_name: (user.profile && user.profile.display_name) || null,
+    profile: user.profile || {},
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
@@ -168,9 +163,10 @@ export async function getUserList(options, models) {
   if (search) {
     whereConditions[Op.or] = [{ email: { [Op.like]: `%${search}%` } }];
     profileWhereConditions[Op.or] = [
-      { display_name: { [Op.like]: `%${search}%` } },
-      { first_name: { [Op.like]: `%${search}%` } },
-      { last_name: { [Op.like]: `%${search}%` } },
+      {
+        attribute_key: ['display_name', 'first_name', 'last_name'],
+        attribute_value: { [Op.like]: `%${search}%` },
+      },
     ];
   }
 
@@ -233,25 +229,24 @@ export async function getUserList(options, models) {
     order: [['created_at', 'DESC']],
   });
 
-  const formattedUsers = users.map(user => ({
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    is_locked: user.is_locked,
-    failed_login_attempts: user.failed_login_attempts,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
-    groups: user.groups || [],
-  }));
+  const formattedUsers = users.map(user => {
+    return {
+      id: user.id,
+      email: user.email,
+      email_confirmed: user.email_confirmed,
+      is_active: user.is_active,
+      is_locked: user.is_locked,
+      failed_login_attempts: user.failed_login_attempts,
+      created_at: user.created_at,
+      updated_at: user.updated_at,
+      profile: user.profile || {},
+      roles:
+        Array.isArray(user.roles) && user.roles.length > 0
+          ? user.roles.map(r => r.name)
+          : [DEFAULT_ROLE],
+      groups: user.groups || [],
+    };
+  });
 
   return {
     users: formattedUsers,
@@ -320,13 +315,7 @@ export async function getUserById(user_id, models) {
     failed_login_attempts: user.failed_login_attempts,
     created_at: user.created_at,
     updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    bio: (user.profile && user.profile.bio) || null,
-    location: (user.profile && user.profile.location) || null,
-    website: (user.profile && user.profile.website) || null,
+    profile: user.profile || {},
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
@@ -357,19 +346,10 @@ export async function updateUserById(
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
 
-  const {
-    email,
-    password,
-    display_name,
-    first_name,
-    last_name,
-    bio,
-    location,
-    website,
-    roles,
-    groups,
-    is_active,
-  } = userData;
+  const { email, password, roles, groups, is_active } = userData;
+
+  const { display_name, first_name, last_name, bio, location, website } =
+    userData.profile || {};
 
   const user = await User.findByPk(user_id, {
     include: [{ model: UserProfile, as: 'profile' }],
@@ -415,14 +395,16 @@ export async function updateUserById(
   if (website != null) profileUpdates.website = website;
 
   if (Object.keys(profileUpdates).length > 0) {
-    if (user.profile) {
-      await user.profile.update(profileUpdates);
-    } else {
-      await UserProfile.create({
-        user_id,
-        ...profileUpdates,
-      });
-    }
+    const upsertPromises = Object.entries(profileUpdates).map(
+      ([key, value]) => {
+        return UserProfile.upsert({
+          user_id,
+          attribute_key: key,
+          attribute_value: value,
+        });
+      },
+    );
+    await Promise.all(upsertPromises);
   }
 
   // Update roles if provided
@@ -503,13 +485,7 @@ export async function updateUserById(
     is_active: user.is_active,
     created_at: user.created_at,
     updated_at: user.updated_at,
-    display_name: (user.profile && user.profile.display_name) || null,
-    first_name: (user.profile && user.profile.first_name) || null,
-    last_name: (user.profile && user.profile.last_name) || null,
-    picture: (user.profile && user.profile.picture) || null,
-    bio: (user.profile && user.profile.bio) || null,
-    location: (user.profile && user.profile.location) || null,
-    website: (user.profile && user.profile.website) || null,
+    profile: user.profile || {},
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)

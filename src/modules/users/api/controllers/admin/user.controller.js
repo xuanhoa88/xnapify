@@ -34,9 +34,7 @@ export async function createUser(req, res) {
       email,
       password,
       confirm_password,
-      display_name,
-      first_name,
-      last_name,
+      profile,
       roles,
       groups,
       is_active,
@@ -47,9 +45,7 @@ export async function createUser(req, res) {
       email: email || '',
       password: password || '',
       confirm_password: confirm_password || '',
-      display_name: display_name || '',
-      first_name: first_name || '',
-      last_name: last_name || '',
+      profile: profile || {},
       roles: roles || [],
       groups: groups || [],
       is_active: is_active !== false,
@@ -68,9 +64,7 @@ export async function createUser(req, res) {
       {
         email,
         password,
-        display_name,
-        first_name,
-        last_name,
+        profile,
         roles,
         groups,
         is_active,
@@ -165,15 +159,7 @@ export async function updateUserById(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const {
-      display_name,
-      first_name,
-      last_name,
-      password,
-      roles,
-      groups,
-      is_active,
-    } = req.body;
+    const { profile, password, roles, groups, is_active } = req.body;
 
     // Prevent admin from updating themselves
     if (req.user.id === id) {
@@ -181,9 +167,7 @@ export async function updateUserById(req, res) {
     }
 
     const [isValid, errors] = validateForm(updateUserFormSchema, {
-      display_name,
-      first_name,
-      last_name,
+      profile: profile || {},
       password: password || '',
       roles: roles || [],
       groups: groups || [],
@@ -200,9 +184,7 @@ export async function updateUserById(req, res) {
 
     // Build update data - only include password if provided
     const updateData = {
-      display_name,
-      first_name,
-      last_name,
+      profile,
       roles,
       groups,
       is_active,

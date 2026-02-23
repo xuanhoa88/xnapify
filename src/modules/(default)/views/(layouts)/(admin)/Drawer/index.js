@@ -130,11 +130,11 @@ function Drawer() {
 
     return [
       {
-        ns: t('navigation.main', 'Main'),
+        ns: t('admin:navigation.main', 'Main'),
         items: [
           {
             path: '/admin',
-            label: t('navigation.dashboard', 'Dashboard'),
+            label: t('admin:navigation.dashboard', 'Dashboard'),
             icon: 'dashboard',
             exact: true,
           },
@@ -142,11 +142,11 @@ function Drawer() {
         order: 0,
       },
       {
-        ns: t('navigation.system', 'System'),
+        ns: t('admin:navigation.system', 'System'),
         items: [
           hasPermission(user, 'nodered:admin') && {
             path: '/~/red/admin',
-            label: t('navigation.nodeRed', 'Node-RED'),
+            label: t('admin:navigation.nodeRed', 'Node-RED'),
             icon: 'node-red',
             external: true,
           },
@@ -180,6 +180,14 @@ function Drawer() {
       }, [])
       .sort((a, b) => a.order - b.order);
   }, [t, user, dynamicMenus]);
+
+  const userDisplayName = useMemo(() => {
+    if (!isAuth) return '';
+    if (!user) return '';
+    return user.profile && user.profile.display_name
+      ? user.profile.display_name
+      : user.email;
+  }, [isAuth, user]);
 
   return (
     <>
@@ -271,11 +279,11 @@ function Drawer() {
           <div className={s.footer}>
             <div className={s.userInfo}>
               <div className={s.userAvatar}>
-                {(user.display_name && user.display_name.charAt(0)) || 'A'}
+                {userDisplayName.charAt(0).toUpperCase()}
               </div>
               <div className={s.userDetails}>
                 <span className={s.userName}>
-                  {user.display_name || t('common.admin', 'Admin')}
+                  {userDisplayName || t('common.admin', 'Admin')}
                 </span>
                 <span className={s.userRole}>{user.email}</span>
               </div>

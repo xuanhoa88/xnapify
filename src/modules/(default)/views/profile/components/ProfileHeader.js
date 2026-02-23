@@ -35,7 +35,12 @@ function ProfileHeader() {
     };
   }, [dispatch]);
 
-  const displayName = user && user.display_name;
+  const displayName = useMemo(() => {
+    if (!user) return '';
+    return user.profile && user.profile.display_name
+      ? user.profile.display_name
+      : user.email;
+  }, [user]);
 
   const avatarInitial = useMemo(
     () => (displayName ? displayName.charAt(0).toUpperCase() : 'U'),

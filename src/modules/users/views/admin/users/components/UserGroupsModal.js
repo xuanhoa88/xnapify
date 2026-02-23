@@ -217,7 +217,11 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
           : t(
               'admin:users.groups.manageGroups',
               'Manage Groups for "{{name}}"',
-              { name: user && (user.display_name || user.email) },
+              {
+                name:
+                  user &&
+                  ((user.profile && user.profile.display_name) || user.email),
+              },
             )}
       </Modal.Header>
       <Modal.Body error={error}>

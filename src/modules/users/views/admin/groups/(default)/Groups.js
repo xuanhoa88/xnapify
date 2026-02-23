@@ -393,7 +393,10 @@ function Groups() {
                         {visibleUsers.map(user => (
                           <Avatar
                             key={user.id}
-                            name={user.display_name || user.email}
+                            name={
+                              (user.profile && user.profile.display_name) ||
+                              user.email
+                            }
                             size='small'
                           />
                         ))}

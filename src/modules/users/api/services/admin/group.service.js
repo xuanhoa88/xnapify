@@ -80,7 +80,6 @@ export async function createGroup(groupData, { models, webhook, actorId }) {
           {
             model: UserProfile,
             as: 'profile',
-            attributes: ['first_name', 'last_name', 'display_name'],
           },
         ],
       },
@@ -221,7 +220,6 @@ export async function getGroupById(group_id, models) {
           {
             model: UserProfile,
             as: 'profile',
-            attributes: ['first_name', 'last_name', 'display_name'],
           },
         ],
       },
@@ -320,7 +318,6 @@ export async function updateGroupById(
           {
             model: UserProfile,
             as: 'profile',
-            attributes: ['first_name', 'last_name', 'display_name'],
           },
         ],
       },
@@ -437,7 +434,7 @@ export async function getUsersWithGroup(group_id, options, models) {
     attributes: ['id', 'email', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
+    order: [['email', 'ASC']],
     subQuery: false,
   });
 

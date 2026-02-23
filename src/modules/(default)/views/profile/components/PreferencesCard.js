@@ -57,7 +57,10 @@ function PreferencesCard() {
 
   // Fetch preferences on mount if not already in Redux
   useEffect(() => {
-    if (!hasFetched.current && (!user || !user.preferences)) {
+    if (
+      !hasFetched.current &&
+      (!user || !user.profile || !user.profile.language)
+    ) {
       hasFetched.current = true;
       dispatch(getUserPreferences());
     }
@@ -67,16 +70,16 @@ function PreferencesCard() {
   const defaultValues = useMemo(
     () => ({
       language:
-        (user && user.preferences && user.preferences.language) ||
+        (user && user.profile && user.profile.language) ||
         DEFAULT_PREFERENCES.language,
       timezone:
-        (user && user.preferences && user.preferences.timezone) ||
+        (user && user.profile && user.profile.timezone) ||
         DEFAULT_PREFERENCES.timezone,
       theme:
-        (user && user.preferences && user.preferences.theme) ||
+        (user && user.profile && user.profile.theme) ||
         DEFAULT_PREFERENCES.theme,
       notifications:
-        (user && user.preferences && user.preferences.notifications) ||
+        (user && user.profile && user.profile.notifications) ||
         DEFAULT_PREFERENCES.notifications,
     }),
     [user],
@@ -119,7 +122,7 @@ function PreferencesCard() {
   );
 
   // Show loading state while fetching preferences
-  if (loading && (!user || !user.preferences)) {
+  if (loading && (!user || !user.profile || !user.profile.language)) {
     return (
       <div className={s.card}>
         <div className={s.loading}>

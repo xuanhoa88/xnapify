@@ -46,8 +46,6 @@ function Form({
   });
 
   // Reset form when defaultValues change (e.g., when data loads asynchronously)
-  // This ensures the form reflects the latest data, fixing issues with "Anonymous User"
-  // showing up when plugin defaults load before user data.
   // Note: Parent components should memoize defaultValues to avoid unnecessary resets.
   useEffect(() => {
     methods.reset(defaultValues);

@@ -481,9 +481,13 @@ describe('[user] slice.js', () => {
       expect(state.operations.avatar.loading).toBe(true);
     });
 
-    it('should update picture field on fulfilled', () => {
+    it('should update picture in profile on fulfilled', () => {
       const initialState = {
-        data: { id: 1, email: 'test@example.com', picture: null },
+        data: {
+          id: 1,
+          email: 'test@example.com',
+          profile: { display_name: 'Test' },
+        },
         operations: {
           auth: { loading: false, error: null },
           emailVerification: { loading: false, error: null },
@@ -500,7 +504,8 @@ describe('[user] slice.js', () => {
         initialState,
         uploadUserAvatar.fulfilled({ picture }, 'requestId', {}),
       );
-      expect(state.data.picture).toBe(picture);
+      expect(state.data.profile.picture).toBe(picture);
+      expect(state.data.profile.display_name).toBe('Test');
       expect(state.operations.avatar.loading).toBe(false);
     });
   });
@@ -571,9 +576,13 @@ describe('[user] slice.js', () => {
       expect(state.operations.preferences.loading).toBe(true);
     });
 
-    it('should update preferences on fulfilled', () => {
+    it('should merge preferences into profile on fulfilled', () => {
       const initialState = {
-        data: { id: 1, email: 'test@example.com', preferences: null },
+        data: {
+          id: 1,
+          email: 'test@example.com',
+          profile: { display_name: 'Test' },
+        },
         operations: {
           auth: { loading: false, error: null },
           emailVerification: { loading: false, error: null },
@@ -590,7 +599,9 @@ describe('[user] slice.js', () => {
         initialState,
         getUserPreferences.fulfilled({ preferences }, 'requestId'),
       );
-      expect(state.data.preferences).toEqual(preferences);
+      expect(state.data.profile.theme).toBe('dark');
+      expect(state.data.profile.language).toBe('en');
+      expect(state.data.profile.display_name).toBe('Test');
       expect(state.operations.preferences.loading).toBe(false);
     });
   });
@@ -604,12 +615,12 @@ describe('[user] slice.js', () => {
       expect(state.operations.preferences.loading).toBe(true);
     });
 
-    it('should update preferences on fulfilled', () => {
+    it('should merge updated preferences into profile on fulfilled', () => {
       const initialState = {
         data: {
           id: 1,
           email: 'test@example.com',
-          preferences: { theme: 'light' },
+          profile: { display_name: 'Test', theme: 'light' },
         },
         operations: {
           auth: { loading: false, error: null },
@@ -627,7 +638,9 @@ describe('[user] slice.js', () => {
         initialState,
         updateUserPreferences.fulfilled({ preferences }, 'requestId', {}),
       );
-      expect(state.data.preferences).toEqual(preferences);
+      expect(state.data.profile.theme).toBe('dark');
+      expect(state.data.profile.language).toBe('en');
+      expect(state.data.profile.display_name).toBe('Test');
     });
   });
 });

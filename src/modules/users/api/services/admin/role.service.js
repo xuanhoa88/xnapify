@@ -405,13 +405,12 @@ export async function getUsersWithRole(role_id, options, models) {
       {
         model: UserProfile,
         as: 'profile',
-        attributes: ['first_name', 'last_name', 'display_name'],
       },
     ],
     attributes: ['id', 'email', 'is_active', 'created_at'],
     limit: parseInt(limit),
     offset: parseInt(offset),
-    order: [[{ model: UserProfile, as: 'profile' }, 'display_name', 'ASC']],
+    order: [['email', 'ASC']],
     subQuery: false,
   });
 

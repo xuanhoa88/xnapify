@@ -25,71 +25,64 @@ export default function createUserProfileModel({ connection, DataTypes }) {
         comment: 'User this profile belongs to',
       },
 
-      display_name: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'User display name',
-      },
-
-      first_name: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'User first name',
-      },
-
-      last_name: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'User last name',
-      },
-
-      picture: {
+      attribute_key: {
         type: DataTypes.STRING(255),
-        allowNull: true,
-        comment: 'Profile picture URL',
+        primaryKey: true,
+        allowNull: false,
+        comment: 'Attribute key/name',
       },
 
-      gender: {
-        type: DataTypes.STRING(50),
-        allowNull: true,
-        comment: 'User gender',
-      },
-
-      location: {
-        type: DataTypes.STRING(100),
-        allowNull: true,
-        comment: 'User location',
-      },
-
-      website: {
-        type: DataTypes.STRING(255),
-        allowNull: true,
-        validate: {
-          isUrl: true,
-        },
-        comment: 'User website URL',
-      },
-
-      bio: {
+      attribute_value: {
         type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'User biography',
+        allowNull: false,
+        comment: 'Attribute value stored as text',
+        get() {
+          const rawValue = this.getDataValue('attribute_value');
+          if (rawValue === undefined || rawValue === null) return rawValue;
+
+          const type = this.getDataValue('attribute_type');
+          switch (type) {
+            case 'json':
+              try {
+                return JSON.parse(rawValue);
+              } catch {
+                return rawValue; // fallback on parse error
+              }
+            case 'number':
+              return Number(rawValue);
+            case 'boolean':
+              return rawValue === 'true';
+            case 'date':
+              return new Date(rawValue);
+            default:
+              return rawValue; // string or unknown
+          }
+        },
+        set(value) {
+          if (value instanceof Date) {
+            this.setDataValue('attribute_type', 'date');
+            this.setDataValue('attribute_value', value.toISOString());
+          } else if (typeof value === 'object' && value !== null) {
+            this.setDataValue('attribute_type', 'json');
+            this.setDataValue('attribute_value', JSON.stringify(value));
+          } else if (typeof value === 'boolean') {
+            this.setDataValue('attribute_type', 'boolean');
+            this.setDataValue('attribute_value', String(value));
+          } else if (typeof value === 'number') {
+            this.setDataValue('attribute_type', 'number');
+            this.setDataValue('attribute_value', String(value));
+          } else {
+            this.setDataValue('attribute_type', 'string');
+            this.setDataValue('attribute_value', String(value));
+          }
+        },
       },
 
-      preferences: {
-        type: DataTypes.JSON,
-        allowNull: true,
-        defaultValue: {
-          language: 'en-US',
-          timezone: 'UTC',
-          theme: 'system',
-          notifications: {
-            email: true,
-            push: true,
-            sms: false,
-          },
-        },
-        comment: 'User preferences (language, timezone, theme, notifications)',
+      attribute_type: {
+        type: DataTypes.ENUM('string', 'number', 'boolean', 'json', 'date'),
+        allowNull: false,
+        defaultValue: 'string',
+        comment: 'Data type for casting attribute_value',
       },
     },
     {

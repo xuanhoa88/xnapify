@@ -9,6 +9,7 @@ import { useCallback, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
+import merge from 'lodash/merge';
 import { z } from '../../../../../shared/validator';
 import {
   getUserProfile,
@@ -72,16 +73,7 @@ function PersonalInfoCard() {
 
   // Derive default values from user (memoized to prevent unnecessary re-renders)
   const defaultValues = useMemo(
-    () => ({
-      ...pluginDefaultValues, // Defaults from plugins
-      ...user, // User data overrides defaults
-      display_name: (user && user.display_name) || '',
-      first_name: (user && user.first_name) || '',
-      last_name: (user && user.last_name) || '',
-      bio: (user && user.bio) || '',
-      location: (user && user.location) || '',
-      website: (user && user.website) || '',
-    }),
+    () => merge({}, user, pluginDefaultValues),
     [user, pluginDefaultValues],
   );
 
@@ -155,7 +147,7 @@ function PersonalInfoFormFields({ loading }) {
   return (
     <>
       <Form.Field
-        name='display_name'
+        name='profile.display_name'
         label={t('profile.displayName', 'Display Name')}
       >
         <Form.Input
@@ -170,7 +162,7 @@ function PersonalInfoFormFields({ loading }) {
       <div className={s.row}>
         <div className={s.col}>
           <Form.Field
-            name='first_name'
+            name='profile.first_name'
             label={t('profile.firstName', 'First Name')}
           >
             <Form.Input
@@ -181,7 +173,7 @@ function PersonalInfoFormFields({ loading }) {
         </div>
         <div className={s.col}>
           <Form.Field
-            name='last_name'
+            name='profile.last_name'
             label={t('profile.lastName', 'Last Name')}
           >
             <Form.Input
@@ -192,20 +184,26 @@ function PersonalInfoFormFields({ loading }) {
         </div>
       </div>
 
-      <Form.Field name='bio' label={t('profile.bio', 'Bio')}>
+      <Form.Field name='profile.bio' label={t('profile.bio', 'Bio')}>
         <Form.WYSIWYG
           placeholder={t('profile.bioPlaceholder', 'Tell us about yourself...')}
         />
       </Form.Field>
 
-      <Form.Field name='location' label={t('profile.location', 'Location')}>
+      <Form.Field
+        name='profile.location'
+        label={t('profile.location', 'Location')}
+      >
         <Form.Input
           type='text'
           placeholder={t('profile.locationPlaceholder', 'Your location')}
         />
       </Form.Field>
 
-      <Form.Field name='website' label={t('profile.website', 'Website')}>
+      <Form.Field
+        name='profile.website'
+        label={t('profile.website', 'Website')}
+      >
         <Form.Input
           type='url'
           placeholder={t(

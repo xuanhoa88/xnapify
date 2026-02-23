@@ -84,74 +84,56 @@ export default {
     this[HANDLERS].updateValidation = function (context) {
       if (context.schema) {
         const extension = profileSchema(context.z);
-        context.schema = context.schema.merge(extension);
+        // Deep-merge the profile sub-object so we extend it, not replace it
+        const baseProfile = context.schema.shape.profile;
+        const extProfile = extension.shape.profile;
+        // Unwrap .optional() wrapper if present, merge, then re-wrap
+        const inner = baseProfile.unwrap
+          ? baseProfile.unwrap().merge(extProfile)
+          : baseProfile.merge(extProfile);
+        context.schema = context.schema.extend({
+          profile: inner.optional(),
+        });
         console.log('[Test Plugin] Extended profile schema via hook');
       }
     };
     hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
-    // Handler to intercept profile update and save nickname + birthday to preferences
-    this[HANDLERS].updating = function (data) {
-      const { formData, user } = data;
-
-      // Get existing preferences from the user's profile
-      const existingPreferences =
-        (user && user.profile && user.profile.preferences) || {};
-
-      // Collect plugin fields to move into preferences
-      const pluginPrefs = {};
-
-      if (formData && 'nickname' in formData) {
-        pluginPrefs.nickname = formData.nickname;
-        delete formData.nickname;
+    // The updating hook is no longer needed!
+    // formData.nickname and formData.birthday are automatically persisted
+    // as native EAV rows by the core profile service.
+    this[HANDLERS].updating = function (profileData) {
+      if (profileData && profileData.nickname) {
         console.log(
-          '[Test Plugin] Saved nickname to preferences:',
-          pluginPrefs.nickname,
+          '[Test Plugin] Persisting nickname as native EAV row:',
+          profileData.nickname,
         );
-      }
-
-      if (formData && 'birthday' in formData) {
-        pluginPrefs.birthday = formData.birthday;
-        delete formData.birthday;
-        console.log(
-          '[Test Plugin] Saved birthday to preferences:',
-          pluginPrefs.birthday,
-        );
-      }
-
-      if (Object.keys(pluginPrefs).length > 0) {
-        formData.preferences = {
-          ...existingPreferences,
-          ...(formData.preferences || {}),
-          ...pluginPrefs,
-        };
       }
     };
     hook('profile').on('updating', this[HANDLERS].updating);
 
-    // Handler to read nickname + birthday from preferences and add to response
-    this[HANDLERS].formatResponse = function (data) {
-      const { user, profile, result } = data;
+    // Handler to read nickname + birthday from profile EAV and add to response
+    this[HANDLERS].formatResponse = function (user) {
+      // Ensure profile exists in result
+      user.profile = user.profile || {};
 
-      const preferences = (profile && profile.preferences) || {};
-
-      // Read nickname from preferences
-      let nickname = preferences.nickname || null;
-      if (!nickname && user && user.email) {
+      // Read nickname from native profile EAV row
+      let nickname = user.profile.nickname || null;
+      if (!nickname && user.email) {
         nickname = user.email.split('@')[0];
       }
-      result.nickname = nickname || null;
+      user.profile.nickname = nickname || null;
 
-      // Read birthday from preferences
-      result.birthday = preferences.birthday || null;
+      // Read birthday from native profile EAV row
+      user.profile.birthday = user.profile.birthday || null;
 
       console.log(
-        '[Test Plugin] Added nickname to response: ' + result.nickname,
+        '[Test Plugin] Added nickname to response: ' + user.profile.nickname,
       );
     };
 
     // Register hook for user response formatting
-    hook('profile').on('formatResponse', this[HANDLERS].formatResponse);
+    hook('profile').on('retrieved', this[HANDLERS].formatResponse);
   },
 
   // Lifecycle: destroy (called when plugin is disabled)
@@ -192,7 +174,7 @@ export default {
       hook('profile').off('updating', this[HANDLERS].updating);
     }
     if (this[HANDLERS].formatResponse) {
-      hook('profile').off('formatResponse', this[HANDLERS].formatResponse);
+      hook('profile').off('retrieved', this[HANDLERS].formatResponse);
     }
 
     // Clear handlers

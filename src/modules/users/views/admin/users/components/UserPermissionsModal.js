@@ -102,7 +102,8 @@ const UserPermissionsModal = forwardRef((props, ref) => {
       <Modal.Header onClose={handleClose}>
         {t('admin:users.permissions.title', 'Permissions for "{{name}}"', {
           name:
-            (user && (user.display_name || user.email)) ||
+            (user &&
+              ((user.profile && user.profile.display_name) || user.email)) ||
             t('admin:common.unknown', 'Unknown'),
         })}
       </Modal.Header>

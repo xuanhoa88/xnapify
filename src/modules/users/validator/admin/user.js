@@ -17,26 +17,33 @@ import { strongPasswordRule } from '../auth/common';
 export const updateUserFormSchema = ({ i18n, z }) =>
   z
     .object({
-      display_name: z
-        .string()
-        .max(
-          100,
-          i18n.t('zod:admin.user.DISPLAY_NAME_MAX', 'Display name is too long'),
-        )
-        .optional(),
-      first_name: z
-        .string()
-        .max(
-          50,
-          i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
-        )
-        .optional(),
-      last_name: z
-        .string()
-        .max(
-          50,
-          i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
-        )
+      profile: z
+        .object({
+          display_name: z
+            .string()
+            .max(
+              100,
+              i18n.t(
+                'zod:admin.user.DISPLAY_NAME_MAX',
+                'Display name is too long',
+              ),
+            )
+            .optional(),
+          first_name: z
+            .string()
+            .max(
+              50,
+              i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
+            )
+            .optional(),
+          last_name: z
+            .string()
+            .max(
+              50,
+              i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
+            )
+            .optional(),
+        })
         .optional(),
       password: z
         .union([
@@ -82,26 +89,33 @@ export const createUserFormSchema = ({ i18n, z }) =>
         .email(i18n.t('zod:auth.EMAIL_INVALID', 'Email is invalid')),
       password: strongPasswordRule({ i18n, z }),
       confirm_password: z.string(),
-      display_name: z
-        .string()
-        .max(
-          100,
-          i18n.t('zod:admin.user.DISPLAY_NAME_MAX', 'Display name is too long'),
-        )
-        .optional(),
-      first_name: z
-        .string()
-        .max(
-          50,
-          i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
-        )
-        .optional(),
-      last_name: z
-        .string()
-        .max(
-          50,
-          i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
-        )
+      profile: z
+        .object({
+          display_name: z
+            .string()
+            .max(
+              100,
+              i18n.t(
+                'zod:admin.user.DISPLAY_NAME_MAX',
+                'Display name is too long',
+              ),
+            )
+            .optional(),
+          first_name: z
+            .string()
+            .max(
+              50,
+              i18n.t('zod:admin.user.FIRST_NAME_MAX', 'First name is too long'),
+            )
+            .optional(),
+          last_name: z
+            .string()
+            .max(
+              50,
+              i18n.t('zod:admin.user.LAST_NAME_MAX', 'Last name is too long'),
+            )
+            .optional(),
+        })
         .optional(),
       roles: z.array(z.string()).optional(),
       groups: z.array(z.string()).optional(),

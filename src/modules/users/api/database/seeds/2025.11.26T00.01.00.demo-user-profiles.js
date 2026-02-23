@@ -15,7 +15,7 @@ export async function up({ context }) {
 
   const now = new Date();
 
-  const profiles = [
+  const profilesRaw = [
     {
       user_id: demoUserIds.admin,
       display_name: 'System Administrator',
@@ -24,8 +24,10 @@ export async function up({ context }) {
       location: 'San Francisco, CA',
       website: 'https://example.com',
       bio: 'System administrator with full access to all features.',
-      created_at: now,
-      updated_at: now,
+      language: 'en',
+      timezone: 'America/Los_Angeles',
+      theme: 'dark',
+      notifications: { email: true, push: true, sms: false },
     },
     {
       user_id: demoUserIds.john,
@@ -35,8 +37,6 @@ export async function up({ context }) {
       location: 'New York, NY',
       website: 'https://johndoe.dev',
       bio: 'Software developer and tech enthusiast. Love building amazing web applications.',
-      created_at: now,
-      updated_at: now,
     },
     {
       user_id: demoUserIds.jane,
@@ -46,8 +46,6 @@ export async function up({ context }) {
       location: 'Los Angeles, CA',
       website: 'https://janesmith.design',
       bio: 'Designer and creative director. Passionate about user experience and visual design.',
-      created_at: now,
-      updated_at: now,
     },
     {
       user_id: demoUserIds.locked,
@@ -57,10 +55,27 @@ export async function up({ context }) {
       location: null,
       website: null,
       bio: 'This account has been locked due to security reasons.',
-      created_at: now,
-      updated_at: now,
     },
   ];
+
+  const profiles = [];
+
+  for (const profile of profilesRaw) {
+    const { user_id, ...attributes } = profile;
+    for (const [key, value] of Object.entries(attributes)) {
+      if (value !== null && value !== undefined) {
+        profiles.push({
+          user_id,
+          attribute_key: key,
+          attribute_value:
+            typeof value === 'object' ? JSON.stringify(value) : String(value),
+          attribute_type: typeof value === 'object' ? 'json' : 'string',
+          created_at: now,
+          updated_at: now,
+        });
+      }
+    }
+  }
 
   await queryInterface.bulkInsert('user_profiles', profiles);
 }

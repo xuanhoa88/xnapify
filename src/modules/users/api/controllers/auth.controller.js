@@ -205,34 +205,6 @@ export async function logout(req, res) {
 }
 
 /**
- * Get current authenticated user
- *
- * @route   GET /api/me
- * @access  Private (requires authentication)
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
- */
-export async function me(req, res) {
-  const http = req.app.get('http');
-  try {
-    const hook = req.app.get('hook').withContext(req.app);
-
-    // Get complete user data with RBAC information
-    const user = await profileService.getUserWithProfile(req.user.id, {
-      models: req.app.get('models'),
-      hook: hook,
-    });
-
-    // Format response with hook extension support
-    const userData = await formatUserResponse(user, { hook: hook });
-
-    return http.sendSuccess(res, { user: userData });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to get user information', error);
-  }
-}
-
-/**
  * Refresh authentication token
  *
  * @route   POST /api/users/refresh
@@ -319,7 +291,6 @@ export async function emailVerification(req, res) {
     // Get complete user data with RBAC information
     const userData = await profileService.getUserWithProfile(user.id, {
       models,
-      hook,
     });
 
     // Generate token pair using configured JWT instance

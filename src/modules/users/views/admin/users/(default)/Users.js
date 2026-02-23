@@ -472,11 +472,15 @@ function Users() {
                 <td>
                   <div className={s.userCell}>
                     <Avatar
-                      name={user.display_name || user.email}
+                      name={
+                        (user.profile && user.profile.display_name) ||
+                        user.email
+                      }
                       size='small'
                     />
                     <span>
-                      {user.display_name || user.email}
+                      {(user.profile && user.profile.display_name) ||
+                        user.email}
                       {currentUser && currentUser.id === user.id && (
                         <span className={s.youBadge}>
                           {t('admin:users.list.you', '(You)')}

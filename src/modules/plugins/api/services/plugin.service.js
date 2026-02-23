@@ -16,7 +16,6 @@ const PLUGIN_PATH = process.env.RSK_PLUGIN_PATH || 'plugins';
 const DEV_PLUGIN_PATH = process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins';
 
 // Cache for plugin list
-
 const CACHE_TTL = 60 * 1000; // 1 minute
 
 /**
@@ -128,7 +127,10 @@ export async function managePlugins({ models, cwd }) {
   // 1. Scan File Systems (Remote & Local)
   // This populates fsPluginsMap with what's physically available
   await scanDirectory(installedPluginsDir, 'remote', fsPluginsMap);
-  await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
+  // Only scan local dir if it differs from installed dir to avoid duplicate scanning
+  if (localPluginsDir !== installedPluginsDir) {
+    await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
+  }
 
   // 2. Fetch from DB
   const dbPlugins = await Plugin.findAll();

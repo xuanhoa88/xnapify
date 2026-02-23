@@ -75,9 +75,11 @@ function CreateUser() {
     email: '',
     password: '',
     confirm_password: '',
-    display_name: '',
-    first_name: '',
-    last_name: '',
+    profile: {
+      display_name: '',
+      first_name: '',
+      last_name: '',
+    },
     roles: [],
     groups: [],
     is_active: true,
@@ -367,7 +369,7 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
 
         <div className={s.formRow}>
           <Form.Field
-            name='first_name'
+            name='profile.first_name'
             label={t('admin:users.create.firstName', 'First Name')}
           >
             <Form.Input
@@ -375,7 +377,7 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             />
           </Form.Field>
           <Form.Field
-            name='last_name'
+            name='profile.last_name'
             label={t('admin:users.create.lastName', 'Last Name')}
           >
             <Form.Input
@@ -385,7 +387,7 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
         </div>
 
         <Form.Field
-          name='display_name'
+          name='profile.display_name'
           label={t('admin:users.create.displayName', 'Display Name')}
         >
           <Form.Input

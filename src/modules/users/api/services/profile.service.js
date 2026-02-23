@@ -21,11 +21,10 @@ import { logUserActivity } from '../utils/activity';
  * @param {string} user_id - User ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook factory for activity logging
  * @returns {Promise<Object>} User with profile and RBAC
  * @throws {Error} If UserNotFoundError
  */
-export async function getUserWithProfile(user_id, { models, hook }) {
+export async function getUserWithProfile(user_id, { models }) {
   const { User, UserProfile, Role, Permission, Group } = models;
 
   const user = await User.findByPk(user_id, {
@@ -82,9 +81,6 @@ export async function getUserWithProfile(user_id, { models, hook }) {
     throw error;
   }
 
-  // Emit hook event if hook factory provided
-  await hook('profile').emit('retrieved', { user, user_id });
-
   return user;
 }
 
@@ -92,7 +88,7 @@ export async function getUserWithProfile(user_id, { models, hook }) {
  * Update user profile information
  *
  * @param {string} user_id - User ID
- * @param {Object} profileData - Profile data to update
+ * @param {Object} formData - Form data to update
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
  * @param {Object} options.hook - Hook factory for activity logging
@@ -102,7 +98,7 @@ export async function getUserWithProfile(user_id, { models, hook }) {
  */
 export async function updateUserProfile(
   user_id,
-  profileData,
+  formData,
   { models, webhook, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
@@ -141,22 +137,23 @@ export async function updateUserProfile(
   }
 
   // Run hooks before updating
-  await hook('profile').emit('updating', {
-    user_id,
-    user,
-    formData: profileData,
-  });
+  await hook('profile').emit('updating', formData, { user_id, user });
 
-  // Update profile data
-  if (user.profile) {
-    await user.profile.update(profileData);
-  } else {
-    // Create profile if it doesn't exist
-    await UserProfile.create({
-      user_id,
-      ...profileData,
-    });
+  // Update profile data via EAV upserts
+  const updates = [];
+  const profileData = formData.profile || {};
+  for (const [key, value] of Object.entries(profileData)) {
+    if (value !== undefined) {
+      updates.push(
+        UserProfile.upsert({
+          user_id,
+          attribute_key: key,
+          attribute_value: value,
+        }),
+      );
+    }
   }
+  await Promise.all(updates);
 
   // Run hooks after updating
   await hook('profile').emit('updated', { user_id, user });
@@ -164,12 +161,10 @@ export async function updateUserProfile(
   // Log activity
   await logUserActivity(webhook, 'profile_updated', user_id);
 
-  // Reload user with updated profile
-  await user.reload({
-    include: [{ model: UserProfile, as: 'profile' }],
-  });
+  // Re-fetch user with full profile (not reload, as reload skips afterFind hooks)
+  const updatedUser = await getUserWithProfile(user_id, { models });
 
-  return user;
+  return updatedUser;
 }
 
 /**
@@ -240,33 +235,26 @@ export async function updateUserPreferences(
 ) {
   const { UserProfile } = models;
 
-  // Find or create user profile
-  let profile = await UserProfile.findOne({ where: { user_id } });
-
-  if (!profile) {
-    profile = await UserProfile.create({
+  // Each preference key is stored as a separate EAV row
+  const upsertPromises = Object.entries(preferences).map(([key, value]) => {
+    return UserProfile.upsert({
       user_id,
-      preferences: preferences,
+      attribute_key: key,
+      attribute_value: value,
     });
-  } else {
-    // Merge with existing preferences
-    const currentPreferences = profile.preferences || {};
-    const updatedPreferences = { ...currentPreferences, ...preferences };
-
-    await profile.update({ preferences: updatedPreferences });
-  }
+  });
+  await Promise.all(upsertPromises);
 
   // Run hooks
   await hook('profile').emit('preferences_updated', {
     user_id,
-    profile,
     preferences,
   });
 
   // Log activity
   await logUserActivity(webhook, 'preferences_updated', user_id);
 
-  return profile.preferences;
+  return preferences;
 }
 
 /**
@@ -281,25 +269,29 @@ export async function updateUserPreferences(
 export async function getUserPreferences(user_id, { models, hook }) {
   const { UserProfile } = models;
 
-  const profile = await UserProfile.findOne({
-    where: { user_id },
-    attributes: ['preferences'],
+  // Preference keys stored as individual EAV rows
+  const prefKeys = ['language', 'timezone', 'theme', 'notifications'];
+  const prefRows = await UserProfile.findAll({
+    where: { user_id, attribute_key: prefKeys },
   });
 
-  await hook('profile').emit('preferences_retrieved', { profile, user_id });
+  const preferences = {};
+  prefRows.forEach(row => {
+    preferences[row.attribute_key] = row.attribute_value;
+  });
 
-  return (
-    (profile && profile.preferences) || {
-      language: 'en',
-      timezone: 'UTC',
-      notifications: {
-        email: true,
-        push: true,
-        sms: false,
-      },
-      theme: 'light',
-    }
-  );
+  await hook('profile').emit('preferences_retrieved', { preferences, user_id });
+
+  return {
+    language: preferences.language || 'en',
+    timezone: preferences.timezone || 'UTC',
+    notifications: preferences.notifications || {
+      email: true,
+      push: true,
+      sms: false,
+    },
+    theme: preferences.theme || 'light',
+  };
 }
 
 /**
