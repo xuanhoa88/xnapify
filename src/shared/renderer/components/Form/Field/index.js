@@ -9,43 +9,11 @@ import { useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import get from 'lodash/get';
 import { FormFieldContext } from '../FormContext';
 import FormLabel from '../Label';
 import FormError from '../Error';
 import s from './FormField.css';
-
-/**
- * Safely access nested object properties
- * @param {Object} obj - The object to query
- * @param {string|Array} path - The path of the property to get
- * @param {*} defaultValue - The value returned for undefined resolved values
- * @returns {*} - The resolved value or the default value
- */
-function get(obj, path, defaultValue) {
-  // Use == null to check for null or undefined (non-strict equality)
-  if (obj == null) return defaultValue;
-
-  let segments;
-  if (Array.isArray(path)) {
-    segments = path;
-  } else if (typeof path === 'string' && path.length > 0) {
-    segments = path.replace(/\[(\d+)\]/g, '.$1').split('.');
-  } else if (typeof path === 'number') {
-    segments = [String(path)];
-  } else {
-    return defaultValue;
-  }
-
-  let result = obj;
-  for (const segment of segments) {
-    if (result == null) {
-      return defaultValue;
-    }
-    result = result[segment];
-  }
-
-  return result === undefined ? defaultValue : result;
-}
 
 /**
  * FormField - Wrapper for form field with optional label and error message

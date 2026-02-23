@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import EmojiPickerButton from './EmojiPickerButton';
+import ColorPickerPopup from './ColorPickerPopup';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 import s from './Toolbar.css';
@@ -39,6 +40,42 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
     ),
     [editor],
   );
+
+  // --- Font-size input: local state so typing doesn't steal focus --------
+  const fontSizeRef = useRef(null);
+  const [fontSizeValue, setFontSizeValue] = useState('16');
+
+  // Sync editor → local state whenever the selection / attributes change,
+  // but only when the input is NOT focused (i.e. the user is not editing).
+  useEffect(() => {
+    if (!editor) return undefined;
+
+    const sync = () => {
+      if (document.activeElement === fontSizeRef.current) return;
+      const fs = editor.getAttributes('textStyle').fontSize;
+      setFontSizeValue(fs ? String(parseInt(fs, 10)) : '16');
+    };
+
+    editor.on('selectionUpdate', sync);
+    editor.on('transaction', sync);
+    return () => {
+      editor.off('selectionUpdate', sync);
+      editor.off('transaction', sync);
+    };
+  }, [editor]);
+
+  const applyFontSize = useCallback(
+    val => {
+      if (!editor) return;
+      if (val && Number(val) > 0) {
+        editor.chain().focus().setFontSize(`${val}px`).run();
+      } else {
+        editor.chain().focus().unsetFontSize().run();
+      }
+    },
+    [editor],
+  );
+  // -----------------------------------------------------------------------
 
   if (!editor) return null;
 
@@ -146,19 +183,49 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
 
       <div className={s.toolbarDivider} />
 
-      {/* Inline code & rule */}
+      {/* Formatting & Color Group */}
       <div className={s.toolbarGroup}>
-        {btn(
-          'code',
-          t('shared:form.wysiwyg.code', 'Code'),
-          () => editor.chain().focus().toggleCode().run(),
-          'code',
-        )}
-        {btn(
-          'horizontalRule',
-          t('shared:form.wysiwyg.horizontalRule', 'Horizontal rule'),
-          () => editor.chain().focus().setHorizontalRule().run(),
-        )}
+        <ColorPickerPopup
+          icon={Icons.textColor}
+          title={t('shared:form.wysiwyg.textColor', 'Text Color')}
+          value={editor.getAttributes('textStyle').color}
+          defaultValue='#000000'
+          isActive={!!editor.getAttributes('textStyle').color}
+          onChange={color => editor.chain().focus().setColor(color).run()}
+          onReset={() => editor.chain().focus().unsetColor().run()}
+          resetLabel={t('shared:form.wysiwyg.resetTextColor', 'Reset')}
+          disabled={!editor.can().chain().focus().run()}
+        />
+        <ColorPickerPopup
+          icon={Icons.highlight}
+          title={t('shared:form.wysiwyg.highlight', 'Background Color')}
+          value={editor.getAttributes('highlight').color}
+          defaultValue='#ffffff'
+          isActive={editor.isActive('highlight')}
+          onChange={color =>
+            editor.chain().focus().toggleHighlight({ color }).run()
+          }
+          onReset={() => editor.chain().focus().unsetHighlight().run()}
+          resetLabel={t('shared:form.wysiwyg.resetHighlight', 'Reset')}
+          disabled={!editor.can().chain().focus().run()}
+        />
+        <input
+          ref={fontSizeRef}
+          type='number'
+          className={s.fontSizeInput}
+          title={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
+          value={fontSizeValue}
+          onChange={e => setFontSizeValue(e.target.value)}
+          onBlur={e => applyFontSize(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              applyFontSize(e.target.value);
+            }
+          }}
+          min='8'
+          max='100'
+        />
       </div>
 
       <div className={s.toolbarDivider} />
@@ -223,6 +290,23 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
 
       <div className={s.toolbarDivider} />
 
+      {/* Inline code & rule */}
+      <div className={s.toolbarGroup}>
+        {btn(
+          'code',
+          t('shared:form.wysiwyg.code', 'Code'),
+          () => editor.chain().focus().toggleCode().run(),
+          'code',
+        )}
+        {btn(
+          'horizontalRule',
+          t('shared:form.wysiwyg.horizontalRule', 'Horizontal rule'),
+          () => editor.chain().focus().setHorizontalRule().run(),
+        )}
+      </div>
+
+      <div className={s.toolbarDivider} />
+
       {/* Undo / Redo */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
@@ -238,6 +322,7 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
           disabled={!editor.can().redo()}
         />
       </div>
+
       {/* View Options */}
       <div className={s.toolbarGroup}>
         <ToolbarButton

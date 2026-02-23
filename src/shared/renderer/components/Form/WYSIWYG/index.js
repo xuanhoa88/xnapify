@@ -33,11 +33,16 @@ import {
 import { Link } from '@tiptap/extension-link';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Image as TiptapImage } from '@tiptap/extension-image';
+import { Color } from '@tiptap/extension-color';
+import { TextStyle } from '@tiptap/extension-text-style';
+import Highlight from '@tiptap/extension-highlight';
+import { Selection } from '@tiptap/extensions';
 import { useFormField, useMergeRefs } from '../FormContext';
 import createSuggestion from './suggestion';
 import { DetailsExtension } from './DetailsExtension';
 import { Video, Audio } from './MediaExtensions';
 import { Emoji } from './EmojiExtension';
+import { FontSize } from './FontSizeExtension';
 import Toolbar from './Toolbar';
 import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
@@ -70,10 +75,6 @@ const CustomImage = TiptapImage.extend({
               view.dom.style.pointerEvents = '';
             });
           }
-
-          // Forcefully block native HTML5 drag on the wrapper to prevent
-          // browser native drag-and-drop from stealing mousemove events
-          view.dom.ondragstart = e => e.preventDefault();
         }
       }
       return view;
@@ -147,6 +148,10 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
   // → setContent → onUpdate → …
   const isInternalUpdate = useRef(false);
 
+  // Ref to pass markdown text from handlePaste to transformPastedHTML without
+  // relying on the deprecated window.event API.
+  const markdownPasteRef = useRef(null);
+
   // Stable handler that chains both react-hook-form's onChange and the optional
   // consumer-supplied onChange prop.
   const handleChange = useCallback(
@@ -195,9 +200,16 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       }),
       Video,
       Audio,
+      Color,
+      TextStyle,
+      FontSize,
+      Highlight.configure({
+        multicolor: true,
+      }),
+      Selection,
     ];
 
-    if (onMentionQuery) {
+    if (typeof onMentionQuery === 'function') {
       exts.push(
         Mention.configure({
           HTMLAttributes: { class: 'mention' },
@@ -242,12 +254,12 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
           }
         }
 
-        // 3. Handle pasted plain text that looks like Markdown
+        // 2. Handle pasted plain text that looks like Markdown
         const text = clipboardData.getData('text/plain');
         if (text) {
           const trimmed = text.trim();
 
-          // 3a. Raw base64 image data URI
+          // 2a. Raw base64 image data URI
           if (
             trimmed.startsWith('data:image/') &&
             trimmed.includes(';base64,')
@@ -256,32 +268,27 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
             return true;
           }
 
-          // 3b. Markdown syntax detected — parse and insert as rich content
+          // 2b. Markdown syntax detected — parse and insert as rich content.
           //     Only if there is NO HTML version on the clipboard (which means
           //     the user is pasting from a code editor or plain text source).
           const hasHtml = clipboardData.types.includes('text/html');
           if (!hasHtml && MD_PATTERNS.test(trimmed)) {
-            // We set a flag on the event object so transformPastedHTML knows
-            // to process this specific paste as Markdown. We can't parse it
-            // manually here without losing context, which causes ProseMirror
-            // to escape valid HTML tags (like <img>) into literal text.
-            event.isMarkdownTextPaste = trimmed;
-            return false; // Let ProseMirror continue so it calls transformPasted
+            // Store the markdown in a ref so transformPastedHTML can pick it up.
+            markdownPasteRef.current = trimmed;
+            return false; // Let ProseMirror continue so it calls transformPastedHTML
           }
         }
 
         return false; // Let ProseMirror handle everything else
       },
       transformPastedHTML: html => {
-        // If our handlePaste handler flagged this event as a Markdown text paste,
-        // we completely replace the empty clipboard HTML with our parsed HTML.
-        // This ensures ProseMirror routes it through its standard HTML parser
-        // with the correct block context instead of trying to insert it as raw text.
-        const { event } = window;
-        if (event && event.isMarkdownTextPaste) {
-          const mdHtml = markdownToHtml(event.isMarkdownTextPaste);
-          event.isMarkdownTextPaste = null; // clear flag
-          return mdHtml;
+        // If handlePaste flagged this paste as Markdown, replace the clipboard
+        // HTML with our parsed version so ProseMirror routes it through its
+        // standard HTML parser with correct block context.
+        const md = markdownPasteRef.current;
+        if (md) {
+          markdownPasteRef.current = null;
+          return markdownToHtml(md);
         }
         return html;
       },

@@ -227,6 +227,59 @@
   color: inherit;
 }
 
+/* Highlight.js syntax highlighting */
+.contentEditable pre code :global(.hljs-comment),
+.contentEditable pre code :global(.hljs-quote) {
+  color: #616161;
+  font-style: italic;
+}
+
+.contentEditable pre code :global(.hljs-variable),
+.contentEditable pre code :global(.hljs-template-variable),
+.contentEditable pre code :global(.hljs-attribute),
+.contentEditable pre code :global(.hljs-tag),
+.contentEditable pre code :global(.hljs-name),
+.contentEditable pre code :global(.hljs-regexp),
+.contentEditable pre code :global(.hljs-link),
+.contentEditable pre code :global(.hljs-selector-id),
+.contentEditable pre code :global(.hljs-selector-class) {
+  color: #f98181;
+}
+
+.contentEditable pre code :global(.hljs-number),
+.contentEditable pre code :global(.hljs-meta),
+.contentEditable pre code :global(.hljs-built_in),
+.contentEditable pre code :global(.hljs-builtin-name),
+.contentEditable pre code :global(.hljs-literal),
+.contentEditable pre code :global(.hljs-type),
+.contentEditable pre code :global(.hljs-params) {
+  color: #fbbc88;
+}
+
+.contentEditable pre code :global(.hljs-string),
+.contentEditable pre code :global(.hljs-symbol),
+.contentEditable pre code :global(.hljs-bullet) {
+  color: #b9f18d;
+}
+
+.contentEditable pre code :global(.hljs-title),
+.contentEditable pre code :global(.hljs-section) {
+  color: #faf594;
+}
+
+.contentEditable pre code :global(.hljs-keyword),
+.contentEditable pre code :global(.hljs-selector-tag) {
+  color: #70cff8;
+}
+
+.contentEditable pre code :global(.hljs-emphasis) {
+  font-style: italic;
+}
+
+.contentEditable pre code :global(.hljs-strong) {
+  font-weight: 700;
+}
+
 /* Horizontal Rule */
 .contentEditable hr {
   border: none;
@@ -364,6 +417,11 @@
   font-weight: var(--font-weight-semibold);
   color: var(--color-white, #fff);
   box-decoration-break: clone;
+}
+
+/* Selection preservation (Tiptap Selection extension) */
+.contentEditable :global(.selection) {
+  background-color: rgb(59 130 246 / 20%);
 }
 
 /* =============================================================================

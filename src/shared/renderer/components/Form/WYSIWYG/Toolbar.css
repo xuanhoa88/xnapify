@@ -29,3 +29,26 @@
   background-color: var(--color-border);
   margin: 0 var(--spacing-1);
 }
+
+.fontSizeInput {
+  height: 28px;
+  width: 50px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background-color: var(--color-background-primary);
+  color: var(--color-text-primary);
+  font-size: 13px;
+  text-align: center;
+  padding: 0 4px;
+  outline: none;
+}
+
+.fontSizeInput:hover,
+.fontSizeInput:focus {
+  border-color: var(--color-border-hover);
+}
+
+.fontSizeInput::-webkit-outer-spin-button,
+.fontSizeInput::-webkit-inner-spin-button {
+  height: 100%;
+}

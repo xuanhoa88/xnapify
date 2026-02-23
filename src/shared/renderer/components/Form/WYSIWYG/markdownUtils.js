@@ -43,6 +43,7 @@ function createTurndownService() {
     'iframe',
     'source',
     'youtube',
+    'span', // for Color, Background Color, FontSize
   ]);
 
   // ── Tiptap-specific wrapper divs ─────────────────────────────────────────
