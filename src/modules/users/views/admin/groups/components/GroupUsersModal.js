@@ -129,7 +129,7 @@ const GroupUsersModal = forwardRef((props, ref) => {
   }, [resetState]);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
         {t('admin:groups.usersInGroup', 'Users in "{{groupName}}"', {
           groupName:

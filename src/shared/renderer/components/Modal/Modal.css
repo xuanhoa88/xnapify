@@ -44,6 +44,73 @@
   flex-direction: column;
 }
 
+/* Slide Right Modifiers */
+.modalOverlayRight {
+  justify-content: flex-end;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.modalRight {
+  height: 100vh;
+  max-height: 100vh;
+  border-radius: 0;
+  margin: 0;
+  animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+.modalOverlayClosing {
+  animation: fadeOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.modalRightClosing {
+  animation: slideOutRight 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes scaleOut {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  to {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+}
+
+.modalClosing {
+  animation: scaleOut 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 .modalHeader {
   display: flex;
   justify-content: space-between;
@@ -159,6 +226,12 @@
   .modal {
     width: 95%;
     max-height: 90vh;
+  }
+
+  .modal.modalRight {
+    width: 100%;
+    max-height: 100vh;
+    border-radius: 0;
   }
 
   .modalHeader {

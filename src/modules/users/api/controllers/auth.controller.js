@@ -16,7 +16,6 @@ import {
 import * as authService from '../services/auth.service';
 import * as profileService from '../services/profile.service';
 import { generatePassword } from '../utils/password';
-import { formatUserResponse } from '../utils/formatters';
 
 // ========================================================================
 // AUTHENTICATION CONTROLLERS

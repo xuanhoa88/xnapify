@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { useState, useEffect } from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -170,16 +171,46 @@ ModalButton.propTypes = {
  * Modal - Main modal wrapper
  * @param {boolean} isOpen - Controls modal visibility
  * @param {function} onClose - Handler called when overlay is clicked
+ * @param {string} placement - Modal placement ('center' | 'right')
  * @param {React.ReactNode} children - Modal content (Header, Body, Footer)
  */
-const Modal = ({ isOpen, onClose, children }) => {
-  if (!isOpen) return null;
+const Modal = ({ isOpen, onClose, placement = 'center', children }) => {
+  const [shouldRender, setShouldRender] = useState(isOpen);
+  const [isClosing, setIsClosing] = useState(false);
+
+  useEffect(() => {
+    let timer;
+    if (isOpen) {
+      setShouldRender(true);
+      setIsClosing(false);
+    } else if (shouldRender) {
+      setIsClosing(true);
+      timer = setTimeout(() => {
+        setShouldRender(false);
+        setIsClosing(false);
+      }, 300); // 300ms matches animation duration
+    }
+    return () => clearTimeout(timer);
+  }, [isOpen, shouldRender]);
+
+  if (!shouldRender) return null;
 
   return (
-    <div className={s.modalOverlay} onClick={onClose} role='presentation'>
+    <div
+      className={clsx(s.modalOverlay, {
+        [s.modalOverlayRight]: placement === 'right',
+        [s.modalOverlayClosing]: isClosing,
+      })}
+      onClick={onClose}
+      role='presentation'
+    >
       {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/click-events-have-key-events */}
       <div
-        className={s.modal}
+        className={clsx(s.modal, {
+          [s.modalRight]: placement === 'right',
+          [s.modalClosing]: isClosing && placement !== 'right',
+          [s.modalRightClosing]: isClosing && placement === 'right',
+        })}
         role='dialog'
         aria-modal='true'
         onClick={e => e.stopPropagation()}
@@ -194,6 +225,7 @@ const Modal = ({ isOpen, onClose, children }) => {
 Modal.propTypes = {
   isOpen: PropTypes.bool.isRequired,
   onClose: PropTypes.func.isRequired,
+  placement: PropTypes.oneOf(['center', 'right']),
   children: PropTypes.node.isRequired,
 };
 

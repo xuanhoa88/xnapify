@@ -125,7 +125,7 @@ const RoleUsersModal = forwardRef((props, ref) => {
   }, [resetState]);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
         {t('admin:roles.usersWithRole', 'Users with "{{roleName}}" Role', {
           roleName: (role && role.name) || t('admin:common.unknown', 'Unknown'),

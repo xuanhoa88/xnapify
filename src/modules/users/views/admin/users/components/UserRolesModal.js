@@ -207,7 +207,7 @@ const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
       );
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
         {isBulk
           ? t(

@@ -167,7 +167,7 @@ const GroupRolesModal = forwardRef((props, ref) => {
   }, [dispatch, group, selections, handleClose, t]);
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose}>
+    <Modal isOpen={isOpen} onClose={handleClose} placement='right'>
       <Modal.Header onClose={handleClose}>
         {t('admin:groups.manageRolesFor', 'Manage Roles for "{{groupName}}"', {
           groupName:
