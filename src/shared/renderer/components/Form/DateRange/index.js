@@ -6,7 +6,7 @@
  */
 
 import { forwardRef, useMemo } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useController } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import Cleave from 'cleave.js/react';
@@ -84,7 +84,7 @@ const FormDateRange = forwardRef(function FormDateRange$(
 ) {
   const { id, name } = useFormField();
   const {
-    register,
+    control,
     formState: { errors },
   } = useFormContext();
 
@@ -106,18 +106,8 @@ const FormDateRange = forwardRef(function FormDateRange$(
     return { date: true, datePattern: parseDatePattern(format) };
   }, [format]);
 
-  const {
-    ref: startRegisterRef,
-    onChange: startOnChange,
-    onBlur: startOnBlur,
-    ...startRegisterProps
-  } = register(startName);
-  const {
-    ref: endRegisterRef,
-    onChange: endOnChange,
-    onBlur: endOnBlur,
-    ...endRegisterProps
-  } = register(endName);
+  const { field: startField } = useController({ name: startName, control });
+  const { field: endField } = useController({ name: endName, control });
 
   return (
     <div className={clsx(s.container, className)} ref={forwardedRef}>
@@ -129,11 +119,12 @@ const FormDateRange = forwardRef(function FormDateRange$(
         placeholder={startPlaceholder || format}
         // eslint-disable-next-line jsx-a11y/no-autofocus
         autoFocus={autoFocus}
-        onChange={startOnChange}
-        onBlur={startOnBlur}
-        {...startRegisterProps}
+        onChange={startField.onChange}
+        onBlur={startField.onBlur}
+        value={startField.value || ''}
+        name={startField.name}
         {...props}
-        htmlRef={startRegisterRef}
+        htmlRef={startField.ref}
       />
       <span className={s.separator}>→</span>
       <Cleave
@@ -142,11 +133,12 @@ const FormDateRange = forwardRef(function FormDateRange$(
         disabled={disabled}
         className={clsx(s.input, { [s.inputError]: endError })}
         placeholder={endPlaceholder || format}
-        onChange={endOnChange}
-        onBlur={endOnBlur}
-        {...endRegisterProps}
+        onChange={endField.onChange}
+        onBlur={endField.onBlur}
+        value={endField.value || ''}
+        name={endField.name}
         {...props}
-        htmlRef={endRegisterRef}
+        htmlRef={endField.ref}
       />
     </div>
   );

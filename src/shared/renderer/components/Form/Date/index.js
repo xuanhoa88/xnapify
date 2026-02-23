@@ -6,7 +6,7 @@
  */
 
 import { forwardRef, useMemo } from 'react';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext, useController } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import Cleave from 'cleave.js/react';
@@ -77,18 +77,11 @@ const FormDate = forwardRef(function FormDate$(
   forwardedRef,
 ) {
   const { id, name, error } = useFormField();
-  const { register } = useFormContext();
-
-  // Get registration props including ref
-  const {
-    ref: registerRef,
-    onChange,
-    onBlur,
-    ...registerProps
-  } = register(name);
+  const { control } = useFormContext();
+  const { field } = useController({ name, control });
 
   // Merge refs - both react-hook-form ref and forwarded ref
-  const handleRef = useMergeRefs(registerRef, forwardedRef);
+  const handleRef = useMergeRefs(field.ref, forwardedRef);
 
   // Build Cleave options based on whether time tokens are present
   const options = useMemo(() => {
@@ -113,9 +106,10 @@ const FormDate = forwardRef(function FormDate$(
       // eslint-disable-next-line jsx-a11y/no-autofocus
       autoFocus={autoFocus}
       placeholder={placeholder || format}
-      onChange={onChange}
-      onBlur={onBlur}
-      {...registerProps}
+      onChange={field.onChange}
+      onBlur={field.onBlur}
+      value={field.value || ''}
+      name={field.name}
       {...props}
       htmlRef={handleRef}
     />
