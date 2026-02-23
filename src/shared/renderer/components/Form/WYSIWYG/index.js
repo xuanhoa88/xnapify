@@ -32,7 +32,7 @@ import {
 } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
 import { Youtube } from '@tiptap/extension-youtube';
-import { Image } from '@tiptap/extension-image';
+import { Image as TiptapImage } from '@tiptap/extension-image';
 import { useFormField, useMergeRefs } from '../FormContext';
 import createSuggestion from './suggestion';
 import { DetailsExtension } from './DetailsExtension';
@@ -41,6 +41,45 @@ import { Emoji } from './EmojiExtension';
 import Toolbar from './Toolbar';
 import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
+
+// ---------------------------------------------------------------------------
+// Custom Extensions
+// ---------------------------------------------------------------------------
+
+// Extend the default Image extension to fix a bug where ResizableNodeView
+// gets stuck with pointerEvents: 'none' if the image loads from cache instantly.
+const CustomImage = TiptapImage.extend({
+  addNodeView() {
+    const parentNodeView =
+      typeof this.parent === 'function' ? this.parent() : null;
+    if (!parentNodeView) return null;
+
+    return props => {
+      const view = parentNodeView(props);
+      if (view && view.dom) {
+        const img = view.dom.querySelector('img');
+        if (img) {
+          // If the image is already downloaded/cached, unblock immediately
+          if (img.complete) {
+            view.dom.style.visibility = '';
+            view.dom.style.pointerEvents = '';
+          } else {
+            // Otherwise bind the event safely
+            img.addEventListener('load', () => {
+              view.dom.style.visibility = '';
+              view.dom.style.pointerEvents = '';
+            });
+          }
+
+          // Forcefully block native HTML5 drag on the wrapper to prevent
+          // browser native drag-and-drop from stealing mousemove events
+          view.dom.ondragstart = e => e.preventDefault();
+        }
+      }
+      return view;
+    };
+  },
+});
 
 // Lightweight check: does the string contain common markdown syntax?
 const MD_PATTERNS =
@@ -143,10 +182,13 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
         autolink: true,
       }),
       Emoji,
-      Image.configure({
+      CustomImage.configure({
         inline: true,
         allowBase64: true,
-        resize: { enabled: true },
+        resize: {
+          enabled: true,
+          alwaysPreserveAspectRatio: true,
+        },
       }),
       Youtube.configure({
         inline: false,
