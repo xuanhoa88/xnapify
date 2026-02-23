@@ -326,7 +326,7 @@
 }
 
 /* Media (Images, Video, Audio, YouTube) */
-.contentEditable img {
+.contentEditable img:not([data-resize-wrapper] img) {
   max-width: 100%;
   height: auto;
   border-radius: var(--radius-sm);
@@ -418,13 +418,12 @@
 .contentEditable :global(.tiptap) div[data-resize-wrapper] img {
   display: block;
   max-width: 100%;
-  height: auto !important; /* Forces aspect ratio maintenance even if Tiptap hardcodes height */
   border: 1px solid transparent;
   transition: border-color var(--transition-base);
 }
 
 .contentEditable :global(.tiptap) div[data-resize-wrapper] {
-  display: inline-block !important;
+  display: inline-block;
   max-width: 100%;
 }
 
