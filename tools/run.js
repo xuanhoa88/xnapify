@@ -197,52 +197,43 @@ function validateTask(taskName) {
 }
 
 /**
- * Execute a task in a child process
- * Each task runs in isolation with its own NODE_ENV
+ * Execute a task in a child process.
+ * Each task runs in isolation with its own NODE_ENV.
  */
 function executeTask(taskName) {
-  // Validate task before attempting to execute
   const { taskConfig, taskPath } = validateTask(taskName);
 
-  // Default NODE_ENV if not already set
-  const defaultEnv =
+  // Resolve NODE_ENV: explicit env > task config > CLI flags > fallback
+  const nodeEnv =
+    process.env.NODE_ENV ||
     (taskConfig.processEnv && taskConfig.processEnv.NODE_ENV) ||
     detectNodeEnv(taskConfig) ||
     'development';
 
-  // Load environment variables first (before creating promise)
-  require('dotenv-flow').config({ silent: true });
+  // Set NODE_ENV before dotenv-flow so it loads the correct .env.{NODE_ENV} file
+  process.env.NODE_ENV = nodeEnv;
 
-  // Load config
-  const config = require('./config');
+  // Load environment-specific .env files (.env, .env.local, .env.{NODE_ENV}, etc.)
+  require('dotenv-flow').config({ silent: true, default_node_env: nodeEnv });
 
-  // Build environment for task process
-  // Priority: task-specific env > existing process.env
-  // But don't override NODE_ENV if already explicitly set
-  const taskEnv = {
-    ...process.env,
-    NODE_ENV: process.env.NODE_ENV || defaultEnv,
-    ...taskConfig.processEnv,
-  };
+  // Build child process environment
+  // Priority: taskConfig.processEnv > dotenv-flow-enhanced process.env
+  const taskEnv = { ...process.env, ...taskConfig.processEnv };
 
-  logDebug(`Executing task: ${taskName}`);
-  logDebug(`Environment: NODE_ENV=${taskEnv.NODE_ENV}`);
+  logDebug(`Executing task: ${taskName} (NODE_ENV=${taskEnv.NODE_ENV})`);
+
+  const taskArgs = [taskPath, ...process.argv.slice(3)];
+  logDebug(`Spawning: node ${taskArgs.join(' ')}`);
 
   return new Promise((resolve, reject) => {
-    // Get additional arguments to forward to task (everything after task name)
-    const taskArgs = [taskPath, ...process.argv.slice(3)];
-
-    logDebug(`Spawning: node ${taskArgs.join(' ')}`);
-
-    // Spawn task in child process using node
     const taskProcess = spawn('node', [...process.execArgv, ...taskArgs], {
-      stdio: 'inherit', // Inherit stdin, stdout, stderr
+      stdio: 'inherit',
       env: taskEnv,
-      cwd: config.CWD,
+      cwd: require('./config').CWD,
     });
 
-    // Handle task process exit
-    taskProcess.on('exit', (code, signal) => {
+    // Use `once` to prevent double-firing edge cases
+    taskProcess.once('exit', (code, signal) => {
       if (signal) {
         reject(
           new BuildError(`Task '${taskName}' killed by signal ${signal}`, {
@@ -263,8 +254,7 @@ function executeTask(taskName) {
       }
     });
 
-    // Handle task process errors (spawn failures, etc.)
-    taskProcess.on('error', error => {
+    taskProcess.once('error', error => {
       reject(
         new BuildError(`Failed to spawn task '${taskName}'`, {
           task: taskName,
