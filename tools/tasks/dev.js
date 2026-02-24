@@ -99,15 +99,15 @@ function createCompilationPromise(name, compiler) {
  * @returns {Object} Modified webpack config
  */
 function configureWebpackForDev(cfg, isClient = true) {
-  // Replace chunkhash with hash for HMR compatibility
+  // Replace chunkhash with fullhash for HMR compatibility
   // HMR requires deterministic hashes, chunkhash changes on every build
   if (cfg.output.filename) {
-    cfg.output.filename = cfg.output.filename.replace('chunkhash', 'hash');
+    cfg.output.filename = cfg.output.filename.replace('chunkhash', 'fullhash');
   }
   if (cfg.output.chunkFilename) {
     cfg.output.chunkFilename = cfg.output.chunkFilename.replace(
       'chunkhash',
-      'hash',
+      'fullhash',
     );
   }
 
@@ -172,8 +172,8 @@ function configureWebpackForDev(cfg, isClient = true) {
   // Server-specific HMR configuration
   else {
     // Configure hot update file paths for server bundle
-    cfg.output.hotUpdateMainFilename = 'updates/[hash].hot-update.json';
-    cfg.output.hotUpdateChunkFilename = 'updates/[id].[hash].hot-update.js';
+    cfg.output.hotUpdateMainFilename = 'updates/[fullhash].hot-update.json';
+    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.js';
   }
 
   return cfg;
