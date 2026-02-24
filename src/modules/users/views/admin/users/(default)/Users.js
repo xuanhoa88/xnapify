@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import { getUserProfile } from '../../../../../../shared/renderer/redux';
 import { useHistory } from '../../../../../../shared/renderer/components/History';
 import {

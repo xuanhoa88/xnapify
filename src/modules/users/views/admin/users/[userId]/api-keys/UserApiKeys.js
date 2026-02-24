@@ -9,7 +9,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { format } from 'date-fns';
+import format from 'date-fns/format';
 import cn from 'clsx';
 import { useRbac } from '../../../../../../../shared/renderer/components/Rbac';
 import { useHistory } from '../../../../../../../shared/renderer/components/History';

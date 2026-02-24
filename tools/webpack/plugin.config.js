@@ -151,6 +151,7 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
           cacheGroups: createCacheGroups('async'),
         },
       },
+      performance: false, // plugins are async remotes — size hints not meaningful
       module: {
         rules: [
           createCSSRule({

@@ -254,16 +254,20 @@ function createSharedDependencies(dependencies, options = {}) {
  * Minimum size (bytes) for a chunk to be split out.
  * Avoids generating tiny files that cost more in HTTP overhead than they save.
  */
-const MIN_CHUNK_SIZE = 20_000; // 20 KB
+const DEFAULT_MIN_CHUNK_SIZE = 20_000; // 20 kB
 
 /**
  * Create splitChunks.cacheGroups configuration.
  * Splits vendors into granular per-package chunks for better caching.
  *
  * @param {'all' | 'async' | 'initial'} chunks - Chunk type
+ * @param {number} minChunkSize - Minimum chunk size in bytes (default 20 kB)
  * @returns {Object} cacheGroups configuration
  */
-function createCacheGroups(chunks = 'all') {
+function createCacheGroups(
+  chunks = 'all',
+  minChunkSize = DEFAULT_MIN_CHUNK_SIZE,
+) {
   return {
     // --- CSS: consolidate all extracted CSS so load order is preserved ---
     styles: {
@@ -271,21 +275,40 @@ function createCacheGroups(chunks = 'all') {
       type: 'css/mini-extract',
       chunks: 'all',
       enforce: true,
-      priority: +Infinity,
+      priority: 100, // was +Infinity — large int is safer with Webpack internals
     },
 
     // --- High-priority named groups ---
 
+    // history is a React Router peer dep; if you ever use it standalone, move it out
     react: {
-      test: /[\\/]node_modules[\\/](react|react-dom|react-is|scheduler|react-redux|@reduxjs[\\/]toolkit|redux|history)[\\/]/,
+      test: /[\\/]node_modules[\\/](react|react-dom|react-is|scheduler|history)[\\/]/,
       name: 'vendor.react',
       chunks,
       priority: 40,
       enforce: true,
     },
 
+    redux: {
+      test: /[\\/]node_modules[\\/](react-redux|@reduxjs[\\/]toolkit|redux|redux-logger|immer|reselect)[\\/]/,
+      name: 'vendor.redux',
+      chunks,
+      priority: 35,
+      enforce: true,
+    },
+
+    core: {
+      test: /[\\/]node_modules[\\/](core-js|core-js-pure|regenerator-runtime)[\\/]/,
+      name: 'vendor.core',
+      chunks,
+      priority: 35,
+      enforce: true,
+    },
+
+    // prosemirror packages are published both as flat (prosemirror-*) and scoped
+    // (@prosemirror/*) — the regex covers both forms
     tiptap: {
-      test: /[\\/]node_modules[\\/](@tiptap[\\/]|prosemirror[-\w]+[\\/]|turndown|marked|tippy\.js)[\\/]/,
+      test: /[\\/]node_modules[\\/](@tiptap[\\/]|@prosemirror[\\/]|prosemirror-[\w-]+|turndown|marked|tippy\.js|@mixmark-io[\\/])/,
       name: 'vendor.tiptap',
       chunks,
       priority: 30,
@@ -293,12 +316,14 @@ function createCacheGroups(chunks = 'all') {
     },
 
     // --- Mid-tier: group related libs together ---
+    // enforce: true added so Webpack doesn't skip small packages due to minSize defaults
 
     forms: {
       test: /[\\/]node_modules[\\/](react-hook-form|@hookform[\\/]resolvers|zod|cleave\.js)[\\/]/,
       name: 'vendor.forms',
       chunks,
       priority: 20,
+      enforce: true,
     },
 
     i18n: {
@@ -306,6 +331,15 @@ function createCacheGroups(chunks = 'all') {
       name: 'vendor.i18n',
       chunks,
       priority: 20,
+      enforce: true,
+    },
+
+    polyfills: {
+      test: /[\\/]node_modules[\\/](whatwg-fetch|url-polyfill|events|process)[\\/]/,
+      name: 'vendor.polyfills',
+      chunks,
+      priority: 20,
+      enforce: true,
     },
 
     utils: {
@@ -313,6 +347,7 @@ function createCacheGroups(chunks = 'all') {
       name: 'vendor.utils',
       chunks,
       priority: 20,
+      enforce: true,
     },
 
     // --- Catch-all: remaining node_modules in a single stable chunk ---
@@ -321,16 +356,19 @@ function createCacheGroups(chunks = 'all') {
       name: 'vendors',
       chunks,
       priority: 10,
-      minSize: MIN_CHUNK_SIZE,
+      enforce: true, // added — prevents tiny packages escaping into the main bundle
+      minSize: minChunkSize,
       reuseExistingChunk: true,
     },
 
     // --- Shared app code used in 2+ chunks ---
+    // Static name works for single-entry builds; for multi-entry consider a
+    // name function to avoid chunk ID collisions across entries.
     common: {
       minChunks: 2,
       chunks,
       priority: -20,
-      minSize: MIN_CHUNK_SIZE,
+      minSize: minChunkSize,
       reuseExistingChunk: true,
       name: 'common',
     },
