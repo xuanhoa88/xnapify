@@ -47,7 +47,7 @@ react-starter-kit/
 ### Core
 
 - **Runtime:** Node.js >= 16.0.0
-- **Package Manager:** npm >= 7.0.0
+- **Package Manager:** npm >= 8.0.0
 - **Language:** JavaScript (ES2015+) with JSX
 
 ### Frontend

@@ -18,18 +18,14 @@ import { useController } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useEditor, EditorContent } from '@tiptap/react';
+import DragHandle from '@tiptap/extension-drag-handle-react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import TaskList from '@tiptap/extension-task-list';
 import TaskItem from '@tiptap/extension-task-item';
-import {
-  Table,
-  TableRow,
-  TableHeader,
-  TableCell,
-} from '@tiptap/extension-table';
+import { TableKit } from '@tiptap/extension-table';
 import { Link } from '@tiptap/extension-link';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Image as TiptapImage } from '@tiptap/extension-image';
@@ -46,6 +42,10 @@ import { FontSize } from './FontSizeExtension';
 import Toolbar from './Toolbar';
 import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
+
+// Lightweight check: does the string contain common markdown syntax?
+const MD_PATTERNS =
+  /^\s*(#{1,6}\s|>\s|[-*+]\s|\d+\.\s|- \[[ x]\]|\*{1,3}|_{1,3}|~{2}|```|!\[|\[.*\]\()/m;
 
 // ---------------------------------------------------------------------------
 // Custom Extensions
@@ -81,10 +81,6 @@ const CustomImage = TiptapImage.extend({
     };
   },
 });
-
-// Lightweight check: does the string contain common markdown syntax?
-const MD_PATTERNS =
-  /^\s*(#{1,6}\s|>\s|[-*+]\s|\d+\.\s|- \[[ x]\]|\*{1,3}|_{1,3}|~{2}|```|!\[|\[.*\]\()/m;
 
 /**
  * FormWYSIWYG — A rich-text editor field powered by Tiptap.
@@ -187,10 +183,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       Placeholder.configure({ placeholder }),
       TaskList,
       TaskItem.configure({ nested: true }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
+      TableKit.configure({ table: { resizable: true } }),
       DetailsExtension,
       Link.configure({ openOnClick: false, autolink: true }),
       Emoji,
@@ -330,6 +323,27 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     }
   }, [editor, disabled]);
 
+  // Patch the ProseMirror view to suppress the 'localsInner' decoration
+  // error that occurs when the DragHandle and column-resize plugins
+  // conflict during drag-and-drop near tables.
+  useEffect(() => {
+    if (!editor || !editor.view) return;
+    const { view } = editor;
+    const origDispatch = view.dispatch.bind(view);
+    view.dispatch = (...args) => {
+      try {
+        origDispatch(...args);
+      } catch (err) {
+        console.log(err);
+
+        // Only throw error in development mode
+        if (__DEV__) {
+          throw err;
+        }
+      }
+    };
+  }, [editor]);
+
   // Sync external value changes (markdown) into the editor (HTML).
   // Only runs for programmatic changes (form reset, setValue) — not for
   // the user's own keystrokes, which are tracked via isInternalUpdate.
@@ -377,6 +391,11 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
         excludeExtensions={excludeExtensions}
       />
       <div className={s.editorContent}>
+        {editor && (
+          <DragHandle editor={editor}>
+            <div className={s.dragHandle}>⠿</div>
+          </DragHandle>
+        )}
         <EditorContent editor={editor} className={s.contentEditable} />
       </div>
     </div>

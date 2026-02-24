@@ -341,6 +341,7 @@
   vertical-align: top;
   box-sizing: border-box;
   position: relative;
+  cursor: ew-resize;
 }
 
 .contentEditable table th {
@@ -407,6 +408,37 @@
 .contentEditable iframe {
   aspect-ratio: 16 / 9;
   width: 100%;
+}
+
+/* Drag Handle (Tiptap DragHandle React extension) */
+.dragHandle {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-background-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  cursor: grab;
+  font-size: 12px;
+  line-height: 1;
+  color: var(--color-text-tertiary);
+  user-select: none;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.dragHandle:hover {
+  background: var(--color-background-secondary);
+  border-color: var(--color-border-hover);
+  color: var(--color-text-secondary);
+}
+
+.dragHandle:active {
+  cursor: grabbing;
 }
 
 /* Mentions (inline) */

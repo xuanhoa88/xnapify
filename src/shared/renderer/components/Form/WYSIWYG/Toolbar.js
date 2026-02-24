@@ -10,6 +10,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import EmojiPickerButton from './EmojiPickerButton';
 import ColorPickerPopup from './ColorPickerPopup';
+import TableActionsPopup from './TableActionsPopup';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 import s from './Toolbar.css';
@@ -164,36 +165,10 @@ export default function Toolbar({
       {/* Table tools */}
       {has('table') && (
         <div className={s.toolbarGroup}>
-          {btn(
-            'table',
-            t('shared:form.wysiwyg.table', 'Insert Table'),
-            () =>
-              editor
-                .chain()
-                .focus()
-                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                .run(),
-            'table',
-          )}
-          {editor.isActive('table') && (
-            <>
-              {btn(
-                'tableRow',
-                t('shared:form.wysiwyg.tableRow', 'Add Row After'),
-                () => editor.chain().focus().addRowAfter().run(),
-              )}
-              {btn(
-                'tableCol',
-                t('shared:form.wysiwyg.tableCol', 'Add Column After'),
-                () => editor.chain().focus().addColumnAfter().run(),
-              )}
-              {btn(
-                'tableDelete',
-                t('shared:form.wysiwyg.tableDelete', 'Delete Table'),
-                () => editor.chain().focus().deleteTable().run(),
-              )}
-            </>
-          )}
+          <TableActionsPopup
+            editor={editor}
+            disabled={!editor.can().chain().focus().run()}
+          />
         </div>
       )}
 
