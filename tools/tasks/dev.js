@@ -99,15 +99,15 @@ function createCompilationPromise(name, compiler) {
  * @returns {Object} Modified webpack config
  */
 function configureWebpackForDev(cfg, isClient = true) {
-  // Replace chunkhash with fullhash for HMR compatibility
+  // Replace chunkhash with hash for HMR compatibility
   // HMR requires deterministic hashes, chunkhash changes on every build
   if (cfg.output.filename) {
-    cfg.output.filename = cfg.output.filename.replace('chunkhash', 'fullhash');
+    cfg.output.filename = cfg.output.filename.replace('chunkhash', 'hash');
   }
   if (cfg.output.chunkFilename) {
     cfg.output.chunkFilename = cfg.output.chunkFilename.replace(
       'chunkhash',
-      'fullhash',
+      'hash',
     );
   }
 
@@ -172,8 +172,8 @@ function configureWebpackForDev(cfg, isClient = true) {
   // Server-specific HMR configuration
   else {
     // Configure hot update file paths for server bundle
-    cfg.output.hotUpdateMainFilename = 'updates/[fullhash].hot-update.json';
-    cfg.output.hotUpdateChunkFilename = 'updates/[id].[fullhash].hot-update.js';
+    cfg.output.hotUpdateMainFilename = 'updates/[hash].hot-update.json';
+    cfg.output.hotUpdateChunkFilename = 'updates/[id].[hash].hot-update.js';
   }
 
   return cfg;
@@ -247,10 +247,11 @@ async function createDevServer(serverBundle, prevServer) {
   // Attach webpack middlewares to the new app
   attachWebpackMiddlewares(app);
 
-  // Bootstrap the app (routes, database, etc.)
-  // Capture the bootstrap-returned dispose (has server arg pre-bound)
+  // Initialize launch function
   let launch;
-  ({ launch, dispose } = await serverBundle.bootstrap(app, server, {
+
+  // Bootstrap the app (routes, database, etc.)
+  ({ launch } = await serverBundle.bootstrap(app, server, {
     port,
     host,
     publicDir: config.PUBLIC_DIR,
@@ -378,8 +379,8 @@ async function checkForUpdate() {
 
     logInfo(`🔥 HMR: Detected ${updatedModules.length} updated module(s).`);
 
-    // Clean up previous bundle resources (Node-RED, WS, caches)
-    if (dispose) {
+    // Clean up previous bundle resources (Node-RED, etc.)
+    if (typeof dispose === 'function') {
       try {
         await dispose();
       } catch (err) {
@@ -387,9 +388,16 @@ async function checkForUpdate() {
       }
     }
 
+    // Load new server bundle
     const serverBundle = loadServerBundle();
+
+    // Save dispose function for graceful shutdown
+    dispose = serverBundle.dispose;
+
+    // Recreate dev server with new bundle
     await createDevServer(serverBundle, server);
 
+    // Notify browser sync to restart
     await notifyBrowserSyncRestart();
 
     return true;
@@ -491,7 +499,7 @@ async function main() {
   logInfo('🚀 Starting development server...');
 
   // Setup graceful shutdown handler
-  setupGracefulShutdown(() => {
+  setupGracefulShutdown(async () => {
     logInfo('🛑 Development server shutting down...');
 
     const shutdownPromise = Promise.allSettled([
@@ -500,6 +508,12 @@ async function main() {
 
       // Dispose server bundle (Node-RED, etc.)
       typeof dispose === 'function' ? dispose() : Promise.resolve(),
+
+      // Print goodbye message (synchronous)
+      new Promise(resolve => {
+        logInfo('👋 Goodbye!');
+        resolve();
+      }),
     ]);
 
     return shutdownPromise.finally(() => {
@@ -510,9 +524,6 @@ async function main() {
       devMiddleware = null;
       hotMiddleware = null;
       dispose = null;
-
-      // Print goodbye message (synchronous)
-      logInfo('👋 Goodbye!');
     });
   });
 
@@ -542,6 +553,9 @@ async function main() {
 
     // Load server bundle
     const serverBundle = loadServerBundle();
+
+    // Save dispose function for graceful shutdown
+    dispose = serverBundle.dispose;
 
     // Create webpack middlewares (triggering client compilation)
     ({ devMiddleware, hotMiddleware } =

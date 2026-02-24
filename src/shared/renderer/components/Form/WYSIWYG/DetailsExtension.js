@@ -7,8 +7,8 @@
 
 import { mergeAttributes, Node } from '@tiptap/core';
 
-export const Details = Node.create({
-  name: 'details',
+export const DetailsBlock = Node.create({
+  name: 'detailsBlock',
   group: 'block',
   content: 'detailsSummary detailsContent',
   defining: true,
@@ -98,7 +98,7 @@ export const DetailsExtension = Node.create({
   name: 'details',
 
   addExtensions() {
-    return [Details, DetailsSummary, DetailsContent];
+    return [DetailsBlock, DetailsSummary, DetailsContent];
   },
 
   addCommands() {
@@ -107,7 +107,7 @@ export const DetailsExtension = Node.create({
         () =>
         ({ commands }) => {
           return commands.insertContent({
-            type: 'details',
+            type: 'detailsBlock',
             content: [
               {
                 type: 'detailsSummary',
