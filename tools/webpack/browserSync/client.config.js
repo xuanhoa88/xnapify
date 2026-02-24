@@ -165,6 +165,20 @@ function waitForReconnect() {
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 400) {
         logInfo('[BrowserSync] Server is back online, reloading...');
+
+        // Notify server immediately before reloading to cancel new tab opening
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/~/__bs_connected');
+          } else {
+            const notifyXhr = new XMLHttpRequest();
+            notifyXhr.open('POST', '/~/__bs_connected', false);
+            notifyXhr.send();
+          }
+        } catch (err) {
+          // Ignore errors
+        }
+
         reloadPage();
       } else {
         setTimeout(checkServer, POLL_INTERVAL);

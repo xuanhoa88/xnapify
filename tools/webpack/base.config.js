@@ -607,6 +607,9 @@ function createWebpackConfig(name, options = {}) {
       resolve: {
         modules: [config.NODE_MODULES_DIR, config.APP_DIR],
         extensions: ['.js', '.jsx', '.json'],
+        alias: {
+          yjs: path.resolve(config.NODE_MODULES_DIR, 'yjs'),
+        },
         fallback: {
           events: require.resolve('events'),
         },
