@@ -67,7 +67,7 @@ const reText = /\.txt(?:\?.*)?$/i;
  * @param {string} hashType - Hash type to use
  * @returns {string} Filename pattern
  */
-const getFileNamePattern = (hashType = 'hash') =>
+const getFileNamePattern = (hashType = 'contenthash') =>
   isDebug ? '[path][name][ext]' : `[${hashType}:8][ext]`;
 
 /**
@@ -248,6 +248,93 @@ function createSharedDependencies(dependencies, options = {}) {
       ];
     }),
   );
+}
+
+/**
+ * Minimum size (bytes) for a chunk to be split out.
+ * Avoids generating tiny files that cost more in HTTP overhead than they save.
+ */
+const MIN_CHUNK_SIZE = 20_000; // 20 KB
+
+/**
+ * Create splitChunks.cacheGroups configuration.
+ * Splits vendors into granular per-package chunks for better caching.
+ *
+ * @param {'all' | 'async' | 'initial'} chunks - Chunk type
+ * @returns {Object} cacheGroups configuration
+ */
+function createCacheGroups(chunks = 'all') {
+  return {
+    // --- CSS: consolidate all extracted CSS so load order is preserved ---
+    styles: {
+      name: 'styles',
+      type: 'css/mini-extract',
+      chunks: 'all',
+      enforce: true,
+      priority: +Infinity,
+    },
+
+    // --- High-priority named groups ---
+
+    react: {
+      test: /[\\/]node_modules[\\/](react|react-dom|react-is|scheduler|react-redux|@reduxjs[\\/]toolkit|redux|history)[\\/]/,
+      name: 'vendor.react',
+      chunks,
+      priority: 40,
+      enforce: true,
+    },
+
+    tiptap: {
+      test: /[\\/]node_modules[\\/](@tiptap[\\/]|prosemirror[-\w]+[\\/]|turndown|marked|tippy\.js)[\\/]/,
+      name: 'vendor.tiptap',
+      chunks,
+      priority: 30,
+      enforce: true,
+    },
+
+    // --- Mid-tier: group related libs together ---
+
+    forms: {
+      test: /[\\/]node_modules[\\/](react-hook-form|@hookform[\\/]resolvers|zod|cleave\.js)[\\/]/,
+      name: 'vendor.forms',
+      chunks,
+      priority: 20,
+    },
+
+    i18n: {
+      test: /[\\/]node_modules[\\/](i18next|react-i18next)[\\/]/,
+      name: 'vendor.i18n',
+      chunks,
+      priority: 20,
+    },
+
+    utils: {
+      test: /[\\/]node_modules[\\/](lodash|date-fns|dayjs|clsx)[\\/]/,
+      name: 'vendor.utils',
+      chunks,
+      priority: 20,
+    },
+
+    // --- Catch-all: remaining node_modules in a single stable chunk ---
+    vendors: {
+      test: /[\\/]node_modules[\\/]/,
+      name: 'vendors',
+      chunks,
+      priority: 10,
+      minSize: MIN_CHUNK_SIZE,
+      reuseExistingChunk: true,
+    },
+
+    // --- Shared app code used in 2+ chunks ---
+    common: {
+      minChunks: 2,
+      chunks,
+      priority: -20,
+      minSize: MIN_CHUNK_SIZE,
+      reuseExistingChunk: true,
+      name: 'common',
+    },
+  };
 }
 
 // =============================================================================
@@ -436,8 +523,22 @@ function createWebpackConfig(name, options = {}) {
         minimize: !isDebug,
         moduleIds: isDebug ? 'named' : 'deterministic',
         chunkIds: isDebug ? 'named' : 'deterministic',
-        splitChunks: false,
-        runtimeChunk: false,
+
+        // ✅ Enable chunk splitting (was `false` — cacheGroups were dead code)
+        splitChunks: isServer
+          ? false // SSR: no benefit splitting chunks server-side
+          : {
+              chunks: 'all',
+              minSize: 20_000, // don't split tiny chunks
+              minChunks: 1,
+              maxAsyncRequests: 20, // allow more parallel async imports
+              maxInitialRequests: 6, // cap initial page load requests
+            },
+
+        // ✅ Enable runtime chunk for client (improves long-term caching)
+        // Without this, a single new module invalidates ALL chunk hashes
+        runtimeChunk: isServer ? false : { name: 'runtime' },
+
         minimizer: !isDebug
           ? [
               new TerserPlugin({
@@ -447,11 +548,16 @@ function createWebpackConfig(name, options = {}) {
                     drop_console: !isServer,
                     comparisons: false,
                     inline: 2,
+                    passes: 2, // ✅ second pass catches more dead code
+                    pure_getters: true,
+                    unsafe_math: false,
                   },
                   mangle: { safari10: true },
                   output: { comments: false, ascii_only: true },
                 },
               }),
+              // ✅ Add CSS minification if you use CSS/MiniCssExtractPlugin
+              // new CssMinimizerPlugin(),
             ]
           : [],
       },
@@ -524,6 +630,7 @@ module.exports = {
   reText,
 
   // Factory functions
+  createCacheGroups,
   createCSSRule,
   createDefinePlugin,
   createEnvDefine,

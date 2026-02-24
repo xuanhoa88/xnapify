@@ -496,7 +496,7 @@ async function main() {
   logInfo('🚀 Starting development server...');
 
   // Setup graceful shutdown handler
-  setupGracefulShutdown(async () => {
+  setupGracefulShutdown(() => {
     logInfo('🛑 Development server shutting down...');
 
     const shutdownPromise = Promise.allSettled([
@@ -504,13 +504,7 @@ async function main() {
       shutdownBrowserSync(),
 
       // Dispose server bundle (Node-RED, etc.)
-      dispose,
-
-      // Print goodbye message (synchronous)
-      new Promise(resolve => {
-        logInfo('👋 Goodbye!');
-        resolve();
-      }),
+      typeof dispose === 'function' ? dispose() : Promise.resolve(),
     ]);
 
     return shutdownPromise.finally(() => {
@@ -521,6 +515,9 @@ async function main() {
       devMiddleware = null;
       hotMiddleware = null;
       dispose = null;
+
+      // Print goodbye message (synchronous)
+      logInfo('👋 Goodbye!');
     });
   });
 

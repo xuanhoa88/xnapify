@@ -10,6 +10,7 @@ const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { logWarn } = require('../utils/logger');
 const {
+  createCacheGroups,
   createWebpackConfig,
   createCSSRule,
   createDefinePlugin,
@@ -137,21 +138,17 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
       output: {
         path: outputPath,
         filename: 'browser.js',
-        chunkFilename: '[name].chunk.js',
+        chunkFilename: isDebug
+          ? '[name].chunk.js'
+          : '[name].[contenthash:8].chunk.js',
         publicPath: 'auto',
         uniqueName: libraryName,
       },
       optimization: {
+        runtimeChunk: false, // remotes must not emit a separate runtime
         splitChunks: {
           chunks: 'async',
-          cacheGroups: {
-            vendors: {
-              test: /[\\/]node_modules[\\/]/,
-              name: 'vendors',
-              chunks: 'async',
-              priority: -10,
-            },
-          },
+          cacheGroups: createCacheGroups('async'),
         },
       },
       module: {

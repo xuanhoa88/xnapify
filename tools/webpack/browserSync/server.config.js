@@ -192,17 +192,14 @@ const closeBrowser = () => {
         resolve();
       }, CONFIG.BROWSER_KILL_TIMEOUT);
 
-      // Try graceful termination
-      browserProcess.kill('SIGTERM');
-      logInfo(`[BrowserSync] Sent SIGTERM to browser (PID: ${pid})`);
+      // Try forceful termination since SIGTERM often hangs for browsers
+      browserProcess.kill('SIGKILL');
+      logInfo(`[BrowserSync] Sent SIGKILL to browser (PID: ${pid})`);
 
-      // Clean up on successful kill
-      browserProcess.once('exit', () => {
-        clearTimeout(killTimeout);
-        logInfo(`[BrowserSync] Browser closed (PID: ${pid})`);
-        browserProcess = null;
-        resolve();
-      });
+      // Clean up and resolve immediately to avoid hanging the shutdown process
+      clearTimeout(killTimeout);
+      browserProcess = null;
+      resolve();
 
       // If no exit event within timeout, the timeout handler will resolve
     } catch (err) {

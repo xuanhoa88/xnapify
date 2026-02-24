@@ -11,6 +11,7 @@ const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const config = require('../config');
 const {
+  createCacheGroups,
   createWebpackConfig,
   createCSSRule,
   createEnvDefine,
@@ -104,22 +105,8 @@ const clientConfig = createWebpackConfig('client', {
   },
   optimization: {
     splitChunks: {
-      chunks: 'all',
-      cacheGroups: {
-        vendors: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-          priority: -10,
-        },
-        common: {
-          minChunks: 2,
-          priority: -20,
-          reuseExistingChunk: true,
-        },
-      },
+      cacheGroups: createCacheGroups('all'),
     },
-    runtimeChunk: 'single',
   },
   module: {
     rules: [

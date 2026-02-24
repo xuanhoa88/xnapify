@@ -71,118 +71,142 @@ function logDetailedError(error, context = {}) {
 }
 
 /**
- * Setup graceful shutdown with proper async handling and fatal error capture.
+ * Sets up graceful shutdown handling for a Node.js process.
+ *
+ * Handles SIGINT, SIGTERM, SIGQUIT, uncaughtException, and unhandledRejection.
+ * Safe to call multiple times (e.g. during HMR reloads) — previous handlers
+ * are automatically removed via a reference stored on `global[SHUTDOWN_SYMBOL]`.
+ *
+ * @param {Function} cleanupFn - Async cleanup callback. Receives one argument:
+ *   - A signal string: 'SIGINT' | 'SIGTERM' | 'SIGQUIT' | 'MANUAL'
+ *   - Or an Error instance for uncaught exceptions / unhandled rejections
+ * @returns {Function} manualShutdown - Call to trigger a graceful shutdown manually.
  */
 function setupGracefulShutdown(cleanupFn) {
-  const signals = ['SIGINT', 'SIGTERM', 'SIGQUIT'];
+  const SIGNALS = ['SIGINT', 'SIGTERM', 'SIGQUIT'];
   let isShuttingDown = false;
 
-  // Remove all event listeners to prevent duplicate handling
+  // --- Handler references (defined up front for correct dependency order) ---
+
+  let handleSignal;
+  let handleUncaughtException;
+  let handleUnhandledRejection;
+
+  // Removes all listeners registered by this invocation.
   const removeListeners = () => {
-    signals.forEach(signal => {
-      process.off(signal, handleSignal);
-    });
+    SIGNALS.forEach(signal => process.off(signal, handleSignal));
     process.off('uncaughtException', handleUncaughtException);
     process.off('unhandledRejection', handleUnhandledRejection);
   };
 
-  // Main shutdown handler
+  // --- Core shutdown logic ---
+
+  /**
+   * @param {string|Error} signalOrError - The triggering signal name or error.
+   * @param {boolean} isFatal - Whether this is caused by an unhandled error.
+   */
   const handleShutdown = async (signalOrError, isFatal) => {
-    // Prevent multiple shutdown attempts
     if (isShuttingDown) {
-      logInfo('⏳ Shutdown already in progress...');
+      // A second fatal error arrived while shutdown is already in progress.
+      // Log it but don't attempt another shutdown cycle.
+      if (isFatal) {
+        logError(
+          '💥 Additional error during shutdown (ignored):',
+          signalOrError,
+        );
+      } else {
+        logInfo('⏳ Shutdown already in progress...');
+      }
       return;
     }
 
     isShuttingDown = true;
     let exitCode = isFatal ? 1 : 0;
 
-    // Force exit if cleanup hangs
+    // Force-exit if cleanup hangs.
+    // NOTE: This timer won't fire if the event loop is blocked (e.g. a CPU-
+    // bound infinite loop). In that case the process must be killed externally.
     const forceExitTimer = setTimeout(() => {
       logError('❌ Forced shutdown after timeout');
       process.exit(1);
     }, SHUTDOWN_TIMEOUT).unref();
 
     try {
-      // Log shutdown reason
       if (typeof signalOrError === 'string') {
         logInfo(`🛑 Received ${signalOrError}, shutting down...`);
       } else if (isFatal) {
+        // logDetailedError already logs the error — avoid double-logging here.
         logDetailedError(signalOrError, { type: 'fatal' });
         logInfo('🛑 Fatal error, shutting down...');
       }
 
-      // Run cleanup function
       if (typeof cleanupFn === 'function') {
         await cleanupFn(signalOrError);
       }
     } catch (error) {
-      logDetailedError(error, { phase: 'cleanup', signal: signalOrError });
+      // Cleanup itself threw — log and escalate exit code.
+      logDetailedError(error, { phase: 'cleanup', trigger: signalOrError });
       exitCode = 1;
     } finally {
       clearTimeout(forceExitTimer);
 
-      // Remove listeners and clear global ref to prevent re-triggering
+      // Remove listeners before exiting so no further events are processed.
       removeListeners();
       delete global[SHUTDOWN_SYMBOL];
 
-      // Exit cleanly
       process.exit(exitCode);
     }
   };
 
-  // Signal handler wrapper
-  const handleSignal = signal => handleShutdown(signal, false);
+  // --- Individual event handlers ---
 
-  // Uncaught exception handler
-  const handleUncaughtException = error => {
-    logError('💥 Uncaught Exception:', error);
+  // SIGQUIT would normally generate a core dump; we override it to shut down
+  // gracefully instead. Document this if your team expects core dumps.
+  handleSignal = signal => handleShutdown(signal, false);
+
+  handleUncaughtException = error => {
+    // Don't double-log here — handleShutdown calls logDetailedError.
     handleShutdown(error, true).catch(() => process.exit(1));
   };
 
-  // Unhandled rejection handler
-  const handleUnhandledRejection = (reason, promise) => {
-    logError('💥 Unhandled Rejection at:', promise, 'reason:', reason);
+  handleUnhandledRejection = (reason, _promise) => {
     const error = reason instanceof Error ? reason : new Error(String(reason));
+    // Attach the original reason in case it isn't an Error (aids debugging).
+    if (!(reason instanceof Error)) error.originalReason = reason;
     handleShutdown(error, true).catch(() => process.exit(1));
   };
 
-  // Remove any previously-registered handlers saved on the global object
+  // --- HMR-safe deduplication ---
+
+  // Remove handlers registered by a previous call to this function.
   const previous = global[SHUTDOWN_SYMBOL];
   if (previous) {
-    const {
-      handleSignal: prevSignal,
-      handleUncaughtException: prevException,
-      handleUnhandledRejection: prevRejection,
-    } = previous;
+    const { prevSignal, prevUncaughtException, prevUnhandledRejection } =
+      previous;
     if (typeof prevSignal === 'function')
-      signals.forEach(signal => process.off(signal, prevSignal));
-    if (typeof prevException === 'function')
-      process.off('uncaughtException', prevException);
-    if (typeof prevRejection === 'function')
-      process.off('unhandledRejection', prevRejection);
+      SIGNALS.forEach(signal => process.off(signal, prevSignal));
+    if (typeof prevUncaughtException === 'function')
+      process.off('uncaughtException', prevUncaughtException);
+    if (typeof prevUnhandledRejection === 'function')
+      process.off('unhandledRejection', prevUnhandledRejection);
   }
 
-  // Register signal handlers
-  signals.forEach(signal => {
-    process.on(signal, handleSignal);
-  });
+  // --- Register handlers ---
 
-  // Register error handlers
+  SIGNALS.forEach(signal => process.on(signal, handleSignal));
   process.on('uncaughtException', handleUncaughtException);
   process.on('unhandledRejection', handleUnhandledRejection);
 
-  // Persist the handler references so they can be removed on next HMR reload
+  // Persist references for the next HMR cycle (or manual teardown).
   global[SHUTDOWN_SYMBOL] = {
-    handleSignal,
-    handleUncaughtException,
-    handleUnhandledRejection,
+    prevSignal: handleSignal,
+    prevUncaughtException: handleUncaughtException,
+    prevUnhandledRejection: handleUnhandledRejection,
   };
 
-  // Log that shutdown handler is ready
   logInfo('✓ Graceful shutdown handler registered');
 
-  // Return manual shutdown trigger
+  // Allow callers to trigger shutdown programmatically.
   return () => handleShutdown('MANUAL', false);
 }
 
