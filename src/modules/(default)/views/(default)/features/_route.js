@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Features from '../Features';
+import Features from '../components/Features';
 
 /**
  * Page metadata
