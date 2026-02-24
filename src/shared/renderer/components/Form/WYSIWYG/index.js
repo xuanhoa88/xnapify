@@ -104,11 +104,25 @@ const MD_PATTERNS =
  *   to an array of label strings.
  *   Example (static):  `(query) => Promise.resolve(['Alice', 'Bob'])`
  *   Example (async):   `(query) => fetch('/api/users?q=' + query).then(r => r.json())`
+ * @param {Array}    [props.addExtensions]     Custom Tiptap extensions to add
+ * @param {string[]} [props.excludeExtensions]  Array of extension names to exclude (e.g. `['youtube', 'video']`)
+ * @param {Object}   [props.editorProps]        Custom ProseMirror editorProps to merge
  */
 const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
-  { className, disabled, placeholder, onChange: onChangeProp, onMentionQuery },
+  {
+    className,
+    disabled,
+    placeholder,
+    onChange: onChangeProp,
+    onMentionQuery,
+    addExtensions = [],
+    excludeExtensions = [],
+    editorProps: userEditorProps,
+  },
   forwardedRef,
 ) {
+  const { handlePaste, transformPastedHTML, ...restUserEditorProps } =
+    userEditorProps || {};
   const { id, name, error } = useFormField();
   const {
     field: { onChange, onBlur, value, ref: registerRef },
@@ -168,11 +182,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
   // Only include the Mention extension when a query callback is provided.
   const extensions = useMemo(() => {
     const exts = [
-      StarterKit.configure({
-        // We add Link and Underline separately with custom options
-        link: false,
-        underline: false,
-      }),
+      StarterKit.configure({ link: false, underline: false }),
       Underline,
       Placeholder.configure({ placeholder }),
       TaskList,
@@ -182,30 +192,20 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       TableHeader,
       TableCell,
       DetailsExtension,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-      }),
+      Link.configure({ openOnClick: false, autolink: true }),
       Emoji,
       CustomImage.configure({
         inline: true,
         allowBase64: true,
-        resize: {
-          enabled: true,
-          alwaysPreserveAspectRatio: true,
-        },
+        resize: { enabled: true, alwaysPreserveAspectRatio: true },
       }),
-      Youtube.configure({
-        inline: false,
-      }),
+      Youtube.configure({ inline: false }),
       Video,
       Audio,
       Color,
       TextStyle,
       FontSize,
-      Highlight.configure({
-        multicolor: true,
-      }),
+      Highlight.configure({ multicolor: true }),
       Selection,
     ];
 
@@ -218,17 +218,31 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       );
     }
 
+    if (addExtensions && addExtensions.length > 0) {
+      exts.push(...addExtensions);
+    }
+
+    // Filter out built-in extensions that the consumer wants to exclude
+    if (excludeExtensions && excludeExtensions.length > 0) {
+      return exts.filter(ext => !excludeExtensions.includes(ext.name));
+    }
+
     return exts;
-  }, [placeholder, onMentionQuery]);
+  }, [placeholder, onMentionQuery, addExtensions, excludeExtensions]);
 
   const editor = useEditor({
     extensions,
     content: markdownToHtml(value || ''),
     editable: !disabled,
     editorProps: {
-      handlePaste: (view, event) => {
+      ...restUserEditorProps,
+      handlePaste: (view, event, slice) => {
         const { clipboardData } = event;
-        if (!clipboardData) return false;
+        if (!clipboardData) {
+          return typeof handlePaste === 'function'
+            ? handlePaste(view, event, slice)
+            : false;
+        }
 
         // Helper: insert an image node at the current cursor position
         const insertImage = src => {
@@ -279,6 +293,11 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
           }
         }
 
+        // Delegate to consumer's handlePaste if our logic didn't handle it
+        if (typeof handlePaste === 'function') {
+          return handlePaste(view, event, slice);
+        }
+
         return false; // Let ProseMirror handle everything else
       },
       transformPastedHTML: html => {
@@ -290,7 +309,9 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
           markdownPasteRef.current = null;
           return markdownToHtml(md);
         }
-        return html;
+        return typeof transformPastedHTML === 'function'
+          ? transformPastedHTML(html)
+          : html;
       },
     },
     onUpdate: ({ editor: e }) => {
@@ -353,6 +374,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
         editor={editor}
         isFullScreen={isFullScreen}
         onToggleFullScreen={toggleFullScreen}
+        excludeExtensions={excludeExtensions}
       />
       <div className={s.editorContent}>
         <EditorContent editor={editor} className={s.contentEditable} />
@@ -367,6 +389,9 @@ FormWYSIWYG.propTypes = {
   placeholder: PropTypes.string,
   onChange: PropTypes.func,
   onMentionQuery: PropTypes.func,
+  addExtensions: PropTypes.array,
+  excludeExtensions: PropTypes.arrayOf(PropTypes.string),
+  editorProps: PropTypes.object,
 };
 
 export default FormWYSIWYG;

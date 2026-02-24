@@ -13,7 +13,7 @@ function escapeRegExp(string) {
 }
 
 export const Emoji = Extension.create({
-  name: 'emojiNative',
+  name: 'emoji',
 
   addInputRules() {
     const rules = [];

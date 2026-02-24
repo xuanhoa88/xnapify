@@ -95,7 +95,7 @@ export const DetailsContent = Node.create({
 });
 
 export const DetailsExtension = Node.create({
-  name: 'detailsExtension',
+  name: 'details',
 
   addExtensions() {
     return [Details, DetailsSummary, DetailsContent];

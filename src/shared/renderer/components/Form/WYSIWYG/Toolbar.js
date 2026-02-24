@@ -24,8 +24,19 @@ import s from './Toolbar.css';
  * @param {import('@tiptap/react').Editor | null} props.editor
  * @param {boolean} [props.isFullScreen]
  * @param {Function} [props.onToggleFullScreen]
+ * @param {string[]} [props.excludeExtensions]
  */
-export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
+export default function Toolbar({
+  editor,
+  isFullScreen,
+  onToggleFullScreen,
+  excludeExtensions = [],
+}) {
+  // Quick lookup: is a given extension enabled?
+  const has = useCallback(
+    name => !excludeExtensions.includes(name),
+    [excludeExtensions],
+  );
   const { t } = useTranslation();
   const btn = useCallback(
     (key, title, command, activeCheck) => (
@@ -95,12 +106,13 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
           () => editor.chain().focus().toggleItalic().run(),
           'italic',
         )}
-        {btn(
-          'underline',
-          t('shared:form.wysiwyg.underline', 'Underline'),
-          () => editor.chain().focus().toggleUnderline().run(),
-          'underline',
-        )}
+        {has('underline') &&
+          btn(
+            'underline',
+            t('shared:form.wysiwyg.underline', 'Underline'),
+            () => editor.chain().focus().toggleUnderline().run(),
+            'underline',
+          )}
         {btn(
           'strikethrough',
           t('shared:form.wysiwyg.strikethrough', 'Strikethrough'),
@@ -125,167 +137,196 @@ export default function Toolbar({ editor, isFullScreen, onToggleFullScreen }) {
           () => editor.chain().focus().toggleOrderedList().run(),
           'orderedList',
         )}
-        {btn(
-          'taskList',
-          t('shared:form.wysiwyg.taskList', 'Task list'),
-          () => editor.chain().focus().toggleTaskList().run(),
-          'taskList',
-        )}
+        {has('taskList') &&
+          btn(
+            'taskList',
+            t('shared:form.wysiwyg.taskList', 'Task list'),
+            () => editor.chain().focus().toggleTaskList().run(),
+            'taskList',
+          )}
         {btn(
           'blockquote',
           t('shared:form.wysiwyg.blockquote', 'Blockquote'),
           () => editor.chain().focus().toggleBlockquote().run(),
           'blockquote',
         )}
-        {btn(
-          'details',
-          t('shared:form.wysiwyg.details', 'Collapsible Details'),
-          () => editor.chain().focus().setDetails().run(),
-          'details',
-        )}
+        {has('details') &&
+          btn(
+            'details',
+            t('shared:form.wysiwyg.details', 'Collapsible Details'),
+            () => editor.chain().focus().setDetails().run(),
+            'details',
+          )}
       </div>
 
       <div className={s.toolbarDivider} />
 
       {/* Table tools */}
-      <div className={s.toolbarGroup}>
-        {btn(
-          'table',
-          t('shared:form.wysiwyg.table', 'Insert Table'),
-          () =>
-            editor
-              .chain()
-              .focus()
-              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-              .run(),
-          'table',
-        )}
-        {editor.isActive('table') && (
-          <>
-            {btn(
-              'tableRow',
-              t('shared:form.wysiwyg.tableRow', 'Add Row After'),
-              () => editor.chain().focus().addRowAfter().run(),
-            )}
-            {btn(
-              'tableCol',
-              t('shared:form.wysiwyg.tableCol', 'Add Column After'),
-              () => editor.chain().focus().addColumnAfter().run(),
-            )}
-            {btn(
-              'tableDelete',
-              t('shared:form.wysiwyg.tableDelete', 'Delete Table'),
-              () => editor.chain().focus().deleteTable().run(),
-            )}
-          </>
-        )}
-      </div>
+      {has('table') && (
+        <div className={s.toolbarGroup}>
+          {btn(
+            'table',
+            t('shared:form.wysiwyg.table', 'Insert Table'),
+            () =>
+              editor
+                .chain()
+                .focus()
+                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+                .run(),
+            'table',
+          )}
+          {editor.isActive('table') && (
+            <>
+              {btn(
+                'tableRow',
+                t('shared:form.wysiwyg.tableRow', 'Add Row After'),
+                () => editor.chain().focus().addRowAfter().run(),
+              )}
+              {btn(
+                'tableCol',
+                t('shared:form.wysiwyg.tableCol', 'Add Column After'),
+                () => editor.chain().focus().addColumnAfter().run(),
+              )}
+              {btn(
+                'tableDelete',
+                t('shared:form.wysiwyg.tableDelete', 'Delete Table'),
+                () => editor.chain().focus().deleteTable().run(),
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       <div className={s.toolbarDivider} />
 
       {/* Formatting & Color Group */}
       <div className={s.toolbarGroup}>
-        <ColorPickerPopup
-          icon={Icons.textColor}
-          title={t('shared:form.wysiwyg.textColor', 'Text Color')}
-          value={editor.getAttributes('textStyle').color}
-          defaultValue='#000000'
-          isActive={!!editor.getAttributes('textStyle').color}
-          onChange={color => editor.chain().focus().setColor(color).run()}
-          onReset={() => editor.chain().focus().unsetColor().run()}
-          resetLabel={t('shared:form.wysiwyg.resetTextColor', 'Reset')}
-          disabled={!editor.can().chain().focus().run()}
-        />
-        <ColorPickerPopup
-          icon={Icons.highlight}
-          title={t('shared:form.wysiwyg.highlight', 'Background Color')}
-          value={editor.getAttributes('highlight').color}
-          defaultValue='#ffffff'
-          isActive={editor.isActive('highlight')}
-          onChange={color =>
-            editor.chain().focus().toggleHighlight({ color }).run()
-          }
-          onReset={() => editor.chain().focus().unsetHighlight().run()}
-          resetLabel={t('shared:form.wysiwyg.resetHighlight', 'Reset')}
-          disabled={!editor.can().chain().focus().run()}
-        />
-        <input
-          ref={fontSizeRef}
-          type='number'
-          className={s.fontSizeInput}
-          title={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
-          value={fontSizeValue}
-          onChange={e => setFontSizeValue(e.target.value)}
-          onBlur={e => applyFontSize(e.target.value)}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault();
-              applyFontSize(e.target.value);
+        {has('color') && (
+          <ColorPickerPopup
+            icon={Icons.textColor}
+            title={t('shared:form.wysiwyg.textColor', 'Text Color')}
+            value={editor.getAttributes('textStyle').color}
+            defaultValue='#000000'
+            isActive={!!editor.getAttributes('textStyle').color}
+            onChange={color => editor.chain().focus().setColor(color).run()}
+            onReset={() => editor.chain().focus().unsetColor().run()}
+            resetLabel={t('shared:form.wysiwyg.resetTextColor', 'Reset')}
+            disabled={!editor.can().chain().focus().run()}
+          />
+        )}
+        {has('highlight') && (
+          <ColorPickerPopup
+            icon={Icons.highlight}
+            title={t('shared:form.wysiwyg.highlight', 'Background Color')}
+            value={editor.getAttributes('highlight').color}
+            defaultValue='#ffffff'
+            isActive={editor.isActive('highlight')}
+            onChange={color =>
+              editor.chain().focus().toggleHighlight({ color }).run()
             }
-          }}
-          min='8'
-          max='100'
-        />
+            onReset={() => editor.chain().focus().unsetHighlight().run()}
+            resetLabel={t('shared:form.wysiwyg.resetHighlight', 'Reset')}
+            disabled={!editor.can().chain().focus().run()}
+          />
+        )}
+        {has('fontSize') && (
+          <input
+            ref={fontSizeRef}
+            type='number'
+            className={s.fontSizeInput}
+            title={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
+            value={fontSizeValue}
+            onChange={e => setFontSizeValue(e.target.value)}
+            onBlur={e => applyFontSize(e.target.value)}
+            onKeyDown={e => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                applyFontSize(e.target.value);
+              }
+            }}
+            min='8'
+            max='100'
+          />
+        )}
       </div>
 
       <div className={s.toolbarDivider} />
 
       {/* Links & Media Group */}
       <div className={s.toolbarGroup}>
-        {btn(
-          'link',
-          t('shared:form.wysiwyg.link', 'Add Link'),
-          () => {
-            const previousUrl = editor.getAttributes('link').href;
-            const url = window.prompt('URL', previousUrl || '');
+        {has('link') && (
+          <>
+            {btn(
+              'link',
+              t('shared:form.wysiwyg.link', 'Add Link'),
+              () => {
+                const previousUrl = editor.getAttributes('link').href;
+                const url = window.prompt('URL', previousUrl || '');
 
-            // cancelled
-            if (url == null) {
-              return;
-            }
+                // cancelled
+                if (url == null) {
+                  return;
+                }
 
-            // empty
-            if (url.trim().length === 0) {
-              editor.chain().focus().extendMarkRange('link').unsetLink().run();
-              return;
-            }
+                // empty
+                if (url.trim().length === 0) {
+                  editor
+                    .chain()
+                    .focus()
+                    .extendMarkRange('link')
+                    .unsetLink()
+                    .run();
+                  return;
+                }
 
-            // update link
-            editor
-              .chain()
-              .focus()
-              .extendMarkRange('link')
-              .setLink({ href: url })
-              .run();
-          },
-          'link',
+                // update link
+                editor
+                  .chain()
+                  .focus()
+                  .extendMarkRange('link')
+                  .setLink({ href: url })
+                  .run();
+              },
+              'link',
+            )}
+            {editor.isActive('link') &&
+              btn(
+                'unlink',
+                t('shared:form.wysiwyg.unlink', 'Remove Link'),
+                () => editor.chain().focus().unsetLink().run(),
+              )}
+          </>
         )}
-        {editor.isActive('link') &&
-          btn('unlink', t('shared:form.wysiwyg.unlink', 'Remove Link'), () =>
-            editor.chain().focus().unsetLink().run(),
-          )}
 
-        {btn('image', t('shared:form.wysiwyg.image', 'Image'), () => {
-          const url = window.prompt('Image URL');
-          if (url) editor.chain().focus().setImage({ src: url }).run();
-        })}
-        {btn('video', t('shared:form.wysiwyg.video', 'Video'), () => {
-          const url = window.prompt('Video URL (MP4, WebM, etc.)');
-          if (url) editor.chain().focus().setVideo({ src: url }).run();
-        })}
-        {btn('audio', t('shared:form.wysiwyg.audio', 'Audio'), () => {
-          const url = window.prompt('Audio URL (MP3, WAV, etc.)');
-          if (url) editor.chain().focus().setAudio({ src: url }).run();
-        })}
-        {btn('youtube', t('shared:form.wysiwyg.youtube', 'YouTube'), () => {
-          const url = window.prompt('YouTube Video URL');
-          if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
-        })}
-        <EmojiPickerButton
-          title={t('shared:form.wysiwyg.emoji', 'Emoji')}
-          onSelect={emoji => editor.chain().focus().insertContent(emoji).run()}
-          disabled={!editor.can().chain().focus().run()}
-        />
+        {has('image') &&
+          btn('image', t('shared:form.wysiwyg.image', 'Image'), () => {
+            const url = window.prompt('Image URL');
+            if (url) editor.chain().focus().setImage({ src: url }).run();
+          })}
+        {has('video') &&
+          btn('video', t('shared:form.wysiwyg.video', 'Video'), () => {
+            const url = window.prompt('Video URL (MP4, WebM, etc.)');
+            if (url) editor.chain().focus().setVideo({ src: url }).run();
+          })}
+        {has('audio') &&
+          btn('audio', t('shared:form.wysiwyg.audio', 'Audio'), () => {
+            const url = window.prompt('Audio URL (MP3, WAV, etc.)');
+            if (url) editor.chain().focus().setAudio({ src: url }).run();
+          })}
+        {has('youtube') &&
+          btn('youtube', t('shared:form.wysiwyg.youtube', 'YouTube'), () => {
+            const url = window.prompt('YouTube Video URL');
+            if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
+          })}
+        {has('emoji') && (
+          <EmojiPickerButton
+            title={t('shared:form.wysiwyg.emoji', 'Emoji')}
+            onSelect={emoji =>
+              editor.chain().focus().insertContent(emoji).run()
+            }
+            disabled={!editor.can().chain().focus().run()}
+          />
+        )}
       </div>
 
       <div className={s.toolbarDivider} />
@@ -344,4 +385,5 @@ Toolbar.propTypes = {
   editor: PropTypes.object,
   isFullScreen: PropTypes.bool,
   onToggleFullScreen: PropTypes.func,
+  excludeExtensions: PropTypes.arrayOf(PropTypes.string),
 };
