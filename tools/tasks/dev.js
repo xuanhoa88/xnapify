@@ -247,11 +247,10 @@ async function createDevServer(serverBundle, prevServer) {
   // Attach webpack middlewares to the new app
   attachWebpackMiddlewares(app);
 
-  // Initialize launch function
-  let launch;
-
   // Bootstrap the app (routes, database, etc.)
-  ({ launch } = await serverBundle.bootstrap(app, server, {
+  // Capture the bootstrap-returned dispose (has server arg pre-bound)
+  let launch;
+  ({ launch, dispose } = await serverBundle.bootstrap(app, server, {
     port,
     host,
     publicDir: config.PUBLIC_DIR,
@@ -367,9 +366,6 @@ async function checkForUpdate() {
     // Small delay to ensure all modules are loaded before checking
     await new Promise(resolve => setTimeout(resolve, 50));
 
-    // Small delay to ensure all modules are loaded before checking
-    await new Promise(resolve => setTimeout(resolve, 50));
-
     // Check for updates but DO NOT auto-apply them (we reload the bundle manually)
     // Applying updates to the old bundle can cause freezes if dispose handlers hang
     const updatedModules = await hmr.check(false);
@@ -382,7 +378,7 @@ async function checkForUpdate() {
 
     logInfo(`🔥 HMR: Detected ${updatedModules.length} updated module(s).`);
 
-    // Clean up previous bundle resources (Node-RED, etc.)
+    // Clean up previous bundle resources (Node-RED, WS, caches)
     if (dispose) {
       try {
         await dispose();
@@ -392,7 +388,6 @@ async function checkForUpdate() {
     }
 
     const serverBundle = loadServerBundle();
-    dispose = serverBundle.dispose;
     await createDevServer(serverBundle, server);
 
     await notifyBrowserSyncRestart();
@@ -547,7 +542,6 @@ async function main() {
 
     // Load server bundle
     const serverBundle = loadServerBundle();
-    dispose = serverBundle.dispose;
 
     // Create webpack middlewares (triggering client compilation)
     ({ devMiddleware, hotMiddleware } =

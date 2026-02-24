@@ -165,49 +165,21 @@ const openBrowser = async server => {
 
 /**
  * Close the browser process with timeout
- * @returns {Promise<void>}
  */
 const closeBrowser = () => {
-  return new Promise(resolve => {
-    if (!browserProcess || browserProcess.killed) {
-      logInfo('[BrowserSync] No browser process to close');
-      resolve();
-      return;
-    }
+  if (!browserProcess || browserProcess.killed) {
+    return;
+  }
 
-    try {
-      if (typeof browserProcess.kill !== 'function') {
-        logWarn('[BrowserSync] Browser process has no kill method');
-        browserProcess = null;
-        resolve();
-        return;
-      }
-
-      const { pid } = browserProcess;
-
-      // Set up timeout in case kill hangs
-      const killTimeout = setTimeout(() => {
-        logWarn(`[BrowserSync] Browser close timeout (PID: ${pid})`);
-        browserProcess = null;
-        resolve();
-      }, CONFIG.BROWSER_KILL_TIMEOUT);
-
-      // Try forceful termination since SIGTERM often hangs for browsers
-      browserProcess.kill('SIGKILL');
-      logInfo(`[BrowserSync] Sent SIGKILL to browser (PID: ${pid})`);
-
-      // Clean up and resolve immediately to avoid hanging the shutdown process
-      clearTimeout(killTimeout);
-      browserProcess = null;
-      resolve();
-
-      // If no exit event within timeout, the timeout handler will resolve
-    } catch (err) {
-      logWarn(`[BrowserSync] Error closing browser: ${err.message}`);
-      browserProcess = null;
-      resolve();
-    }
-  });
+  try {
+    const { pid } = browserProcess;
+    browserProcess.kill('SIGKILL');
+    logInfo(`[BrowserSync] Sent SIGKILL to browser (PID: ${pid})`);
+  } catch (err) {
+    logWarn(`[BrowserSync] Error closing browser: ${err.message}`);
+  } finally {
+    browserProcess = null;
+  }
 };
 
 /**

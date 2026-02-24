@@ -1191,17 +1191,7 @@ if (module.hot) {
     console.log('🔄 HMR: Caches cleared');
   });
 
-  // Explicitly shutdown Node-RED before the old module is replaced.
-  // The new module's bootstrap() will call nodeRED.init() which auto-starts
-  // since the server is already listening.
-  module.hot.dispose(() => {
-    if (appState.nodeRED) {
-      console.log('🔄 HMR: Shutting down Node-RED for restart...');
-      appState.nodeRED.shutdown().catch(err => {
-        console.warn('⚠️  HMR: Node-RED shutdown error:', err.message);
-      });
-    }
-  });
+  // Node-RED cleanup is handled by dev.js calling dispose() before loadServerBundle()
 
   exports.hot = module.hot;
 } else {
