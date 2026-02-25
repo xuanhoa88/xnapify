@@ -1,0 +1,15 @@
+import * as permissionController from '../../../controllers/admin/permission.controller';
+
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
+export const patch = [
+  requirePermission('permissions:update'),
+  permissionController.bulkUpdateStatus,
+];

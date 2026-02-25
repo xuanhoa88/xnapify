@@ -79,20 +79,16 @@ function validatePlugin(plugin) {
     return null;
   }
 
-  // Normalize plugin name
-  const pluginName = plugin.manifest.name || plugin.name.trim();
-  const pluginDescription = plugin.manifest.description || pluginName;
-
   return {
-    pluginName,
-    pluginDescription,
+    pluginName: plugin.name,
+    pluginDescription: plugin.manifest.description || plugin.name,
     clientPath: plugin.manifest.browser
       ? path.resolve(plugin.path, plugin.manifest.browser)
       : null,
     apiPath: plugin.manifest.main
       ? path.resolve(plugin.path, plugin.manifest.main)
       : null,
-    libraryName: getLibraryName(pluginName),
+    libraryName: `plugin_${plugin.name}`,
   };
 }
 
@@ -107,12 +103,6 @@ const getPluginLocalIdentName = pluginName =>
   isDebug
     ? `${pluginName}_[local]__[hash:base64:5]`
     : `${pluginName}_[hash:base64:5]`;
-
-/**
- * Create safe library name from plugin name
- */
-const getLibraryName = pluginName =>
-  `plugin_${pluginName.replace(/[^a-zA-Z0-9]/g, '_')}`;
 
 // =============================================================================
 // CONFIG BUILDERS

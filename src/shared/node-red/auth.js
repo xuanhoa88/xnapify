@@ -253,7 +253,7 @@ export function createNodeRedLogoutConfig(options = {}) {
 
   return {
     logout: {
-      redirect: `${protocol}://${host}:${port}/api/logout`,
+      redirect: `${protocol}://${host}:${port}/api/auth/logout`,
     },
   };
 }

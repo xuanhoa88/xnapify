@@ -27,18 +27,18 @@ In your module's `api/routes` folder, create `.js` files named `_route.js`. The 
 
 **Standard Module Mapping:**
 
-- `src/modules/users/api/routes/_route.js` -> `/users`
+- `@apps/users/api/routes/_route.js` -> `/users`
 
 **Priority Handling & `(default)` wrapping:**
 If you place `_route.js` inside a `(default)` folder, it takes priority over a file at the same tier. This allows clean file organization at the root of a module.
 
-- `src/modules/users/api/routes/(default)/_route.js` -> `/users` (Overrides the standard mapping above)
+- `@apps/users/api/routes/(default)/_route.js` -> `/users` (Overrides the standard mapping above)
 
 **The `(default)` Module:**
 If the module itself is named `(default)`, its namespace is dropped from the path.
 
-- `src/modules/(default)/api/routes/(default)/_route.js` -> `/`
-- `src/modules/(default)/api/routes/login/_route.js` -> `/login`
+- `@apps/(default)/api/routes/(default)/_route.js` -> `/`
+- `@apps/(default)/api/routes/login/_route.js` -> `/login`
 
 ```javascript
 export function get(req, res) {
@@ -51,7 +51,7 @@ export function get(req, res) {
 
 If a module provides API routes for a specific section root (like `admin` or `customer`), simply create that folder inside the `api/routes/` directory. The router automatically appends the module name to the folder name to prevent path clashing.
 
-**Example: `src/modules/users/api/routes/admin/_route.js` -> `/admin/users`**
+**Example: `@apps/users/api/routes/admin/_route.js` -> `/admin/users`**
 
 ```javascript
 export function get(req, res) {
@@ -60,13 +60,13 @@ export function get(req, res) {
 }
 ```
 
-_(Note: To map explicitly to the global `/admin` path instead of `/admin/users`, the module would need to be the explicit `(default)` module: `src/modules/(default)/api/routes/admin/_route.js`.)_
+_(Note: To map explicitly to the global `/admin` path instead of `/admin/users`, the module would need to be the explicit `(default)` module: `@apps/(default)/api/routes/admin/_route.js`.)_
 
 ### 3. Handling Dynamic Parameters (`[param]`)
 
 Use brackets in folder names for dynamic Express parameters.
 
-**Example: `src/modules/users/api/routes/users/[id]/_route.js` -> `/users/:id`**
+**Example: `@apps/users/api/routes/users/[id]/_route.js` -> `/users/:id`**
 
 ```javascript
 export function get(req, res) {
@@ -80,12 +80,12 @@ export function get(req, res) {
 
 If you need authentication or specific checking for a group of routes, create a `_middleware.js` file in that directory. It will apply to the directory and all children hierarchically.
 
-**Example: `src/modules/users/api/routes/users/_middleware.js` (Applies to `/users` and `/users/*`)**
+**Example: `@apps/users/api/routes/users/_middleware.js` (Applies to `/users` and `/users/*`)**
 
 You can export a single function, or an array of standard Express middlewares if you need multiple steps:
 
 ```javascript
-import { rateLimiter } from 'rapid-rsk/middlewares';
+import { rateLimiter } from '@middlewares';
 
 function requireAuth(req, res, next) {
   if (!req.user) {
@@ -128,7 +128,7 @@ If you want to apply specific middlewares to _only_ a `GET` request or a `POST` 
 **Example: Protecting a POST endpoint but keeping GET public:**
 
 ```javascript
-import { requireAuth } from 'rapid-rsk/middlewares';
+import { requireAuth } from '@middlewares';
 
 // Drop all inherited parent middlewares (making the route inherently public)
 export const middleware = false;
@@ -153,7 +153,7 @@ export const post = [
 Route handler errors are automatically normalized into a consistent `RouterError` shape with `status`, `message`, `code`, and `details` properties, then passed to Express error middleware via `next(err)`.
 
 ```javascript
-import { createError } from 'rapid-rsk/shared/api/router/utils';
+import { createError } from '@shared/api/router/utils';
 
 export function get(req, res) {
   // Throw a structured error — automatically normalized
@@ -191,15 +191,15 @@ app.use('/api', apiRouter.resolve);
 If your app supports loading external plugin modules on the fly, you can dynamically attach or detach them.
 
 ```javascript
-import { createContextAdapter } from 'rapid-rsk/shared/context';
+import { createContextAdapter } from '@shared/context';
 
 const pluginAdapter = createContextAdapter(
-  require.context('/path/to/plugin/api/routes'),
+  require.context('/path/to/my-module/api/routes'),
 );
 
 // Attach the plugin's routes dynamically
-app.get('apiRouter').add(pluginAdapter);
+apiRouter.add(pluginAdapter);
 
 // Unload when disabling plugin
-app.get('apiRouter').remove(pluginAdapter);
+apiRouter.remove(pluginAdapter);
 ```

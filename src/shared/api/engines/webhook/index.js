@@ -192,7 +192,7 @@ export * from './utils/signature';
 export * from './controller';
 
 // Export services
-export * from './services';
+export * as services from './services';
 
 // Export factory creator
 export { createFactory };

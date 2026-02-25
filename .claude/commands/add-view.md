@@ -3,7 +3,7 @@ Add a new view/route to a module.
 ## Structure
 
 ```
-src/modules/{module-name}/views/{view-path}/
+@apps/{module-name}/views/{view-path}/
 ├── _route.js         # Route definition (metadata, middleware, data fetching)
 ├── _layout.js        # Optional layout wrapper for this view
 ├── {ViewName}.js     # View component
@@ -14,7 +14,7 @@ src/modules/{module-name}/views/{view-path}/
 ## 1. Create View Component
 
 ```javascript
-// src/modules/(default)/views/my-view/MyView.js
+// @apps/(default)/views/my-view/MyView.js
 import React from 'react';
 import PropTypes from 'prop-types';
 import s from './MyView.css';
@@ -38,7 +38,7 @@ export default MyView;
 ## 2. Create Styles
 
 ```css
-/* src/modules/(default)/views/my-view/MyView.css */
+/* @apps/(default)/views/my-view/MyView.css */
 .container {
   max-width: 1200px;
   margin: 0 auto;
@@ -55,7 +55,7 @@ export default MyView;
 ## 3. Create Route Definition
 
 ```javascript
-// src/modules/(default)/views/my-view/_route.js
+// @apps/(default)/views/my-view/_route.js
 import MyView from './MyView';
 
 /**
@@ -94,7 +94,7 @@ import { Link } from '@/shared/renderer/components/History';
 Use `export const layout` to control which layout wraps the view:
 
 ```javascript
-// src/modules/(default)/views/login/_route.js
+// @apps/(default)/views/login/_route.js
 import Login from './Login';
 
 // Disable layout wrapping entirely
@@ -108,7 +108,7 @@ export default Login;
 Use `export async function middleware` for authentication, authorization, or redirects:
 
 ```javascript
-// src/modules/(default)/views/dashboard/_route.js
+// @apps/(default)/views/dashboard/_route.js
 import { isAuthenticated } from '@/shared/renderer/redux';
 import Dashboard from './Dashboard';
 
@@ -142,7 +142,7 @@ export default Dashboard;
 Create `_layout.js` in a view directory to wrap views with a layout component:
 
 ```
-src/modules/(default)/views/(layouts)/(admin)/
+@apps/(default)/views/(layouts)/(admin)/
 ├── _layout.js        # Admin layout wrapper
 ├── Layout.css
 ├── Drawer/
@@ -152,7 +152,7 @@ src/modules/(default)/views/(layouts)/(admin)/
 ```
 
 ```javascript
-// src/modules/(default)/views/(layouts)/(admin)/_layout.js
+// @apps/(default)/views/(layouts)/(admin)/_layout.js
 import PropTypes from 'prop-types';
 import Header from './Header';
 import Drawer from './Drawer';
@@ -182,13 +182,13 @@ export default AdminLayout;
 Create a folder with brackets `[paramName]` for dynamic segments or `(group)` for organization:
 
 ```
-src/modules/users/views/admin/[id]/
+@apps/users/views/admin/[id]/
 ├── _route.js
 └── UserProfile.js
 ```
 
 ```javascript
-// src/modules/users/views/admin/[id]/_route.js
+// @apps/users/views/admin/[id]/_route.js
 import UserProfile from './UserProfile';
 
 export async function getInitialProps({ fetch, params }) {
@@ -209,7 +209,7 @@ export default UserProfile;
 Use parentheses `(groupName)` to organize routes without affecting the URL path:
 
 ```
-src/modules/(default)/views/
+@apps/(default)/views/
 ├── (layouts)/          # Layout group (not in URL)
 │   ├── (admin)/        # Admin layout
 │   └── (default)/      # Default layout
@@ -223,7 +223,7 @@ src/modules/(default)/views/
 ## Protected Routes Example
 
 ```javascript
-// src/modules/(default)/views/admin/dashboard/_route.js
+// @apps/(default)/views/admin/dashboard/_route.js
 import { isAuthenticated, hasPermission } from '@/shared/renderer/redux';
 import Dashboard from './Dashboard';
 

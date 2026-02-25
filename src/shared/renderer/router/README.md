@@ -14,18 +14,18 @@ To define a page in your React app, place a `_route.js` (or `.tsx`) file in your
 
 **Standard Module Mapping:**
 
-- `src/modules/users/views/_route.js` -> `/users`
+- `@apps/users/views/_route.js` -> `/users`
 
 **Priority Handling & `(default)` wrapping:**
 To create paths at the root of a module without explicitly placing it at the filesystem root, use `(default)`.
 
-- `src/modules/users/views/(default)/_route.js` -> `/users` (Overrides standard mapping)
+- `@apps/users/views/(default)/_route.js` -> `/users` (Overrides standard mapping)
 
 **The `(default)` Module:**
 If the module itself is named `(default)`, its namespace is dropped from the path.
 
-- `src/modules/(default)/views/(default)/_route.js` -> `/`
-- `src/modules/(default)/views/dashboard/_route.js` -> `/dashboard`
+- `@apps/(default)/views/(default)/_route.js` -> `/`
+- `@apps/(default)/views/dashboard/_route.js` -> `/dashboard`
 
 ### Route Module Exports
 
@@ -48,8 +48,8 @@ export const action = async ctx => {
 
 Use brackets in folder names for dynamic URL parameters matching paths like `/users/:id`.
 
-- `src/modules/users/views/users/[id]/_route.js` maps to `/users/:id`
-- `src/modules/users/views/[...slug]/_route.js` maps to a catch-all route (e.g., `/users/*`)
+- `@apps/users/views/users/[id]/_route.js` maps to `/users/:id`
+- `@apps/users/views/[...slug]/_route.js` maps to a catch-all route (e.g., `/users/*`)
 
 These parameters become available in the router context object at runtime during data fetching and resolving!
 
@@ -61,19 +61,19 @@ The router natively supports persistent UI wrappers via `_layout.js`.
 
 If you want a wrapper around a specific set of routes:
 
-- `src/modules/users/views/users/_layout.js` -> Wraps `/users` and `/users/*` (like Next.js)
+- `@apps/users/views/users/_layout.js` -> Wraps `/users` and `/users/*` (like Next.js)
 
 ### Global / Theme Layouts
 
 Layouts placed inside a `(layouts)` group are injected into the global view routing tree!
 
-- `src/modules/(default)/(layouts)/main/_layout.js`
+- `@apps/(default)/(layouts)/main/_layout.js`
 
 ## 4. Configuration Components (`(routes)`)
 
 You can inject specific routing options or global configs directly into the route tree by placing configuration scripts inside a `(routes)` group folder implicitly within a module:
 
-- `src/modules/(default)/(routes)/(main).js`
+- `@apps/(default)/(routes)/(main).js`
 
 This allows modifying how specific paths operate natively!
 
@@ -106,10 +106,10 @@ export default function Dashboard() {
 The Router supports adding and removing routes dynamically at runtime without restarting the application!
 
 ```javascript
-import { createContextAdapter } from 'rapid-rsk/shared/context';
+import { createContextAdapter } from '@shared/context';
 
 const pluginAdapter = createContextAdapter(
-  require.context('/path/to/plugin/views'),
+  require.context('/path/to/my-module/views'),
 );
 
 // Add dynamic routes seamlessly into the existing active app tree

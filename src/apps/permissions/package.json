@@ -1,0 +1,7 @@
+{
+  "name": "@rsk-module/permissions",
+  "version": "1.0.0",
+  "browser": "views/index.js",
+  "main": "api/index.js",
+  "description": "Permissions module"
+}

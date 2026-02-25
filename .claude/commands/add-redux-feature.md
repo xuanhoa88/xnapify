@@ -5,7 +5,7 @@ Add a new Redux feature for a module view.
 Redux features are colocated with their view modules, not in the shared renderer:
 
 ```
-src/modules/{module-name}/views/{view-path}/
+@apps/{module-name}/views/{view-path}/
 ├── redux/
 │   ├── index.js          # Public exports
 │   ├── slice.js          # Redux Toolkit slice with extraReducers
@@ -19,7 +19,7 @@ src/modules/{module-name}/views/{view-path}/
 ## 1. Create Slice
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/slice.js
+// @apps/blog/views/admin/posts/redux/slice.js
 import { createSlice } from '@reduxjs/toolkit';
 import {
   fetchPosts,
@@ -255,7 +255,7 @@ export default postsSlice.reducer;
 ## 2. Create Thunks
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/thunks.js
+// @apps/blog/views/admin/posts/redux/thunks.js
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
@@ -364,7 +364,7 @@ export const deletePost = createAsyncThunk(
 ## 3. Create Selectors
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/selector.js
+// @apps/blog/views/admin/posts/redux/selector.js
 import { normalizeState, SLICE_NAME } from './slice';
 
 // =============================================================================
@@ -488,7 +488,7 @@ export const getPostDeleteError = state => {
 ## 4. Create Index (Public API)
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/index.js
+// @apps/blog/views/admin/posts/redux/index.js
 
 // Public API - Async Thunks
 export * from './thunks';
@@ -519,7 +519,7 @@ export { default } from './slice';
 Use route lifecycle hooks in the view's `_route.js`:
 
 ```javascript
-// src/modules/blog/views/admin/posts/_route.js
+// @apps/blog/views/admin/posts/_route.js
 import reducer, { SLICE_NAME } from './redux';
 import PostsList from './PostsList';
 import { addBreadcrumb } from '@/shared/renderer/redux';
@@ -598,7 +598,7 @@ export default PostsList;
 ## 6. Usage in Component
 
 ```javascript
-// src/modules/blog/views/admin/posts/PostsList.js
+// @apps/blog/views/admin/posts/PostsList.js
 import { useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import {

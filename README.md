@@ -169,7 +169,7 @@ The API is structured into **Shared API** and **Modules**:
 - Provide reusable capabilities for modules
 - Should not contain business logic
 
-**Modules** (`src/modules/`):
+**Modules** (`@apps/`):
 
 - Business logic domains: `users`, `homepage`
 - Consume shared API to implement features
@@ -194,10 +194,10 @@ See [`.claude/commands/add-worker.md`](.claude/commands/add-worker.md) for detai
 
 ### Module System
 
-The application uses an auto-discovery module system. Place new modules in `src/modules/`:
+The application uses an auto-discovery module system. Place new modules in `@apps/`:
 
 ```
-src/modules/your-module/
+@apps/your-module/
 ├── api/               # Backend logic
 │   ├── index.js       # Module entry point
 │   ├── models/        # Sequelize models

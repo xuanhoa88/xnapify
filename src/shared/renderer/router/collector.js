@@ -56,11 +56,11 @@ const COLLECTORS = Object.freeze({
         })
         .filter(s => s && s !== 'default');
 
-      // Auto-detect module-scoped paths for non-default modules:
+      // Auto-detect app-scoped paths for non-default modules:
       // When terminal (default) is filtered out and only one segment remains
       // (a section root like 'admin'), append the module name to prevent
       // route collisions with the (default) module.
-      // e.g. plugins/views/admin/(default) -> /admin/plugins
+      // e.g. {moduleName}/admin/(default) -> /admin/{moduleName}
       if (!isDefaultModule && isTerminalDefault && segments.length === 1) {
         segments.push(moduleName);
       }
@@ -121,7 +121,7 @@ const COLLECTORS = Object.freeze({
       }
 
       // 2. Check for Colocated layouts in views folder
-      // e.g. ./modules/(default)/views/test-nextjs/_layout.js
+      // e.g. ./apps/(default)/views/test-nextjs/_layout.js
       const routeMatch = filePath.match(
         /^\.\/([^/]+)\/views\/(.+?)\/_layout\.[cm]?[jt]sx?$/i,
       );

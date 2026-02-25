@@ -10,7 +10,7 @@
 react-starter-kit/
 ├── src/                          # Application source code
 ├── bootstrap/                    # Application bootstrap & configuration
-├── modules/                      # Business logic & Views (auto-discovered)
+├── apps/                      # Business logic & Views (auto-discovered)
 │   ├── (default)/                # Default module (homepage, etc.)
 │   │   ├── api/                  # Backend logic
 │   │   └── views/                # Frontend views
@@ -122,13 +122,13 @@ The application uses an auto-discovery system for both API modules and page comp
 
 **API Modules** (`src/bootstrap/index.js`):
 
-- Automatically discovers modules in `src/modules/*/api/index.js`
+- Automatically discovers modules in `@apps/*/api/index.js`
 - Each module can export models, routes, and initialization logic
 - Modules are loaded in two phases: models first, then routes
 
 **Views** (`src/bootstrap/views.js`):
 
-- Automatically discovers views in `src/modules/*/views`
+- Automatically discovers views in `@apps/*/views`
 - Finds and mounts `_route.js` files using a defined hierarchy
 - Merges metadata and props via `getInitialProps`
 
@@ -140,7 +140,7 @@ The application uses an auto-discovery system for both API modules and page comp
 - Provide reusable capabilities for modules
 - Should not contain business logic
 
-**Modules** (`src/modules/`):
+**Modules** (`@apps/`):
 
 - Business domains: `users`, `homepage`
 - Consume shared API to implement features
@@ -301,7 +301,7 @@ export default MyComponent;
 ### 2. Redux Toolkit Patterns
 
 ```javascript
-// Module-level slice (src/modules/blog/views/admin/posts/redux/slice.js)
+// Module-level slice (@apps/blog/views/admin/posts/redux/slice.js)
 import { createSlice } from '@reduxjs/toolkit';
 import { fetchPosts, createPost } from './thunks';
 
@@ -334,7 +334,7 @@ const postsSlice = createSlice({
 export const { clearError } = postsSlice.actions;
 export default postsSlice.reducer;
 
-// Thunks (src/modules/blog/views/admin/posts/redux/thunks.js)
+// Thunks (@apps/blog/views/admin/posts/redux/thunks.js)
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 export const fetchPosts = createAsyncThunk(
@@ -364,7 +364,7 @@ function MyComponent() {
 ### 4. Page Routing with Lifecycle Hooks
 
 ```javascript
-// src/modules/blog/views/admin/posts/_route.js
+// @apps/blog/views/admin/posts/_route.js
 import reducer, { SLICE_NAME } from './redux';
 import PostsList from './PostsList';
 import {
@@ -432,13 +432,13 @@ export default PostsList;
 ### 5. API Module Structure
 
 ```javascript
-// src/modules/my-module/api/index.js
+// @apps/my-module/api/index.js
 export default function initMyModule(app, { db, auth }) {
   const router = require('./routes').default; // Auto-discovered from ./routes/index.js if exists, or manual import
   app.use('/api/my-module', router);
 }
 
-// src/api/modules/my-module/api/routes.js
+// @apps/my-module/api/routes.js
 import express from 'express';
 import * as controller from './controller';
 
@@ -449,7 +449,7 @@ router.post('/', controller.create);
 
 export default router;
 
-// src/api/modules/my-module/api/controller.js
+// @apps/my-module/api/controller.js
 import * as service from './service';
 
 export async function list(req, res) {
@@ -457,7 +457,7 @@ export async function list(req, res) {
   res.json(items);
 }
 
-// src/api/modules/my-module/api/service.js
+// @apps/my-module/api/service.js
 export async function getAll() {
   // Business logic
   return [];
@@ -623,7 +623,7 @@ docker run -p 1337:1337 \
 ### Fetching Data in Pages
 
 ```javascript
-// src/modules/(default)/views/users/_route.js
+// @apps/(default)/views/users/_route.js
 import React from 'react';
 import UsersPage from './UsersPage';
 
@@ -668,7 +668,7 @@ schedule.register('daily-cleanup', '0 0 * * *', async () => {
 ### Database Models
 
 ```javascript
-// src/modules/my-module/api/models/MyModel.js
+// @apps/my-module/api/models/MyModel.js
 export default function createMyModel(connection, DataTypes) {
   const MyModel = sequelize.define('MyModel', {
     name: {

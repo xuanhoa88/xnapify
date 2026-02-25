@@ -53,8 +53,8 @@ describe('Router Engine', () => {
     const rootRoute = router.routes.find(r => r.path === '/');
     expect(rootRoute).toBeDefined();
 
-    // /auth/users should exist
-    const authRoute = rootRoute.children.find(r => r.path === '/auth/users');
+    // /auth should exist
+    const authRoute = rootRoute.children.find(r => r.path === '/auth');
     expect(authRoute).toBeDefined();
 
     // /plugins/:id should exist
@@ -68,7 +68,7 @@ describe('Router Engine', () => {
 
     const req = {
       method: 'POST',
-      path: '/auth/users',
+      path: '/auth',
       params: {},
     };
 
@@ -137,7 +137,7 @@ describe('Router Engine', () => {
 
     const req = {
       method: 'DELETE', // not implemented
-      path: '/auth/users',
+      path: '/auth',
       params: {},
     };
 

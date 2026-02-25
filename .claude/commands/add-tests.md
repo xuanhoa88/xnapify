@@ -50,7 +50,7 @@ src/
 Test reducers and thunk actions using `createAsyncThunk` patterns:
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/slice.test.js
+// @apps/blog/views/admin/posts/redux/slice.test.js
 import reducer, {
   clearPostsListError,
   clearPostCreateError,
@@ -194,7 +194,7 @@ describe('[admin/posts] slice.js', () => {
 Test thunks with mocked `fetch` via store helpers:
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/thunks.test.js
+// @apps/blog/views/admin/posts/redux/thunks.test.js
 import configureStore from '@/shared/renderer/redux/configureStore';
 import { fetchPosts, createPost } from './thunks';
 import reducer, { SLICE_NAME } from './slice';
@@ -363,7 +363,7 @@ describe('Button', () => {
 Test selectors with mocked state:
 
 ```javascript
-// src/modules/blog/views/admin/posts/redux/selector.test.js
+// @apps/blog/views/admin/posts/redux/selector.test.js
 import {
   getPosts,
   getPostsPagination,
@@ -477,8 +477,8 @@ Mock selectors from a specific module:
 
 ```javascript
 // Mock posts selector
-jest.mock('@/modules/blog/views/admin/posts/redux/selector', () => ({
-  ...jest.requireActual('@/modules/blog/views/admin/posts/redux/selector'),
+jest.mock('@/apps/blog/views/admin/posts/redux/selector', () => ({
+  ...jest.requireActual('@/apps/blog/views/admin/posts/redux/selector'),
   getPosts: jest.fn(() => [{ id: 1, title: 'Mocked Post' }]),
   isPostsListLoading: jest.fn(() => false),
 }));

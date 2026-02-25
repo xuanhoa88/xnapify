@@ -7,6 +7,7 @@
 
 import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
+import { PLUGIN_ID } from '../constants';
 
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
@@ -56,7 +57,7 @@ export default {
       try {
         console.log('[Test Plugin] Migration keys:', migrationsContext.keys());
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: 'test-plugin' },
+          { context: migrationsContext, prefix: PLUGIN_ID },
         ]);
         console.log('[Test Plugin] Database migrations executed');
       } catch (error) {
@@ -69,7 +70,7 @@ export default {
       try {
         console.log('[Test Plugin] Seed keys:', seedsContext.keys());
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: 'test-plugin' },
+          { context: seedsContext, prefix: PLUGIN_ID },
         ]);
         console.log('[Test Plugin] Database seeds executed');
       } catch (error) {
@@ -144,7 +145,7 @@ export default {
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: 'test-plugin' },
+          { context: seedsContext, prefix: PLUGIN_ID },
         ]);
         console.log('[Test Plugin] Database seeds destroyed');
       } catch (error) {
@@ -154,7 +155,7 @@ export default {
       try {
         console.log('[Test Plugin] Database migrations/seeds destroyed');
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: 'test-plugin' },
+          { context: migrationsContext, prefix: PLUGIN_ID },
         ]);
         console.log('[Test Plugin] Database migrations destroyed');
       } catch (error) {

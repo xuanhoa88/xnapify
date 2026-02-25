@@ -31,7 +31,7 @@ export const login = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const { data } = await fetch('/api/login', {
+      const { data } = await fetch('/api/auth/login', {
         method: 'POST',
         body: { email, password, rememberMe },
       });
@@ -52,7 +52,7 @@ export const register = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const { data } = await fetch('/api/register', {
+      const { data } = await fetch('/api/auth/register', {
         method: 'POST',
         body: { email, password, confirmPassword },
       });
@@ -70,7 +70,7 @@ export const logout = createAsyncThunk(
   'user/logout',
   async (_, { extra: { fetch } }) => {
     try {
-      await fetch('/api/logout');
+      await fetch('/api/auth/logout');
     } catch {
       // Ignore logout API errors - always clear state
     }
@@ -85,7 +85,7 @@ export const me = createAsyncThunk(
   'user/me',
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/me');
+      const { data } = await fetch('/api/auth/profile');
       return { user: data.user };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -100,7 +100,9 @@ export const refreshToken = createAsyncThunk(
   'user/refreshToken',
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/refresh-token', { method: 'POST' });
+      const { data } = await fetch('/api/auth/refresh-token', {
+        method: 'POST',
+      });
       return { user: (data && data.user) || null };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -119,7 +121,7 @@ export const resetPasswordRequest = createAsyncThunk(
   'user/resetPasswordRequest',
   async ({ email }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/users/reset-password/request', {
+      const { data } = await fetch('/api/auth/reset-password/request', {
         method: 'POST',
         body: { email },
       });
@@ -137,7 +139,7 @@ export const resetPasswordConfirmation = createAsyncThunk(
   'user/resetPasswordConfirmation',
   async ({ token, password }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/users/password-reset/confirmation', {
+      const { data } = await fetch('/api/auth/password-reset/confirmation', {
         method: 'POST',
         body: { token, password },
       });
@@ -157,7 +159,7 @@ export const generatePassword = createAsyncThunk(
     try {
       const { length = 16, includeSymbols = true } = options;
 
-      const { data } = await fetch(`/api/generate-password`, {
+      const { data } = await fetch(`/api/auth/generate-password`, {
         query: { length, includeSymbols: includeSymbols ? undefined : 'false' },
       });
 
@@ -175,7 +177,7 @@ export const emailVerification = createAsyncThunk(
   'user/emailVerification',
   async ({ token }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/users/email-verification', {
+      const { data } = await fetch('/api/auth/email-verification', {
         method: 'POST',
         body: { token },
       });
@@ -201,7 +203,7 @@ export const updateUserProfile = createAsyncThunk(
   'user/updateProfile',
   async (userData, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/profile', {
+      const { data } = await fetch('/api/auth/profile', {
         method: 'PUT',
         body: userData,
       });
@@ -214,7 +216,7 @@ export const updateUserProfile = createAsyncThunk(
 
 /**
  * Upload user avatar
- * Uses consolidated /api/profile/avatar endpoint which handles upload and link in one step
+ * Uses consolidated /api/auth/profile/avatar endpoint which handles upload and link in one step
  */
 export const uploadUserAvatar = createAsyncThunk(
   'user/uploadAvatar',
@@ -223,7 +225,7 @@ export const uploadUserAvatar = createAsyncThunk(
       const formData = new FormData();
       formData.append('avatar', file);
 
-      const { data } = await fetch('/api/profile/avatar', {
+      const { data } = await fetch('/api/auth/profile/avatar', {
         method: 'POST',
         body: formData,
       });
@@ -249,7 +251,7 @@ export const changeUserPassword = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const { data } = await fetch('/api/profile/password', {
+      const { data } = await fetch('/api/auth/profile/password', {
         method: 'PUT',
         body: { currentPassword, newPassword },
       });
@@ -270,7 +272,7 @@ export const deleteUser = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      await fetch('/api/profile', {
+      await fetch('/api/auth/profile', {
         method: 'DELETE',
         body: { password, confirmPassword },
       });
@@ -292,7 +294,7 @@ export const getUserPreferences = createAsyncThunk(
   'user/getPreferences',
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/profile/preferences', {
+      const { data } = await fetch('/api/auth/profile/preferences', {
         method: 'GET',
       });
       return { preferences: data.preferences };
@@ -312,7 +314,7 @@ export const updateUserPreferences = createAsyncThunk(
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
-      const { data } = await fetch('/api/profile/preferences', {
+      const { data } = await fetch('/api/auth/profile/preferences', {
         method: 'PUT',
         body: { language, timezone, notifications, theme },
       });

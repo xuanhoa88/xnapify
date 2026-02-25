@@ -16,7 +16,7 @@ The WebSocket server is already configured and running. You do **not** need to c
 In your API modules or routes, access the WebSocket server instance from the Express `app`:
 
 ```javascript
-// src/modules/chat/index.js
+// @apps/chat/index.js
 export default async function chatModule(app) {
   const ws = app.get('ws'); // Note: key is 'ws', not 'wss'
 
@@ -45,7 +45,7 @@ ws.sendToConnection(targetConnectionId, 'message:type', payload);
 Register a handler for a specific message type. The handler receives the WebSocket connection and the message payload.
 
 ```javascript
-// src/modules/chat/websocket.js
+// @apps/chat/websocket.js
 import { MessageType } from '@/shared/ws/server'; // or defined locally
 
 export function initChatWebSocket(ws) {

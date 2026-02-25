@@ -82,7 +82,7 @@ export const getUserAvatarUrl = state => {
   const picture = user && user.profile && user.profile.picture;
   if (!picture) return null;
   if (/^https?:\/\//i.test(picture)) return picture;
-  return '/api/profile/avatar?fileName=' + encodeURIComponent(picture);
+  return '/api/auth/profile/avatar?fileName=' + encodeURIComponent(picture);
 };
 
 /**

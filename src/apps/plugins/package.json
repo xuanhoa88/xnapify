@@ -1,0 +1,7 @@
+{
+  "name": "@rsk-module/plugins",
+  "version": "1.0.0",
+  "browser": "views/index.js",
+  "main": "api/index.js",
+  "description": "Plugins module"
+}

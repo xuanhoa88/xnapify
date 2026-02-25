@@ -15,6 +15,10 @@ describe('shared/api/autoloader', () => {
       const { validateCoreModules } = require('./autoloader');
       const paths = [
         './users/api/index.js',
+        './roles/api/index.js',
+        './groups/api/index.js',
+        './permissions/api/index.js',
+        './auth/api/index.js',
         './plugins/api/index.js',
         './other/api/index.js',
       ];
@@ -42,6 +46,10 @@ describe('shared/api/autoloader', () => {
 
       const validPaths = [
         './users/api/index.js',
+        './roles/api/index.js',
+        './groups/api/index.js',
+        './permissions/api/index.js',
+        './auth/api/index.js',
         './plugins/api/index.js',
         './custom/api/index.js',
       ];
@@ -108,19 +116,23 @@ describe('shared/api/autoloader', () => {
       mockApp.get.mockClear();
     });
 
-    it('should load models directly from files and associate them', async () => {
+    it('should load models via hooks.models() and call init', async () => {
       const { discoverModules } = require('./autoloader');
 
-      // Mock context
+      // Mock context — only lifecycle files now (no model paths)
       const mockContext = jest.fn();
-      mockContext.keys = jest.fn().mockReturnValue([
-        './users/api/models/User.js',
-        './users/api/models/Post.js',
-        './users/api/index.js', // Lifecycle file
-        './plugins/api/index.js',
-      ]);
+      mockContext.keys = jest
+        .fn()
+        .mockReturnValue([
+          './users/api/index.js',
+          './roles/api/index.js',
+          './groups/api/index.js',
+          './permissions/api/index.js',
+          './auth/api/index.js',
+          './plugins/api/index.js',
+        ]);
 
-      // Mock factories
+      // Mock model context returned by hooks.models()
       const userModel = {
         name: 'User',
         associate: jest.fn(),
@@ -133,59 +145,106 @@ describe('shared/api/autoloader', () => {
         findAll: jest.fn(),
         create: jest.fn(),
       };
-      const lifecycle = { init: jest.fn() };
 
-      mockContext.mockImplementation(key => {
-        if (key === './users/api/models/User.js') {
+      const mockModelContext = jest.fn();
+      mockModelContext.keys = jest
+        .fn()
+        .mockReturnValue(['./User.js', './Post.js']);
+      mockModelContext.mockImplementation(key => {
+        if (key === './User.js') {
           return { default: jest.fn().mockResolvedValue(userModel) };
         }
-        if (key === './users/api/models/Post.js') {
+        if (key === './Post.js') {
           return { default: jest.fn().mockResolvedValue(postModel) };
         }
+      });
+
+      const usersInit = jest.fn();
+
+      mockContext.mockImplementation(key => {
         if (key === './users/api/index.js') {
-          return { init: lifecycle.init };
+          return {
+            init: usersInit,
+            models: () => mockModelContext,
+            routes: jest.fn(),
+          };
         }
         if (key === './plugins/api/index.js') {
+          return { init: jest.fn() };
+        }
+        if (
+          [
+            './roles/api/index.js',
+            './groups/api/index.js',
+            './permissions/api/index.js',
+            './auth/api/index.js',
+          ].includes(key)
+        ) {
           return { init: jest.fn() };
         }
       });
 
       const { apiModels } = await discoverModules(mockContext, mockApp);
 
-      // Verify models loaded
+      // Verify models loaded via hooks.models()
       expect(apiModels).toHaveProperty('User', userModel);
       expect(apiModels).toHaveProperty('Post', postModel);
 
       // Verify associations called
       expect(userModel.associate).toHaveBeenCalledWith(apiModels);
       expect(postModel.associate).toHaveBeenCalledWith(apiModels);
+
+      // Verify init was called
+      expect(usersInit).toHaveBeenCalled();
     });
 
-    it('should skip non-model files in model directory', async () => {
+    it('should skip modules without models hook', async () => {
       const { discoverModules } = require('./autoloader');
 
       const mockContext = jest.fn();
-      mockContext.keys = jest.fn().mockReturnValue([
-        './users/api/models/User.js',
-        './users/api/models/index.js', // Should be skipped
-        './users/api/models/User.test.js', // Should be skipped
-        './users/api/index.js',
-        './plugins/api/index.js',
-      ]);
+      mockContext.keys = jest
+        .fn()
+        .mockReturnValue([
+          './users/api/index.js',
+          './roles/api/index.js',
+          './groups/api/index.js',
+          './permissions/api/index.js',
+          './auth/api/index.js',
+          './plugins/api/index.js',
+        ]);
 
+      // Only users exports models()
       const userModel = {
         name: 'User',
         associate: jest.fn(),
         findAll: jest.fn(),
         create: jest.fn(),
       };
-      const lifecycle = { init: jest.fn() };
+
+      const mockModelContext = jest.fn();
+      mockModelContext.keys = jest.fn().mockReturnValue(['./User.js']);
+      mockModelContext.mockImplementation(() => {
+        return { default: jest.fn().mockResolvedValue(userModel) };
+      });
 
       mockContext.mockImplementation(key => {
-        if (key === './users/api/models/User.js')
-          return { default: jest.fn().mockResolvedValue(userModel) };
-        if (key === './users/api/index.js') return { init: lifecycle.init };
+        if (key === './users/api/index.js') {
+          return {
+            init: jest.fn(),
+            models: () => mockModelContext,
+          };
+        }
         if (key === './plugins/api/index.js') return { init: jest.fn() };
+        if (
+          [
+            './roles/api/index.js',
+            './groups/api/index.js',
+            './permissions/api/index.js',
+            './auth/api/index.js',
+          ].includes(key)
+        ) {
+          return { init: jest.fn() };
+        }
         return { default: jest.fn() };
       });
 

@@ -1,0 +1,237 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../../shared/renderer/components/variables.css';
+
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+.content {
+  margin-top: var(--spacing-6);
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-6);
+}
+
+.error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-4);
+  padding: var(--spacing-8);
+  color: var(--color-error);
+}
+
+/* =============================================================================
+   NEW KEY ALERT
+   ============================================================================= */
+
+.newKeyAlert {
+  margin-bottom: var(--spacing-6);
+  padding: var(--spacing-4);
+  background: var(--color-success-bg, #ecfdf5);
+  border: 1px solid var(--color-success, #10b981);
+  border-radius: var(--radius-md);
+  color: var(--color-success-text, #064e3b);
+}
+
+.alertHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-2);
+}
+
+.alertHeader strong {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+}
+
+.closeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-size-lg);
+  color: currentcolor;
+  transition: var(--transition-base);
+}
+
+.closeBtn:hover {
+  background: rgb(0 0 0 / 8%);
+}
+
+.alertText {
+  font-size: var(--font-size-sm);
+  margin: 0 0 var(--spacing-3);
+}
+
+.tokenDisplay {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-3);
+  padding: var(--spacing-3);
+  background: var(--color-background);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.tokenDisplay code {
+  flex: 1;
+  font-family: var(--font-family-mono, monospace);
+  font-weight: var(--font-weight-semibold);
+  font-size: var(--font-size-xs);
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+/* =============================================================================
+   TABLE
+   ============================================================================= */
+
+.tableContainer {
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--font-size-sm);
+}
+
+.table th,
+.table td {
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table th {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-secondary);
+  background: var(--color-background-secondary);
+  letter-spacing: 0.03em;
+}
+
+.actionsCol {
+  text-align: right;
+  width: 80px;
+}
+
+.revoked td {
+  opacity: 0.5;
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+/* =============================================================================
+   BADGES
+   ============================================================================= */
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--spacing-2);
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-medium);
+  line-height: 1.6;
+}
+
+.badgeActive {
+  background: var(--color-success-bg, #d1fae5);
+  color: var(--color-success-text, #065f46);
+}
+
+.badgeRevoked {
+  background: var(--color-background-secondary);
+  color: var(--color-text-tertiary);
+}
+
+/* =============================================================================
+   EMPTY STATE
+   ============================================================================= */
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--spacing-2);
+  padding: var(--spacing-8) var(--spacing-4);
+  color: var(--color-text-tertiary);
+}
+
+.emptyState svg {
+  opacity: 0.4;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: var(--font-size-sm);
+}
+
+/* =============================================================================
+   MODAL
+   ============================================================================= */
+
+.modalField {
+  margin-bottom: var(--spacing-4);
+}
+
+/* =============================================================================
+   LOADING STATE
+   ============================================================================= */
+
+.loadingState {
+  display: flex;
+  justify-content: center;
+  padding: var(--spacing-8);
+}
+
+/* =============================================================================
+   RESPONSIVE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  .content {
+    padding: var(--spacing-3);
+    margin-top: var(--spacing-4);
+  }
+
+  .table th,
+  .table td {
+    padding: var(--spacing-2) var(--spacing-3);
+    font-size: var(--font-size-xs);
+  }
+
+  /* Hide less important columns on mobile */
+  .table th:nth-child(2),
+  .table td:nth-child(2),
+  .table th:nth-child(4),
+  .table td:nth-child(4) {
+    display: none;
+  }
+}

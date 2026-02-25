@@ -5,26 +5,55 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { Router } from 'express';
 import { discoverModules, engines } from '../../shared/api';
+import { Router as DynamicRouter } from '../../shared/api/router';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 
-// Discover and mount modules
-const modulesContext = require.context(
-  '../../modules',
+// Discover lifecycle modules from apps directory
+const apisContext = require.context(
+  '../../apps',
   true,
-  /^\.\/[^/]+\/api\/.*\.[cm]?[jt]s$/i,
+  /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i,
 );
 
 // Export all engines as providers
 export const APP_PROVIDERS = Object.keys(engines);
 
 // =============================================================================
-// BOOTSTRAP HELPERS
+// LOGGING
+// =============================================================================
+
+const TAG = 'API';
+
+/**
+ * Log a bootstrap phase message.
+ *
+ * @param {string} message - Message text
+ * @param {'info'|'warn'|'error'} [level='info'] - Log level
+ */
+function log(message, level = 'info') {
+  const prefix = `[${TAG}]`;
+  switch (level) {
+    case 'error':
+      console.error(`${prefix} ❌ ${message}`);
+      break;
+    case 'warn':
+      console.warn(`${prefix} ⚠️ ${message}`);
+      break;
+    default:
+      console.info(`${prefix} ✅ ${message}`);
+  }
+}
+
+// =============================================================================
+// INTERNAL HELPERS
 // =============================================================================
 
 /**
- * Register all engines as app providers
+ * Register all engines as app providers.
+ *
  * @param {object} app - Express app instance
  */
 function registerEngines(app) {
@@ -34,22 +63,28 @@ function registerEngines(app) {
     }
     app.set(name, engine);
   });
+
+  log('Engines registered');
 }
 
 /**
- * Initialize database (migrations and seeds)
+ * Run core database migrations and seeds (framework-level).
+ *
  * @returns {Promise<void>}
  */
-async function initializeDatabase() {
+async function runCoreMigrations() {
   await engines.db.connection.runMigrations();
   await engines.db.connection.runSeeds();
 
   // Configure webhook database connection
   engines.webhook.setDbConnection(engines.db.connection);
+
+  log('Core database migrated');
 }
 
 /**
- * Setup global middleware stack
+ * Setup global middleware stack.
+ *
  * @param {object} app - Express app instance
  */
 function setupGlobalMiddleware(app) {
@@ -58,10 +93,13 @@ function setupGlobalMiddleware(app) {
 
   app.use(loggingMiddleware);
   app.use(corsMiddleware);
+
+  log('Global middleware applied');
 }
 
 /**
- * Create API middleware stack with authentication
+ * Create API middleware stack with authentication.
+ *
  * @param {object} app - Express app instance
  * @returns {Array} Array of middleware functions
  */
@@ -80,18 +118,45 @@ function createApiMiddlewareStack(app) {
 }
 
 /**
- * Setup API routes and error handlers
+ * Build the dynamic API router from per-module route adapters.
+ *
  * @param {object} app - Express app instance
- * @returns {Promise<Array>} Array of middleware functions
+ * @param {Map<string, object>} routeAdapters - Map of module name → route adapter
+ * @returns {Router} Assembled Express router
  */
-async function setupApiRoutes(app) {
+function buildApiRouter(app, routeAdapters) {
   // Create API middleware stack
   const apiMiddlewares = createApiMiddlewareStack(app);
 
-  // Discover and register module routes
-  const { apiRouter } = await discoverModules(modulesContext, app);
+  const router = new Router();
+  for (const [name, adapter] of routeAdapters) {
+    try {
+      const dynamicRouter = new DynamicRouter(adapter);
+      router.use(...apiMiddlewares, dynamicRouter.resolve);
+    } catch (error) {
+      log(`[${name}] Failed to load routes: ${error.message}`, 'error');
+    }
+  }
 
-  return [...apiMiddlewares, apiRouter];
+  log(`Dynamic router built (${routeAdapters.size} module(s))`);
+
+  return router;
+}
+
+/**
+ * Discover modules and assemble the API middleware stack.
+ *
+ * @param {object} app - Express app instance
+ * @returns {Promise<Router>} Assembled Express router
+ */
+async function setupApiRoutes(app) {
+  // Discover and run module lifecycles
+  const { routeAdapters } = await discoverModules(apisContext, app);
+
+  // Build the dynamic router from collected route adapters
+  const router = buildApiRouter(app, routeAdapters);
+
+  return router;
 }
 
 // =============================================================================
@@ -99,17 +164,20 @@ async function setupApiRoutes(app) {
 // =============================================================================
 
 /**
- * Bootstrap the API
+ * Bootstrap the API.
  *
- * @param {object} app - Express app instance
- * @param {object} config - Configuration object
- * @param {string} [config.apiPrefix='/api'] - API route prefix
- * @returns {Promise<Array>} Array of middleware functions
+ * Orchestrates the full API startup sequence:
+ *   1. Register engines on the app
+ *   2. Run core database migrations
+ *   3. Discover & initialise app modules (models → init → routes)
+ *   4. Build the dynamic API router
+ *   5. Apply global middleware
+ *
+ * @param {object} guardControl - Guard control with unlock/lock and app
+ * @returns {Promise<Router>} The assembled API router
  * @throws {Error} If initialization fails
  */
-export default async function bootstrap(guardControl, config = {}) {
-  config.apiPrefix = config.apiPrefix || '/api';
-
+export default async function bootstrap(guardControl) {
   try {
     // Unlock providers for initialization
     await guardControl.unlock();
@@ -117,20 +185,20 @@ export default async function bootstrap(guardControl, config = {}) {
     // Register engines
     registerEngines(guardControl.app);
 
-    // Initialize database
-    await initializeDatabase();
+    // Run core database migrations
+    await runCoreMigrations();
 
-    // Setup middleware
+    // Setup global middleware
     setupGlobalMiddleware(guardControl.app);
 
-    // Setup API routes
-    const apiMiddlewares = await setupApiRoutes(guardControl.app);
+    // Discover modules and setup API routes
+    const apiRouter = await setupApiRoutes(guardControl.app);
 
-    console.info('✅ API bootstrap completed successfully');
+    log('Bootstrap completed');
 
-    return apiMiddlewares;
+    return apiRouter;
   } catch (error) {
-    console.error('❌ API bootstrap failed:', error);
+    log(`Bootstrap failed: ${error.message}`, 'error');
 
     // Provide more context for debugging
     if (error.stack) {

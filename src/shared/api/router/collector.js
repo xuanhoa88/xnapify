@@ -17,6 +17,56 @@ import { log } from './utils';
  */
 
 /**
+ * Parses a file path's route segments into a normalized pathname.
+ * Handles unwrapping route groups, converting dynamic params, and
+ * auto-scoping non-default modules under section roots.
+ *
+ * @param {string} moduleName - The module directory name
+ * @param {string} routePath - The raw sub-path under routes/views (may be empty)
+ * @returns {string} Normalized pathname (e.g. "/admin/users")
+ */
+function buildPathname(moduleName, routePath) {
+  const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
+  const rawSegments = routePath ? routePath.split(ROUTE_SEPARATOR) : [];
+
+  const isTerminalDefault =
+    rawSegments.length > 0 &&
+    rawSegments[rawSegments.length - 1] === '(default)';
+
+  // Parse path segments, unwrapping route groups and converting params
+  const segments = rawSegments
+    .map(s => {
+      // Unwrap route groups: (admin) -> admin
+      if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
+      // Convert Next.js params: [id] -> :id, [...slug] -> :slug*
+      if (s.startsWith('[') && s.endsWith(']')) {
+        const param = s.slice(1, -1);
+        return param.startsWith('...') ? `:${param.slice(3)}*` : `:${param}`;
+      }
+      return s;
+    })
+    .filter(s => s && s !== 'default');
+
+  // Auto-detect app-scoped paths for non-default modules:
+  // When terminal (default) is filtered out and only one segment remains
+  // (a section root like 'admin'), append the module name to prevent
+  // route collisions with the (default) module.
+  // e.g. {moduleName}/admin/(default) -> /admin/{moduleName}
+  if (!isDefaultModule && isTerminalDefault && segments.length === 1) {
+    segments.push(moduleName);
+  }
+
+  // Build pathname: default modules and modules with segments use segments as-is,
+  // bare non-default modules fall back to [moduleName].
+  const parts =
+    !isDefaultModule && segments.length === 0 ? [moduleName] : segments;
+
+  return parts.length > 0
+    ? ROUTE_SEPARATOR + parts.join(ROUTE_SEPARATOR)
+    : ROUTE_SEPARATOR;
+}
+
+/**
  * Collector configuration for API routes, configs, and middlewares.
  * Defines how file paths are matched and parsed into route entries.
  * @type {Object<string, CollectorConfig>}
@@ -31,47 +81,7 @@ const COLLECTORS = Object.freeze({
       );
       if (!m) return null;
 
-      const moduleName = m[1];
-      const routePath = m[2] || '';
-      const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
-
-      const rawSegments = routePath ? routePath.split(ROUTE_SEPARATOR) : [];
-
-      // Parse path segments, unwrapping route groups and converting params
-      const segments = rawSegments
-        .map(s => {
-          // Unwrap route groups: (admin) -> admin
-          if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
-          // Convert Next.js params: [id] -> :id, [...slug] -> :slug*
-          if (s.startsWith('[') && s.endsWith(']')) {
-            const param = s.slice(1, -1);
-            return param.startsWith('...')
-              ? `:${param.slice(3)}*`
-              : `:${param}`;
-          }
-          return s;
-        })
-        .filter(s => s && s !== 'default');
-
-      // Auto-detect module-scoped paths for non-default modules:
-      if (!isDefaultModule && segments.length === 1) {
-        segments.push(moduleName);
-      }
-
-      // Build pathname based on module type
-      let parts;
-      if (isDefaultModule) {
-        parts = segments;
-      } else if (segments.length > 0) {
-        parts = segments; // Use segments directly like renderer router
-      } else {
-        parts = [moduleName];
-      }
-
-      const pathname =
-        parts.length > 0
-          ? ROUTE_SEPARATOR + parts.join(ROUTE_SEPARATOR)
-          : ROUTE_SEPARATOR;
+      const pathname = buildPathname(m[1], m[2] || '');
       return { key: pathname, data: { path: pathname } };
     },
     label: 'API Route',
@@ -79,7 +89,7 @@ const COLLECTORS = Object.freeze({
 
   configs: {
     optional: true,
-    pattern: /\/\(routes\)\/\([^)]+\)\.[cm]?[jt]sx?$/i,
+    pattern: /\/api\/\(routes\)\/\([^)]+\)\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       const m = filePath.match(
         /^\.\/([^/]+)\/api\/\(routes\)\/\(([^)]+)\)\.[cm]?[jt]sx?$/i,
@@ -96,11 +106,11 @@ const COLLECTORS = Object.freeze({
   middlewares: {
     optional: true,
     // Match _middleware.js collocated with API routes
-    pattern: /\/(?:.*\/)?_middleware\.[cm]?[jt]sx?$/i,
+    pattern: /\/api\/(?:.*\/)?_middleware\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       // Check for Global/Theme middlewares in (middlewares) folder
       const themeMatch = filePath.match(
-        /^\.\/(\([^)]+\)|[^/]+)\/api\/\(middlewares\)\/\(([^)]+)\)\/_middleware\.[cm]?[jt]s$/i,
+        /^\.\/(\([^)]+\)|[^/]+)\/api\/\(middlewares\)\/\(([^)]+)\)\/_middleware\.[cm]?[jt]sx?$/i,
       );
       if (themeMatch) {
         return {
@@ -115,48 +125,11 @@ const COLLECTORS = Object.freeze({
 
       // Check for Colocated middlewares in routes folder
       const routeMatch = filePath.match(
-        /^\.\/([^/]+)\/api\/routes\/(?:(.*)\/)?_middleware\.[cm]?[jt]s$/i,
+        /^\.\/([^/]+)\/api\/routes\/(?:(.*)\/)?_middleware\.[cm]?[jt]sx?$/i,
       );
 
       if (routeMatch) {
-        const moduleName = routeMatch[1];
-        const routePath = routeMatch[2] || '';
-        const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
-
-        const rawSegments = routePath ? routePath.split(ROUTE_SEPARATOR) : [];
-
-        const segments = rawSegments
-          .map(s => {
-            if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
-            if (s.startsWith('[') && s.endsWith(']')) {
-              const param = s.slice(1, -1);
-              return param.startsWith('...')
-                ? `:${param.slice(3)}*`
-                : `:${param}`;
-            }
-            return s;
-          })
-          .filter(s => s && s !== 'default');
-
-        // Apply exactly the same module scoping rule as API routes
-        if (!isDefaultModule && segments.length === 1) {
-          segments.push(moduleName);
-        }
-
-        let parts;
-        if (isDefaultModule) {
-          parts = segments;
-        } else if (segments.length > 0) {
-          parts = segments; // Aligned with API routes
-        } else {
-          parts = [moduleName];
-        }
-
-        const pathname =
-          parts.length > 0
-            ? ROUTE_SEPARATOR + parts.join(ROUTE_SEPARATOR)
-            : ROUTE_SEPARATOR;
-
+        const pathname = buildPathname(routeMatch[1], routeMatch[2] || '');
         return {
           key: pathname,
           data: { path: pathname, type: 'colocated' },
@@ -174,9 +147,13 @@ const COLLECTORS = Object.freeze({
  * @param {Object} source - Module loader adapter with files() and load() methods
  * @param {'routes'|'configs'|'middlewares'} type - Which collector to use
  * @returns {Map<string, Object>} Map of route keys to loaded module info
- * @throws {Error} If type is unknown
+ * @throws {Error} If type is unknown or source adapter is invalid
  */
 export function collect(source, type) {
+  if (!source || !source.files || !source.load) {
+    throw new Error('Source adapter must implement files() and load()');
+  }
+
   const config = COLLECTORS[type];
   if (!config) throw new Error(`Unknown API collector type: ${type}`);
 

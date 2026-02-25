@@ -8,6 +8,7 @@
 const webpack = require('webpack');
 const path = require('path');
 const fs = require('fs');
+const snakeCase = require('lodash/snakeCase');
 const config = require('../config');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const createPluginConfig = require('../webpack/plugin.config');
@@ -40,8 +41,14 @@ function discoverPlugins() {
           manifest.browser &&
           fs.existsSync(path.join(pluginPath, manifest.browser));
 
+        manifest.name = snakeCase(manifest.name || name);
+
         if (hasMain || hasBrowser) {
-          return { name, path: pluginPath, manifest };
+          return {
+            manifest,
+            name: manifest.name,
+            path: pluginPath,
+          };
         }
       } catch {
         // Invalid or missing manifest

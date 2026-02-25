@@ -1,7 +1,7 @@
 {
-  "name": "test-plugin",
+  "name": "@rsk-plugin/test",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Test plugin for profile"
+  "description": "Test plugin"
 }

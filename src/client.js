@@ -23,6 +23,7 @@ import {
   setWebSocketClient,
 } from './shared/ws/client';
 import pluginManager from './shared/plugin/manager/client';
+import container from './shared/container';
 import App from './shared/renderer/App';
 
 // =============================================================================
@@ -31,7 +32,6 @@ import App from './shared/renderer/App';
 
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
-const ROOT_KEY = Symbol('__rsk.client__');
 const READY_STATES = new Set(['interactive', 'complete']);
 
 // =============================================================================
@@ -89,6 +89,7 @@ const store = configureStore(preloadedReduxState, { fetch, history, i18n });
 
 // Create context for React components
 const context = {
+  container,
   store,
   fetch,
   i18n,
@@ -117,6 +118,7 @@ let isTransitioning = false;
 let transitionAbortController = null;
 let hasHydrated = false;
 let ReactDOMClient = null;
+let root = null;
 let visibilityChangeHandler = null;
 let scrollHandler = null;
 let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
@@ -238,10 +240,17 @@ function restoreScrollPosition(location) {
 
 async function loadViews() {
   if (!cachedViews) {
-    cachedViews = (await import('./bootstrap/views')).default({
-      pluginManager,
-    });
-    log('✅ Views initialized');
+    cachedViews = import('./bootstrap/views')
+      .then(m => {
+        const views = m.default({ pluginManager });
+        log('✅ Views initialized');
+        return views;
+      })
+      .catch(err => {
+        cachedViews = null; // allow retry on failure
+        log('❌ Failed to load views:' + err.message, 'error');
+        throw err;
+      });
   }
   return cachedViews;
 }
@@ -283,42 +292,66 @@ async function initReactDOMClient() {
   return ReactDOMClient;
 }
 
-function renderPage(appElement, container, isInitial) {
-  const client = ReactDOMClient;
+async function renderLegacy(appElement, container, isInitial) {
+  let ReactDOM;
 
-  if (client) {
-    // React 18+
-    let root = window[ROOT_KEY];
-    if (!root) {
-      try {
-        root = client.hydrateRoot(container, appElement, {
-          onRecoverableError: err =>
-            log(`❌ Hydration error: ${err.message}`, 'error'),
-        });
-        log('✅ Hydrated');
-      } catch (err) {
-        log(
-          `❌ Hydration failed, using client render: ${err.message}`,
-          'error',
-        );
-        root = client.createRoot(container);
-        root.render(appElement);
-      }
-      window[ROOT_KEY] = root;
+  try {
+    ReactDOM = await import('react-dom');
+  } catch (err) {
+    log(`❌ Failed to load react-dom: ${err.message}`, 'error');
+    if (__DEV__) {
+      throw err;
+    }
+    return;
+  }
+
+  if (isInitial && !hasHydrated) {
+    try {
+      // eslint-disable-next-line react/no-deprecated
+      ReactDOM.hydrate(appElement, container);
       hasHydrated = true;
-    } else {
-      root.render(appElement);
+      log('✅ Hydrated (React 16/17)');
+    } catch (err) {
+      log(
+        `❌ Legacy hydration failed, falling back to render: ${err.message}`,
+        'error',
+      );
+      // eslint-disable-next-line react/no-deprecated
+      ReactDOM.render(appElement, container);
     }
   } else {
-    // React 16/17 fallback
-    import('react-dom').then(ReactDOM => {
-      // eslint-disable-next-line react/no-deprecated
-      const method =
-        // eslint-disable-next-line react/no-deprecated
-        isInitial && !hasHydrated ? ReactDOM.hydrate : ReactDOM.render;
-      method(appElement, container);
-      if (isInitial) hasHydrated = true;
-    });
+    // eslint-disable-next-line react/no-deprecated
+    ReactDOM.render(appElement, container);
+  }
+}
+
+function renderReact18(appElement, container, isInitial) {
+  if (root) {
+    // Subsequent render — just update the existing root.
+    root.render(appElement);
+    return;
+  }
+
+  if (isInitial && !hasHydrated) {
+    try {
+      root = ReactDOMClient.hydrateRoot(container, appElement, {
+        onRecoverableError: err =>
+          log(`❌ Hydration error: ${err.message}`, 'error'),
+      });
+      hasHydrated = true;
+      log('✅ Hydrated (React 18)');
+    } catch (err) {
+      log(
+        `❌ Hydration failed, falling back to client render: ${err.message}`,
+        'error',
+      );
+      root = ReactDOMClient.createRoot(container);
+      root.render(appElement);
+      // hasHydrated intentionally left false — SSR content was not reused.
+    }
+  } else {
+    root = ReactDOMClient.createRoot(container);
+    root.render(appElement);
   }
 }
 
@@ -436,7 +469,11 @@ async function onLocationChange(location, action) {
     }
 
     const appElement = <App context={context}>{page.component}</App>;
-    renderPage(appElement, container, isInitial);
+    if (ReactDOMClient) {
+      renderReact18(appElement, container, isInitial);
+    } else {
+      await renderLegacy(appElement, container, isInitial);
+    }
 
     if (page.title || page.description) {
       updateMetadata({

@@ -3,7 +3,7 @@ Add a new database migration for schema changes.
 ## Migration Structure
 
 ```
-src/modules/{module-name}/api/database/
+@apps/{module-name}/api/database/
 └── migrations/
     └── YYYY.MM.DDTHH.MM.SS.{description}.js
 ```
@@ -29,7 +29,7 @@ Examples:
 ## 2. Basic Migration Template
 
 ```javascript
-// src/modules/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.{description}.js
+// @apps/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.{description}.js
 
 /**
  * Run the migration
@@ -99,7 +99,7 @@ export async function down({ context }) {
 ## 3. Add Column Migration
 
 ```javascript
-// src/modules/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.add-{column}-to-{table}.js
+// @apps/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.add-{column}-to-{table}.js
 
 export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
@@ -127,7 +127,7 @@ export async function down({ context }) {
 ## 4. Foreign Key Migration
 
 ```javascript
-// src/modules/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.create-{junction}-table.js
+// @apps/{module}/api/database/migrations/YYYY.MM.DDTHH.MM.SS.create-{junction}-table.js
 
 export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
@@ -347,7 +347,7 @@ DataTypes.ENUM('val1', 'val2', 'val3');
 ## 7. Register Migrations in Module
 
 ```javascript
-// src/modules/{module}/api/index.js
+// @apps/{module}/api/index.js
 const migrationsContext = require.context(
   './database/migrations',
   false,

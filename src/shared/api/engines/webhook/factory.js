@@ -15,6 +15,7 @@ import workerPool, {
   setPersistDbConnection,
   setPersistConnectionFactory,
 } from './workers';
+import * as services from './services';
 
 // Webhook validation schema (accepts any data - validation at adapter level)
 const sendWebhookSchema = z.any();
@@ -394,6 +395,39 @@ class WebhookManager {
   }
 
   /**
+   * Get services from adapter
+   * @returns {Object} Services object keyed by adapter name
+   */
+  get services() {
+    // eslint-disable-next-line no-underscore-dangle
+    if (!this._cachedServices) {
+      // eslint-disable-next-line no-underscore-dangle
+      const _services = {};
+      for (const [serviceName, fn] of Object.entries(services)) {
+        if (typeof fn === 'function') {
+          _services[serviceName] = ({
+            adapter: adapterName = this.defaultAdapter,
+            ...restOptions
+          } = {}) => {
+            const adapter = this.adapters.get(adapterName);
+            if (!adapter) {
+              throw new WebhookError(
+                `Unknown adapter: ${adapterName}`,
+                'ADAPTER_NOT_FOUND',
+              );
+            }
+            return fn(adapter, restOptions);
+          };
+        }
+      }
+      // eslint-disable-next-line no-underscore-dangle
+      this._cachedServices = _services;
+    }
+    // eslint-disable-next-line no-underscore-dangle
+    return this._cachedServices;
+  }
+
+  /**
    * Cleanup - close all adapters
    * Called automatically on process termination
    * @returns {Promise<void>}
@@ -429,8 +463,5 @@ class WebhookManager {
  */
 export function createFactory(config = {}) {
   const manager = new WebhookManager(config);
-
-  // Register cleanup with global coordinator
-
   return manager;
 }

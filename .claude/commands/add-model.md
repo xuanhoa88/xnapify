@@ -3,7 +3,7 @@ Add a new Sequelize model to an existing or new module.
 ## Model Structure
 
 ```
-src/modules/{module-name}/api/
+@apps/{module-name}/api/
 ├── models/
 │   └── {Model}.js        # Model definition
 └── database/
@@ -15,7 +15,7 @@ src/modules/{module-name}/api/
 ## 1. Create Model File
 
 ```javascript
-// src/modules/{module}/api/models/{ModelName}.js
+// @apps/{module}/api/models/{ModelName}.js
 
 /**
  * {ModelName} Model Factory
@@ -193,7 +193,7 @@ Relationships are now defined directly in the model's `associate` method.
 ### One-to-Many
 
 ```javascript
-// src/modules/{module}/api/models/User.js
+// @apps/{module}/api/models/User.js
 
 User.associate = function (models) {
   const { Post } = models;
@@ -207,7 +207,7 @@ User.associate = function (models) {
   });
 };
 
-// src/modules/{module}/api/models/Post.js
+// @apps/{module}/api/models/Post.js
 
 Post.associate = function (models) {
   const { User } = models;
@@ -223,7 +223,7 @@ Post.associate = function (models) {
 ### Many-to-Many
 
 ```javascript
-// src/modules/{module}/api/models/Post.js
+// @apps/{module}/api/models/Post.js
 
 Post.associate = function (models) {
   const { Tag, PostTag } = models;
@@ -241,7 +241,7 @@ Post.associate = function (models) {
 ### One-to-One
 
 ```javascript
-// src/modules/{module}/api/models/User.js
+// @apps/{module}/api/models/User.js
 
 User.associate = function (models) {
   const { UserProfile } = models;
@@ -260,7 +260,7 @@ User.associate = function (models) {
 ## 5. Create Migration
 
 ```javascript
-// src/modules/{module}/api/database/migrations/YYYY.MM.DD.create-{table-name}-table.js
+// @apps/{module}/api/database/migrations/YYYY.MM.DD.create-{table-name}-table.js
 
 export async function up({ context: queryInterface }) {
   const { DataTypes } = queryInterface.sequelize.constructor;
@@ -320,7 +320,7 @@ export async function down({ context: queryInterface }) {
 ## 6. Junction Table Model (Many-to-Many)
 
 ```javascript
-// src/modules/{module}/api/models/PostTag.js
+// @apps/{module}/api/models/PostTag.js
 export default function createPostTagModel({ connection, DataTypes }) {
   const types = DataTypes || connection.constructor.DataTypes;
 
@@ -362,7 +362,7 @@ export default function createPostTagModel({ connection, DataTypes }) {
 ## 7. Model with Hooks Example
 
 ```javascript
-// src/modules/{module}/api/models/{ModelName}.js
+// @apps/{module}/api/models/{ModelName}.js
 import { hashPassword } from '../utils/password';
 
 export default function create{ModelName}Model({ connection, DataTypes }) {
@@ -414,11 +414,11 @@ export default function create{ModelName}Model({ connection, DataTypes }) {
 
 ## Quick Reference
 
-| Task             | File Location                                                  |
-| ---------------- | -------------------------------------------------------------- |
-| Model definition | `src/modules/{module}/api/models/{Model}.js`                   |
-| Migration        | `src/modules/{module}/api/database/migrations/YYYY.MM.DD.*.js` |
-| Seed data        | `src/modules/{module}/api/database/seeds/*.js`                 |
+| Task             | File Location                                            |
+| ---------------- | -------------------------------------------------------- |
+| Model definition | `@apps/{module}/api/models/{Model}.js`                   |
+| Migration        | `@apps/{module}/api/database/migrations/YYYY.MM.DD.*.js` |
+| Seed data        | `@apps/{module}/api/database/seeds/*.js`                 |
 
 ---
 

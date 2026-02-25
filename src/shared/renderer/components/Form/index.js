@@ -48,6 +48,6 @@ Form.Error = FormError;
 Form.WYSIWYG = FormWYSIWYG;
 
 // Export hooks for custom usage
-export { useFormContext, useFormValidation, useFormField, Controller };
+export { useFormContext, useFormValidation, useFormField, Controller, Form };
 
 export default Form;

@@ -234,7 +234,6 @@ export async function runInit(route, ctx) {
     current = current.parent;
   }
 
-  // Auto-install plugins via router options callback
   if (
     // eslint-disable-next-line no-underscore-dangle
     ctx._instance &&
@@ -270,7 +269,6 @@ export async function runInit(route, ctx) {
 export async function runMount(route, ctx) {
   if (!route) return null;
 
-  // Auto-install plugins via router options callback
   if (
     // eslint-disable-next-line no-underscore-dangle
     ctx._instance &&

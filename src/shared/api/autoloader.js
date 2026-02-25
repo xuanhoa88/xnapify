@@ -8,19 +8,20 @@
 /**
  * API Module Autoloader
  *
- * Discovers and loads API modules (models + routers) from the modules directory.
+ * Discovers and loads API modules from the apps directory.
+ * Each module exports independent lifecycle hooks:
+ *   - init(app, apiRouter, options)  — initialisation logic
+ *   - models()                       — returns a webpack require.context for models
+ *   - routes()                       — returns a webpack require.context for routes
+ *
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
  */
 
-import { Router } from 'express';
 import { createContextAdapter } from '../context';
 
 // =============================================================================
 // CONSTANTS
 // =============================================================================
-
-/** Pattern to match model files: ./moduleName/api/models/ModelName.js */
-const MODEL_PATH_PATTERN = /^\.\/([^/]+)\/api\/models\/[^/]+\.[cm]?[jt]s$/i;
 
 /** Pattern to match module lifecycle files: ./moduleName/api/index.js */
 const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
@@ -47,9 +48,44 @@ function parseEnvCoreModules() {
 
 /**
  * Set of core modules that must be loaded.
- * 'users' is always required; additional modules come from RSK_MODULE_DEFAULTS.
+ * 'users', 'roles', 'groups', 'permissions', 'plugins', 'auth' are always required;
+ * additional modules come from RSK_MODULE_DEFAULTS.
  */
-const CORE_MODULES = new Set(['users', 'plugins', ...parseEnvCoreModules()]);
+const CORE_MODULES = new Set([
+  'users',
+  'roles',
+  'groups',
+  'permissions',
+  'plugins',
+  'auth',
+  ...parseEnvCoreModules(),
+]);
+
+// =============================================================================
+// LOGGING
+// =============================================================================
+
+const TAG = 'Autoloader';
+
+/**
+ * Log an autoloader message.
+ *
+ * @param {string} message - Message text
+ * @param {'info'|'warn'|'error'} [level='info'] - Log level
+ */
+function log(message, level = 'info') {
+  const prefix = `[${TAG}]`;
+  switch (level) {
+    case 'error':
+      console.error(`${prefix} ❌ ${message}`);
+      break;
+    case 'warn':
+      console.warn(`${prefix} ⚠️ ${message}`);
+      break;
+    default:
+      console.info(`${prefix} ✅ ${message}`);
+  }
+}
 
 // =============================================================================
 // HELPERS
@@ -125,12 +161,8 @@ export function sortModules(modulePaths) {
   );
 
   return [...modulePaths].sort((a, b) => {
-    const nameA =
-      getModuleName(a, LIFECYCLE_PATH_PATTERN) ||
-      getModuleName(a, MODEL_PATH_PATTERN);
-    const nameB =
-      getModuleName(b, LIFECYCLE_PATH_PATTERN) ||
-      getModuleName(b, MODEL_PATH_PATTERN);
+    const nameA = getModuleName(a, LIFECYCLE_PATH_PATTERN);
+    const nameB = getModuleName(b, LIFECYCLE_PATH_PATTERN);
 
     const priorityA = corePriority.has(nameA)
       ? corePriority.get(nameA)
@@ -181,7 +213,7 @@ export function validateCoreModules(modulePaths, options = {}) {
       throw error;
     }
 
-    console.warn(`⚠️ ${message}`);
+    log(message, 'warn');
     return { valid: false, missing };
   }
 
@@ -193,25 +225,20 @@ export function validateCoreModules(modulePaths, options = {}) {
 // =============================================================================
 
 /**
- * Load all model modules directly from file paths.
+ * Load models from a single module's require.context.
  *
- * @param {object} adapter - Context adapter
- * @param {string[]} paths - Sorted model file paths
+ * @param {object} modelContext - Webpack require.context returned by hooks.models()
+ * @param {string} moduleName - Name of the owning module (for logging)
+ * @param {object} db - Database connection
  * @param {object} app - Express app instance
  * @returns {Promise<{models: object, errors: object[]}>}
  */
-async function loadModels(adapter, paths, app) {
-  const db = app.get('db');
-
-  if (!db) {
-    console.warn('⚠️ No database connection found, skipping models');
-    return { models: {}, errors: [] };
-  }
-
+async function loadModelsFromContext(modelContext, moduleName, db, app) {
+  const adapter = createContextAdapter(modelContext);
   const models = {};
   const errors = [];
 
-  for (const filePath of paths) {
+  for (const filePath of adapter.files()) {
     const fileName = filePath.split('/').pop();
 
     // Skip index files and test/spec files
@@ -222,23 +249,23 @@ async function loadModels(adapter, paths, app) {
       continue;
     }
 
-    const moduleName = getModuleName(filePath, MODEL_PATH_PATTERN);
-
     try {
       const factory = loadModuleFactory(adapter, filePath);
       const model = await factory(db, app);
 
       // Validate model exists and has basic properties
       if (!model) {
-        console.warn(
-          `⚠️ [${moduleName}] File "${filePath}" did not return a valid object.`,
+        log(
+          `[${moduleName}] File "${filePath}" did not return a valid object`,
+          'warn',
         );
         continue;
       }
 
       if (!model.name) {
-        console.warn(
-          `⚠️ [${moduleName}] File "${filePath}" returned an object without a name property.`,
+        log(
+          `[${moduleName}] File "${filePath}" returned an object without a name property`,
+          'warn',
         );
         continue;
       }
@@ -248,50 +275,127 @@ async function loadModels(adapter, paths, app) {
         typeof model.findAll !== 'function' ||
         typeof model.create !== 'function'
       ) {
-        console.warn(
-          `⚠️ [${moduleName}] Model "${model.name}" doesn't appear to be a Sequelize model (missing findAll/create methods).`,
+        log(
+          `[${moduleName}] Model "${model.name}" doesn't appear to be a Sequelize model (missing findAll/create methods)`,
+          'warn',
         );
-        continue;
-      }
-
-      // Check for duplicate model names
-      if (model.name in models) {
-        const error = new Error(
-          `Duplicate model name: "${model.name}". Module skipped.`,
-        );
-        errors.push(createLoadError(moduleName, filePath, error));
-        console.error(`❌ [${moduleName}] ${error.message}`);
         continue;
       }
 
       models[model.name] = model;
     } catch (error) {
       errors.push(createLoadError(moduleName, filePath, error));
-      console.error(`❌ [${moduleName}] ${error.message}`);
+      log(`[${moduleName}] ${error.message}`, 'error');
+    }
+  }
+
+  return { models, errors };
+}
+
+/**
+ * Collect models from all lifecycle modules that export a models() hook.
+ * Runs each module's model factories and initialises associations.
+ *
+ * @param {Map<string, object>} lifecycles - Map of module name → hooks
+ * @param {object} app - Express app instance
+ * @returns {Promise<{models: object, errors: object[]}>}
+ */
+async function collectModels(lifecycles, app) {
+  const db = app.get('db');
+
+  if (!db) {
+    log('No database connection found, skipping models', 'warn');
+    return { models: {}, errors: [] };
+  }
+
+  const allModels = {};
+  const allErrors = [];
+
+  for (const [name, hooks] of lifecycles) {
+    if (typeof hooks.models !== 'function') continue;
+
+    try {
+      const modelContext = hooks.models();
+      if (!modelContext) continue;
+
+      const { models, errors } = await loadModelsFromContext(
+        modelContext,
+        name,
+        db,
+        app,
+      );
+
+      // Check for duplicate model names across modules
+      for (const [modelName, model] of Object.entries(models)) {
+        if (modelName in allModels) {
+          const error = new Error(
+            `Duplicate model name: "${modelName}" from module "${name}". Skipped.`,
+          );
+          allErrors.push(createLoadError(name, modelName, error));
+          log(`[${name}] ${error.message}`, 'error');
+          continue;
+        }
+        allModels[modelName] = model;
+      }
+
+      allErrors.push(...errors);
+    } catch (error) {
+      allErrors.push(createLoadError(name, 'models()', error));
+      log(`[${name}] Failed to collect models: ${error.message}`, 'error');
     }
   }
 
   // Initialize associations after all models are loaded
-  Object.keys(models).forEach(modelName => {
+  Object.keys(allModels).forEach(modelName => {
     if (
-      models[modelName] &&
-      typeof models[modelName].associate === 'function'
+      allModels[modelName] &&
+      typeof allModels[modelName].associate === 'function'
     ) {
       try {
-        models[modelName].associate(models);
-        console.log(`🔗 [${modelName}] Associations initialized`);
+        allModels[modelName].associate(allModels);
+        log(`[${modelName}] Associations initialized`);
       } catch (error) {
-        errors.push(
-          createLoadError(modelName, `${modelName}.associate(models)`, error),
+        allErrors.push(
+          createLoadError(modelName, `${modelName}.associate()`, error),
         );
-        console.error(
-          `❌ [${modelName}] Failed to initialize associations: ${error.message}`,
+        log(
+          `[${modelName}] Failed to initialize associations: ${error.message}`,
+          'error',
         );
       }
     }
   });
 
-  return { models, errors };
+  return { models: allModels, errors: allErrors };
+}
+
+// =============================================================================
+// ROUTE COLLECTION
+// =============================================================================
+
+/**
+ * Collect route contexts from all lifecycle modules that export a routes() hook.
+ *
+ * @param {Map<string, object>} lifecycles - Map of module name → hooks
+ * @returns {Map<string, object>} Map of module name → route context adapter
+ */
+function collectRouteAdapters(lifecycles) {
+  const adapters = new Map();
+
+  for (const [name, hooks] of lifecycles) {
+    if (typeof hooks.routes !== 'function') continue;
+
+    try {
+      const routeContext = hooks.routes();
+      if (!routeContext) continue;
+
+      adapters.set(name, createContextAdapter(routeContext));
+    } catch (error) {
+      log(`[${name}] Failed to collect routes: ${error.message}`, 'error');
+    }
+  }
+
+  return adapters;
 }
 
 // =============================================================================
@@ -313,7 +417,7 @@ async function loadModules(adapter, paths) {
     const moduleName = getModuleName(filePath, LIFECYCLE_PATH_PATTERN);
 
     try {
-      // Direct load (supports object { install, uninstall, init } export)
+      // Direct load (supports object { init, models, routes })
       const hooks = adapter.load(filePath);
 
       if (!hooks || typeof hooks !== 'object') {
@@ -327,13 +431,13 @@ async function loadModules(adapter, paths) {
 
       // Validate at least one hook exists
       const hasValidHook =
-        typeof hooks.install === 'function' ||
-        typeof hooks.uninstall === 'function' ||
-        typeof hooks.init === 'function';
+        typeof hooks.init === 'function' ||
+        typeof hooks.models === 'function' ||
+        typeof hooks.routes === 'function';
 
       if (!hasValidHook) {
         const err = new Error(
-          'Lifecycle module must export at least one hook (install, uninstall or init)',
+          'Lifecycle module must export at least one hook (init, models, routes)',
         );
         err.name = 'InvalidLifecycleError';
         err.code = 'INVALID_LIFECYCLE';
@@ -343,7 +447,7 @@ async function loadModules(adapter, paths) {
       lifecycles.set(moduleName, hooks);
     } catch (error) {
       errors.push(createLoadError(moduleName, filePath, error));
-      console.error(`❌ [${moduleName}] ${error.message}`);
+      log(`[${moduleName}] ${error.message}`, 'error');
     }
   }
 
@@ -355,14 +459,17 @@ async function loadModules(adapter, paths) {
 // =============================================================================
 
 /**
- * Discover and load API modules (models and routers).
+ * Discover and load API modules.
  *
- * Scans the modules directory for model and router index files,
- * validates core modules are present, and loads them in order.
+ * Scans the apps directory for lifecycle index files, validates core modules,
+ * then calls each module's hooks in order:
+ *   1. models()  — collect model contexts
+ *   2. init()    — run initialisation (migrations, DI, auth hooks, etc.)
+ *   3. routes()  — collect route contexts
  *
  * @param {object} modulesContext - Webpack require.context or compatible
  * @param {object} app - Express app instance
- * @returns {Promise<{apiModels: object, apiRoutes: Router, errors: object[]}>}
+ * @returns {Promise<{apiModels: object, routeAdapters: Map, errors: object[]}>}
  * @throws {Error} If Express app is missing or core modules fail to load
  */
 export async function discoverModules(modulesContext, app) {
@@ -376,15 +483,11 @@ export async function discoverModules(modulesContext, app) {
   // Start timer
   const startTime = Date.now();
 
-  // Create router
-  const apiRouter = Router();
-
   // Create adapter
   const adapter = createContextAdapter(modulesContext);
   const allFiles = adapter.files();
 
-  // Filter model and lifecycle paths
-  const modelPaths = allFiles.filter(path => MODEL_PATH_PATTERN.test(path));
+  // Filter lifecycle paths
   const lifecyclePaths = allFiles.filter(path =>
     LIFECYCLE_PATH_PATTERN.test(path),
   );
@@ -401,35 +504,37 @@ export async function discoverModules(modulesContext, app) {
   }
 
   // Sort to load core modules first
-  const sortedModelPaths = sortModules(modelPaths);
   const sortedLifecyclePaths = sortModules(lifecyclePaths);
 
-  // Load models first (needed for lifecycle)
-  const { models, errors: modelErrors } = await loadModels(
-    adapter,
-    sortedModelPaths,
-    app,
-  );
-
-  // Load modules
+  // Load lifecycle modules
   const { lifecycles, errors: lifecycleErrors } = await loadModules(
     adapter,
     sortedLifecyclePaths,
   );
 
-  // Combine all errors
-  const errors = [...modelErrors, ...lifecycleErrors];
+  const errors = [...lifecycleErrors];
 
-  // Initialize all modules
+  // 1. Collect and load models from each module's models() hook
+  const { models, errors: modelErrors } = await collectModels(lifecycles, app);
+  errors.push(...modelErrors);
+
+  // Register models on app instance
+  app.set('models', models);
+
+  // 2. Initialize all modules
   for (const [name, hooks] of lifecycles) {
     if (hooks && typeof hooks.init === 'function') {
       try {
-        await hooks.init(app, apiRouter, { Router, CORE_MODULES });
+        await hooks.init(app, { CORE_MODULES });
       } catch (error) {
-        console.error(`❌ [${name}] Initialize failed:`, error.message);
+        errors.push(createLoadError(name, 'init()', error));
+        log(`[${name}] Initialize failed: ${error.message}`, 'error');
       }
     }
   }
+
+  // 3. Collect route adapters from each module's routes() hook
+  const routeAdapters = collectRouteAdapters(lifecycles);
 
   // Fail if any core module failed to load
   const failedCoreModules = errors
@@ -448,16 +553,13 @@ export async function discoverModules(modulesContext, app) {
   }
 
   // Summary
-  console.info(
-    `📦 API: ${Object.keys(models).length} model(s), ${lifecycles.size} lifecycle(s) loaded in ${Date.now() - startTime}ms`,
+  log(
+    `${Object.keys(models).length} model(s), ${lifecycles.size} lifecycle(s), ${routeAdapters.size} route context(s) loaded in ${Date.now() - startTime}ms`,
   );
 
   if (errors.length > 0) {
-    console.warn(`⚠️ API: ${errors.length} module(s) failed to load`);
+    log(`${errors.length} module(s) had errors during loading`, 'warn');
   }
 
-  // Register models on app instance
-  app.set('models', models);
-
-  return { apiModels: models, apiRouter };
+  return { apiModels: models, routeAdapters, errors };
 }

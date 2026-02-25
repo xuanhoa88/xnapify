@@ -36,6 +36,7 @@ import {
 } from './shared/renderer/redux';
 import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
+import { Container } from './shared/container';
 
 // =============================================================================
 // CONSTANTS
@@ -152,6 +153,7 @@ const config = Object.freeze({
 function createProviderGuard(app, providers = []) {
   const CORE_PROVIDERS = new Set([
     ...providers,
+    'container',
     'cwd',
     'env',
     'jwt',
@@ -481,6 +483,9 @@ async function render({ context, component, metadata = {} }) {
 
 /** Create SSR request handler */
 function createSSRHandler(guardControl, baseUrl) {
+  // Create a new container for each request
+  const container = new Container();
+
   return async (req, res, next) => {
     const startTime = Date.now();
     let store = null;
@@ -533,6 +538,7 @@ function createSSRHandler(guardControl, baseUrl) {
         i18n,
         locale,
         history,
+        container,
         pathname: history.location.pathname,
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
         signal: abortController.signal,
@@ -892,6 +898,7 @@ export async function bootstrap(app, server, options = {}) {
   );
 
   // Core providers
+  app.set('container', new Container());
   app.set('cwd', config.cwd);
   app.set('env', config.nodeEnv);
   app.set('jwt', configureJwt());
@@ -1066,12 +1073,8 @@ export async function bootstrap(app, server, options = {}) {
   );
 
   // Setup API routes
-  const apiMiddlewares = await api.default(guardControl, {
-    ...config,
-    port,
-    host: normalizedHost,
-  });
-  app.use(config.apiPrefix, ...apiMiddlewares);
+  const apiRouter = await api.default(guardControl);
+  app.use(config.apiPrefix, apiRouter);
 
   // Setup Node-RED
   await appState.nodeRED.init(app, server, {

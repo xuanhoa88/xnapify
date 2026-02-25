@@ -12,7 +12,7 @@ Use workers for:
 ## Structure
 
 ```
-src/modules/{module}/workers/
+@apps/{module}/workers/
 ├── index.js                    # Worker pool
 ├── {task-name}.worker.js       # Worker handler
 └── {task-name}.worker.test.js  # Worker tests
@@ -21,7 +21,7 @@ src/modules/{module}/workers/
 ## 1. Create Worker Handler
 
 ```javascript
-// src/modules/posts/workers/generate-report.worker.js
+// @apps/posts/workers/generate-report.worker.js
 import { createWorkerHandler } from '@/shared/api/worker';
 
 /**
@@ -62,7 +62,7 @@ export default createWorkerHandler(generateReportLogic, 'GENERATE_REPORT');
 ## 2. Create Worker Pool
 
 ```javascript
-// src/modules/posts/workers/index.js
+// @apps/posts/workers/index.js
 import { createWorkerPool } from '@/shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
@@ -80,7 +80,7 @@ export default workerPool;
 ### From API Endpoint
 
 ```javascript
-// src/modules/posts/controllers/report.controller.js
+// @apps/posts/controllers/report.controller.js
 import workerPool from '../workers';
 
 export async function generateReport(req, res) {
@@ -106,7 +106,7 @@ export async function generateReport(req, res) {
 ### From Scheduled Task
 
 ```javascript
-// src/modules/posts/index.js
+// @apps/posts/index.js
 import schedule from '@/shared/api/schedule';
 import workerPool from './workers';
 
@@ -139,7 +139,7 @@ export default async function postsModule(deps, app) {
 ## 4. Worker with Error Handling
 
 ```javascript
-// src/modules/posts/workers/process-images.worker.js
+// @apps/posts/workers/process-images.worker.js
 import { createWorkerHandler } from '@/shared/api/worker';
 
 async function processImagesLogic(payload) {
@@ -183,7 +183,7 @@ export default createWorkerHandler(processImagesLogic, 'PROCESS_IMAGES');
 ## 5. Testing Workers
 
 ```javascript
-// src/modules/posts/workers/generate-report.worker.test.js
+// @apps/posts/workers/generate-report.worker.test.js
 import workerHandler from './generate-report.worker';
 
 describe('[worker] generate-report', () => {

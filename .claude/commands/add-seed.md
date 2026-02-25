@@ -3,7 +3,7 @@ Add database seed files to populate tables with initial or demo data.
 ## Seed Structure
 
 ```
-src/modules/{module-name}/api/database/
+@apps/{module-name}/api/database/
 └── seeds/
     └── YYYY.MM.DDTHH.MM.SS.{description}.js
 ```
@@ -29,7 +29,7 @@ Examples:
 ## 2. Basic Seed Template (Using QueryInterface)
 
 ```javascript
-// src/modules/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.{description}.js
+// @apps/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.{description}.js
 
 import { v4 as uuidv4 } from 'uuid';
 
@@ -87,7 +87,7 @@ export async function down({ context }) {
 Use models when you need hooks (e.g., password hashing):
 
 ```javascript
-// src/modules/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.demo-users.js
+// @apps/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.demo-users.js
 
 import { v4 as uuidv4 } from 'uuid';
 import createUserModel from '../../models/User';
@@ -153,7 +153,7 @@ export async function down({ context }) {
 For seeding many-to-many relationships:
 
 ```javascript
-// src/modules/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.demo-user-roles.js
+// @apps/{module}/api/database/seeds/YYYY.MM.DDTHH.MM.SS.demo-user-roles.js
 
 import { v4 as uuidv4 } from 'uuid';
 import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
@@ -203,7 +203,7 @@ export async function down({ context }) {
 ## 5. Register Seeds in Module
 
 ```javascript
-// src/modules/{module}/api/index.js
+// @apps/{module}/api/index.js
 
 const migrationsContext = require.context(
   './database/migrations',
