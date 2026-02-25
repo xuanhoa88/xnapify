@@ -16,9 +16,8 @@ const routesContext = require.context('./routes', false, /\.[cm]?[jt]s$/i);
  * Init hook — called by the autoloader to initialise this module.
  *
  * @param {Object} _app - Express app instance
- * @param {Object} _options - Options ({ CORE_MODULES })
  */
-export async function init(_app, _options) {
+export async function init(_app) {
   console.info('[Default] ✅ Initialized');
 }
 

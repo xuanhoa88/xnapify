@@ -7,22 +7,24 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
-import { demoRoleIds } from './2025.11.26T00.03.00.demo-roles';
 
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
+  const now = new Date();
+
   const { queryInterface } = context;
 
-  const now = new Date();
+  // Get seed roles from container
+  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
 
   const userRoles = [
     // Admin user - admin role
     {
       id: uuidv4(),
       user_id: demoUserIds.admin,
-      role_id: demoRoleIds.admin,
+      role_id: SEED_ROLES.admin,
       created_at: now,
       updated_at: now,
     },
@@ -31,14 +33,14 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.john,
-      role_id: demoRoleIds.user,
+      role_id: SEED_ROLES.user,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       user_id: demoUserIds.john,
-      role_id: demoRoleIds.editor,
+      role_id: SEED_ROLES.editor,
       created_at: now,
       updated_at: now,
     },
@@ -47,14 +49,14 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      role_id: demoRoleIds.user,
+      role_id: SEED_ROLES.user,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      role_id: demoRoleIds.mod,
+      role_id: SEED_ROLES.mod,
       created_at: now,
       updated_at: now,
     },
@@ -63,7 +65,7 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.locked,
-      role_id: demoRoleIds.viewer,
+      role_id: SEED_ROLES.viewer,
       created_at: now,
       updated_at: now,
     },

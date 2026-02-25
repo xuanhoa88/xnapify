@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as RBAC_CONSTANTS from './constants/rbac';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
 
@@ -43,103 +44,6 @@ function log(phase) {
   console.info(`[${TAG}] ✅ ${phase}`);
 }
 
-// =============================================================================
-// INTERNAL HELPERS
-// =============================================================================
-
-/**
- * Run database migrations and seeds.
- *
- * @param {Object} app - Express app instance
- */
-async function runMigrations(app) {
-  const db = app.get('db');
-
-  await db.connection.runMigrations([
-    { context: migrationsContext, prefix: 'users' },
-  ]);
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }]);
-
-  log('Database migrated');
-}
-
-/**
- * Bind shared services into the DI container.
- *
- * @param {Object} app - Express app instance
- */
-async function bindServices(app) {
-  const container = app.get('container');
-
-  container.bind('users:services', () => {
-    return {
-      // Controllers
-      controllers: {
-        login(_req, res, _next) {
-          res.status(200).json({ message: 'Login' });
-        },
-        logout(_req, res, _next) {
-          res.status(200).json({ message: 'Logout' });
-        },
-        forgotPassword(_req, res, _next) {
-          res.status(200).json({ message: 'Forgot Password' });
-        },
-        resetPassword(_req, res, _next) {
-          res.status(200).json({ message: 'Reset Password' });
-        },
-        register(_req, res, _next) {
-          res.status(200).json({ message: 'Register' });
-        },
-        verifyEmail(_req, res, _next) {
-          res.status(200).json({ message: 'Verify Email' });
-        },
-        changePassword(_req, res, _next) {
-          res.status(200).json({ message: 'Change Password' });
-        },
-        changeEmail(_req, res, _next) {
-          res.status(200).json({ message: 'Change Email' });
-        },
-        changeAvatar(_req, res, _next) {
-          res.status(200).json({ message: 'Change Avatar' });
-        },
-        getProfile(_req, res, _next) {
-          res.status(200).json({ message: 'Get Profile' });
-        },
-        updateProfile(_req, res, _next) {
-          res.status(200).json({ message: 'Update Profile' });
-        },
-        deleteAccount(_req, res, _next) {
-          res.status(200).json({ message: 'Delete Account' });
-        },
-      },
-      // Utils
-      utils: {
-        generateToken: () => {
-          return 'Generated Token';
-        },
-        verifyToken: () => {
-          return 'Verified Token';
-        },
-        generatePassword: () => {
-          return 'Generated Password';
-        },
-        verifyPassword: () => {
-          return 'Verified Password';
-        },
-        hashPassword: () => {
-          return 'Hashed Password';
-        },
-        verifyHashPassword: () => {
-          return 'Verified Hash Password';
-        },
-      },
-    };
-  });
-
-  log('Services bound');
-}
-
 /**
  * Register auth strategies and RBAC hook listeners.
  *
@@ -162,19 +66,49 @@ async function registerAuthHooks(app) {
 // =============================================================================
 
 /**
- * Init hook — called by the autoloader to initialise this module.
- *
- * Orchestrates internal phases in order:
- *   1. runMigrations     — database migrations & seeds
- *   2. bindServices      — DI service bindings
- *   3. registerAuthHooks — auth strategy & RBAC registrations
+ * Shared hook — called by the autoloader to share services with other modules.
  *
  * @param {Object} app - Express app instance
- * @param {Object} _options - Options ({ CORE_MODULES })
  */
-export async function init(app, _options) {
-  await runMigrations(app);
-  await bindServices(app);
+export async function shared(app) {
+  const container = app.get('container');
+
+  // Bind rbac constants to container as singleton
+  container.bind('users:rbac_constants', () => RBAC_CONSTANTS, true);
+}
+
+/**
+ * Migrations hook — run database migrations.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function migrations(app) {
+  const db = app.get('db');
+
+  await db.connection.runMigrations(
+    [{ context: migrationsContext, prefix: 'users' }],
+    { app },
+  );
+}
+
+/**
+ * Seeds hook — run database seeds.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function seeds(app) {
+  const db = app.get('db');
+
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }], {
+    app,
+  });
+}
+
+/**
+ * Init hook — called by the autoloader to initialise this module.
+ * @param {Object} app - Express app instance
+ */
+export async function init(app) {
   await registerAuthHooks(app);
 }
 

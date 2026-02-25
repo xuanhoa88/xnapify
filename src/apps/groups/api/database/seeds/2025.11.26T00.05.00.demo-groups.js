@@ -5,27 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
-
-// Store group IDs for use in other seeds
-export const demoGroupIds = {
-  engineering: uuidv4(),
-  marketing: uuidv4(),
-  support: uuidv4(),
-  management: uuidv4(),
-};
-
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
   const { queryInterface } = context;
+
+  // Get seed groups from container
+  const SEED_GROUPS = app.get('container').resolve('SEED:GROUPS');
 
   const now = new Date();
 
   const groups = [
     {
-      id: demoGroupIds.engineering,
+      id: SEED_GROUPS.engineering,
       name: 'Engineering',
       description: 'Engineering and development team',
       is_active: true,
@@ -33,7 +26,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoGroupIds.marketing,
+      id: SEED_GROUPS.marketing,
       name: 'Marketing',
       description: 'Marketing and communications team',
       is_active: true,
@@ -41,7 +34,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoGroupIds.support,
+      id: SEED_GROUPS.support,
       name: 'Support',
       description: 'Customer support team',
       is_active: true,
@@ -49,7 +42,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoGroupIds.management,
+      id: SEED_GROUPS.management,
       name: 'Management',
       description: 'Management and leadership team',
       is_active: true,

@@ -216,16 +216,12 @@ export default async function moduleInit(deps, app) {
   const db = app.get('db');
 
   // Run migrations first
-  await db.runMigrations(
-    [{ context: migrationsContext, prefix: '{module}' }],
-    db.connection,
-  );
+  await db.connection.runMigrations([
+    { context: migrationsContext, prefix: '{module}' },
+  ]);
 
   // Then run seeds
-  await db.runSeeds(
-    [{ context: seedsContext, prefix: '{module}' }],
-    db.connection,
-  );
+  await db.connection.runSeeds([{ context: seedsContext, prefix: '{module}' }]);
 
   // ... rest of module initialization
 }

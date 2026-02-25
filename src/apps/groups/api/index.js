@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SEED_GROUPS } from './constants';
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -26,54 +28,54 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', false, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
-// LOGGING
-// =============================================================================
-
-const TAG = 'Groups';
-
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-// =============================================================================
-// INTERNAL HELPERS
-// =============================================================================
-
-/**
- * Run database migrations and seeds.
- *
- * @param {Object} app - Express app instance
- */
-async function runMigrations(app) {
-  const db = app.get('db');
-
-  await db.connection.runMigrations([
-    { context: migrationsContext, prefix: 'groups' },
-  ]);
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'groups' }]);
-
-  log('Database migrated');
-}
-
-// =============================================================================
 // PUBLIC LIFECYCLE HOOKS
 // =============================================================================
 
 /**
- * Init hook — called by the autoloader to initialise this module.
+ * Shared hook — called by the autoloader to share services with other modules.
  *
  * @param {Object} app - Express app instance
- * @param {Object} _options - Options ({ CORE_MODULES })
  */
-export async function init(app, _options) {
-  await runMigrations(app);
+export async function shared(app) {
+  const container = app.get('container');
+
+  // Bind seed groups to container as singleton
+  container.bind('SEED:GROUPS', () => SEED_GROUPS, true);
 }
+
+/**
+ * Migrations hook — run database migrations.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function migrations(app) {
+  const db = app.get('db');
+
+  await db.connection.runMigrations(
+    [{ context: migrationsContext, prefix: 'groups' }],
+    { app },
+  );
+}
+
+/**
+ * Seeds hook — run database seeds.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function seeds(app) {
+  const db = app.get('db');
+
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'groups' }], {
+    app,
+  });
+}
+
+/**
+ * Init hook — called by the autoloader to initialise this module.
+ *
+ * @param {Object} _app - Express app instance
+ */
+export async function init(_app) {}
 
 /**
  * Models hook — returns the webpack require.context for this module's models.

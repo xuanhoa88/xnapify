@@ -6,7 +6,6 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import createUserModel from '../../models/User';
 
 // Store user IDs for use in other seeds
 export const demoUserIds = {
@@ -19,11 +18,11 @@ export const demoUserIds = {
 /**
  * Run the seed
  */
-export async function up({ context }) {
-  // Create User model from the connection (DataTypes derived internally)
-  const User = createUserModel({ connection: context });
-
+export async function up(_, { app }) {
   const now = new Date();
+
+  // Get User model from the container
+  const { User } = app.get('models');
 
   // Passwords will be automatically hashed by beforeBulkCreate hook
   const users = [
@@ -79,9 +78,9 @@ export async function up({ context }) {
 /**
  * Revert the seed
  */
-export async function down({ context }) {
-  // Create User model from the connection (DataTypes derived internally)
-  const User = createUserModel({ connection: context });
+export async function down(_, { app }) {
+  // Get User model from the container
+  const { User } = app.get('models');
 
   // Remove all seeded users by email
   await User.destroy({

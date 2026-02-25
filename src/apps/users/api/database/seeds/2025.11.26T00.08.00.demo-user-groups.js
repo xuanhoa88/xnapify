@@ -7,29 +7,31 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
-import { demoGroupIds } from './2025.11.26T00.05.00.demo-groups';
 
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
+  const now = new Date();
+
   const { queryInterface } = context;
 
-  const now = new Date();
+  // Get seed roles from container
+  const SEED_GROUPS = app.get('container').resolve('SEED:GROUPS');
 
   const userGroups = [
     // Admin - Management and Engineering groups (multi-group membership)
     {
       id: uuidv4(),
       user_id: demoUserIds.admin,
-      group_id: demoGroupIds.management,
+      group_id: SEED_GROUPS.management,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       user_id: demoUserIds.admin,
-      group_id: demoGroupIds.engineering,
+      group_id: SEED_GROUPS.engineering,
       created_at: now,
       updated_at: now,
     },
@@ -38,7 +40,7 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.john,
-      group_id: demoGroupIds.engineering,
+      group_id: SEED_GROUPS.engineering,
       created_at: now,
       updated_at: now,
     },
@@ -47,14 +49,14 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      group_id: demoGroupIds.marketing,
+      group_id: SEED_GROUPS.marketing,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
       user_id: demoUserIds.jane,
-      group_id: demoGroupIds.support,
+      group_id: SEED_GROUPS.support,
       created_at: now,
       updated_at: now,
     },
@@ -63,7 +65,7 @@ export async function up({ context }) {
     {
       id: uuidv4(),
       user_id: demoUserIds.locked,
-      group_id: demoGroupIds.support,
+      group_id: SEED_GROUPS.support,
       created_at: now,
       updated_at: now,
     },

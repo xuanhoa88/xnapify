@@ -25,54 +25,34 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 // Auto-load routes via require.context
 const routesContext = require.context('./routes', false, /\.[cm]?[jt]s$/i);
 
-// =============================================================================
-// LOGGING
-// =============================================================================
-
-const TAG = 'Plugins';
-
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-// =============================================================================
 // INTERNAL HELPERS
 // =============================================================================
 
 /**
- * Run database migrations and seeds.
+ * Migrations hook — run database migrations.
  *
  * @param {Object} app - Express app instance
  */
-async function runMigrations(app) {
+export async function migrations(app) {
   const db = app.get('db');
 
-  await db.connection.runMigrations([
-    { context: migrationsContext, prefix: 'plugins' },
-  ]);
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'plugins' }]);
-
-  log('Database migrated');
+  await db.connection.runMigrations(
+    [{ context: migrationsContext, prefix: 'plugins' }],
+    { app },
+  );
 }
 
-// =============================================================================
-// PUBLIC LIFECYCLE HOOKS
-// =============================================================================
-
 /**
- * Init hook — called by the autoloader to initialise this module.
+ * Seeds hook — run database seeds.
  *
  * @param {Object} app - Express app instance
- * @param {Object} _options - Options ({ CORE_MODULES })
  */
-export async function init(app, _options) {
-  await runMigrations(app);
+export async function seeds(app) {
+  const db = app.get('db');
+
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'plugins' }], {
+    app,
+  });
 }
 
 /**

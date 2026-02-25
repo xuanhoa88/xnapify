@@ -6,14 +6,17 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { demoGroupIds } from './2025.11.26T00.05.00.demo-groups';
-import { demoRoleIds } from './2025.11.26T00.03.00.demo-roles';
 
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
   const { queryInterface } = context;
+
+  // Get seed groups from container
+  const container = app.get('container');
+  const SEED_GROUPS = container.resolve('SEED:GROUPS');
+  const SEED_ROLES = container.resolve('SEED:ROLES');
 
   const now = new Date();
 
@@ -21,8 +24,8 @@ export async function up({ context }) {
     // Engineering group - editor role
     {
       id: uuidv4(),
-      group_id: demoGroupIds.engineering,
-      role_id: demoRoleIds.editor,
+      group_id: SEED_GROUPS.engineering,
+      role_id: SEED_ROLES.editor,
       created_at: now,
       updated_at: now,
     },
@@ -30,8 +33,8 @@ export async function up({ context }) {
     // Marketing group - user role
     {
       id: uuidv4(),
-      group_id: demoGroupIds.marketing,
-      role_id: demoRoleIds.user,
+      group_id: SEED_GROUPS.marketing,
+      role_id: SEED_ROLES.user,
       created_at: now,
       updated_at: now,
     },
@@ -39,8 +42,8 @@ export async function up({ context }) {
     // Support group - moderator role
     {
       id: uuidv4(),
-      group_id: demoGroupIds.support,
-      role_id: demoRoleIds.mod,
+      group_id: SEED_GROUPS.support,
+      role_id: SEED_ROLES.mod,
       created_at: now,
       updated_at: now,
     },
@@ -48,8 +51,8 @@ export async function up({ context }) {
     // Management group - admin role
     {
       id: uuidv4(),
-      group_id: demoGroupIds.management,
-      role_id: demoRoleIds.admin,
+      group_id: SEED_GROUPS.management,
+      role_id: SEED_ROLES.admin,
       created_at: now,
       updated_at: now,
     },
@@ -66,6 +69,6 @@ export async function down({ context }) {
 
   // Remove all seeded group roles by groupId
   await queryInterface.bulkDelete('group_roles', {
-    group_id: Object.values(demoGroupIds),
+    group_id: Object.values(SEED_GROUPS),
   });
 }

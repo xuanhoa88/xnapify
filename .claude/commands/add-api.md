@@ -291,13 +291,11 @@ export default async function postModule(deps, app) {
   const db = app.get('db');
 
   // Run migrations and seeds
-  await db.runMigrations(
-    [{ context: migrationsContext, prefix: 'posts' }],
-    db.connection,
-  );
-  await db.runSeeds(
-    [{ context: seedsContext, prefix: 'posts' }],
-    db.connection,
+  await db.connection.runMigrations([
+    { context: migrationsContext, prefix: 'posts' },
+  ]);
+  await db.connection.runSeeds([
+    { context: seedsContext, prefix: 'posts' },
   );
 
   // Register module middlewares for reuse by other modules

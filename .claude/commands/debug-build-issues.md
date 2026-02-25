@@ -217,10 +217,10 @@ console.log('Executed migrations:', status.executed);
 console.log('Pending migrations:', status.pending);
 
 // Run migrations manually
-await db.runMigrations(null, connection);
+await db.connection.runMigrations();
 
 // Rollback last migration
-await db.revertMigrations(null, connection);
+await db.connection.revertMigrations();
 
 // Check database connection
 try {

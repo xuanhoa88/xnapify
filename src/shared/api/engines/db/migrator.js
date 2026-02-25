@@ -49,8 +49,14 @@ function resolveAbsolutePath(adapter, key) {
 
 /**
  * Convert context adapter to umzug migrations (auto-deduplicated by filename)
+ *
+ * @param {Object} adapter - Context adapter
+ * @param {string} prefix - Module prefix
+ * @param {Object} [options] - Optional configuration
+ * @param {Console|Object} [options.logger] - Logger instance (default: console)
+ * @returns {Array} Array of migration objects
  */
-function adapterToMigrations(adapter, prefix) {
+function adapterToMigrations(adapter, prefix, options = {}) {
   const allKeys = adapter.files();
   const uniqueMigrations = new Map();
 
@@ -68,10 +74,10 @@ function adapterToMigrations(adapter, prefix) {
         path: resolveAbsolutePath(adapter, key), // Use absolute path
         up: async ({ context }) =>
           typeof migration.up === 'function' &&
-          (await migration.up({ name, context, Sequelize })),
+          (await migration.up({ name, context, Sequelize }, options)),
         down: async ({ context }) =>
           typeof migration.down === 'function' &&
-          (await migration.down({ name, context, Sequelize })),
+          (await migration.down({ name, context, Sequelize }, options)),
       });
     }
   });
@@ -84,15 +90,19 @@ function adapterToMigrations(adapter, prefix) {
  * Ensures no duplicate names across modules
  *
  * @param {Array} migrationSources - Array of {context, prefix} objects
+ * @param {Object} [options] - Optional configuration
+ * @param {Console|Object} [options.logger] - Logger instance (default: console)
  * @returns {Array} Combined array of migration objects
  */
-function mergeMigrations(migrationSources) {
+function mergeMigrations(migrationSources, options = {}) {
   if (!Array.isArray(migrationSources)) {
     const error = new Error('migrationSources must be an array');
     error.name = 'InvalidMigrationSourcesError';
     error.status = 400;
     throw error;
   }
+
+  const logger = options.logger || console;
 
   const allMigrations = new Map();
 
@@ -129,11 +139,11 @@ function mergeMigrations(migrationSources) {
 
     // Wrap raw context with adapter
     const adapter = createContextAdapter(source.context);
-    const migrations = adapterToMigrations(adapter, source.prefix);
+    const migrations = adapterToMigrations(adapter, source.prefix, options);
 
     migrations.forEach(migration => {
       if (allMigrations.has(migration.name)) {
-        console.warn(
+        logger.warn(
           `⚠️  Duplicate migration name detected: ${migration.name}. Using first occurrence.`,
         );
       } else {
@@ -173,13 +183,15 @@ function validateConnection(connection) {
  *   - null: use built-in migrations
  *   - Array: [{context, prefix}, ...] for modules
  * @param {Sequelize} connection - Sequelize connection instance
- * @param {Console|Object} logger - Logger instance (default: console)
+ * @param {Object} [options] - Optional configuration
+ * @param {Console|Object} [options.logger] - Logger instance (default: console)
  * @returns {Umzug} Configured Umzug instance for migrations
  */
-function createMigrationUmzug(migrations, connection, logger = console) {
+function createMigrationUmzug(migrations, connection, options = {}) {
   validateConnection(connection);
 
   let migrationsConfig;
+  const logger = options.logger || console;
 
   if (migrations == null) {
     // Use built-in bundled migrations
@@ -187,7 +199,7 @@ function createMigrationUmzug(migrations, connection, logger = console) {
     migrationsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(migrations)) {
     // Array of {context, prefix} objects
-    migrationsConfig = mergeMigrations(migrations);
+    migrationsConfig = mergeMigrations(migrations, options);
   } else {
     const error = new Error(
       'Invalid migrations parameter. Expected:\n' +
@@ -217,13 +229,15 @@ function createMigrationUmzug(migrations, connection, logger = console) {
  *   - null: use built-in seeds
  *   - Array: [{context, prefix}, ...] for modules
  * @param {Sequelize} connection - Sequelize connection instance
- * @param {Console|Object} logger - Logger instance (default: console)
+ * @param {Object} [options] - Optional configuration
+ * @param {Console|Object} [options.logger] - Logger instance (default: console)
  * @returns {Umzug} Configured Umzug instance for seeds
  */
-function createSeedUmzug(seeds, connection, logger = console) {
+function createSeedUmzug(seeds, connection, options = {}) {
   validateConnection(connection);
 
   let seedsConfig;
+  const logger = options.logger || console;
 
   if (seeds == null) {
     // Use built-in bundled seeds
@@ -231,7 +245,7 @@ function createSeedUmzug(seeds, connection, logger = console) {
     seedsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(seeds)) {
     // Array of {context, prefix} objects
-    seedsConfig = mergeMigrations(seeds);
+    seedsConfig = mergeMigrations(seeds, options);
   } else {
     const error = new Error(
       'Invalid seeds parameter. Expected:\n' +
@@ -270,11 +284,7 @@ export async function getMigrationStatus(
 ) {
   validateConnection(connection);
 
-  const umzug = createMigrationUmzug(
-    migrations,
-    connection,
-    options.logger || console,
-  );
+  const umzug = createMigrationUmzug(migrations, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
     umzug.pending(),
@@ -298,7 +308,7 @@ export async function getMigrationStatus(
 export async function getSeedStatus(seeds = null, connection, options = {}) {
   validateConnection(connection);
 
-  const umzug = createSeedUmzug(seeds, connection, options.logger || console);
+  const umzug = createSeedUmzug(seeds, connection, options);
   const [executed, pending] = await Promise.all([
     umzug.executed(),
     umzug.pending(),
@@ -329,7 +339,10 @@ export async function runMigrations(
   const logger = options.logger || console;
 
   try {
-    const umzug = createMigrationUmzug(migrations, connection, logger);
+    const umzug = createMigrationUmzug(migrations, connection, {
+      ...options,
+      logger,
+    });
     const pending = await umzug.pending();
 
     if (pending.length > 0) {
@@ -363,7 +376,10 @@ export async function runSeeds(seeds = null, connection, options = {}) {
   const logger = options.logger || console;
 
   try {
-    const umzug = createSeedUmzug(seeds, connection, logger);
+    const umzug = createSeedUmzug(seeds, connection, {
+      ...options,
+      logger,
+    });
     const pending = await umzug.pending();
 
     if (pending.length > 0) {
@@ -401,7 +417,10 @@ export async function revertMigrations(
   const logger = options.logger || console;
 
   try {
-    const umzug = createMigrationUmzug(migrations, connection, logger);
+    const umzug = createMigrationUmzug(migrations, connection, {
+      ...options,
+      logger,
+    });
     const executed = await umzug.executed();
 
     if (executed.length === 0) {
@@ -432,7 +451,10 @@ export async function undoSeeds(seeds = null, connection, options = {}) {
   const logger = options.logger || console;
 
   try {
-    const umzug = createSeedUmzug(seeds, connection, logger);
+    const umzug = createSeedUmzug(seeds, connection, {
+      ...options,
+      logger,
+    });
     const executed = await umzug.executed();
 
     if (executed.length === 0) {

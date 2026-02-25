@@ -6,22 +6,25 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { demoRoleIds } from './2025.11.26T00.03.00.demo-roles';
-import { demoPermissionIds } from './2025.11.26T00.04.00.demo-permissions';
 
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
   const { queryInterface } = context;
   const now = new Date();
+
+  // Get seed roles from container
+  const container = app.get('container');
+  const SEED_ROLES = container.resolve('SEED:ROLES');
+  const SEED_PERMISSIONS = container.resolve('SEED:PERMISSIONS');
 
   const rolePermissions = [
     // Admin role - super admin permission (*:*) grants all permissions dynamically
     {
       id: uuidv4(),
-      role_id: demoRoleIds.admin,
-      permission_id: demoPermissionIds.superAdmin,
+      role_id: SEED_ROLES.admin,
+      permission_id: SEED_PERMISSIONS.superAdmin,
       created_at: now,
       updated_at: now,
     },
@@ -29,29 +32,29 @@ export async function up({ context }) {
     // User role - read-only permissions
     {
       id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.usersRead,
+      role_id: SEED_ROLES.user,
+      permission_id: SEED_PERMISSIONS.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.rolesRead,
+      role_id: SEED_ROLES.user,
+      permission_id: SEED_PERMISSIONS.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.groupsRead,
+      role_id: SEED_ROLES.user,
+      permission_id: SEED_PERMISSIONS.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.user,
-      permission_id: demoPermissionIds.permissionsRead,
+      role_id: SEED_ROLES.user,
+      permission_id: SEED_PERMISSIONS.permissionsRead,
       created_at: now,
       updated_at: now,
     },
@@ -59,43 +62,43 @@ export async function up({ context }) {
     // Moderator role - read all + update users/groups
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.usersRead,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.usersUpdate,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.usersUpdate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.rolesRead,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.groupsRead,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.groupsUpdate,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.groupsUpdate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.mod,
-      permission_id: demoPermissionIds.permissionsRead,
+      role_id: SEED_ROLES.mod,
+      permission_id: SEED_PERMISSIONS.permissionsRead,
       created_at: now,
       updated_at: now,
     },
@@ -103,43 +106,43 @@ export async function up({ context }) {
     // Editor role - read all + create/update users
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.usersRead,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.usersCreate,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.usersCreate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.usersUpdate,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.usersUpdate,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.rolesRead,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.groupsRead,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.editor,
-      permission_id: demoPermissionIds.permissionsRead,
+      role_id: SEED_ROLES.editor,
+      permission_id: SEED_PERMISSIONS.permissionsRead,
       created_at: now,
       updated_at: now,
     },
@@ -147,29 +150,29 @@ export async function up({ context }) {
     // Viewer role - read-only permissions
     {
       id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.usersRead,
+      role_id: SEED_ROLES.viewer,
+      permission_id: SEED_PERMISSIONS.usersRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.rolesRead,
+      role_id: SEED_ROLES.viewer,
+      permission_id: SEED_PERMISSIONS.rolesRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.groupsRead,
+      role_id: SEED_ROLES.viewer,
+      permission_id: SEED_PERMISSIONS.groupsRead,
       created_at: now,
       updated_at: now,
     },
     {
       id: uuidv4(),
-      role_id: demoRoleIds.viewer,
-      permission_id: demoPermissionIds.permissionsRead,
+      role_id: SEED_ROLES.viewer,
+      permission_id: SEED_PERMISSIONS.permissionsRead,
       created_at: now,
       updated_at: now,
     },
@@ -181,11 +184,14 @@ export async function up({ context }) {
 /**
  * Revert the seed
  */
-export async function down({ context }) {
+export async function down({ context }, { app }) {
   const { queryInterface } = context;
+
+  // Get seed roles from container
+  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
 
   // Remove all seeded role permissions by roleId
   await queryInterface.bulkDelete('role_permissions', {
-    role_id: Object.values(demoRoleIds),
+    role_id: Object.values(SEED_ROLES),
   });
 }

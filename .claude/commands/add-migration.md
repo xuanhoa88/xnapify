@@ -358,10 +358,9 @@ export default async function moduleInit(deps, app) {
   const db = app.get('db');
 
   // Run migrations
-  await db.runMigrations(
-    [{ context: migrationsContext, prefix: '{module}' }],
-    db.connection,
-  );
+  await db.connection.runMigrations([
+    { context: migrationsContext, prefix: '{module}' },
+  ]);
 
   // ... rest of module initialization
 }

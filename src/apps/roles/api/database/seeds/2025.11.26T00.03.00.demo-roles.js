@@ -5,28 +5,20 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
-
-// Store role IDs for use in other seeds
-export const demoRoleIds = {
-  admin: uuidv4(),
-  user: uuidv4(),
-  mod: uuidv4(),
-  editor: uuidv4(),
-  viewer: uuidv4(),
-};
-
 /**
  * Run the seed
  */
-export async function up({ context }) {
+export async function up({ context }, { app }) {
   const { queryInterface } = context;
+
+  // Get seed roles from container
+  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
 
   const now = new Date();
 
   const roles = [
     {
-      id: demoRoleIds.admin,
+      id: SEED_ROLES.admin,
       name: 'admin',
       description: 'System administrator with full access',
       is_active: true,
@@ -34,7 +26,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoRoleIds.user,
+      id: SEED_ROLES.user,
       name: 'user',
       description: 'Regular user with standard permissions',
       is_active: true,
@@ -42,7 +34,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoRoleIds.mod,
+      id: SEED_ROLES.mod,
       name: 'mod',
       description: 'Content moderator with moderation permissions',
       is_active: true,
@@ -50,7 +42,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoRoleIds.editor,
+      id: SEED_ROLES.editor,
       name: 'editor',
       description: 'Content editor with write permissions',
       is_active: true,
@@ -58,7 +50,7 @@ export async function up({ context }) {
       updated_at: now,
     },
     {
-      id: demoRoleIds.viewer,
+      id: SEED_ROLES.viewer,
       name: 'viewer',
       description: 'Read-only access to resources',
       is_active: true,
@@ -73,11 +65,14 @@ export async function up({ context }) {
 /**
  * Revert the seed
  */
-export async function down({ context }) {
+export async function down({ context }, { app }) {
   const { queryInterface } = context;
 
-  // Remove all seeded roles by name
+  // Get seed roles from container
+  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
+
+  // Remove all seeded roles by id
   await queryInterface.bulkDelete('roles', {
-    name: ['admin', 'user', 'mod', 'editor', 'viewer'],
+    id: Object.values(SEED_ROLES),
   });
 }

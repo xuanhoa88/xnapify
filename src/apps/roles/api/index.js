@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SEED_ROLES } from './constants';
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -26,54 +28,54 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', false, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
-// LOGGING
-// =============================================================================
-
-const TAG = 'Roles';
-
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-// =============================================================================
-// INTERNAL HELPERS
-// =============================================================================
-
-/**
- * Run database migrations and seeds.
- *
- * @param {Object} app - Express app instance
- */
-async function runMigrations(app) {
-  const db = app.get('db');
-
-  await db.connection.runMigrations([
-    { context: migrationsContext, prefix: 'roles' },
-  ]);
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'roles' }]);
-
-  log('Database migrated');
-}
-
-// =============================================================================
 // PUBLIC LIFECYCLE HOOKS
 // =============================================================================
 
 /**
- * Init hook — called by the autoloader to initialise this module.
+ * Shared hook — called by the autoloader to share services with other modules.
  *
  * @param {Object} app - Express app instance
- * @param {Object} _options - Options ({ CORE_MODULES })
  */
-export async function init(app, _options) {
-  await runMigrations(app);
+export async function shared(app) {
+  const container = app.get('container');
+
+  // Bind seed roles to container as singleton
+  container.bind('SEED:ROLES', () => SEED_ROLES, true);
 }
+
+/**
+ * Migrations hook — run database migrations.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function migrations(app) {
+  const db = app.get('db');
+
+  await db.connection.runMigrations(
+    [{ context: migrationsContext, prefix: 'roles' }],
+    { app },
+  );
+}
+
+/**
+ * Seeds hook — run database seeds.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function seeds(app) {
+  const db = app.get('db');
+
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'roles' }], {
+    app,
+  });
+}
+
+/**
+ * Init hook — called by the autoloader to initialise this module.
+ *
+ * @param {Object} _app - Express app instance
+ */
+export async function init(_app) {}
 
 /**
  * Models hook — returns the webpack require.context for this module's models.
