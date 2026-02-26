@@ -49,32 +49,35 @@ function findLayouts(layouts, rootSegment, pathname, module) {
   const result = [];
   const defaultKey = `${ROUTE_PATH_DEFAULT}:default`;
 
-  // 1. Theme layout: section-specific REPLACES default
-  //    e.g. (admin) layout replaces (default) layout for /admin/* routes
+  // 1. Section layout (e.g., admin shell) — always applied if it exists
+  let hasSection = false;
   if (rootSegment) {
     const sectionKey = `${ROUTE_PATH_DEFAULT}:${rootSegment}`;
     if (layouts.has(sectionKey)) {
       result.push(layouts.get(sectionKey));
-    } else if (layouts.has(defaultKey)) {
-      result.push(layouts.get(defaultKey));
+      hasSection = true;
     }
-  } else if (layouts.has(defaultKey)) {
-    result.push(layouts.get(defaultKey));
   }
 
   // 2. Colocated/Nested Layouts (Path-based, root → leaf)
-  // Traverse the path from root to leaf to find _layout.js files
   const segments = pathname.split(ROUTE_SEPARATOR).filter(Boolean);
   let currentPath = '';
+  const pathLayouts = [];
 
   segments.forEach(segment => {
     currentPath += `${ROUTE_SEPARATOR}${segment}`;
     const layout = layouts.get(currentPath);
     if (layout && !result.includes(layout)) {
-      result.push(layout);
+      pathLayouts.push(layout);
     }
   });
 
+  // 3. Default layout is a FALLBACK — only when no section AND no colocated
+  if (!hasSection && pathLayouts.length === 0 && layouts.has(defaultKey)) {
+    result.push(layouts.get(defaultKey));
+  }
+
+  result.push(...pathLayouts);
   return result;
 }
 
