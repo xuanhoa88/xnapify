@@ -98,8 +98,27 @@ export async function up(_, { app }) {
     },
   ];
 
-  await User.bulkCreate(users, {
-    // We must pass the include to correctly handle the expandProfileEAV hook logic
+  const formattedUsers = users.map(user => {
+    const eavProfile = [];
+    if (user.profile) {
+      for (const [key, value] of Object.entries(user.profile)) {
+        if (value !== undefined && value !== null) {
+          eavProfile.push({
+            attribute_key: key,
+            attribute_value:
+              typeof value === 'object' ? JSON.stringify(value) : String(value),
+          });
+        }
+      }
+    }
+    return {
+      ...user,
+      profile: eavProfile,
+    };
+  });
+
+  await User.bulkCreate(formattedUsers, {
+    // We must pass the include to correctly create the user_profiles
     include: [
       {
         model: UserProfile,

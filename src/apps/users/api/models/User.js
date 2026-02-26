@@ -233,11 +233,6 @@ export default function createUserModel({ connection, DataTypes }) {
   });
 
   User.addHook('beforeValidate', 'expandProfileEAV', expandProfileEAV);
-  User.addHook('beforeBulkCreate', 'expandProfileEAVBulk', users => {
-    if (Array.isArray(users)) {
-      users.forEach(expandProfileEAV);
-    }
-  });
 
   return User;
 }
