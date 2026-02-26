@@ -205,23 +205,20 @@ export class RadixTree {
 export function buildRadixTree(routes) {
   const tree = new RadixTree();
 
-  function insertRecursive(route, parentPath) {
-    const fullPath =
-      parentPath === ROUTE_SEPARATOR
-        ? route.path || ROUTE_SEPARATOR
-        : parentPath + (route.path || '');
+  const insertRecursive = route => {
+    const fullPath = route.path || ROUTE_SEPARATOR;
 
     tree.insert(fullPath, route);
 
     if (Array.isArray(route.children)) {
       for (const child of route.children) {
-        insertRecursive(child, fullPath);
+        insertRecursive(child);
       }
     }
-  }
+  };
 
   for (const route of routes) {
-    insertRecursive(route, '');
+    insertRecursive(route);
   }
 
   return tree;
