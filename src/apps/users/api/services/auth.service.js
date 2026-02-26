@@ -243,14 +243,17 @@ export async function authenticateUser(
     { useWorker: true },
   );
 
+  // Format user response
+  const normalizedUser = await formatUserResponse(user);
+
   // Emit hook event if hook factory provided
-  await hook('auth').emit('login', {
+  await hook('auth').emit('logged_in', {
     user_id: user.id,
     activityData,
-    user: await formatUserResponse(user),
+    user: normalizedUser,
   });
 
-  return formatUserResponse(user);
+  return normalizedUser;
 }
 
 /**

@@ -46,23 +46,23 @@ export const getActivitiesTotal = state => {
 };
 
 /**
- * Check if dashboard has been fetched at least once
+ * Check if activities has been fetched at least once
  */
-export const isDashboardInitialized = state => {
+export const isActivitiesInitialized = state => {
   const data = getDashboardState(state);
   return !!(data && data.initialized && data.initialized.fetch);
 };
 
 // =============================================================================
-// FETCH OPERATION (fetchDashboard)
+// FETCH OPERATION (fetchActivities)
 // =============================================================================
 
-export const isDashboardLoading = state => {
+export const isActivitiesLoading = state => {
   const op = getOperationState(state, 'fetch');
   return !!(op && op.loading);
 };
 
-export const getDashboardError = state => {
+export const getActivitiesError = state => {
   const op = getOperationState(state, 'fetch');
   return (op && op.error) || null;
 };

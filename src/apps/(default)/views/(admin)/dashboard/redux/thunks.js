@@ -21,8 +21,8 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
  * @param {number} options.limit - Items per page
  * @returns {Promise<Object>} Activity data with pagination
  */
-export const fetchDashboard = createAsyncThunk(
-  'admin/dashboard/fetchDashboard',
+export const fetchActivities = createAsyncThunk(
+  'admin/dashboard/fetchActivities',
   async (options = {}, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { page = 1, limit = 20, search = '' } = options;
@@ -31,7 +31,7 @@ export const fetchDashboard = createAsyncThunk(
       const query = { limit, offset };
       if (search) query.search = search;
 
-      const { data } = await fetch('/api/activities', {
+      const { data } = await fetch('/api/admin/activities', {
         query,
       });
 

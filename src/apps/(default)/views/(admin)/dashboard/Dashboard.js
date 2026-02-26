@@ -18,12 +18,12 @@ import {
 } from '../../../../../shared/renderer/components/Admin';
 import Card from '../../../../../shared/renderer/components/Card';
 import {
-  fetchDashboard,
+  fetchActivities,
   getActivities,
   getActivitiesTotal,
   getActivitiesPagination,
-  isDashboardLoading,
-  getDashboardError,
+  isActivitiesLoading,
+  getActivitiesError,
 } from './redux';
 import s from './Dashboard.css';
 
@@ -48,21 +48,21 @@ function Dashboard() {
   const activities = useSelector(getActivities);
   const total = useSelector(getActivitiesTotal);
   const pagination = useSelector(getActivitiesPagination);
-  const loading = useSelector(isDashboardLoading);
-  const error = useSelector(getDashboardError);
+  const loading = useSelector(isActivitiesLoading);
+  const error = useSelector(getActivitiesError);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
-    dispatch(fetchDashboard({ page: 1, limit: 20 }));
+    dispatch(fetchActivities({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   const handlePageChange = page => {
-    dispatch(fetchDashboard({ page, limit: 20, search }));
+    dispatch(fetchActivities({ page, limit: 20, search }));
   };
 
   const handleSearch = value => {
     setSearch(value);
-    dispatch(fetchDashboard({ page: 1, limit: 20, search: value }));
+    dispatch(fetchActivities({ page: 1, limit: 20, search: value }));
   };
 
   const renderContent = () => {
@@ -85,7 +85,7 @@ function Dashboard() {
         <Table.Error
           title={t('admin:dashboard.errorLoading', 'Error loading activities')}
           error={error}
-          onRetry={() => dispatch(fetchDashboard())}
+          onRetry={() => dispatch(fetchActivities())}
         />
       );
     }

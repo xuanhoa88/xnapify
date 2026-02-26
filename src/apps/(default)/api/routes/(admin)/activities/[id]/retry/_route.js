@@ -6,27 +6,17 @@
  */
 
 /**
- * POST /api/activities/:id/retry
+ * POST /api/admin/activities/:id/retry
  * Retry activity
  */
 export async function post(req, res) {
+  const http = req.app.get('http');
   const webhook = req.app.get('webhook');
   const result = await webhook.services.retry(webhook, req.params.id);
 
   if (result.success) {
-    return res.status(200).json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      data: result.data,
-      message: result.message,
-    });
+    return http.sendSuccess(res, result.data);
   }
 
-  return res.status(result.error.status || 500).json({
-    success: false,
-    timestamp: new Date().toISOString(),
-    message:
-      result.error.message || result.message || 'Failed to retry activity',
-    meta: result.error,
-  });
+  return http.sendError(res, 'Failed to retry activity', result.error);
 }

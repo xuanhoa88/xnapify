@@ -6,27 +6,17 @@
  */
 
 /**
- * GET /api/activities/stats
+ * GET /api/admin/activities/stats
  * Get activity statistics
  */
 export async function get(req, res) {
+  const http = req.app.get('http');
   const webhook = req.app.get('webhook');
   const result = await webhook.services.stats(webhook);
 
   if (result.success) {
-    return res.status(200).json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      data: result.data,
-      message: result.message,
-    });
+    return http.sendSuccess(res, result.data);
   }
 
-  return res.status(result.error.status || 500).json({
-    success: false,
-    timestamp: new Date().toISOString(),
-    message:
-      result.error.message || result.message || 'Failed to get statistics',
-    meta: result.error,
-  });
+  return http.sendError(res, 'Failed to get statistics', result.error);
 }

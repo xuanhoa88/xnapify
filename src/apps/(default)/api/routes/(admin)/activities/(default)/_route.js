@@ -6,10 +6,12 @@
  */
 
 /**
- * GET /api/activities
+ * GET /api/admin/activities
  * List recent activities
  */
 export async function get(req, res) {
+  const http = req.app.get('http');
+
   const webhook = req.app.get('webhook');
   const defaults = { page: 1, limit: 10, maxLimit: 100 };
   const page = Math.max(1, parseInt(req.query.page, 10) || defaults.page);
@@ -28,19 +30,8 @@ export async function get(req, res) {
   const result = await webhook.services.list(webhook, options);
 
   if (result.success) {
-    return res.status(200).json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      data: result.data,
-      message: result.message,
-    });
+    return http.sendSuccess(res, result.data);
   }
 
-  return res.status(result.error.status || 500).json({
-    success: false,
-    timestamp: new Date().toISOString(),
-    message:
-      result.error.message || result.message || 'Failed to list activities',
-    meta: result.error,
-  });
+  return http.sendError(res, 'Failed to list activities', result.error);
 }

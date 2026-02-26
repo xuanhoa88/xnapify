@@ -52,10 +52,8 @@ function isAdmin(user) {
  * @param {boolean} [options.includePermissions=true] - Include detailed permissions
  * @returns {Promise<Object>} Formatted user object
  */
-export async function formatUserResponse(user, options) {
-  const opts = options || {};
-  const { rbacData } = opts;
-  const includePermissions = opts.includePermissions !== false;
+export async function formatUserResponse(user, options = {}) {
+  const { rbacData, includePermissions = true } = options;
 
   // Collect RBAC data if not provided
   const rbac = rbacData || collectUserRBACData(user);
@@ -67,10 +65,7 @@ export async function formatUserResponse(user, options) {
     // Core user fields
     id: user.id,
     email: user.email,
-    email_confirmed: user.email_confirmed,
     is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
 
     // Profile fields (nested under profile)
     profile,

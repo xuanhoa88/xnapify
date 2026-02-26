@@ -40,9 +40,7 @@ export async function getProfile(req, res) {
     }
 
     // Format user response
-    const normalizedUser = await formatUserResponse(user, {
-      hook: req.app.get('hook').withContext(req.app),
-    });
+    const normalizedUser = await formatUserResponse(user);
 
     // Emit hook event for plugins to modify the response
     await hook('profile').emit('retrieved', normalizedUser);
@@ -102,10 +100,8 @@ export async function updateProfile(req, res) {
       },
     );
 
-    // Format user response and emit retrieved hook (same as getProfile)
-    // so plugins can format the response data consistently
-    const normalizedUser = await formatUserResponse(user, { hook });
-    await hook('profile').emit('retrieved', normalizedUser);
+    // Format user response
+    const normalizedUser = await formatUserResponse(user);
 
     return http.sendSuccess(res, { profile: normalizedUser });
   } catch (error) {

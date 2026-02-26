@@ -6,7 +6,7 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
-import { fetchDashboard } from './thunks';
+import { fetchActivities } from './thunks';
 
 // =============================================================================
 // STATE SHAPE
@@ -150,8 +150,8 @@ const dashboardSlice = createSlice({
   extraReducers: builder => {
     builder
       // Fetch dashboard
-      .addCase(fetchDashboard.pending, createPendingHandler('fetch'))
-      .addCase(fetchDashboard.fulfilled, (state, action) => {
+      .addCase(fetchActivities.pending, createPendingHandler('fetch'))
+      .addCase(fetchActivities.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         const { data, total, page, limit, offset, hasMore } = action.payload;
 
@@ -172,7 +172,7 @@ const dashboardSlice = createSlice({
         normalized.operations.fetch = createOperationState();
         Object.assign(state, normalized);
       })
-      .addCase(fetchDashboard.rejected, createRejectedHandler('fetch'));
+      .addCase(fetchActivities.rejected, createRejectedHandler('fetch'));
   },
 });
 
