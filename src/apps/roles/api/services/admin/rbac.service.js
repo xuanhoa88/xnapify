@@ -908,7 +908,7 @@ export async function assignRolesToGroup(
   role_names,
   { models, webhook, actorId },
 ) {
-  const { Group, Role, User } = models;
+  const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -949,15 +949,13 @@ export async function assignRolesToGroup(
   );
 
   // Invalidate RBAC cache for all users in this group
-  const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: User, as: 'users', attributes: ['id'] }],
+  const groupUsers = await GroupUser.findAll({
+    where: { group_id },
+    attributes: ['user_id'],
+    raw: true,
   });
-  if (
-    groupWithUsers &&
-    groupWithUsers.users &&
-    groupWithUsers.users.length > 0
-  ) {
-    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
+  if (groupUsers.length > 0) {
+    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Return group with roles
@@ -999,7 +997,7 @@ export async function addRoleToGroup(
   role_id,
   { models, webhook, actorId },
 ) {
-  const { Group, Role, User } = models;
+  const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -1030,15 +1028,13 @@ export async function addRoleToGroup(
   );
 
   // Invalidate RBAC cache for all users in this group
-  const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: User, as: 'users', attributes: ['id'] }],
+  const groupUsers = await GroupUser.findAll({
+    where: { group_id },
+    attributes: ['user_id'],
+    raw: true,
   });
-  if (
-    groupWithUsers &&
-    groupWithUsers.users &&
-    groupWithUsers.users.length > 0
-  ) {
-    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
+  if (groupUsers.length > 0) {
+    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Reload group with roles
@@ -1079,7 +1075,7 @@ export async function removeRoleFromGroup(
   role_id,
   { models, webhook, actorId },
 ) {
-  const { Group, Role, User } = models;
+  const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
   if (!group) {
@@ -1110,15 +1106,13 @@ export async function removeRoleFromGroup(
   );
 
   // Invalidate RBAC cache for all users in this group
-  const groupWithUsers = await Group.findByPk(group_id, {
-    include: [{ model: User, as: 'users', attributes: ['id'] }],
+  const groupUsers = await GroupUser.findAll({
+    where: { group_id },
+    attributes: ['user_id'],
+    raw: true,
   });
-  if (
-    groupWithUsers &&
-    groupWithUsers.users &&
-    groupWithUsers.users.length > 0
-  ) {
-    rbacCache.invalidateUsers(groupWithUsers.users.map(u => u.id));
+  if (groupUsers.length > 0) {
+    rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
   // Reload group with roles
@@ -1291,7 +1285,7 @@ export async function manageRolePermissions(
   models,
   action,
 ) {
-  const { Role, Permission, User } = models;
+  const { Role, Permission, UserRole } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
@@ -1390,12 +1384,13 @@ export async function manageRolePermissions(
   }
 
   // Invalidate cache for all users with this role
-  const usersWithRole = await User.findAll({
-    include: [{ model: Role, as: 'roles', where: { id: role.id } }],
-    attributes: ['id'],
+  const userRoles = await UserRole.findAll({
+    where: { role_id: role.id },
+    attributes: ['user_id'],
+    raw: true,
   });
-  if (usersWithRole.length > 0) {
-    rbacCache.invalidateUsers(usersWithRole.map(u => u.id));
+  if (userRoles.length > 0) {
+    rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
   }
 
   // Return role with permissions (excluding wildcards)

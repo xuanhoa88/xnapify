@@ -34,11 +34,7 @@ const COLLECTORS = Object.freeze({
       const [, moduleName, routePath] = m;
       const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
 
-      // Check if terminal segment is (default) before unwrapping
       const rawSegments = routePath.split(ROUTE_SEPARATOR);
-      const isTerminalDefault =
-        rawSegments.length > 0 &&
-        rawSegments[rawSegments.length - 1] === '(default)';
 
       // Parse path segments, unwrapping route groups and converting params
       const segments = rawSegments
@@ -57,27 +53,20 @@ const COLLECTORS = Object.freeze({
         .filter(s => s && s !== 'default');
 
       // Auto-detect app-scoped paths for non-default modules:
-      // When terminal (default) is filtered out and only one segment remains
-      // (a section root like 'admin'), append the module name to prevent
-      // route collisions with the (default) module.
-      // e.g. {moduleName}/admin/(default) -> /admin/{moduleName}
-      if (!isDefaultModule && isTerminalDefault && segments.length === 1) {
-        segments.push(moduleName);
-      }
-
-      // Build pathname based on module type
-      let parts;
-      if (isDefaultModule) {
-        parts = segments;
-      } else if (segments.length > 0) {
-        parts = segments;
-      } else {
-        parts = [moduleName];
+      if (!isDefaultModule) {
+        if (segments.length > 0 && segments[0] === 'admin') {
+          // Inject moduleName after 'admin'
+          // /admin/users/list
+          segments.splice(1, 0, moduleName);
+        } else {
+          // Prepend moduleName
+          segments.unshift(moduleName);
+        }
       }
 
       const pathname =
-        parts.length > 0
-          ? ROUTE_SEPARATOR + parts.join(ROUTE_SEPARATOR)
+        segments.length > 0
+          ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
           : ROUTE_SEPARATOR;
       return { key: pathname, data: { path: pathname } };
     },
@@ -127,7 +116,8 @@ const COLLECTORS = Object.freeze({
       );
 
       if (routeMatch) {
-        const [, , routePath] = routeMatch;
+        const [, moduleName, routePath] = routeMatch;
+        const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
         // reused logic from routes to determine path Key?
         // Simplified: Just use the directory path as the key
         // Note: We need to normalize the path similar to routes (unwrap groups)
@@ -147,6 +137,14 @@ const COLLECTORS = Object.freeze({
             return s;
           })
           .filter(s => s && s !== 'default'); // default?
+
+        if (!isDefaultModule) {
+          if (segments.length > 0 && segments[0] === 'admin') {
+            segments.splice(1, 0, moduleName);
+          } else {
+            segments.unshift(moduleName);
+          }
+        }
 
         const pathname =
           segments.length > 0

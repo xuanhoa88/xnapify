@@ -5,8 +5,39 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ROLE } from '../../../../shared/api/engines/auth';
-import { collectUserRBACData, isAdmin } from './rbac/collector';
+import {
+  DEFAULT_ROLE,
+  ADMIN_ROLE,
+  DEFAULT_RESOURCES,
+  DEFAULT_ACTIONS,
+} from '../../../../shared/api/engines/auth';
+import { collectUserRBACData } from './rbac/collector';
+
+/**
+ * Check if a user object is an admin (RBAC compatible)
+ * Checks for: is_admin flag, admin role, or super admin permission (*:*)
+ *
+ * @param {object} user - User object with roles/permissions
+ * @returns {boolean} True if user is an admin
+ */
+function isAdmin(user) {
+  try {
+    if (!user) return false;
+    if (user.is_admin === true) return true;
+    if (Array.isArray(user.roles) && user.roles.includes(ADMIN_ROLE))
+      return true;
+    if (
+      Array.isArray(user.permissions) &&
+      user.permissions.includes(
+        `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
+      )
+    )
+      return true;
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+  }
+  return false;
+}
 
 /**
  * Format user data for API response
@@ -45,7 +76,6 @@ export async function formatUserResponse(user, options) {
     profile,
 
     // RBAC fields
-    is_admin: isAdmin({ roles: rbac.roles }),
     roles: rbac.roles.length > 0 ? rbac.roles : [DEFAULT_ROLE],
     groups: rbac.groups,
   };
@@ -55,5 +85,9 @@ export async function formatUserResponse(user, options) {
     result.permissions = rbac.permissions;
   }
 
-  return result;
+  return {
+    ...result,
+    // Check admin status
+    is_admin: isAdmin({ ...result, ...rbac }),
+  };
 }

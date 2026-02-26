@@ -29,10 +29,6 @@ function buildPathname(moduleName, routePath) {
   const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
   const rawSegments = routePath ? routePath.split(ROUTE_SEPARATOR) : [];
 
-  const isTerminalDefault =
-    rawSegments.length > 0 &&
-    rawSegments[rawSegments.length - 1] === '(default)';
-
   // Parse path segments, unwrapping route groups and converting params
   const segments = rawSegments
     .map(s => {
@@ -48,21 +44,20 @@ function buildPathname(moduleName, routePath) {
     .filter(s => s && s !== 'default');
 
   // Auto-detect app-scoped paths for non-default modules:
-  // When terminal (default) is filtered out and only one segment remains
-  // (a section root like 'admin'), append the module name to prevent
-  // route collisions with the (default) module.
-  // e.g. {moduleName}/admin/(default) -> /admin/{moduleName}
-  if (!isDefaultModule && isTerminalDefault && segments.length === 1) {
-    segments.push(moduleName);
+  if (!isDefaultModule) {
+    if (segments.length > 0 && segments[0] === 'admin') {
+      // Inject moduleName after 'admin'
+      // /admin/users/list
+      segments.splice(1, 0, moduleName);
+    } else {
+      // Prepend moduleName
+      // /auth/profile/preferences
+      segments.unshift(moduleName);
+    }
   }
 
-  // Build pathname: default modules and modules with segments use segments as-is,
-  // bare non-default modules fall back to [moduleName].
-  const parts =
-    !isDefaultModule && segments.length === 0 ? [moduleName] : segments;
-
-  return parts.length > 0
-    ? ROUTE_SEPARATOR + parts.join(ROUTE_SEPARATOR)
+  return segments.length > 0
+    ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
     : ROUTE_SEPARATOR;
 }
 

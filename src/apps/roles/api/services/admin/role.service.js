@@ -319,7 +319,7 @@ export async function updateRole(
  * @returns {Promise<boolean>} Success status
  */
 export async function deleteRole(role_id, { models, webhook, actorId }) {
-  const { Role, User } = models;
+  const { Role, UserRole } = models;
 
   const role = await Role.findByPk(role_id);
   if (!role) {
@@ -337,14 +337,21 @@ export async function deleteRole(role_id, { models, webhook, actorId }) {
     throw error;
   }
 
-  // Get all users with this role before deletion for cache invalidation
-  const usersWithRole = await User.findAll({
-    include: [{ model: Role, as: 'roles', where: { id: role_id } }],
-    attributes: ['id'],
+  // Get all user IDs with this role before deletion for cache invalidation
+  // Use UserRole junction table directly for better database performance
+  const userRoles = await UserRole.findAll({
+    where: { role_id },
+    attributes: ['user_id'],
+    raw: true,
   });
 
   const roleName = role.name;
   await role.destroy();
+
+  // Invalidate RBAC cache for affected users
+  if (userRoles.length > 0) {
+    rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+  }
 
   // Log activity
   await logRoleActivity(
@@ -354,11 +361,6 @@ export async function deleteRole(role_id, { models, webhook, actorId }) {
     { name: roleName },
     actorId,
   );
-
-  // Invalidate RBAC cache for affected users
-  if (usersWithRole.length > 0) {
-    rbacCache.invalidateUsers(usersWithRole.map(u => u.id));
-  }
 
   return true;
 }
