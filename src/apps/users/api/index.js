@@ -6,6 +6,7 @@
  */
 
 import * as RBAC_CONSTANTS from './constants/rbac';
+import { SEED_USERS } from './constants/migration';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
 
@@ -72,6 +73,9 @@ async function registerAuthHooks(app) {
  */
 export async function shared(app) {
   const container = app.get('container');
+
+  // Bind seed constants to container as singleton
+  container.bind('users:seed_constants', () => SEED_USERS, true);
 
   // Bind rbac constants to container as singleton
   container.bind('users:rbac_constants', () => RBAC_CONSTANTS, true);

@@ -10,15 +10,13 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Run the seed
  */
-export async function up({ context }, { app }) {
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { GroupRole } = app.get('models');
 
   // Get seed groups from container
   const container = app.get('container');
-  const SEED_GROUPS = container.resolve('SEED:GROUPS');
-  const SEED_ROLES = container.resolve('SEED:ROLES');
-
-  const now = new Date();
+  const SEED_GROUPS = container.resolve('groups:seed_constants');
+  const SEED_ROLES = container.resolve('roles:seed_constants');
 
   const groupRoles = [
     // Engineering group - editor role
@@ -26,8 +24,6 @@ export async function up({ context }, { app }) {
       id: uuidv4(),
       group_id: SEED_GROUPS.engineering,
       role_id: SEED_ROLES.editor,
-      created_at: now,
-      updated_at: now,
     },
 
     // Marketing group - user role
@@ -35,8 +31,6 @@ export async function up({ context }, { app }) {
       id: uuidv4(),
       group_id: SEED_GROUPS.marketing,
       role_id: SEED_ROLES.user,
-      created_at: now,
-      updated_at: now,
     },
 
     // Support group - moderator role
@@ -44,8 +38,6 @@ export async function up({ context }, { app }) {
       id: uuidv4(),
       group_id: SEED_GROUPS.support,
       role_id: SEED_ROLES.mod,
-      created_at: now,
-      updated_at: now,
     },
 
     // Management group - admin role
@@ -53,22 +45,26 @@ export async function up({ context }, { app }) {
       id: uuidv4(),
       group_id: SEED_GROUPS.management,
       role_id: SEED_ROLES.admin,
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('group_roles', groupRoles);
+  await GroupRole.bulkCreate(groupRoles);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { GroupRole } = app.get('models');
+
+  // Get seed groups from container
+  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
 
   // Remove all seeded group roles by groupId
-  await queryInterface.bulkDelete('group_roles', {
-    group_id: Object.values(SEED_GROUPS),
+  await GroupRole.destroy({
+    where: {
+      group_id: Object.values(SEED_GROUPS),
+    },
+    force: true, // Hard delete
   });
 }

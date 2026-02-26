@@ -8,13 +8,11 @@
 /**
  * Run the seed
  */
-export async function up({ context }, { app }) {
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { Group } = app.get('models');
 
   // Get seed groups from container
-  const SEED_GROUPS = app.get('container').resolve('SEED:GROUPS');
-
-  const now = new Date();
+  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
 
   const groups = [
     {
@@ -22,46 +20,44 @@ export async function up({ context }, { app }) {
       name: 'Engineering',
       description: 'Engineering and development team',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_GROUPS.marketing,
       name: 'Marketing',
       description: 'Marketing and communications team',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_GROUPS.support,
       name: 'Support',
       description: 'Customer support team',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_GROUPS.management,
       name: 'Management',
       description: 'Management and leadership team',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('groups', groups);
+  await Group.bulkCreate(groups);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { Group } = app.get('models');
 
-  // Remove all seeded groups by name
-  await queryInterface.bulkDelete('groups', {
-    name: ['Engineering', 'Marketing', 'Support', 'Management'],
+  // Get seed groups from container
+  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
+
+  // Remove all seeded groups by id
+  await Group.destroy({
+    where: {
+      id: Object.values(SEED_GROUPS),
+    },
+    force: true, // Hard delete
   });
 }

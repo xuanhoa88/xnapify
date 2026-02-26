@@ -8,14 +8,12 @@
 /**
  * Run the seed
  */
-export async function up({ context }, { app }) {
-  const now = new Date();
-
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { Permission } = app.get('models');
 
   // Get seed permissions from container
   const container = app.get('container');
-  const SEED_PERMISSIONS = container.resolve('SEED:PERMISSIONS');
+  const SEED_PERMISSIONS = container.resolve('permissions:seed_constants');
   const RBAC_CONSTANTS = container.resolve('users:rbac_constants');
 
   const permissions = [
@@ -26,8 +24,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.MANAGE,
       description: 'Super admin - full system access',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // Users CRUD
     {
@@ -36,8 +32,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.CREATE,
       description: 'Create users',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.usersRead,
@@ -45,8 +39,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.READ,
       description: 'View users',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.usersUpdate,
@@ -54,8 +46,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.UPDATE,
       description: 'Update users',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.usersDelete,
@@ -63,8 +53,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.DELETE,
       description: 'Delete users',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // Roles CRUD
     {
@@ -73,8 +61,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.CREATE,
       description: 'Create roles',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.rolesRead,
@@ -82,8 +68,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.READ,
       description: 'View roles',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.rolesUpdate,
@@ -91,8 +75,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.UPDATE,
       description: 'Update roles',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.rolesDelete,
@@ -100,8 +82,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.DELETE,
       description: 'Delete roles',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // Groups CRUD
     {
@@ -110,8 +90,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.CREATE,
       description: 'Create groups',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.groupsRead,
@@ -119,8 +97,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.READ,
       description: 'View groups',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.groupsUpdate,
@@ -128,8 +104,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.UPDATE,
       description: 'Update groups',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.groupsDelete,
@@ -137,8 +111,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.DELETE,
       description: 'Delete groups',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // Permissions CRUD
     {
@@ -147,8 +119,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.CREATE,
       description: 'Create permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.permissionsRead,
@@ -156,8 +126,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.READ,
       description: 'View permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.permissionsUpdate,
@@ -165,8 +133,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.UPDATE,
       description: 'Update permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.permissionsDelete,
@@ -174,8 +140,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.DELETE,
       description: 'Delete permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // Node-RED
     {
@@ -185,8 +149,6 @@ export async function up({ context }, { app }) {
       description:
         'Grants full access to the Node-RED editor and Admin API, allowing users to view, modify, and deploy flows, nodes, and settings.',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.nodeRedReadOnly,
@@ -195,8 +157,6 @@ export async function up({ context }, { app }) {
       description:
         'Grants read-only access to the Node-RED editor and Admin API, allowing users to view flows, nodes, and settings without making changes.',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     // API Keys
     {
@@ -205,8 +165,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.CREATE,
       description: 'Create API keys',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.apiKeysRead,
@@ -214,8 +172,6 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.READ,
       description: 'View API keys',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_PERMISSIONS.apiKeysDelete,
@@ -223,25 +179,28 @@ export async function up({ context }, { app }) {
       action: RBAC_CONSTANTS.DEFAULT_ACTIONS.DELETE,
       description: 'Delete API keys',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('permissions', permissions);
+  await Permission.bulkCreate(permissions);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }, { app }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { Permission } = app.get('models');
 
   // Get seed permissions from container
-  const SEED_PERMISSIONS = app.get('container').resolve('SEED:PERMISSIONS');
+  const SEED_PERMISSIONS = app
+    .get('container')
+    .resolve('permissions:seed_constants');
 
   // Remove all seeded permissions by id
-  await queryInterface.bulkDelete('permissions', {
-    id: Object.values(SEED_PERMISSIONS),
+  await Permission.destroy({
+    where: {
+      id: Object.values(SEED_PERMISSIONS),
+    },
+    force: true, // Hard delete
   });
 }

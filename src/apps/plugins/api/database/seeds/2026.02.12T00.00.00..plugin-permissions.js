@@ -19,8 +19,8 @@ export const pluginPermissionIds = {
 /**
  * Run the seed
  */
-export async function up({ context }) {
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { Permission } = app.get('models');
   const now = new Date();
 
   const permissions = [
@@ -62,20 +62,23 @@ export async function up({ context }) {
     },
   ];
 
-  await queryInterface.bulkInsert('permissions', permissions);
+  await Permission.bulkCreate(permissions);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context, Sequelize }) {
-  const { queryInterface } = context;
+export async function down({ Sequelize }, { app }) {
+  const { Permission } = app.get('models');
   const { Op } = Sequelize;
 
-  await queryInterface.bulkDelete('permissions', {
-    resource: 'plugins',
-    action: {
-      [Op.in]: ['create', 'read', 'update', 'delete'],
+  await Permission.destroy({
+    where: {
+      resource: 'plugins',
+      action: {
+        [Op.in]: ['create', 'read', 'update', 'delete'],
+      },
     },
+    force: true, // Hard delete
   });
 }

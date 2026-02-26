@@ -69,10 +69,10 @@ function parseEnvCoreModules() {
  * Additional modules come from RSK_MODULE_DEFAULTS.
  */
 const CORE_MODULES = new Set([
-  'users',
+  'permissions',
   'roles',
   'groups',
-  'permissions',
+  'users',
   'plugins',
   'auth',
   ...parseEnvCoreModules(),

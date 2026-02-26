@@ -40,7 +40,7 @@ export async function shared(app) {
   const container = app.get('container');
 
   // Bind seed groups to container as singleton
-  container.bind('SEED:GROUPS', () => SEED_GROUPS, true);
+  container.bind('groups:seed_constants', () => SEED_GROUPS, true);
 }
 
 /**

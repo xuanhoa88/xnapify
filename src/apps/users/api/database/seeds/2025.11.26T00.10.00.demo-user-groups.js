@@ -6,82 +6,75 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
 
 /**
  * Run the seed
  */
-export async function up({ context }, { app }) {
-  const now = new Date();
+export async function up(_, { app }) {
+  const { UserGroup } = app.get('models');
 
-  const { queryInterface } = context;
-
-  // Get seed roles from container
-  const SEED_GROUPS = app.get('container').resolve('SEED:GROUPS');
+  // Get seed constants from the container
+  const container = app.get('container');
+  const SEED_GROUPS = container.resolve('groups:seed_constants');
+  const SEED_USERS = container.resolve('users:seed_constants');
 
   const userGroups = [
     // Admin - Management and Engineering groups (multi-group membership)
     {
       id: uuidv4(),
-      user_id: demoUserIds.admin,
+      user_id: SEED_USERS.admin,
       group_id: SEED_GROUPS.management,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: uuidv4(),
-      user_id: demoUserIds.admin,
+      user_id: SEED_USERS.admin,
       group_id: SEED_GROUPS.engineering,
-      created_at: now,
-      updated_at: now,
     },
 
     // John - Engineering group only
     {
       id: uuidv4(),
-      user_id: demoUserIds.john,
+      user_id: SEED_USERS['john.doe'],
       group_id: SEED_GROUPS.engineering,
-      created_at: now,
-      updated_at: now,
     },
 
     // Jane - Marketing and Support groups (multi-group membership)
     {
       id: uuidv4(),
-      user_id: demoUserIds.jane,
+      user_id: SEED_USERS['jane.smith'],
       group_id: SEED_GROUPS.marketing,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: uuidv4(),
-      user_id: demoUserIds.jane,
+      user_id: SEED_USERS['jane.smith'],
       group_id: SEED_GROUPS.support,
-      created_at: now,
-      updated_at: now,
     },
 
     // Locked user - Support group only
     {
       id: uuidv4(),
-      user_id: demoUserIds.locked,
+      user_id: SEED_USERS['locked.user'],
       group_id: SEED_GROUPS.support,
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('user_groups', userGroups);
+  await UserGroup.bulkCreate(userGroups);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { UserGroup } = app.get('models');
+
+  // Get seed constants from the container
+  const SEED_USERS = app.get('container').resolve('users:seed_constants');
 
   // Remove all seeded user groups by userId
-  await queryInterface.bulkDelete('user_groups', {
-    user_id: Object.values(demoUserIds),
+  await UserGroup.destroy({
+    where: {
+      user_id: Object.values(SEED_USERS),
+    },
+    force: true, // Hard delete
   });
 }

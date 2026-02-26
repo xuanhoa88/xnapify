@@ -6,62 +6,60 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
-import { demoUserIds } from './2025.11.26T00.00.00.demo-users';
 
 /**
  * Run the seed
  */
-export async function up({ context }) {
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { UserLogin } = app.get('models');
 
-  const now = new Date();
+  // Get seed constants from the container
+  const SEED_USERS = app.get('container').resolve('users:seed_constants');
 
   const logins = [
     {
       id: uuidv4(),
-      user_id: demoUserIds.john,
+      user_id: SEED_USERS['john.doe'],
       name: 'google',
       key: 'google-oauth-id-123456',
-      created_at: now,
-      updated_at: now,
     },
     {
       id: uuidv4(),
-      user_id: demoUserIds.john,
+      user_id: SEED_USERS['john.doe'],
       name: 'github',
       key: 'github-oauth-id-789012',
-      created_at: now,
-      updated_at: now,
     },
     {
       id: uuidv4(),
-      user_id: demoUserIds.jane,
+      user_id: SEED_USERS['jane.smith'],
       name: 'google',
       key: 'google-oauth-id-345678',
-      created_at: now,
-      updated_at: now,
     },
     {
       id: uuidv4(),
-      user_id: demoUserIds.jane,
+      user_id: SEED_USERS['jane.smith'],
       name: 'facebook',
       key: 'facebook-oauth-id-901234',
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('user_logins', logins);
+  await UserLogin.bulkCreate(logins);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { UserLogin } = app.get('models');
+
+  // Get seed constants from the container
+  const SEED_USERS = app.get('container').resolve('users:seed_constants');
 
   // Remove all seeded logins by userId
-  await queryInterface.bulkDelete('user_logins', {
-    user_id: Object.values(demoUserIds),
+  await UserLogin.destroy({
+    where: {
+      user_id: Object.values(SEED_USERS),
+    },
+    force: true, // Hard delete
   });
 }

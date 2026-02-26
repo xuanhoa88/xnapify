@@ -40,7 +40,7 @@ export async function shared(app) {
   const container = app.get('container');
 
   // Bind seed permissions to container as singleton
-  container.bind('SEED:PERMISSIONS', () => SEED_PERMISSIONS, true);
+  container.bind('permissions:seed_constants', () => SEED_PERMISSIONS, true);
 }
 
 /**

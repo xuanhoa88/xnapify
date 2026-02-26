@@ -8,13 +8,11 @@
 /**
  * Run the seed
  */
-export async function up({ context }, { app }) {
-  const { queryInterface } = context;
+export async function up(_, { app }) {
+  const { Role } = app.get('models');
 
   // Get seed roles from container
-  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
-
-  const now = new Date();
+  const SEED_ROLES = app.get('container').resolve('roles:seed_constants');
 
   const roles = [
     {
@@ -22,57 +20,50 @@ export async function up({ context }, { app }) {
       name: 'admin',
       description: 'System administrator with full access',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_ROLES.user,
       name: 'user',
       description: 'Regular user with standard permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_ROLES.mod,
       name: 'mod',
       description: 'Content moderator with moderation permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_ROLES.editor,
       name: 'editor',
       description: 'Content editor with write permissions',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
     {
       id: SEED_ROLES.viewer,
       name: 'viewer',
       description: 'Read-only access to resources',
       is_active: true,
-      created_at: now,
-      updated_at: now,
     },
   ];
 
-  await queryInterface.bulkInsert('roles', roles);
+  await Role.bulkCreate(roles);
 }
 
 /**
  * Revert the seed
  */
-export async function down({ context }, { app }) {
-  const { queryInterface } = context;
+export async function down(_, { app }) {
+  const { Role } = app.get('models');
 
   // Get seed roles from container
-  const SEED_ROLES = app.get('container').resolve('SEED:ROLES');
+  const SEED_ROLES = app.get('container').resolve('roles:seed_constants');
 
   // Remove all seeded roles by id
-  await queryInterface.bulkDelete('roles', {
-    id: Object.values(SEED_ROLES),
+  await Role.destroy({
+    where: {
+      id: Object.values(SEED_ROLES),
+    },
+    force: true, // Hard delete
   });
 }

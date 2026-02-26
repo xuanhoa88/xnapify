@@ -40,7 +40,7 @@ export async function shared(app) {
   const container = app.get('container');
 
   // Bind seed roles to container as singleton
-  container.bind('SEED:ROLES', () => SEED_ROLES, true);
+  container.bind('roles:seed_constants', () => SEED_ROLES, true);
 }
 
 /**
