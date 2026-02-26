@@ -18,18 +18,18 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import { Table } from '../../../../../shared/renderer/components/Admin';
-import { fetchGroups } from '../../../../groups/views/admin/redux';
-import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
-import s from './UserGroupsModal.css';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
+import { assignRolesToUser, isUserAssignRolesLoading } from '../redux';
+import s from './UserRolesModal.css';
 
 /**
- * UserGroupsModal - Self-contained modal for managing user groups
+ * UserRolesModal - Self-contained modal for managing user roles
  *
  * Usage:
- *   const groupsModalRef = useRef();
- *   groupsModalRef.current.open(user);           // Open for single user
- *   groupsModalRef.current.openBulk(userIds);    // Open for bulk assignment
- *   groupsModalRef.current.close();              // Close modal
+ *   const rolesModalRef = useRef();
+ *   rolesModalRef.current.open(user);           // Open for single user
+ *   rolesModalRef.current.openBulk(userIds);    // Open for bulk assignment
+ *   rolesModalRef.current.close();              // Close modal
  *
  * Features:
  *   - Independent data fetching (not dependent on shared Redux state)
@@ -38,14 +38,14 @@ import s from './UserGroupsModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
+const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
-  const loading = useSelector(isUserAssignGroupsLoading);
+  const loading = useSelector(isUserAssignRolesLoading);
 
-  // Local groups state - fetched independently when modal opens
-  const [groups, setGroups] = useState([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
+  // Local roles state - fetched independently when modal opens
+  const [roles, setRoles] = useState([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -61,19 +61,18 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   const [selections, setSelections] = useState([]);
   const [error, setError] = useState(null);
 
-  // Load groups function
-  const loadGroups = useCallback(
+  // Load roles function
+  const loadRoles = useCallback(
     async (page = 1, search = '') => {
-      setGroupsLoading(true);
+      setRolesLoading(true);
       try {
         const data = await dispatch(
-          fetchGroups({ page, limit: ITEMS_PER_PAGE, search }),
+          fetchRoles({ page, limit: ITEMS_PER_PAGE, search }),
         ).unwrap();
-        if (Array.isArray(data.groups)) {
-          setGroups(data.groups);
+        const { roles, pagination } = data;
+        if (Array.isArray(roles)) {
+          setRoles(roles);
         }
-
-        const { pagination } = data;
         if (pagination) {
           setCurrentPage(pagination.page || page);
           setTotalPages(pagination.pages || 1);
@@ -81,21 +80,21 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
         }
       } catch (err) {
         setError(
-          err || t('admin:users.errors.loadGroups', 'Failed to load groups'),
+          err || t('admin:users.errors.loadRoles', 'Failed to load roles'),
         );
       } finally {
-        setGroupsLoading(false);
+        setRolesLoading(false);
       }
     },
     [dispatch, t],
   );
 
-  // Fetch groups when modal opens or search/page changes
+  // Fetch roles when modal opens or search/page changes
   useEffect(() => {
     if (isOpen) {
-      loadGroups(currentPage, searchTerm);
+      loadRoles(currentPage, searchTerm);
     }
-  }, [isOpen, currentPage, searchTerm, loadGroups]);
+  }, [isOpen, currentPage, searchTerm, loadRoles]);
 
   // Handle search change
   const handleSearchChange = useCallback(value => {
@@ -103,11 +102,13 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
     setCurrentPage(1); // Reset to first page on search
   }, []);
 
-  // Initialize selections from user groups
+  // Initialize selections from user roles
   const initSelections = useCallback(targetUser => {
-    if (targetUser && targetUser.groups) {
-      const userGroupIds = targetUser.groups.map(g => g.id);
-      setSelections(userGroupIds);
+    if (targetUser) {
+      const userRoles = Array.isArray(targetUser.roles)
+        ? [...new Set(targetUser.roles)]
+        : [];
+      setSelections(userRoles);
     } else {
       setSelections([]);
     }
@@ -120,7 +121,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
     setIsBulk(false);
     setBulkUserIds([]);
     setSelections([]);
-    setGroups([]);
+    setRoles([]);
     setCurrentPage(1);
     setTotalPages(1);
     setTotalItems(0);
@@ -157,9 +158,9 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
     [initSelections, resetState],
   );
 
-  const toggleSelection = useCallback(id => {
+  const toggleSelection = useCallback(role => {
     setSelections(prev =>
-      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id],
+      prev.includes(role) ? prev.filter(x => x !== role) : [...prev, role],
     );
   }, []);
 
@@ -173,7 +174,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
       const targetUsers = isBulk ? bulkUserIds : [user.id];
       for (const userId of targetUsers) {
         await dispatch(
-          assignGroupsToUser({ userId, groupIds: selections }),
+          assignRolesToUser({ userId, roleNames: selections }),
         ).unwrap();
       }
       // Call success callback
@@ -181,7 +182,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
       handleClose();
     } catch (err) {
       setError(
-        err || t('admin:users.errors.assignGroups', 'Failed to assign groups'),
+        err || t('admin:users.errors.assignRoles', 'Failed to assign roles'),
       );
     }
   }, [
@@ -197,12 +198,12 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
 
   const description = isBulk
     ? t(
-        'admin:users.groups.assignGroupsBulkDesc',
-        'Select groups to assign to the selected users.',
+        'admin:users.roles.assignRolesBulkDesc',
+        'Select roles to assign to the selected users.',
       )
     : t(
-        'admin:users.groups.assignGroupsDesc',
-        'Select groups for this user. The user will inherit roles from these groups.',
+        'admin:users.roles.assignRolesDesc',
+        "Select roles to assign to this user. The user's permissions will be based on these roles.",
       );
 
   return (
@@ -210,19 +211,15 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
       <Modal.Header onClose={handleClose}>
         {isBulk
           ? t(
-              'admin:users.groups.assignGroupsBulk',
-              'Assign Groups to {{count}} Users',
+              'admin:users.roles.assignRolesBulk',
+              'Assign Roles to {{count}} Users',
               { count: bulkUserIds.length },
             )
-          : t(
-              'admin:users.groups.manageGroups',
-              'Manage Groups for "{{name}}"',
-              {
-                name:
-                  user &&
-                  ((user.profile && user.profile.display_name) || user.email),
-              },
-            )}
+          : t('admin:users.roles.manageRoles', 'Manage Roles for "{{name}}"', {
+              name:
+                user &&
+                ((user.profile && user.profile.display_name) || user.email),
+            })}
       </Modal.Header>
       <Modal.Body error={error}>
         <Modal.Description>{description}</Modal.Description>
@@ -231,58 +228,55 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
         <Table.SearchBar
           value={searchTerm}
           onChange={handleSearchChange}
-          placeholder={t('admin:users.groups.searchGroups', 'Search groups...')}
+          placeholder={t('admin:users.roles.searchRoles', 'Search roles...')}
           debounce={300}
           className={s.modalSearchBar}
         />
 
         <div className={s.checkboxList}>
-          {groupsLoading ? (
+          {rolesLoading ? (
             <div className={s.noItems}>
-              {t('admin:users.groups.loadingGroups', 'Loading groups...')}
+              {t('admin:users.roles.loadingRoles', 'Loading roles...')}
             </div>
-          ) : groups.length === 0 ? (
+          ) : roles.length === 0 ? (
             <div className={s.noItems}>
               {searchTerm
                 ? t(
-                    'admin:users.groups.noGroupsMatch',
-                    'No groups match your search',
+                    'admin:users.roles.noRolesMatch',
+                    'No roles match your search',
                   )
-                : t(
-                    'admin:users.groups.noGroupsAvailable',
-                    'No groups available',
-                  )}
+                : t('admin:users.roles.noRolesAvailable', 'No roles available')}
             </div>
           ) : (
-            groups.map(group => (
+            roles.map(role => (
               <div
-                key={group.id}
+                key={role.id}
                 className={clsx(s.checkboxListItem, {
-                  [s.selected]: selections.includes(group.id),
+                  [s.selected]: selections.includes(role.name),
                 })}
-                onClick={() => toggleSelection(group.id)}
+                onClick={() => toggleSelection(role.name)}
                 role='checkbox'
-                aria-checked={selections.includes(group.id)}
+                aria-checked={selections.includes(role.name)}
                 tabIndex={0}
                 onKeyDown={e => {
                   if (e.key === ' ' || e.key === 'Enter') {
                     e.preventDefault();
-                    toggleSelection(group.id);
+                    toggleSelection(role.name);
                   }
                 }}
               >
                 <input
                   type='checkbox'
                   className={s.checkbox}
-                  checked={selections.includes(group.id)}
+                  checked={selections.includes(role.name)}
                   onChange={() => {}}
                   tabIndex={-1}
                 />
                 <div className={s.checkboxContent}>
-                  <span className={s.checkboxListLabel}>{group.name}</span>
-                  {group.description && (
+                  <span className={s.checkboxListLabel}>{role.name}</span>
+                  {role.description && (
                     <span className={s.checkboxListDesc}>
-                      {group.description}
+                      {role.description}
                     </span>
                   )}
                 </div>
@@ -298,7 +292,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
             totalPages={totalPages}
             totalItems={totalItems}
             onPageChange={setCurrentPage}
-            loading={groupsLoading}
+            loading={rolesLoading}
           />
         )}
       </Modal.Body>
@@ -306,7 +300,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
         <Modal.SelectionCount count={selections.length} />
         <Modal.Actions>
           <Modal.Button onClick={handleClose}>
-            {t('admin:users.groups.cancel', 'Cancel')}
+            {t('admin:users.roles.cancel', 'Cancel')}
           </Modal.Button>
           <Modal.Button
             variant='primary'
@@ -314,8 +308,8 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
             disabled={loading}
           >
             {loading
-              ? t('admin:users.groups.saving', 'Saving...')
-              : t('admin:users.groups.save', 'Save')}
+              ? t('admin:users.roles.saving', 'Saving...')
+              : t('admin:users.roles.save', 'Save')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>
@@ -323,10 +317,10 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
   );
 });
 
-UserGroupsModal.displayName = 'UserGroupsModal';
+UserRolesModal.displayName = 'UserRolesModal';
 
-UserGroupsModal.propTypes = {
+UserRolesModal.propTypes = {
   onSuccess: PropTypes.func,
 };
 
-export default UserGroupsModal;
+export default UserRolesModal;

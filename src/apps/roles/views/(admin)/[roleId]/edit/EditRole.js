@@ -5,31 +5,44 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../shared/renderer/components/History';
-import { useDebounce } from '../../../../../shared/renderer/components/InfiniteScroll';
+import { useHistory } from '../../../../../../shared/renderer/components/History';
+import { useDebounce } from '../../../../../../shared/renderer/components/InfiniteScroll';
 import {
   Box,
   Icon,
+  Loader,
   ConfirmModal,
-} from '../../../../../shared/renderer/components/Admin';
-import Button from '../../../../../shared/renderer/components/Button';
+} from '../../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
-} from '../../../../../shared/renderer/components/Form';
-import { createRoleFormSchema } from '../../../validator/admin';
-import { fetchPermissions } from '../../../../permissions/views/admin/redux';
-import { createRole, isRoleCreateLoading } from '../redux';
-import s from './CreateRole.css';
+} from '../../../../../../shared/renderer/components/Form';
+import { updateRoleFormSchema } from '../../../../validator/admin';
+import { fetchPermissions } from '../../../../../permissions/views/(admin)/redux';
+import {
+  updateRole,
+  fetchRoleById,
+  isRoleUpdateLoading,
+  isRoleFetchLoading,
+  isRoleFetchInitialized,
+  getFetchedRole,
+  getRoleFetchError,
+} from '../../redux';
+import s from './EditRole.css';
 
-function CreateRole() {
+function EditRole({ roleId }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const history = useHistory();
-  const loading = useSelector(isRoleCreateLoading);
+  const loading = useSelector(isRoleUpdateLoading);
+  const fetchingRole = useSelector(isRoleFetchLoading);
+  const fetchInitialized = useSelector(isRoleFetchInitialized);
+  const role = useSelector(getFetchedRole);
+  const roleLoadError = useSelector(getRoleFetchError);
 
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
@@ -55,27 +68,116 @@ function CreateRole() {
       setError(null);
 
       try {
-        await dispatch(createRole(data)).unwrap();
+        await dispatch(
+          updateRole({ roleId: role.id, roleData: data }),
+        ).unwrap();
         history.push('/admin/roles');
       } catch (err) {
-        setError(err || t('admin:errors.createRole', 'Failed to create role'));
+        setError(err || t('admin:errors.updateRole', 'Failed to update role'));
       }
     },
-    [dispatch, history, t],
+    [dispatch, role, history, t],
   );
 
+  // Fetch role data on mount
+  useEffect(() => {
+    if (roleId) {
+      dispatch(fetchRoleById(roleId));
+    }
+  }, [dispatch, roleId]);
+
+  // Show loading on first fetch or when still fetching
+  if (!fetchInitialized || fetchingRole) {
+    return (
+      <div className={s.root}>
+        <Box.Header
+          icon={<Icon name='shield' size={24} />}
+          title={t('admin:roles.edit.editRole', 'Edit Role')}
+          subtitle={t(
+            'admin:roles.edit.modifyRolePermissions',
+            'Modify role permissions',
+          )}
+        >
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
+            <Icon name='arrowLeft' />
+            {t('admin:buttons.backToRoles', 'Back to Roles')}
+          </Button>
+        </Box.Header>
+        <div className={s.formContainer}>
+          <Loader
+            variant='spinner'
+            message={t('admin:roles.loadingRoleData', 'Loading role data...')}
+          />
+        </div>
+        <ConfirmModal.Back
+          ref={confirmBackModalRef}
+          onConfirm={handleConfirmBack}
+        />
+      </div>
+    );
+  }
+
+  if (!role || roleLoadError) {
+    return (
+      <div className={s.root}>
+        <Box.Header
+          icon={<Icon name='shield' size={24} />}
+          title={t('admin:roles.edit.editRole', 'Edit Role')}
+          subtitle={t(
+            'admin:roles.edit.modifyRolePermissions',
+            'Modify role permissions',
+          )}
+        >
+          <Button
+            variant='secondary'
+            onClick={() => handleCancel(isDirtyRef.current)}
+          >
+            <Icon name='arrowLeft' />
+            {t('admin:buttons.backToRoles', 'Back to Roles')}
+          </Button>
+        </Box.Header>
+        <div className={s.formContainer}>
+          <div className={s.formError}>
+            {t('admin:errors.failedToLoadRoleData', 'Failed to load role data')}
+          </div>
+          <div className={s.formActions}>
+            <Button
+              variant='secondary'
+              onClick={() => handleCancel(isDirtyRef.current)}
+            >
+              {t('admin:buttons.backToRoles', 'Back to Roles')}
+            </Button>
+          </div>
+        </div>
+        <ConfirmModal.Back
+          ref={confirmBackModalRef}
+          onConfirm={handleConfirmBack}
+        />
+      </div>
+    );
+  }
+
   const defaultValues = {
-    name: '',
-    description: '',
-    permissions: [],
+    name: role.name || '',
+    description: role.description || '',
+    permissions:
+      role.permissions && role.permissions.length > 0
+        ? role.permissions.map(p => p.id)
+        : [],
   };
 
   return (
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='shield' size={24} />}
-        title={t('admin:roles.create.title', 'Create New Role')}
-        subtitle={t('admin:roles.create.subtitle', 'Define a new access level')}
+        title={t('admin:roles.edit.editRole', 'Edit Role')}
+        subtitle={t(
+          'admin:roles.edit.modifyRolePermissions',
+          'Modify role permissions',
+        )}
       >
         <Button
           variant='secondary'
@@ -90,12 +192,12 @@ function CreateRole() {
         <Form.Error message={error} />
 
         <Form
-          schema={createRoleFormSchema}
+          schema={updateRoleFormSchema}
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
           className={s.form}
         >
-          <CreateRoleFormFields
+          <EditRoleFormFields
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
@@ -111,11 +213,11 @@ function CreateRole() {
 }
 
 /**
- * CreateRoleFormFields - Form fields component that uses react-hook-form context
+ * EditRoleFormFields - Form fields component that uses react-hook-form context
  */
-function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
-  const dispatch = useDispatch();
+function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
   const { t } = useTranslation();
+  const dispatch = useDispatch();
   const {
     watch,
     formState: { isDirty },
@@ -195,17 +297,17 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
     <>
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:roles.create.roleInformation', 'Role Information')}
+          {t('admin:roles.edit.roleInformation', 'Role Information')}
         </h3>
 
         <Form.Field
           name='name'
-          label={t('admin:roles.create.roleName', 'Role Name')}
+          label={t('admin:roles.edit.roleName', 'Role Name')}
           required
         >
           <Form.Input
             placeholder={t(
-              'admin:roles.create.roleNamePlaceholder',
+              'admin:roles.edit.roleNamePlaceholder',
               'e.g., editor, moderator, viewer',
             )}
           />
@@ -213,11 +315,11 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
 
         <Form.Field
           name='description'
-          label={t('admin:roles.create.description', 'Description')}
+          label={t('admin:roles.edit.description', 'Description')}
         >
           <Form.Textarea
             placeholder={t(
-              'admin:roles.create.descriptionPlaceholder',
+              'admin:roles.edit.descriptionPlaceholder',
               'Describe what this role is for...',
             )}
             rows={3}
@@ -228,9 +330,11 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
           {t(
-            'admin:roles.create.permissionsCount',
+            'admin:roles.edit.permissionsCount',
             'Permissions ({{count}} selected)',
-            { count: selectedPermissions.length },
+            {
+              count: selectedPermissions.length,
+            },
           )}
         </h3>
 
@@ -245,16 +349,16 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
             onLoadMore={handleLoadMorePermissions}
             searchable
             searchPlaceholder={t(
-              'admin:roles.create.searchPlaceholder',
+              'admin:roles.edit.permissionsSearchPlaceholder',
               'Search e.g. users, users:read, :create',
             )}
             onSearch={setPermissionSearch}
             emptyMessage={t(
-              'admin:roles.create.noPermissionsFound',
+              'admin:roles.edit.permissionsEmptyMessage',
               'No permissions found',
             )}
             loadingMessage={t(
-              'admin:roles.create.loadingPermissions',
+              'admin:roles.edit.permissionsLoadingMessage',
               'Loading permissions...',
             )}
           />
@@ -267,18 +371,22 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
           {loading
-            ? t('admin:buttons.creating', 'Creating...')
-            : t('admin:buttons.createRole', 'Create Role')}
+            ? t('admin:buttons.saving', 'Saving...')
+            : t('admin:buttons.saveChanges', 'Save Changes')}
         </Button>
       </div>
     </>
   );
 }
 
-CreateRoleFormFields.propTypes = {
+EditRoleFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
-export default CreateRole;
+EditRole.propTypes = {
+  roleId: PropTypes.string.isRequired,
+};
+
+export default EditRole;

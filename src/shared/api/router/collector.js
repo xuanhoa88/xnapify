@@ -27,7 +27,11 @@ import { log } from './utils';
  */
 function buildPathname(moduleName, routePath) {
   const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
-  const rawSegments = routePath ? routePath.split(ROUTE_SEPARATOR) : [];
+  const rawSegments = routePath.split(ROUTE_SEPARATOR);
+  const firstRaw = rawSegments[0];
+
+  const firstIsRouteGroup =
+    firstRaw && firstRaw.startsWith('(') && firstRaw.endsWith(')');
 
   // Parse path segments, unwrapping route groups and converting params
   const segments = rawSegments
@@ -45,13 +49,17 @@ function buildPathname(moduleName, routePath) {
 
   // Auto-detect app-scoped paths for non-default modules:
   if (!isDefaultModule) {
-    if (segments.length > 0 && segments[0] === 'admin') {
-      // Inject moduleName after 'admin'
-      // /admin/users/list
+    if (firstIsRouteGroup) {
+      // Route group prefix detected: inject moduleName after the section
+      // e.g. (admin)/orders -> /admin/{moduleName}/orders
+      segments.splice(1, 0, moduleName);
+    } else if (segments.length > 0 && segments[0] === 'admin') {
+      // Plain 'admin' segment (no route group): inject moduleName after it
+      // e.g. admin/orders -> /admin/{moduleName}/orders
       segments.splice(1, 0, moduleName);
     } else {
-      // Prepend moduleName
-      // /auth/profile/preferences
+      // No section prefix: prepend moduleName
+      // e.g. settings -> /{moduleName}/settings
       segments.unshift(moduleName);
     }
   }
@@ -104,15 +112,15 @@ const COLLECTORS = Object.freeze({
     pattern: /\/api\/(?:.*\/)?_middleware\.[cm]?[jt]sx?$/i,
     extract: filePath => {
       // Check for Global/Theme middlewares in (middlewares) folder
-      const themeMatch = filePath.match(
+      const middlewareMatch = filePath.match(
         /^\.\/(\([^)]+\)|[^/]+)\/api\/\(middlewares\)\/\(([^)]+)\)\/_middleware\.[cm]?[jt]sx?$/i,
       );
-      if (themeMatch) {
+      if (middlewareMatch) {
         return {
-          key: `${themeMatch[1]}:${themeMatch[2]}`,
+          key: `${middlewareMatch[1]}:${middlewareMatch[2]}`,
           data: {
-            moduleName: themeMatch[1],
-            middlewareName: themeMatch[2],
+            moduleName: middlewareMatch[1],
+            middlewareName: middlewareMatch[2],
             type: 'global',
           },
         };

@@ -48,6 +48,8 @@ import { HistoryProvider } from './Providers/History';
  * Shape of the context object passed to App
  */
 const contextPropTypes = PropTypes.shape({
+  /** Dependency Injection container */
+  container: PropTypes.object.isRequired,
   /** Universal HTTP client for making API requests */
   fetch: PropTypes.func.isRequired,
   /** Redux store instance */

@@ -17,7 +17,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import { Table } from '../../../../../shared/renderer/components/Admin';
-import { fetchRoles } from '../../../../roles/views/admin/redux';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   assignRolesToGroup,
   fetchGroups,

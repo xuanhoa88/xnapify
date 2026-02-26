@@ -21,7 +21,7 @@ import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
 import { createGroupFormSchema } from '../../../validator/admin';
-import { fetchRoles } from '../../../../roles/views/admin/redux';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import { createGroup, isGroupCreateLoading } from '../redux';
 import s from './CreateGroup.css';
 

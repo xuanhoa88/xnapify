@@ -5,62 +5,40 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../../shared/renderer/components/History';
+import { useHistory } from '../../../../../shared/renderer/components/History';
 import {
   generatePassword,
-  getUserProfile,
   showSuccessMessage,
-} from '../../../../../../shared/renderer/redux';
-import { useDebounce } from '../../../../../../shared/renderer/components/InfiniteScroll';
+} from '../../../../../shared/renderer/redux';
+import { useDebounce } from '../../../../../shared/renderer/components/InfiniteScroll';
 import {
   Box,
   Icon,
-  Loader,
   ConfirmModal,
-} from '../../../../../../shared/renderer/components/Admin';
-import Button from '../../../../../../shared/renderer/components/Button';
+} from '../../../../../shared/renderer/components/Admin';
+import Button from '../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,
-} from '../../../../../../shared/renderer/components/Form';
-import { updateUserFormSchema } from '../../../../validator/admin';
-import { fetchRoles } from '../../../../../roles/views/admin/redux';
-import { fetchGroups } from '../../../../../groups/views/admin/redux';
-import {
-  updateUser,
-  fetchUserById,
-  isUserUpdateLoading,
-  isUserFetchLoading,
-  isUserFetchInitialized,
-  getFetchedUser,
-  getUserFetchError,
-} from '../../redux';
-import s from './EditUser.css';
+} from '../../../../../shared/renderer/components/Form';
+import { createUserFormSchema } from '../../../validator/admin';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
+import { fetchGroups } from '../../../../groups/views/(admin)/redux';
+import { createUser, isUserCreateLoading } from '../redux';
+import s from './CreateUser.css';
 
-function EditUser({ userId }) {
+function CreateUser() {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const history = useHistory();
-  const currentUser = useSelector(getUserProfile);
-  const loading = useSelector(isUserUpdateLoading);
-  const fetchingUser = useSelector(isUserFetchLoading);
-  const fetchInitialized = useSelector(isUserFetchInitialized);
-  const user = useSelector(getFetchedUser);
-  const userLoadError = useSelector(getUserFetchError);
+  const loading = useSelector(isUserCreateLoading);
 
   const [error, setError] = useState(null);
   const confirmBackModalRef = useRef(null);
   const isDirtyRef = useRef(false);
-
-  // Fetch user data on mount
-  useEffect(() => {
-    if (userId) {
-      dispatch(fetchUserById(userId));
-    }
-  }, [dispatch, userId]);
 
   const handleCancel = useCallback(
     isDirty => {
@@ -82,165 +60,56 @@ function EditUser({ userId }) {
       setError(null);
 
       try {
-        await dispatch(
-          updateUser({ userId: user.id, userData: data }),
-        ).unwrap();
+        await dispatch(createUser(data)).unwrap();
         history.push('/admin/users');
       } catch (err) {
         setError(
-          err || t('admin:users.errors.updateUser', 'Failed to update user'),
+          err || t('admin:users.errors.createUser', 'Failed to create user'),
         );
       }
     },
-    [dispatch, user, history, t],
+    [dispatch, history, t],
   );
 
-  // Build default values from user data (memoized to prevent Form re-renders)
-  // Must be called before early returns to follow Rules of Hooks
-  const defaultValues = useMemo(
-    () =>
-      user
-        ? {
-            email: user.email || '',
-            profile: {
-              display_name: (user.profile && user.profile.display_name) || '',
-              first_name: (user.profile && user.profile.first_name) || '',
-              last_name: (user.profile && user.profile.last_name) || '',
-            },
-            roles:
-              Array.isArray(user.roles) && user.roles.length > 0
-                ? user.roles
-                : [],
-            groups:
-              Array.isArray(user.groups) && user.groups.length > 0
-                ? user.groups.map(g => g.id)
-                : [],
-            is_active: user.is_active,
-          }
-        : {},
-    [user],
-  );
-
-  // Show loading on first fetch or when still fetching
-  if (!fetchInitialized || fetchingUser) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
-        >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <Loader
-            variant='spinner'
-            message={t('admin:users.edit.loadingUser', 'Loading user data...')}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  if (!user || userLoadError) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
-        >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t('admin:users.edit.failedToLoad', 'Failed to load user data')}
-          </div>
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={() => handleCancel(false)}>
-              {t('admin:users.edit.backBtn', 'Back to Users')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Prevent admin from editing their own account
-  if (currentUser && currentUser.id === userId) {
-    return (
-      <div className={s.root}>
-        <Box.Header
-          icon={<Icon name='users' size={24} />}
-          title={t('admin:users.edit.title', 'Edit User')}
-          subtitle={t(
-            'admin:users.edit.subtitle',
-            'Modify user account details',
-          )}
-        >
-          <Button variant='secondary' onClick={() => handleCancel(false)}>
-            <Icon name='arrowLeft' />
-            {t('admin:users.edit.backToUsers', 'Back to Users')}
-          </Button>
-        </Box.Header>
-        <div className={s.formContainer}>
-          <div className={s.formError}>
-            {t(
-              'admin:users.errors.cannotEditSelf',
-              'You cannot edit your own account from the admin panel. Please use your profile settings instead.',
-            )}
-          </div>
-          <div className={s.formActions}>
-            <Button variant='secondary' onClick={() => handleCancel(false)}>
-              {t('admin:users.edit.backBtn', 'Back to Users')}
-            </Button>
-            <Button variant='primary' onClick={() => history.push('/profile')}>
-              {t('admin:users.edit.goToProfile', 'Go to Profile Settings')}
-            </Button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const defaultValues = {
+    email: '',
+    password: '',
+    confirm_password: '',
+    profile: {
+      display_name: '',
+      first_name: '',
+      last_name: '',
+    },
+    roles: [],
+    groups: [],
+    is_active: true,
+  };
 
   return (
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='users' size={24} />}
-        title={t('admin:users.edit.title', 'Edit User')}
-        subtitle={t('admin:users.edit.subtitle', 'Modify user account details')}
+        title={t('admin:users.create.title', 'Create New User')}
+        subtitle={t('admin:users.create.subtitle', 'Add a new user account')}
       >
         <Button
           variant='secondary'
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <Icon name='arrowLeft' />
-          {t('admin:users.edit.backToUsers', 'Back to Users')}
+          {t('admin:users.create.backToUsers', 'Back to Users')}
         </Button>
       </Box.Header>
-
       <div className={s.formContainer}>
         <Form.Error message={error} />
 
         <Form
-          schema={updateUserFormSchema}
+          schema={createUserFormSchema}
           defaultValues={defaultValues}
           onSubmit={handleSubmit}
           className={s.form}
         >
-          <EditUserFormFields
+          <CreateUserFormFields
             setError={setError}
             onCancel={handleCancel}
             loading={loading}
@@ -257,10 +126,9 @@ function EditUser({ userId }) {
 }
 
 /**
- * EditUserFormFields - Form fields component that uses react-hook-form context
- * Contains all the form fields and manages roles/groups state internally
+ * CreateUserFormFields - Form fields component that uses react-hook-form context
  */
-function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
+function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -300,7 +168,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
   // Password generation state
   const [generatingPassword, setGeneratingPassword] = useState(false);
 
-  // Watch the roles and groups arrays for the custom checkbox lists
+  // Watch the roles and groups arrays for display count
   const selectedRoles = watch('roles') || [];
   const selectedGroups = watch('groups') || [];
 
@@ -328,6 +196,8 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
 
         setRolesHasMore(pagination && pagination.page < pagination.pages);
         setRolesPage(page);
+      } catch (err) {
+        // Silently handle error
       } finally {
         setRolesLoading(false);
         setRolesLoadingMore(false);
@@ -399,7 +269,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
     try {
       const password = await dispatch(generatePassword()).unwrap();
       setValue('password', password, { shouldValidate: true });
-      setValue('password_confirmation', password, { shouldValidate: true });
+      setValue('confirm_password', password, { shouldValidate: true });
       dispatch(
         showSuccessMessage({
           message: t(
@@ -425,39 +295,49 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
     <>
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:users.edit.accountInfo', 'Account Information')}
+          {t('admin:users.create.accountInfo', 'Account Information')}
         </h3>
 
-        <Form.Field name='email' label={t('admin:users.edit.email', 'Email')}>
-          <Form.Input type='email' disabled />
-        </Form.Field>
-
         <Form.Field
-          name='password'
-          label={t('admin:users.edit.newPassword', 'New Password (optional)')}
+          name='email'
+          label={t('admin:users.create.email', 'Email')}
+          required
         >
-          <Form.Password
+          <Form.Input
+            type='email'
             placeholder={t(
-              'admin:users.edit.newPasswordPlaceholder',
-              'Leave empty to keep current password',
+              'admin:users.create.emailPlaceholder',
+              'user@example.com',
             )}
           />
         </Form.Field>
 
-        <Form.Field
-          name='password_confirmation'
-          label={t(
-            'admin:users.edit.confirmNewPassword',
-            'Confirm New Password',
-          )}
-        >
-          <Form.Password
-            placeholder={t(
-              'admin:users.edit.confirmNewPasswordPlaceholder',
-              'Confirm new password',
-            )}
-          />
-        </Form.Field>
+        <div className={s.formRow}>
+          <Form.Field
+            name='password'
+            label={t('admin:users.create.password', 'Password')}
+            required
+          >
+            <Form.Password
+              placeholder={t(
+                'admin:users.create.passwordPlaceholder',
+                'Enter password',
+              )}
+            />
+          </Form.Field>
+          <Form.Field
+            name='confirm_password'
+            label={t('admin:users.create.confirmPassword', 'Confirm Password')}
+            required
+          >
+            <Form.Password
+              placeholder={t(
+                'admin:users.create.confirmPasswordPlaceholder',
+                'Confirm password',
+              )}
+            />
+          </Form.Field>
+        </div>
 
         <div className={s.generatePasswordLink}>
           <Button
@@ -472,7 +352,10 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             ) : (
               <>
                 <Icon name='key' size={14} />
-                {t('admin:users.generateNewPassword', 'Generate New Password')}
+                {t(
+                  'admin:users.generateSecurePassword',
+                  'Generate Secure Password',
+                )}
               </>
             )}
           </Button>
@@ -481,35 +364,35 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:users.edit.personalInfo', 'Personal Information')}
+          {t('admin:users.create.personalInfo', 'Personal Information')}
         </h3>
 
         <div className={s.formRow}>
           <Form.Field
             name='profile.first_name'
-            label={t('admin:users.edit.firstName', 'First Name')}
+            label={t('admin:users.create.firstName', 'First Name')}
           >
             <Form.Input
-              placeholder={t('admin:users.edit.firstNamePlaceholder', 'John')}
+              placeholder={t('admin:users.create.firstNamePlaceholder', 'John')}
             />
           </Form.Field>
           <Form.Field
             name='profile.last_name'
-            label={t('admin:users.edit.lastName', 'Last Name')}
+            label={t('admin:users.create.lastName', 'Last Name')}
           >
             <Form.Input
-              placeholder={t('admin:users.edit.lastNamePlaceholder', 'Doe')}
+              placeholder={t('admin:users.create.lastNamePlaceholder', 'Doe')}
             />
           </Form.Field>
         </div>
 
         <Form.Field
           name='profile.display_name'
-          label={t('admin:users.edit.displayName', 'Display Name')}
+          label={t('admin:users.create.displayName', 'Display Name')}
         >
           <Form.Input
             placeholder={t(
-              'admin:users.edit.displayNamePlaceholder',
+              'admin:users.create.displayNamePlaceholder',
               'John Doe',
             )}
           />
@@ -518,13 +401,13 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
 
       <div className={s.formSection}>
         <h3 className={s.sectionTitle}>
-          {t('admin:users.edit.accessAndPermissions', 'Access & Permissions')}
+          {t('admin:users.create.accessAndPermissions', 'Access & Permissions')}
         </h3>
 
         <Form.Field
           name='roles'
           label={t(
-            'admin:users.edit.rolesSelected',
+            'admin:users.create.rolesSelected',
             'Roles ({{count}} selected)',
             { count: selectedRoles.length },
           )}
@@ -539,15 +422,18 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchValue={roleSearch}
             onSearch={setRoleSearch}
             searchPlaceholder={t(
-              'admin:users.edit.searchRoles',
+              'admin:users.create.searchRoles',
               'Search roles...',
             )}
             valueKey='name'
             labelKey='name'
             itemDescription='description'
-            emptyMessage={t('admin:users.edit.noRolesFound', 'No roles found')}
+            emptyMessage={t(
+              'admin:users.create.noRolesFound',
+              'No roles found',
+            )}
             loadingMessage={t(
-              'admin:users.edit.loadingRoles',
+              'admin:users.create.loadingRoles',
               'Loading roles...',
             )}
           />
@@ -556,7 +442,7 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
         <Form.Field
           name='groups'
           label={t(
-            'admin:users.edit.groupsSelected',
+            'admin:users.create.groupsSelected',
             'Groups ({{count}} selected)',
             { count: selectedGroups.length },
           )}
@@ -571,51 +457,47 @@ function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
             searchValue={groupSearch}
             onSearch={setGroupSearch}
             searchPlaceholder={t(
-              'admin:users.edit.searchGroups',
+              'admin:users.create.searchGroups',
               'Search groups...',
             )}
             valueKey='id'
             labelKey='name'
             itemDescription='description'
             emptyMessage={t(
-              'admin:users.edit.noGroupsFound',
+              'admin:users.create.noGroupsFound',
               'No groups found',
             )}
             loadingMessage={t(
-              'admin:users.edit.loadingGroups',
+              'admin:users.create.loadingGroups',
               'Loading groups...',
             )}
           />
         </Form.Field>
 
         <Form.Field name='is_active'>
-          <Form.Checkbox label={t('admin:users.edit.active', 'Active')} />
+          <Form.Checkbox label={t('admin:users.create.active', 'Active')} />
         </Form.Field>
       </div>
 
       <div className={s.formActions}>
         <Button variant='secondary' onClick={handleCancel}>
-          {t('admin:users.edit.cancel', 'Cancel')}
+          {t('admin:users.create.cancel', 'Cancel')}
         </Button>
         <Button variant='primary' type='submit' loading={loading}>
           {loading
-            ? t('admin:users.edit.saving', 'Saving...')
-            : t('admin:users.edit.saveChanges', 'Save Changes')}
+            ? t('admin:users.create.creating', 'Creating...')
+            : t('admin:users.create.submit', 'Create User')}
         </Button>
       </div>
     </>
   );
 }
 
-EditUserFormFields.propTypes = {
+CreateUserFormFields.propTypes = {
   setError: PropTypes.func.isRequired,
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
 };
 
-EditUser.propTypes = {
-  userId: PropTypes.string.isRequired,
-};
-
-export default EditUser;
+export default CreateUser;

@@ -25,8 +25,8 @@ import {
 import Tag from '../../../../../shared/renderer/components/Tag';
 import Button from '../../../../../shared/renderer/components/Button';
 import Avatar from '../../../../../shared/renderer/components/Avatar';
-import { fetchGroups } from '../../../../groups/views/admin/redux';
-import { fetchRoles } from '../../../../roles/views/admin/redux';
+import { fetchGroups } from '../../../../groups/views/(admin)/redux';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   fetchUsers,
   getUsers,

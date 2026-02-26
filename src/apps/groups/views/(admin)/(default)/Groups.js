@@ -25,8 +25,8 @@ import Button from '../../../../../shared/renderer/components/Button';
 import Card from '../../../../../shared/renderer/components/Card';
 import Tag from '../../../../../shared/renderer/components/Tag';
 import Avatar from '../../../../../shared/renderer/components/Avatar';
-import RoleTag from '../../../../users/views/admin/components/RoleTag';
-import { fetchRoles } from '../../../../roles/views/admin/redux';
+import RoleTag from '../../../../users/views/(admin)/components/RoleTag';
+import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   fetchGroups,
   getGroups,

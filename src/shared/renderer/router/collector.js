@@ -17,6 +17,59 @@ import { log } from './utils';
  */
 
 /**
+ * Parses a file path's route segments into a normalized pathname.
+ * Handles unwrapping route groups, converting dynamic params, and
+ * auto-scoping non-default modules under section roots.
+ *
+ * @param {string} moduleName - The module directory name
+ * @param {string} routePath - The raw sub-path under routes/views (may be empty)
+ * @returns {string} Normalized pathname (e.g. "/admin/users")
+ */
+function buildPathname(moduleName, routePath) {
+  const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
+  const rawSegments = routePath.split(ROUTE_SEPARATOR);
+  const firstRaw = rawSegments[0];
+
+  const firstIsRouteGroup =
+    firstRaw && firstRaw.startsWith('(') && firstRaw.endsWith(')');
+
+  // Parse path segments, unwrapping route groups and converting params
+  const segments = rawSegments
+    .map(s => {
+      // Unwrap route groups: (admin) -> admin
+      if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
+      // Convert Next.js params: [id] -> :id, [...slug] -> :slug*
+      if (s.startsWith('[') && s.endsWith(']')) {
+        const param = s.slice(1, -1);
+        return param.startsWith('...') ? `:${param.slice(3)}*` : `:${param}`;
+      }
+      return s;
+    })
+    .filter(s => s && s !== 'default');
+
+  // Auto-detect app-scoped paths for non-default modules:
+  if (!isDefaultModule) {
+    if (firstIsRouteGroup) {
+      // Route group prefix detected: inject moduleName after the section
+      // e.g. (admin)/orders -> /admin/{moduleName}/orders
+      segments.splice(1, 0, moduleName);
+    } else if (segments.length > 0 && segments[0] === 'admin') {
+      // Plain 'admin' segment (no route group): inject moduleName after it
+      // e.g. admin/orders -> /admin/{moduleName}/orders
+      segments.splice(1, 0, moduleName);
+    } else {
+      // No section prefix: prepend moduleName
+      // e.g. settings -> /{moduleName}/settings
+      segments.unshift(moduleName);
+    }
+  }
+
+  return segments.length > 0
+    ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
+    : ROUTE_SEPARATOR;
+}
+
+/**
  * Collector configuration for routes, configs, and layouts.
  * Defines how file paths are matched and parsed into route entries.
  * @type {Object<string, CollectorConfig>}
@@ -31,43 +84,7 @@ const COLLECTORS = Object.freeze({
       );
       if (!m) return null;
 
-      const [, moduleName, routePath] = m;
-      const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
-
-      const rawSegments = routePath.split(ROUTE_SEPARATOR);
-
-      // Parse path segments, unwrapping route groups and converting params
-      const segments = rawSegments
-        .map(s => {
-          // Unwrap route groups: (admin) -> admin
-          if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
-          // Convert Next.js params: [id] -> :id, [...slug] -> :slug*
-          if (s.startsWith('[') && s.endsWith(']')) {
-            const param = s.slice(1, -1);
-            return param.startsWith('...')
-              ? `:${param.slice(3)}*`
-              : `:${param}`;
-          }
-          return s;
-        })
-        .filter(s => s && s !== 'default');
-
-      // Auto-detect app-scoped paths for non-default modules:
-      if (!isDefaultModule) {
-        if (segments.length > 0 && segments[0] === 'admin') {
-          // Inject moduleName after 'admin'
-          // /admin/users/list
-          segments.splice(1, 0, moduleName);
-        } else {
-          // Prepend moduleName
-          segments.unshift(moduleName);
-        }
-      }
-
-      const pathname =
-        segments.length > 0
-          ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
-          : ROUTE_SEPARATOR;
+      const pathname = buildPathname(m[1], m[2] || '');
       return { key: pathname, data: { path: pathname } };
     },
     label: 'Route',
@@ -116,41 +133,7 @@ const COLLECTORS = Object.freeze({
       );
 
       if (routeMatch) {
-        const [, moduleName, routePath] = routeMatch;
-        const isDefaultModule = moduleName === ROUTE_PATH_DEFAULT;
-        // reused logic from routes to determine path Key?
-        // Simplified: Just use the directory path as the key
-        // Note: We need to normalize the path similar to routes (unwrap groups)
-
-        const segments = routePath
-          .split(ROUTE_SEPARATOR)
-          .map(s => {
-            if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
-            // Param handling? Layouts in param folders?
-            // For now, keep simple literal paths or normalized
-            if (s.startsWith('[') && s.endsWith(']')) {
-              const param = s.slice(1, -1);
-              return param.startsWith('...')
-                ? `:${param.slice(3)}*`
-                : `:${param}`;
-            }
-            return s;
-          })
-          .filter(s => s && s !== 'default'); // default?
-
-        if (!isDefaultModule) {
-          if (segments.length > 0 && segments[0] === 'admin') {
-            segments.splice(1, 0, moduleName);
-          } else {
-            segments.unshift(moduleName);
-          }
-        }
-
-        const pathname =
-          segments.length > 0
-            ? ROUTE_SEPARATOR + segments.join(ROUTE_SEPARATOR)
-            : ROUTE_SEPARATOR;
-
+        const pathname = buildPathname(routeMatch[1], routeMatch[2] || '');
         return {
           key: pathname,
           data: { path: pathname, type: 'colocated' },
