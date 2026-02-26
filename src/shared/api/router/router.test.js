@@ -11,18 +11,18 @@ import { RouterError, normalizeError } from './utils';
 const mockModuleLoader = {
   files: () => [
     './(default)/api/routes/(default)/_route.js',
-    './users/api/routes/auth/_route.js',
-    './plugins/api/routes/plugins/[id]/_route.js',
+    './auth/api/routes/(default)/_route.js',
+    './plugins/api/routes/[id]/_route.js',
     './plugins/api/routes/_middleware.js',
   ],
   load: path => {
-    if (path.includes('auth')) {
+    if (path.includes('/auth/')) {
       return {
         post: (req, res) => res.json({ action: 'login' }),
         get: (req, res) => res.json({ action: 'me' }),
       };
     }
-    if (path.includes('plugins/[id]')) {
+    if (path.includes('[id]')) {
       return {
         // Handlers must explicitly call res.json() — no auto-formatting
         get: (req, res) => {
