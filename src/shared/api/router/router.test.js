@@ -6,7 +6,15 @@
  */
 
 import Router from '.';
-import { RouterError, normalizeError } from './utils';
+import {
+  RouterError,
+  normalizeError,
+  normalizePath,
+  decodeUrl,
+  getRootSegment,
+  createError,
+  isDescendant,
+} from './utils';
 
 const mockModuleLoader = {
   files: () => [
@@ -64,6 +72,10 @@ describe('Router Engine', () => {
     // /plugins/:id should exist
     const pluginRoute = rootRoute.children.find(r => r.path === '/plugins/:id');
     expect(pluginRoute).toBeDefined();
+
+    // /admin/users should exist from (admin) route group injection
+    const adminRoute = rootRoute.children.find(r => r.path === '/admin/users');
+    expect(adminRoute).toBeDefined();
   });
 
   it('should handle routing to an exact method explicitly', async () => {
@@ -472,5 +484,147 @@ describe('Instance-level cache isolation', () => {
     await router2.resolve(req, res, next);
     expect(res.json).not.toHaveBeenCalled();
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe('Utils', () => {
+  it('normalizePath should remove duplicate slashes and trailing slashes', () => {
+    expect(normalizePath('//api///users//')).toBe('/api/users');
+    expect(normalizePath('/api')).toBe('/api');
+  });
+
+  it('normalizePath should throw on path traversal', () => {
+    expect(() => normalizePath('/api/../users')).toThrow(RouterError);
+  });
+
+  it('decodeUrl should decode safely', () => {
+    expect(decodeUrl('hello%20world')).toBe('hello world');
+    expect(decodeUrl('%E0%A4%A')).toBe('%E0%A4%A'); // Malformed URI, should return original
+  });
+
+  it('getRootSegment should return first segment', () => {
+    expect(getRootSegment('/api/users/1')).toBe('api');
+    expect(getRootSegment('/')).toBeNull();
+  });
+
+  it('createError should create a RouterError', () => {
+    const err = createError('test error', 404, { code: 'TEST_CODE' });
+    expect(err).toBeInstanceOf(RouterError);
+    expect(err.message).toBe('test error');
+    expect(err.status).toBe(404);
+    expect(err.code).toBe('TEST_CODE');
+  });
+
+  it('isDescendant should correctly identify ancestry', () => {
+    const parent = { path: '/parent' };
+    const child = { path: '/child', parent };
+    const grandchild = { path: '/grandchild', parent: child };
+    const unrelated = { path: '/unrelated' };
+
+    expect(isDescendant(parent, grandchild)).toBe(true);
+    expect(isDescendant(parent, child)).toBe(true);
+    expect(isDescendant(parent, unrelated)).toBe(false);
+  });
+});
+
+describe('Action handler fallback and promises', () => {
+  it('should pass to next(err) if handler returns a rejecting promise', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/async/_route.js'],
+      load: () => ({
+        get: async () => {
+          throw new Error('Async failed');
+        },
+      }),
+    };
+    const router = new Router(adapter);
+    const req = { method: 'GET', path: '/async', params: {} };
+    const res = {};
+    const next = jest.fn();
+
+    await router.resolve(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(next.mock.calls[0][0].message).toBe('Async failed');
+  });
+
+  it('should call next() without error if no handler found for method', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/nomethod/_route.js'],
+      load: () => ({
+        post: (req, res) => res.json({ ok: true }),
+      }),
+    };
+    const router = new Router(adapter);
+    const req = { method: 'GET', path: '/nomethod', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.resolve(req, res, next);
+
+    expect(res.json).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledWith(); // Called without args
+  });
+
+  it('should support module exporting a function directly', async () => {
+    const adapter = {
+      files: () => ['./(default)/api/routes/direct/_route.js'],
+      load: () => (req, res) => res.json({ direct: true }),
+    };
+    const router = new Router(adapter);
+    const req = { method: 'GET', path: '/direct', params: {} };
+    const res = { json: jest.fn() };
+    const next = jest.fn();
+
+    await router.resolve(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ direct: true });
+  });
+});
+
+describe('Radix Tree Priority', () => {
+  it('should prioritize static segments over dynamic parameters', async () => {
+    const adapter = {
+      files: () => [
+        './(default)/api/routes/items/new/_route.js',
+        './(default)/api/routes/items/[id]/_route.js',
+      ],
+      load: path => {
+        if (path.includes('new')) {
+          return { get: (req, res) => res.json({ type: 'static_new' }) };
+        }
+        return {
+          get: (req, res) => res.json({ type: 'dynamic', id: req.params.id }),
+        };
+      },
+    };
+    const router = new Router(adapter);
+
+    // Call /items/new
+    let req = { method: 'GET', path: '/items/new', params: {} };
+    let res = { json: jest.fn() };
+    let next = jest.fn();
+    await router.resolve(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ type: 'static_new' });
+
+    // Call /items/42
+    req = { method: 'GET', path: '/items/42', params: {} };
+    res = { json: jest.fn() };
+    next = jest.fn();
+    await router.resolve(req, res, next);
+    expect(res.json).toHaveBeenCalledWith({ type: 'dynamic', id: '42' });
+  });
+});
+
+describe('Router Validation', () => {
+  it('should throw if adapter lacks files or load methods', () => {
+    expect(() => new Router({})).toThrow(
+      'adapter must have files() and load() methods',
+    );
+    expect(() => new Router({ files: () => [] })).toThrow(
+      'adapter must have files() and load() methods',
+    );
+    expect(() => new Router({ load: () => ({}) })).toThrow(
+      'adapter must have files() and load() methods',
+    );
   });
 });

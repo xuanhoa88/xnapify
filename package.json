@@ -117,11 +117,12 @@
     "umzug": "3.8.2",
     "unzipper": "0.12.3",
     "url-polyfill": "1.1.14",
+    "use-sync-external-store": "1.6.0",
     "uuid": "10.0.0",
     "whatwg-fetch": "3.6.20",
     "ws": "8.18.3",
-    "y-protocols": "1.0.5",
-    "yjs": "13.5.53",
+    "y-protocols": "1.0.7",
+    "yjs": "13.6.29",
     "zod": "3.23.8"
   },
   "devDependencies": {
@@ -136,6 +137,8 @@
     "@babel/plugin-transform-numeric-separator": "7.27.1",
     "@babel/plugin-transform-object-rest-spread": "7.28.4",
     "@babel/plugin-transform-optional-chaining": "7.28.5",
+    "@babel/plugin-transform-private-methods": "7.28.6",
+    "@babel/plugin-transform-private-property-in-object": "7.28.6",
     "@babel/plugin-transform-react-constant-elements": "7.27.1",
     "@babel/plugin-transform-react-inline-elements": "7.27.1",
     "@babel/preset-env": "7.28.5",

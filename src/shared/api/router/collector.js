@@ -35,6 +35,7 @@ function buildPathname(moduleName, routePath) {
 
   // Parse path segments, unwrapping route groups and converting params
   const segments = rawSegments
+    .filter(s => !['(middlewares)', '(routes)'].includes(s))
     .map(s => {
       // Unwrap route groups: (admin) -> admin
       if (s.startsWith('(') && s.endsWith(')')) return s.slice(1, -1);
