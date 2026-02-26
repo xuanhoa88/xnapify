@@ -95,6 +95,50 @@ function discoverViewModules() {
 }
 
 // =============================================================================
+// ADAPTER MERGING
+// =============================================================================
+
+/**
+ * Merges multiple per-module adapters into a single unified adapter.
+ * This ensures layouts from any module (e.g. the (default) module's admin layout)
+ * are globally visible when building routes for any other module.
+ *
+ * @param {Map<string, object>} adapters - Map of module name → adapter
+ * @returns {object|null} Merged adapter or null if no adapters
+ */
+function mergeAdapters(adapters) {
+  if (adapters.size === 0) return null;
+
+  // Build file → adapter lookup for O(1) resolution
+  const fileMap = new Map();
+  const allFiles = [];
+
+  for (const adapter of adapters.values()) {
+    for (const file of adapter.files()) {
+      if (!fileMap.has(file)) {
+        fileMap.set(file, adapter);
+        allFiles.push(file);
+      }
+    }
+  }
+
+  return {
+    files: () => allFiles,
+    load: path => {
+      const adapter = fileMap.get(path);
+      if (!adapter) {
+        throw new Error(`View file not found in any module: ${path}`);
+      }
+      return adapter.load(path);
+    },
+    resolve: path => {
+      const adapter = fileMap.get(path);
+      return adapter ? adapter.resolve(path) : null;
+    },
+  };
+}
+
+// =============================================================================
 // APP ROUTER
 // =============================================================================
 
@@ -142,75 +186,70 @@ class AppRouter extends Router {
  *
  * @param {Object} options - Router initialization options
  * @param {Object} options.pluginManager - Plugin manager instance (client or server)
+ * @param {Object} options.container - DI container instance (client or server)
  * @returns {Promise<Router>} Configured router instance
  */
-export default async function initializeRouter({ pluginManager } = {}) {
+export default async function initializeRouter({
+  pluginManager,
+  container,
+} = {}) {
   // Discover per-module view adapters
   const viewAdapters = discoverViewModules();
 
-  // Build router from the first adapter, then merge the rest
-  let router = null;
+  // Merge all adapters into one combined adapter so that layouts
+  // from any module (e.g. (default)'s admin layout) are globally
+  // visible when building routes for any other module.
+  const mergedAdapter = mergeAdapters(viewAdapters);
 
-  for (const [name, adapter] of viewAdapters) {
-    try {
-      if (!router) {
-        router = new AppRouter(adapter, {
-          context: {
-            pluginManager,
-          },
-          errorHandler(error, ctx) {
-            if (__DEV__ && error.status !== 403) {
-              console.error('Router Error:', error);
-              throw error;
-            }
-
-            const { _instance, ...context } = ctx;
-            return _instance.resolve({
-              ...context,
-              pathname: '/error',
-              error,
-            });
-          },
-          async onRouteInit(route, ctx) {
-            const ns =
-              route.workspace || (route.module && route.module.workspace);
-            const manager = ctx.pluginManager || pluginManager;
-
-            if (ns && manager) {
-              if (!manager.isNamespaceLoaded(ns)) {
-                if (__DEV__) {
-                  console.log(`[Router] Loading plugin namespace: ${ns}`);
-                }
-                await manager.loadNamespace(ns);
-              } else if (__DEV__) {
-                console.log(`[Router] Plugin namespace already loaded: ${ns}`);
-              }
-            }
-          },
-          async onRouteDestroy(route, ctx) {
-            const ns =
-              route.workspace || (route.module && route.module.workspace);
-            const manager = ctx.pluginManager || pluginManager;
-
-            if (ns && manager) {
-              if (__DEV__) {
-                console.log(`[Router] Unloading plugin namespace: ${ns}`);
-              }
-              await manager.unloadNamespace(ns);
-            }
-          },
-        });
-      } else {
-        router.add(adapter);
-      }
-    } catch (error) {
-      log(`[${name}] Failed to add routes: ${error.message}`, 'error');
-    }
-  }
-
-  if (!router) {
+  if (!mergedAdapter) {
     throw new Error('No view modules found — cannot initialize router');
   }
+
+  const router = new AppRouter(mergedAdapter, {
+    context: {
+      pluginManager,
+      container,
+    },
+    errorHandler(error, ctx) {
+      if (__DEV__ && error.status !== 403) {
+        console.error('Router Error:', error);
+        throw error;
+      }
+
+      const { _instance, ...context } = ctx;
+      return _instance.resolve({
+        ...context,
+        pathname: '/error',
+        error,
+      });
+    },
+    async onRouteInit(route, ctx) {
+      const ns = route.workspace || (route.module && route.module.workspace);
+      const manager = ctx.pluginManager || pluginManager;
+
+      if (ns && manager) {
+        if (!manager.isNamespaceLoaded(ns)) {
+          if (__DEV__) {
+            console.log(`[Router] Loading plugin namespace: ${ns}`);
+          }
+          await manager.loadNamespace(ns);
+        } else if (__DEV__) {
+          console.log(`[Router] Plugin namespace already loaded: ${ns}`);
+        }
+      }
+    },
+    async onRouteDestroy(route, ctx) {
+      const ns = route.workspace || (route.module && route.module.workspace);
+      const manager = ctx.pluginManager || pluginManager;
+
+      if (ns && manager) {
+        if (__DEV__) {
+          console.log(`[Router] Unloading plugin namespace: ${ns}`);
+        }
+        await manager.unloadNamespace(ns);
+      }
+    },
+  });
 
   // Append catch-all route for 404s
   router.routes.push({

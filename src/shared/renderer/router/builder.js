@@ -49,39 +49,33 @@ function findLayouts(layouts, rootSegment, pathname, module) {
   const result = [];
   const defaultKey = `${ROUTE_PATH_DEFAULT}:default`;
 
-  // 1. Theme/Global Layout (Section-specific or Default)
+  // 1. Theme layout: section-specific REPLACES default
+  //    e.g. (admin) layout replaces (default) layout for /admin/* routes
   if (rootSegment) {
     const sectionKey = `${ROUTE_PATH_DEFAULT}:${rootSegment}`;
     if (layouts.has(sectionKey)) {
       result.push(layouts.get(sectionKey));
+    } else if (layouts.has(defaultKey)) {
+      result.push(layouts.get(defaultKey));
     }
-  }
-
-  // If no section layout found, check default theme layout
-  if (result.length === 0 && layouts.has(defaultKey)) {
+  } else if (layouts.has(defaultKey)) {
     result.push(layouts.get(defaultKey));
   }
 
-  // 2. Colocated/Nested Layouts (Path-based)
+  // 2. Colocated/Nested Layouts (Path-based, root → leaf)
   // Traverse the path from root to leaf to find _layout.js files
   const segments = pathname.split(ROUTE_SEPARATOR).filter(Boolean);
   let currentPath = '';
 
-  const pathLayouts = [];
   segments.forEach(segment => {
     currentPath += `${ROUTE_SEPARATOR}${segment}`;
-    if (layouts.has(currentPath)) {
-      pathLayouts.push(layouts.get(currentPath));
+    const layout = layouts.get(currentPath);
+    if (layout && !result.includes(layout)) {
+      result.push(layout);
     }
   });
 
-  // Independence Rule: If colocated layouts exist, they act as the root layouts
-  // for this route, overriding any Global/Theme layouts.
-  if (pathLayouts.length > 0) {
-    return pathLayouts;
-  }
-
-  return result; // Return theme layouts only if no path layouts found
+  return result;
 }
 
 function findParentPath(pathname, routeMap) {

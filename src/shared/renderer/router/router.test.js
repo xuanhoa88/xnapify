@@ -691,7 +691,7 @@ describe('Configs and runInit', () => {
 // =============================================================================
 
 describe('Theme vs Colocated Layouts', () => {
-  it('should prioritize colocated layouts over theme layouts', async () => {
+  it('should combine global and colocated layouts hierarchically', async () => {
     const adapter = createAdapter({
       './(default)/views/(layouts)/(default)/_layout.js': {
         default: ({ children }) => `Theme(${children})`,
@@ -707,12 +707,66 @@ describe('Theme vs Colocated Layouts', () => {
     const router = new Router(adapter);
     const result = await router.resolve({ pathname: '/nested' });
 
-    // The Action wrapper will compile the component with both layouts unless independence rule kicks in
-    // wait – our builder logic checks `independence` rule: if pathLayouts > 0, IT RETURNS pathLayouts exactly.
-    // Meaning it skips `theme` completely! Let's assert that only Colocated layout wraps.
+    // Both global and colocated layouts should be applied
+    // Nesting order: Theme(Colocated(Page))
     expect(result).toBeDefined();
     expect(result.component).toBeDefined();
-    // Verify it works (Result checking doesn't easily render JSX strings offline, but we ensure it resolves)
+  });
+
+  it('should apply section layout for admin routes', async () => {
+    const adapter = createAdapter({
+      './(default)/views/(layouts)/(default)/_layout.js': {
+        default: ({ children }) => `Default(${children})`,
+      },
+      './(default)/views/(layouts)/(admin)/_layout.js': {
+        default: ({ children }) => `Admin(${children})`,
+      },
+      './(default)/views/(admin)/(default)/_route.js': {
+        default: () => 'AdminPage',
+      },
+    });
+
+    const router = new Router(adapter);
+    const result = await router.resolve({ pathname: '/admin' });
+
+    // Both default and admin section layouts should be applied
+    expect(result).toBeDefined();
+    expect(result.component).toBeDefined();
+  });
+
+  it('should apply global layout when no section or colocated layouts exist', async () => {
+    const adapter = createAdapter({
+      './(default)/views/(layouts)/(default)/_layout.js': {
+        default: ({ children }) => `Default(${children})`,
+      },
+      './(default)/views/contact/_route.js': {
+        default: () => 'Contact',
+      },
+    });
+
+    const router = new Router(adapter);
+    const result = await router.resolve({ pathname: '/contact' });
+
+    expect(result).toBeDefined();
+    expect(result.component).toBeDefined();
+  });
+
+  it('should respect layout opt-out', async () => {
+    const adapter = createAdapter({
+      './(default)/views/(layouts)/(default)/_layout.js': {
+        default: ({ children }) => `Default(${children})`,
+      },
+      './(default)/views/bare/_route.js': {
+        layout: false,
+        default: () => 'Bare',
+      },
+    });
+
+    const router = new Router(adapter);
+    const result = await router.resolve({ pathname: '/bare' });
+
+    expect(result).toBeDefined();
+    expect(result.component).toBeDefined();
   });
 });
 

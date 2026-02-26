@@ -54,10 +54,6 @@ function buildPathname(moduleName, routePath) {
       // Route group prefix detected: inject moduleName after the section
       // e.g. (admin)/orders -> /admin/{moduleName}/orders
       segments.splice(1, 0, moduleName);
-    } else if (segments.length > 0 && segments[0] === 'admin') {
-      // Plain 'admin' segment (no route group): inject moduleName after it
-      // e.g. admin/orders -> /admin/{moduleName}/orders
-      segments.splice(1, 0, moduleName);
     } else {
       // No section prefix: prepend moduleName
       // e.g. settings -> /{moduleName}/settings

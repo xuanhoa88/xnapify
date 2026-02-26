@@ -381,11 +381,11 @@ function setSSRCache(key, data) {
 // =============================================================================
 
 /** Load view resolver (lazy, promise-cached to avoid duplicate imports) */
-async function loadViews() {
+async function loadViews({ container }) {
   if (!appState.viewsPromise) {
     appState.viewsPromise = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ pluginManager });
+        const views = m.default({ pluginManager, container });
         if (__DEV__) console.log('✅ Views initialized');
         return views;
       })
@@ -567,7 +567,7 @@ function createSSRHandler(guardControl, baseUrl) {
 
       // Views
       const views = await withTimeout(
-        loadViews(),
+        loadViews({ container }),
         TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
