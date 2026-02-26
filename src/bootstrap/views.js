@@ -73,7 +73,14 @@ function discoverViewModules() {
       if (hooks && typeof hooks.views === 'function') {
         const viewContext = hooks.views();
         if (viewContext) {
-          adapters.set(moduleName, createContextAdapter(viewContext));
+          const rawAdapter = createContextAdapter(viewContext);
+          const prefix = `./${moduleName}/views`;
+          const wrappedAdapter = {
+            files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
+            load: p => rawAdapter.load(p.replace(prefix, '.')),
+            resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
+          };
+          adapters.set(moduleName, wrappedAdapter);
         }
       } else {
         log(`[${moduleName}] No views() hook found, skipping`, 'warn');

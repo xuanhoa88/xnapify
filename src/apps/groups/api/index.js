@@ -25,7 +25,7 @@ const seedsContext = require.context(
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 
 // Auto-load routes via require.context
-const routesContext = require.context('./routes', false, /\.[cm]?[jt]s$/i);
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
 // PUBLIC LIFECYCLE HOOKS

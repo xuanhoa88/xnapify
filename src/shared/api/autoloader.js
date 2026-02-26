@@ -305,7 +305,7 @@ async function runPhase(phase, lifecycles, handler) {
  *
  * @param {object} modulesContext - Webpack require.context or compatible
  * @param {object} app            - Express app instance
- * @returns {Promise<{apiModels: object, routeAdapters: Map, errors: object[]}>}
+ * @returns {Promise<{apiModels: object, apiRoutes: Map, errors: object[]}>}
  */
 export async function discoverModules(modulesContext, app) {
   if (!app) {
@@ -334,7 +334,7 @@ export async function discoverModules(modulesContext, app) {
 
   // ─── Phase 1: models ──────────────────────────────────────────────────────
   const db = app.get('db');
-  const allModels = {};
+  const apiModels = {};
 
   if (!db) {
     log('No database connection found, skipping models', 'warn');
@@ -353,23 +353,23 @@ export async function discoverModules(modulesContext, app) {
         errors.push(...modelErrors);
 
         for (const [modelName, model] of Object.entries(models)) {
-          if (modelName in allModels) {
+          if (modelName in apiModels) {
             log(
               `Duplicate model "${modelName}" from module "${name}". Skipped.`,
               'error',
             );
             continue;
           }
-          allModels[modelName] = model;
+          apiModels[modelName] = model;
         }
       })),
     );
 
     // Initialise Sequelize associations after all models are collected
-    for (const [modelName, model] of Object.entries(allModels)) {
+    for (const [modelName, model] of Object.entries(apiModels)) {
       if (typeof model.associate !== 'function') continue;
       try {
-        model.associate(allModels);
+        model.associate(apiModels);
         log(`[${modelName}] Associations initialized`);
       } catch (error) {
         errors.push(
@@ -383,7 +383,7 @@ export async function discoverModules(modulesContext, app) {
     }
   }
 
-  app.set('models', allModels);
+  app.set('models', apiModels);
 
   // ─── Phase 2: shared ──────────────────────────────────────────────────────
   errors.push(
@@ -402,12 +402,20 @@ export async function discoverModules(modulesContext, app) {
   errors.push(...(await runPhase('init', lifecycles, (_, hook) => hook(app))));
 
   // ─── Phase 6: routes ──────────────────────────────────────────────────────
-  const routeAdapters = new Map();
+  const apiRoutes = new Map();
   errors.push(
     ...(await runPhase('routes', lifecycles, (name, hook) => {
       const routeContext = hook();
-      if (routeContext)
-        routeAdapters.set(name, createContextAdapter(routeContext));
+      if (routeContext) {
+        const rawAdapter = createContextAdapter(routeContext);
+        const prefix = `./${name}/api/routes`;
+        const wrappedAdapter = {
+          files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
+          load: p => rawAdapter.load(p.replace(prefix, '.')),
+          resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
+        };
+        apiRoutes.set(name, wrappedAdapter);
+      }
     })),
   );
 
@@ -429,13 +437,13 @@ export async function discoverModules(modulesContext, app) {
 
   // ─── Summary ──────────────────────────────────────────────────────────────
   log(
-    `${Object.keys(allModels).length} model(s), ${lifecycles.size} lifecycle(s), ` +
-      `${routeAdapters.size} route context(s) loaded in ${Date.now() - startTime}ms`,
+    `${Object.keys(apiModels).length} model(s), ${lifecycles.size} lifecycle(s), ` +
+      `${apiRoutes.size} route context(s) loaded in ${Date.now() - startTime}ms`,
   );
 
   if (errors.length > 0) {
     log(`${errors.length} error(s) during module loading`, 'warn');
   }
 
-  return { apiModels: allModels, routeAdapters, errors };
+  return { apiModels, apiRoutes, errors };
 }

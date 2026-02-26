@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Router } from 'express';
+import express from 'express';
 import { discoverModules, engines } from '../../shared/api';
 import { Router as DynamicRouter } from '../../shared/api/router';
 import { createCorsMiddleware } from './middlewares/cors';
@@ -121,15 +121,15 @@ function createApiMiddlewareStack(app) {
  * Build the dynamic API router from per-module route adapters.
  *
  * @param {object} app - Express app instance
- * @param {Map<string, object>} routeAdapters - Map of module name → route adapter
+ * @param {Map<string, object>} apiRoutes - Map of module name → route adapter
  * @returns {Router} Assembled Express router
  */
-function buildApiRouter(app, routeAdapters) {
+function buildApiRouter(app, apiRoutes) {
   // Create API middleware stack
   const apiMiddlewares = createApiMiddlewareStack(app);
 
-  const router = new Router();
-  for (const [name, adapter] of routeAdapters) {
+  const router = express.Router();
+  for (const [name, adapter] of apiRoutes) {
     try {
       const dynamicRouter = new DynamicRouter(adapter);
       router.use(...apiMiddlewares, dynamicRouter.resolve);
@@ -138,7 +138,7 @@ function buildApiRouter(app, routeAdapters) {
     }
   }
 
-  log(`Dynamic router built (${routeAdapters.size} module(s))`);
+  log(`Dynamic router built (${apiRoutes.size} module(s))`);
 
   return router;
 }
@@ -151,10 +151,10 @@ function buildApiRouter(app, routeAdapters) {
  */
 async function setupApiRoutes(app) {
   // Discover and run module lifecycles
-  const { routeAdapters } = await discoverModules(apisContext, app);
+  const { apiRoutes } = await discoverModules(apisContext, app);
 
   // Build the dynamic router from collected route adapters
-  const router = buildApiRouter(app, routeAdapters);
+  const router = buildApiRouter(app, apiRoutes);
 
   return router;
 }
