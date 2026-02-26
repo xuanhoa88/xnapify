@@ -12,12 +12,12 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import { Table } from '../../../../../shared/renderer/components/Admin';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   assignRolesToGroup,
   fetchGroups,
@@ -40,7 +40,7 @@ import s from './GroupRolesModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const GroupRolesModal = forwardRef((props, ref) => {
+const GroupRolesModal = forwardRef(({ fetchRoles }, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const loading = useSelector(isGroupAssignRolesLoading);
@@ -84,7 +84,7 @@ const GroupRolesModal = forwardRef((props, ref) => {
         setRolesLoading(false);
       }
     },
-    [dispatch, t],
+    [dispatch, fetchRoles, t],
   );
 
   // Fetch roles when modal opens or search/page changes
@@ -273,5 +273,9 @@ const GroupRolesModal = forwardRef((props, ref) => {
 });
 
 GroupRolesModal.displayName = 'GroupRolesModal';
+
+GroupRolesModal.propTypes = {
+  fetchRoles: PropTypes.func.isRequired,
+};
 
 export default GroupRolesModal;

@@ -385,7 +385,7 @@ async function loadViews({ container }) {
   if (!appState.viewsPromise) {
     appState.viewsPromise = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ pluginManager, container });
+        const views = m.default({ plugin: pluginManager, container });
         if (__DEV__) console.log('✅ Views initialized');
         return views;
       })

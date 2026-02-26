@@ -5,7 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useCallback, useState, useRef } from 'react';
+import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { useHistory } from '../../../../../shared/renderer/components/History';
@@ -25,8 +26,6 @@ import Button from '../../../../../shared/renderer/components/Button';
 import Card from '../../../../../shared/renderer/components/Card';
 import Tag from '../../../../../shared/renderer/components/Tag';
 import Avatar from '../../../../../shared/renderer/components/Avatar';
-import RoleTag from '../../../../users/views/(admin)/components/RoleTag';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   fetchGroups,
   getGroups,
@@ -45,9 +44,21 @@ import s from './Groups.css';
 // Pagination items per page
 const ITEMS_PER_PAGE = 10;
 
-function Groups() {
+function Groups({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+
+  // Get shared components and state from container
+  const { container } = context;
+  const { RoleTag } = useMemo(
+    () => container.resolve('users:admin:components'),
+    [container],
+  );
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission('groups:create');
@@ -432,7 +443,7 @@ function Groups() {
       )}
 
       {/* Group Roles Modal */}
-      <GroupRolesModal ref={rolesModalRef} />
+      <GroupRolesModal ref={rolesModalRef} fetchRoles={fetchRoles} />
 
       {/* Group Permissions Modal */}
       <GroupPermissionsModal ref={permissionsModalRef} />
@@ -451,5 +462,11 @@ function Groups() {
     </div>
   );
 }
+
+Groups.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
+};
 
 export default Groups;

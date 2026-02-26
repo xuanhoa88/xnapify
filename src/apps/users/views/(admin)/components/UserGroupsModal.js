@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import { Table } from '../../../../../shared/renderer/components/Admin';
-import { fetchGroups } from '../../../../groups/views/(admin)/redux';
 import { assignGroupsToUser, isUserAssignGroupsLoading } from '../redux';
 import s from './UserGroupsModal.css';
 
@@ -38,7 +37,7 @@ import s from './UserGroupsModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
+const UserGroupsModal = forwardRef(({ onSuccess, fetchGroups }, ref) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const loading = useSelector(isUserAssignGroupsLoading);
@@ -87,7 +86,7 @@ const UserGroupsModal = forwardRef(({ onSuccess }, ref) => {
         setGroupsLoading(false);
       }
     },
-    [dispatch, t],
+    [dispatch, fetchGroups, t],
   );
 
   // Fetch groups when modal opens or search/page changes
@@ -327,6 +326,7 @@ UserGroupsModal.displayName = 'UserGroupsModal';
 
 UserGroupsModal.propTypes = {
   onSuccess: PropTypes.func,
+  fetchGroups: PropTypes.func,
 };
 
 export default UserGroupsModal;

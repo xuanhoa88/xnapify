@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,6 @@ import Form, {
   useFormContext,
 } from '../../../../../../shared/renderer/components/Form';
 import { updateRoleFormSchema } from '../../../../validator/admin';
-import { fetchPermissions } from '../../../../../permissions/views/(admin)/redux';
 import {
   updateRole,
   fetchRoleById,
@@ -34,9 +33,16 @@ import {
 } from '../../redux';
 import s from './EditRole.css';
 
-function EditRole({ roleId }) {
+function EditRole({ roleId, context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchPermissions } = useMemo(() => {
+    const { thunks } = container.resolve('permissions:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const loading = useSelector(isRoleUpdateLoading);
   const fetchingRole = useSelector(isRoleFetchLoading);
@@ -201,6 +207,7 @@ function EditRole({ roleId }) {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchPermissions={fetchPermissions}
           />
         </Form>
       </div>
@@ -215,7 +222,12 @@ function EditRole({ roleId }) {
 /**
  * EditRoleFormFields - Form fields component that uses react-hook-form context
  */
-function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
+function EditRoleFormFields({
+  onCancel,
+  loading,
+  isDirtyRef,
+  fetchPermissions,
+}) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const {
@@ -272,7 +284,7 @@ function EditRoleFormFields({ onCancel, loading, isDirtyRef }) {
         setPermissionsLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchPermissions],
   );
 
   // Debounced permission search (also handles initial load on mount)
@@ -383,10 +395,14 @@ EditRoleFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchPermissions: PropTypes.func.isRequired,
 };
 
 EditRole.propTypes = {
   roleId: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
 };
 
 export default EditRole;

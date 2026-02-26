@@ -18,7 +18,6 @@ import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import { Table } from '../../../../../shared/renderer/components/Admin';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import { assignRolesToUser, isUserAssignRolesLoading } from '../redux';
 import s from './UserRolesModal.css';
 
@@ -38,7 +37,7 @@ import s from './UserRolesModal.css';
  */
 const ITEMS_PER_PAGE = 10;
 
-const UserRolesModal = forwardRef(({ onSuccess }, ref) => {
+const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const loading = useSelector(isUserAssignRolesLoading);
@@ -321,6 +320,7 @@ UserRolesModal.displayName = 'UserRolesModal';
 
 UserRolesModal.propTypes = {
   onSuccess: PropTypes.func,
+  fetchRoles: PropTypes.func.isRequired,
 };
 
 export default UserRolesModal;

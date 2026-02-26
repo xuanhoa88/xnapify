@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -22,7 +22,6 @@ import Form, {
   useFormContext,
 } from '../../../../../../shared/renderer/components/Form';
 import { updateGroupFormSchema } from '../../../../validator/admin';
-import { fetchRoles } from '../../../../../roles/views/(admin)/redux';
 import {
   updateGroup,
   fetchGroupById,
@@ -34,9 +33,16 @@ import {
 } from '../../redux';
 import s from './EditGroup.css';
 
-function EditGroup({ groupId }) {
+function EditGroup({ groupId, context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const loading = useSelector(isGroupUpdateLoading);
   const fetchingGroup = useSelector(isGroupFetchLoading);
@@ -194,6 +200,7 @@ function EditGroup({ groupId }) {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchRoles={fetchRoles}
           />
         </Form>
       </div>
@@ -208,7 +215,7 @@ function EditGroup({ groupId }) {
 /**
  * EditGroupFormFields - Form fields component that uses react-hook-form context
  */
-function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
+function EditGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -265,7 +272,7 @@ function EditGroupFormFields({ onCancel, loading, isDirtyRef }) {
         setRolesLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchRoles],
   );
 
   // Debounced role search (also handles initial load on mount)
@@ -385,10 +392,12 @@ EditGroupFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchRoles: PropTypes.func.isRequired,
 };
 
 EditGroup.propTypes = {
   groupId: PropTypes.string.isRequired,
+  context: PropTypes.shape({ container: PropTypes.object }).isRequired,
 };
 
 export default EditGroup;

@@ -5,7 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import format from 'date-fns/format';
@@ -25,8 +26,6 @@ import {
 import Tag from '../../../../../shared/renderer/components/Tag';
 import Button from '../../../../../shared/renderer/components/Button';
 import Avatar from '../../../../../shared/renderer/components/Avatar';
-import { fetchGroups } from '../../../../groups/views/(admin)/redux';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import {
   fetchUsers,
   getUsers,
@@ -45,9 +44,20 @@ import RoleTag from '../components/RoleTag';
 import GroupTag from '../components/GroupTag';
 import s from './Users.css';
 
-function Users() {
+function Users({ context }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+
+  const { container } = context;
+  const { fetchGroups } = useMemo(() => {
+    const { thunks } = container.resolve('groups:admin:state');
+    return thunks;
+  }, [container]);
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const { hasPermission } = useRbac();
   const canCreate = hasPermission('users:create');
@@ -623,8 +633,16 @@ function Users() {
         />
       )}
 
-      <UserRolesModal ref={rolesModalRef} onSuccess={handleRefreshUsers} />
-      <UserGroupsModal ref={groupsModalRef} onSuccess={handleRefreshUsers} />
+      <UserRolesModal
+        ref={rolesModalRef}
+        onSuccess={handleRefreshUsers}
+        fetchRoles={fetchRoles}
+      />
+      <UserGroupsModal
+        ref={groupsModalRef}
+        onSuccess={handleRefreshUsers}
+        fetchGroups={fetchGroups}
+      />
       <UserPermissionsModal ref={permissionsModalRef} />
       <DeleteUserModal ref={deleteModalRef} onSuccess={handleRefreshUsers} />
       <ChangeStatusUserModal
@@ -634,5 +652,11 @@ function Users() {
     </div>
   );
 }
+
+Users.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
+};
 
 export default Users;

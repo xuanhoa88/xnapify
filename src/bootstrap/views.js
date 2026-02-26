@@ -50,15 +50,17 @@ function log(message, level = 'info') {
 const LIFECYCLE_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
 
 /**
- * Discover view modules and collect their view contexts.
+ * Discover view modules and collect their view contexts and lifecycle hooks.
  *
  * Scans apps for views/index.js lifecycle files, calls hooks.views()
- * on each, and returns the collected context adapters.
+ * on each, and returns the collected context adapters along with
+ * their full hook objects for lifecycle phases (e.g. shared).
  *
- * @returns {Map<string, object>} Map of module name → context adapter
+ * @returns {{ adapters: Map<string, object>, hooks: Map<string, object> }}
  */
 function discoverViewModules() {
   const adapters = new Map();
+  const moduleHooks = new Map();
   const lifecycleAdapter = createContextAdapter(viewsLifecycleContext);
 
   for (const filePath of lifecycleAdapter.files()) {
@@ -81,6 +83,7 @@ function discoverViewModules() {
             resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
           };
           adapters.set(moduleName, wrappedAdapter);
+          moduleHooks.set(moduleName, hooks);
         }
       } else {
         log(`[${moduleName}] No views() hook found, skipping`, 'warn');
@@ -91,7 +94,7 @@ function discoverViewModules() {
   }
 
   log(`${adapters.size} view module(s) discovered`);
-  return adapters;
+  return { adapters, hooks: moduleHooks };
 }
 
 // =============================================================================
@@ -185,17 +188,32 @@ class AppRouter extends Router {
  * Creates the router by discovering per-module view contexts.
  *
  * @param {Object} options - Router initialization options
- * @param {Object} options.pluginManager - Plugin manager instance (client or server)
+ * @param {Object} options.plugin - Plugin manager instance (client or server)
  * @param {Object} options.container - DI container instance (client or server)
  * @returns {Promise<Router>} Configured router instance
  */
-export default async function initializeRouter({
-  pluginManager,
-  container,
-} = {}) {
-  // Discover per-module view adapters
-  const viewAdapters = discoverViewModules();
+export default async function initializeRouter(options = {}) {
+  // ─── Initialize ─────────────────────────────────────────────────────
+  const { plugin, container } = options;
 
+  // Discover per-module view adapters and lifecycle hooks
+  const { adapters: viewAdapters, hooks: moduleHooks } = discoverViewModules();
+
+  // ─── Shared phase ─────────────────────────────────────────────────────
+  // Call each module's shared() hook to allow cross-module sharing
+  // (e.g. registering Redux slices, shared components, DI bindings).
+  for (const [name, hooks] of moduleHooks) {
+    if (typeof hooks.shared === 'function') {
+      try {
+        await hooks.shared({ plugin, container });
+        log(`[${name}] Shared`);
+      } catch (error) {
+        log(`[${name}] Shared phase failed: ${error.message}`, 'error');
+      }
+    }
+  }
+
+  // ─── Merge adapters ─────────────────────────────────────────────────────
   // Merge all adapters into one combined adapter so that layouts
   // from any module (e.g. (default)'s admin layout) are globally
   // visible when building routes for any other module.
@@ -207,7 +225,7 @@ export default async function initializeRouter({
 
   const router = new AppRouter(mergedAdapter, {
     context: {
-      pluginManager,
+      plugin,
       container,
     },
     errorHandler(error, ctx) {
@@ -225,7 +243,7 @@ export default async function initializeRouter({
     },
     async onRouteInit(route, ctx) {
       const ns = route.workspace || (route.module && route.module.workspace);
-      const manager = ctx.pluginManager || pluginManager;
+      const manager = ctx.plugin || plugin;
 
       if (ns && manager) {
         if (!manager.isNamespaceLoaded(ns)) {
@@ -240,7 +258,7 @@ export default async function initializeRouter({
     },
     async onRouteDestroy(route, ctx) {
       const ns = route.workspace || (route.module && route.module.workspace);
-      const manager = ctx.pluginManager || pluginManager;
+      const manager = ctx.plugin || plugin;
 
       if (ns && manager) {
         if (__DEV__) {

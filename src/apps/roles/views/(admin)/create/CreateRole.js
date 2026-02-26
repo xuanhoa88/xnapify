@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -21,13 +21,19 @@ import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
 import { createRoleFormSchema } from '../../../validator/admin';
-import { fetchPermissions } from '../../../../permissions/views/(admin)/redux';
 import { createRole, isRoleCreateLoading } from '../redux';
 import s from './CreateRole.css';
 
-function CreateRole() {
+function CreateRole({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchPermissions } = useMemo(() => {
+    const { thunks } = container.resolve('permissions:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const loading = useSelector(isRoleCreateLoading);
 
@@ -99,6 +105,7 @@ function CreateRole() {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchPermissions={fetchPermissions}
           />
         </Form>
       </div>
@@ -113,7 +120,12 @@ function CreateRole() {
 /**
  * CreateRoleFormFields - Form fields component that uses react-hook-form context
  */
-function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
+function CreateRoleFormFields({
+  onCancel,
+  loading,
+  isDirtyRef,
+  fetchPermissions,
+}) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -170,7 +182,7 @@ function CreateRoleFormFields({ onCancel, loading, isDirtyRef }) {
         setPermissionsLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchPermissions],
   );
 
   // Debounced permission search (also handles initial load on mount)
@@ -279,6 +291,13 @@ CreateRoleFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchPermissions: PropTypes.func.isRequired,
+};
+
+CreateRole.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
 };
 
 export default CreateRole;

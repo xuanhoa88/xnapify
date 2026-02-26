@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -21,13 +21,19 @@ import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
 import { createGroupFormSchema } from '../../../validator/admin';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
 import { createGroup, isGroupCreateLoading } from '../redux';
 import s from './CreateGroup.css';
 
-function CreateGroup() {
+function CreateGroup({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const loading = useSelector(isGroupCreateLoading);
 
@@ -106,6 +112,7 @@ function CreateGroup() {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchRoles={fetchRoles}
           />
         </Form>
       </div>
@@ -120,7 +127,7 @@ function CreateGroup() {
 /**
  * CreateGroupFormFields - Form fields component that uses react-hook-form context
  */
-function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
+function CreateGroupFormFields({ onCancel, loading, isDirtyRef, fetchRoles }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -177,7 +184,7 @@ function CreateGroupFormFields({ onCancel, loading, isDirtyRef }) {
         setRolesLoading(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchRoles],
   );
 
   // Debounced role search (also handles initial load on mount)
@@ -297,6 +304,11 @@ CreateGroupFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchRoles: PropTypes.func.isRequired,
+};
+
+CreateGroup.propTypes = {
+  context: PropTypes.shape({ container: PropTypes.object }).isRequired,
 };
 
 export default CreateGroup;

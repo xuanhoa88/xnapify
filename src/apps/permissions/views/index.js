@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import * as selectors from './(admin)/redux/selector';
+import * as thunks from './(admin)/redux/thunks';
+
 // Auto-load view routes via require.context
 // Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
 const viewsContext = require.context(
@@ -31,6 +34,21 @@ function log(phase) {
 // =============================================================================
 // PUBLIC LIFECYCLE HOOK
 // =============================================================================
+
+/**
+ * Shared hook — called during view bootstrap to share
+ * client-side services/state with other view modules.
+ *
+ * @param {Object} context - Shared context (e.g., container, plugin)
+ */
+export function shared({ container }) {
+  // Bind admin state
+  container.bind(
+    'permissions:admin:state',
+    () => ({ selectors, thunks }),
+    true,
+  );
+}
 
 /**
  * Views hook — returns the webpack require.context for this module's views.

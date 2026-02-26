@@ -27,8 +27,6 @@ import Form, {
   useFormContext,
 } from '../../../../../../shared/renderer/components/Form';
 import { updateUserFormSchema } from '../../../../validator/admin';
-import { fetchRoles } from '../../../../../roles/views/(admin)/redux';
-import { fetchGroups } from '../../../../../groups/views/(admin)/redux';
 import {
   updateUser,
   fetchUserById,
@@ -40,9 +38,20 @@ import {
 } from '../../redux';
 import s from './EditUser.css';
 
-function EditUser({ userId }) {
+function EditUser({ userId, context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+  const { fetchGroups } = useMemo(() => {
+    const { thunks } = container.resolve('groups:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const currentUser = useSelector(getUserProfile);
   const loading = useSelector(isUserUpdateLoading);
@@ -245,6 +254,8 @@ function EditUser({ userId }) {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchRoles={fetchRoles}
+            fetchGroups={fetchGroups}
           />
         </Form>
       </div>
@@ -260,7 +271,14 @@ function EditUser({ userId }) {
  * EditUserFormFields - Form fields component that uses react-hook-form context
  * Contains all the form fields and manages roles/groups state internally
  */
-function EditUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
+function EditUserFormFields({
+  setError,
+  onCancel,
+  loading,
+  isDirtyRef,
+  fetchRoles,
+  fetchGroups,
+}) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -612,10 +630,15 @@ EditUserFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchRoles: PropTypes.func.isRequired,
+  fetchGroups: PropTypes.func.isRequired,
 };
 
 EditUser.propTypes = {
   userId: PropTypes.string.isRequired,
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
 };
 
 export default EditUser;

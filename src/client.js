@@ -242,7 +242,7 @@ async function loadViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ pluginManager, container });
+        const views = m.default({ plugin: pluginManager, container });
         log('✅ Views initialized');
         return views;
       })

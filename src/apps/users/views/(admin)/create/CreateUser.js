@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
@@ -25,14 +25,23 @@ import Form, {
   useFormContext,
 } from '../../../../../shared/renderer/components/Form';
 import { createUserFormSchema } from '../../../validator/admin';
-import { fetchRoles } from '../../../../roles/views/(admin)/redux';
-import { fetchGroups } from '../../../../groups/views/(admin)/redux';
 import { createUser, isUserCreateLoading } from '../redux';
 import s from './CreateUser.css';
 
-function CreateUser() {
+function CreateUser({ context }) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
+
+  const { container } = context;
+  const { fetchRoles } = useMemo(() => {
+    const { thunks } = container.resolve('roles:admin:state');
+    return thunks;
+  }, [container]);
+  const { fetchGroups } = useMemo(() => {
+    const { thunks } = container.resolve('groups:admin:state');
+    return thunks;
+  }, [container]);
+
   const history = useHistory();
   const loading = useSelector(isUserCreateLoading);
 
@@ -114,6 +123,8 @@ function CreateUser() {
             onCancel={handleCancel}
             loading={loading}
             isDirtyRef={isDirtyRef}
+            fetchRoles={fetchRoles}
+            fetchGroups={fetchGroups}
           />
         </Form>
       </div>
@@ -128,7 +139,14 @@ function CreateUser() {
 /**
  * CreateUserFormFields - Form fields component that uses react-hook-form context
  */
-function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
+function CreateUserFormFields({
+  setError,
+  onCancel,
+  loading,
+  isDirtyRef,
+  fetchRoles,
+  fetchGroups,
+}) {
   const dispatch = useDispatch();
   const { t } = useTranslation();
   const {
@@ -203,7 +221,7 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
         setRolesLoadingMore(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchRoles],
   );
 
   // Debounced role search using RxJS (also handles initial load on mount)
@@ -249,7 +267,7 @@ function CreateUserFormFields({ setError, onCancel, loading, isDirtyRef }) {
         setGroupsLoadingMore(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchGroups],
   );
 
   // Debounced group search using RxJS (also handles initial load on mount)
@@ -498,6 +516,14 @@ CreateUserFormFields.propTypes = {
   onCancel: PropTypes.func.isRequired,
   loading: PropTypes.bool.isRequired,
   isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+  fetchRoles: PropTypes.func.isRequired,
+  fetchGroups: PropTypes.func.isRequired,
+};
+
+CreateUser.propTypes = {
+  context: PropTypes.shape({
+    container: PropTypes.object.isRequired,
+  }),
 };
 
 export default CreateUser;
