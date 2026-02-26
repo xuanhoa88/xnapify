@@ -65,26 +65,20 @@ export const getPlugin = async (req, res) => {
  * Serve plugin static files
  */
 export const servePluginStatic = async (req, res, next) => {
-  const root = await pluginService.getPluginStaticDir(
+  const staticDir = await pluginService.getPluginStaticDir(
     { cwd: req.app.get('cwd'), models: req.app.get('models') },
     req.params.id,
   );
-  if (!root) {
+  if (!staticDir) {
     const http = req.app.get('http');
     return http.sendError(res, 'Invalid Plugin ID', 400);
   }
 
+  // Use the catch-all :path* param from [id]/static/[...path]/_route.js
   const originalUrl = req.url;
-  const basePath = `/api/plugins/${req.params.id}/static`;
+  req.url = `/${req.params.path}`.replace(/\/+/g, '/');
 
-  if (req.url.startsWith(basePath)) {
-    req.url = req.url.slice(basePath.length);
-    if (!req.url.startsWith('/')) {
-      req.url = `/${req.url}`;
-    }
-  }
-
-  return express.static(root)(req, res, (...args) => {
+  return express.static(staticDir)(req, res, (...args) => {
     req.url = originalUrl;
     next(...args);
   });

@@ -5,6 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as pluginController from '../../../controllers/plugin.controller';
+import * as pluginController from '../../../../controllers/plugin.controller';
 
 export const get = [pluginController.servePluginStatic];
