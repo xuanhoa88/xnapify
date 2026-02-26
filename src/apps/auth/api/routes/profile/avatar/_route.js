@@ -14,12 +14,9 @@ function authMiddleware(req, res, next) {
 
 export const get = [
   authMiddleware,
-  function get(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.previewAvatar(req, res);
+  function previewAvatar(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.previewAvatar(req, ...args);
   },
 ];
 
@@ -35,23 +32,17 @@ export const post = [
     });
     return avatarUpload(req, res, next);
   },
-  function uploadAvatar(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.uploadAvatar(req, res);
+  function uploadAvatar(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.uploadAvatar(req, ...args);
   },
 ];
 
 export const del = [
   authMiddleware,
-  function removeAvatar(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.removeAvatar(req, res);
+  function removeAvatar(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.removeAvatar(req, ...args);
   },
 ];
 

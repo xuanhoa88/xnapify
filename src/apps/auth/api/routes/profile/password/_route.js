@@ -14,11 +14,8 @@ function authMiddleware(req, res, next) {
 
 export const put = [
   authMiddleware,
-  function changePassword(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.changePassword(req, res);
+  function changePassword(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.changePassword(req, ...args);
   },
 ];

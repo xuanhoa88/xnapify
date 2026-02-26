@@ -6,11 +6,8 @@
  */
 
 export const post = [
-  function resetPasswordRequest(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.resetPasswordRequest(req, res);
+  function resetPasswordRequest(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.resetPasswordRequest(req, ...args);
   },
 ];

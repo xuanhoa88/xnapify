@@ -14,22 +14,16 @@ function authMiddleware(req, res, next) {
 
 export const get = [
   authMiddleware,
-  function get(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.getPreferences(req, res);
+  function get(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.getPreferences(req, ...args);
   },
 ];
 
 export const put = [
   authMiddleware,
-  function put(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { profile },
-    } = container.resolve('users:controllers');
-    return profile.updatePreferences(req, res);
+  function put(req, ...args) {
+    const { profile } = req.app.get('container').resolve('users:controllers');
+    return profile.updatePreferences(req, ...args);
   },
 ];

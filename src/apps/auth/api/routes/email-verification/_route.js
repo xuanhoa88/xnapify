@@ -6,11 +6,8 @@
  */
 
 export const post = [
-  function emailVerification(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.emailVerification(req, res);
+  function emailVerification(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.emailVerification(req, ...args);
   },
 ];

@@ -14,11 +14,8 @@ function authMiddleware(req, res, next) {
 
 export const get = [
   authMiddleware,
-  function logout(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.logout(req, res);
+  function logout(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.logout(req, ...args);
   },
 ];

@@ -6,11 +6,8 @@
  */
 
 export const get = [
-  function generateRandomPassword(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.generateRandomPassword(req, res);
+  function generateRandomPassword(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.generateRandomPassword(req, ...args);
   },
 ];

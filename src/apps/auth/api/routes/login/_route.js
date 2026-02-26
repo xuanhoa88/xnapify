@@ -6,11 +6,8 @@
  */
 
 export const post = [
-  function login(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.login(req, res);
+  function login(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.login(req, ...args);
   },
 ];

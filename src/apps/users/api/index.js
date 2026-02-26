@@ -35,17 +35,6 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // LOGGING
 // =============================================================================
 
-const TAG = 'Users';
-
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
 /**
  * Register auth strategies and RBAC hook listeners.
  *
@@ -59,8 +48,6 @@ async function registerAuthHooks(app) {
   hook('auth.roles').on('resolve', getUserRBACData);
   hook('auth.groups').on('resolve', getUserRBACData);
   hook('auth.ownership').on('resolve', getUserRBACData);
-
-  log('Auth hooks registered');
 }
 
 // =============================================================================
@@ -133,7 +120,6 @@ export async function init(app) {
  * @returns {object} Webpack require.context for models
  */
 export function models() {
-  log('Models declared');
   return modelsContext;
 }
 
@@ -146,6 +132,5 @@ export function models() {
  * @returns {object} Webpack require.context for routes
  */
 export function routes() {
-  log('Routes declared');
   return routesContext;
 }

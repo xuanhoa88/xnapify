@@ -6,11 +6,8 @@
  */
 
 export const post = [
-  function resetPasswordConfirmation(req, res) {
-    const container = req.app.get('container');
-    const {
-      controllers: { auth },
-    } = container.resolve('users:controllers');
-    return auth.resetPasswordConfirmation(req, res);
+  function resetPasswordConfirmation(req, ...args) {
+    const { auth } = req.app.get('container').resolve('users:controllers');
+    return auth.resetPasswordConfirmation(req, ...args);
   },
 ];
