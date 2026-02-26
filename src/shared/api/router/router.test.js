@@ -14,6 +14,10 @@ const mockModuleLoader = {
     './auth/api/routes/(default)/_route.js',
     './plugins/api/routes/[id]/_route.js',
     './plugins/api/routes/_middleware.js',
+    './users/api/routes/(admin)/_route.js',
+    './users/api/routes/(admin)/(default)/_route.js',
+    './users/api/routes/(admin)/_middleware.js',
+    './users/api/routes/(admin)/(default)/_middleware.js',
   ],
   load: path => {
     if (path.includes('/auth/')) {

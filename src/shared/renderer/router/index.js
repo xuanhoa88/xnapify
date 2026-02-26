@@ -341,37 +341,58 @@ export class Router {
     // 2. Tag all new routes with the adapter source
     newRoutes.forEach(route => tagRoutes(route, adapter));
 
-    // 3. Merge into existing tree
-    // If a new top-level route shares a path with an existing route,
-    // append its children to the existing route instead of duplicating
-    for (const newRoute of newRoutes) {
-      const existing = this.routes.find(r => r.path === newRoute.path);
+    // 3. Merge into existing tree deeply
+    const insertDeep = (routesList, routeToInsert) => {
+      let bestParent = null;
 
-      if (
-        existing &&
-        Array.isArray(newRoute.children) &&
-        newRoute.children.length > 0
-      ) {
-        // Merge children into the existing route
-        existing.children = existing.children || [];
-        for (const child of newRoute.children) {
-          existing.children.push(child);
+      const findParent = list => {
+        for (const r of list) {
+          if (routeToInsert.path === r.path) {
+            return r; // Exact match is the best
+          }
+          const isPrefix =
+            r.path === '/' || routeToInsert.path.startsWith(r.path + '/');
+          if (isPrefix) {
+            bestParent = r;
+            if (r.children) {
+              const deeper = findParent(r.children);
+              if (deeper) return deeper;
+            }
+          }
         }
-        // Re-link parents for the merged children
-        newRoute.children.forEach(child => linkParents(child, existing));
-      } else if (existing) {
-        // New route has same path but no children — skip to avoid duplicate
-        continue;
+        return bestParent;
+      };
+
+      const existing = findParent(this.routes);
+
+      if (existing) {
+        if (existing.path === routeToInsert.path) {
+          if (
+            Array.isArray(routeToInsert.children) &&
+            routeToInsert.children.length > 0
+          ) {
+            existing.children = existing.children || [];
+            for (const child of routeToInsert.children) {
+              insertDeep(existing.children, child);
+            }
+          }
+        } else {
+          existing.children = existing.children || [];
+          existing.children.push(routeToInsert);
+        }
       } else {
-        // No overlap, add as new top-level route
-        this.routes.push(newRoute);
-        validateConfig([newRoute]);
-        linkParents(newRoute);
+        routesList.push(routeToInsert);
       }
+    };
+
+    for (const newRoute of newRoutes) {
+      insertDeep(this.routes, newRoute);
     }
 
-    // 4. Clear matcher cache so new URLs resolve correctly
+    validateConfig(this.routes);
+    this.routes.forEach(route => linkParents(route));
 
+    // 4. Clear matcher cache so new URLs resolve correctly
     return newRoutes;
   }
 

@@ -22,6 +22,11 @@
   transition: all 0.15s ease;
 }
 
+.toolbarBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .toolbarBtn:hover:not(:disabled) {
   color: var(--color-text-primary);
 }
@@ -29,9 +34,4 @@
 .toolbarBtn.toolbarBtnActive {
   background-color: var(--color-primary-light);
   color: var(--color-white, #fff);
-}
-
-.toolbarBtn:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }

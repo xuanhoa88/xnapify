@@ -109,27 +109,55 @@ export class Router {
 
     newRoutes.forEach(route => tagRoutes(route, adapter));
 
-    for (const newRoute of newRoutes) {
-      const existing = this.routes.find(r => r.path === newRoute.path);
+    const insertDeep = (routesList, routeToInsert) => {
+      let bestParent = null;
 
-      if (
-        existing &&
-        Array.isArray(newRoute.children) &&
-        newRoute.children.length > 0
-      ) {
-        existing.children = existing.children || [];
-        for (const child of newRoute.children) {
-          existing.children.push(child);
+      const findParent = list => {
+        for (const r of list) {
+          if (routeToInsert.path === r.path) {
+            return r;
+          }
+          const isPrefix =
+            r.path === '/' || routeToInsert.path.startsWith(r.path + '/');
+          if (isPrefix) {
+            bestParent = r;
+            if (r.children) {
+              const deeper = findParent(r.children);
+              if (deeper) return deeper;
+            }
+          }
         }
-        newRoute.children.forEach(child => linkParents(child, existing));
-      } else if (existing) {
-        continue;
+        return bestParent;
+      };
+
+      const existing = findParent(this.routes);
+
+      if (existing) {
+        if (existing.path === routeToInsert.path) {
+          if (
+            Array.isArray(routeToInsert.children) &&
+            routeToInsert.children.length > 0
+          ) {
+            existing.children = existing.children || [];
+            for (const child of routeToInsert.children) {
+              insertDeep(existing.children, child);
+            }
+          }
+        } else {
+          existing.children = existing.children || [];
+          existing.children.push(routeToInsert);
+        }
       } else {
-        this.routes.push(newRoute);
-        validateConfig([newRoute]);
-        linkParents(newRoute);
+        routesList.push(routeToInsert);
       }
+    };
+
+    for (const newRoute of newRoutes) {
+      insertDeep(this.routes, newRoute);
     }
+
+    validateConfig(this.routes);
+    this.routes.forEach(route => linkParents(route));
 
     clearMatchCache(this[ROUTE_CACHE_KEY]);
     return newRoutes;
