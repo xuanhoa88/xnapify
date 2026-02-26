@@ -5,22 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { JWT_COOKIE_NAME, REFRESH_COOKIE_NAME } from './constants';
+
 /**
  * Default cookie configuration
  */
-export const DEFAULT_COOKIE_CONFIG = Object.freeze({
+const DEFAULT_COOKIE_CONFIG = Object.freeze({
   httpOnly: true,
   secure: process.env.NODE_ENV === 'production',
   sameSite: 'lax',
   path: '/',
 });
-
-/**
- * Cookie names
- */
-const JWT_COOKIE_NAME = process.env.RSK_JWT_COOKIE_NAME || 'id_token';
-const REFRESH_COOKIE_NAME =
-  process.env.RSK_REFRESH_COOKIE_NAME || 'refresh_token';
 
 /**
  * Predefined cookie types with their configurations

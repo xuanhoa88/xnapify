@@ -1,4 +1,9 @@
-import * as profileController from '../../../../../users/api/controllers/profile.controller';
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
 
 function authMiddleware(req, res, next) {
   const {
@@ -7,7 +12,16 @@ function authMiddleware(req, res, next) {
   return requireAuth()(req, res, next);
 }
 
-export const get = [authMiddleware, profileController.previewAvatar];
+export const get = [
+  authMiddleware,
+  function get(req, res) {
+    const container = req.app.get('container');
+    const {
+      controllers: { profile },
+    } = container.resolve('users:controllers');
+    return profile.previewAvatar(req, res);
+  },
+];
 
 export const post = [
   authMiddleware,
@@ -21,9 +35,24 @@ export const post = [
     });
     return avatarUpload(req, res, next);
   },
-  profileController.uploadAvatar,
+  function uploadAvatar(req, res) {
+    const container = req.app.get('container');
+    const {
+      controllers: { profile },
+    } = container.resolve('users:controllers');
+    return profile.uploadAvatar(req, res);
+  },
 ];
 
-export const del = [authMiddleware, profileController.removeAvatar];
+export const del = [
+  authMiddleware,
+  function removeAvatar(req, res) {
+    const container = req.app.get('container');
+    const {
+      controllers: { profile },
+    } = container.resolve('users:controllers');
+    return profile.removeAvatar(req, res);
+  },
+];
 
 export { del as delete };

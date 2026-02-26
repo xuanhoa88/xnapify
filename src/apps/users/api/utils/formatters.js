@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ROLE } from '../../../../shared/api/engines/auth';
 import { collectUserRBACData, isAdmin } from './rbac/collector';
-import { DEFAULT_ROLE } from '../constants/rbac';
 
 /**
  * Format user data for API response

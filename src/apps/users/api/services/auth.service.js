@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { DEFAULT_ROLE } from '../../../../shared/api/engines/auth';
 import {
   hashToken,
   verifyPassword,
   createTimedResetToken,
   validateResetToken,
 } from '../utils/password';
-import { DEFAULT_ROLE } from '../constants/rbac';
 import { logUserActivity } from '../utils/activity';
 import { formatUserResponse } from '../utils/formatters';
 

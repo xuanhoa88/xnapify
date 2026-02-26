@@ -13,8 +13,8 @@ import {
   DEFAULT_ACTIONS,
   DEFAULT_RESOURCES,
   SYSTEM_PERMISSIONS,
-} from '../../../../users/api/constants/rbac';
-import { logPermissionActivity } from '../../../../users/api/utils/activity';
+} from '../../../../../shared/api/engines/auth';
+import { logPermissionActivity } from '../../utils/activity';
 
 /**
  * Create a new permission

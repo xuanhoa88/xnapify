@@ -9,10 +9,10 @@ import {
   SYSTEM_ROLES,
   DEFAULT_RESOURCES,
   DEFAULT_ACTIONS,
-} from '../../../../users/api/constants/rbac';
-import { manageRolePermissions } from './rbac.service';
+} from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
-import { logRoleActivity } from '../../../../users/api/utils/activity';
+import { logRoleActivity } from '../../utils/activity';
+import { manageRolePermissions } from './rbac.service';
 
 // ========================================================================
 // ROLE MANAGEMENT SERVICES

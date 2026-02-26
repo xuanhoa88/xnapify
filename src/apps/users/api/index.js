@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as RBAC_CONSTANTS from './constants/rbac';
-import { SEED_USERS } from './constants/migration';
+import { SEED_USERS } from './constants';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
+import * as profileController from './controllers/profile.controller';
+import * as authController from './controllers/auth.controller';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
@@ -77,8 +78,15 @@ export async function shared(app) {
   // Bind seed constants to container as singleton
   container.bind('users:seed_constants', () => SEED_USERS, true);
 
-  // Bind rbac constants to container as singleton
-  container.bind('users:rbac_constants', () => RBAC_CONSTANTS, true);
+  // Bind controllers to container as singleton
+  container.bind(
+    'users:controllers',
+    () => ({
+      profile: profileController,
+      auth: authController,
+    }),
+    true,
+  );
 }
 
 /**

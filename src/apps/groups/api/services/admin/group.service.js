@@ -8,8 +8,8 @@
 import {
   DEFAULT_ROLE,
   SYSTEM_GROUPS,
-} from '../../../../users/api/constants/rbac';
-import { logGroupActivity } from '../../../../users/api/utils/activity';
+} from '../../../../../shared/api/engines/auth';
+import { logGroupActivity } from '../../utils/activity';
 
 // ========================================================================
 // GROUP MANAGEMENT SERVICES

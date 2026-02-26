@@ -9,7 +9,7 @@ import {
   ADMIN_ROLE,
   DEFAULT_ACTIONS,
   DEFAULT_RESOURCES,
-} from '../../constants/rbac';
+} from '../../../../../shared/api/engines/auth';
 
 /**
  * Extract role name and permissions into sets

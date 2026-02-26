@@ -16,10 +16,10 @@ import {
   DEFAULT_ACTIONS,
   DEFAULT_RESOURCES,
   SYSTEM_PERMISSIONS,
-} from '../../../../users/api/constants/rbac';
+} from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
-import { logActivity } from '../../../../users/api/utils/activity';
 import { fetchUserRBACData } from '../../../../users/api/utils/rbac/fetcher';
+import { logActivity } from '../../utils/activity';
 
 /**
  * Log RBAC activity

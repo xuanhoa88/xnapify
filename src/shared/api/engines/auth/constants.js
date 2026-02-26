@@ -5,9 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// ========================================================================
-// RBAC (Role-Based Access Control) CONSTANTS
-// ========================================================================
+/**
+ * Cookie names
+ */
+export const JWT_COOKIE_NAME = process.env.RSK_JWT_COOKIE_NAME || 'id_token';
+export const REFRESH_COOKIE_NAME =
+  process.env.RSK_REFRESH_COOKIE_NAME || 'refresh_token';
 
 // ------------------------------------------------------------------------
 // ROLES

@@ -6,22 +6,21 @@
  */
 
 /**
- * Log a user activity
+ * Log an activity
  *
  * @param {Object} webhook - Webhook engine instance
  * @param {Object} activity - Activity data
- * @param {string} activity.event - Event type (e.g., 'user.created', 'role.updated')
- * @param {string} activity.entityType - Entity type (user, group, role, permission)
+ * @param {string} activity.event - Event type
+ * @param {string} activity.entityType - Entity type
  * @param {string} activity.entityId - Entity ID
- * @param {string} activity.action - Action performed (create, update, delete)
+ * @param {string} activity.action - Action performed
  * @param {Object} activity.data - Additional activity data
  * @param {string} [activity.actorId] - ID of user performing the action
- * @param {Object} [options] - Additional send options (e.g. { useWorker: true })
+ * @param {Object} [options] - Additional send options
  * @returns {Promise<Object|null>} Activity result or null if webhook unavailable
  */
 export async function logActivity(webhook, activity, options = {}) {
   try {
-    // webhook is now the instance directly (no longer the module namespace)
     if (!webhook) {
       console.warn('Activity Logger: No webhook manager instance provided');
       return null;
@@ -35,12 +34,11 @@ export async function logActivity(webhook, activity, options = {}) {
       ...payload
     } = activity;
 
-    // Use webhook.send to allow for worker processing if configured
     const result = await webhook.send(
       {
         ...payload,
         event,
-        status: 'delivered', // Activity logs are audit records, not webhooks to send
+        status: 'delivered',
         entity_type: entityType,
         entity_id: entityId,
         actor_id: actorId,
@@ -49,7 +47,7 @@ export async function logActivity(webhook, activity, options = {}) {
       },
       {
         adapter: 'database',
-        ...options, // Pass through options like useWorker
+        ...options,
       },
     );
 
@@ -62,7 +60,6 @@ export async function logActivity(webhook, activity, options = {}) {
 
     return result;
   } catch (error) {
-    // Silently fail - activity logging should never block auth operations
     console.error('Failed to log activity:', error.message);
     console.error(error.stack);
     return null;
@@ -70,18 +67,19 @@ export async function logActivity(webhook, activity, options = {}) {
 }
 
 /**
- * Log user entity activity
+ * Log group entity activity
  *
  * @param {Object} webhook - Webhook engine instance
  * @param {string} action - Action (created, updated, deleted)
- * @param {string} userId - User ID
+ * @param {string} groupId - Group ID
  * @param {Object} data - Additional data
+ * @param {string} [actorId] - ID of user performing the action
  * @param {Object} [options] - Additional send options
  */
-export function logUserActivity(
+export function logGroupActivity(
   webhook,
   action,
-  userId,
+  groupId,
   data = {},
   actorId,
   options = {},
@@ -90,9 +88,9 @@ export function logUserActivity(
     webhook,
     {
       ...data,
-      event: `user.${action}`,
-      entityType: 'user',
-      entityId: userId,
+      event: `group.${action}`,
+      entityType: 'group',
+      entityId: groupId,
       action,
       actorId,
     },
