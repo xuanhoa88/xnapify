@@ -78,8 +78,6 @@ async function runCoreMigrations() {
 
   // Configure webhook database connection
   engines.webhook.setDbConnection(engines.db.connection);
-
-  log('Core database migrated');
 }
 
 /**

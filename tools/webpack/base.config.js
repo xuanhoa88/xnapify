@@ -391,7 +391,7 @@ const createScriptRule = () => ({
       loader: 'babel-loader',
       options: {
         cacheDirectory: false,
-        configFile: path.resolve(config.CWD, '.babelrc.js'),
+        configFile: path.resolve(config.CWD, 'babel.config.js'),
       },
     },
   ],

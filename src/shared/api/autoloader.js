@@ -370,7 +370,6 @@ export async function discoverModules(modulesContext, app) {
       if (typeof model.associate !== 'function') continue;
       try {
         model.associate(apiModels);
-        log(`[${modelName}] Associations initialized`);
       } catch (error) {
         errors.push(
           createLoadError(modelName, `${modelName}.associate()`, error),
