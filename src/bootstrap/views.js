@@ -184,6 +184,9 @@ class AppRouter extends Router {
 // PUBLIC API
 // =============================================================================
 
+// Track modules that have completed their shared() phase (survives HMR re-init)
+const sharedPhaseCompleted = new Set();
+
 /**
  * Creates the router by discovering per-module view contexts.
  *
@@ -202,10 +205,12 @@ export default async function initializeRouter(options = {}) {
   // ─── Shared phase ─────────────────────────────────────────────────────
   // Call each module's shared() hook to allow cross-module sharing
   // (e.g. registering Redux slices, shared components, DI bindings).
+  // Skip modules that already completed shared() (HMR idempotency).
   for (const [name, hooks] of moduleHooks) {
-    if (typeof hooks.shared === 'function') {
+    if (typeof hooks.shared === 'function' && !sharedPhaseCompleted.has(name)) {
       try {
         await hooks.shared({ plugin, container });
+        sharedPhaseCompleted.add(name);
         log(`[${name}] Shared`);
       } catch (error) {
         log(`[${name}] Shared phase failed: ${error.message}`, 'error');
