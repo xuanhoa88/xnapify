@@ -699,6 +699,42 @@ if (module.hot) {
     );
   });
 
+  // Listen for plugin rebuild events from dev server via hot middleware
+  if (
+    // eslint-disable-next-line no-underscore-dangle
+    window.__webpack_hot_middleware_reporter__ &&
+    typeof EventSource !== 'undefined'
+  ) {
+    const source = new EventSource('/~/__webpack_hmr');
+    let pluginReloadPending = false;
+    source.addEventListener('message', event => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data && data.type === 'plugins-refreshed') {
+          log('🔌 Plugin(s) rebuilt, reload required');
+
+          // Ensure next navigation triggers a full page reload
+          pluginManager.needsReload = true;
+
+          // Show only one confirm at a time
+          if (pluginReloadPending) return;
+          pluginReloadPending = true;
+
+          // Ask user if they want to reload now
+          // eslint-disable-next-line no-alert
+          if (
+            window.confirm('Plugin(s) updated. Reload now to apply changes?')
+          ) {
+            window.location.reload();
+          }
+          pluginReloadPending = false;
+        }
+      } catch {
+        // Ignore non-JSON messages (webpack HMR heartbeats, etc.)
+      }
+    });
+  }
+
   module.hot.addStatusHandler(status => {
     if (
       status === 'idle' &&

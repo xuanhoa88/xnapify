@@ -235,6 +235,20 @@ async function buildPlugins(options = {}) {
       const duration = Date.now() - start;
       logInfo(`✅ Plugin build completed in ${formatDuration(duration)}`);
 
+      // Notify the server process to refresh plugins on successful rebuild
+      if (!error && isWatch) {
+        const pluginNames = plugins.map(p => p.name);
+        const msg = { type: 'plugins-refreshed', plugins: pluginNames };
+        if (typeof process.send === 'function') {
+          process.send(msg);
+        } else {
+          process.emit('message', msg);
+        }
+        logInfo(
+          `🔌 Sent plugins-refreshed to server: ${pluginNames.join(', ')}`,
+        );
+      }
+
       if (!isWatch) {
         compiler.close(closeErr => {
           if (closeErr) console.error('Failed to close compiler:', closeErr);

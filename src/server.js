@@ -1194,7 +1194,21 @@ if (module.hot) {
     console.log('🔄 HMR: Caches cleared');
   });
 
-  // Node-RED cleanup is handled by dev.js calling dispose() before loadServerBundle()
+  // Listen for process messages to hot-refresh plugin manager cache
+  process.on('message', async msg => {
+    if (msg && msg.type === 'plugins-refreshed') {
+      console.log('🔌 Refreshing plugins...');
+      try {
+        if (typeof pluginManager.refresh === 'function') {
+          await pluginManager.refresh(...(msg.plugins || []));
+        }
+        clearCaches();
+        console.log('✅ Plugins refreshed');
+      } catch (err) {
+        console.error('❌ Failed to refresh plugins:', err.message);
+      }
+    }
+  });
 
   exports.hot = module.hot;
 } else {

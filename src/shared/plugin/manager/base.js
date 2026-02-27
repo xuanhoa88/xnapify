@@ -957,6 +957,83 @@ export class BasePluginManager {
       this[EVENT_HANDLERS].delete(eventType);
     }
   }
+  /**
+   * Refresh plugins (unload, reset state, re-fetch)
+   * Unlike destroy(), this preserves context and event handlers,
+   * allowing the manager to immediately re-initialize.
+   *
+   * @param {Array<string>} [pluginIds] - Specific plugin IDs to refresh.
+   *   If provided, only those plugins are reloaded (unload → load).
+   *   If omitted or empty, all plugins are refreshed.
+   */
+  async refresh(...pluginIds) {
+    // Resolve incoming names to actual plugin IDs.
+    // The build tool sends manifest names (e.g. 'rsk_plugin_test') but the
+    // plugin manager tracks plugins by their API IDs (UUIDs).  We match
+    // incoming names against manifest.name stored in plugin metadata.
+    let resolvedIds = [];
+
+    if (pluginIds.length > 0) {
+      const nameSet = new Set(pluginIds);
+
+      for (const [id, metadata] of this[PLUGIN_METADATA].entries()) {
+        const manifestName = metadata.manifest && metadata.manifest.name;
+        if (nameSet.has(id) || (manifestName && nameSet.has(manifestName))) {
+          resolvedIds.push(id);
+        }
+      }
+
+      resolvedIds = [...new Set(resolvedIds)];
+    }
+
+    const specific = resolvedIds.length > 0;
+
+    if (__DEV__) {
+      console.log(
+        `[PluginManager] Refreshing${specific ? `: ${resolvedIds.join(', ')}` : ' all'}...`,
+      );
+    }
+
+    await this.emit('plugins:refreshing', { pluginIds: resolvedIds });
+
+    if (specific) {
+      // Targeted refresh: properly tear down and reload each plugin
+      for (const id of resolvedIds) {
+        // Unload if active (registered in a namespace)
+        if (this[ACTIVE_PLUGINS].has(id)) {
+          await this.unloadPlugin(id);
+        }
+
+        // Clean up metadata and version tracking
+        this[PLUGIN_METADATA].delete(id);
+        this[LOADED_VERSIONS].delete(id);
+      }
+
+      // Re-load the plugins (fetchAll would re-load everything;
+      // here we load only the targeted ones)
+      await Promise.all(resolvedIds.map(id => this.loadPlugin(id)));
+    } else {
+      // Full refresh: unload all, reset state, re-fetch
+      const allIds = Array.from(this[ACTIVE_PLUGINS].keys());
+      await Promise.all(allIds.map(id => this.unloadPlugin(id)));
+
+      this[ACTIVE_PLUGINS].clear();
+      this[PLUGIN_METADATA].clear();
+      this[LOADED_VERSIONS].clear();
+      this[INITIALIZED] = false;
+      this[PLUGIN_MANAGER_INIT] = null;
+
+      await this.fetchAll();
+    }
+
+    await this.emit('plugins:refreshed', {
+      pluginIds: specific ? resolvedIds : null,
+    });
+
+    if (__DEV__) {
+      console.log('[PluginManager] Refreshed');
+    }
+  }
 
   /**
    * Clean up resources

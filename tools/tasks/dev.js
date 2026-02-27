@@ -536,6 +536,19 @@ async function main() {
   // Build plugins
   await buildPlugins({ watch: true });
 
+  // Forward plugin rebuild events to the client browser via hot middleware
+  process.on('message', msg => {
+    if (msg && msg.type === 'plugins-refreshed' && hotMiddleware) {
+      if (typeof hotMiddleware.publish === 'function') {
+        hotMiddleware.publish({
+          type: 'plugins-refreshed',
+          plugins: msg.plugins,
+        });
+        logInfo('🔌 Forwarded plugins-refreshed to client');
+      }
+    }
+  });
+
   try {
     // Setup webpack compilers
     const { clientCompiler, serverCompiler } = setupWebpackCompilers();
