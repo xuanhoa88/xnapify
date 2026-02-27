@@ -11,6 +11,7 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import get from 'lodash/get';
 import { FormFieldContext } from '../FormContext';
+import useAsyncValidator from '../useAsyncValidator';
 import FormLabel from '../Label';
 import FormError from '../Error';
 import s from './FormField.css';
@@ -23,11 +24,16 @@ import s from './FormField.css';
  *     <Form.Input type="email" />
  *   </Form.Field>
  *
- *   // Or with explicit Form.Label and Form.Error:
- *   <Form.Field name="email" showError={false}>
- *     <Form.Label>Email Address</Form.Label>
- *     <Form.Input type="email" />
- *     <Form.Error />
+ *   // With async validation:
+ *   <Form.Field
+ *     name="username"
+ *     label="Username"
+ *     asyncValidate={async (value) => {
+ *       const data = await fetch(`/api/check?username=${value}`);
+ *       return data.taken ? 'Username is taken' : true;
+ *     }}
+ *   >
+ *     <Form.Input />
  *   </Form.Field>
  */
 function FormField({
@@ -37,18 +43,31 @@ function FormField({
   className,
   required,
   showError = true,
+  asyncValidate,
+  debounceMs = 300,
+  asyncMessages,
 }) {
   const id = useMemo(() => `field-${name}`, [name]);
   const {
     formState: { errors },
   } = useFormContext();
 
+  // Async validation — only active when asyncValidate prop is provided
+  const { isValidating, validationStatus } = useAsyncValidator(
+    name,
+    asyncValidate,
+    debounceMs,
+  );
+
   // With mode: 'onChange', errors are automatically cleared when field becomes valid
   // Use custom get to access nested errors (e.g., 'items.0.name')
+  // Async errors are also set on this same key by useAsyncValidator
   const error = get(errors, name);
 
   return (
-    <FormFieldContext.Provider value={{ id, name, error }}>
+    <FormFieldContext.Provider
+      value={{ id, name, error, isValidating, validationStatus, asyncMessages }}
+    >
       <div className={clsx(s.formGroup, className)}>
         {label && <FormLabel required={required}>{label}</FormLabel>}
         {children}
@@ -71,6 +90,15 @@ FormField.propTypes = {
   required: PropTypes.bool,
   /** Show error message automatically (default: true) */
   showError: PropTypes.bool,
+  /** Async validation function: (value) => true | string (error message) */
+  asyncValidate: PropTypes.func,
+  /** Debounce delay in ms for async validation (default: 300) */
+  debounceMs: PropTypes.number,
+  /** Custom messages for async validation status: { validating, valid } */
+  asyncMessages: PropTypes.shape({
+    validating: PropTypes.string,
+    valid: PropTypes.string,
+  }),
 };
 
 export default FormField;

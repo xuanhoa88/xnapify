@@ -26,6 +26,7 @@ import FormSearchableSelect from './SearchableSelect';
 import FormCheckboxList from './CheckboxList';
 import FormWYSIWYG from './WYSIWYG';
 import { useFormValidation, useFormField } from './FormContext';
+import useAsyncValidator from './useAsyncValidator';
 
 // Attach sub-components
 Form.Field = FormField;
@@ -48,6 +49,13 @@ Form.Error = FormError;
 Form.WYSIWYG = FormWYSIWYG;
 
 // Export hooks for custom usage
-export { useFormContext, useFormValidation, useFormField, Controller, Form };
+export {
+  useFormContext,
+  useFormValidation,
+  useFormField,
+  useAsyncValidator,
+  Controller,
+  Form,
+};
 
 export default Form;

@@ -8,6 +8,7 @@
 import { useContext, useMemo } from 'react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 import { FormFieldContext } from '../FormContext';
 import s from './FormError.css';
 
@@ -25,48 +26,77 @@ const findMessage = errObj => {
 };
 
 /**
- * FormError - Displays error message
+ * FormError - Displays field errors and async validation status
  *
- * Usage inside Form.Field (auto-detects error from field context):
- *   <Form.Field name="email" showError={false}>
- *     <Form.Input />
- *     <Form.Error />
- *   </Form.Field>
+ * Renders a single line below the field with the following priority:
+ *   1. Error message (sync or async)
+ *   2. "⏳ Validating…" while async validation is in progress
+ *   3. "✓" when async validation passes
+ *   4. Nothing when idle
  *
- * Usage for form-level errors (explicit message prop):
- *   <Form.Error message={submitError} />
+ * Also supports form-level errors via explicit `message` prop.
  */
 function FormError({ message, className }) {
+  const { t } = useTranslation();
+
   const fieldContext = useContext(FormFieldContext);
-
-  // If inside Form.Field, use field error; otherwise use message prop
   const error = fieldContext && fieldContext.error;
+  const { isValidating, validationStatus, asyncMessages } = fieldContext || {};
 
-  // Get error message
-  const displayMessage = useMemo(() => {
-    if (!message && error) {
-      if (typeof error.message === 'string') {
-        return error.message;
-      }
-      return findMessage(error);
+  // Determine what to display: { text, css, role } or null
+  const display = useMemo(() => {
+    const msgs = asyncMessages || {};
+
+    // --- Explicit message prop (form-level) ---
+    if (message) {
+      return { text: message, css: s.formError, role: 'alert' };
     }
-    return message;
-  }, [error, message]);
 
-  // Use different style for form-level vs field-level errors
-  const isFieldError = useMemo(
-    () => !message && Object.keys(fieldContext || {}).length > 0,
-    [message, fieldContext],
-  );
+    // --- Field-level error (sync or async) ---
+    if (error) {
+      const errorMsg =
+        typeof error.message === 'string' ? error.message : findMessage(error);
+      if (errorMsg) {
+        return { text: errorMsg, css: s.fieldError, role: 'alert' };
+      }
+    }
 
-  return displayMessage ? (
+    // --- Async validation in progress ---
+    if (isValidating) {
+      return {
+        text:
+          msgs.validating ||
+          t('zod:form.messages.validating', '⏳ Validating…'),
+        css: s.fieldStatus,
+        role: 'status',
+      };
+    }
+
+    // --- Async validation passed ---
+    if (validationStatus === 'valid') {
+      return msgs.valid
+        ? {
+            text: msgs.valid,
+            css: s.fieldValid,
+            role: 'status',
+          }
+        : null;
+    }
+
+    return null;
+  }, [message, error, isValidating, validationStatus, asyncMessages, t]);
+
+  if (!display) return null;
+
+  return (
     <div
-      className={clsx(isFieldError ? s.fieldError : s.formError, className)}
-      role='alert'
+      className={clsx(display.css, className)}
+      role={display.role}
+      aria-live={display.role === 'status' ? 'polite' : undefined}
     >
-      {displayMessage}
+      {display.text}
     </div>
-  ) : null;
+  );
 }
 
 FormError.propTypes = {

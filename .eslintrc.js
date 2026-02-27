@@ -143,6 +143,19 @@ const config = {
         jsx: 'never',
       },
     ],
+
+    // Disable nullish coalescing (??) and optional chaining (?.)
+    'no-restricted-syntax': [
+      'error',
+      {
+        selector: 'LogicalExpression[operator="??"]',
+        message: 'Nullish coalescing (??) is not allowed.',
+      },
+      {
+        selector: 'ChainExpression',
+        message: 'Optional chaining (?.) is not allowed.',
+      },
+    ],
   },
 
   settings: {

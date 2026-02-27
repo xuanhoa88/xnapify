@@ -25,3 +25,19 @@
   font-size: var(--font-size-xs);
   color: var(--color-error-text);
 }
+
+/* Async validation: in-progress indicator */
+.fieldStatus {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}
+
+/* Async validation: valid indicator */
+.fieldValid {
+  display: block;
+  margin-top: var(--spacing-1);
+  font-size: var(--font-size-xs);
+  color: var(--color-success);
+}

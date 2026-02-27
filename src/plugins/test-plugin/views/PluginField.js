@@ -1,28 +1,24 @@
-import { useState, useEffect } from 'react';
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { useFormContext, useWatch } from 'react-hook-form';
 import Form from '../../../shared/renderer/components/Form';
 import { PLUGIN_ID } from '../constants';
 import s from './PluginField.scss';
 
 export default function PluginField({ register, context }) {
   const { t } = useTranslation(PLUGIN_ID);
-  const { control, setError, clearErrors } = useFormContext();
-  const nickname = useWatch({ control, name: 'profile.nickname' });
-  const [isChecking, setIsChecking] = useState(false);
-  const [isAvailable, setIsAvailable] = useState(null);
 
-  useEffect(() => {
-    // Only check if it's at least 3 characters
-    if (!nickname || nickname.length < 3) {
-      setIsAvailable(null);
-      clearErrors('profile.nickname.api');
-      return;
-    }
-
-    const checkAvailability = async () => {
-      setIsChecking(true);
+  const handleAsyncValidate = useCallback(
+    async value => {
+      // Only check if it's at least 3 characters
+      if (!value || value.length < 3) return true;
       try {
         const response = await context.fetch(
           `/api/plugins/${__PLUGIN_NAME__}/ipc`,
@@ -30,64 +26,30 @@ export default function PluginField({ register, context }) {
             method: 'POST',
             body: {
               action: 'checkNickname',
-              data: { nickname },
+              data: { nickname: value },
             },
           },
         );
-
         if (response.success && response.data && response.data.exists) {
-          setIsAvailable(false);
-          setError('profile.nickname.api', {
-            type: 'manual',
-            message: t('nickname_taken', 'This nickname is already taken'),
-          });
-        } else {
-          setIsAvailable(true);
-          clearErrors('profile.nickname.api');
+          return t('nickname_taken', 'This nickname is already taken');
         }
+        return true;
       } catch (err) {
         console.error('Failed to check nickname:', err);
-      } finally {
-        setIsChecking(false);
+        return true; // Don't block on network errors
       }
-    };
-
-    const timeoutId = setTimeout(checkAvailability, 500); // debounce 500ms
-    return () => clearTimeout(timeoutId);
-  }, [nickname, setError, clearErrors, t, context]);
+    },
+    [context, t],
+  );
 
   return (
     <>
-      <Form.Field name='profile.nickname' label={t('nickname', 'Nickname')}>
-        <div style={{ position: 'relative' }}>
-          <Form.Input {...register('profile.nickname')} />
-          {isChecking && (
-            <span
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: 10,
-                fontSize: 12,
-                color: 'gray',
-              }}
-            >
-              Checking...
-            </span>
-          )}
-          {isAvailable === true && (
-            <span
-              style={{
-                position: 'absolute',
-                right: 10,
-                top: 10,
-                fontSize: 12,
-                color: 'green',
-              }}
-            >
-              ✓ Available
-            </span>
-          )}
-        </div>
+      <Form.Field
+        name='profile.nickname'
+        label={t('nickname', 'Nickname')}
+        asyncValidate={handleAsyncValidate}
+      >
+        <Form.Input {...register('profile.nickname')} />
         <div className={s.formText}>
           {t('nickname_hint', 'This field requires a minimum of 3 characters')}
         </div>
