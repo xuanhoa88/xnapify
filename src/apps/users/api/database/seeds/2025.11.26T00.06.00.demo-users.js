@@ -103,10 +103,16 @@ export async function up(_, { app }) {
     if (user.profile) {
       for (const [key, value] of Object.entries(user.profile)) {
         if (value !== undefined && value !== null) {
+          let attribute_type = 'string';
+          if (typeof value === 'object') attribute_type = 'json';
+          else if (typeof value === 'boolean') attribute_type = 'boolean';
+          else if (typeof value === 'number') attribute_type = 'number';
+
           eavProfile.push({
             attribute_key: key,
             attribute_value:
               typeof value === 'object' ? JSON.stringify(value) : String(value),
+            attribute_type,
           });
         }
       }

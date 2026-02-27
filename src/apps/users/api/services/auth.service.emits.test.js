@@ -93,7 +93,7 @@ describe('auth.service emits (additional)', () => {
     const activityData = { ip_address: '1.2.3.4' };
 
     const authChannel = hook('auth');
-    authChannel.on('login', function (payload) {
+    authChannel.on('logged_in', function (payload) {
       expect(this).toBe(ctx);
       expect(payload.user_id).toBe(dbUser.id);
       expect(payload.activityData).toEqual(activityData);

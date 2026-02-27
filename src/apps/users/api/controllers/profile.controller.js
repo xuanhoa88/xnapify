@@ -86,7 +86,7 @@ export async function updateProfile(req, res) {
     );
 
     if (!isValid) {
-      return http.sendValidationError(res, dataOrErrors[0]);
+      return http.sendValidationError(res, dataOrErrors);
     }
 
     // 4. Update user profile with validated data
@@ -325,7 +325,7 @@ export async function changePassword(req, res) {
       confirmNewPassword,
     });
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     await profileService.changeUserPassword(
@@ -377,7 +377,7 @@ export async function updatePreferences(req, res) {
       },
     );
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     const preferences = await profileService.updateUserPreferences(
@@ -440,7 +440,7 @@ export async function deleteAccount(req, res) {
       confirmPassword,
     });
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     await profileService.deleteUserAccount(req.user.id, password, {

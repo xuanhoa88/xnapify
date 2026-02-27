@@ -51,11 +51,16 @@ function Form({
     methods.reset(defaultValues);
   }, [defaultValues, methods]);
 
-  const handleFormSubmit = methods.handleSubmit(async data => {
-    if (typeof onSubmit === 'function') {
-      await onSubmit(data, methods);
-    }
-  });
+  const handleFormSubmit = methods.handleSubmit(
+    async data => {
+      if (typeof onSubmit === 'function') {
+        await onSubmit(data, methods);
+      }
+    },
+    errors => {
+      console.error('Form validation failed on client:', errors);
+    },
+  );
 
   return (
     <FormValidationContext.Provider value={{ schema, z }}>

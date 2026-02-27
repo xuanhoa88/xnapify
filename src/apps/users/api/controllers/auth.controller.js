@@ -42,7 +42,7 @@ export async function register(req, res) {
       confirmPassword,
     });
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models and auth utilities from app context
@@ -111,7 +111,7 @@ export async function login(req, res) {
       password,
     });
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models from app context
@@ -272,7 +272,7 @@ export async function emailVerification(req, res) {
       { token },
     );
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models and webhook from app context
@@ -351,7 +351,7 @@ export async function resetPasswordRequest(req, res) {
       },
     );
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models and webhook from app context
@@ -398,7 +398,7 @@ export async function resetPasswordConfirmation(req, res) {
       },
     );
     if (!isValid) {
-      return http.sendValidationError(res, validationErrors[0]);
+      return http.sendValidationError(res, validationErrors);
     }
 
     // Get models, auth, and webhook from app context
