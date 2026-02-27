@@ -28,7 +28,6 @@ src/plugins/{plugin-name}/
 ├── validator/
 │   └── index.js                # Zod validation schemas
 ├── translations/
-│   ├── index.js                # Translation loader
 │   └── en-US.json              # English translations
 └── [optional]
     ├── api/[other-files]       # API utilities, database models
@@ -54,6 +53,7 @@ mkdir -p src/plugins/{plugin-name}
 ```
 
 Example:
+
 ```json
 {
   "name": "notifications-plugin",
@@ -80,6 +80,7 @@ export const PLUGIN_ID = '{plugin-name}';
 ```
 
 Example:
+
 ```javascript
 // src/plugins/notifications-plugin/constants.js
 export const PLUGIN_ID = 'notifications-plugin';
@@ -96,7 +97,6 @@ export const PLUGIN_ID = 'notifications-plugin';
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registerTranslations } from '../translations';
 import { validationSchemas } from '../validator';
 
 const HANDLERS = Symbol('handlers');
@@ -122,19 +122,19 @@ export default {
   register() {
     return [
       ['feature-name', 'another-feature'], // Routes/features that this plugin extends
-      __PLUGIN_NAME__,                      // Plugin name
-      { name: __PLUGIN_DESCRIPTION__ },     // Plugin description
+      __PLUGIN_NAME__, // Plugin name
+      { name: __PLUGIN_DESCRIPTION__ }, // Plugin description
     ];
+  },
+
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
   },
 
   // Lifecycle: Initialize on server startup
   async init(registry, context) {
     console.log('[Plugin] Initialized for ' + __PLUGIN_NAME__);
-
-    // Register translations
-    if (context.i18n) {
-      registerTranslations(context.i18n);
-    }
 
     // Run database migrations
     const db = context.app.get('db');
@@ -163,21 +163,61 @@ export default {
     this[HANDLERS].updateValidation = function (context) {
       if (context.schema && validationSchemas) {
         const extension = validationSchemas(context.z);
-        context.schema = context.schema.merge(extension);
+        // Assuming validationSchemas returns an object schema
+        // and we are extending the root level
+        const merged = context.schema.merge(extension);
+        context.schema = context.schema.extend(merged.shape);
       }
     };
 
     // Register hooks
-    hook('feature-name').on('validation:update', this[HANDLERS].updateValidation);
+    hook('feature-name').on(
+      'validation:update',
+      this[HANDLERS].updateValidation,
+    );
+
+    // =========================================================================
+    // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
+    // =========================================================================
+
+    // Example Middleware
+    const loggingMiddleware = async (data, ctx, next) => {
+      console.log(`[Plugin] IPC Request started`);
+      const result = await next();
+      console.log(`[Plugin] IPC Request ended`);
+      return result;
+    };
+
+    // Use createPipeline for middleware composition for IPC handlers
+    this[HANDLERS].ipcHello = registry.createPipeline(
+      loggingMiddleware,
+      async data => {
+        return { message: 'Hello', received: data };
+      },
+    );
+    registry.registerHook(
+      `ipc:${__PLUGIN_NAME__}:hello`,
+      this[HANDLERS].ipcHello,
+      __PLUGIN_NAME__,
+    );
   },
 
   // Lifecycle: Cleanup on plugin disable
   destroy(registry, context) {
     const hook = context.app.get('hook');
-    
+
     if (this[HANDLERS].updateValidation) {
-      hook('feature-name').off('validation:update', this[HANDLERS].updateValidation);
+      hook('feature-name').off(
+        'validation:update',
+        this[HANDLERS].updateValidation,
+      );
     }
+
+    // Handlers mapped by createPipeline on registry are automatically
+    // cleaned up if registered using the plugin name string
+
+    // Clear handlers
+    this[HANDLERS] = {};
 
     console.log('[Plugin] Destroyed');
   },
@@ -195,9 +235,11 @@ export default {
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registerTranslations } from '../translations';
 import { validationSchemas } from '../validator';
 import PluginComponent from './PluginComponent';
+
+// Private symbol for handlers storage
+const HANDLERS = Symbol('handlers');
 
 // Validation hook
 const extendValidator = (schema, validator) => {
@@ -207,9 +249,7 @@ const extendValidator = (schema, validator) => {
 
 // Data hook
 const handleFormData = async user => {
-  return {
-    // Default form data from user
-  };
+  return {};
 };
 
 // Submit hook
@@ -221,19 +261,19 @@ const handleFormSubmit = async (data, _context) => {
 export default {
   register() {
     return [
-      ['feature-name'],          // Features this plugin extends
+      ['feature-name'], // Features this plugin extends
       __PLUGIN_NAME__,
       { name: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
+
   // Initialize plugin on client
   init(registry, context) {
-    // Register translations
-    if (context && context.i18n) {
-      registerTranslations(context.i18n);
-    }
-
     // Register UI slot/component
     registry.registerSlot('feature-name.section.fields', PluginComponent, {
       order: 10, // Position in the UI
@@ -241,8 +281,18 @@ export default {
 
     // Register hooks
     registry.registerHook('feature-name.section.validator', extendValidator);
-    registry.registerHook('feature-name.section.formData', handleFormData);
-    registry.registerHook('feature-name.section.submit', handleFormSubmit);
+    // Compose submit hook with middleware using createPipeline
+    this[HANDLERS].formSubmit = registry.createPipeline(
+      async (data, context, next) => {
+        // middleware: do something before
+        return next();
+      },
+      handleFormSubmit,
+    );
+    registry.registerHook(
+      'feature-name.section.submit',
+      this[HANDLERS].formSubmit,
+    );
 
     console.log('[Plugin] Initialized');
   },
@@ -252,7 +302,12 @@ export default {
     registry.unregisterSlot('feature-name.section.fields', PluginComponent);
     registry.unregisterHook('feature-name.section.validator', extendValidator);
     registry.unregisterHook('feature-name.section.formData', handleFormData);
-    registry.unregisterHook('feature-name.section.submit', handleFormSubmit);
+    registry.unregisterHook(
+      'feature-name.section.submit',
+      this[HANDLERS].formSubmit,
+    );
+
+    this[HANDLERS] = {};
 
     console.log('[Plugin] Destroyed');
   },
@@ -274,12 +329,12 @@ function PluginComponent({ data, onDataChange }) {
   const { i18n } = usePluginHooks();
 
   return (
-    <div className="plugin-component">
+    <div className='plugin-component'>
       <fieldset>
         <legend>{i18n.t('{plugin-name}:labels.title')}</legend>
-        
+
         <input
-          type="text"
+          type='text'
           value={data.fieldName || ''}
           onChange={e => onDataChange({ fieldName: e.target.value })}
           placeholder={i18n.t('{plugin-name}:labels.placeholder')}
@@ -353,31 +408,9 @@ export const validationSchemas = zod => {
 
 ### 7. Create Translations
 
-```javascript
-// src/plugins/{plugin-name}/translations/index.js
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/**
- * Register plugin translations
- */
-export function registerTranslations(i18n) {
-  const resources = require.context('.', false, /\.json$/);
-
-  resources.keys().forEach(key => {
-    const lang = key.match(/\/([^/]+)\.json/)[1];
-    const namespace = require.context('.', false, /\.json$/)(key);
-
-    i18n.addNamespace(lang, require.context('.', false, /\.json$/)(`./en-US.json`), namespace);
-  });
-}
-```
-
+````javascript
 ```json
+// src/plugins/{plugin-name}/translations/en-US.json
 {
   "labels": {
     "title": "Plugin Feature Title",
@@ -387,7 +420,7 @@ export function registerTranslations(i18n) {
     "field_too_short": "Field must be at least 3 characters"
   }
 }
-```
+````
 
 ### 8. Create Database Migration (Optional)
 
@@ -398,14 +431,14 @@ export function registerTranslations(i18n) {
  */
 export async function up(connection, Sequelize) {
   const queryInterface = connection.queryInterface;
-  
+
   // Create table or modify existing tables
   // await queryInterface.createTable('plugin_data', { ... });
 }
 
 export async function down(connection, Sequelize) {
   const queryInterface = connection.queryInterface;
-  
+
   // Rollback changes
   // await queryInterface.dropTable('plugin_data');
 }
@@ -491,10 +524,12 @@ export const validationSchemas = zod => {
 
 ```javascript
 // views/index.js
-import { registerTranslations } from '../translations';
 import CommentForm from './CommentForm';
 
 export default {
+  // Store handlers for cleanup
+  [HANDLERS]: {},
+
   register() {
     return [
       ['posts', 'comments'],
@@ -503,9 +538,12 @@ export default {
     ];
   },
 
-  init(registry, context) {
-    if (context?.i18n) registerTranslations(context.i18n);
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
 
+  init(registry, context) {
     registry.registerSlot('posts.detail.comments', CommentForm, {
       order: 10,
     });
@@ -515,6 +553,7 @@ export default {
 
   destroy(registry) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
+    this[HANDLERS] = {};
     console.log('[Comments Plugin] Destroyed');
   },
 };
@@ -524,10 +563,13 @@ export default {
 
 ```javascript
 // api/index.js
-import { registerTranslations } from '../translations';
 
 const HANDLERS = Symbol('handlers');
-const migrationsContext = require.context('./database/migrations', false, /\.[cm]?[jt]s$/i);
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
 
 export default {
   [HANDLERS]: {},
@@ -540,9 +582,12 @@ export default {
     ];
   },
 
-  async init(registry, context) {
-    if (context.i18n) registerTranslations(context.i18n);
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
 
+  async init(registry, context) {
     const db = context.app.get('db');
     if (db) {
       try {
@@ -555,6 +600,11 @@ export default {
     }
 
     console.log('[Comments Plugin] Backend initialized');
+  },
+
+  destroy(registry, context) {
+    this[HANDLERS] = {};
+    console.log('[Comments Plugin] Backend destroyed');
   },
 };
 ```
@@ -580,7 +630,7 @@ registry.unregisterHook('posts.validator', extendValidator);
 
 // Listen to plugin events
 const hook = context.app.get('hook');
-hook('posts').on('created', (post) => {
+hook('posts').on('created', post => {
   console.log('Post created:', post);
 });
 ```
@@ -618,6 +668,6 @@ hook('posts').on('created', (post) => {
 
 ### Translations Missing
 
-- Verify `registerTranslations()` is called in both `init()` functions
+- Verify `translations()` declarative method is added to the plugin definitions
 - Check JSON file is in `translations/` directory
 - Ensure namespace matches PLUGIN_ID

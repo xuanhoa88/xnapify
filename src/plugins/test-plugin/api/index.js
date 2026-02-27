@@ -11,6 +11,13 @@ import { profileSchema } from '../validator';
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
 
+// Private symbol for translations context
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
 // Private symbol for migrations context
 const migrationsContext = require.context(
   './database/migrations',
@@ -41,7 +48,7 @@ export default {
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
   // Lifecycle: init (called when plugin is initialized on server)

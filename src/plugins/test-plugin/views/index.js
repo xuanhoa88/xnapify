@@ -11,6 +11,13 @@ import PluginField from './PluginField';
 // Private symbol for storing composed handlers (needed for cleanup)
 const HANDLERS = Symbol('handlers');
 
+// Private symbol for translations context
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
 // =========================================================================
 // Static Handlers (not middleware-composed, safe for direct ref cleanup)
 // =========================================================================
@@ -85,7 +92,7 @@ export default {
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
   // Lifecycle: init (called when plugin is initialized)
