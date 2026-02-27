@@ -152,6 +152,39 @@ export default {
       this[HANDLERS].ipcHello,
       __PLUGIN_NAME__,
     );
+
+    // IPC handler to check if a nickname exists
+    this[HANDLERS].ipcCheckNickname = async (data, { req }) => {
+      const { nickname } = data || {};
+      if (!nickname) {
+        return { exists: false };
+      }
+
+      try {
+        const db = context.app.get('db');
+        const query = db
+          .knex('user_profiles')
+          .where('attribute_key', 'nickname')
+          .where('attribute_value', nickname)
+          .first();
+
+        // If the checking user is logged in, exclude their own profile
+        if (req && req.user && req.user.id) {
+          query.whereNot('user_id', req.user.id);
+        }
+
+        const existing = await query;
+        return { exists: !!existing };
+      } catch (err) {
+        console.error('[Test Plugin] Error checking nickname:', err);
+        return { exists: false, error: err.message };
+      }
+    };
+    registry.registerHook(
+      `ipc:${__PLUGIN_NAME__}:checkNickname`,
+      this[HANDLERS].ipcCheckNickname,
+      __PLUGIN_NAME__,
+    );
   },
 
   // Lifecycle: destroy (called when plugin is disabled)

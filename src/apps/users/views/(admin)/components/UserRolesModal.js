@@ -85,7 +85,7 @@ const UserRolesModal = forwardRef(({ onSuccess, fetchRoles }, ref) => {
         setRolesLoading(false);
       }
     },
-    [dispatch, t],
+    [dispatch, t, fetchRoles],
   );
 
   // Fetch roles when modal opens or search/page changes

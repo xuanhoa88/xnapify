@@ -351,7 +351,7 @@ function EditUserFormFields({
         setRolesLoadingMore(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchRoles],
   );
 
   // Debounced role search using RxJS (also handles initial load on mount)
@@ -397,7 +397,7 @@ function EditUserFormFields({
         setGroupsLoadingMore(false);
       }
     },
-    [dispatch],
+    [dispatch, fetchGroups],
   );
 
   // Debounced group search using RxJS (also handles initial load on mount)
