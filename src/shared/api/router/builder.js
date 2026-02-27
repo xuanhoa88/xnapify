@@ -7,7 +7,12 @@
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import { getRootSegment } from './utils';
-import { createInit, createMount, createAction } from './lifecycle';
+import {
+  createInit,
+  createMount,
+  createTranslations,
+  createAction,
+} from './lifecycle';
 
 /**
  * Finds config modules for a given route based on root segment.
@@ -131,6 +136,11 @@ export function buildRoutes(
       module,
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedMiddlewares),
+      translations: createTranslations(
+        matchedConfigs,
+        module.translations,
+        pathname,
+      ),
       init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),
     });

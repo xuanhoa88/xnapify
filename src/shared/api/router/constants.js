@@ -15,3 +15,5 @@ export const ROUTE_PATH_DEFAULT = '(default)';
 export const ROUTE_INIT_KEY = Symbol('__rsk.routeInitKey__');
 /** @type {symbol} Tracks mounted config modules to prevent double-mounting */
 export const ROUTE_MOUNT_KEY = Symbol('__rsk.routeMountKey__');
+/** @type {symbol} Tracks whether a route's translations have been registered */
+export const ROUTE_TRANSLATIONS_KEY = Symbol('__rsk.routeTranslationsKey__');

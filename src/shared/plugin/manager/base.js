@@ -11,6 +11,8 @@
  * Shared logic for both server and client.
  */
 import { registry } from '../Registry';
+import { addNamespace } from '../../i18n/addNamespace';
+import { getTranslations } from '../../i18n/getTranslations';
 
 // Symbols for internal state
 export const INITIALIZED = Symbol('__rsk.initializedPlugins__');
@@ -722,6 +724,22 @@ export class BasePluginManager {
             if (__DEV__) {
               console.log(`[PluginManager] Initializing plugin: ${plugin.id}`);
             }
+
+            // Auto-register translations before init if plugin exports translations()
+            if (typeof plugin.translations === 'function') {
+              try {
+                const translations = getTranslations(plugin.translations());
+                if (Object.keys(translations).length > 0) {
+                  addNamespace(plugin.id, translations);
+                }
+              } catch (error) {
+                console.error(
+                  `[PluginManager] Failed to register translations for ${plugin.id}:`,
+                  error,
+                );
+              }
+            }
+
             if (typeof plugin.init === 'function') {
               try {
                 await plugin.init(reg, this[PLUGIN_CONTEXT]);

@@ -5,8 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import merge from 'lodash/merge';
 import { composeMiddleware } from '../../utils/composer';
-import { ROUTE_INIT_KEY, ROUTE_MOUNT_KEY } from './constants';
+import { addNamespace } from '../../i18n/addNamespace';
+import { getTranslations } from '../../i18n/getTranslations';
+import {
+  ROUTE_INIT_KEY,
+  ROUTE_MOUNT_KEY,
+  ROUTE_TRANSLATIONS_KEY,
+} from './constants';
 import { log, normalizeError } from './utils';
 
 /**
@@ -78,6 +85,95 @@ export function createMount(configs, routeMount) {
   };
 }
 
+/**
+ * Creates a translations registration function for the route.
+ * Merges translations from configs and route-level `translations()` export,
+ * then registers them via addNamespace using the route path as the namespace.
+ *
+ * @param {Object[]} configs - Matched config modules
+ * @param {Function|undefined} routeTranslations - Route module's translations export
+ * @param {string} routePath - The route pathname (used as i18n namespace)
+ * @returns {Function|undefined} Registration function or undefined
+ */
+export function createTranslations(configs, routeTranslations, routePath) {
+  const translatableConfigs = configs.filter(
+    c => typeof c.module.translations === 'function',
+  );
+
+  if (
+    translatableConfigs.length === 0 &&
+    typeof routeTranslations !== 'function'
+  ) {
+    return undefined;
+  }
+
+  return function () {
+    const merged = {};
+
+    // 1. Collect config translations first
+    for (const config of translatableConfigs) {
+      try {
+        const result = getTranslations(config.module.translations());
+        if (result && typeof result === 'object') {
+          Object.entries(result).forEach(([locale, messages]) => {
+            merged[locale] = merge({}, merged[locale], messages);
+          });
+        }
+      } catch (error) {
+        log(`Config translations error: ${error.message}`, 'error');
+      }
+    }
+
+    // 2. Route translations override/merge on top
+    if (typeof routeTranslations === 'function') {
+      try {
+        const result = getTranslations(routeTranslations());
+        if (result && typeof result === 'object') {
+          Object.entries(result).forEach(([locale, messages]) => {
+            merged[locale] = merge({}, merged[locale], messages);
+          });
+        }
+      } catch (error) {
+        log(`Route translations error: ${error.message}`, 'error');
+      }
+    }
+
+    // 3. Register with i18n
+    try {
+      if (Object.keys(merged).length > 0) {
+        addNamespace(routePath, merged);
+      }
+    } catch (error) {
+      log(`addNamespace error for "${routePath}": ${error.message}`, 'error');
+    }
+  };
+}
+
+/**
+ * Runs translation registration for a route hierarchy (parent → child).
+ * Each route's translations are registered once (tracked via ROUTE_TRANSLATIONS_KEY).
+ */
+export async function runTranslations(route, _ctx) {
+  if (!route) return;
+
+  const hierarchy = [];
+  let current = route;
+  while (current) {
+    hierarchy.unshift(current);
+    current = current.parent;
+  }
+
+  for (const r of hierarchy) {
+    if (typeof r.translations === 'function' && !r[ROUTE_TRANSLATIONS_KEY]) {
+      try {
+        r.translations();
+        r[ROUTE_TRANSLATIONS_KEY] = true;
+      } catch (error) {
+        log(`Translations error for "${r.path}": ${error.message}`, 'error');
+      }
+    }
+  }
+}
 /**
  * Creates a middleware runner for the route
  */

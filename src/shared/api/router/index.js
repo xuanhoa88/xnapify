@@ -7,7 +7,7 @@
 
 import { ROUTE_MOUNT_KEY } from './constants';
 import { collect } from './collector';
-import { runInit, runMount } from './lifecycle';
+import { runTranslations, runInit, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
@@ -238,7 +238,13 @@ export class Router {
     };
 
     try {
+      // Run translations hook (once per route, parent → child)
+      await runTranslations(route, ctx);
+
+      // Run init hook (once per route, parent → child)
       await runInit(route, ctx);
+
+      // Run mount hook (once per route, parent → child)
       await runMount(route, ctx);
 
       // Execute the action (composed middlewares + handler)

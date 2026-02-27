@@ -6,7 +6,6 @@
  */
 
 import { PLUGIN_ID } from '../constants';
-import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
 
 // Private symbol for handlers storage
@@ -40,14 +39,16 @@ export default {
     ];
   },
 
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
+
   // Lifecycle: init (called when plugin is initialized on server)
   async init(registry, context) {
     console.log(
       '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
     );
-
-    // 0. Register Translations
-    registerTranslations(context.i18n);
 
     // Get database connection
     const db = context.app.get('db');

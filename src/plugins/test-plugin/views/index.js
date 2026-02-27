@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
 import PluginField from './PluginField';
 
@@ -84,11 +83,13 @@ export default {
     ];
   },
 
-  // Lifecycle: init (called when plugin is initialized)
-  init(registry, context) {
-    // 0. Register Translations
-    registerTranslations(context.i18n);
+  // Declarative translations — auto-registered by plugin manager before init
+  translations() {
+    return require.context('../translations', false, /\.json$/i);
+  },
 
+  // Lifecycle: init (called when plugin is initialized)
+  init(registry, _context) {
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', PluginField, {
       order: 10,

@@ -11,6 +11,7 @@ import {
   createInit,
   createMount,
   createUnmount,
+  createTranslations,
   createAction,
 } from './lifecycle';
 
@@ -113,6 +114,11 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedLayouts),
       // Lifecycle hooks: init (config + route), mount/unmount (both)
+      translations: createTranslations(
+        matchedConfigs,
+        module.translations,
+        pathname,
+      ),
       init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),
       unmount: createUnmount(matchedConfigs, module.unmount),

@@ -7,6 +7,9 @@
 
 /* eslint-env jest */
 
+// eslint-disable-next-line no-underscore-dangle
+global.__DEV__ = false;
+
 import {
   BasePluginManager,
   PluginState,
@@ -25,6 +28,14 @@ jest.mock('../Registry', () => ({
     getDefinitions: jest.fn(),
     has: jest.fn(),
   },
+}));
+
+// Mock i18n utilities used by translations phase
+jest.mock('../../i18n/addNamespace', () => ({
+  addNamespace: jest.fn(),
+}));
+jest.mock('../../i18n/getTranslations', () => ({
+  getTranslations: jest.fn(ctx => ctx),
 }));
 
 describe('BasePluginManager', () => {

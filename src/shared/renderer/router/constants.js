@@ -21,3 +21,5 @@ export const ROUTE_UNMOUNT_KEY = Symbol('__rsk.routeUnmountKey__');
 export const ROUTE_PREV_KEY = Symbol('__rsk.routePrevKey__');
 /** @type {symbol} Stores the previous route's context (for unmount) */
 export const ROUTE_PREV_CTX = Symbol('__rsk.routePrevCtx__');
+/** @type {symbol} Tracks whether a route's translations have been registered */
+export const ROUTE_TRANSLATIONS_KEY = Symbol('__rsk.routeTranslationsKey__');
