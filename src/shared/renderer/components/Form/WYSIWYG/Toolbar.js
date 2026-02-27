@@ -11,6 +11,7 @@ import { useTranslation } from 'react-i18next';
 import EmojiPickerButton from './EmojiPickerButton';
 import ColorPickerPopup from './ColorPickerPopup';
 import TableActionsPopup from './TableActionsPopup';
+import MediaActionsPopup from './MediaActionsPopup';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 import s from './Toolbar.css';
@@ -278,21 +279,15 @@ export default function Toolbar({
             const url = window.prompt('Image URL');
             if (url) editor.chain().focus().setImage({ src: url }).run();
           })}
-        {has('video') &&
-          btn('video', t('shared:form.wysiwyg.video', 'Video'), () => {
-            const url = window.prompt('Video URL (MP4, WebM, etc.)');
-            if (url) editor.chain().focus().setVideo({ src: url }).run();
-          })}
-        {has('audio') &&
-          btn('audio', t('shared:form.wysiwyg.audio', 'Audio'), () => {
-            const url = window.prompt('Audio URL (MP3, WAV, etc.)');
-            if (url) editor.chain().focus().setAudio({ src: url }).run();
-          })}
-        {has('youtube') &&
-          btn('youtube', t('shared:form.wysiwyg.youtube', 'YouTube'), () => {
-            const url = window.prompt('YouTube Video URL');
-            if (url) editor.chain().focus().setYoutubeVideo({ src: url }).run();
-          })}
+        {(has('video') || has('audio') || has('youtube')) && (
+          <MediaActionsPopup
+            editor={editor}
+            disabled={!editor.can().chain().focus().run()}
+            hasVideo={has('video')}
+            hasAudio={has('audio')}
+            hasYoutube={has('youtube')}
+          />
+        )}
         {has('emoji') && (
           <EmojiPickerButton
             title={t('shared:form.wysiwyg.emoji', 'Emoji')}
