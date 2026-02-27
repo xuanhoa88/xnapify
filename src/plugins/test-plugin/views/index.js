@@ -44,16 +44,14 @@ export default {
     return [
       ['profile', 'dashboard'],
       __PLUGIN_NAME__,
-      { name: __PLUGIN_DESCRIPTION__ },
+      { description: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
   // Lifecycle: init (called when plugin is initialized)
   init(registry, context) {
     // 0. Register Translations
-    if (context && context.i18n) {
-      registerTranslations(context.i18n);
-    }
+    registerTranslations(context.i18n);
 
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', PluginField, {

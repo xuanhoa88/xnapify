@@ -36,7 +36,7 @@ export default {
     return [
       ['profile', 'dashboard'],
       __PLUGIN_NAME__,
-      { name: __PLUGIN_DESCRIPTION__ },
+      { description: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
@@ -47,9 +47,7 @@ export default {
     );
 
     // 0. Register Translations
-    if (context.i18n) {
-      registerTranslations(context.i18n);
-    }
+    registerTranslations(context.i18n);
 
     // Get database connection
     const db = context.app.get('db');

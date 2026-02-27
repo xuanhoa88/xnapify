@@ -967,6 +967,17 @@ export class BasePluginManager {
    *   If omitted or empty, all plugins are refreshed.
    */
   async refresh(...pluginIds) {
+    // Guard: if context was destroyed (e.g. by HMR dispose), skip refresh.
+    // The manager will be re-initialized via init() when the new bundle loads.
+    if (!this[PLUGIN_CONTEXT]) {
+      if (__DEV__) {
+        console.log(
+          '[PluginManager] Skipping refresh (no context, manager was destroyed)',
+        );
+      }
+      return;
+    }
+
     // Resolve incoming names to actual plugin IDs.
     // The build tool sends manifest names (e.g. 'rsk_plugin_test') but the
     // plugin manager tracks plugins by their API IDs (UUIDs).  We match
