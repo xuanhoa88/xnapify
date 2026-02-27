@@ -6,16 +6,19 @@
  */
 
 import { EventEmitter } from 'events';
-
 import {
   DefaultConfig,
   MessageType,
   EventType as SharedEventType,
   parseMessage,
   createLogger,
-  setWebSocketClient,
-  useWebSocket,
 } from '../utils';
+
+/**
+ * Global WebSocket client instance
+ * This allows components to access the client without needing React Context
+ */
+let wsClientInstance = null;
 
 /**
  * Client-specific event types
@@ -595,6 +598,22 @@ class WebSocketClient extends EventEmitter {
 }
 
 /**
+ * Set the global WebSocket client instance
+ * @param {WebSocketClient} client - WebSocket client instance
+ */
+export function setWebSocketClient(client) {
+  wsClientInstance = client;
+}
+
+/**
+ * Get the global WebSocket client instance
+ * @returns {WebSocketClient|null} WebSocket client or null if not initialized
+ */
+export function useWebSocket() {
+  return wsClientInstance;
+}
+
+/**
  * Factory function
  */
 export function createWebSocketClient(options = {}) {
@@ -604,4 +623,4 @@ export function createWebSocketClient(options = {}) {
 }
 
 // Re-export types for convenience
-export { EventType, MessageType, useWebSocket, setWebSocketClient };
+export { EventType, MessageType };
