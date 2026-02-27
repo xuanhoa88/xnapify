@@ -26,7 +26,7 @@ const pkg = JSON.parse(
 
 // Base webpack configuration
 const nodeEnv = config.env('NODE_ENV', 'development');
-const isDebug = nodeEnv !== 'production';
+const isDev = nodeEnv !== 'production';
 const isProfile = process.argv.includes('--profile');
 const verbose = isVerbose();
 
@@ -68,7 +68,7 @@ const reText = /\.txt(?:\?.*)?$/i;
  * @returns {string} Filename pattern
  */
 const getFileNamePattern = (hashType = 'contenthash') =>
-  isDebug ? '[path][name][ext]' : `[${hashType}:8][ext]`;
+  isDev ? '[path][name][ext]' : `[${hashType}:8][ext]`;
 
 /**
  * Create CSS loader configuration for webpack
@@ -90,20 +90,20 @@ const createCSSRule = ({
   // Common CSS loader options
   const cssLoaderOptions = {
     importLoaders: 1,
-    sourceMap: isDebug,
+    sourceMap: isDev,
     esModule: false,
     modules: {
       auto: resourcePath => resourcePath.includes(config.APP_DIR),
       exportOnlyLocals,
       localIdentName:
         localIdentName ||
-        (isDebug ? '[name]-[local]-[hash:base64:5]' : '[hash:base64:5]'),
+        (isDev ? '[name]-[local]-[hash:base64:5]' : '[hash:base64:5]'),
     },
   };
 
   // PostCSS loader options
   const postcssLoaderOptions = {
-    sourceMap: isDebug,
+    sourceMap: isDev,
     postcssOptions: ctx => {
       // Clear require cache to ensure fresh options for each build
       const configPath = require.resolve('../postcss.config');
@@ -157,7 +157,7 @@ const createCSSRule = ({
           loader: 'sass-loader',
           options: {
             api: 'modern', // Use modern Sass API (fixes deprecation warning)
-            sourceMap: isDebug,
+            sourceMap: isDev,
           },
         }),
       },
@@ -165,14 +165,14 @@ const createCSSRule = ({
         test: /\.less$/i,
         use: buildLoaders({
           loader: 'less-loader',
-          options: { sourceMap: isDebug },
+          options: { sourceMap: isDev },
         }),
       },
       {
         test: /\.styl$/i,
         use: buildLoaders({
           loader: 'stylus-loader',
-          options: { sourceMap: isDebug },
+          options: { sourceMap: isDev },
         }),
       },
       {
@@ -189,7 +189,7 @@ const createCSSRule = ({
  */
 const createDefinePlugin = extraDefinitions =>
   new webpack.DefinePlugin({
-    __DEV__: !!isDebug,
+    __DEV__: !!isDev,
     ...extraDefinitions,
   });
 
@@ -390,6 +390,7 @@ const createScriptRule = () => ({
     {
       loader: 'babel-loader',
       options: {
+        comments: false,
         cacheDirectory: false,
         configFile: path.resolve(config.CWD, 'babel.config.js'),
       },
@@ -555,12 +556,12 @@ function createWebpackConfig(name, options = {}) {
       stats: 'errors-only',
 
       optimization: {
-        concatenateModules: !isDebug,
-        usedExports: !isDebug,
-        sideEffects: !isDebug,
-        minimize: !isDebug,
-        moduleIds: isDebug ? 'named' : 'deterministic',
-        chunkIds: isDebug ? 'named' : 'deterministic',
+        concatenateModules: !isDev,
+        usedExports: !isDev,
+        sideEffects: !isDev,
+        minimize: !isDev,
+        moduleIds: isDev ? 'named' : 'deterministic',
+        chunkIds: isDev ? 'named' : 'deterministic',
 
         // ✅ Enable chunk splitting (was `false` — cacheGroups were dead code)
         splitChunks: isServer
@@ -577,7 +578,7 @@ function createWebpackConfig(name, options = {}) {
         // Without this, a single new module invalidates ALL chunk hashes
         runtimeChunk: isServer ? false : { name: 'runtime' },
 
-        minimizer: !isDebug
+        minimizer: !isDev
           ? [
               new TerserPlugin({
                 parallel: true,
@@ -629,11 +630,24 @@ function createWebpackConfig(name, options = {}) {
         ],
       },
 
-      bail: !isDebug,
-      cache: false,
+      // Stop compilation on first error
+      bail: !isDev,
+
+      // ✅ Enable filesystem caching (huge speedup for rebuilds)
+      cache: isDev
+        ? {
+            type: 'filesystem',
+            buildDependencies: {
+              config: [__filename],
+            },
+          }
+        : false,
+      experiments: { cacheUnaffected: true },
+
+      // ✅ Enable source maps for debugging
       devtool: config.env(
         'WEBPACK_DEVTOOL',
-        isDebug ? (isServer ? 'source-map' : 'eval-source-map') : false,
+        isDev ? (isServer ? 'source-map' : 'eval-source-map') : false,
       ),
 
       plugins: [new webpack.EnvironmentPlugin({ NODE_ENV: nodeEnv })],
@@ -655,7 +669,7 @@ function createWebpackConfig(name, options = {}) {
 
 module.exports = {
   // Constants
-  isDebug,
+  isDev,
   verbose,
   isProfile,
   pkg: Object.freeze(pkg),

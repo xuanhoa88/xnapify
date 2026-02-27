@@ -11,7 +11,7 @@
  * Discovers and loads API modules from the apps directory.
  * Each module exports independent lifecycle hooks:
  *   - models()     — returns a webpack require.context for models
- *   - shared()     — share services/constants across modules (DI bindings)
+ *   - providers()     — share services/constants across modules (DI bindings)
  *   - migrations() — run database migrations (all tables created first)
  *   - seeds()      — run database seeds (after all tables exist)
  *   - init()       — initialisation logic (auth hooks, etc.)
@@ -40,7 +40,7 @@ const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
  */
 const LIFECYCLE_PHASES = [
   'models',
-  'shared',
+  'providers',
   'migrations',
   'seeds',
   'init',
@@ -384,9 +384,9 @@ export async function discoverModules(modulesContext, app) {
 
   app.set('models', apiModels);
 
-  // ─── Phase 2: shared ──────────────────────────────────────────────────────
+  // ─── Phase 2: providers ───────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('shared', lifecycles, (_, hook) => hook(app))),
+    ...(await runPhase('providers', lifecycles, (_, hook) => hook(app))),
   );
 
   // ─── Phase 3: migrations ──────────────────────────────────────────────────

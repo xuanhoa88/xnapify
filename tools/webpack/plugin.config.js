@@ -18,7 +18,7 @@ const {
   createProgressPlugin,
   createSharedDependencies,
   pkg,
-  isDebug,
+  isDev,
   verbose,
 } = require('./base.config');
 
@@ -100,7 +100,7 @@ function validatePlugin(plugin) {
  * Create CSS Modules localIdentName for a plugin
  */
 const getPluginLocalIdentName = pluginName =>
-  isDebug
+  isDev
     ? `${pluginName}_[local]__[hash:base64:5]`
     : `${pluginName}_[hash:base64:5]`;
 
@@ -128,7 +128,7 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
       output: {
         path: outputPath,
         filename: 'browser.js',
-        chunkFilename: isDebug
+        chunkFilename: isDev
           ? '[name].chunk.js'
           : '[name].[contenthash:8].chunk.js',
         publicPath: 'auto',
@@ -194,7 +194,7 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
         createEnvDefine(),
         new MiniCssExtractPlugin({
           filename: 'plugin.css',
-          ignoreOrder: isDebug,
+          ignoreOrder: isDev,
         }),
         new StripRootCSSPlugin(),
         createProgressPlugin(),

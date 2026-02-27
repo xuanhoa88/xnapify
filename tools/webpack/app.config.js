@@ -17,7 +17,7 @@ const {
   createEnvDefine,
   createProgressPlugin,
   createSharedDependencies,
-  isDebug,
+  isDev,
   pkg,
 } = require('./base.config');
 
@@ -88,7 +88,7 @@ function createStatsWriterPlugin() {
 const clientConfig = createWebpackConfig('client', {
   entry: {
     client: [
-      ...(isDebug
+      ...(isDev
         ? [path.join(__dirname, 'browserSync', 'client.config.js')]
         : []),
       path.join(config.APP_DIR, 'client.js'),
@@ -96,10 +96,10 @@ const clientConfig = createWebpackConfig('client', {
   },
   output: {
     path: path.join(config.BUILD_DIR, 'public'),
-    filename: isDebug
+    filename: isDev
       ? 'assets/[name].js'
       : 'assets-[fullhash:8]/[name].[chunkhash:8].js',
-    chunkFilename: isDebug
+    chunkFilename: isDev
       ? 'assets/[name].chunk.js'
       : 'assets-[fullhash:8]/[name].[chunkhash:8].chunk.js',
   },
@@ -129,13 +129,13 @@ const clientConfig = createWebpackConfig('client', {
       }),
     }),
     new MiniCssExtractPlugin({
-      filename: isDebug
+      filename: isDev
         ? 'assets/[name].css'
         : 'assets-[fullhash:8]/[name].[contenthash:8].css',
-      chunkFilename: isDebug
+      chunkFilename: isDev
         ? 'assets/[id].css'
         : 'assets-[fullhash:8]/[id].[contenthash:8].css',
-      ignoreOrder: isDebug,
+      ignoreOrder: isDev,
     }),
     createStatsWriterPlugin(),
     createProgressPlugin(),
@@ -165,7 +165,7 @@ const serverConfig = createWebpackConfig('server', {
   },
   plugins: [
     createEnvDefine(),
-    ...(isDebug
+    ...(isDev
       ? [
           new webpack.BannerPlugin({
             banner: 'require("source-map-support").install();',

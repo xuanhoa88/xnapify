@@ -55,11 +55,11 @@ async function registerAuthHooks(app) {
 // =============================================================================
 
 /**
- * Shared hook — called by the autoloader to share services with other modules.
+ * Providers hook — called by the autoloader to share services with other modules.
  *
  * @param {Object} app - Express app instance
  */
-export async function shared(app) {
+export async function providers(app) {
   const container = app.get('container');
 
   // Bind seed constants to container as singleton

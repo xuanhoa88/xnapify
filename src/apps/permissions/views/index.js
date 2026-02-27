@@ -36,12 +36,12 @@ function log(phase) {
 // =============================================================================
 
 /**
- * Shared hook — called during view bootstrap to share
+ * Providers hook — called during view bootstrap to share
  * client-side services/state with other view modules.
  *
  * @param {Object} context - Shared context (e.g., container, plugin)
  */
-export function shared({ container }) {
+export function providers({ container }) {
   // Bind admin state
   container.bind(
     'permissions:admin:state',

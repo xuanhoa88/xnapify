@@ -322,11 +322,11 @@ class PluginRegistry {
 
     // Unload if currently loaded
     if (this.has(id)) {
-      await this.unregister(id);
+      await this.unregister(id, definition.context);
     }
 
     // Reload plugin
-    return this.register(id, definition);
+    return this.register(id, definition, definition.context);
   }
 
   // =========================================================================
