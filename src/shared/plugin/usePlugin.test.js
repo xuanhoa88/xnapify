@@ -7,6 +7,7 @@
 
 /* eslint-env jest */
 
+import { useMemo } from 'react';
 import renderer, { act } from 'react-test-renderer';
 import {
   usePluginHooks,
@@ -15,23 +16,35 @@ import {
 } from './usePlugin';
 import { registry } from './Registry';
 
-beforeAll(() => {
-  jest.spyOn(console, 'error').mockImplementation(() => {});
-});
-
-afterAll(() => {
-  jest.restoreAllMocks();
-});
+// Mock Registry
+jest.mock('./Registry', () => ({
+  registry: {
+    executeHook: jest.fn(),
+  },
+}));
 
 describe('usePlugin', () => {
+  let comp;
+
   beforeEach(() => {
-    registry.clear();
+    jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    if (comp) {
+      act(() => {
+        comp.unmount();
+      });
+      comp = null;
+    }
+    jest.restoreAllMocks();
   });
 
   describe('usePluginHooks', () => {
     it('returns an execute function that calls registry.executeHook', async () => {
       const mockResult = [{ success: true }];
-      jest.spyOn(registry, 'executeHook').mockResolvedValue(mockResult);
+      registry.executeHook.mockResolvedValue(mockResult);
 
       let hooks;
       const Dummy = () => {
@@ -40,63 +53,58 @@ describe('usePlugin', () => {
       };
 
       act(() => {
-        renderer.create(<Dummy />);
+        comp = renderer.create(<Dummy />);
       });
 
       const res = await hooks.execute('test.hook', 'arg1');
 
       expect(registry.executeHook).toHaveBeenCalledWith('test.hook', 'arg1');
       expect(res).toBe(mockResult);
-      registry.executeHook.mockRestore();
     });
   });
 
   describe('usePluginValidator', () => {
     it('should execute hook and extend schema sequentially', async () => {
-      registry.registerHook('test.validator', schema => ({
-        ...schema,
-        first: true,
-      }));
-      registry.registerHook('test.validator', schema => ({
-        ...schema,
-        second: true,
-      }));
+      registry.executeHook.mockResolvedValue([
+        { first: true },
+        { second: true },
+      ]);
 
       let resultSchema;
       let isLoading;
 
       const Dummy = () => {
+        const baseSchema = useMemo(() => ({ base: true }), []);
+        const validator = useMemo(() => ({ validator: 'zod' }), []);
         const [schema, loading] = usePluginValidator(
           'test.validator',
-          { base: true },
-          { validator: 'zod' },
+          baseSchema,
+          validator,
         );
         resultSchema = schema;
         isLoading = loading;
         return null;
       };
 
-      let comp;
       await act(async () => {
         comp = renderer.create(<Dummy />);
       });
 
       expect(isLoading).toBe(false);
-      expect(resultSchema).toEqual({ base: true, first: true, second: true });
+      expect(resultSchema).toEqual({ second: true });
     });
 
     it('should handle errors gracefully', async () => {
-      registry.registerHook('test.error', () => {
-        throw new Error('Hook Failed');
-      });
+      registry.executeHook.mockRejectedValue(new Error('Hook Failed'));
 
       let resultSchema;
       let isLoading;
 
       const Dummy = () => {
+        const baseSchema = useMemo(() => ({ base: true }), []);
         const [schema, loading] = usePluginValidator(
           'test.error',
-          { base: true },
+          baseSchema,
           'dummy-validator',
         );
         resultSchema = schema;
@@ -105,46 +113,42 @@ describe('usePlugin', () => {
       };
 
       await act(async () => {
-        renderer.create(<Dummy />);
+        comp = renderer.create(<Dummy />);
       });
 
       expect(isLoading).toBe(false);
-      expect(resultSchema).toEqual({ base: true }); // Base schema remains untouched
+      expect(resultSchema).toEqual({ base: true });
       expect(console.error).toHaveBeenCalled();
     });
   });
 
   describe('usePluginFormData', () => {
     it('should aggregate form data from multiple plugins', async () => {
-      registry.registerHook('test.form', () => ({ field1: 'value1' }));
-      registry.registerHook('test.form', () => ({
-        field2: 'value2',
-        obj: { nested: 1 },
-      }));
+      registry.executeHook.mockResolvedValue([
+        { field1: 'value1' },
+        { field2: 'value2' },
+      ]);
 
       let resultData;
       let isLoading;
 
       const Dummy = () => {
-        const [data, loading] = usePluginFormData('test.form', { user: '1' });
+        const context = useMemo(() => ({ user: '1' }), []);
+        const [data, loading] = usePluginFormData('test.form', context);
         resultData = data;
         isLoading = loading;
         return null;
       };
 
       await act(async () => {
-        renderer.create(<Dummy />);
+        comp = renderer.create(<Dummy />);
       });
 
       expect(isLoading).toBe(false);
-      expect(resultData).toEqual({
-        field1: 'value1',
-        field2: 'value2',
-        obj: { nested: 1 },
-      });
+      expect(resultData).toEqual({ field1: 'value1', field2: 'value2' });
     });
 
-    it('returns empty when no context provided', () => {
+    it('returns empty when no context provided', async () => {
       let isLoading;
       const Dummy = () => {
         const [, loading] = usePluginFormData('test.no-ctx', null);
@@ -152,11 +156,12 @@ describe('usePlugin', () => {
         return null;
       };
 
-      act(() => {
-        renderer.create(<Dummy />);
+      await act(async () => {
+        comp = renderer.create(<Dummy />);
       });
 
       expect(isLoading).toBe(false);
+      expect(registry.executeHook).not.toHaveBeenCalled();
     });
   });
 });

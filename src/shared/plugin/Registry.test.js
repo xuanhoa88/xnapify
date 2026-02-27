@@ -194,4 +194,63 @@ describe('PluginRegistry', () => {
       expect(listener).toHaveBeenCalledTimes(1); // Should not increase
     });
   });
+
+  describe('Pipelines', () => {
+    test('creates a pipeline and executes middlewares in order', async () => {
+      const step1 = jest.fn((data, ctx, next) => {
+        data.order.push(1);
+        return next();
+      });
+      const step2 = jest.fn((data, ctx, next) => {
+        data.order.push(2);
+        return next();
+      });
+
+      const pipeline = registry.createPipeline(step1, step2);
+      const data = { order: [] };
+      const ctx = { some: 'ctx' };
+
+      await pipeline(data, ctx);
+
+      expect(data.order).toEqual([1, 2]);
+      expect(step1).toHaveBeenCalledWith(data, ctx, expect.any(Function));
+      expect(step2).toHaveBeenCalledWith(data, ctx, expect.any(Function));
+    });
+
+    test('supports short-circuiting in pipeline', async () => {
+      const step1 = jest.fn((data, _ctx, _next) => {
+        data.called = true;
+        // Not calling next()
+        return 'short-circuit';
+      });
+      const step2 = jest.fn();
+
+      const pipeline = registry.createPipeline(step1, step2);
+      const data = {};
+
+      const result = await pipeline(data, {});
+
+      expect(data.called).toBe(true);
+      expect(step2).not.toHaveBeenCalled();
+      expect(result).toBe('short-circuit');
+    });
+
+    test('passes data modifications through the pipeline', async () => {
+      const step1 = (data, _ctx, next) => {
+        data.value += 10;
+        return next();
+      };
+      const step2 = (data, _ctx, next) => {
+        data.value *= 2;
+        return next();
+      };
+
+      const pipeline = registry.createPipeline(step1, step2);
+      const data = { value: 5 };
+
+      await pipeline(data, {});
+
+      expect(data.value).toBe(30); // (5 + 10) * 2
+    });
+  });
 });
