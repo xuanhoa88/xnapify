@@ -6,7 +6,7 @@ import Form from '../../../shared/renderer/components/Form';
 import { PLUGIN_ID } from '../constants';
 import s from './PluginField.scss';
 
-export default function PluginField({ register }) {
+export default function PluginField({ register, context }) {
   const { t } = useTranslation(PLUGIN_ID);
   const { control, setError, clearErrors } = useFormContext();
   const nickname = useWatch({ control, name: 'profile.nickname' });
@@ -24,18 +24,18 @@ export default function PluginField({ register }) {
     const checkAvailability = async () => {
       setIsChecking(true);
       try {
-        const res = await fetch(`/api/plugins/${__PLUGIN_NAME__}/ipc`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'checkNickname',
-            data: { nickname },
-          }),
-        });
+        const { data } = await context.fetch(
+          `/api/plugins/${__PLUGIN_NAME__}/ipc`,
+          {
+            method: 'POST',
+            body: {
+              action: 'checkNickname',
+              data: { nickname },
+            },
+          },
+        );
 
-        const json = await res.json();
-
-        if (json.success && json.data && json.data.exists) {
+        if (data.success && data.data && data.data.exists) {
           setIsAvailable(false);
           setError('profile.nickname.api', {
             type: 'manual',
@@ -54,7 +54,7 @@ export default function PluginField({ register }) {
 
     const timeoutId = setTimeout(checkAvailability, 500); // debounce 500ms
     return () => clearTimeout(timeoutId);
-  }, [nickname, setError, clearErrors, t]);
+  }, [nickname, setError, clearErrors, t, context]);
 
   return (
     <>
@@ -102,4 +102,5 @@ export default function PluginField({ register }) {
 
 PluginField.propTypes = {
   register: PropTypes.func.isRequired,
+  context: PropTypes.object,
 };

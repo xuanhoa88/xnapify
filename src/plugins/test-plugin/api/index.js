@@ -161,19 +161,26 @@ export default {
       }
 
       try {
-        const db = context.app.get('db');
-        const query = db
-          .knex('user_profiles')
-          .where('attribute_key', 'nickname')
-          .where('attribute_value', nickname)
-          .first();
+        const models = context.app.get('models');
+        const { UserProfile } = models;
 
-        // If the checking user is logged in, exclude their own profile
-        if (req && req.user && req.user.id) {
-          query.whereNot('user_id', req.user.id);
+        if (!UserProfile) {
+          throw new Error('UserProfile model not found');
         }
 
-        const existing = await query;
+        const existing = await UserProfile.findOne({
+          where: {
+            attribute_key: 'nickname',
+            attribute_value: nickname,
+          },
+          attributes: ['user_id'],
+        });
+
+        // If the checking user is logged in, exclude their own profile
+        if (existing && req && req.user && req.user.id === existing.user_id) {
+          return { exists: false };
+        }
+
         return { exists: !!existing };
       } catch (err) {
         console.error('[Test Plugin] Error checking nickname:', err);

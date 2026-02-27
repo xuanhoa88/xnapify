@@ -101,16 +101,6 @@ export class BasePluginManager {
    * @note Client context: Initialized before app startup, updated on navigation
    */
   async init(context) {
-    // Singleton pattern: Skip re-initialization if already initialized
-    // This prevents redundant plugin loading on subsequent calls (e.g., per-request on server)
-    // We check the explicit INITIALIZED flag instead of active plugin count
-    // to handle cases where no plugins are installed (count = 0)
-    if (this[INITIALIZED]) {
-      // Update context for the current request/navigation
-      this[PLUGIN_CONTEXT] = context;
-      return;
-    }
-
     if (!context || typeof context.fetch !== 'function') {
       const error = new Error(
         'PluginManager requires a valid context with fetch method',
@@ -119,7 +109,19 @@ export class BasePluginManager {
       throw error;
     }
 
+    // Update context for the current request/navigation
     this[PLUGIN_CONTEXT] = context;
+    this.registry.context = context;
+
+    // Singleton pattern: Skip re-initialization if already initialized
+    // This prevents redundant plugin loading on subsequent calls (e.g., per-request on server)
+    // We check the explicit INITIALIZED flag instead of active plugin count
+    // to handle cases where no plugins are installed (count = 0)
+    if (this[INITIALIZED]) {
+      return;
+    }
+
+    this[INITIALIZED] = true;
 
     // Subclasses can implement this
     this.subscribeToEvents();
@@ -167,11 +169,6 @@ export class BasePluginManager {
         loaded: success.length,
         failed: failures.length,
       });
-
-      // Mark as initialized after all plugins are loaded
-      if (success.length > 0) {
-        this[INITIALIZED] = true;
-      }
     } catch (error) {
       console.error('[PluginManager] Failed to fetch plugins:', error);
       await this.emit('plugins:init-failed', { error });

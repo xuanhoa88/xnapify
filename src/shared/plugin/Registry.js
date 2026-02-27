@@ -14,6 +14,7 @@ const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
 const LISTENERS = Symbol('__rsk.pluginListeners__');
 const HOOKS = Symbol('__rsk.pluginHooks__');
 const REGISTRATIONS = Symbol('__rsk.pluginRegistrations__');
+const CONTEXT = Symbol('__rsk.pluginContext__');
 
 /**
  * PluginRegistry - Manages plugin registrations, UI slots, hooks, and schema extensions
@@ -29,6 +30,7 @@ class PluginRegistry {
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
     this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [] }>
+    this[CONTEXT] = null; // Global application context (fetch, i18n, etc.)
   }
 
   // =========================================================================
@@ -432,6 +434,26 @@ class PluginRegistry {
   /** Notify all listeners of changes */
   notify() {
     this[LISTENERS].forEach(callback => callback());
+  }
+
+  // =========================================================================
+  // Context Management
+  // =========================================================================
+
+  /**
+   * Set the global application context
+   * @param {Object} ctx - App context (fetch, i18n, store, etc.)
+   */
+  set context(ctx) {
+    this[CONTEXT] = ctx;
+  }
+
+  /**
+   * Get the current application context
+   * @returns {Object|null}
+   */
+  get context() {
+    return this[CONTEXT];
   }
 }
 

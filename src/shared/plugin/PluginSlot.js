@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, Fragment, memo } from 'react';
 import PropTypes from 'prop-types';
 import { registry } from './Registry';
 
@@ -15,36 +15,42 @@ import { registry } from './Registry';
  * Usage:
  *   <PluginSlot name="profile.fields" formData={formData} />
  */
-function PluginSlot({ name, ...props }) {
-  const [components, setComponents] = useState(() => {
-    const slots = registry.getSlot(name);
-    return slots;
-  });
+const PluginSlot = memo(function PluginSlot({ name, ...props }) {
+  const [components, setComponents] = useState(() => registry.getSlot(name));
+
+  const syncComponents = useCallback(() => {
+    setComponents(registry.getSlot(name));
+  }, [name]);
 
   useEffect(() => {
-    // Sync with current registry state
-    setComponents(registry.getSlot(name));
+    // Sync immediately in case registry changed between render and effect
+    syncComponents();
 
     // Subscribe to future changes
-    const unsubscribe = registry.subscribe(() => {
-      setComponents(registry.getSlot(name));
-    });
-
-    return unsubscribe;
-  }, [name]);
+    return registry.subscribe(syncComponents);
+  }, [syncComponents]);
 
   if (!components.length) return null;
 
-  return components.map(({ component: Component$, ...options }, index) => {
-    const key =
-      options.id ||
-      options.key ||
-      Component$.displayName ||
-      Component$.name ||
-      `${name}-${index}`;
-    return <Component$ key={key} {...props} />;
-  });
-}
+  const { context } = registry;
+
+  return (
+    <Fragment>
+      {components.map(({ component: Component, ...options }, index) => {
+        const key =
+          options.id ||
+          options.key ||
+          Component.displayName ||
+          Component.name ||
+          `${name}-${index}`;
+
+        return <Component key={key} {...props} context={context} />;
+      })}
+    </Fragment>
+  );
+});
+
+PluginSlot.displayName = 'PluginSlot';
 
 PluginSlot.propTypes = {
   name: PropTypes.string.isRequired,
