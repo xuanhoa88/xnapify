@@ -27,7 +27,7 @@ export async function get(req, res) {
     offset: (page - 1) * limit,
   };
 
-  const result = await webhook.services.list(webhook, options);
+  const result = await webhook.services.list(options);
 
   if (result.success) {
     return http.sendSuccess(res, result.data);

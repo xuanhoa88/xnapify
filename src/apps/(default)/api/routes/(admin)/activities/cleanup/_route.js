@@ -19,7 +19,7 @@ export async function del(req, res) {
     status: req.query.status,
   };
 
-  const result = await webhook.services.cleanup(webhook, options);
+  const result = await webhook.services.cleanup(options);
 
   if (result.success) {
     return http.sendSuccess(res, result.data);

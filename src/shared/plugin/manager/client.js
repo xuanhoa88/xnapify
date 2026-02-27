@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { registry } from '../Registry';
 import {
   BasePluginManager,
   LOADED_VERSIONS,
@@ -377,12 +376,12 @@ class ClientPluginManager extends BasePluginManager {
           } else if (manifestName) {
             // Plugin was defined but not activated in a namespace.
             // Clean up registry (slots, hooks) and emit unloaded for DOM cleanup.
-            await registry.unregister(manifestName, this[PLUGIN_CONTEXT]);
+            await this.registry.unregister(manifestName, this[PLUGIN_CONTEXT]);
           }
 
           // Remove definition to prevent re-loading via loadNamespace
           if (manifestName) {
-            registry.undefine(manifestName);
+            this.registry.undefine(manifestName);
           }
 
           // Clean up metadata and DOM resources (using UUID)

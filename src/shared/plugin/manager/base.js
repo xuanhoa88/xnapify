@@ -57,6 +57,14 @@ export class BasePluginManager {
   }
 
   /**
+   * Get the registry instance
+   * @returns {Registry} The registry instance
+   */
+  get registry() {
+    return registry;
+  }
+
+  /**
    * Build plugin asset URL
    * @param {string} id - Plugin ID
    * @param {string} filename - Asset filename

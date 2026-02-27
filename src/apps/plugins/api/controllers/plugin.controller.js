@@ -264,3 +264,54 @@ export const upgradePlugin = async (req, res) => {
     return http.sendServerError(res, 'Failed to upgrade plugin', error);
   }
 };
+
+// ========================================================================
+// IPC GATEWAY
+// ========================================================================
+
+/**
+ * Handle Plugin IPC
+ *
+ * Centralized gateway for plugin inter-process communication.
+ * Plugins register IPC handlers via registry.registerHook('ipc:<pluginId>:<action>', handler).
+ * The gateway validates the request, executes the hook, and returns the result.
+ *
+ * @route   POST /api/plugins/:id/ipc
+ * @body    { action: string, data?: any }
+ */
+export const handleIPC = async (req, res) => {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+    const { action, data } = req.body || {};
+
+    // Validate action
+    if (!action || typeof action !== 'string') {
+      return http.sendError(
+        res,
+        'Missing or invalid "action" in request body',
+        400,
+      );
+    }
+
+    // Execute the IPC hook: ipc:<pluginId>:<action>
+    const hookId = `ipc:${id}:${action}`;
+    const results = await req.app
+      .get('plugin')
+      .registry.executeHook(hookId, data, { req, res });
+
+    // If no handlers registered for this hook, return 404
+    if (!results || results.length === 0) {
+      return http.sendError(
+        res,
+        `No IPC handler registered for action "${action}" on plugin "${id}"`,
+        404,
+      );
+    }
+
+    // Return the first handler's result (single handler per action is expected)
+    return http.sendSuccess(res, results[0]);
+  } catch (error) {
+    return http.sendServerError(res, 'Plugin IPC failed', error);
+  }
+};

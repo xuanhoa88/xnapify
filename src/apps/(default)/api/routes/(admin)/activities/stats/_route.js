@@ -12,7 +12,7 @@
 export async function get(req, res) {
   const http = req.app.get('http');
   const webhook = req.app.get('webhook');
-  const result = await webhook.services.stats(webhook);
+  const result = await webhook.services.stats();
 
   if (result.success) {
     return http.sendSuccess(res, result.data);

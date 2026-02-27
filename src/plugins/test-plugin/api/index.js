@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { PLUGIN_ID } from '../constants';
 import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
-import { PLUGIN_ID } from '../constants';
 
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
@@ -133,6 +133,25 @@ export default {
 
     // Register hook for user response formatting
     hook('profile').on('retrieved', this[HANDLERS].formatResponse);
+
+    // =========================================================================
+    // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
+    // =========================================================================
+
+    // Example: Register an IPC handler for the 'hello' action
+    this[HANDLERS].ipcHello = async data => {
+      console.log('[Test Plugin] IPC hello called with:', data);
+      return {
+        message: `Hello from ${__PLUGIN_NAME__}!`,
+        received: data,
+        timestamp: new Date().toISOString(),
+      };
+    };
+    registry.registerHook(
+      `ipc:${__PLUGIN_NAME__}:hello`,
+      this[HANDLERS].ipcHello,
+      __PLUGIN_NAME__,
+    );
   },
 
   // Lifecycle: destroy (called when plugin is disabled)

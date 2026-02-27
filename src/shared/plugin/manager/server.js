@@ -6,7 +6,6 @@
  */
 
 import path from 'path';
-import { registry } from '../Registry';
 import {
   BasePluginManager,
   PLUGIN_CONTEXT,
@@ -30,7 +29,7 @@ class ServerPluginManager extends BasePluginManager {
       try {
         const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
         if (apiPlugin && typeof apiPlugin.destroy === 'function') {
-          await apiPlugin.destroy(registry, this[PLUGIN_CONTEXT]);
+          await apiPlugin.destroy(this.registry, this[PLUGIN_CONTEXT]);
           if (__DEV__) {
             console.log(`[PluginManager] Destroyed API for: ${id}`);
           }
@@ -253,7 +252,7 @@ class ServerPluginManager extends BasePluginManager {
               console.log(`[ServerPluginManager] Booting API for ${id}`);
             }
             try {
-              await pluginApi.init(registry, this[PLUGIN_CONTEXT]);
+              await pluginApi.init(this.registry, this[PLUGIN_CONTEXT]);
               // Store API instance for destroy during unload
               this[PLUGIN_API_INSTANCES].set(id, pluginApi);
             } catch (error) {

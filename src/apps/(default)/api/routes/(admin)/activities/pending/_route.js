@@ -12,8 +12,7 @@
 export async function get(req, res) {
   const http = req.app.get('http');
   const webhook = req.app.get('webhook');
-  const result = await webhook.services.pending(webhook, req.query);
-
+  const result = await webhook.services.pending(req.query);
   if (result.success) {
     return http.sendSuccess(res, result.data);
   }

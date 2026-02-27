@@ -405,19 +405,7 @@ class WebhookManager {
       const _services = {};
       for (const [serviceName, fn] of Object.entries(services)) {
         if (typeof fn === 'function') {
-          _services[serviceName] = ({
-            adapter: adapterName = this.defaultAdapter,
-            ...restOptions
-          } = {}) => {
-            const adapter = this.adapters.get(adapterName);
-            if (!adapter) {
-              throw new WebhookError(
-                `Unknown adapter: ${adapterName}`,
-                'ADAPTER_NOT_FOUND',
-              );
-            }
-            return fn(adapter, restOptions);
-          };
+          _services[serviceName] = (...args) => fn(this, ...args);
         }
       }
       // eslint-disable-next-line no-underscore-dangle

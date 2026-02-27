@@ -12,7 +12,7 @@
 export async function post(req, res) {
   const http = req.app.get('http');
   const webhook = req.app.get('webhook');
-  const result = await webhook.services.retry(webhook, req.params.id);
+  const result = await webhook.services.retry(req.params.id);
 
   if (result.success) {
     return http.sendSuccess(res, result.data);
