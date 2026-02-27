@@ -63,6 +63,16 @@ class Hook {
   }
 
   /**
+   * Check if a hook has any registered callbacks
+   * @param {string} hookId - Hook identifier
+   * @returns {boolean}
+   */
+  has(hookId) {
+    const callbacks = this.hooks.get(hookId);
+    return !!callbacks && callbacks.size > 0;
+  }
+
+  /**
    * Execute all callbacks for a hook sequentially
    * @param {string} hookId - Hook identifier
    * @param {...any} args - Arguments to pass to callbacks

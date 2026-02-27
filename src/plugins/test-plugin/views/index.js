@@ -9,7 +9,13 @@ import { registerTranslations } from '../translations';
 import { profileSchema } from '../validator';
 import PluginField from './PluginField';
 
-// Extract handlers for cleanup
+// Private symbol for storing composed handlers (needed for cleanup)
+const HANDLERS = Symbol('handlers');
+
+// =========================================================================
+// Static Handlers (not middleware-composed, safe for direct ref cleanup)
+// =========================================================================
+
 const extendProfileValidator = (schema, validator) => {
   // Deep-merge the profile sub-object so we extend it, not replace it
   const extension = profileSchema(validator);
@@ -22,12 +28,6 @@ const extendProfileValidator = (schema, validator) => {
   return schema.extend({ profile: inner.optional() });
 };
 
-const handleProfileSubmit = async (data, _context) => {
-  if (data.profile.nickname) {
-    console.log(`[Test Plugin] Hello, ${data.profile.nickname}!`);
-  }
-};
-
 const handleProfileDefaults = async user => {
   return {
     profile: {
@@ -37,8 +37,44 @@ const handleProfileDefaults = async user => {
   };
 };
 
+// =========================================================================
+// Middleware Functions (reusable across hooks)
+// =========================================================================
+
+/**
+ * Logs submission timing
+ */
+const loggingMiddleware = (data, context, next) => {
+  const start = Date.now();
+  console.log('[Test Plugin] Submit pipeline started', data);
+
+  return Promise.resolve(next()).then(result => {
+    console.log(
+      `[Test Plugin] Submit pipeline completed in ${Date.now() - start}ms`,
+    );
+    return result;
+  });
+};
+
+/**
+ * Guards against submitting when nickname is too short
+ */
+const nicknameGuard = (data, context, next) => {
+  const nickname = data && data.profile && data.profile.nickname;
+  if (nickname && nickname.length < 3) {
+    console.warn(
+      '[Test Plugin] Nickname too short, skipping submit hook logic',
+    );
+    return Promise.resolve(); // Short-circuit: don't call next()
+  }
+  return next();
+};
+
 // Plugin definition
 export default {
+  // Store composed handlers for cleanup
+  [HANDLERS]: {},
+
   // Metadata & registration config
   register() {
     return [
@@ -64,8 +100,22 @@ export default {
       extendProfileValidator,
     );
 
-    // 3. Register Hook
-    registry.registerHook('profile.personal_info.submit', handleProfileSubmit);
+    // 3. Compose submit handler with middleware pipeline
+    this[HANDLERS].profileSubmit = registry.createPipeline(
+      loggingMiddleware,
+      nicknameGuard,
+      async data => {
+        if (data.profile.nickname) {
+          console.log(`[Test Plugin] Hello, ${data.profile.nickname}!`);
+        }
+      },
+    );
+    registry.registerHook(
+      'profile.personal_info.submit',
+      this[HANDLERS].profileSubmit,
+    );
+
+    // 4. Register form defaults hook
     registry.registerHook(
       'profile.personal_info.formData',
       handleProfileDefaults,
@@ -83,12 +133,15 @@ export default {
     );
     registry.unregisterHook(
       'profile.personal_info.submit',
-      handleProfileSubmit,
+      this[HANDLERS].profileSubmit,
     );
     registry.unregisterHook(
       'profile.personal_info.formData',
       handleProfileDefaults,
     );
+
+    // Clean up handlers
+    this[HANDLERS] = {};
 
     console.log('[Test Plugin] Destroyed');
   },

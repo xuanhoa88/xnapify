@@ -395,6 +395,15 @@ class PluginRegistry {
   }
 
   /**
+   * Check if a hook has any registered callbacks
+   * @param {string} hookId - Hook identifier
+   * @returns {boolean}
+   */
+  hasHook(hookId) {
+    return this[HOOKS].has(hookId);
+  }
+
+  /**
    * Execute all callbacks for a hook sequentially
    * @param {string} hookId - Hook identifier
    * @param {...any} args - Arguments to pass to callbacks

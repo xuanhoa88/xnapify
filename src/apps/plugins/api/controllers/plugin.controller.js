@@ -294,14 +294,12 @@ export const handleIPC = async (req, res) => {
       );
     }
 
-    // Execute the IPC hook: ipc:<pluginId>:<action>
+    // Build the hook ID: ipc:<pluginId>:<action>
     const hookId = `ipc:${id}:${action}`;
-    const results = await req.app
-      .get('plugin')
-      .registry.executeHook(hookId, data, { req, res });
+    const pluginRegistry = req.app.get('plugin').registry;
 
-    // If no handlers registered for this hook, return 404
-    if (!results || results.length === 0) {
+    // Check if any handler is registered before executing
+    if (!pluginRegistry.hasHook(hookId)) {
       return http.sendError(
         res,
         `No IPC handler registered for action "${action}" on plugin "${id}"`,
@@ -309,8 +307,14 @@ export const handleIPC = async (req, res) => {
       );
     }
 
+    // Execute the IPC hook
+    const results = await pluginRegistry.executeHook(hookId, data, {
+      req,
+      res,
+    });
+
     // Return the first handler's result (single handler per action is expected)
-    return http.sendSuccess(res, results[0]);
+    return http.sendSuccess(res, results[0] || null);
   } catch (error) {
     return http.sendServerError(res, 'Plugin IPC failed', error);
   }
