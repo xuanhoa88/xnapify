@@ -5,13 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { composeMiddleware } from '../../utils/composer';
 import {
   ROUTE_INIT_KEY,
   ROUTE_MOUNT_KEY,
   ROUTE_UNMOUNT_KEY,
 } from './constants';
 import { log } from './utils';
-import { composeMiddleware } from './composer';
 
 /**
  * Creates init function for config and route initialization
@@ -159,7 +159,7 @@ export function createMiddlewareRunner(configs, routeMiddleware) {
   }
 
   // Return composed function
-  return composeMiddleware(middlewares);
+  return composeMiddleware(...middlewares);
 }
 
 /**
@@ -168,54 +168,50 @@ export function createMiddlewareRunner(configs, routeMiddleware) {
  * NOTE: init/mount are handled separately via runInit/runMount in resolve()
  */
 export function createAction(pageInfo, configs = [], layouts = []) {
-  // Pre-extract at build time
   const { module } = pageInfo;
   const runMiddleware = createMiddlewareRunner(configs, module.middleware);
-  const reversedLayouts = [...layouts].reverse(); // Cache reversed order
+  const reversedLayouts = [...layouts].reverse();
 
   return function (context) {
-    // Run middleware stack, with core logic as the final "next"
-    return runMiddleware(context, async ctx => {
-      // 1. Load route data (per-request)
-      let initialProps = {};
+    return runMiddleware(context, async () => {
+      // 1. Load route data
+      let pageData = {};
       if (typeof module.getInitialProps === 'function') {
         try {
-          initialProps = await module.getInitialProps(ctx);
+          pageData = await module.getInitialProps(context);
         } catch (error) {
           log(`Error loading ${pageInfo.path}: ${error.message}`, 'error');
         }
       }
-      Object.defineProperty(ctx, 'initialProps', {
-        value: initialProps,
-        writable: false,
-        enumerable: true,
-        configurable: false,
+
+      Object.defineProperty(context, 'initialProps', {
+        value: pageData,
+        writable: false, // can't reassign context.initialProps = something
+        enumerable: true, // shows up in Object.keys / spreads
+        configurable: true, // allows redefine on re-navigation, fixes the crash
       });
 
       // 2. Get component
-      const Page$ = module.default;
-      if (!Page$) {
+      const Page = module.default;
+      if (!Page) {
         log(`No component for ${pageInfo.path}`, 'error');
         return null;
       }
 
       // 3. Build component tree with layouts (innermost to outermost)
-      // metadata is now just the initialProps
-      const metadata = initialProps || {};
-
-      let component = <Page$ context={ctx} {...initialProps} />;
+      let component = <Page context={context} {...pageData} />;
       for (const layout of reversedLayouts) {
-        const Layout$ = layout.module.default || layout.module;
-        if (Layout$) {
+        const Layout = layout.module.default || layout.module;
+        if (Layout) {
           component = (
-            <Layout$ context={ctx} metadata={metadata}>
+            <Layout context={context} metadata={pageData}>
               {component}
-            </Layout$>
+            </Layout>
           );
         }
       }
 
-      return { ...metadata, component };
+      return { ...pageData, component };
     });
   };
 }

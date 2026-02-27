@@ -138,55 +138,83 @@ export default {
     // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
     // =========================================================================
 
-    // Example: Register an IPC handler for the 'hello' action
-    this[HANDLERS].ipcHello = async data => {
-      console.log('[Test Plugin] IPC hello called with:', data);
-      return {
-        message: `Hello from ${__PLUGIN_NAME__}!`,
-        received: data,
-        timestamp: new Date().toISOString(),
-      };
+    // Example Middleware: Logs the start and end of an IPC request
+    const loggingMiddleware = async (data, ctx, next) => {
+      console.log(`[Test Plugin] IPC Middleware -> Request started`, data);
+      const start = Date.now();
+
+      const result = await next(); // Proceed to the next middleware or handler
+
+      console.log(
+        `[Test Plugin] IPC Middleware -> Request ended in ${Date.now() - start}ms`,
+      );
+      return result;
     };
+
+    // Example Middleware: Validates that data is provided
+    const validationMiddleware = async (data, ctx, next) => {
+      if (!data) {
+        return { error: 'Data payload is required' };
+      }
+      return next();
+    };
+
+    // Example: Register an IPC handler for the 'hello' action using createPipeline
+    this[HANDLERS].ipcHello = registry.createPipeline(
+      loggingMiddleware,
+      async data => {
+        console.log('[Test Plugin] IPC hello called with:', data);
+        return {
+          message: `Hello from ${__PLUGIN_NAME__}!`,
+          received: data,
+          timestamp: new Date().toISOString(),
+        };
+      },
+    );
     registry.registerHook(
       `ipc:${__PLUGIN_NAME__}:hello`,
       this[HANDLERS].ipcHello,
       __PLUGIN_NAME__,
     );
 
-    // IPC handler to check if a nickname exists
-    this[HANDLERS].ipcCheckNickname = async (data, { req }) => {
-      const { nickname } = data || {};
-      if (!nickname) {
-        return { exists: false };
-      }
-
-      try {
-        const models = context.app.get('models');
-        const { UserProfile } = models;
-
-        if (!UserProfile) {
-          throw new Error('UserProfile model not found');
-        }
-
-        const existing = await UserProfile.findOne({
-          where: {
-            attribute_key: 'nickname',
-            attribute_value: nickname,
-          },
-          attributes: ['user_id'],
-        });
-
-        // If the checking user is logged in, exclude their own profile
-        if (existing && req && req.user && req.user.id === existing.user_id) {
+    // IPC handler to check if a nickname exists using createPipeline
+    this[HANDLERS].ipcCheckNickname = registry.createPipeline(
+      loggingMiddleware,
+      validationMiddleware,
+      async (data, { req }) => {
+        const { nickname } = data || {};
+        if (!nickname) {
           return { exists: false };
         }
 
-        return { exists: !!existing };
-      } catch (err) {
-        console.error('[Test Plugin] Error checking nickname:', err);
-        return { exists: false, error: err.message };
-      }
-    };
+        try {
+          const models = context.app.get('models');
+          const { UserProfile } = models;
+
+          if (!UserProfile) {
+            throw new Error('UserProfile model not found');
+          }
+
+          const existing = await UserProfile.findOne({
+            where: {
+              attribute_key: 'nickname',
+              attribute_value: nickname,
+            },
+            attributes: ['user_id'],
+          });
+
+          // If the checking user is logged in, exclude their own profile
+          if (existing && req && req.user && req.user.id === existing.user_id) {
+            return { exists: false };
+          }
+
+          return { exists: !!existing };
+        } catch (err) {
+          console.error('[Test Plugin] Error checking nickname:', err);
+          return { exists: false, error: err.message };
+        }
+      },
+    );
     registry.registerHook(
       `ipc:${__PLUGIN_NAME__}:checkNickname`,
       this[HANDLERS].ipcCheckNickname,

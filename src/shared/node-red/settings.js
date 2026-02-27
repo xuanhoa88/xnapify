@@ -8,19 +8,19 @@
 import path from 'path';
 import fs from 'fs';
 import merge from 'lodash/merge';
-import { createContextAdapter } from '../context';
+import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
 
 // Auto-discover all custom Node-RED node modules in ./nodes/
 // Each module must export: getNodeJS() and getNodeHTML()
-const nodesAdapter = createContextAdapter(
-  require.context('./nodes', false, /\.[cm]?[jt]s$/i),
-);
+const nodesContexts = require.context('./nodes', false, /\.[cm]?[jt]s$/i);
 
 // Auto-discover all client-side editor scripts in ./client-scripts/
 // Each module must export: getScript() => string
-const clientScriptsAdapter = createContextAdapter(
-  require.context('./client-scripts', false, /\.[cm]?[jt]s$/i),
+const clientScriptsContexts = require.context(
+  './client-scripts',
+  false,
+  /\.[cm]?[jt]s$/i,
 );
 
 // Use __non_webpack_require__ if available (for Webpack environments)
@@ -72,6 +72,9 @@ function writeCustomNodes(userDir) {
   const nodesDir = path.join(userDir, 'nodes');
   const rskDir = path.join(nodesDir, 'rsk');
   ensureDir(rskDir);
+
+  // Create adapter for nodes context
+  const nodesAdapter = createWebpackContextAdapter(nodesContexts);
 
   const modulePaths = nodesAdapter.files();
   const seen = new Set();
@@ -129,6 +132,11 @@ function writeCustomNodes(userDir) {
 function writeClientScripts(userDir) {
   const scriptsDir = path.join(userDir, 'scripts');
   ensureDir(scriptsDir);
+
+  // Create adapter for client scripts context
+  const clientScriptsAdapter = createWebpackContextAdapter(
+    clientScriptsContexts,
+  );
 
   const scriptPaths = [];
   const modulePaths = clientScriptsAdapter.files();

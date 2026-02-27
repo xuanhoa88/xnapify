@@ -106,9 +106,9 @@ export default function Dashboard() {
 The Router supports adding and removing routes dynamically at runtime without restarting the application!
 
 ```javascript
-import { createContextAdapter } from '@shared/context';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
-const pluginAdapter = createContextAdapter(
+const pluginAdapter = createWebpackContextAdapter(
   require.context('/path/to/my-module/views'),
 );
 

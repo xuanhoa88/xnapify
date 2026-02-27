@@ -6,22 +6,26 @@
  */
 
 /**
- * Creates an adapter for webpack's require.context to provide a standardized interface
+ * Creates an adapter for webpack's require.context to provide a standardized interface.
  *
- * @param {Object} ctx - Webpack require.context object
- * @returns {Object} Adapter with files() and load() methods
+ * @param {__WebpackModuleApi.RequireContext} ctx - Webpack require.context object
+ * @returns {{ files: () => string[], load: (path: string) => any, resolve: (path: string) => string }}
  *
  * @example
  * const modulesContext = require.context('../apps', true, /pattern/);
- * const adapter = createContextAdapter(modulesContext);
+ * const adapter = createWebpackContextAdapter(modulesContext);
  *
- * // Get all file paths
  * const paths = adapter.files();
- *
- * // Load a specific module
- * const module = adapter.load('./path/to/module.js');
+ * const mod = adapter.load('./path/to/module.js');
+ * const abs = adapter.resolve('./path/to/module.js');
  */
-export function createContextAdapter(ctx) {
+export function createWebpackContextAdapter(ctx) {
+  if (!ctx || typeof ctx !== 'function') {
+    throw new TypeError(
+      'createWebpackContextAdapter requires a valid webpack require.context',
+    );
+  }
+
   return {
     /**
      * Get all file paths from the context
@@ -44,3 +48,6 @@ export function createContextAdapter(ctx) {
     resolve: path => ctx.resolve(path),
   };
 }
+
+// Export default for backward compatibility
+export default createWebpackContextAdapter;

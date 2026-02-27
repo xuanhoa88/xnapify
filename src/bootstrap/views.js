@@ -7,7 +7,7 @@
 
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
-import { createContextAdapter } from '../shared/context';
+import { createWebpackContextAdapter } from '../shared/utils/webpackContextAdapter';
 
 // Discover view lifecycle modules from apps directory
 const viewsLifecycleContext = require.context(
@@ -61,7 +61,7 @@ const LIFECYCLE_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
 function discoverViewModules() {
   const adapters = new Map();
   const moduleHooks = new Map();
-  const lifecycleAdapter = createContextAdapter(viewsLifecycleContext);
+  const lifecycleAdapter = createWebpackContextAdapter(viewsLifecycleContext);
 
   for (const filePath of lifecycleAdapter.files()) {
     const match = filePath.match(LIFECYCLE_PATTERN);
@@ -75,7 +75,7 @@ function discoverViewModules() {
       if (hooks && typeof hooks.views === 'function') {
         const viewContext = hooks.views();
         if (viewContext) {
-          const rawAdapter = createContextAdapter(viewContext);
+          const rawAdapter = createWebpackContextAdapter(viewContext);
           const prefix = `./${moduleName}/views`;
           const wrappedAdapter = {
             files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),

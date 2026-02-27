@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback, Fragment, memo } from 'react';
 import PropTypes from 'prop-types';
+import { useAppContext } from '../renderer/AppContext';
 import { registry } from './Registry';
 
 /**
@@ -17,6 +18,7 @@ import { registry } from './Registry';
  */
 const PluginSlot = memo(function PluginSlot({ name, ...props }) {
   const [components, setComponents] = useState(() => registry.getSlot(name));
+  const context = useAppContext();
 
   const syncComponents = useCallback(() => {
     setComponents(registry.getSlot(name));
@@ -31,8 +33,6 @@ const PluginSlot = memo(function PluginSlot({ name, ...props }) {
   }, [syncComponents]);
 
   if (!components.length) return null;
-
-  const { context } = registry;
 
   return (
     <Fragment>

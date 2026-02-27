@@ -39,6 +39,7 @@ import React, { useMemo } from 'react';
 import { I18nextProvider } from 'react-i18next';
 import { Provider as ReduxProvider } from 'react-redux';
 import { HistoryProvider } from './Providers/History';
+import { AppContext } from './AppContext';
 
 // =============================================================================
 // PROP TYPES
@@ -82,15 +83,17 @@ export default function App({ context, children }) {
   // Memoize the provider composition to prevent unnecessary re-renders
   const providers = useMemo(
     () => (
-      <ReduxProvider store={context.store}>
-        <I18nextProvider i18n={context.i18n}>
-          <HistoryProvider history={context.history}>
-            {React.Children.only(children)}
-          </HistoryProvider>
-        </I18nextProvider>
-      </ReduxProvider>
+      <AppContext.Provider value={context}>
+        <ReduxProvider store={context.store}>
+          <I18nextProvider i18n={context.i18n}>
+            <HistoryProvider history={context.history}>
+              {React.Children.only(children)}
+            </HistoryProvider>
+          </I18nextProvider>
+        </ReduxProvider>
+      </AppContext.Provider>
     ),
-    [context.store, context.i18n, context.history, children],
+    [context, children],
   );
 
   return providers;

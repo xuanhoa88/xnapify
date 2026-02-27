@@ -20,7 +20,7 @@
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
  */
 
-import { createContextAdapter } from '../context';
+import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
 
 // =============================================================================
 // CONSTANTS
@@ -167,7 +167,7 @@ export function validateCoreModules(modulePaths, options = {}) {
 // =============================================================================
 
 async function loadModelsFromContext(modelContext, moduleName, db, app) {
-  const adapter = createContextAdapter(modelContext);
+  const adapter = createWebpackContextAdapter(modelContext);
   const models = {};
   const errors = [];
 
@@ -316,7 +316,7 @@ export async function discoverModules(modulesContext, app) {
   }
 
   const startTime = Date.now();
-  const adapter = createContextAdapter(modulesContext);
+  const adapter = createWebpackContextAdapter(modulesContext);
 
   // Filter → validate → sort  (one pass over files)
   const lifecyclePaths = adapter
@@ -406,7 +406,7 @@ export async function discoverModules(modulesContext, app) {
     ...(await runPhase('routes', lifecycles, (name, hook) => {
       const routeContext = hook();
       if (routeContext) {
-        const rawAdapter = createContextAdapter(routeContext);
+        const rawAdapter = createWebpackContextAdapter(routeContext);
         const prefix = `./${name}/api/routes`;
         const wrappedAdapter = {
           files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),

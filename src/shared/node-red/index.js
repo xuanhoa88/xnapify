@@ -6,11 +6,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
 import {
   createProductionSettings,
   createDevelopmentSettings,
 } from './settings';
-import { createContextAdapter } from '../context';
 import initFlowSplitter from './flow-splitter';
 
 // Bundle all migration JSON files at build time
@@ -697,7 +697,7 @@ export class NodeRedManager {
         settings: {
           userDir: settings.userDir,
           flowFile: settings.flowFile || 'flows.json',
-          migrationsAdapter: createContextAdapter(migrationsContext),
+          migrationsAdapter: createWebpackContextAdapter(migrationsContext),
         },
         nodes: internal.nodes,
       };

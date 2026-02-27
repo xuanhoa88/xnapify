@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { composeMiddleware } from '../../utils/composer';
 import { ROUTE_INIT_KEY, ROUTE_MOUNT_KEY } from './constants';
 import { log, normalizeError } from './utils';
-import { composeMiddleware } from './composer';
 
 /**
  * Creates init function for config and route initialization
@@ -103,7 +103,7 @@ export function createMiddlewareRunner(configs, routeMiddlewares) {
     }
   }
 
-  return composeMiddleware(middlewares);
+  return composeMiddleware(...middlewares);
 }
 
 /**
@@ -160,7 +160,7 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
     // Compile the final action pipeline for this specific incoming method!
     const runMethodPipeline =
       routeMiddlewares.length > 0
-        ? composeMiddleware([baseMiddleware, ...routeMiddlewares])
+        ? composeMiddleware(baseMiddleware, ...routeMiddlewares)
         : baseMiddleware;
 
     return runMethodPipeline(req, res, err => {

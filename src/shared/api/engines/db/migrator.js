@@ -7,7 +7,7 @@
 
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
-import { createContextAdapter } from '../../../context';
+import { createWebpackContextAdapter } from '../../../utils/webpackContextAdapter';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
@@ -138,7 +138,7 @@ function mergeMigrations(migrationSources, options = {}) {
     }
 
     // Wrap raw context with adapter
-    const adapter = createContextAdapter(source.context);
+    const adapter = createWebpackContextAdapter(source.context);
     const migrations = adapterToMigrations(adapter, source.prefix, options);
 
     migrations.forEach(migration => {
@@ -195,7 +195,7 @@ function createMigrationUmzug(migrations, connection, options = {}) {
 
   if (migrations == null) {
     // Use built-in bundled migrations
-    const adapter = createContextAdapter(migrationsContext);
+    const adapter = createWebpackContextAdapter(migrationsContext);
     migrationsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(migrations)) {
     // Array of {context, prefix} objects
@@ -241,7 +241,7 @@ function createSeedUmzug(seeds, connection, options = {}) {
 
   if (seeds == null) {
     // Use built-in bundled seeds
-    const adapter = createContextAdapter(seedsContext);
+    const adapter = createWebpackContextAdapter(seedsContext);
     seedsConfig = adapterToMigrations(adapter);
   } else if (Array.isArray(seeds)) {
     // Array of {context, prefix} objects

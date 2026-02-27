@@ -111,7 +111,6 @@ export class BasePluginManager {
 
     // Update context for the current request/navigation
     this[PLUGIN_CONTEXT] = context;
-    this.registry.context = context;
 
     // Singleton pattern: Skip re-initialization if already initialized
     // This prevents redundant plugin loading on subsequent calls (e.g., per-request on server)

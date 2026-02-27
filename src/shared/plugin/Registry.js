@@ -5,16 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Private property symbols
+import { composeMiddleware } from '../utils/composer';
 import Hook from './Hook';
 
+// Private property symbols
 const PLUGINS = Symbol('__rsk.pluginsList__');
 const SLOTS = Symbol('__rsk.pluginSlots__');
 const DEFINITIONS = Symbol('__rsk.pluginDefinitions__');
 const LISTENERS = Symbol('__rsk.pluginListeners__');
 const HOOKS = Symbol('__rsk.pluginHooks__');
 const REGISTRATIONS = Symbol('__rsk.pluginRegistrations__');
-const CONTEXT = Symbol('__rsk.pluginContext__');
 
 /**
  * PluginRegistry - Manages plugin registrations, UI slots, hooks, and schema extensions
@@ -30,7 +30,6 @@ class PluginRegistry {
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
     this[LISTENERS] = new Set(); // Set<callback>
     this[REGISTRATIONS] = new Map(); // Map<pluginId, { slots: [], hooks: [] }>
-    this[CONTEXT] = null; // Global application context (fetch, i18n, etc.)
   }
 
   // =========================================================================
@@ -406,6 +405,21 @@ class PluginRegistry {
   }
 
   // =========================================================================
+  // IPC & Middleware Utility
+  // =========================================================================
+
+  /**
+   * Compose multiple middleware functions into a single handler.
+   * Useful for IPC hooks where you want validation, auth, etc., before the main logic.
+   *
+   * @param {...Function} middlewares - Functions with signature `(data, context, next)`
+   * @returns {Function} Composed handler with signature `(data, context)`
+   */
+  createPipeline(...middlewares) {
+    return composeMiddleware(...middlewares);
+  }
+
+  // =========================================================================
   // Utility
   // =========================================================================
 
@@ -434,26 +448,6 @@ class PluginRegistry {
   /** Notify all listeners of changes */
   notify() {
     this[LISTENERS].forEach(callback => callback());
-  }
-
-  // =========================================================================
-  // Context Management
-  // =========================================================================
-
-  /**
-   * Set the global application context
-   * @param {Object} ctx - App context (fetch, i18n, store, etc.)
-   */
-  set context(ctx) {
-    this[CONTEXT] = ctx;
-  }
-
-  /**
-   * Get the current application context
-   * @returns {Object|null}
-   */
-  get context() {
-    return this[CONTEXT];
   }
 }
 

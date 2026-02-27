@@ -24,7 +24,7 @@ export default function PluginField({ register, context }) {
     const checkAvailability = async () => {
       setIsChecking(true);
       try {
-        const { data } = await context.fetch(
+        const response = await context.fetch(
           `/api/plugins/${__PLUGIN_NAME__}/ipc`,
           {
             method: 'POST',
@@ -35,7 +35,7 @@ export default function PluginField({ register, context }) {
           },
         );
 
-        if (data.success && data.data && data.data.exists) {
+        if (response.success && response.data && response.data.exists) {
           setIsAvailable(false);
           setError('profile.nickname.api', {
             type: 'manual',

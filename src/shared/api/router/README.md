@@ -177,10 +177,11 @@ app.use((err, req, res, next) => {
 Depending on your loader, you instantiate the router and link it via Express's `app.use()`.
 
 ```javascript
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 import Router from './router';
 
 // In autoloader's discoverModules setup:
-const apiAdapter = createContextAdapter(modulesContext);
+const apiAdapter = createWebpackContextAdapter(modulesContext);
 const apiRouter = new Router(apiAdapter);
 
 app.use('/api', apiRouter.resolve);
@@ -191,9 +192,9 @@ app.use('/api', apiRouter.resolve);
 If your app supports loading external plugin modules on the fly, you can dynamically attach or detach them.
 
 ```javascript
-import { createContextAdapter } from '@shared/context';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
-const pluginAdapter = createContextAdapter(
+const pluginAdapter = createWebpackContextAdapter(
   require.context('/path/to/my-module/api/routes'),
 );
 

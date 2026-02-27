@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createContextAdapter } from '../context';
+import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
 
 /**
  * Get translations from a require.context object (wrapped in adapter)
@@ -20,7 +20,7 @@ export function getTranslations(translationAdapter) {
   // Ensure we have an adapter interface
   const adapter = translationAdapter.files
     ? translationAdapter
-    : createContextAdapter(translationAdapter);
+    : createWebpackContextAdapter(translationAdapter);
 
   adapter.files().forEach(filename => {
     // Extract locale from filename (e.g., 'en-US' from './en-US.json' or any path)

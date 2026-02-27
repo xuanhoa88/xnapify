@@ -20,7 +20,7 @@
 import { fork } from 'child_process';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import { createContextAdapter } from '../../../context';
+import { createWebpackContextAdapter } from '../../../utils/webpackContextAdapter';
 import { WorkerError } from './errors';
 
 /**
@@ -48,7 +48,7 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
  */
 export function createWorkerPool(workersContext, options = {}) {
   // Wrap context with adapter for consistent interface
-  const adapter = createContextAdapter(workersContext);
+  const adapter = createWebpackContextAdapter(workersContext);
 
   const {
     ErrorHandler = WorkerError,
