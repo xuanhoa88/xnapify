@@ -684,11 +684,7 @@ export async function getUserPermissions(user_id, options = {}) {
     ],
   });
 
-  if (permissions.some(isWildcard)) {
-    return permissions.filter(p => !isWildcard(p));
-  }
-
-  return permissions;
+  return permissions.filter(p => !isWildcard(p));
 }
 
 /**
