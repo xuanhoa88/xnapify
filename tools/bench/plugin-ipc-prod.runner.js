@@ -70,10 +70,13 @@ function createApp(registry) {
     if (!action) return res.status(400).json({ error: 'missing action' });
 
     const hookId = `ipc:${id}:${action}`;
-    if (!registry.hasHook(hookId)) return res.status(404).json({ error: 'no-handler' });
+    if (!registry.hasHook(hookId))
+      return res.status(404).json({ error: 'no-handler' });
 
     try {
-      const results = await registry.executeHook(hookId, data, { reqId: req.headers['x-req-id'] });
+      const results = await registry.executeHook(hookId, data, {
+        reqId: req.headers['x-req-id'],
+      });
       return res.json({ ok: true, results: results.slice(0, 5) });
     } catch (err) {
       return res.status(500).json({ error: String(err) });
@@ -88,16 +91,21 @@ function createApp(registry) {
 
   // Register handlers
   for (let i = 0; i < HANDLERS; i++) {
-    registry.registerHook(`ipc:${PLUGIN_ID}:echo`, async payload => {
-      if (BENCH_IO_MS > 0) {
-        // simulate I/O latency with a Promise-based delay
-        await new Promise(r => setTimeout(r, BENCH_IO_MS));
-      }
-      // light CPU work
-      let s = 0;
-      for (let j = 0; j < 5; j++) s += payload && payload.blob ? payload.blob.length : 0;
-      return { handler: i, ok: true };
-    }, `plugin-${i}`);
+    registry.registerHook(
+      `ipc:${PLUGIN_ID}:echo`,
+      async payload => {
+        if (BENCH_IO_MS > 0) {
+          // simulate I/O latency with a Promise-based delay
+          await new Promise(r => setTimeout(r, BENCH_IO_MS));
+        }
+        // light CPU work
+        let s = 0;
+        for (let j = 0; j < 5; j++)
+          s += payload && payload.blob ? payload.blob.length : 0;
+        return { handler: i, ok: true };
+      },
+      `plugin-${i}`,
+    );
   }
 
   const app = createApp(registry);
@@ -105,7 +113,7 @@ function createApp(registry) {
     const s = app.listen(0, () => resolve(s));
   });
 
-  const port = server.address().port;
+  const { port } = server.address();
   const url = `http://127.0.0.1:${port}/api/plugins/${PLUGIN_ID}/ipc`;
   console.log(`Started server at ${url}`);
 
@@ -148,7 +156,9 @@ function createApp(registry) {
   const duration = performance.now() - startAll;
   const throughput = (REQUESTS / duration) * 1000;
 
-  console.log(`HTTP IPC: ${REQUESTS} requests x ${HANDLERS} handlers in ${duration.toFixed(2)}ms`);
+  console.log(
+    `HTTP IPC: ${REQUESTS} requests x ${HANDLERS} handlers in ${duration.toFixed(2)}ms`,
+  );
   console.log(`throughput: ${Math.round(throughput)} req/s`);
 
   if (RECORD_PATH) {
@@ -163,7 +173,10 @@ function createApp(registry) {
         latencies: {
           min: Math.min(...perRequestLatencies),
           max: Math.max(...perRequestLatencies),
-          median: perRequestLatencies.sort((a,b) => a-b)[Math.floor(perRequestLatencies.length/2)] || 0,
+          median:
+            perRequestLatencies.sort((a, b) => a - b)[
+              Math.floor(perRequestLatencies.length / 2)
+            ] || 0,
         },
       };
       fs.writeFileSync(RECORD_PATH, JSON.stringify(result, null, 2));

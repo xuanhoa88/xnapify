@@ -7,6 +7,7 @@
 
 import 'url-polyfill';
 import 'dotenv-flow/config';
+import { performance } from 'perf_hooks';
 import path from 'path';
 import fs from 'fs/promises';
 import http from 'http';
@@ -38,9 +39,9 @@ import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
 import { Container } from './shared/container';
 
-// =============================================================================
-// CONSTANTS
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Constants & Configuration
+// ---------------------------------------------------------------------------
 
 const LOCALHOST_IPS = new Set([
   '0.0.0.0',
@@ -61,29 +62,46 @@ const TIMEOUTS = Object.freeze({
   SHUTDOWN: 30_000,
 });
 
-// =============================================================================
-// STATE MANAGEMENT
-// =============================================================================
+const LOCALE = Object.freeze({
+  CACHE_TTL: 5 * 60_000,
+  CACHE_MAX: 500,
+});
 
-const appState = {
-  ssrCache: new Map(),
-  viewsPromise: null,
-  wsServer: null,
-  nodeRED: new NodeRedManager(),
-};
+const CONFIGS = Object.freeze({
+  cwd: __dirname,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  protocol: process.env.RSK_HTTPS === 'true' ? 'https' : 'http',
+  port: parsePort(process.env.RSK_PORT, 1337),
+  host: normalizeHost(process.env.RSK_HOST || '127.0.0.1'),
+  wsPath: normalizePath(process.env.RSK_WS_PATH || 'ws'),
+  apiPrefix: normalizePath(process.env.RSK_API_PREFIX || 'api'),
 
-/** Clear all caches */
-function clearCaches() {
-  appState.ssrCache.clear();
-  appState.viewsPromise = null;
-  if (__DEV__) console.log('🗑️  Caches cleared');
-}
+  enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
+  compressionLevel:
+    parseInt(process.env.RSK_COMPRESSION_LEVEL, 10) || (__DEV__ ? 1 : 6),
 
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
+  enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
+  rateLimitWindow:
+    parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
+  rateLimitMax: parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
 
-/** Parse and validate port number */
+  enableSSRCache: process.env.RSK_ENABLE_SSR_CACHE === 'true',
+  ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
+
+  csp: [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' https: data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: wss:",
+  ].join('; '),
+});
+
+// ---------------------------------------------------------------------------
+// Utilities
+// ---------------------------------------------------------------------------
+
 function parsePort(port, defaultPort = 1337) {
   const parsed = parseInt(port, 10);
   if (Number.isInteger(parsed) && parsed >= 0 && parsed <= 65535) {
@@ -97,191 +115,18 @@ function parsePort(port, defaultPort = 1337) {
     : 1337;
 }
 
-/** Normalize host to standardized format (used for URL generation, not binding) */
 function normalizeHost(host) {
   return LOCALHOST_IPS.has(host) ? '127.0.0.1' : host;
 }
 
-/** Normalize URL path */
 function normalizePath(urlPath) {
-  return ('/' + urlPath)
-    .replace(/\/+/g, '/') // collapse multiple slashes
-    .replace(/\/$/, ''); // strip trailing slash
+  return ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
 }
 
-const config = Object.freeze({
-  cwd: __dirname,
-  nodeEnv: process.env.NODE_ENV || 'development',
-  protocol: process.env.RSK_HTTPS === 'true' ? 'https' : 'http',
-  port: parsePort(process.env.RSK_PORT, 1337),
-  host: normalizeHost(process.env.RSK_HOST || '127.0.0.1'),
-  wsPath: normalizePath(process.env.RSK_WS_PATH || 'ws'),
-  apiPrefix: normalizePath(process.env.RSK_API_PREFIX || 'api'),
-
-  // Performance
-  enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
-  compressionLevel:
-    parseInt(process.env.RSK_COMPRESSION_LEVEL, 10) || (__DEV__ ? 1 : 6),
-
-  // Security
-  enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
-  rateLimitWindow:
-    parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
-  rateLimitMax: parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
-
-  // SSR Cache
-  enableSSRCache: process.env.RSK_ENABLE_SSR_CACHE === 'true',
-  ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
-
-  // Request limits
-  jsonRequestLimit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb',
-  urlEncodedLimit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
-});
-
-// =============================================================================
-// PROVIDER GUARD
-// =============================================================================
-
-/**
- * Protect core providers from plugin mutation.
- * Returns a guarded app proxy, a read-only plugin proxy, and lock/unlock controls.
- *
- * @param {object} app - Express app instance
- * @param {string[]} providers - Additional provider keys
- * @returns {{ app: Proxy, proxy: Proxy, unlock(): void, lock(): void }}
- */
-function createProviderGuard(app, providers = []) {
-  const CORE_PROVIDERS = new Set([
-    ...providers,
-    'container',
-    'cwd',
-    'env',
-    'jwt',
-    'i18n',
-    'plugin',
-    'ws',
-    'models',
-    'nodeRED',
-  ]);
-
-  app.settings = app.settings || {};
-
-  let unlocked = false;
-
-  const shouldBlock = key =>
-    CORE_PROVIDERS.has(key) && app.settings[key] == null && !unlocked;
-
-  const logBlocked = (operation, key) => {
-    const error = new Error();
-    error.name = 'ProviderGuardError';
-    const stack = error.stack
-      ? error.stack.split('\n').slice(2, 6).join('\n')
-      : '(stack unavailable)';
-    console.warn(
-      `⚠️  Provider guard blocked ${operation} on "${key}"\n${stack}`,
-    );
-  };
-
-  // WeakMap-cached settings proxy to avoid re-creating on every access
-  const settingsCache = new WeakMap();
-  const getSettingsProxy = settings => {
-    if (!settingsCache.has(settings)) {
-      settingsCache.set(
-        settings,
-        new Proxy(settings, {
-          set(target, key, value) {
-            if (shouldBlock(key)) {
-              logBlocked('set', key);
-              return true;
-            }
-            return Reflect.set(target, key, value);
-          },
-          deleteProperty(target, key) {
-            if (shouldBlock(key)) {
-              logBlocked('delete', key);
-              return true;
-            }
-            return Reflect.deleteProperty(target, key);
-          },
-        }),
-      );
-    }
-    return settingsCache.get(settings);
-  };
-
-  // Guard set / enable / disable
-  const guardMethod = (original, operation) =>
-    function (key, ...args) {
-      if (shouldBlock(key)) {
-        logBlocked(operation, key);
-        return this;
-      }
-      return original.call(app, key, ...args);
-    };
-
-  const guardedApp = new Proxy(app, {
-    get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
-      if (prop === 'set' || prop === 'enable' || prop === 'disable') {
-        return guardMethod(value, prop);
-      }
-      if (prop === 'settings') {
-        return getSettingsProxy(value);
-      }
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-  });
-
-  // Read-only proxy exposed to plugins
-  const pluginProxy = new Proxy(Object.freeze({}), {
-    get(_target, prop) {
-      if (prop === 'get') {
-        return key => {
-          if (CORE_PROVIDERS.has(key)) return app.get(key);
-          const err = new Error(`Plugin access denied for: ${String(key)}`);
-          err.code = 'PLUGIN_ACCESS_DENIED';
-          err.key = key;
-          throw err;
-        };
-      }
-      const err = new Error(`Plugins cannot access app.${String(prop)}`);
-      err.code = 'PLUGIN_ACCESS_DENIED';
-      err.property = prop;
-      throw err;
-    },
-    ownKeys() {
-      return ['get'];
-    },
-    getOwnPropertyDescriptor(_target, prop) {
-      return prop === 'get'
-        ? { configurable: true, enumerable: true }
-        : undefined;
-    },
-  });
-
-  return {
-    app: guardedApp,
-    proxy: pluginProxy,
-    unlock() {
-      unlocked = true;
-    },
-    lock() {
-      unlocked = false;
-    },
-  };
-}
-
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-/** Build base URL from port and host */
 function getBaseUrl(port, host) {
-  const normalizedHost = normalizeHost(host);
-  return `${config.protocol}://${normalizedHost}:${port}`;
+  return `${CONFIGS.protocol}://${normalizeHost(host)}:${port}`;
 }
 
-/** Race a promise against a timeout; clears the timer on settlement */
 function withTimeout(promise, timeoutMs, operationName) {
   let timeoutId;
   return Promise.race([
@@ -299,9 +144,8 @@ function withTimeout(promise, timeoutMs, operationName) {
   ]);
 }
 
-/** Extract SEO metadata from a resolved page */
 function getMetadata(page, req) {
-  const rawHost = req.get('host') || config.host;
+  const rawHost = req.get('host') || CONFIGS.host;
   const host = rawHost.split(':')[0];
 
   const metadata = {
@@ -312,17 +156,52 @@ function getMetadata(page, req) {
   };
 
   if (!LOCALHOST_IPS.has(host)) {
-    metadata.url = `${config.protocol}://${rawHost}${req.originalUrl || req.path}`;
+    metadata.url = `${CONFIGS.protocol}://${rawHost}${req.originalUrl || req.path}`;
   }
 
   return metadata;
 }
 
-// =============================================================================
-// SSR CACHE
-// =============================================================================
+let requestCounter = 0;
+const requestIdPrefix = Date.now().toString(36);
 
-/** Generate a cache key for GET requests without query params */
+// ---------------------------------------------------------------------------
+// Cache Management
+// ---------------------------------------------------------------------------
+
+const localeCache = new Map();
+
+const appState = {
+  ssrCache: new Map(),
+  viewsPromise: null,
+  wsServer: null,
+  nodeRED: new NodeRedManager(),
+};
+
+function clearCaches() {
+  appState.ssrCache.clear();
+  appState.viewsPromise = null;
+  localeCache.clear();
+  if (__DEV__) console.log('🗑️  Caches cleared');
+}
+
+function evictLocaleCache() {
+  if (localeCache.size <= LOCALE.CACHE_MAX) return;
+  const now = Date.now();
+  for (const [k, v] of localeCache) {
+    if (v.exp < now) localeCache.delete(k);
+  }
+  // If still over limit after expiry sweep, drop oldest half
+  if (localeCache.size > LOCALE.CACHE_MAX) {
+    const entries = Array.from(localeCache.entries()).sort(
+      (a, b) => a[1].exp - b[1].exp,
+    );
+    entries
+      .slice(0, Math.floor(entries.length / 2))
+      .forEach(([k]) => localeCache.delete(k));
+  }
+}
+
 function getSSRCacheKey(req, baseUrl, locale, authHeader) {
   if (req.method !== 'GET') return null;
 
@@ -333,19 +212,19 @@ function getSSRCacheKey(req, baseUrl, locale, authHeader) {
   if (params.length > 0) return null;
 
   return `${req.path}:${locale}:${crypto
-    .createHash('md5')
+    .createHash('sha256')
     .update(authHeader)
-    .digest('hex')}`;
+    .digest('hex')
+    .slice(0, 16)}`;
 }
 
-/** Return cached SSR response if valid, or null */
 function getSSRCache(key) {
-  if (!config.enableSSRCache || !key) return null;
+  if (!CONFIGS.enableSSRCache || !key) return null;
 
   const cached = appState.ssrCache.get(key);
   if (!cached) return null;
 
-  if (Date.now() - cached.timestamp > config.ssrCacheTTL) {
+  if (Date.now() - cached.timestamp > CONFIGS.ssrCacheTTL) {
     appState.ssrCache.delete(key);
     return null;
   }
@@ -353,34 +232,46 @@ function getSSRCache(key) {
   return cached;
 }
 
-/** Store SSR response with eviction when the cache exceeds 1000 entries */
 function setSSRCache(key, data) {
-  if (!config.enableSSRCache || !key) return;
+  if (!CONFIGS.enableSSRCache || !key) return;
 
-  appState.ssrCache.set(key, {
-    ...data,
-    timestamp: Date.now(),
-  });
+  appState.ssrCache.set(key, { ...data, timestamp: Date.now() });
 
   if (appState.ssrCache.size > 1000) {
     const entries = Array.from(appState.ssrCache.entries()).sort(
       (a, b) => a[1].timestamp - b[1].timestamp,
     );
-
-    const toRemove = entries.slice(0, 50);
-    toRemove.forEach(([k]) => appState.ssrCache.delete(k));
-
-    if (__DEV__) {
-      console.log(`🗑️  Evicted ${toRemove.length} old cache entries`);
-    }
+    entries.slice(0, 50).forEach(([k]) => appState.ssrCache.delete(k));
+    if (__DEV__) console.log('🗑️  Evicted 50 old SSR cache entries');
   }
 }
 
-// =============================================================================
-// VIEW & STORE INITIALIZATION
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Locale Middleware
+// ---------------------------------------------------------------------------
 
-/** Load view resolver (lazy, promise-cached to avoid duplicate imports) */
+const localeCookieConfig = {
+  name: LOCALE_COOKIE_NAME,
+  options: {
+    path: '/',
+    maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+    httpOnly: true,
+    secure: !__DEV__,
+    sameSite: 'lax',
+  },
+  url: `/${LOCALE_COOKIE_NAME}/{language}`,
+};
+
+const localeMiddleware = expressRequestLanguage({
+  languages: Object.keys(AVAILABLE_LOCALES),
+  queryName: LOCALE_COOKIE_NAME,
+  cookie: localeCookieConfig,
+});
+
+// ---------------------------------------------------------------------------
+// View & Store Initialization
+// ---------------------------------------------------------------------------
+
 async function loadViews({ container }) {
   if (!appState.viewsPromise) {
     appState.viewsPromise = import('./bootstrap/views')
@@ -390,7 +281,7 @@ async function loadViews({ container }) {
         return views;
       })
       .catch(err => {
-        appState.viewsPromise = null; // allow retry on failure
+        appState.viewsPromise = null;
         console.error('❌ Failed to load views:', err);
         throw err;
       });
@@ -398,18 +289,16 @@ async function loadViews({ container }) {
   return appState.viewsPromise;
 }
 
-/** Initialize Redux store with auth check */
 async function initReduxStore({ fetch, history }, locale) {
   const store = configureStore(
     { user: { data: null } },
     { fetch, history, i18n },
   );
 
-  // Silently fail for unauthenticated users
   try {
     await store.dispatch(me()).unwrap();
   } catch {
-    // expected
+    // unauthenticated — expected
   }
 
   await store.dispatch(
@@ -426,16 +315,14 @@ async function initReduxStore({ fetch, history }, locale) {
   return store;
 }
 
-// =============================================================================
-// SSR RENDERING
-// =============================================================================
+// ---------------------------------------------------------------------------
+// SSR Rendering
+// ---------------------------------------------------------------------------
 
-/** Render a React page to a full HTML document string */
 async function render({ context, component, metadata = {} }) {
   const scriptLinks = [];
   const styleLinks = [];
 
-  // Load simplified webpack stats
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
     const stats = await fs.readFile(statsPath, 'utf8');
@@ -477,16 +364,13 @@ async function render({ context, component, metadata = {} }) {
   return `<!doctype html>${html}`;
 }
 
-/** Create SSR request handler */
 function createSSRHandler(guardControl, baseUrl) {
-  // Create a new container for each request
-  const container = new Container();
-
   return async (req, res, next) => {
     const startTime = Date.now();
     let store = null;
     let context = null;
     const abortController = new AbortController();
+    const container = new Container();
 
     const authHeader = req.headers.cookie || '';
     const locale = req.language || DEFAULT_LOCALE;
@@ -499,7 +383,6 @@ function createSSRHandler(guardControl, baseUrl) {
     };
 
     try {
-      // Check cache
       const cacheKey = getSSRCacheKey(req, baseUrl, locale, authHeader);
       const cached = getSSRCache(cacheKey);
 
@@ -544,7 +427,7 @@ function createSSRHandler(guardControl, baseUrl) {
       try {
         await pluginManager.init({
           ...context,
-          cwd: config.cwd,
+          cwd: CONFIGS.cwd,
           app: guardControl.proxy,
         });
       } catch (err) {
@@ -553,7 +436,6 @@ function createSSRHandler(guardControl, baseUrl) {
         }
       }
 
-      // Store init
       store = await withTimeout(
         initReduxStore({ fetch, history }, locale),
         TIMEOUTS.STORE_INIT,
@@ -561,14 +443,12 @@ function createSSRHandler(guardControl, baseUrl) {
       );
       context.store = store;
 
-      // Views
       const views = await withTimeout(
         loadViews({ container }),
         TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
 
-      // Resolve page
       const page = await withTimeout(
         views.resolve(context),
         TIMEOUTS.PAGE_RESOLVE,
@@ -593,7 +473,6 @@ function createSSRHandler(guardControl, baseUrl) {
         throw err;
       }
 
-      // Render
       const html = await withTimeout(
         render({
           context,
@@ -646,7 +525,6 @@ function createSSRHandler(guardControl, baseUrl) {
         abortController.abort();
       }
 
-      // Clear references for GC
       if (context) {
         context.fetch = null;
         context.store = null;
@@ -656,16 +534,14 @@ function createSSRHandler(guardControl, baseUrl) {
   };
 }
 
-// =============================================================================
-// ERROR HANDLING
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Error Handling & Auth
+// ---------------------------------------------------------------------------
 
-/** Global error-handling middleware */
 function createErrorHandler() {
   return async (err, req, res, next) => {
     if (res.headersSent) return next(err);
 
-    // JWT errors
     if (err.name === 'JsonWebTokenError' || err.name === 'TokenExpiredError') {
       return res.status(401).json({
         success: false,
@@ -688,7 +564,6 @@ function createErrorHandler() {
       ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    // Pretty error page in dev
     if (__DEV__) {
       try {
         const Youch = require('youch');
@@ -713,7 +588,6 @@ function createErrorHandler() {
   };
 }
 
-/** Verify a WebSocket authentication token */
 function verifyWsToken(jwt, token) {
   if (!token) {
     const error = new Error('Token required');
@@ -729,15 +603,192 @@ function verifyWsToken(jwt, token) {
     throw error;
   }
 
+  // Standard User Token flow (fallback)
+  // First consult cache to avoid redundant crypto work.
+  const cachedUser = jwt.cache.get(token);
+  if (cachedUser) {
+    return { id: cachedUser.id, email: cachedUser.email };
+  }
+
   const decoded = jwt.verifyTypedToken(token, 'access');
+  jwt.cacheToken(token, decoded);
+
   return { id: decoded.id, email: decoded.email };
 }
 
-// =============================================================================
-// GRACEFUL SHUTDOWN
-// =============================================================================
+// ---------------------------------------------------------------------------
+// Provider Guard
+// ---------------------------------------------------------------------------
 
-/** Register signal and process error handlers for clean shutdown */
+function createProviderGuard(app, providers = []) {
+  const CORE_PROVIDERS = new Set([
+    ...providers,
+    'container',
+    'cwd',
+    'env',
+    'jwt',
+    'i18n',
+    'plugin',
+    'ws',
+    'models',
+    'nodeRED',
+  ]);
+
+  app.settings = app.settings || {};
+
+  let unlocked = false;
+
+  const shouldBlock = key =>
+    CORE_PROVIDERS.has(key) && app.settings[key] == null && !unlocked;
+
+  const logBlocked = (operation, key) => {
+    const error = new Error();
+    error.name = 'ProviderGuardError';
+    const stack = error.stack
+      ? error.stack.split('\n').slice(2, 6).join('\n')
+      : '(stack unavailable)';
+    console.warn(
+      `⚠️  Provider guard blocked ${operation} on "${key}"\n${stack}`,
+    );
+  };
+
+  const settingsCache = new WeakMap();
+  const getSettingsProxy = settings => {
+    if (!settingsCache.has(settings)) {
+      settingsCache.set(
+        settings,
+        new Proxy(settings, {
+          set(target, key, value) {
+            if (shouldBlock(key)) {
+              logBlocked('set', key);
+              return true;
+            }
+            return Reflect.set(target, key, value);
+          },
+          deleteProperty(target, key) {
+            if (shouldBlock(key)) {
+              logBlocked('delete', key);
+              return true;
+            }
+            return Reflect.deleteProperty(target, key);
+          },
+        }),
+      );
+    }
+    return settingsCache.get(settings);
+  };
+
+  const guardMethod = (original, operation) =>
+    function (key, ...args) {
+      if (shouldBlock(key)) {
+        logBlocked(operation, key);
+        return this;
+      }
+      return original.call(app, key, ...args);
+    };
+
+  const guardedApp = new Proxy(app, {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (prop === 'set' || prop === 'enable' || prop === 'disable') {
+        return guardMethod(value, prop);
+      }
+      if (prop === 'settings') {
+        return getSettingsProxy(value);
+      }
+      return typeof value === 'function' ? value.bind(target) : value;
+    },
+  });
+
+  const pluginProxy = new Proxy(Object.freeze({}), {
+    get(_target, prop) {
+      if (prop === 'get') {
+        return key => {
+          if (CORE_PROVIDERS.has(key)) return app.get(key);
+          const err = new Error(`Plugin access denied for: ${String(key)}`);
+          err.code = 'PLUGIN_ACCESS_DENIED';
+          err.key = key;
+          throw err;
+        };
+      }
+      const err = new Error(`Plugins cannot access app.${String(prop)}`);
+      err.code = 'PLUGIN_ACCESS_DENIED';
+      err.property = prop;
+      throw err;
+    },
+    ownKeys() {
+      return ['get'];
+    },
+    getOwnPropertyDescriptor(_target, prop) {
+      return prop === 'get'
+        ? { configurable: true, enumerable: true }
+        : undefined;
+    },
+  });
+
+  return {
+    app: guardedApp,
+    proxy: pluginProxy,
+    unlock() {
+      unlocked = true;
+    },
+    lock() {
+      unlocked = false;
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Server Lifecycle
+// ---------------------------------------------------------------------------
+
+async function launch(app, server, baseUrl, port, host) {
+  if (!server.listening) {
+    await new Promise((resolve, reject) => {
+      const handleError = err => {
+        console.error(
+          err.code === 'EADDRINUSE'
+            ? `❌ Port ${port} already in use`
+            : `❌ Server start failed: ${err.message}`,
+        );
+        reject(err);
+      };
+
+      server.once('error', handleError);
+      server.listen(port, host, () => {
+        server.removeListener('error', handleError);
+        resolve();
+      });
+    });
+  }
+
+  appState.nodeRED.start();
+
+  const separator = '='.repeat(60);
+  const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
+
+  console.info(separator);
+  console.info('🚀 Server started successfully');
+  console.info(`Environment   : ${CONFIGS.nodeEnv}`);
+  console.info(
+    `SSR Cache     : ${
+      CONFIGS.enableSSRCache
+        ? `enabled (TTL: ${CONFIGS.ssrCacheTTL}ms)`
+        : 'disabled'
+    }`,
+  );
+  console.info(`Base URL      : ${baseUrl}`);
+  console.info(`API URL       : ${baseUrl}${CONFIGS.apiPrefix}`);
+  console.info(`WebSocket URL : ${wsUrl}${CONFIGS.wsPath}`);
+  const nodeRedRoot = appState.nodeRED.settings
+    ? appState.nodeRED.settings.httpAdminRoot
+    : '/~/red/admin';
+  console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
+  console.info(separator);
+
+  return server;
+}
+
 function setupGracefulShutdown(server) {
   let shutdownPromise = null;
 
@@ -774,11 +825,9 @@ function setupGracefulShutdown(server) {
     return shutdownPromise;
   };
 
-  // Signal handlers
   process.on('SIGTERM', () => handleShutdown('SIGTERM'));
   process.on('SIGINT', () => handleShutdown('SIGINT'));
 
-  // SIGUSR2: used by nodemon — `once` is intentional for its restart protocol
   if (__DEV__) {
     process.once('SIGUSR2', () =>
       handleShutdown('SIGUSR2').finally(() =>
@@ -787,7 +836,6 @@ function setupGracefulShutdown(server) {
     );
   }
 
-  // Process error handlers
   const handleUncaughtException = err => {
     console.error('❌ Uncaught Exception:', err);
     if (err && err.stack) {
@@ -815,78 +863,21 @@ function setupGracefulShutdown(server) {
   process.on('warning', handleWarning);
 }
 
-// =============================================================================
-// SERVER FUNCTIONS
-// =============================================================================
-
-/** Start listening and initialize background services (WS, Node-RED) */
-async function launch(app, server, baseUrl, port, host) {
-  // Only listen if not already listening (HMR reuse)
-  if (!server.listening) {
-    await new Promise((resolve, reject) => {
-      const handleError = err => {
-        console.error(
-          err.code === 'EADDRINUSE'
-            ? `❌ Port ${port} already in use`
-            : `❌ Server start failed: ${err.message}`,
-        );
-        reject(err);
-      };
-
-      server.once('error', handleError);
-      server.listen(port, host, () => {
-        server.removeListener('error', handleError);
-        resolve();
-      });
-    });
-  }
-
-  // Node-RED
-  appState.nodeRED.start();
-
-  // Print startup info
-  const separator = '='.repeat(60);
-  const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
-
-  console.info(separator);
-  console.info('🚀 Server started successfully');
-  console.info(`Environment   : ${config.nodeEnv}`);
-  console.info(
-    `SSR Cache     : ${
-      config.enableSSRCache
-        ? `enabled (TTL: ${config.ssrCacheTTL}ms)`
-        : 'disabled'
-    }`,
-  );
-  console.info(`Base URL      : ${baseUrl}`);
-  console.info(`API URL       : ${baseUrl}${config.apiPrefix}`);
-  console.info(`WebSocket URL : ${wsUrl}${config.wsPath}`);
-  const nodeRedRoot = appState.nodeRED.settings
-    ? appState.nodeRED.settings.httpAdminRoot
-    : '/~/red/admin';
-  console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
-  console.info(separator);
-
-  return server;
-}
-
-/** Create Express app + HTTP server */
 export function init() {
   const app = express();
   const server = http.createServer(app);
   return { app, server };
 }
 
-/** Bootstrap middleware, providers, API, and SSR */
 export async function bootstrap(app, server, options = {}) {
-  const { publicDir, port = config.port, host = config.host } = options;
+  const { publicDir, port = CONFIGS.port, host = CONFIGS.host } = options;
   const normalizedHost = normalizeHost(host);
   const baseUrl = getBaseUrl(port, normalizedHost);
 
   // WebSocket
   appState.wsServer = createWebSocketServer(
     {
-      path: config.wsPath,
+      path: CONFIGS.wsPath,
       enableLogging: !__DEV__,
       onAuthentication: token => verifyWsToken(app.get('jwt'), token),
     },
@@ -895,20 +886,19 @@ export async function bootstrap(app, server, options = {}) {
 
   // Core providers
   app.set('container', new Container());
-  app.set('cwd', config.cwd);
-  app.set('env', config.nodeEnv);
+  app.set('cwd', CONFIGS.cwd);
+  app.set('env', CONFIGS.nodeEnv);
   app.set('jwt', configureJwt());
   app.set('i18n', i18n);
   app.set('nodeRED', appState.nodeRED);
   app.set('ws', appState.wsServer);
   app.set('plugin', pluginManager);
 
-  // Express config
-  app.set('trust proxy', config.nodeEnv === 'production' ? 1 : 'loopback');
+  app.set('trust proxy', CONFIGS.nodeEnv === 'production' ? 1 : 'loopback');
   app.disable('x-powered-by');
 
   // Compression
-  if (config.enableCompression) {
+  if (CONFIGS.enableCompression) {
     app.use(
       compression({
         filter(req, res) {
@@ -921,64 +911,52 @@ export async function bootstrap(app, server, options = {}) {
           }
           return compression.filter(req, res);
         },
-        level: config.compressionLevel,
+        level: CONFIGS.compressionLevel,
         threshold: 1024,
       }),
     );
   }
 
-  // Security headers + request ID
-  app.use((req, res, next) => {
-    req.id = crypto.randomUUID();
-    res.setHeader('X-Request-Id', req.id);
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  // Security headers & request ID
+  const staticSecurityHeaders = {
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  };
 
-    if (!__DEV__) {
-      res.setHeader(
-        'Content-Security-Policy',
-        [
-          "default-src 'self'",
-          "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-          "style-src 'self' 'unsafe-inline'",
-          "img-src 'self' https: data: blob:",
-          "font-src 'self' data:",
-          "connect-src 'self' ws: wss:",
-        ].join('; '),
-      );
+  app.use((req, res, next) => {
+    req.id = `${requestIdPrefix}-${(++requestCounter).toString(36)}`;
+    res.setHeader('X-Request-Id', req.id);
+
+    for (const [k, v] of Object.entries(staticSecurityHeaders)) {
+      res.setHeader(k, v);
     }
 
+    if (!__DEV__) {
+      res.setHeader('Content-Security-Policy', CONFIGS.csp);
+    }
     next();
   });
 
-  // Request parsing
-  app.use(express.json({ limit: config.jsonRequestLimit }));
-  app.use(
-    express.urlencoded({ extended: true, limit: config.urlEncodedLimit }),
-  );
+  // Timing / metrics
+  app.use((req, res, next) => {
+    const start = performance.now();
+    res.on('finish', () => {
+      const duration = performance.now() - start;
+      if (req.app && req.app.get('metrics')) {
+        req.app.get('metrics').record('request.duration', duration, {
+          method: req.method,
+          path: req.path,
+          status: res.statusCode,
+        });
+      } else {
+        console.log(`${req.method} ${req.path} ${duration.toFixed(2)}ms`);
+      }
+    });
+    next();
+  });
 
-  // Locale detection
-  app.use(cookieParser());
-  app.use(
-    expressRequestLanguage({
-      languages: Object.keys(AVAILABLE_LOCALES),
-      queryName: LOCALE_COOKIE_NAME,
-      cookie: {
-        name: LOCALE_COOKIE_NAME,
-        options: {
-          path: '/',
-          maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
-          httpOnly: true,
-          secure: !__DEV__,
-          sameSite: 'lax',
-        },
-        url: `/${LOCALE_COOKIE_NAME}/{language}`,
-      },
-    }),
-  );
-
-  // Static files
+  // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
   app.use(
     express.static(
       path.resolve(typeof publicDir === 'string' ? publicDir : 'public'),
@@ -1005,14 +983,51 @@ export async function bootstrap(app, server, options = {}) {
     ),
   );
 
+  // Locale detection with caching
+  app.use(cookieParser());
+  app.use((req, res, next) => {
+    const cookieLocale = req.cookies && req.cookies[LOCALE_COOKIE_NAME];
+    const queryLocale = req.query && req.query[LOCALE_COOKIE_NAME];
+
+    // Reduce cardinality by ignoring accept-language if explicit override exists
+    const cacheKey = queryLocale
+      ? `q:${queryLocale}`
+      : cookieLocale
+        ? `c:${cookieLocale}`
+        : `a:${req.get('accept-language') || ''}`;
+
+    const entry = localeCache.get(cacheKey);
+    if (entry && entry.exp > Date.now()) {
+      req.language = entry.language;
+      return next();
+    }
+
+    localeMiddleware(req, res, err => {
+      if (!err) {
+        localeCache.set(cacheKey, {
+          language: req.language,
+          exp: Date.now() + LOCALE.CACHE_TTL,
+        });
+        evictLocaleCache();
+      }
+      next(err);
+    });
+  });
+
   // Request timeout
   app.use((req, res, next) => {
-    const timeout = req.path.startsWith(config.apiPrefix)
+    const timeout = req.path.startsWith(CONFIGS.apiPrefix)
       ? TIMEOUTS.API_REQUEST
       : TIMEOUTS.SSR_REQUEST;
 
+    let settled = false;
+    const settle = () => {
+      settled = true;
+      clearTimeout(timeoutId);
+    };
+
     const timeoutId = setTimeout(() => {
-      if (!res.headersSent) {
+      if (!settled && !res.headersSent) {
         const err = new Error('Request timeout');
         err.code = 'REQUEST_TIMEOUT';
         err.status = 408;
@@ -1021,18 +1036,18 @@ export async function bootstrap(app, server, options = {}) {
       }
     }, timeout);
 
-    res.on('finish', () => clearTimeout(timeoutId));
-    res.on('close', () => clearTimeout(timeoutId));
+    res.on('finish', settle);
+    res.on('close', settle);
 
     next();
   });
 
   // Rate limiter
-  if (config.enableRateLimit) {
-    const windowMs = __DEV__ ? 60_000 : config.rateLimitWindow;
-    const max = __DEV__ ? 100 : config.rateLimitMax;
+  if (CONFIGS.enableRateLimit) {
+    const windowMs = __DEV__ ? 60_000 : CONFIGS.rateLimitWindow;
+    const max = __DEV__ ? 100 : CONFIGS.rateLimitMax;
     app.use(
-      config.apiPrefix,
+      CONFIGS.apiPrefix,
       rateLimit({
         windowMs,
         max,
@@ -1059,22 +1074,18 @@ export async function bootstrap(app, server, options = {}) {
     );
   }
 
-  // Load API
+  // API routes
   const api = await import('./bootstrap/api');
-
-  // Provider guard
   const guardControl = createProviderGuard(
     app,
     Array.isArray(api.APP_PROVIDERS) ? api.APP_PROVIDERS : [],
   );
-
-  // Setup API routes
   const apiRouter = await api.default(guardControl);
-  app.use(config.apiPrefix, apiRouter);
+  app.use(CONFIGS.apiPrefix, apiRouter);
 
-  // Setup Node-RED
+  // Node-RED
   await appState.nodeRED.init(app, server, {
-    ...config,
+    ...CONFIGS,
     port,
     host: normalizedHost,
     functionGlobalContext: {
@@ -1083,11 +1094,9 @@ export async function bootstrap(app, server, options = {}) {
       },
     },
   });
+  await appState.nodeRED.setupApiProxy(app, CONFIGS.apiPrefix);
 
-  // Setup reverse proxy for Node-RED API
-  await appState.nodeRED.setupApiProxy(app, config.apiPrefix);
-
-  // SSR handler
+  // SSR catch-all
   app.get('*', createSSRHandler(guardControl, baseUrl));
 
   // Error handler (must be last)
@@ -1101,13 +1110,11 @@ export async function bootstrap(app, server, options = {}) {
   };
 }
 
-/** Dispose of all server resources */
 export async function dispose(server) {
   console.info('🛑 Stopping background services...');
 
   const errors = [];
 
-  // Node-RED
   try {
     if (appState.nodeRED) {
       console.info('   Shutting down Node-RED...');
@@ -1119,7 +1126,6 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // WebSocket
   try {
     if (appState.wsServer && typeof appState.wsServer.dispose === 'function') {
       await appState.wsServer.dispose();
@@ -1130,7 +1136,6 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // Plugin manager
   try {
     if (typeof pluginManager.destroy === 'function') {
       await pluginManager.destroy();
@@ -1140,7 +1145,6 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // HTTP server
   try {
     if (server && server.listening) {
       console.info('   Shutting down HTTP server...');
@@ -1161,7 +1165,6 @@ export async function dispose(server) {
     errors.push(err);
   }
 
-  // Clear caches
   clearCaches();
   console.info('   ✔ Caches cleared');
 
@@ -1175,9 +1178,9 @@ export async function dispose(server) {
   }
 }
 
-// =============================================================================
-// HMR & STARTUP
-// =============================================================================
+// ---------------------------------------------------------------------------
+// HMR & Startup
+// ---------------------------------------------------------------------------
 
 if (module.hot) {
   module.hot.accept(err => {
@@ -1190,7 +1193,6 @@ if (module.hot) {
     console.log('🔄 HMR: Caches cleared');
   });
 
-  // Listen for process messages to hot-refresh plugin manager cache
   process.on('message', async msg => {
     if (msg && msg.type === 'plugins-refreshed') {
       console.log('🔌 Refreshing plugins...');
@@ -1208,13 +1210,12 @@ if (module.hot) {
 
   exports.hot = module.hot;
 } else {
-  // Production startup
   (async () => {
     try {
       const { app, server } = init();
-      const { launch } = await bootstrap(app, server);
+      const { launch: startServer } = await bootstrap(app, server);
       setupGracefulShutdown(server);
-      await launch();
+      await startServer();
     } catch (err) {
       console.error('❌ Startup failed:', err);
       process.exit(1);

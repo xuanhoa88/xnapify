@@ -86,11 +86,8 @@ async function runCoreMigrations() {
  * @param {object} app - Express app instance
  */
 function setupGlobalMiddleware(app) {
-  const loggingMiddleware = createLoggingMiddleware();
-  const corsMiddleware = createCorsMiddleware();
-
-  app.use(loggingMiddleware);
-  app.use(corsMiddleware);
+  app.use(createLoggingMiddleware());
+  app.use(createCorsMiddleware());
 
   log('Global middleware applied');
 }
@@ -127,6 +124,18 @@ function buildApiRouter(app, apiRoutes) {
   const apiMiddlewares = createApiMiddlewareStack(app);
 
   const router = express.Router();
+
+  // Body parsing scoped to API routes only
+  router.use(
+    express.json({ limit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb' }),
+  );
+  router.use(
+    express.urlencoded({
+      extended: true,
+      limit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
+    }),
+  );
+
   for (const [name, adapter] of apiRoutes) {
     try {
       const dynamicRouter = new DynamicRouter(adapter);

@@ -91,48 +91,26 @@ time curl http://localhost:1337/api/protected -H "Cookie: jwt=..." # ~0.3ms
 
 **File:** `src/apps/users/api/utils/rbac/fetcher.js`  
 **Effort:** 15 minutes  
-**Impact:** 40–50% reduction in auth latency (50–100ms → 20–30ms)
+**Impact:** usually negligible because the current implementation already
+uses a single eager-loading query; the bulk of RBAC latency is due to
+JWT verification and the first database hit.
 
-### Current Implementation (Sequential)
-```javascript
-async function fetchUserWithRBAC(userId) {
-  const user = await User.findById(userId);      // 10ms
-  const roles = await user.getRoles();           // 20ms
-  const groups = await user.getGroups();         // 20ms
-  const permissions = await getPermissions(...); // 30ms
-  // Total: ~80ms
-}
-```
+### Current Implementation
+The fetcher uses `User.findByPk(..., { include: [...] })` to load roles,
+groups and permissions in one query.  This is already optimal for the
+common case and avoids the classic N+1 problem.
 
-### Optimized Implementation (Parallel)
-```javascript
-async function fetchUserWithRBAC(userId) {
-  const user = await User.findById(userId); // 10ms (must be first to get user ID)
-
-  // Fetch roles, groups, permissions in parallel
-  const [roles, groups, permissions] = await Promise.all([
-    user.getRoles(),           // 20ms
-    user.getGroups(),          // 20ms
-    getPermissions(userId),    // 30ms
-  ]).catch(err => {
-    console.error('RBAC fetch error:', err);
-    throw err;
-  });
-
-  // Total: ~10ms + ~30ms (max of parallel) = ~40ms
-  return { user, roles, groups, permissions };
-}
-```
+### When to Parallelize
+Parallelization is only needed if you introduce additional asynchronous
+lookups outside the primary query (e.g. external services or plugins).
+In that case wrap them in `Promise.all()` and handle errors gracefully.
 
 **Testing:**
 ```bash
-# Test auth endpoint
+# auth latency is more impacted by JWT cache than RBAC queries
 time curl http://localhost:1337/api/auth/me \
   -H "Cookie: jwt=..." \
   -H "Accept: application/json"
-
-# Should see ~50% latency reduction for first auth request
-# (subsequent requests hit JWT cache from step 1)
 ```
 
 ---
@@ -363,9 +341,8 @@ app.use(compression({
   - [ ] Test with curl
   - [ ] Verify no stale user data issues
 
-- [ ] **Parallel RBAC** — 15 min
-  - [ ] Modify fetcher to use `Promise.all()`
-  - [ ] Add error handling
+- [ ] **Review RBAC fetcher** — 15 min (already uses eager loading)
+  - [ ] Confirm no sequential database calls remain
   - [ ] Test auth endpoint
   - [ ] Verify RBAC still works correctly
 
@@ -400,7 +377,8 @@ app.use(compression({
 # Before optimization
 npm run benchmark
 # Note down baseline scores
-
+# new suite 'auth.benchmark.js' will show cache benefits
+```
 # Apply optimizations
 git commit -m "Performance: Priority 1 optimizations"
 

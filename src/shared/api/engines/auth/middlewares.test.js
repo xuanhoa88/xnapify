@@ -5,7 +5,6 @@ import {
   requireAnyPermission,
   requireRole,
   requireAnyRole,
-  requireAdmin,
   requireRoleLevel,
   requireDynamicRole,
   requireOwnership,
@@ -41,6 +40,10 @@ describe('requireAuth', () => {
       decodeToken: jest.fn(),
       verifyToken: jest.fn(),
       verifyTypedToken: jest.fn(),
+      cache: new Map(),
+      cacheToken: jest.fn((token, decoded) =>
+        jwtMock.cache.set(token, decoded),
+      ),
     };
 
     modelsMock = {
@@ -100,6 +103,28 @@ describe('requireAuth', () => {
       expect(req.authMethod).toBe('jwt');
       expect(req.authenticated).toBe(true);
       expect(next).toHaveBeenCalled();
+    });
+
+    test('should cache verified JWT and skip second verification', async () => {
+      const token = 'cached-token';
+      const decodedUser = { id: 2, type: 'access' };
+
+      withToken(token);
+      jwtMock.decodeToken.mockReturnValue({ payload: { type: 'access' } });
+      jwtMock.verifyTypedToken.mockReturnValue(decodedUser);
+
+      const middleware = requireAuth();
+      await middleware(req, res, next); // first call populates cache
+      expect(jwtMock.verifyTypedToken).toHaveBeenCalledTimes(1);
+
+      // Reset spies and simulate new request
+      jwtMock.verifyTypedToken.mockClear();
+      const req2 = { ...req, headers: { authorization: `Bearer ${token}` } };
+      const middleware2 = requireAuth();
+      await middleware2(req2, res, next);
+
+      expect(jwtMock.verifyTypedToken).not.toHaveBeenCalled();
+      expect(req2.user).toEqual(decodedUser);
     });
 
     test('should fail if verifyTypedToken throws', async () => {
@@ -243,6 +268,10 @@ describe('optionalAuth', () => {
     jwtMock = {
       decodeToken: jest.fn(),
       verifyTypedToken: jest.fn(),
+      cache: new Map(),
+      cacheToken: jest.fn((token, decoded) =>
+        jwtMock.cache.set(token, decoded),
+      ),
     };
 
     const channelMock = {
@@ -605,7 +634,7 @@ describe('requireRole', () => {
       r.user.roles = ['editor'];
     });
 
-    req.user.roles = [];
+    delete req.user.roles;
     const middleware = requireRole('editor');
     await middleware(req, res, next);
 
@@ -656,48 +685,6 @@ describe('requireAnyRole', () => {
     expect(next).toHaveBeenCalledWith(expect.any(Error));
     expect(next.mock.calls[0][0].name).toBe('ForbiddenError');
     expect(next.mock.calls[0][0].status).toBe(403);
-  });
-});
-
-describe('requireAdmin', () => {
-  let req, res, next, hookMock;
-
-  beforeEach(() => {
-    const channelMock = { emit: jest.fn() };
-    hookMock = jest.fn().mockReturnValue(channelMock);
-    hookMock.has = jest.fn().mockReturnValue(false);
-
-    req = {
-      user: {},
-      app: {
-        get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
-          return null;
-        }),
-      },
-    };
-    res = {
-      status: jest.fn().mockReturnThis(),
-      json: jest.fn().mockReturnThis(),
-    };
-    next = jest.fn();
-  });
-
-  test('should allow access for admin role', async () => {
-    req.user.roles = ['admin'];
-    const middleware = requireAdmin();
-    await middleware(req, res, next);
-
-    expect(next).toHaveBeenCalledWith();
-  });
-
-  test('should deny access for non-admin role', async () => {
-    req.user.roles = ['user'];
-    const middleware = requireAdmin();
-    await middleware(req, res, next);
-
-    expect(next).toHaveBeenCalledWith(expect.any(Error));
-    expect(next.mock.calls[0][0].name).toBe('ForbiddenError');
   });
 });
 
@@ -759,7 +746,7 @@ describe('requireRoleLevel', () => {
   });
 
   test('should deny when user has no roles', async () => {
-    req.user.roles = [];
+    delete req.user.roles;
     const middleware = requireRoleLevel('viewer', HIERARCHY);
     await middleware(req, res, next);
 
@@ -1612,7 +1599,7 @@ describe('requireGroup', () => {
       r.user.groups = ['engineering'];
     });
 
-    req.user.groups = [];
+    delete req.user.groups;
     const middleware = requireGroup('engineering');
     await middleware(req, res, next);
 
@@ -1732,7 +1719,7 @@ describe('requireGroupLevel', () => {
   });
 
   test('should deny when user has no groups', async () => {
-    req.user.groups = [];
+    delete req.user.groups;
     const middleware = requireGroupLevel('junior', HIERARCHY);
     await middleware(req, res, next);
 

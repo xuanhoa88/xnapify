@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { ADMIN_ROLE } from '../constants';
+
 /**
  * Hook channel name for group resolution.
  * Modules can register a listener on this channel to populate `req.user.groups`.
@@ -32,15 +34,17 @@ async function resolveGroups(req, adminBypass) {
   if (
     adminBypass &&
     Array.isArray(req.user.roles) &&
-    req.user.roles.includes('admin')
+    req.user.roles.includes(ADMIN_ROLE)
   ) {
     return { skip: true, error: null };
   }
 
-  // 3. Use hook to let modules resolve groups (e.g. from database)
-  const hook = req.app.get('hook');
-  if (hook && hook.has(HOOK_CHANNEL)) {
-    await hook(HOOK_CHANNEL).emit('resolve', req);
+  // 3. Use hook to let modules resolve groups if not already populated
+  if (!req.user.groups) {
+    const hook = req.app.get('hook');
+    if (hook && hook.has(HOOK_CHANNEL)) {
+      await hook(HOOK_CHANNEL).emit('resolve', req);
+    }
   }
 
   return { skip: false, error: null };

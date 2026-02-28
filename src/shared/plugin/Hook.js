@@ -73,24 +73,29 @@ class Hook {
   }
 
   /**
-   * Execute all callbacks for a hook sequentially
+   * Execute all callbacks for a hook.
+   *
+   * Callbacks are **initiated in parallel** and the results array preserves
+   * registration order. Any errors are logged and do not stop other callbacks.
+   *
    * @param {string} hookId - Hook identifier
    * @param {...any} args - Arguments to pass to callbacks
-   * @returns {Promise<Array>} Results from all callbacks
+   * @returns {Promise<Array>} Results from successful callbacks (in order)
    */
   async execute(hookId, ...args) {
     const callbacks = this.hooks.get(hookId);
     if (!callbacks) return [];
 
-    const results = [];
-    for (const callback of callbacks) {
-      try {
-        results.push(await callback(...args));
-      } catch (error) {
+    const promises = [...callbacks].map(cb =>
+      Promise.resolve(cb(...args)).catch(error => {
         console.error(`[HookRegistry] Hook "${hookId}" error:`, error);
-      }
-    }
-    return results;
+        return undefined;
+      }),
+    );
+
+    const results = await Promise.all(promises);
+    // filter out undefined entries (failed hooks)
+    return results.filter(r => r !== undefined);
   }
 
   /**

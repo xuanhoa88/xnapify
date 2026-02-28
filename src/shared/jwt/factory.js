@@ -20,6 +20,7 @@ import {
   createTokenBlacklistEntry,
 } from './utils';
 import { validateJwtConfig, getJwtConfig } from './config';
+import { jwtCache, cacheToken } from './cache';
 
 /**
  * Create a configured JWT instance
@@ -102,6 +103,18 @@ export function createJwt(config = {}) {
     createTokenBlacklistEntry,
     validateJwtConfig,
     getJwtConfig,
+
+    /**
+     * Get JWT cache
+     */
+    get cache() {
+      return jwtCache;
+    },
+
+    /**
+     * Cache a token
+     */
+    cacheToken,
   });
 }
 

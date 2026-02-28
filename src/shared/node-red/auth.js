@@ -5,24 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/**
- * Node-RED Authentication Integration
- *
- * Integrates the application's JWT-based authentication and RBAC system
- * with Node-RED's adminAuth configuration for seamless single sign-on.
- */
-
-/**
- * Create Node-RED authentication configuration
- *
- * This implements a session-based authentication strategy that:
- * - Verifies JWT tokens from cookies using the existing auth system
- * - Checks user permissions via the RBAC service
- * - Grants access to users with 'nodered:admin' permission or '*:*' wildcard
- *
- * @param {Object} app - Express app instance with auth services
- * @returns {Object} Node-RED adminAuth configuration
- */
 import { Strategy } from 'passport-strategy';
 
 /**
@@ -67,17 +49,23 @@ class RskAuthStrategy extends Strategy {
         return this.redirect('/admin');
       }
 
-      // Verify token
+      // Verify token - check cache first
       let decoded;
-      try {
-        decoded = jwt.verifyTypedToken(token, 'access');
-      } catch (tokenError) {
-        console.warn(
-          '⚠️  [Node-RED Auth] Token verification failed:',
-          tokenError.message,
-        );
-        // Token invalid or expired — redirect to main app login
-        return this.redirect('/admin');
+      const cachedUser = jwt.cache.get(token);
+
+      if (cachedUser) {
+        decoded = cachedUser;
+      } else {
+        try {
+          decoded = jwt.verifyTypedToken(token, 'access');
+        } catch (tokenError) {
+          console.warn(
+            '⚠️  [Node-RED Auth] Token verification failed:',
+            tokenError.message,
+          );
+          // Token invalid or expired — redirect to main app login
+          return this.redirect('/admin');
+        }
       }
 
       if (!decoded || !decoded.id) {
@@ -95,24 +83,35 @@ class RskAuthStrategy extends Strategy {
         return this.fail(500);
       }
 
-      // Attach user to request for hook resolution
-      req.user = { id: decoded.id };
-      req.app = app; // Ensure app is available on request
+      // If permissions are already in the decoded token (from cache or payload), use them
+      // Otherwise hit the DB via the hook system
+      let { permissions } = decoded;
 
-      // Get user's permissions using hook system
-      let permissions;
-      try {
-        const hook = app.get('hook');
-        if (hook && hook.has('auth.permissions')) {
-          await hook('auth.permissions').emit('resolve', req);
+      if (!permissions) {
+        // Attach user to request for hook resolution
+        req.user = { id: decoded.id };
+        req.app = app; // Ensure app is available on request
+
+        try {
+          const hook = app.get('hook');
+          if (hook && hook.has('auth.permissions')) {
+            await hook('auth.permissions').emit('resolve', req);
+          }
+          permissions = req.user.permissions || [];
+
+          // Cache the resolved permissions back into the token payload
+          // so subequent Node-RED requests don't hit the DB again
+          decoded.permissions = permissions;
+          if (!cachedUser) {
+            jwt.cacheToken(token, decoded);
+          }
+        } catch (permError) {
+          console.error(
+            '❌ [Node-RED Auth] Failed to get user permissions:',
+            permError.message,
+          );
+          return this.fail(500);
         }
-        permissions = req.user.permissions || [];
-      } catch (permError) {
-        console.error(
-          '❌ [Node-RED Auth] Failed to get user permissions:',
-          permError.message,
-        );
-        return this.fail(500);
       }
 
       // Check if user has Node-RED permissions

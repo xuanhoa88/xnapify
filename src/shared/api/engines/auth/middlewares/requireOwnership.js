@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { ADMIN_ROLE } from '../constants';
+
 /**
  * Hook channel name for ownership resolution.
  * Modules can register a listener on this channel to resolve the resource owner.
@@ -82,16 +84,18 @@ export function requireOwnership(options = {}) {
     if (
       adminBypass &&
       Array.isArray(req.user.roles) &&
-      req.user.roles.includes('admin')
+      req.user.roles.includes(ADMIN_ROLE)
     ) {
       return next();
     }
 
     // 3. Hook-based resolution (for complex ownership like posts, comments, etc.)
     if (resourceType) {
-      const hook = req.app.get('hook');
-      if (hook && hook.has(HOOK_CHANNEL)) {
-        await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
+      if (req.isOwner == null) {
+        const hook = req.app.get('hook');
+        if (hook && hook.has(HOOK_CHANNEL)) {
+          await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
+        }
       }
 
       // Hook should set `req.isOwner` to true/false
@@ -176,7 +180,7 @@ export function requireFlexibleOwnership(options = {}) {
     if (
       adminBypass &&
       Array.isArray(req.user.roles) &&
-      req.user.roles.includes('admin')
+      req.user.roles.includes(ADMIN_ROLE)
     ) {
       return next();
     }
@@ -187,7 +191,9 @@ export function requireFlexibleOwnership(options = {}) {
 
       // Hook-based resolution
       if (resourceType) {
-        req.isOwner = undefined; // reset between strategies
+        // Reset ownership state so each strategy gets a fresh hook resolution
+        req.isOwner = undefined;
+
         const hook = req.app.get('hook');
         if (hook && hook.has(HOOK_CHANNEL)) {
           await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
@@ -260,15 +266,17 @@ export function requireSharedOwnership(options = {}) {
     if (
       adminBypass &&
       Array.isArray(req.user.roles) &&
-      req.user.roles.includes('admin')
+      req.user.roles.includes(ADMIN_ROLE)
     ) {
       return next();
     }
 
     // 3. Emit hook to populate req.sharedOwners
-    const hook = req.app.get('hook');
-    if (hook && hook.has(SHARED_HOOK_CHANNEL)) {
-      await hook(SHARED_HOOK_CHANNEL).emit('resolve', req, { resourceType });
+    if (!req.sharedOwners) {
+      const hook = req.app.get('hook');
+      if (hook && hook.has(SHARED_HOOK_CHANNEL)) {
+        await hook(SHARED_HOOK_CHANNEL).emit('resolve', req, { resourceType });
+      }
     }
 
     // 4. Check if user is among shared owners
@@ -339,7 +347,7 @@ export function requireHierarchicalOwnership(options = {}) {
     if (
       adminBypass &&
       Array.isArray(req.user.roles) &&
-      req.user.roles.includes('admin')
+      req.user.roles.includes(ADMIN_ROLE)
     ) {
       return next();
     }
@@ -422,7 +430,7 @@ export function requireTimeBasedOwnership(options = {}) {
     if (
       adminBypass &&
       Array.isArray(req.user.roles) &&
-      req.user.roles.includes('admin')
+      req.user.roles.includes(ADMIN_ROLE)
     ) {
       return next();
     }

@@ -48,13 +48,10 @@ describe('Hook', () => {
     hooks.register('dup.hook', callback);
 
     // Internal checks via spy
-    // Accessing internal map to verify size (or check console.warn)
     expect(console.warn).toHaveBeenCalledWith(
       expect.stringContaining('Duplicate callback registration'),
     );
 
-    // Check internal state if possible, or verify execution count
-    // Since we don't expose size, let's execute and count
     const cbSpy = jest.fn();
     hooks.register('exec.dup', cbSpy);
     hooks.register('exec.dup', cbSpy);
@@ -103,5 +100,19 @@ describe('Hook', () => {
 
     expect(console.error).toHaveBeenCalled();
     expect(results).toEqual(['OK']); // Should contain only successful results
+  });
+  test('parallel execution reduces total time', async () => {
+    const slow1 = jest.fn(() => new Promise(r => setTimeout(() => r(1), 50)));
+    const slow2 = jest.fn(() => new Promise(r => setTimeout(() => r(2), 50)));
+    hooks.register('async.hook', slow1);
+    hooks.register('async.hook', slow2);
+
+    const start = Date.now();
+    const results = await hooks.execute('async.hook');
+    const duration = Date.now() - start;
+
+    expect(results).toEqual([1, 2]);
+    // running in parallel should take slightly more than 50ms, not 100ms
+    expect(duration).toBeLessThan(90);
   });
 });

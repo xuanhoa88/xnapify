@@ -27,8 +27,9 @@ export function optionalAuth(options = {}) {
         return next(); // No token, continue without authentication
       }
 
+      const jwt = req.app.get('jwt');
+
       if (includeUser) {
-        const jwt = req.app.get('jwt');
         const decodedToken = jwt.decodeToken(token);
 
         if (decodedToken && decodedToken.payload) {
@@ -44,11 +45,24 @@ export function optionalAuth(options = {}) {
               payload,
             });
           } else {
-            // Standard User Token flow (fallback)
-            const decoded = jwt.verifyTypedToken(token, tokenType);
-            req.user = decoded;
+            // Standard User Token flow — consult cache first
+            const cachedUser = jwt.cache.get(token);
+            if (cachedUser) {
+              req.user = cachedUser;
+            } else {
+              const decoded = jwt.verifyTypedToken(token, tokenType);
+              req.user = decoded;
+              jwt.cacheToken(token, decoded);
+            }
             req.authMethod = 'jwt';
           }
+        }
+      } else {
+        // Even without user resolution, verify the token signature
+        // to ensure we don't mark forged/expired tokens as authenticated
+        if (!jwt.cache.get(token)) {
+          const decoded = jwt.verifyTypedToken(token, tokenType);
+          jwt.cacheToken(token, decoded);
         }
       }
 

@@ -15,7 +15,6 @@ const { isSilent, isVerbose, logDebug, logInfo } = require('../utils/logger');
 
 async function main() {
   const silent = isSilent();
-  const verbose = isVerbose();
 
   if (!silent) {
     logInfo('📏 Running benchmark suites...');

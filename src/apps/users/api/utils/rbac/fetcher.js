@@ -8,6 +8,9 @@
 import * as rbacCache from './cache';
 import { collectUserRBACData } from './collector';
 
+// Track in-flight promises to prevent cache stampedes (thundering herd)
+const activeFetches = new Map();
+
 /**
  * Fetch user with full RBAC associations from DB
  *
@@ -96,11 +99,22 @@ export async function fetchUserRBACData(userId, { models, cache }) {
     throw error;
   }
 
-  const user = await fetchUserWithRBAC(userId, models);
-  const rbacData = collectUserRBACData(user);
-  rbacCache.setUser(userId, rbacData, cache);
+  // Deduplicate concurrent requests (prevent cache stampede)
+  if (!activeFetches.has(userId)) {
+    const fetchPromise = (async () => {
+      try {
+        const user = await fetchUserWithRBAC(userId, models);
+        const rbacData = collectUserRBACData(user);
+        rbacCache.setUser(userId, rbacData, cache);
+        return rbacData;
+      } finally {
+        activeFetches.delete(userId); // ensure cleanup
+      }
+    })();
+    activeFetches.set(userId, fetchPromise);
+  }
 
-  return rbacData;
+  return activeFetches.get(userId);
 }
 
 /**

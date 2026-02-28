@@ -101,7 +101,7 @@ describe('auth.service emits (additional)', () => {
       called = true;
     });
 
-    await authService.authenticateUser('email', 'pass', {
+    const result = await authService.authenticateUser('email', 'pass', {
       models,
       webhook: null,
       activityData,
@@ -110,6 +110,12 @@ describe('auth.service emits (additional)', () => {
 
     expect(called).toBe(true);
     expect(verifyPassword).toHaveBeenCalled();
+
+    // Result should include RBAC data (roles array at minimum)
+    expect(result).toHaveProperty('roles');
+    expect(Array.isArray(result.roles)).toBe(true);
+    // Default role should be present when no roles set on user
+    expect(result.roles).toContain('user');
   });
 
   test('verifyEmail emits email_verified', async () => {

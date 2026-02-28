@@ -93,7 +93,7 @@ app.use((req, res, next) => {
 LOG_LEVEL=debug npm run dev
 
 # Check versions
-node --version  # >= 16.0.0
+node --version  # >= 16.14.0
 npm --version   # >= 8.0.0
 ```
 

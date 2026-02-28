@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { ADMIN_ROLE } from '../constants';
+
 /**
  * Hook channel name for role resolution.
  * Modules can register a listener on this channel to populate `req.user.roles`.
@@ -18,28 +20,40 @@ const HOOK_CHANNEL = 'auth.roles';
 const DYNAMIC_HOOK_CHANNEL = 'auth.dynamic_roles';
 
 /**
- * Shared helper: validate auth and resolve roles via hook.
+ * Shared helper: validate auth, optionally check admin bypass, and resolve roles via hook.
  *
  * @param {Object} req - Express request
- * @returns {Promise<{ error: Error|null }>}
+ * @param {boolean} [adminBypass=false] - Whether admin role bypasses the check
+ * @returns {Promise<{ skip: boolean, error: Error|null }>}
  */
-async function resolveRoles(req) {
+async function resolveRoles(req, adminBypass = false) {
   // 1. Check if user is authenticated
   if (!req.user) {
     const error = new Error('User not authenticated');
     error.name = 'AuthenticationRequiredError';
     error.status = 401;
     error.code = 'AUTH_REQUIRED';
-    return { error };
+    return { skip: false, error };
   }
 
-  // 2. Use hook to let modules resolve roles (e.g. from database)
-  const hook = req.app.get('hook');
-  if (hook && hook.has(HOOK_CHANNEL)) {
-    await hook(HOOK_CHANNEL).emit('resolve', req);
+  // 2. Use hook to let modules resolve roles if not already populated
+  if (!req.user.roles) {
+    const hook = req.app.get('hook');
+    if (hook && hook.has(HOOK_CHANNEL)) {
+      await hook(HOOK_CHANNEL).emit('resolve', req);
+    }
   }
 
-  return { error: null };
+  // 3. Admin role bypasses all checks (when enabled)
+  if (
+    adminBypass &&
+    Array.isArray(req.user.roles) &&
+    req.user.roles.includes(ADMIN_ROLE)
+  ) {
+    return { skip: true, error: null };
+  }
+
+  return { skip: false, error: null };
 }
 
 /**
@@ -49,7 +63,9 @@ async function resolveRoles(req) {
  * Emits `auth.roles` hook to let modules populate roles.
  * User must have ALL listed roles to pass.
  *
- * @param {...string} roles - One or more roles to check (user must have ALL)
+ * @param {Object} options - Options object or first role string
+ * @param {boolean} [options.adminBypass=false] - Whether admin role bypasses the check
+ * @param {string[]} options.roles - One or more roles to check (user must have ALL)
  * @returns {Function} Express middleware
  *
  * @example
@@ -58,12 +74,29 @@ async function resolveRoles(req) {
  *
  * // Multiple roles (user must have ALL)
  * router.post('/super', requireRole('admin', 'superuser'), controller.superAction);
+ *
+ * // With admin bypass
+ * router.get('/moderate', requireRole({ roles: ['moderator'], adminBypass: true }), controller.moderate);
  */
-export function requireRole(...roles) {
+export function requireRole(...args) {
+  let roles;
+  let adminBypass = false;
+
+  if (
+    args.length === 1 &&
+    typeof args[0] === 'object' &&
+    !Array.isArray(args[0])
+  ) {
+    ({ roles = [], adminBypass = false } = args[0]);
+  } else {
+    roles = args;
+  }
+
   return async (req, res, next) => {
-    // Resolve roles (check auth, populate from DB)
-    const { error } = await resolveRoles(req);
+    // Resolve roles (check auth, admin bypass, populate from DB)
+    const { skip, error } = await resolveRoles(req, adminBypass);
     if (error) return next(error);
+    if (skip) return next();
 
     // Check if user has ALL required roles
     const userRoles = req.user.roles || [];
@@ -89,17 +122,36 @@ export function requireRole(...roles) {
  * Emits `auth.roles` hook to let modules populate roles.
  * User needs at least ONE of the listed roles to pass.
  *
- * @param {...string} roles - One or more roles to check (user must have ANY)
+ * @param {Object} options - Options object or first role string
+ * @param {boolean} [options.adminBypass=false] - Whether admin role bypasses the check
+ * @param {string[]} options.roles - One or more roles to check (user must have ANY)
  * @returns {Function} Express middleware
  *
  * @example
  * router.get('/manage', requireAnyRole('admin', 'moderator'), controller.manage);
+ *
+ * // With admin bypass
+ * router.get('/review', requireAnyRole({ roles: ['editor', 'reviewer'], adminBypass: true }), controller.review);
  */
-export function requireAnyRole(...roles) {
+export function requireAnyRole(...args) {
+  let roles;
+  let adminBypass = false;
+
+  if (
+    args.length === 1 &&
+    typeof args[0] === 'object' &&
+    !Array.isArray(args[0])
+  ) {
+    ({ roles = [], adminBypass = false } = args[0]);
+  } else {
+    roles = args;
+  }
+
   return async (req, res, next) => {
-    // Resolve roles (check auth, populate from DB)
-    const { error } = await resolveRoles(req);
+    // Resolve roles (check auth, admin bypass, populate from DB)
+    const { skip, error } = await resolveRoles(req, adminBypass);
     if (error) return next(error);
+    if (skip) return next();
 
     // Check if user has ANY of the required roles
     const userRoles = req.user.roles || [];
@@ -119,18 +171,6 @@ export function requireAnyRole(...roles) {
 }
 
 /**
- * Convenience middleware to require admin role.
- *
- * @returns {Function} Express middleware
- *
- * @example
- * router.use('/admin', requireAdmin(), controller.admin);
- */
-export function requireAdmin() {
-  return requireRole('admin');
-}
-
-/**
  * Middleware to check if user has a role at or above a minimum level
  * in a defined role hierarchy.
  *
@@ -146,11 +186,14 @@ export function requireAdmin() {
  * const hierarchy = ['viewer', 'editor', 'moderator', 'admin'];
  * router.delete('/posts/:id', requireRoleLevel('moderator', hierarchy), controller.delete);
  */
-export function requireRoleLevel(minimumRole, roleHierarchy) {
+export function requireRoleLevel(minimumRole, roleHierarchy, options = {}) {
+  const { adminBypass = false } = options;
+
   return async (req, res, next) => {
-    // Resolve roles (check auth, populate from DB)
-    const { error } = await resolveRoles(req);
+    // Resolve roles (check auth, admin bypass, populate from DB)
+    const { skip, error } = await resolveRoles(req, adminBypass);
     if (error) return next(error);
+    if (skip) return next();
 
     // Validate hierarchy configuration
     const minimumLevel = roleHierarchy.indexOf(minimumRole);

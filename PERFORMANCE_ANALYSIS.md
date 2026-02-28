@@ -6,6 +6,11 @@ This analysis identifies performance hotspots across the project and provides op
 
 ---
 
+**NOTE:** Priority 1 optimizations (JWT cache, locale cache, static reordering,
+request‑ID speedup, metrics middleware) have been applied throughout `server.js`.
+See `PERFORMANCE_OPTIMIZATION_GUIDE.md` for implementation details. New benchmark
+`auth.benchmark.js` measures authentication throughput before/after cache.
+
 ## 1. Request Pipeline Bottlenecks
 
 ### Current Middleware Stack (server.js)

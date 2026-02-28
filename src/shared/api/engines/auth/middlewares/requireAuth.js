@@ -63,14 +63,20 @@ export function requireAuth(options = {}) {
           });
         } else {
           // Standard User Token flow (fallback)
-          // Verify typed token (checks signature + type === tokenType)
-          // Only ONE verification call
-          const decoded = jwt.verifyTypedToken(token, tokenType);
-          req.user = decoded;
+          // First consult cache to avoid redundant crypto work.
+          const cachedUser = jwt.cache.get(token);
+          if (cachedUser) {
+            req.user = cachedUser;
+          } else {
+            // Verify typed token (checks signature + type === tokenType)
+            const decoded = jwt.verifyTypedToken(token, tokenType);
+            req.user = decoded;
+            jwt.cacheToken(token, decoded);
+          }
           req.authMethod = 'jwt';
         }
 
-        // Only set authenticated if we successfully verified
+        // Set authenticated for all successful verifications
         req.authenticated = true;
       }
 

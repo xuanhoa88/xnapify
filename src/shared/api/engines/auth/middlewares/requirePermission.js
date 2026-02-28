@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { ADMIN_ROLE } from '../constants';
+
 /**
  * Hook channel name for permission resolution.
  * Modules can register a listener on this channel to populate `req.user.permissions`.
@@ -81,9 +83,10 @@ export function hasPermission(userPermissions, requiredPermission) {
  * Shared helper: validate auth, check admin bypass, and resolve permissions via hook.
  *
  * @param {Object} req - Express request
+ * @param {boolean} [adminBypass=true] - Whether admin role bypasses the check
  * @returns {Promise<{ skip: boolean, isAdmin: boolean, error: Error|null }>}
  */
-async function resolvePermissions(req) {
+async function resolvePermissions(req, adminBypass = true) {
   // 1. Check if user is authenticated
   if (!req.user) {
     const error = new Error('User not authenticated');
@@ -93,15 +96,21 @@ async function resolvePermissions(req) {
     return { skip: false, isAdmin: false, error };
   }
 
-  // 2. Admin role bypasses all checks
-  if (Array.isArray(req.user.roles) && req.user.roles.includes('admin')) {
+  // 2. Admin role bypasses all checks (when enabled)
+  if (
+    adminBypass &&
+    Array.isArray(req.user.roles) &&
+    req.user.roles.includes(ADMIN_ROLE)
+  ) {
     return { skip: true, isAdmin: true, error: null };
   }
 
-  // 3. Use hook to let modules resolve permissions (e.g. from database)
-  const hook = req.app.get('hook');
-  if (hook && hook.has(HOOK_CHANNEL)) {
-    await hook(HOOK_CHANNEL).emit('resolve', req);
+  // 3. Use hook to let modules resolve permissions if not already populated
+  if (!req.user.permissions) {
+    const hook = req.app.get('hook');
+    if (hook && hook.has(HOOK_CHANNEL)) {
+      await hook(HOOK_CHANNEL).emit('resolve', req);
+    }
   }
 
   return { skip: false, isAdmin: false, error: null };
@@ -118,7 +127,9 @@ async function resolvePermissions(req) {
  * - 'users:*' matches all actions on users resource
  * - '*:read' matches read action on all resources
  *
- * @param {...string} permissions - One or more permissions to check (user must have ALL)
+ * @param {Object} options - Options object or first permission string
+ * @param {boolean} [options.adminBypass=true] - Whether admin role bypasses the check
+ * @param {string[]} options.permissions - One or more permissions to check (user must have ALL)
  * @returns {Function} Express middleware
  *
  * @example
@@ -127,11 +138,28 @@ async function resolvePermissions(req) {
  *
  * // Multiple permissions (user must have ALL)
  * router.post('/users', requirePermission('users:read', 'users:write'), controller.create);
+ *
+ * // Disable admin bypass
+ * router.delete('/self', requirePermission({ permissions: ['users:delete-self'], adminBypass: false }), controller.deleteSelf);
  */
-export function requirePermission(...permissions) {
+export function requirePermission(...args) {
+  // Support both requirePermission('perm1', 'perm2') and requirePermission({ permissions, adminBypass })
+  let permissions;
+  let adminBypass = true;
+
+  if (
+    args.length === 1 &&
+    typeof args[0] === 'object' &&
+    !Array.isArray(args[0])
+  ) {
+    ({ permissions = [], adminBypass = true } = args[0]);
+  } else {
+    permissions = args;
+  }
+
   return async (req, res, next) => {
     // Resolve permissions (check auth, admin bypass, populate from DB)
-    const { skip, error } = await resolvePermissions(req);
+    const { skip, error } = await resolvePermissions(req, adminBypass);
     if (error) return next(error);
     if (skip) return next();
 
@@ -161,16 +189,35 @@ export function requirePermission(...permissions) {
  * Emits `auth.permissions` hook to let modules populate permissions.
  * User needs at least ONE of the listed permissions to pass.
  *
- * @param {...string} permissions - One or more permissions to check (user must have ANY)
+ * @param {Object} options - Options object or first permission string
+ * @param {boolean} [options.adminBypass=true] - Whether admin role bypasses the check
+ * @param {string[]} options.permissions - One or more permissions to check (user must have ANY)
  * @returns {Function} Express middleware
  *
  * @example
  * router.get('/content', requireAnyPermission('posts:read', 'posts:moderate'), controller.get);
+ *
+ * // Disable admin bypass
+ * router.get('/audit', requireAnyPermission({ permissions: ['audit:read'], adminBypass: false }), controller.audit);
  */
-export function requireAnyPermission(...permissions) {
+export function requireAnyPermission(...args) {
+  // Support both requireAnyPermission('perm1', 'perm2') and requireAnyPermission({ permissions, adminBypass })
+  let permissions;
+  let adminBypass = true;
+
+  if (
+    args.length === 1 &&
+    typeof args[0] === 'object' &&
+    !Array.isArray(args[0])
+  ) {
+    ({ permissions = [], adminBypass = true } = args[0]);
+  } else {
+    permissions = args;
+  }
+
   return async (req, res, next) => {
     // Resolve permissions (check auth, admin bypass, populate from DB)
-    const { skip, error } = await resolvePermissions(req);
+    const { skip, error } = await resolvePermissions(req, adminBypass);
     if (error) return next(error);
     if (skip) return next();
 

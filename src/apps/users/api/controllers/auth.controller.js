@@ -197,6 +197,11 @@ export async function logout(req, res) {
     // Clear token cookies
     auth.clearAllAuthCookies(res);
 
+    // Also clear cache entry for this token (if present)
+    if (req.token) {
+      req.app.get('jwt').cache.delete(req.token);
+    }
+
     return http.sendSuccess(res, { message: 'Logged out successfully' });
   } catch (error) {
     return http.sendServerError(res, 'Logout failed', error);

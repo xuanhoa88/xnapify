@@ -49,7 +49,7 @@ react-starter-kit/
 
 ### Core
 
-- **Runtime:** Node.js >= 16.0.0
+- **Runtime:** Node.js >= 16.14.0
 - **Package Manager:** npm >= 8.0.0
 - **Language:** JavaScript (ES2015+) with JSX
 
@@ -732,6 +732,7 @@ describe('myFeature slice', () => {
 
 Benchmarks help catch regressions and guide optimization work without
 polluting the regular test suite.
+
 ```
 
 ## Important Notes
@@ -757,3 +758,4 @@ For issues and questions, refer to:
 
 - GitHub Issues: https://github.com/xuanhoa88/rapid-rsk/issues
 - Repository: https://github.com/xuanhoa88/rapid-rsk
+```
