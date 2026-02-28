@@ -177,7 +177,7 @@ export async function processEmails(provider, emails, options = {}) {
 
   const maxRetries = options.maxRetries || 3;
 
-  for (const emailData of emailList) {
+  const promises = emailList.map(async emailData => {
     try {
       // Use retry logic for bulk sends
       const result = await sendWithRetry(
@@ -195,7 +195,9 @@ export async function processEmails(provider, emails, options = {}) {
         retries: maxRetries - 1,
       });
     }
-  }
+  });
+
+  await Promise.all(promises);
 
   return createOperationResult(
     true,

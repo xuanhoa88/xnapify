@@ -53,7 +53,7 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
     console.debug(
       `[managePlugins] Found ${files.length} items in ${source} dir: ${dirPath}`,
     );
-    for (const dirent of files) {
+    const dirPromises = files.map(async dirent => {
       if (dirent.isDirectory()) {
         console.debug(
           `[managePlugins] Scanning plugin: ${dirent.name} (${source})`,
@@ -61,12 +61,6 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
         const manifest = await readPluginManifest(dirPath, dirent.name);
         if (manifest) {
           console.debug(`[managePlugins] Added plugin: ${dirent.name}`);
-          // Use directory name as ID for local plugins to keep it simple, or encrypt it
-          // For consistency, we use the same encryption.
-          // CAUTION: If a plugin exists in both, the last one scanned wins in the map.
-          // We should probably prioritize local plugins (dev) over installed ones?
-          // Or just treat them as unique based on directory name.
-
           const encryptedId = encryptPluginId(dirent.name);
           fsPluginsMap.set(dirent.name, {
             ...manifest,
@@ -78,7 +72,9 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
           });
         }
       }
-    }
+    });
+
+    await Promise.all(dirPromises);
   } catch (err) {
     console.warn(`Failed to scan plugins dir: ${dirPath}`, err.message);
   }

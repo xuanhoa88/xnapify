@@ -34,16 +34,18 @@ export function createInit(configs, init) {
 
   return async function (ctx) {
     // 1. Init configs first (once per config, tracked by module)
-    for (const config of initableConfigs) {
-      try {
-        if (!config.module[ROUTE_INIT_KEY]) {
-          await config.module.init(ctx);
-          config.module[ROUTE_INIT_KEY] = true;
+    await Promise.all(
+      initableConfigs.map(async config => {
+        try {
+          if (!config.module[ROUTE_INIT_KEY]) {
+            await config.module.init(ctx);
+            config.module[ROUTE_INIT_KEY] = true;
+          }
+        } catch (error) {
+          log(`Config init error: ${error.message}`, 'error');
         }
-      } catch (error) {
-        log(`Config init error: ${error.message}`, 'error');
-      }
-    }
+      }),
+    );
 
     // 2. Init route (original behavior)
     if (typeof init === 'function') {
@@ -74,18 +76,20 @@ export function createMount(configs, routeMount) {
     }
 
     // Mount configs first (once per navigation, tracked by module)
-    for (const config of mountableConfigs) {
-      try {
-        // Skip if this config module already mounted during this navigation
-        if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
-          continue;
+    await Promise.all(
+      mountableConfigs.map(async config => {
+        try {
+          // Skip if this config module already mounted during this navigation
+          if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
+            return;
+          }
+          ctx[ROUTE_MOUNT_KEY].add(config.module);
+          await config.module.mount(ctx);
+        } catch (error) {
+          log(`Config mount error: ${error.message}`, 'error');
         }
-        ctx[ROUTE_MOUNT_KEY].add(config.module);
-        await config.module.mount(ctx);
-      } catch (error) {
-        log(`Config mount error: ${error.message}`, 'error');
-      }
-    }
+      }),
+    );
 
     // Route mount always runs (it's specific to this route)
     if (typeof routeMount === 'function') {
@@ -127,19 +131,21 @@ export function createUnmount(configs, routeUnmount) {
     }
 
     // 2. Config unmounts (in order)
-    for (const config of unmountableConfigs) {
-      // Skip if this config module already unmounted during this pass
-      if (ctx[ROUTE_UNMOUNT_KEY].has(config.module)) {
-        continue;
-      }
-      ctx[ROUTE_UNMOUNT_KEY].add(config.module);
+    await Promise.all(
+      unmountableConfigs.map(async config => {
+        // Skip if this config module already unmounted during this pass
+        if (ctx[ROUTE_UNMOUNT_KEY].has(config.module)) {
+          return;
+        }
+        ctx[ROUTE_UNMOUNT_KEY].add(config.module);
 
-      try {
-        await config.module.unmount(ctx);
-      } catch (error) {
-        log(`Config unmount error: ${error.message}`, 'error');
-      }
-    }
+        try {
+          await config.module.unmount(ctx);
+        } catch (error) {
+          log(`Config unmount error: ${error.message}`, 'error');
+        }
+      }),
+    );
   };
 }
 

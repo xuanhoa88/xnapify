@@ -687,19 +687,21 @@ export async function bulkUpdateStatus(
     where: { id: { [Op.in]: ids } },
   });
 
-  // Log activity for each user
+  // Log activity and invalidate cache for each user concurrently
   const action = is_active ? 'activated' : 'deactivated';
-  for (const user of users) {
-    await logUserActivity(
-      webhook,
-      action,
-      user.id,
-      { email: user.email },
-      actorId,
-    );
-    // Invalidate RBAC cache
-    rbacCache.invalidateUser(user.id);
-  }
+  await Promise.all(
+    users.map(user => {
+      // Invalidate RBAC cache
+      rbacCache.invalidateUser(user.id);
+      return logUserActivity(
+        webhook,
+        action,
+        user.id,
+        { email: user.email },
+        actorId,
+      );
+    }),
+  );
 
   return {
     users,
@@ -736,18 +738,20 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
       where: { id: { [Op.in]: deletedIds } },
     });
 
-    // Log activity for each deleted user
-    for (let i = 0; i < deletedIds.length; i++) {
-      await logUserActivity(
-        webhook,
-        'deleted',
-        deletedIds[i],
-        { email: deletedEmails[i] },
-        actorId,
-      );
-      // Invalidate RBAC cache
-      rbacCache.invalidateUser(deletedIds[i]);
-    }
+    // Log activity and invalidate cache for each deleted user concurrently
+    await Promise.all(
+      deletedIds.map((id, i) => {
+        // Invalidate RBAC cache
+        rbacCache.invalidateUser(id);
+        return logUserActivity(
+          webhook,
+          'deleted',
+          id,
+          { email: deletedEmails[i] },
+          actorId,
+        );
+      }),
+    );
   }
 
   return {

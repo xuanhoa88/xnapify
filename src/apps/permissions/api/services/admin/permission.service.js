@@ -498,17 +498,19 @@ export async function bulkUpdateStatus(
     where: { id: { [Op.in]: ids } },
   });
 
-  // Log activity for each permission
+  // Log activity for each permission concurrently
   const action = is_active ? 'activated' : 'deactivated';
-  for (const perm of updatedPermissions) {
-    await logPermissionActivity(
-      webhook,
-      action,
-      perm.id,
-      { name: `${perm.resource}:${perm.action}` },
-      actorId,
-    );
-  }
+  await Promise.all(
+    updatedPermissions.map(perm =>
+      logPermissionActivity(
+        webhook,
+        action,
+        perm.id,
+        { name: `${perm.resource}:${perm.action}` },
+        actorId,
+      ),
+    ),
+  );
 
   return updatedPermissions;
 }
@@ -559,16 +561,18 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
       where: { id: { [Op.in]: deletableIds } },
     });
 
-    // Log activity for each deleted permission
-    for (let i = 0; i < deletableIds.length; i++) {
-      await logPermissionActivity(
-        webhook,
-        'deleted',
-        deletableIds[i],
-        { name: deletedNames[i] },
-        actorId,
-      );
-    }
+    // Log activity for each deleted permission concurrently
+    await Promise.all(
+      deletableIds.map((id, i) =>
+        logPermissionActivity(
+          webhook,
+          'deleted',
+          id,
+          { name: deletedNames[i] },
+          actorId,
+        ),
+      ),
+    );
   }
 
   return {

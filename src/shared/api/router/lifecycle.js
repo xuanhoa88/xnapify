@@ -29,16 +29,18 @@ export function createInit(configs, init) {
   }
 
   return async function (ctx) {
-    for (const config of initableConfigs) {
-      try {
-        if (!config.module[ROUTE_INIT_KEY]) {
-          await config.module.init(ctx);
-          config.module[ROUTE_INIT_KEY] = true;
+    await Promise.all(
+      initableConfigs.map(async config => {
+        try {
+          if (!config.module[ROUTE_INIT_KEY]) {
+            await config.module.init(ctx);
+            config.module[ROUTE_INIT_KEY] = true;
+          }
+        } catch (error) {
+          log(`Config init error: ${error.message}`, 'error');
         }
-      } catch (error) {
-        log(`Config init error: ${error.message}`, 'error');
-      }
-    }
+      }),
+    );
 
     if (typeof init === 'function') {
       try {
@@ -63,17 +65,19 @@ export function createMount(configs, routeMount) {
       ctx[ROUTE_MOUNT_KEY] = new Set();
     }
 
-    for (const config of mountableConfigs) {
-      try {
-        if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
-          continue;
+    await Promise.all(
+      mountableConfigs.map(async config => {
+        try {
+          if (ctx[ROUTE_MOUNT_KEY].has(config.module)) {
+            return;
+          }
+          ctx[ROUTE_MOUNT_KEY].add(config.module);
+          await config.module.mount(ctx);
+        } catch (error) {
+          log(`Config mount error: ${error.message}`, 'error');
         }
-        ctx[ROUTE_MOUNT_KEY].add(config.module);
-        await config.module.mount(ctx);
-      } catch (error) {
-        log(`Config mount error: ${error.message}`, 'error');
-      }
-    }
+      }),
+    );
 
     if (typeof routeMount === 'function') {
       try {

@@ -18,6 +18,8 @@ import express from 'express';
 import rateLimit from 'express-rate-limit';
 import expressRequestLanguage from 'express-request-language';
 import nodeFetch from 'node-fetch';
+import { LRUCache } from 'lru-cache';
+
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
 import { configureJwt } from './shared/jwt';
@@ -169,7 +171,11 @@ const requestIdPrefix = Date.now().toString(36);
 // Cache Management
 // ---------------------------------------------------------------------------
 
-const localeCache = new Map();
+// use an LRU cache for locale lookups instead of managing our own Map/TTL
+const localeCache = new LRUCache({
+  max: LOCALE.CACHE_MAX,
+  ttl: LOCALE.CACHE_TTL, // milliseconds
+});
 
 const appState = {
   ssrCache: new Map(),
@@ -183,23 +189,6 @@ function clearCaches() {
   appState.viewsPromise = null;
   localeCache.clear();
   if (__DEV__) console.log('🗑️  Caches cleared');
-}
-
-function evictLocaleCache() {
-  if (localeCache.size <= LOCALE.CACHE_MAX) return;
-  const now = Date.now();
-  for (const [k, v] of localeCache) {
-    if (v.exp < now) localeCache.delete(k);
-  }
-  // If still over limit after expiry sweep, drop oldest half
-  if (localeCache.size > LOCALE.CACHE_MAX) {
-    const entries = Array.from(localeCache.entries()).sort(
-      (a, b) => a[1].exp - b[1].exp,
-    );
-    entries
-      .slice(0, Math.floor(entries.length / 2))
-      .forEach(([k]) => localeCache.delete(k));
-  }
 }
 
 function getSSRCacheKey(req, baseUrl, locale, authHeader) {
@@ -250,22 +239,20 @@ function setSSRCache(key, data) {
 // Locale Middleware
 // ---------------------------------------------------------------------------
 
-const localeCookieConfig = {
-  name: LOCALE_COOKIE_NAME,
-  options: {
-    path: '/',
-    maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
-    httpOnly: true,
-    secure: !__DEV__,
-    sameSite: 'lax',
-  },
-  url: `/${LOCALE_COOKIE_NAME}/{language}`,
-};
-
 const localeMiddleware = expressRequestLanguage({
   languages: Object.keys(AVAILABLE_LOCALES),
   queryName: LOCALE_COOKIE_NAME,
-  cookie: localeCookieConfig,
+  cookie: {
+    name: LOCALE_COOKIE_NAME,
+    options: {
+      path: '/',
+      maxAge: LOCALE_COOKIE_MAX_AGE * 1000,
+      httpOnly: true,
+      secure: !__DEV__,
+      sameSite: 'lax',
+    },
+    url: `/${LOCALE_COOKIE_NAME}/{language}`,
+  },
 });
 
 // ---------------------------------------------------------------------------
@@ -316,15 +303,13 @@ async function initReduxStore({ fetch, history }, locale) {
 }
 
 // Memoized SSR resources
-let ssrResources = null;
+let ssrResourcesPromise = null;
 
-async function loadSSRResources() {
-  if (ssrResources) return ssrResources;
+async function loadSSRResources$() {
+  const normaliseUrl = s => `/${s}`.replace(/\/+/g, '/');
 
   const scriptLinks = [];
   const styleLinks = [];
-  let AppComp = null;
-  let HtmlComp = null;
 
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
@@ -339,16 +324,32 @@ async function loadSSRResources() {
       styleLinks.push(...pluginCssUrls);
     }
   } catch (err) {
-    if (!__DEV__) {
+    if (__DEV__) {
       console.error('❌ Failed to load stats.json:', err.message);
     }
   }
 
-  AppComp = (await import('./shared/renderer/App')).default;
-  HtmlComp = (await import('./shared/renderer/Html')).default;
+  const [{ default: App }, { default: Html }] = await Promise.all([
+    import('./shared/renderer/App'),
+    import('./shared/renderer/Html'),
+  ]);
 
-  ssrResources = { scriptLinks, styleLinks, App: AppComp, Html: HtmlComp };
-  return ssrResources;
+  return {
+    scriptLinks: [...new Set(scriptLinks)].map(normaliseUrl),
+    styleLinks: [...new Set(styleLinks)].map(normaliseUrl),
+    App,
+    Html,
+  };
+}
+
+function loadSSRResources() {
+  if (!ssrResourcesPromise) {
+    ssrResourcesPromise = loadSSRResources$().catch(err => {
+      ssrResourcesPromise = null; // allow retry on failure
+      throw err;
+    });
+  }
+  return ssrResourcesPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -365,12 +366,8 @@ async function render({ context, component, metadata = {} }) {
   const htmlData = {
     ...metadata,
     children,
-    styleLinks: [...new Set([...styleLinks])].map(s =>
-      `/${s}`.replace(/\/+/g, '/'),
-    ),
-    scriptLinks: [...new Set([...scriptLinks])].map(s =>
-      `/${s}`.replace(/\/+/g, '/'),
-    ),
+    styleLinks,
+    scriptLinks,
     appState: { redux: context.store.getState() },
   };
 
@@ -1010,19 +1007,16 @@ export async function bootstrap(app, server, options = {}) {
         ? `c:${cookieLocale}`
         : `a:${req.get('accept-language') || ''}`;
 
-    const entry = localeCache.get(cacheKey);
-    if (entry && entry.exp > Date.now()) {
-      req.language = entry.language;
+    const cachedLang = localeCache.get(cacheKey);
+    if (cachedLang) {
+      req.language = cachedLang;
       return next();
     }
 
     localeMiddleware(req, res, err => {
       if (!err) {
-        localeCache.set(cacheKey, {
-          language: req.language,
-          exp: Date.now() + LOCALE.CACHE_TTL,
-        });
-        evictLocaleCache();
+        // just store the language string; LRUCache handles TTL/eviction
+        localeCache.set(cacheKey, req.language);
       }
       next(err);
     });

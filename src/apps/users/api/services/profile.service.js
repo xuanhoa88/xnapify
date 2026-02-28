@@ -139,21 +139,24 @@ export async function updateUserProfile(
   // Run hooks before updating
   await hook('profile').emit('updating', formData, { user_id, user });
 
-  // Update profile data via EAV upserts
+  // Update profile data via EAV bulk upserts
   const updates = [];
   const profileData = formData.profile || {};
   for (const [key, value] of Object.entries(profileData)) {
     if (value !== undefined) {
-      updates.push(
-        UserProfile.upsert({
-          user_id,
-          attribute_key: key,
-          attribute_value: value,
-        }),
-      );
+      updates.push({
+        user_id,
+        attribute_key: key,
+        attribute_value: value,
+      });
     }
   }
-  await Promise.all(updates);
+
+  if (updates.length > 0) {
+    await UserProfile.bulkCreate(updates, {
+      updateOnDuplicate: ['attribute_value'],
+    });
+  }
 
   // Run hooks after updating
   await hook('profile').emit('updated', { user_id, user });
@@ -236,14 +239,17 @@ export async function updateUserPreferences(
   const { UserProfile } = models;
 
   // Each preference key is stored as a separate EAV row
-  const upsertPromises = Object.entries(preferences).map(([key, value]) => {
-    return UserProfile.upsert({
-      user_id,
-      attribute_key: key,
-      attribute_value: value,
+  const preferenceEntries = Object.entries(preferences).map(([key, value]) => ({
+    user_id,
+    attribute_key: key,
+    attribute_value: value,
+  }));
+
+  if (preferenceEntries.length > 0) {
+    await UserProfile.bulkCreate(preferenceEntries, {
+      updateOnDuplicate: ['attribute_value'],
     });
-  });
-  await Promise.all(upsertPromises);
+  }
 
   // Run hooks
   await hook('profile').emit('preferences_updated', {
