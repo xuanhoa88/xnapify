@@ -730,7 +730,11 @@ export class BasePluginManager {
               try {
                 const translations = getTranslations(plugin.translations());
                 if (Object.keys(translations).length > 0) {
-                  addNamespace(plugin.id, translations);
+                  addNamespace(
+                    plugin.id,
+                    translations,
+                    this[PLUGIN_CONTEXT].i18n,
+                  );
                 }
               } catch (error) {
                 console.error(

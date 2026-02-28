@@ -20,6 +20,7 @@ const {
   isDev,
   pkg,
 } = require('./base.config');
+const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 
 /**
  * Get the compiled server entry path from webpack output configuration
@@ -29,49 +30,98 @@ const SERVER_BUNDLE_PATH = path.join(config.BUILD_DIR, 'server');
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
-
 /**
- * Create StatsWriterPlugin to output build stats
- * Filters out hot update files and writes minimal stats.json
- * @returns {Object} Webpack plugin object
+ * Webpack plugin that writes a minimal stats.json containing only the asset
+ * filenames needed by the SSR template to emit <script>, <link rel="stylesheet">,
+ * and <link rel="preload"> tags.
+ *
+ * Filters out hot-update chunks, source maps, and duplicate entries.
+ * Includes both entry assets AND preloaded child chunks so that the SSR
+ * template can emit <link rel="preload"> for async client bundles produced
+ * by the Module Federation bootstrap wrapper.
+ *
+ * Output shape:
+ *   { "scripts": ["main.abc123.js"], "stylesheets": ["main.abc123.css"] }
+ *
+ * @returns {import('webpack').WebpackPluginInstance}
  */
 function createStatsWriterPlugin() {
   return {
     apply(compiler) {
       compiler.hooks.done.tap('StatsWriterPlugin', stats => {
-        const statsData = stats.toJson({
-          all: false,
-          entrypoints: true,
-          assets: false,
-          chunkGroups: false,
-          namedChunkGroups: false,
-          chunks: false,
-          modules: false,
-        });
-
-        // Filter out hot update assets
-        const filterHotUpdates = assets =>
-          assets.filter(asset => {
-            const name = typeof asset === 'string' ? asset : asset.name;
-            return name && !/\.hot-update\./i.test(name);
+        try {
+          const statsData = stats.toJson({
+            all: false,
+            entrypoints: true,
+            assets: true,
+            chunkGroups: true,
+            namedChunkGroups: true,
+            chunks: false,
+            modules: false,
           });
 
-        // Clean entrypoints
-        if (statsData.entrypoints) {
-          for (const key in statsData.entrypoints) {
-            if (statsData.entrypoints[key].assets) {
-              statsData.entrypoints[key].assets = filterHotUpdates(
-                statsData.entrypoints[key].assets,
-              );
-            }
+          if (stats.hasErrors()) {
+            console.warn(
+              '[StatsWriterPlugin] Build has errors — stats.json may be incomplete.',
+            );
           }
-        }
 
-        // Write stats to file
-        fs.writeFileSync(
-          path.join(config.BUILD_DIR, 'stats.json'),
-          JSON.stringify(statsData, null, 2),
-        );
+          const scripts = new Set();
+          const stylesheets = new Set();
+
+          const isHotUpdate = name => /\.hot-update\./i.test(name);
+          const isSourceMap = name => name.endsWith('.map');
+          const isScript = name => name.endsWith('.js');
+          const isStylesheet = name => name.endsWith('.css');
+
+          const addAsset = asset => {
+            const name =
+              typeof asset === 'object' && asset.name ? asset.name : asset;
+            if (!name || isHotUpdate(name) || isSourceMap(name)) return;
+            if (isScript(name)) scripts.add(name);
+            if (isStylesheet(name)) stylesheets.add(name);
+          };
+
+          // 1. Ordered assets from the client entrypoint (preserves load order).
+          const clientEntry =
+            (statsData.entrypoints && statsData.entrypoints.client) || null;
+          if (clientEntry) {
+            (clientEntry.assets || []).forEach(addAsset);
+
+            // Preloaded child chunks (e.g. async MF bootstrap wrapper).
+            (
+              (clientEntry.childAssets && clientEntry.childAssets.preload) ||
+              []
+            ).forEach(addAsset);
+          } else {
+            console.warn(
+              '[StatsWriterPlugin] No "client" entrypoint found in stats — scripts will be empty.',
+            );
+          }
+
+          // 2. CSS safety net: sweep all emitted assets for any CSS not already
+          //    captured above (e.g. async-imported CSS chunks). This prevents FOUC
+          //    when MiniCssExtractPlugin emits chunks outside the main entrypoint.
+          (statsData.assets || []).forEach(asset => {
+            const name = (typeof asset === 'object' && asset.name) || asset;
+            if (name && isStylesheet(name) && !isHotUpdate(name)) {
+              stylesheets.add(name);
+            }
+          });
+
+          const output = {
+            scripts: Array.from(scripts),
+            stylesheets: Array.from(stylesheets),
+          };
+
+          const outPath = path.join(config.BUILD_DIR, 'stats.json');
+          fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
+        } catch (err) {
+          // Surface the error without silently swallowing it — a missing or
+          // malformed stats.json will break SSR at runtime, so fail loudly.
+          console.error('[StatsWriterPlugin] Failed to write stats.json:', err);
+          throw err;
+        }
       });
     },
   };
@@ -84,6 +134,10 @@ function createStatsWriterPlugin() {
 /**
  * Configuration for the client-side bundle (client.js)
  * Targets web browsers with optimizations for production
+ *
+ * Uses an async bootstrap entry (src/bootstrap/client.js) to create
+ * a Module Federation async boundary — shared modules like i18next
+ * and react-i18next are fully initialized before the app code runs.
  */
 const clientConfig = createWebpackConfig('client', {
   entry: {
@@ -120,6 +174,7 @@ const clientConfig = createWebpackConfig('client', {
       process: require.resolve('process/browser'),
     }),
     createEnvDefine(),
+    new AsyncModuleFederationPlugin(),
     new webpack.container.ModuleFederationPlugin({
       name: 'host',
       shared: createSharedDependencies(pkg.dependencies || {}, {

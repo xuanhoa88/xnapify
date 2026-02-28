@@ -435,22 +435,14 @@ async function render({ context, component, metadata = {} }) {
   const scriptLinks = [];
   const styleLinks = [];
 
-  // Load webpack stats (handles both webpack 4 string and webpack 5 object asset formats)
+  // Load simplified webpack stats
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
     const stats = await fs.readFile(statsPath, 'utf8');
-    const { entrypoints } = JSON.parse(stats);
-    const entryAssets =
-      entrypoints &&
-      entrypoints.client &&
-      Array.isArray(entrypoints.client.assets)
-        ? entrypoints.client.assets
-        : [];
-    const assets = entryAssets.map(asset =>
-      typeof asset === 'string' ? asset : asset.name,
-    );
-    scriptLinks.push(...assets.filter(f => /\.js$/i.test(f)));
-    styleLinks.push(...assets.filter(f => /\.css$/i.test(f)));
+    const { scripts = [], stylesheets = [] } = JSON.parse(stats);
+
+    scriptLinks.push(...scripts);
+    styleLinks.push(...stylesheets);
 
     const pluginCssUrls = pluginManager.getPluginCssUrls();
     if (pluginCssUrls.length > 0) {
@@ -472,8 +464,12 @@ async function render({ context, component, metadata = {} }) {
   const htmlData = {
     ...metadata,
     children,
-    styleLinks: styleLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
-    scriptLinks: scriptLinks.map(s => `/${s.replace(/^\/+/g, '')}`),
+    styleLinks: [...new Set([...styleLinks])].map(s =>
+      `/${s}`.replace(/\/+/g, '/'),
+    ),
+    scriptLinks: [...new Set([...scriptLinks])].map(s =>
+      `/${s}`.replace(/\/+/g, '/'),
+    ),
     appState: { redux: context.store.getState() },
   };
 

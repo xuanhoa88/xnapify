@@ -13,7 +13,7 @@ const { default: merge } = require('webpack-merge');
 const nodeExternals = require('webpack-node-externals');
 const config = require('../config');
 const { isVerbose } = require('../utils/logger');
-const loadDotenv = require('./dotenv.plugin');
+const loadDotenv = require('./loadDotenv');
 
 // =============================================================================
 // CONSTANTS
@@ -231,22 +231,25 @@ function createSharedDependencies(dependencies, options = {}) {
     strictVersion = true,
     eagerDeps = [],
     singletonDeps = [],
+    excludeDeps = [],
   } = options;
 
   return Object.fromEntries(
-    Object.keys(dependencies).map(dep => {
-      const isEager = eager || eagerDeps.includes(dep);
-      const isSingleton = singleton || singletonDeps.includes(dep);
-      return [
-        dep,
-        {
-          singleton: isSingleton,
-          eager: isEager,
-          requiredVersion: dependencies[dep],
-          strictVersion,
-        },
-      ];
-    }),
+    Object.keys(dependencies)
+      .filter(dep => !excludeDeps.includes(dep))
+      .map(dep => {
+        const isEager = eager || eagerDeps.includes(dep);
+        const isSingleton = singleton || singletonDeps.includes(dep);
+        return [
+          dep,
+          {
+            singleton: isSingleton,
+            eager: isEager,
+            requiredVersion: dependencies[dep],
+            strictVersion,
+          },
+        ];
+      }),
   );
 }
 
@@ -595,8 +598,6 @@ function createWebpackConfig(name, options = {}) {
                   output: { comments: false, ascii_only: true },
                 },
               }),
-              // ✅ Add CSS minification if you use CSS/MiniCssExtractPlugin
-              // new CssMinimizerPlugin(),
             ]
           : [],
       },
@@ -633,18 +634,10 @@ function createWebpackConfig(name, options = {}) {
       // Stop compilation on first error
       bail: !isDev,
 
-      // ✅ Enable filesystem caching (huge speedup for rebuilds)
-      cache: isDev
-        ? {
-            type: 'filesystem',
-            buildDependencies: {
-              config: [__filename],
-            },
-          }
-        : false,
-      experiments: { cacheUnaffected: true },
+      // Disable filesystem caching
+      cache: false,
 
-      // ✅ Enable source maps for debugging
+      // Enable source maps for debugging
       devtool: config.env(
         'WEBPACK_DEVTOOL',
         isDev ? (isServer ? 'source-map' : 'eval-source-map') : false,
