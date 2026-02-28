@@ -15,7 +15,6 @@ Use plugins for:
 ```
 src/plugins/{plugin-name}/
 ├── package.json                # Plugin metadata
-├── constants.js                # Plugin constants & ID
 ├── api/
 │   ├── index.js                # Backend plugin definition
 │   └── database/
@@ -28,7 +27,8 @@ src/plugins/{plugin-name}/
 ├── validator/
 │   └── index.js                # Zod validation schemas
 ├── translations/
-│   └── en-US.json              # English translations
+│   ├── en-US.json              # English translations
+│   └── vi-VN.json              # Vietnamese translations (optional)
 └── [optional]
     ├── api/[other-files]       # API utilities, database models
     └── views/[other-files]     # Additional React components
@@ -56,7 +56,7 @@ Example:
 
 ```json
 {
-  "name": "notifications-plugin",
+  "name": "@rsk-plugin/notifications",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
@@ -75,39 +75,49 @@ Example:
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validationSchemas } from '../validator';
+import { profileSchema } from '../validator';
 
+// Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
 
-// Load migrations
+// Load migrations context
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
-// Load seeds
+// Load seeds context
 const seedsContext = require.context(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
 
+// Load translations context
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
+// Plugin definition for backend
 export default {
+  // Store handlers for cleanup
   [HANDLERS]: {},
 
-  // Plugin registration metadata
+  // Metadata & registration config
   register() {
     return [
-      ['feature-name', 'another-feature'], // Routes/features that this plugin extends
-      __PLUGIN_NAME__, // Plugin name
-      { name: __PLUGIN_DESCRIPTION__ }, // Plugin description
+      ['profile', 'dashboard'], // Namespaces that this plugin extends
+      __PLUGIN_NAME__,            // Plugin ID
+      { description: __PLUGIN_DESCRIPTION__ }, // Plugin metadata
     ];
   },
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
   // Lifecycle: Initialize on server startup
@@ -119,16 +129,18 @@ export default {
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: '{plugin-name}' },
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
         ]);
+        console.log('[Plugin] Database migrations executed');
       } catch (error) {
         console.error('[Plugin] Migration failed:', error.message);
       }
 
       try {
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: '{plugin-name}' },
+          { context: seedsContext, prefix: __PLUGIN_NAME__ },
         ]);
+        console.log('[Plugin] Database seeds executed');
       } catch (error) {
         console.error('[Plugin] Seed failed:', error.message);
       }
@@ -137,42 +149,55 @@ export default {
     // Get hook engine
     const hook = context.app.get('hook');
 
-    // Example: Handler for schema validation
+    // Handler for schema validation
     this[HANDLERS].updateValidation = function (context) {
-      if (context.schema && validationSchemas) {
-        const extension = validationSchemas(context.z);
-        // Assuming validationSchemas returns an object schema
-        // and we are extending the root level
-        const merged = context.schema.merge(extension);
-        context.schema = context.schema.extend(merged.shape);
+      if (context.schema) {
+        const extension = profileSchema(context.z);
+        // Deep-merge nested schemas to extend them properly
+        const baseProfile = context.schema.shape.profile;
+        const extProfile = extension.shape.profile;
+        // Unwrap .optional() if present, merge, then re-wrap
+        const inner = baseProfile.unwrap
+          ? baseProfile.unwrap().merge(extProfile)
+          : baseProfile.merge(extProfile);
+        context.schema = context.schema.extend({
+          profile: inner.optional(),
+        });
+        console.log('[Plugin] Extended profile schema via hook');
       }
     };
 
-    // Register hooks
-    hook('feature-name').on(
-      'validation:update',
-      this[HANDLERS].updateValidation,
-    );
+    // Register hook for validation updates
+    hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
     // =========================================================================
     // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
     // =========================================================================
 
-    // Example Middleware
+    // Example Middleware: logs timing
     const loggingMiddleware = async (data, ctx, next) => {
       console.log(`[Plugin] IPC Request started`);
+      const start = Date.now();
       const result = await next();
-      console.log(`[Plugin] IPC Request ended`);
+      console.log(
+        `[Plugin] IPC Request ended in ${Date.now() - start}ms`,
+      );
       return result;
     };
 
-    // Use createPipeline for middleware composition for IPC handlers
+    // Use createPipeline to compose middleware with the handler
     this[HANDLERS].ipcHello = registry.createPipeline(
       loggingMiddleware,
       async data => {
-        return { message: 'Hello', received: data };
+        return { 
+          message: `Hello from ${__PLUGIN_NAME__}!`,
+          received: data,
+          timestamp: new Date().toISOString(),
+        };
       },
     );
+    
+    // Register IPC handler - include plugin name for auto-cleanup
     registry.registerHook(
       `ipc:${__PLUGIN_NAME__}:hello`,
       this[HANDLERS].ipcHello,
@@ -181,18 +206,35 @@ export default {
   },
 
   // Lifecycle: Cleanup on plugin disable
-  destroy(registry, context) {
+  async destroy(registry, context) {
     const hook = context.app.get('hook');
 
+    // Unregister hook
     if (this[HANDLERS].updateValidation) {
-      hook('feature-name').off(
-        'validation:update',
-        this[HANDLERS].updateValidation,
-      );
+      hook('profile').off('validation:update', this[HANDLERS].updateValidation);
     }
 
-    // Handlers mapped by createPipeline on registry are automatically
-    // cleaned up if registered using the plugin name string
+    // Undo seeds and migrations
+    const db = context.app.get('db');
+    if (db) {
+      try {
+        await db.connection.undoSeeds([
+          { context: seedsContext, prefix: __PLUGIN_NAME__ },
+        ]);
+        console.log('[Plugin] Database seeds destroyed');
+      } catch (error) {
+        console.error('[Plugin] Seed undo failed:', error.message);
+      }
+
+      try {
+        await db.connection.revertMigrations([
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+        ]);
+        console.log('[Plugin] Database migrations reverted');
+      } catch (error) {
+        console.error('[Plugin] Migration revert failed:', error.message);
+      }
+    }
 
     // Clear handlers
     this[HANDLERS] = {};
@@ -213,78 +255,151 @@ export default {
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validationSchemas } from '../validator';
-import PluginComponent from './PluginComponent';
+import { profileSchema } from '../validator';
+import PluginField from './PluginField';
 
-// Private symbol for handlers storage
+// Private symbol for storing composed handlers (needed for cleanup)
 const HANDLERS = Symbol('handlers');
 
-// Validation hook
-const extendValidator = (schema, validator) => {
-  const extension = validationSchemas(validator);
-  return schema.merge(extension);
+// Load translations context
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
+// =========================================================================
+// Static Handlers (not middleware-composed, safe for direct ref cleanup)
+// =========================================================================
+
+const extendProfileValidator = (schema, validator) => {
+  // Deep-merge the profile sub-object so we extend it, not replace it
+  const extension = profileSchema(validator);
+  const baseProfile = schema.shape.profile;
+  const extProfile = extension.shape.profile;
+  // Unwrap .optional() wrapper if present, merge, then re-wrap
+  const inner = baseProfile.unwrap
+    ? baseProfile.unwrap().merge(extProfile)
+    : baseProfile.merge(extProfile);
+  return schema.extend({ profile: inner.optional() });
 };
 
-// Data hook
-const handleFormData = async user => {
-  return {};
+const handleProfileDefaults = async user => {
+  return {
+    profile: {
+      nickname: (user && user.profile.nickname) || 'Anonymous User',
+      birthdate: (user && user.profile.birthdate) || '',
+    },
+  };
 };
 
-// Submit hook
-const handleFormSubmit = async (data, _context) => {
-  // Handle form submission
-  console.log('Plugin data:', data);
+// =========================================================================
+// Middleware Functions (reusable across hooks)
+// =========================================================================
+
+/**
+ * Logs submission timing
+ */
+const loggingMiddleware = (data, context, next) => {
+  const start = Date.now();
+  console.log('[Plugin] Submit pipeline started', data);
+
+  return Promise.resolve(next()).then(result => {
+    console.log(
+      `[Plugin] Submit pipeline completed in ${Date.now() - start}ms`,
+    );
+    return result;
+  });
 };
+
+/**
+ * Guards against submitting when nickname is too short
+ */
+const nicknameGuard = (data, context, next) => {
+  const nickname = data && data.profile && data.profile.nickname;
+  if (nickname && nickname.length < 3) {
+    console.warn('[Plugin] Nickname too short, skipping submit hook logic');
+    return Promise.resolve(); // Short-circuit: don't call next()
+  }
+  return next();
+};
+
+// =========================================================================
+// Plugin Definition
+// =========================================================================
 
 export default {
+  // Store composed handlers for cleanup
+  [HANDLERS]: {},
+
+  // Metadata & registration config
   register() {
     return [
-      ['feature-name'], // Features this plugin extends
+      ['profile', 'dashboard'],
       __PLUGIN_NAME__,
-      { name: __PLUGIN_DESCRIPTION__ },
+      { description: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
-  // Initialize plugin on client
-  init(registry, context) {
-    // Register UI slot/component
-    registry.registerSlot('feature-name.section.fields', PluginComponent, {
-      order: 10, // Position in the UI
+  // Lifecycle: init (called when plugin is initialized)
+  init(registry, _context) {
+    // 1. Register Slot Component
+    registry.registerSlot('profile.personal_info.fields', PluginField, {
+      order: 10,
     });
 
-    // Register hooks
-    registry.registerHook('feature-name.section.validator', extendValidator);
-    // Compose submit hook with middleware using createPipeline
-    this[HANDLERS].formSubmit = registry.createPipeline(
-      async (data, context, next) => {
-        // middleware: do something before
-        return next();
+    // 2. Extend Schema
+    registry.registerHook(
+      'profile.personal_info.validator',
+      extendProfileValidator,
+    );
+
+    // 3. Compose submit handler with middleware pipeline
+    this[HANDLERS].profileSubmit = registry.createPipeline(
+      loggingMiddleware,
+      nicknameGuard,
+      async data => {
+        if (data.profile.nickname) {
+          console.log(`[Plugin] Hello, ${data.profile.nickname}!`);
+        }
       },
-      handleFormSubmit,
     );
     registry.registerHook(
-      'feature-name.section.submit',
-      this[HANDLERS].formSubmit,
+      'profile.personal_info.submit',
+      this[HANDLERS].profileSubmit,
+    );
+
+    // 4. Register form defaults hook
+    registry.registerHook(
+      'profile.personal_info.formData',
+      handleProfileDefaults,
     );
 
     console.log('[Plugin] Initialized');
   },
 
-  // Clean up on plugin disable
+  // Lifecycle: destroy (called when plugin is disabled)
   destroy(registry) {
-    registry.unregisterSlot('feature-name.section.fields', PluginComponent);
-    registry.unregisterHook('feature-name.section.validator', extendValidator);
-    registry.unregisterHook('feature-name.section.formData', handleFormData);
+    registry.unregisterSlot('profile.personal_info.fields', PluginField);
     registry.unregisterHook(
-      'feature-name.section.submit',
-      this[HANDLERS].formSubmit,
+      'profile.personal_info.validator',
+      extendProfileValidator,
+    );
+    registry.unregisterHook(
+      'profile.personal_info.submit',
+      this[HANDLERS].profileSubmit,
+    );
+    registry.unregisterHook(
+      'profile.personal_info.formData',
+      handleProfileDefaults,
     );
 
+    // Clean up handlers
     this[HANDLERS] = {};
 
     console.log('[Plugin] Destroyed');
@@ -295,63 +410,79 @@ export default {
 ### 4. Create Plugin Component
 
 ```javascript
-// src/plugins/{plugin-name}/views/PluginComponent.js
-import React from 'react';
-import { usePluginHooks } from '@/shared/plugin';
-import './PluginComponent.scss';
+// src/plugins/{plugin-name}/views/PluginField.js
+import { useCallback } from 'react';
+import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
+import Form from '../../../shared/renderer/components/Form';
+import s from './PluginField.scss';
 
 /**
- * Plugin component rendered in a feature slot
+ * Plugin form field component injected into the form via slot
+ * Receives register (React Hook Form) and context (fetch, etc.)
  */
-function PluginComponent({ data, onDataChange }) {
-  const { i18n } = usePluginHooks();
+export default function PluginField({ register, context }) {
+  const { t } = useTranslation(`plugin:${__PLUGIN_NAME__}`);
+
+  const handleAsyncValidate = useCallback(
+    async value => {
+      // Only check if it's at least 3 characters
+      if (!value || value.length < 3) return true;
+      try {
+        const response = await context.fetch(
+          `/api/plugins/${__PLUGIN_NAME__}/ipc`,
+          {
+            method: 'POST',
+            body: {
+              action: 'checkNickname',
+              data: { nickname: value },
+            },
+          },
+        );
+        if (response.success && response.data && response.data.exists) {
+          return t('nickname_taken', 'This nickname is already taken');
+        }
+        return true;
+      } catch (err) {
+        console.error('Failed to check nickname:', err);
+        return true; // Don't block on network errors
+      }
+    },
+    [context, t],
+  );
 
   return (
-    <div className='plugin-component'>
-      <fieldset>
-        <legend>{i18n.t('{plugin-name}:labels.title')}</legend>
+    <>
+      <Form.Field
+        name='profile.nickname'
+        label={t('nickname', 'Nickname')}
+        asyncValidate={handleAsyncValidate}
+      >
+        <Form.Input {...register('profile.nickname')} />
+        <div className={s.formText}>
+          {t('nickname_hint', 'This field requires a minimum of 3 characters')}
+        </div>
+      </Form.Field>
 
-        <input
-          type='text'
-          value={data.fieldName || ''}
-          onChange={e => onDataChange({ fieldName: e.target.value })}
-          placeholder={i18n.t('{plugin-name}:labels.placeholder')}
-        />
-      </fieldset>
-    </div>
+      <Form.Field name='profile.birthdate' label={t('birthdate', 'Birthdate')}>
+        <Form.Date {...register('profile.birthdate')} />
+      </Form.Field>
+    </>
   );
 }
 
-export default PluginComponent;
+PluginField.propTypes = {
+  register: PropTypes.func.isRequired,
+  context: PropTypes.object.isRequired,
+};
 ```
 
 ```scss
-// src/plugins/{plugin-name}/views/PluginComponent.scss
-.plugin-component {
-  margin-top: 1rem;
-
-  fieldset {
-    border: 1px solid #ddd;
-    border-radius: 0.25rem;
-    padding: 1rem;
-  }
-
-  legend {
-    font-weight: 600;
-  }
-
-  input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 1px solid #ccc;
-    border-radius: 0.25rem;
-
-    &:focus {
-      outline: none;
-      border-color: #007bff;
-      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-    }
-  }
+// src/plugins/{plugin-name}/views/PluginField.scss
+.formText {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #666;
 }
 ```
 
@@ -367,38 +498,55 @@ export default PluginComponent;
  */
 
 /**
- * Define validation schema - works on client and server
+ * Define reusable schema factory
+ * This schema can be used on:
+ * - Client: for form validation
+ * - Server: for API request validation
  */
-export const validationSchemas = zod => {
+export const profileSchema = zod => {
   return zod.object({
-    fieldName: zod
-      .string()
-      .min(3, {
-        params: {
-          i18n: `plugin:${__PLUGIN_NAME__}:validations.field_too_short`,
-        },
-      })
-      .max(100)
-      .optional(),
+    profile: zod.object({
+      nickname: zod
+        .string()
+        .min(3, {
+          params: {
+            i18n: `plugin:${__PLUGIN_NAME__}:validations.nickname_too_short`,
+          },
+        })
+        .max(50)
+        .regex(/^[a-zA-Z0-9_]+$/, {
+          params: { i18n: 'zod:validations.alphanum' },
+        }),
+      birthdate: zod
+        .string()
+        .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
+          params: {
+            i18n: `plugin:${__PLUGIN_NAME__}:validations.birthdate_format`,
+          },
+        })
+        .optional()
+        .or(zod.literal('')),
+    }),
   });
 };
 ```
 
 ### 6. Create Translations
 
-````javascript
 ```json
 // src/plugins/{plugin-name}/translations/en-US.json
 {
-  "labels": {
-    "title": "Plugin Feature Title",
-    "placeholder": "Enter value here"
-  },
+  "nickname": "Nickname",
+  "nickname_hint": "Added via Plugin (min 3 chars)",
+  "birthdate": "Birthdate",
   "validations": {
-    "field_too_short": "Field must be at least 3 characters"
+    "nickname_taken": "This nickname is already taken",
+    "nickname_too_short": "Nickname must be at least 3 characters long",
+    "birthdate_format": "Birthdate must be in DD/MM/YYYY format"
+  }
   }
 }
-````
+```
 
 ### 7. Create Database Migration (Optional)
 
@@ -453,7 +601,7 @@ cd src/plugins/comments-plugin
 
 ```json
 {
-  "name": "comments-plugin",
+  "name": "@rsk-plugin/comments",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
@@ -465,18 +613,20 @@ cd src/plugins/comments-plugin
 
 ```javascript
 // validator/index.js
-export const validationSchemas = zod => {
+export const commentSchema = zod => {
   return zod.object({
-    comment: zod
-      .string()
-      .min(1, {
-        params: { i18n: `plugin:${__PLUGIN_NAME__}:validations.required` },
-      })
-      .max(1000, {
-        params: {
-          i18n: `plugin:${__PLUGIN_NAME__}:validations.too_long`,
-        },
-      }),
+    comment: zod.object({
+      text: zod
+        .string()
+        .min(1, {
+          params: { i18n: `plugin:${__PLUGIN_NAME__}:validations.required` },
+        })
+        .max(1000, {
+          params: {
+            i18n: `plugin:${__PLUGIN_NAME__}:validations.too_long`,
+          },
+        }),
+    }),
   });
 };
 ```
@@ -500,23 +650,41 @@ export const validationSchemas = zod => {
 
 ```javascript
 // views/index.js
+import { commentSchema } from '../validator';
 import CommentForm from './CommentForm';
 
+// Private symbol for handlers
+const HANDLERS = Symbol('handlers');
+
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
+);
+
+const extendCommentValidator = (schema, validator) => {
+  const extension = commentSchema(validator);
+  const baseComment = schema.shape.comment;
+  const extComment = extension.shape.comment;
+  const inner = baseComment.unwrap
+    ? baseComment.unwrap().merge(extComment)
+    : baseComment.merge(extComment);
+  return schema.extend({ comment: inner.optional() });
+};
+
 export default {
-  // Store handlers for cleanup
   [HANDLERS]: {},
 
   register() {
     return [
       ['posts', 'comments'],
       __PLUGIN_NAME__,
-      { name: __PLUGIN_DESCRIPTION__ },
+      { description: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
-  // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
   init(registry, context) {
@@ -524,11 +692,20 @@ export default {
       order: 10,
     });
 
+    registry.registerHook(
+      'posts.comments.validator',
+      extendCommentValidator,
+    );
+
     console.log('[Comments Plugin] Initialized');
   },
 
   destroy(registry) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
+    registry.unregisterHook(
+      'posts.comments.validator',
+      extendCommentValidator,
+    );
     this[HANDLERS] = {};
     console.log('[Comments Plugin] Destroyed');
   },
@@ -541,10 +718,17 @@ export default {
 // api/index.js
 
 const HANDLERS = Symbol('handlers');
+
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
+);
+
+const translationsContext = require.context(
+  '../translations',
+  false,
+  /\.json$/i,
 );
 
 export default {
@@ -554,13 +738,12 @@ export default {
     return [
       ['posts', 'comments'],
       __PLUGIN_NAME__,
-      { name: __PLUGIN_DESCRIPTION__ },
+      { description: __PLUGIN_DESCRIPTION__ },
     ];
   },
 
-  // Declarative translations — auto-registered by plugin manager before init
   translations() {
-    return require.context('../translations', false, /\.json$/i);
+    return translationsContext;
   },
 
   async init(registry, context) {
@@ -568,17 +751,45 @@ export default {
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: 'comments-plugin' },
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
         ]);
+        console.log('[Comments Plugin] Migrations executed');
       } catch (error) {
-        console.error('[Comments] Migration failed:', error);
+        console.error('[Comments Plugin] Migration failed:', error);
       }
     }
+
+    const hook = context.app.get('hook');
+    
+    // Example handler for comment creation hook
+    this[HANDLERS].onCommentCreated = function(comment) {
+      console.log('[Comments Plugin] New comment created:', comment.id);
+    };
+    
+    hook('posts').on('comment:created', this[HANDLERS].onCommentCreated);
 
     console.log('[Comments Plugin] Backend initialized');
   },
 
-  destroy(registry, context) {
+  async destroy(registry, context) {
+    const hook = context.app.get('hook');
+    
+    if (this[HANDLERS].onCommentCreated) {
+      hook('posts').off('comment:created', this[HANDLERS].onCommentCreated);
+    }
+
+    const db = context.app.get('db');
+    if (db) {
+      try {
+        await db.connection.revertMigrations([
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+        ]);
+        console.log('[Comments Plugin] Migrations reverted');
+      } catch (error) {
+        console.error('[Comments Plugin] Migration revert failed:', error);
+      }
+    }
+
     this[HANDLERS] = {};
     console.log('[Comments Plugin] Backend destroyed');
   },
@@ -611,35 +822,120 @@ hook('posts').on('created', post => {
 });
 ```
 
+## IPC Handlers (Inter-Plugin Communication)
+
+IPC handlers allow frontend components to call backend logic via HTTP POST requests.
+
+### Calling IPC from Frontend
+
+```javascript
+// In a plugin component
+const response = await context.fetch(
+  `/api/plugins/${__PLUGIN_NAME__}/ipc`,
+  {
+    method: 'POST',
+    body: {
+      action: 'checkNickname',  // Handler name
+      data: { nickname: value }, // Payload
+    },
+  },
+);
+
+if (response.success) {
+  console.log(response.data);
+}
+```
+
+### Implementing IPC Handlers (Backend)
+
+```javascript
+// In api/index.js init method
+const loggingMiddleware = async (data, ctx, next) => {
+  console.log('IPC request:', data);
+  const result = await next();
+  console.log('IPC response:', result);
+  return result;
+};
+
+this[HANDLERS].ipcCheckNickname = registry.createPipeline(
+  loggingMiddleware,
+  async (data, { req }) => {
+    // req is the Express request object with user info
+    const { nickname } = data || {};
+    
+    // Your business logic
+    const exists = await checkNicknameExists(nickname);
+    
+    return { exists };
+  },
+);
+
+// Register with plugin ID for auto-cleanup
+registry.registerHook(
+  `ipc:${__PLUGIN_NAME__}:checkNickname`,
+  this[HANDLERS].ipcCheckNickname,
+  __PLUGIN_NAME__,
+);
+```
+
+### IPC Request Format
+
+- **Endpoint:** `POST /api/plugins/{pluginId}/ipc`
+- **Body (JSON):**
+  ```json
+  {
+    "action": "handlerName",
+    "data": {...}
+  }
+  ```
+- **Response (JSON):**
+  ```json
+  {
+    "success": true,
+    "data": {...}
+  }
+  ```
+
 ## Best Practices
 
-1. **Namespace Everything**: Use `plugin:{__PLUGIN_NAME__}:` prefix for translations
-2. **Cleanup on Destroy**: Always unregister hooks/slots when plugin is disabled
-3. **Error Handling**: Wrap migrations/seeds in try-catch
-4. **Documentation**: Add JSDoc comments to all exports
-5. **Modularity**: Keep components small and focused
-6. **Validation**: Use Zod for both client & server validation
-7. **Migrations**: Use versioned filenames (1.initial.js, 2.add_field.js)
-8. **Testing**: Create test files (ComponentName.test.js) for critical parts
+1. **Use Symbol for Handler Storage**: Store handlers in `this[HANDLERS]` for cleanup on destroy
+2. **Namespace Everything**: Use `plugin:{__PLUGIN_NAME__}:` prefix for i18n keys
+3. **Cleanup on Destroy**: Always unregister hooks/slots when plugin is disabled
+4. **Store Composed Handlers**: When using `registry.createPipeline()`, store the result in `this[HANDLERS]` so you can unregister it by reference
+5. **Deep Merge Schemas**: When extending nested objects like `profile`, check for `.unwrap()` and merge properly
+6. **Error Handling**: Wrap migrations/seeds in try-catch blocks
+7. **Validation**: Use Zod schema factories for both client & server validation
+8. **Migrations**: Use versioned filenames (1.initial.js, 2.add_field.js) and call `revertMigrations()` in destroy
+9. **Testing**: Create test files (ComponentName.test.js) for critical plugin parts
+10. **Register with Plugin ID**: Include `__PLUGIN_NAME__` when registering hooks for auto-cleanup on unregister
 
 ## Common Issues
 
 ### Plugin Not Loading
 
 - Check `__PLUGIN_NAME__` and `__PLUGIN_DESCRIPTION__` globals are defined
-- Verify `register()` returns correct format: `[routes, name, metadata]`
+- Verify `register()` returns correct format: `[namespaces, id, metadata]` where:
+  - `namespaces` is an array like `['profile', 'dashboard']`
+  - `id` is `__PLUGIN_NAME__`
+  - `metadata` is `{ description: __PLUGIN_DESCRIPTION__ }`
+- Ensure both `api/index.js` and `views/index.js` export default plugin definitions
+- Check browser console for any initialization errors
 
 ### Slots Not Appearing
 
-- Verify slot name matches feature name in `register()`
-- Check component is exported from `views/index.js`
-- Ensure `order` property is set correctly
+- Verify slot name matches the feature (e.g., `profile.personal_info.fields`)
+- Check component path in slot registration (e.g., `PluginField` must be imported correctly)
+- Ensure `order` property is set (higher numbers appear later)
+- Verify form component receives `register` and `context` as props, not `data` and `onDataChange`
+- Check that both backend and frontend plugins are loaded correctly
 
 ### Validation Not Working
 
-- Export `validationSchemas` function from `validator/index.js`
-- Verify schema returns a Zod object
-- Check hook name matches feature validator
+- Export schema factory (e.g., `profileSchema`) from `validator/index.js` that takes `zod` as parameter
+- Schema must nest nested objects properly (e.g., `profile: zod.object({...})`)
+- Hook name must match the feature (e.g., `profile.personal_info.validator`)
+- Ensure the schema merger handles optional wrapping correctly with `.unwrap()` check
+- Check that the validator hook is registered in `init()` before the component renders
 
 ### Translations Missing
 

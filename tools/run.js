@@ -139,6 +139,11 @@ const AVAILABLE_TASKS = [
     processEnv: { NODE_ENV: 'test' },
   },
   {
+    name: 'benchmark',
+    description: 'Run performance benchmarks (*.benchmark.js)',
+    processEnv: { NODE_ENV: 'test' },
+  },
+  {
     name: 'plugin',
     description: 'Build plugins (use --watch for development)',
   },
@@ -153,6 +158,11 @@ const AVAILABLE_TASKS = [
   {
     name: 'stylelint',
     description: 'Lint CSS files with Stylelint',
+  },
+  {
+    name: 'benchmark',
+    description: 'Run performance benchmarks (*.benchmark.js)',
+    processEnv: { NODE_ENV: 'test' },
   },
 ];
 

@@ -50,32 +50,42 @@ Open [http://localhost:1337](http://localhost:1337)
 ## Project Structure
 
 ```
-src/
-├── bootstrap/        # Application bootstrap & configuration
-├── modules/          # Business logic & Views (auto-discovered)
-│   ├── (default)/    # Default module (homepage, etc.)
-│   │   ├── api/      # Backend logic (models, routes, etc.)
-│   │   └── views/    # Frontend views
-│   └── ...           # Other modules
-├── shared/           # Shared utilities
-│   ├── api/          # Core API infrastructure
-│   │   ├── auth/     # Auth middlewares & cookies
-│   │   ├── db/       # Database & Sequelize
-│   │   └── ...       # cache, email, fs, http, queue, etc.
-│   ├── jwt/          # JWT configuration & utilities
-│   ├── renderer/     # SSR utilities and Redux store
-│   ├── fetch/        # API client
-│   ├── ws/           # WebSocket client
-│   ├── i18n/         # i18n utilities
-│   ├── validator/    # SSR validator utilities
-│   └── node-red/     # Node-RED integration & migrations
-├── client.js         # Client entry point
-└── server.js         # Server entry point
-tools/
-├── tasks/            # Build tasks (build, clean, dev, etc.)
-├── utils/            # Build utilities
-├── jest/             # Jest configuration
-├── webpack/          # Webpack configurations
+react-starter-kit/
+├── src/                          # Application source code
+├── bootstrap/                    # Application bootstrap & configuration
+├── apps/                      # Business logic & Views (auto-discovered)
+│   ├── (default)/                # Default module (homepage, etc.)
+│   │   ├── api/                  # Backend logic
+│   │   └── views/                # Frontend views
+│   └── ...                       # Other modules
+├── shared/                       # Shared utilities
+│   ├── api/                      # Core API infrastructure
+│   │   ├── auth/                 # Auth middlewares & cookies
+│   │   ├── db/                   # Database & Sequelize
+│   │   └── ...                   # cache, email, fs, http, queue, etc.
+│   ├── jwt/                      # JWT configuration & utilities
+│   ├── renderer/                 # SSR utilities and Redux store
+│   ├── fetch/                    # API client
+│   ├── ws/                       # WebSocket client
+│   ├── i18n/                     # i18n utilities
+│   └── validator/                # SSR validator utilities
+│   └── node-red/                 # Node-RED integration & migrations
+├── client.js                     # Client entry point
+├── server.js                     # Server entry point
+├── tools/                        # Build tools and tasks
+│   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
+│   ├── utils/                    # Build utilities (fs, logger, etc.)
+│   ├── jest/                     # Jest configuration
+│   ├── webpack/                  # Webpack configurations
+│   └── run.js                    # Task runner
+├── build/                        # Production build output
+├── public/                       # Static assets
+├── uploads/                      # Uploaded files during development/runtime
+├── .node-red/                    # Node-RED runtime state and flows (hidden)
+├── .claude/                      # AI assistant command guides
+│   └── commands/                 # Development command documentation
+├── database.sqlite               # Local SQLite database (dev)
+└── .env.rsk                      # Environment variable template
 ```
 
 ## Environment Variables

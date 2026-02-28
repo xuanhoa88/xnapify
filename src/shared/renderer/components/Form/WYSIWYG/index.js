@@ -14,10 +14,12 @@ import {
   useCallback,
   useMemo,
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useController } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus'; // eslint-disable-line import/no-unresolved
 import DragHandle from '@tiptap/extension-drag-handle-react';
 import StarterKit from '@tiptap/starter-kit';
 import Mention from '@tiptap/extension-mention';
@@ -39,7 +41,11 @@ import { DetailsExtension } from './DetailsExtension';
 import { Video, Audio } from './MediaExtensions';
 import { Emoji } from './EmojiExtension';
 import { FontSize } from './FontSizeExtension';
+import { CommentExtension } from './CommentExtension';
+import CommentActionsPopup from './CommentActionsPopup';
 import Toolbar from './Toolbar';
+import ToolbarButton from './ToolbarButton';
+import Icons from './ToolbarIcon';
 import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
 import s from './FormWYSIWYG.css';
 
@@ -117,12 +123,49 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
   },
   forwardedRef,
 ) {
+  const { t } = useTranslation();
   const { handlePaste, transformPastedHTML, ...restUserEditorProps } =
     userEditorProps || {};
   const { id, name, error } = useFormField();
   const {
     field: { onChange, onBlur, value, ref: registerRef },
   } = useController({ name });
+
+  // Store comments local state: { [commentId]: [{ id, text, createdAt }] }
+  const [commentsState, setCommentsState] = useState({});
+  const [activeCommentId, setActiveCommentId] = useState(null);
+
+  // Parse comments from the active mark attribute when selected
+  const handleCommentActivated = useCallback((id, commentsJson) => {
+    setActiveCommentId(id);
+    if (id && commentsJson) {
+      try {
+        const parsed = JSON.parse(commentsJson);
+        setCommentsState(prev => ({ ...prev, [id]: parsed }));
+      } catch (e) {
+        // ignore parsing errors
+      }
+    }
+  }, []);
+
+  // Controls whether the popup form is open for the current selection
+  const [isCommentPopupOpen, setIsCommentPopupOpen] = useState(false);
+
+  // Called when the user clicks the "Add Comment" button in BubbleMenu
+  const handleOpenCommentPopup = useCallback(() => {
+    setIsCommentPopupOpen(true);
+  }, []);
+
+  // Called when the user clicks Cancel or Escape in the popup
+  const handleCloseCommentPopup = useCallback(() => {
+    setIsCommentPopupOpen(false);
+  }, []);
+
+  // When selection changes and a different comment becomes active,
+  // we reset the popup open state so it doesn't stay open unexpectedly
+  useEffect(() => {
+    setIsCommentPopupOpen(false);
+  }, [activeCommentId]);
 
   const [isFullScreen, setIsFullScreen] = useState(false);
   const toggleFullScreen = useCallback(
@@ -200,6 +243,9 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       FontSize,
       Highlight.configure({ multicolor: true }),
       Selection,
+      CommentExtension.configure({
+        onCommentActivated: handleCommentActivated,
+      }),
     ];
 
     if (typeof onMentionQuery === 'function') {
@@ -221,7 +267,13 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     }
 
     return exts;
-  }, [placeholder, onMentionQuery, addExtensions, excludeExtensions]);
+  }, [
+    placeholder,
+    onMentionQuery,
+    addExtensions,
+    excludeExtensions,
+    handleCommentActivated,
+  ]);
 
   const editor = useEditor({
     extensions,
@@ -323,6 +375,93 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     }
   }, [editor, disabled]);
 
+  const handleAddComment = useCallback(
+    text => {
+      // If we don't have an active comment ID for this text range yet,
+      // create a new comment mark around it.
+      let currentId = activeCommentId;
+      if (!currentId) {
+        currentId = `comment-${Date.now()}`;
+      }
+
+      const newComment = {
+        id: `c-${Date.now()}`,
+        text,
+        createdAt: new Date().toISOString(),
+      };
+
+      const existingComments = activeCommentId
+        ? commentsState[activeCommentId] || []
+        : [];
+      const updatedComments = [...existingComments, newComment];
+      const commentsJson = JSON.stringify(updatedComments);
+
+      // Save the comments back to the editor node's HTML attributes
+      if (!activeCommentId) {
+        editor.commands.setComment(currentId, commentsJson);
+      } else {
+        editor.commands.updateComment(currentId, commentsJson);
+      }
+
+      setCommentsState(prev => ({
+        ...prev,
+        [currentId]: updatedComments,
+      }));
+
+      // Keep popup open to see the thread? Or close it. Let's close it after submit.
+      setIsCommentPopupOpen(false);
+
+      // Return focus to editor
+      editor.commands.focus();
+    },
+    [editor, activeCommentId, commentsState],
+  );
+
+  const handleRemoveCommentItem = useCallback(
+    commentItemId => {
+      if (!activeCommentId) return;
+
+      setCommentsState(prev => {
+        const thread = prev[activeCommentId] || [];
+        const newThread = thread.filter(c => c.id !== commentItemId);
+
+        // If thread is empty after removing this item, automatically unset the mark
+        if (newThread.length === 0) {
+          editor.commands.unsetComment(activeCommentId);
+          const newState = { ...prev };
+          delete newState[activeCommentId];
+          return newState;
+        }
+
+        // Otherwise update the markdown string inside the editor
+        editor.commands.updateComment(
+          activeCommentId,
+          JSON.stringify(newThread),
+        );
+
+        return {
+          ...prev,
+          [activeCommentId]: newThread,
+        };
+      });
+    },
+    [editor, activeCommentId],
+  );
+
+  // Called when the user actively wants to *delete* the entire comment thread
+  // from the text (e.g. clicking the toolbar button again when a comment is active)
+  const handleRemoveWholeComment = useCallback(() => {
+    if (activeCommentId) {
+      editor.commands.unsetComment(activeCommentId);
+      setCommentsState(prev => {
+        const next = { ...prev };
+        delete next[activeCommentId];
+        return next;
+      });
+      setIsCommentPopupOpen(false);
+    }
+  }, [editor, activeCommentId]);
+
   // Patch the ProseMirror view to suppress the 'localsInner' decoration
   // error that occurs when the DragHandle and column-resize plugins
   // conflict during drag-and-drop near tables.
@@ -392,9 +531,80 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       />
       <div className={s.editorContent}>
         {editor && (
-          <DragHandle editor={editor}>
-            <div className={s.dragHandle}>⠿</div>
-          </DragHandle>
+          <>
+            <DragHandle editor={editor}>
+              <div className={s.dragHandle}>{Icons.dragHandle}</div>
+            </DragHandle>
+
+            <BubbleMenu
+              className={s.bubbleMenu}
+              editor={editor}
+              appendTo={() =>
+                typeof document !== 'undefined' ? document.body : null
+              }
+              shouldShow={({ editor: e, state }) => {
+                const { selection } = state;
+                const { empty } = selection;
+                const hasEditorFocus = e.isFocused;
+
+                if (!hasEditorFocus || empty) {
+                  return false;
+                }
+                return true;
+              }}
+            >
+              {isCommentPopupOpen ? (
+                <CommentActionsPopup
+                  comments={
+                    activeCommentId ? commentsState[activeCommentId] || [] : []
+                  }
+                  onAddComment={handleAddComment}
+                  onRemoveComment={handleRemoveCommentItem}
+                  onClose={handleCloseCommentPopup}
+                />
+              ) : (
+                <>
+                  <ToolbarButton
+                    icon={Icons.comment}
+                    label={
+                      activeCommentId
+                        ? t(
+                            'shared.form.wysiwyg.viewAndReplyComment',
+                            'View & Reply Comment',
+                          )
+                        : t('shared.form.wysiwyg.addComment', 'Add Comment')
+                    }
+                    title={
+                      activeCommentId
+                        ? t(
+                            'shared.form.wysiwyg.viewAndReplyComment',
+                            'View & Reply Comment',
+                          )
+                        : t('shared.form.wysiwyg.addComment', 'Add Comment')
+                    }
+                    onClick={handleOpenCommentPopup}
+                    isActive={!!activeCommentId}
+                  />
+
+                  {/* If we are actively on a comment thread and not in popup mode, show a quick delete button */}
+                  {activeCommentId && (
+                    <ToolbarButton
+                      icon={Icons.tableDelete} // Using tableDelete icon as a generic trash icon for now
+                      label={t(
+                        'shared.form.wysiwyg.removeCommentThread',
+                        'Remove Comment Thread',
+                      )}
+                      title={t(
+                        'shared.form.wysiwyg.removeCommentThread',
+                        'Remove Comment Thread',
+                      )}
+                      onClick={handleRemoveWholeComment}
+                    />
+                  )}
+                </>
+              )}
+            </BubbleMenu>
+          </>
         )}
         <EditorContent editor={editor} className={s.contentEditable} />
       </div>

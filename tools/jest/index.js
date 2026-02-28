@@ -13,6 +13,8 @@ const isCI = config.env('CI') === 'true';
 const isCoverage = config.env('COVERAGE') === 'true';
 const isWatch = config.env('JEST_WATCH') === 'true';
 const isVerbose = config.env('JEST_VERBOSE') !== 'false';
+// support benchmark mode (only run *.benchmark.js files)
+const isBenchmark = config.env('JEST_BENCHMARK') === 'true';
 const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? 2 : '50%');
 
 // Relative path to app directory
@@ -29,7 +31,8 @@ module.exports = {
    * Indicates whether the coverage information should be collected while executing the test.
    * Enable via COVERAGE=true environment variable or --coverage flag.
    */
-  collectCoverage: isCoverage,
+  // disable coverage while benchmarking to avoid skewing timings
+  collectCoverage: isCoverage && !isBenchmark,
 
   /**
    * An array of glob patterns indicating a set of files for which coverage
@@ -161,7 +164,13 @@ module.exports = {
   /**
    * The glob patterns Jest uses to detect test files.
    */
-  testMatch: ['**/__tests__/**/*.{js,jsx}', '**/?(*.)+(spec|test).{js,jsx}'],
+  // Determine which files jest should treat as test suites. In normal
+  // mode we only pick up *.test.js and *.spec.js inside the app directory.
+  // When running benchmarks we switch to *.benchmark.js so that performance
+  // tests are kept separate from unit tests.
+  testMatch: isBenchmark
+    ? ['**/?(*.)+(benchmark).{js,jsx}']
+    : ['**/__tests__/**/*.{js,jsx}', '**/?(*.)+(spec|test).{js,jsx}'],
 
   /**
    * An array of regexp pattern strings that are matched against all test paths,

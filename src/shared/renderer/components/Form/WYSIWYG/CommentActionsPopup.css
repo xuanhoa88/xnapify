@@ -1,0 +1,144 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../variables.css';
+
+.commentPopup {
+  display: flex;
+  flex-direction: column;
+  width: 280px;
+  max-height: 400px;
+  background-color: var(--color-background);
+  padding: var(--spacing-3);
+  font-family: var(--font-family-base);
+  border-radius: var(--radius-md);
+  box-sizing: border-box;
+}
+
+.commentList {
+  list-style: none;
+  margin: 0 0 var(--spacing-3) 0;
+  padding: 0;
+  overflow-y: auto;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.commentItem {
+  background-color: var(--color-background-secondary);
+  padding: var(--spacing-2) var(--spacing-3);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.commentHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-1);
+}
+
+.commentDate {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-tertiary);
+}
+
+.removeButton {
+  background: transparent;
+  border: none;
+  color: var(--color-text-tertiary);
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition:
+    background-color var(--transition-base),
+    color var(--transition-base);
+}
+
+.removeButton:hover {
+  background-color: var(--color-background-tertiary);
+  color: var(--color-error);
+}
+
+.commentText {
+  margin: 0;
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  word-wrap: break-word;
+}
+
+.commentForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.commentTextarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-2);
+  font-size: var(--font-size-sm);
+  color: var(--color-text-primary);
+  font-family: inherit;
+  outline: none;
+  transition: border-color var(--transition-base);
+}
+
+.commentTextarea:focus {
+  border-color: var(--color-primary);
+}
+
+.commentActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-2);
+}
+
+.cancelButton {
+  background: transparent;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-base);
+}
+
+.cancelButton:hover {
+  background-color: var(--color-background-secondary);
+}
+
+.submitButton {
+  background-color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  padding: var(--spacing-1) var(--spacing-3);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-semibold);
+  cursor: pointer;
+  transition: opacity var(--transition-base);
+}
+
+.submitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submitButton:hover:not(:disabled) {
+  opacity: 0.9;
+}

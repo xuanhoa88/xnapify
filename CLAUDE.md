@@ -37,8 +37,11 @@ react-starter-kit/
 │   └── run.js                    # Task runner
 ├── build/                        # Production build output
 ├── public/                       # Static assets
+├── uploads/                      # Uploaded files during development/runtime
+├── .node-red/                    # Node-RED runtime state and flows (hidden)
 ├── .claude/                      # AI assistant command guides
 │   └── commands/                 # Development command documentation
+├── database.sqlite               # Local SQLite database (dev)
 └── .env.rsk                      # Environment variable template
 ```
 
@@ -707,6 +710,28 @@ describe('myFeature slice', () => {
     expect(store.getState().myFeature.value).toBe(1);
   });
 });
+```
+
+### Benchmark Tests
+
+> Performance-oriented suites that measure execution time. Benchmarks
+> are kept separate from regular unit tests and are executed with a
+> dedicated command.
+
+- **File naming:** create `*.benchmark.js` files alongside the code you
+  want to measure (common to put examples in `src/benchmarks/`).
+- **Running:** use `npm run benchmark` or `node tools/run benchmark`.
+  The task will invoke Jest in "benchmark mode" (`JEST_BENCHMARK=true`)
+  which only loads files matching the pattern and disables coverage to
+  avoid skewing timings.
+- **Writing:** benchmarks are just Jest tests, so you can use the
+  standard `describe/it` syntax and any test helpers. Use
+  `performance.now()` or libraries like `benchmark` if you prefer.
+- **Example:** see `src/benchmarks/example.benchmark.js` for a simple
+  fibonacci timing.
+
+Benchmarks help catch regressions and guide optimization work without
+polluting the regular test suite.
 ```
 
 ## Important Notes

@@ -129,6 +129,32 @@ function createTurndownService() {
     },
   });
 
+  // ── Comments ────────────────────────────────────────────────────────────
+  // Keep comments using Markdown Directive syntax instead of raw HTML:
+  // :comment[content]{id="X" data="[encoded JSON]"}
+  td.addRule('commentSpan', {
+    filter(node) {
+      return node.nodeName === 'SPAN' && node.hasAttribute('data-comment-id');
+    },
+    replacement(content, node) {
+      const commentId = node.getAttribute('data-comment-id');
+      const comments = node.getAttribute('data-comments');
+
+      let attrs = `id="${commentId}"`;
+      if (comments) {
+        try {
+          // Encode JSON array to avoid breaking Markdown attribute syntax
+          const safeData = encodeURIComponent(comments);
+          attrs += ` data="${safeData}"`;
+        } catch (e) {
+          // Error encoding, ignore data
+        }
+      }
+
+      return `:comment[${content}]{${attrs}}`;
+    },
+  });
+
   // ── Strikethrough ~~text~~ ───────────────────────────────────────────────
   td.addRule('strikethrough', {
     filter: ['del', 's', 'strike'],
@@ -323,6 +349,32 @@ export function markdownToHtml(markdown) {
   let processed = markdown.replace(
     /!\[([^\]]*)\]\((data:image\/[^)]+)\)/g,
     '<img src="$2" alt="$1">',
+  );
+
+  // Pre-process: Convert custom comment markdown directives back into HTML spans
+  // Syntax: :comment[content]{id="X" data="Y"}
+  processed = processed.replace(
+    /:comment\[([\s\S]*?)\]\{([^}]+)\}/g,
+    (match, content, attrString) => {
+      const idMatch = attrString.match(/id="([^"]+)"/);
+      const dataMatch = attrString.match(/data="([^"]+)"/);
+
+      const id = idMatch ? idMatch[1] : '';
+      let dataAttr = '';
+
+      if (dataMatch) {
+        try {
+          const decoded = decodeURIComponent(dataMatch[1]);
+          // Escape quotes so we don't break the HTML attribute parsing
+          const htmlSafeData = decoded.replace(/"/g, '&quot;');
+          dataAttr = ` data-comments="${htmlSafeData}"`;
+        } catch (e) {
+          // Decoding failed, ignore data
+        }
+      }
+
+      return `<span data-comment-id="${id}"${dataAttr}>${content}</span>`;
+    },
   );
 
   let html = marked.parse(processed);
