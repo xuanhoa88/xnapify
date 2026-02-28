@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import LRUCache from 'lru-cache';
+import { LRUCache } from 'lru-cache';
 
 /**
  * In-memory LRU cache for verified JWTs.
