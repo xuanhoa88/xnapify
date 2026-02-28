@@ -701,13 +701,13 @@ if (module.hot) {
 
   // Listen for plugin rebuild events from dev server via hot middleware
   let hmrEventSource = null;
+  const RELOAD_PENDING = Symbol.for('__rsk.hmrPluginReloadPending__');
   if (
     // eslint-disable-next-line no-underscore-dangle
     window.__webpack_hot_middleware_reporter__ &&
     typeof EventSource !== 'undefined'
   ) {
     hmrEventSource = new EventSource('/~/__webpack_hmr');
-    let pluginReloadPending = false;
     hmrEventSource.addEventListener('message', event => {
       try {
         const data = JSON.parse(event.data);
@@ -717,18 +717,24 @@ if (module.hot) {
           // Ensure next navigation triggers a full page reload
           pluginManager.needsReload = true;
 
-          // Show only one confirm at a time
-          if (pluginReloadPending) return;
-          pluginReloadPending = true;
+          // Show only one confirm at a time and debounce
+          if (window[RELOAD_PENDING]) return;
+          window[RELOAD_PENDING] = true;
 
-          // Ask user if they want to reload now
-          // eslint-disable-next-line no-alert
-          if (
-            window.confirm('Plugin(s) updated. Reload now to apply changes?')
-          ) {
-            window.location.reload();
-          }
-          pluginReloadPending = false;
+          setTimeout(() => {
+            // Ask user if they want to reload now
+            // eslint-disable-next-line no-alert
+            if (
+              window.confirm('Plugin(s) updated. Reload now to apply changes?')
+            ) {
+              window.location.reload();
+            } else {
+              // Cooldown to prevent spamming if canceled
+              setTimeout(() => {
+                window[RELOAD_PENDING] = false;
+              }, 3000);
+            }
+          }, 100);
         }
       } catch {
         // Ignore non-JSON messages (webpack HMR heartbeats, etc.)
