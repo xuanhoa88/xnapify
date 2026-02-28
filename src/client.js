@@ -700,14 +700,15 @@ if (module.hot) {
   });
 
   // Listen for plugin rebuild events from dev server via hot middleware
+  let hmrEventSource = null;
   if (
     // eslint-disable-next-line no-underscore-dangle
     window.__webpack_hot_middleware_reporter__ &&
     typeof EventSource !== 'undefined'
   ) {
-    const source = new EventSource('/~/__webpack_hmr');
+    hmrEventSource = new EventSource('/~/__webpack_hmr');
     let pluginReloadPending = false;
-    source.addEventListener('message', event => {
+    hmrEventSource.addEventListener('message', event => {
       try {
         const data = JSON.parse(event.data);
         if (data && data.type === 'plugins-refreshed') {
@@ -750,6 +751,9 @@ if (module.hot) {
 
   module.hot.dispose(() => {
     log('🔥 HMR dispose', 'info');
+    if (hmrEventSource) {
+      hmrEventSource.close();
+    }
     cleanup();
   });
 }

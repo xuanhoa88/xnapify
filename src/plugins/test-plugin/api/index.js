@@ -106,7 +106,7 @@ export default {
     hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
     // The updating hook is no longer needed!
-    // formData.nickname and formData.birthday are automatically persisted
+    // formData.nickname and formData.birthdate are automatically persisted
     // as native EAV rows by the core profile service.
     this[HANDLERS].updating = function (profileData) {
       if (profileData && profileData.nickname) {
@@ -118,7 +118,7 @@ export default {
     };
     hook('profile').on('updating', this[HANDLERS].updating);
 
-    // Handler to read nickname + birthday from profile EAV and add to response
+    // Handler to read nickname + birthdate from profile EAV and add to response
     this[HANDLERS].formatResponse = function (user) {
       // Ensure profile exists in result
       user.profile = user.profile || {};
@@ -130,8 +130,8 @@ export default {
       }
       user.profile.nickname = nickname || null;
 
-      // Read birthday from native profile EAV row
-      user.profile.birthday = user.profile.birthday || null;
+      // Read birthdate from native profile EAV row
+      user.profile.birthdate = user.profile.birthdate || null;
 
       console.log(
         '[Test Plugin] Added nickname to response: ' + user.profile.nickname,

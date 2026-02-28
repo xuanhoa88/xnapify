@@ -1,8 +1,10 @@
 {
   "nickname": "Tên hiển thị",
   "nickname_hint": "Thêm qua Test Plugin (tối thiểu 3 ký tự)",
+  "birthdate": "Ngày sinh",
   "validations": {
     "nickname_taken": "Tên hiển thị đã tồn tại",
-    "nickname_too_short": "Tên hiển thị phải có ít nhất 3 ký tự"
+    "nickname_too_short": "Tên hiển thị phải có ít nhất 3 ký tự",
+    "birthdate_format": "Ngày sinh phải có định dạng DD/MM/YYYY"
   }
 }

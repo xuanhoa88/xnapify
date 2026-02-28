@@ -54,8 +54,8 @@ export default function PluginField({ register, context }) {
         </div>
       </Form.Field>
 
-      <Form.Field name='profile.birthday' label={t('birthday', 'Birthday')}>
-        <Form.Date {...register('profile.birthday')} />
+      <Form.Field name='profile.birthdate' label={t('birthdate', 'Birthdate')}>
+        <Form.Date {...register('profile.birthdate')} />
       </Form.Field>
     </>
   );

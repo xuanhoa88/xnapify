@@ -38,7 +38,7 @@ const handleProfileDefaults = async user => {
   return {
     profile: {
       nickname: (user && user.profile.nickname) || 'Anonymous User',
-      birthday: (user && user.profile.birthday) || '',
+      birthdate: (user && user.profile.birthdate) || '',
     },
   };
 };
