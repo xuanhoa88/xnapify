@@ -410,6 +410,16 @@ class PluginRegistry {
     return this[HOOKS].execute(hookId, ...args);
   }
 
+  /**
+   * Execute all callbacks for a hook in parallel
+   * @param {string} hookId - Hook identifier
+   * @param {...any} args - Arguments to pass to callbacks
+   * @returns {Promise<Array>} Results from all callbacks
+   */
+  async executeHookParallel(hookId, ...args) {
+    return this[HOOKS].executeParallel(hookId, ...args);
+  }
+
   // =========================================================================
   // IPC & Middleware Utility
   // =========================================================================

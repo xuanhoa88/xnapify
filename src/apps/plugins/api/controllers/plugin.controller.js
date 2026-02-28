@@ -307,8 +307,8 @@ export const handleIPC = async (req, res) => {
       );
     }
 
-    // Execute the IPC hook
-    const results = await pluginRegistry.executeHook(hookId, data, {
+    // Execute the IPC hook (in parallel for maximum throughput)
+    const results = await pluginRegistry.executeHookParallel(hookId, data, {
       req,
       res,
     });

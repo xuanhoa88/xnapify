@@ -73,10 +73,10 @@ class Hook {
   }
 
   /**
-   * Execute all callbacks for a hook.
+   * Execute all callbacks for a hook sequentially.
    *
-   * Callbacks are **initiated in parallel** and the results array preserves
-   * registration order. Any errors are logged and do not stop other callbacks.
+   * Callbacks are executed **in order of registration**, waiting for each to complete
+   * before starting the next. Any errors are logged and do not stop subsequent callbacks.
    *
    * @param {string} hookId - Hook identifier
    * @param {...any} args - Arguments to pass to callbacks
@@ -86,15 +86,44 @@ class Hook {
     const callbacks = this.hooks.get(hookId);
     if (!callbacks) return [];
 
+    const results = [];
+    for (const cb of callbacks) {
+      try {
+        const result = await cb(...args);
+        if (result !== undefined) {
+          results.push(result);
+        }
+      } catch (error) {
+        console.error(`[HookRegistry] Hook "${hookId}" error:`, error);
+      }
+    }
+
+    return results;
+  }
+
+  /**
+   * Execute all callbacks for a hook in parallel.
+   *
+   * Callbacks are **initiated concurrently**. Registration order is preserved in the
+   * results array. Any errors are logged and do not stop other callbacks.
+   * Use this for high-performance hooks where order and shared state mutation don't matter.
+   *
+   * @param {string} hookId - Hook identifier
+   * @param {...any} args - Arguments to pass to callbacks
+   * @returns {Promise<Array>} Results from successful callbacks (in order)
+   */
+  async executeParallel(hookId, ...args) {
+    const callbacks = this.hooks.get(hookId);
+    if (!callbacks) return [];
+
     const promises = [...callbacks].map(cb =>
       Promise.resolve(cb(...args)).catch(error => {
-        console.error(`[HookRegistry] Hook "${hookId}" error:`, error);
+        console.error(`[HookRegistry] Hook "${hookId}" parallel error:`, error);
         return undefined;
       }),
     );
 
     const results = await Promise.all(promises);
-    // filter out undefined entries (failed hooks)
     return results.filter(r => r !== undefined);
   }
 

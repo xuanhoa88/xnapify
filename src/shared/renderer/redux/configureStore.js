@@ -11,14 +11,27 @@ import {
 } from '@reduxjs/toolkit';
 import rootReducer from './rootReducer';
 
-// Check if running on server
-const isServer = typeof window === 'undefined';
-
 /**
  * Symbol to mark identity reducers created for SSR state preservation
  * @private
  */
 const IDENTITY_REDUCER = Symbol('__rsk.identityReducer__');
+
+// Empty objects for default parameters
+const EMPTY_INITIAL_STATE = {};
+const EMPTY_HELPERS_CONFIG = {};
+
+// Actions to skip logging (too verbose)
+const SKIP_LOG_ACTIONS = ['@@INIT', '@@redux/INIT'];
+
+// Static options for redux logger to prevent recreating objects
+const SERVER_LOGGER_OPTIONS = {
+  colors: false,
+  stateTransformer: () => null,
+};
+
+// Check if running on server
+const isServer = typeof window === 'undefined';
 
 /**
  * Validates reducer injection parameters
@@ -99,15 +112,31 @@ function separateInitialState(initialState, rootReducerKeys) {
  * @param {Object} helpersConfig.i18n - i18next instance
  * @returns {Store} Configured Redux store with dynamic reducer injection
  */
-export default function configureStore(initialState = {}, helpersConfig = {}) {
+// Cache known root reducer keys
+const rootReducerKeys = Object.keys(rootReducer);
+
+// Cache the combined root reducer since it doesn't change
+const staticRootReducer = combineReducers(rootReducer);
+
+/**
+ * Configure and create Redux store using Redux Toolkit
+ * @param {Object} initialState - Initial Redux state
+ * @param {Object} helpersConfig - Extra argument for thunk middleware
+ * @param {Function} helpersConfig.fetch - Isomorphic fetch function
+ * @param {Object} helpersConfig.history - History instance (memory on server, browser on client)
+ * @param {Object} helpersConfig.i18n - i18next instance
+ * @returns {Store} Configured Redux store with dynamic reducer injection
+ */
+
+export default function configureStore(
+  initialState = EMPTY_INITIAL_STATE,
+  helpersConfig = EMPTY_HELPERS_CONFIG,
+) {
   // Track dynamically injected reducers
   const injectedReducers = {};
 
   // Track reducer injection listeners for cleanup
   const reducerListeners = new Set();
-
-  // Get known root reducer keys
-  const rootReducerKeys = Object.keys(rootReducer);
 
   // Separate initial state into known (root) and dynamic (to be injected) state
   const { filteredInitialState, pendingDynamicState } = separateInitialState(
@@ -141,20 +170,9 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
             timestamp: false,
             diff: false,
             // Predicate to avoid logging specific actions
-            predicate: (getState, action) => {
-              // Skip logging actions that are too verbose
-              const skipActions = ['@@INIT', '@@redux/INIT'];
-              return !skipActions.includes(action.type);
-            },
-            ...(isServer
-              ? {
-                  // Minimal logging on server:
-                  // 1. No colors to avoid escape codes in text logs
-                  colors: false,
-                  // 2. Hide state to reduce noise (only show actions)
-                  stateTransformer: () => null,
-                }
-              : {}),
+            predicate: (getState, action) =>
+              !SKIP_LOG_ACTIONS.includes(action.type),
+            ...(isServer ? SERVER_LOGGER_OPTIONS : {}),
           }),
         );
       } catch (err) {
@@ -167,7 +185,7 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
 
   // Create store with RTK's configureStore
   const store = createStore({
-    reducer: combineReducers(rootReducer),
+    reducer: staticRootReducer,
     preloadedState: filteredInitialState,
     middleware: createMiddleware,
     devTools: __DEV__
@@ -199,11 +217,16 @@ export default function configureStore(initialState = {}, helpersConfig = {}) {
    * @private
    * @returns {Function} Combined reducer
    */
-  const rebuildRootReducer = () =>
-    combineReducers({
+  const rebuildRootReducer = () => {
+    // Fast path: if no injected reducers, return static root
+    const injectedKeys = Object.keys(injectedReducers);
+    if (injectedKeys.length === 0) return staticRootReducer;
+
+    return combineReducers({
       ...rootReducer,
       ...injectedReducers,
     });
+  };
 
   /**
    * Notifies all reducer listeners about an injection event

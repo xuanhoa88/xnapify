@@ -161,20 +161,36 @@ export async function getGroups(options, models) {
 
   const { count, rows: groups } = await Group.findAndCountAll({
     where: whereCondition,
-    include: [
-      roleInclude,
-      {
-        model: User,
-        as: 'users',
-        through: { attributes: [] },
-        required: false,
-      },
-    ],
+    include: [roleInclude],
     distinct: true, // Fix count inflation from associations
     limit: parseInt(limit),
     offset: parseInt(offset),
     order: [['name', 'ASC']],
   });
+
+  const groupIds = groups.map(g => g.id);
+
+  // Bulk fetch user counts per group
+  const userCountsRows = await User.findAll({
+    attributes: [
+      [sequelize.col('groups.id'), 'groupId'],
+      [sequelize.fn('COUNT', sequelize.col('User.id')), 'count'],
+    ],
+    include: [
+      {
+        model: Group,
+        as: 'groups',
+        where: { id: { [Op.in]: groupIds } },
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['groups.id'],
+    raw: true,
+  });
+  const userCountsMap = new Map(
+    userCountsRows.map(row => [row.groupId, parseInt(row.count, 10)]),
+  );
 
   // Add user count to each group
   const groupsWithCount = groups.map(group => ({
@@ -183,7 +199,7 @@ export async function getGroups(options, models) {
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
         : [DEFAULT_ROLE],
-    userCount: group.users ? group.users.length : 0,
+    userCount: userCountsMap.get(group.id) || 0,
     roleCount: group.roles ? group.roles.length : 0,
   }));
 

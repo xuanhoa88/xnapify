@@ -315,13 +315,16 @@ async function initReduxStore({ fetch, history }, locale) {
   return store;
 }
 
-// ---------------------------------------------------------------------------
-// SSR Rendering
-// ---------------------------------------------------------------------------
+// Memoized SSR resources
+let ssrResources = null;
 
-async function render({ context, component, metadata = {} }) {
+async function loadSSRResources() {
+  if (ssrResources) return ssrResources;
+
   const scriptLinks = [];
   const styleLinks = [];
+  let AppComp = null;
+  let HtmlComp = null;
 
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
@@ -341,8 +344,19 @@ async function render({ context, component, metadata = {} }) {
     }
   }
 
-  const App = (await import('./shared/renderer/App')).default;
-  const Html = (await import('./shared/renderer/Html')).default;
+  AppComp = (await import('./shared/renderer/App')).default;
+  HtmlComp = (await import('./shared/renderer/Html')).default;
+
+  ssrResources = { scriptLinks, styleLinks, App: AppComp, Html: HtmlComp };
+  return ssrResources;
+}
+
+// ---------------------------------------------------------------------------
+// SSR Rendering
+// ---------------------------------------------------------------------------
+
+async function render({ context, component, metadata = {} }) {
+  const { scriptLinks, styleLinks, App, Html } = await loadSSRResources();
 
   const children = ReactDOM.renderToString(
     <App context={context}>{component}</App>,
@@ -742,7 +756,7 @@ function createProviderGuard(app, providers = []) {
 // Server Lifecycle
 // ---------------------------------------------------------------------------
 
-async function launch(app, server, baseUrl, port, host) {
+async function launch(server, baseUrl, port, host) {
   if (!server.listening) {
     await new Promise((resolve, reject) => {
       const handleError = err => {
@@ -1105,7 +1119,7 @@ export async function bootstrap(app, server, options = {}) {
   return {
     app,
     server,
-    launch: () => launch(app, server, baseUrl, port, normalizedHost),
+    launch: () => launch(server, baseUrl, port, normalizedHost),
     dispose: () => dispose(server),
   };
 }

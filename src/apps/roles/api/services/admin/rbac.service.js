@@ -18,7 +18,6 @@ import {
   SYSTEM_PERMISSIONS,
 } from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
-import { fetchUserWithRBAC } from '../../../../users/api/utils/rbac/fetcher';
 import { logActivity } from '../../utils/activity';
 
 /**

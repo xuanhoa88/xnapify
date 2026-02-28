@@ -118,59 +118,80 @@ export async function getRoles(options, models) {
     },
   });
 
-  // Fetch counts for each role
-  const rolesWithCounts = await Promise.all(
-    roles.map(async role => {
-      // Check if role has wildcard permission
-      const hasWildcard = role.permissions.some(
-        p =>
-          p.resource === DEFAULT_RESOURCES.ALL &&
-          p.action === DEFAULT_ACTIONS.MANAGE,
-      );
+  const roleIds = roles.map(r => r.id);
 
-      const [usersCount, groupsCount, permissionsCount] = await Promise.all([
-        User.count({
-          include: [
-            {
-              model: Role,
-              as: 'roles',
-              where: { id: role.id },
-              required: true,
-            },
-          ],
-        }),
-        Group.count({
-          include: [
-            {
-              model: Role,
-              as: 'roles',
-              where: { id: role.id },
-              required: true,
-            },
-          ],
-        }),
-        // If wildcard, return total count; otherwise count actual permissions
-        hasWildcard
-          ? Promise.resolve(totalPermissionsCount)
-          : Promise.resolve(
-              role.permissions.filter(
-                p =>
-                  !(
-                    p.resource === DEFAULT_RESOURCES.ALL &&
-                    p.action === DEFAULT_ACTIONS.MANAGE
-                  ),
-              ).length,
-            ),
-      ]);
-
-      return {
-        ...role.toJSON(),
-        usersCount,
-        groupsCount,
-        permissionsCount,
-      };
-    }),
+  // Bulk fetch user counts per role
+  const userCountsRows = await User.findAll({
+    attributes: [
+      [sequelize.col('roles.id'), 'roleId'],
+      [sequelize.fn('COUNT', sequelize.col('User.id')), 'count'],
+    ],
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        where: { id: { [Op.in]: roleIds } },
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['roles.id'],
+    raw: true,
+  });
+  const userCountsMap = new Map(
+    userCountsRows.map(row => [row.roleId, parseInt(row.count, 10)]),
   );
+
+  // Bulk fetch group counts per role
+  const groupCountsRows = await Group.findAll({
+    attributes: [
+      [sequelize.col('roles.id'), 'roleId'],
+      [sequelize.fn('COUNT', sequelize.col('Group.id')), 'count'],
+    ],
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        where: { id: { [Op.in]: roleIds } },
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['roles.id'],
+    raw: true,
+  });
+  const groupCountsMap = new Map(
+    groupCountsRows.map(row => [row.roleId, parseInt(row.count, 10)]),
+  );
+
+  // Fetch counts for each role without N+1 mapping
+  const rolesWithCounts = roles.map(role => {
+    // Check if role has wildcard permission
+    const hasWildcard = role.permissions.some(
+      p =>
+        p.resource === DEFAULT_RESOURCES.ALL &&
+        p.action === DEFAULT_ACTIONS.MANAGE,
+    );
+
+    const usersCount = userCountsMap.get(role.id) || 0;
+    const groupsCount = groupCountsMap.get(role.id) || 0;
+    const permissionsCount = hasWildcard
+      ? totalPermissionsCount
+      : role.permissions.filter(
+          p =>
+            !(
+              p.resource === DEFAULT_RESOURCES.ALL &&
+              p.action === DEFAULT_ACTIONS.MANAGE
+            ),
+        ).length;
+
+    return {
+      ...role.toJSON(),
+      usersCount,
+      groupsCount,
+      permissionsCount,
+    };
+  });
 
   return {
     roles: rolesWithCounts,
@@ -480,26 +501,39 @@ export async function getGroupsWithRole(role_id, options, models) {
     subQuery: false,
   });
 
-  // Fetch user counts for each group
-  const groupsWithCounts = await Promise.all(
-    groups.map(async group => {
-      const userCount = await User.count({
-        include: [
-          {
-            model: Group,
-            as: 'groups',
-            where: { id: group.id },
-            required: true,
-          },
-        ],
-      });
+  const groupIds = groups.map(g => g.id);
 
-      return {
-        ...group.toJSON(),
-        userCount,
-      };
-    }),
+  // Bulk fetch user counts per group
+  const userCountsRows = await User.findAll({
+    attributes: [
+      [sequelize.col('groups.id'), 'groupId'],
+      [sequelize.fn('COUNT', sequelize.col('User.id')), 'count'],
+    ],
+    include: [
+      {
+        model: Group,
+        as: 'groups',
+        where: { id: { [Op.in]: groupIds } },
+        attributes: [],
+        through: { attributes: [] },
+      },
+    ],
+    group: ['groups.id'],
+    raw: true,
+  });
+  const userCountsMap = new Map(
+    userCountsRows.map(row => [row.groupId, parseInt(row.count, 10)]),
   );
+
+  // Connect counts back to groups
+  const groupsWithCounts = groups.map(group => {
+    const userCount = userCountsMap.get(group.id) || 0;
+
+    return {
+      ...group.toJSON(),
+      userCount,
+    };
+  });
 
   return {
     role: { id: role.id, name: role.name },
