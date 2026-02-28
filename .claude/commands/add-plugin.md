@@ -64,29 +64,7 @@ Example:
 }
 ```
 
-### 2. Create Plugin Constants
-
-```javascript
-// src/plugins/{plugin-name}/constants.js
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-// Plugin ID - must match folder name
-export const PLUGIN_ID = '{plugin-name}';
-```
-
-Example:
-
-```javascript
-// src/plugins/notifications-plugin/constants.js
-export const PLUGIN_ID = 'notifications-plugin';
-```
-
-### 3. Create Backend Plugin (API)
+### 2. Create Backend Plugin (API)
 
 ```javascript
 // src/plugins/{plugin-name}/api/index.js
@@ -224,7 +202,7 @@ export default {
 };
 ```
 
-### 4. Create Frontend Plugin (Views)
+### 3. Create Frontend Plugin (Views)
 
 ```javascript
 // src/plugins/{plugin-name}/views/index.js
@@ -314,7 +292,7 @@ export default {
 };
 ```
 
-### 5. Create Plugin Component
+### 4. Create Plugin Component
 
 ```javascript
 // src/plugins/{plugin-name}/views/PluginComponent.js
@@ -377,7 +355,7 @@ export default PluginComponent;
 }
 ```
 
-### 6. Create Validation Schemas
+### 5. Create Validation Schemas
 
 ```javascript
 // src/plugins/{plugin-name}/validator/index.js
@@ -388,8 +366,6 @@ export default PluginComponent;
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { PLUGIN_ID } from '../constants';
-
 /**
  * Define validation schema - works on client and server
  */
@@ -398,7 +374,9 @@ export const validationSchemas = zod => {
     fieldName: zod
       .string()
       .min(3, {
-        params: { i18n: `${PLUGIN_ID}:validations.field_too_short` },
+        params: {
+          i18n: `plugin:${__PLUGIN_NAME__}:validations.field_too_short`,
+        },
       })
       .max(100)
       .optional(),
@@ -406,7 +384,7 @@ export const validationSchemas = zod => {
 };
 ```
 
-### 7. Create Translations
+### 6. Create Translations
 
 ````javascript
 ```json
@@ -422,7 +400,7 @@ export const validationSchemas = zod => {
 }
 ````
 
-### 8. Create Database Migration (Optional)
+### 7. Create Database Migration (Optional)
 
 ```javascript
 // src/plugins/{plugin-name}/api/database/migrations/1.initial.js
@@ -444,7 +422,7 @@ export async function down(connection, Sequelize) {
 }
 ```
 
-### 9. Create Database Seed (Optional)
+### 8. Create Database Seed (Optional)
 
 ```javascript
 // src/plugins/{plugin-name}/api/database/seeds/1.initial.js
@@ -483,29 +461,27 @@ cd src/plugins/comments-plugin
 }
 ```
 
-### Step 3: constants.js
-
-```javascript
-export const PLUGIN_ID = 'comments-plugin';
-```
-
-### Step 4: Validator
+### Step 3: Validator
 
 ```javascript
 // validator/index.js
-import { PLUGIN_ID } from '../constants';
-
 export const validationSchemas = zod => {
   return zod.object({
     comment: zod
       .string()
-      .min(1, { params: { i18n: `${PLUGIN_ID}:required` } })
-      .max(1000),
+      .min(1, {
+        params: { i18n: `plugin:${__PLUGIN_NAME__}:validations.required` },
+      })
+      .max(1000, {
+        params: {
+          i18n: `plugin:${__PLUGIN_NAME__}:validations.too_long`,
+        },
+      }),
   });
 };
 ```
 
-### Step 5: Translations
+### Step 4: Translations
 
 ```json
 {
@@ -520,7 +496,7 @@ export const validationSchemas = zod => {
 }
 ```
 
-### Step 6: Frontend Plugin
+### Step 5: Frontend Plugin
 
 ```javascript
 // views/index.js
@@ -559,7 +535,7 @@ export default {
 };
 ```
 
-### Step 7: Backend Plugin
+### Step 6: Backend Plugin
 
 ```javascript
 // api/index.js
@@ -637,7 +613,7 @@ hook('posts').on('created', post => {
 
 ## Best Practices
 
-1. **Namespace Everything**: Use `{PLUGIN_ID}:` prefix for translations
+1. **Namespace Everything**: Use `plugin:{__PLUGIN_NAME__}:` prefix for translations
 2. **Cleanup on Destroy**: Always unregister hooks/slots when plugin is disabled
 3. **Error Handling**: Wrap migrations/seeds in try-catch
 4. **Documentation**: Add JSDoc comments to all exports
@@ -652,7 +628,6 @@ hook('posts').on('created', post => {
 
 - Check `__PLUGIN_NAME__` and `__PLUGIN_DESCRIPTION__` globals are defined
 - Verify `register()` returns correct format: `[routes, name, metadata]`
-- Ensure directory name matches PLUGIN_ID
 
 ### Slots Not Appearing
 
@@ -670,4 +645,3 @@ hook('posts').on('created', post => {
 
 - Verify `translations()` declarative method is added to the plugin definitions
 - Check JSON file is in `translations/` directory
-- Ensure namespace matches PLUGIN_ID

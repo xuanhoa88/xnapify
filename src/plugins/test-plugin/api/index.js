@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { PLUGIN_ID } from '../constants';
 import { profileSchema } from '../validator';
 
 // Private symbol for handlers storage
@@ -63,7 +62,7 @@ export default {
       try {
         console.log('[Test Plugin] Migration keys:', migrationsContext.keys());
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: PLUGIN_ID },
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
         ]);
         console.log('[Test Plugin] Database migrations executed');
       } catch (error) {
@@ -76,7 +75,7 @@ export default {
       try {
         console.log('[Test Plugin] Seed keys:', seedsContext.keys());
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: PLUGIN_ID },
+          { context: seedsContext, prefix: __PLUGIN_NAME__ },
         ]);
         console.log('[Test Plugin] Database seeds executed');
       } catch (error) {
@@ -238,7 +237,7 @@ export default {
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: PLUGIN_ID },
+          { context: seedsContext, prefix: __PLUGIN_NAME__ },
         ]);
         console.log('[Test Plugin] Database seeds destroyed');
       } catch (error) {
@@ -248,7 +247,7 @@ export default {
       try {
         console.log('[Test Plugin] Database migrations/seeds destroyed');
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: PLUGIN_ID },
+          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
         ]);
         console.log('[Test Plugin] Database migrations destroyed');
       } catch (error) {

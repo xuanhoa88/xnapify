@@ -7,8 +7,8 @@
 
 import merge from 'lodash/merge';
 import { composeMiddleware } from '../../utils/composer';
-import { addNamespace } from '../../i18n/addNamespace';
-import { getTranslations } from '../../i18n/getTranslations';
+import { addNamespace } from '../../i18n/utils';
+import { getTranslations } from '../../i18n/loader';
 import {
   ROUTE_INIT_KEY,
   ROUTE_MOUNT_KEY,
@@ -150,10 +150,16 @@ export function createUnmount(configs, routeUnmount) {
  *
  * @param {Object[]} configs - Matched config modules
  * @param {Function|undefined} routeTranslations - Route module's translations export
- * @param {string} routePath - The route pathname (used as i18n namespace)
+ * @param {string} routePath - The route pathname (used as i18n namespace fallback)
+ * @param {string} moduleName - The module name to use as i18n namespace
  * @returns {Function|undefined} Registration function or undefined
  */
-export function createTranslations(configs, routeTranslations, routePath) {
+export function createTranslations(
+  configs,
+  routeTranslations,
+  routePath,
+  moduleName,
+) {
   const translatableConfigs = configs.filter(
     c => typeof c.module.translations === 'function',
   );
@@ -199,7 +205,8 @@ export function createTranslations(configs, routeTranslations, routePath) {
     // 3. Register with i18n
     try {
       if (Object.keys(merged).length > 0) {
-        addNamespace(routePath, merged);
+        const namespace = (moduleName || '').replace(/[()]/g, '') || routePath;
+        addNamespace(namespace, merged);
       }
     } catch (error) {
       log(`addNamespace error for "${routePath}": ${error.message}`, 'error');

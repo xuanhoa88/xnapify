@@ -105,7 +105,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
   // Create route objects
   pages.forEach((pageInfo, pathname) => {
     const rootSegment = getRootSegment(pathname);
-    const { module } = pageInfo;
+    const { module, moduleName } = pageInfo;
     const matchedConfigs = findConfigs(configs, rootSegment);
     const matchedLayouts = findLayouts(layouts, rootSegment, pathname, module);
 
@@ -118,6 +118,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
         matchedConfigs,
         module.translations,
         pathname,
+        moduleName,
       ),
       init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),

@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { PLUGIN_ID } from '../constants';
-
 /**
  * Define reusable schema factory
  * This schema can be used on:
@@ -19,7 +17,9 @@ export const profileSchema = zod => {
       nickname: zod
         .string()
         .min(3, {
-          params: { i18n: `${PLUGIN_ID}:validations.nickname_too_short` },
+          params: {
+            i18n: `plugin:${__PLUGIN_NAME__}:validations.nickname_too_short`,
+          },
         })
         .max(50)
         .regex(/^[a-zA-Z0-9_]+$/, {

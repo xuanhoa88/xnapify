@@ -31,10 +31,10 @@ jest.mock('../Registry', () => ({
 }));
 
 // Mock i18n utilities used by translations phase
-jest.mock('../../i18n/addNamespace', () => ({
+jest.mock('../../i18n/utils', () => ({
   addNamespace: jest.fn(),
 }));
-jest.mock('../../i18n/getTranslations', () => ({
+jest.mock('../../i18n/loader', () => ({
   getTranslations: jest.fn(ctx => ctx),
 }));
 

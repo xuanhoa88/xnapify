@@ -170,14 +170,11 @@ class PluginRegistry {
       // Store the full definition wrapper
       const definitions = this[DEFINITIONS].get(ns);
       const newDef = {
+        ...definition,
         ...meta,
         id,
         context,
         name: meta.name || id,
-        install: definition.install,
-        uninstall: definition.uninstall,
-        init: definition.init,
-        destroy: definition.destroy,
       };
 
       // Remove existing definition with same ID if present (update/overwrite)

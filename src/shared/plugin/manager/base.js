@@ -11,8 +11,8 @@
  * Shared logic for both server and client.
  */
 import { registry } from '../Registry';
-import { addNamespace } from '../../i18n/addNamespace';
-import { getTranslations } from '../../i18n/getTranslations';
+import { addNamespace } from '../../i18n/utils';
+import { getTranslations } from '../../i18n/loader';
 
 // Symbols for internal state
 export const INITIALIZED = Symbol('__rsk.initializedPlugins__');
@@ -731,7 +731,7 @@ export class BasePluginManager {
                 const translations = getTranslations(plugin.translations());
                 if (Object.keys(translations).length > 0) {
                   addNamespace(
-                    plugin.id,
+                    `plugin:${plugin.id}`,
                     translations,
                     this[PLUGIN_CONTEXT].i18n,
                   );

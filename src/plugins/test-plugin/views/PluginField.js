@@ -9,11 +9,10 @@ import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import Form from '../../../shared/renderer/components/Form';
-import { PLUGIN_ID } from '../constants';
 import s from './PluginField.scss';
 
 export default function PluginField({ register, context }) {
-  const { t } = useTranslation(PLUGIN_ID);
+  const { t } = useTranslation(`plugin:${__PLUGIN_NAME__}`);
 
   const handleAsyncValidate = useCallback(
     async value => {

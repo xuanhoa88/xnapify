@@ -123,7 +123,7 @@ export function buildRoutes(
   // Create route objects
   pages.forEach((pageInfo, pathname) => {
     const rootSegment = getRootSegment(pathname);
-    const { module } = pageInfo;
+    const { module, moduleName } = pageInfo;
     const matchedConfigs = findConfigs(configs, rootSegment);
     const matchedMiddlewares = findMiddlewares(
       middlewares,
@@ -140,6 +140,7 @@ export function buildRoutes(
         matchedConfigs,
         module.translations,
         pathname,
+        moduleName,
       ),
       init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),

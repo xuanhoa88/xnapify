@@ -1,0 +1,8 @@
+{
+  "nickname": "Tên hiển thị",
+  "nickname_hint": "Thêm qua Test Plugin (tối thiểu 3 ký tự)",
+  "validations": {
+    "nickname_taken": "Tên hiển thị đã tồn tại",
+    "nickname_too_short": "Tên hiển thị phải có ít nhất 3 ký tự"
+  }
+}

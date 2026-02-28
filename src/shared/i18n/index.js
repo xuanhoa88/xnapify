@@ -6,8 +6,8 @@
  */
 
 import i18nInstance from './getInstance';
-import { getTranslations } from './getTranslations';
-import { addNamespace } from './addNamespace';
+import { getTranslations } from './loader';
+import { addNamespace } from './utils';
 
 // Export utilities
 export { getTranslations, addNamespace };

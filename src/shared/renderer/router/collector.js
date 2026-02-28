@@ -82,7 +82,7 @@ const COLLECTORS = Object.freeze({
       if (!m) return null;
 
       const pathname = buildPathname(m[1], m[2] || '');
-      return { key: pathname, data: { path: pathname } };
+      return { key: pathname, data: { path: pathname, moduleName: m[1] } };
     },
     label: 'Route',
   },
