@@ -49,11 +49,11 @@ const host = config.env('RSK_HOST', '127.0.0.1');
 // Module-level variables for managing the Express app and HMR state
 // - app: Holds the Express application instance
 // - server: Holds the HTTP server instance
+// - dispose: Dispose server bundle (Node-RED, etc.)
 // - hmr: Tracks Hot Module Replacement state and configuration
 // - hotMiddleware: Webpack hot middleware instance
 // - devMiddleware: Webpack dev middleware instance
-// - dispose: Dispose server bundle (Node-RED, etc.)
-let app, server, hmr, hotMiddleware, devMiddleware, dispose;
+let app, server, dispose, hmr, hotMiddleware, devMiddleware;
 
 /**
  * Create compilation promise for webpack compiler
@@ -203,8 +203,6 @@ function clearModuleCache(modulePath, visited = new Set()) {
  * Clears the require cache to ensure fresh module loading on each call.
  *
  * @returns {Object} Server module with initialization methods
- * @property {Function} init - Function to initialize the Express application
- * @property {Function} serve - Function to start the HTTP server
  */
 
 function loadServerBundle() {
@@ -232,34 +230,29 @@ function loadServerBundle() {
 }
 
 /**
- * Launches or relaunches the development server.
+ * Prepares the development server for initial launch or HMR reload.
  * - If server exists: Swaps the request listener to the new app.
  * - If server missing: Initializes a new one.
  */
-async function createDevServer(serverBundle, prevServer) {
-  ({ app, server } = serverBundle.init());
+async function prepareDevServer({ createApp, initializeServer }, prevServer) {
+  ({ app, server } = createApp());
 
   // Reuse existing server if available
-  if (prevServer) {
-    server = prevServer;
-  }
+  const newServer = prevServer || server;
 
   // Attach webpack middlewares to the new app
   attachWebpackMiddlewares(app);
 
-  // Initialize launch function
-  let launch;
-
-  // Bootstrap the app (routes, database, etc.)
-  ({ launch } = await serverBundle.bootstrap(app, server, {
+  // Bootstrap/initialize the app (routes, database, etc.)
+  const { start: startServer } = await initializeServer(app, newServer, {
     port,
     host,
     publicDir: config.PUBLIC_DIR,
-  }));
-
-  logInfo('✅ Server reloaded successfully');
+  });
 
   if (prevServer) {
+    logInfo('✅ Server reloaded successfully');
+
     // Hot-swap: Remove old listener and add the new one
     // NOTE: This relies on the fact that the 'request' listener is the Express app
     prevServer.removeAllListeners('request');
@@ -268,7 +261,7 @@ async function createDevServer(serverBundle, prevServer) {
     notifyBrowserSyncReady();
   }
 
-  return launch;
+  return startServer;
 }
 
 /**
@@ -389,13 +382,15 @@ async function checkForUpdate() {
     }
 
     // Load new server bundle
-    const serverBundle = loadServerBundle();
-
-    // Save dispose function for graceful shutdown
-    dispose = serverBundle.dispose;
+    let createApp, initializeServer;
+    ({
+      createApp,
+      initializeServer,
+      shutdownServer: dispose,
+    } = loadServerBundle());
 
     // Recreate dev server with new bundle
-    await createDevServer(serverBundle, server);
+    await prepareDevServer({ createApp, initializeServer }, server);
 
     // Notify browser sync to restart
     await notifyBrowserSyncRestart();
@@ -565,10 +560,12 @@ async function main() {
     await serverPromise;
 
     // Load server bundle
-    const serverBundle = loadServerBundle();
-
-    // Save dispose function for graceful shutdown
-    dispose = serverBundle.dispose;
+    let createApp, initializeServer;
+    ({
+      createApp,
+      initializeServer,
+      shutdownServer: dispose,
+    } = loadServerBundle());
 
     // Create webpack middlewares (triggering client compilation)
     ({ devMiddleware, hotMiddleware } =
@@ -576,9 +573,12 @@ async function main() {
 
     await clientPromise;
 
-    // Start Server
-    const launch = await createDevServer(serverBundle);
-    await launch();
+    // Start server
+    const startServer = await prepareDevServer(
+      { createApp, initializeServer },
+      server,
+    );
+    await startServer();
 
     // This will also open the browser automatically if no clients are connected
     await startBrowserSync(server, hotMiddleware);

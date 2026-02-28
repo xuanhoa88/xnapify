@@ -184,9 +184,6 @@ class AppRouter extends Router {
 // PUBLIC API
 // =============================================================================
 
-// Track modules that have completed their providers() phase (survives HMR re-init)
-const providersPhaseCompleted = new Set();
-
 /**
  * Creates the router by discovering per-module view contexts.
  *
@@ -205,18 +202,18 @@ export default async function initializeRouter(options = {}) {
   // ─── Shared phase ─────────────────────────────────────────────────────
   // Call each module's providers() hook to allow cross-module sharing
   // (e.g. registering Redux slices, shared components, DI bindings).
-  // Skip modules that already completed providers() (HMR idempotency).
+  // Always re-run providers — persistent bindings on the Container itself
+  // guard against double-registration on the same instance.
   for (const [name, hooks] of moduleHooks) {
-    if (
-      typeof hooks.providers === 'function' &&
-      !providersPhaseCompleted.has(name)
-    ) {
+    if (typeof hooks.providers === 'function') {
       try {
         await hooks.providers({ plugin, container });
-        providersPhaseCompleted.add(name);
         log(`[${name}] Providers`);
       } catch (error) {
-        log(`[${name}] Providers phase failed: ${error.message}`, 'error');
+        // PersistentBindingError = idempotent re-registration on same container
+        if (error.name !== 'PersistentBindingError') {
+          log(`[${name}] Providers phase failed: ${error.message}`, 'error');
+        }
       }
     }
   }

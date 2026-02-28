@@ -23,7 +23,7 @@ import {
   setWebSocketClient,
 } from './shared/ws/client';
 import pluginManager from './shared/plugin/manager/client';
-import container from './shared/container';
+import { Container } from './shared/container';
 import App from './shared/renderer/App';
 
 // =============================================================================
@@ -37,6 +37,9 @@ const READY_STATES = new Set(['interactive', 'complete']);
 // =============================================================================
 // INITIALIZATION
 // =============================================================================
+
+// Create dependency injection container
+const container = new Container();
 
 // Create browser history with configurable basename
 const history = createBrowserHistory({
@@ -238,7 +241,7 @@ function restoreScrollPosition(location) {
 // UTILITIES: NETWORK
 // =============================================================================
 
-async function loadViews() {
+async function initializeViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
@@ -441,7 +444,7 @@ async function onLocationChange(location, action) {
     context.locale =
       (currentState.intl && currentState.intl.locale) || context.locale;
 
-    const views = await loadViews();
+    const views = await initializeViews();
     const page = await views.resolve(context);
     if (!page) {
       const err = new Error(`Page ${location.pathname} not found`);
