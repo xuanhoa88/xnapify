@@ -18,7 +18,7 @@ import {
   SYSTEM_PERMISSIONS,
 } from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
-import { fetchUserRBACData } from '../../../../users/api/utils/rbac/fetcher';
+import { fetchUserWithRBAC } from '../../../../users/api/utils/rbac/fetcher';
 import { logActivity } from '../../utils/activity';
 
 /**
@@ -630,50 +630,65 @@ export async function removeGroupFromUser(
  * @param {string} user_id - User ID
  * @param {Object} [options] - Options
  * @param {Object} [options.models] - Database models
- * @param {Object} [options.cache] - Cache engine
- * @param {boolean} [options.forceRefresh=false] - Force fetch from database
  * @returns {Promise<string[]>} Array of permission strings (e.g., 'users:read')
  */
 export async function getUserPermissions(user_id, options = {}) {
-  const { models, cache } = options;
+  const { models } = options;
+  const { User, Role, Group, Permission } = models;
 
-  // Fetch RBAC data using consolidated fetcher
-  const rbacData = await fetchUserRBACData(user_id, {
-    models,
-    cache,
+  const isWildcard = p =>
+    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+
+  const permissions = await Permission.findAll({
+    distinct: true,
+    where: { is_active: true },
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+        required: true,
+        attributes: [],
+        include: [
+          {
+            model: User,
+            as: 'users',
+            through: { attributes: [] },
+            where: { id: user_id },
+            required: false,
+            attributes: [],
+          },
+          {
+            model: Group,
+            as: 'groups',
+            through: { attributes: [] },
+            required: false,
+            attributes: [],
+            include: [
+              {
+                model: User,
+                as: 'users',
+                through: { attributes: [] },
+                where: { id: user_id },
+                required: false,
+                attributes: [],
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['resource', 'ASC'],
+      ['action', 'ASC'],
+    ],
   });
 
-  // Check for wildcard and expand if present
-  if (
-    rbacData.permissions.includes(
-      `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
-    )
-  ) {
-    // Expand wildcard to ALL non-wildcard permissions from DB
-    const { Permission } = models;
-    const { sequelize } = Permission;
-    const { Op } = sequelize.Sequelize;
-
-    const allPermissions = await Permission.findAll({
-      where: {
-        [Op.not]: {
-          [Op.and]: [
-            { resource: DEFAULT_RESOURCES.ALL },
-            { action: DEFAULT_ACTIONS.MANAGE },
-          ],
-        },
-        is_active: true,
-      },
-      order: [
-        ['resource', 'ASC'],
-        ['action', 'ASC'],
-      ],
-    });
-    return allPermissions.map(p => `${p.resource}:${p.action}`);
+  if (permissions.some(isWildcard)) {
+    return permissions.filter(p => !isWildcard(p));
   }
 
-  // No wildcard: return user's actual permissions (already filtered in collector)
-  return rbacData.permissions;
+  return permissions;
 }
 
 /**
@@ -746,6 +761,9 @@ export async function getGroupPermissions(group_id, models) {
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
+  const isWildcard = p =>
+    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+
   const group = await Group.findByPk(group_id, {
     include: [
       {
@@ -770,39 +788,33 @@ export async function getGroupPermissions(group_id, models) {
     throw error;
   }
 
-  const permissions = new Set();
-  const roleDetails = [];
-
   // Check if any role has wildcard permission
-  let hasWildcardRole = false;
+  const hasWildcardRole = group.roles.some(role =>
+    role.permissions.some(
+      p =>
+        p.resource === DEFAULT_RESOURCES.ALL &&
+        p.action === DEFAULT_ACTIONS.MANAGE,
+    ),
+  );
 
-  // Get permissions from each role
-  for (const role of group.roles) {
-    // Check if this role has the wildcard permission
+  // Build role details
+  const roleDetails = group.roles.map(role => {
     const roleHasWildcard = role.permissions.some(
       p =>
         p.resource === DEFAULT_RESOURCES.ALL &&
         p.action === DEFAULT_ACTIONS.MANAGE,
     );
-
-    if (roleHasWildcard) {
-      hasWildcardRole = true;
-    }
-
-    // Filter out wildcards for non-expanded listing
-    const filteredPerms = filterWildcardPermissions(role.permissions);
-    const rolePerms = filteredPerms.map(p => `${p.resource}:${p.action}`);
-    rolePerms.forEach(p => permissions.add(p));
-    roleDetails.push({
+    const filteredPerms = role.permissions.filter(p => !isWildcard(p));
+    return {
       id: role.id,
       name: role.name,
       description: role.description,
-      permissions: rolePerms,
+      permissions: filteredPerms.map(p => `${p.resource}:${p.action}`),
       hasWildcard: roleHasWildcard,
-    });
-  }
+    };
+  });
 
-  // If any role has wildcard, expand to all permissions
+  // If wildcard, fetch all active permissions (excluding the wildcard itself)
   if (hasWildcardRole) {
     const allPermissions = await Permission.findAll({
       where: {
@@ -819,21 +831,54 @@ export async function getGroupPermissions(group_id, models) {
         ['action', 'ASC'],
       ],
     });
-    allPermissions.forEach(p => permissions.add(`${p.resource}:${p.action}`));
 
-    // Update role details for wildcard roles
     const allPermStrings = allPermissions.map(p => `${p.resource}:${p.action}`);
     roleDetails.forEach(detail => {
       if (detail.hasWildcard) {
         detail.permissions = allPermStrings;
       }
     });
+
+    return { permissions: allPermissions, roleDetails };
   }
 
-  return {
-    permissions: Array.from(permissions).sort(),
-    roleDetails,
-  };
+  // No wildcard — fetch distinct permissions for this group directly from DB
+  const permissions = await Permission.findAll({
+    distinct: true,
+    where: {
+      [Op.not]: {
+        [Op.and]: [
+          { resource: DEFAULT_RESOURCES.ALL },
+          { action: DEFAULT_ACTIONS.MANAGE },
+        ],
+      },
+    },
+    include: [
+      {
+        model: Role,
+        as: 'roles',
+        through: { attributes: [] },
+        required: true,
+        attributes: [],
+        include: [
+          {
+            model: Group,
+            as: 'groups',
+            through: { attributes: [] },
+            where: { id: group_id },
+            required: true,
+            attributes: [],
+          },
+        ],
+      },
+    ],
+    order: [
+      ['resource', 'ASC'],
+      ['action', 'ASC'],
+    ],
+  });
+
+  return { permissions, roleDetails };
 }
 
 /**
@@ -1250,27 +1295,6 @@ export async function removeUserFromGroup(
 // ========================================================================
 
 /**
- * Check if a permission is a wildcard (super admin) permission
- * @param {Object} permission - Permission object with resource and action
- * @returns {boolean} True if wildcard permission
- */
-function isWildcardPermission(permission) {
-  return (
-    permission.resource === DEFAULT_RESOURCES.ALL ||
-    permission.action === DEFAULT_ACTIONS.MANAGE
-  );
-}
-
-/**
- * Filter out wildcard permissions from an array
- * @param {Object[]} permissions - Array of permission objects
- * @returns {Object[]} Filtered permissions without wildcards
- */
-function filterWildcardPermissions(permissions) {
-  return permissions.filter(p => !isWildcardPermission(p));
-}
-
-/**
  * Manage permissions for a role (add/remove/replace)
  *
  * @param {string} role_name - Role name
@@ -1425,7 +1449,9 @@ export async function getRolePermissions(role_id, models) {
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
-  // First, fetch the role with ALL its permissions (including wildcard)
+  const isWildcard = p =>
+    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+
   const role = await Role.findByPk(role_id, {
     include: [
       {
@@ -1444,16 +1470,10 @@ export async function getRolePermissions(role_id, models) {
     throw error;
   }
 
-  // Check if role has the wildcard permission (*:*)
-  const hasWildcard = (role.permissions || []).some(
-    p =>
-      p.resource === DEFAULT_RESOURCES.ALL &&
-      p.action === DEFAULT_ACTIONS.MANAGE,
-  );
+  const hasWildcard = role.permissions.some(isWildcard);
 
   if (hasWildcard) {
-    // Expand wildcard: return ALL non-wildcard permissions from DB
-    const allPermissions = await Permission.findAll({
+    return Permission.findAll({
       where: {
         [Op.not]: {
           [Op.and]: [
@@ -1468,9 +1488,7 @@ export async function getRolePermissions(role_id, models) {
         ['action', 'ASC'],
       ],
     });
-    return allPermissions;
   }
 
-  // No wildcard: return role's actual permissions (excluding wildcards)
-  return filterWildcardPermissions(role.permissions || []);
+  return role.permissions.filter(p => !isWildcard(p));
 }

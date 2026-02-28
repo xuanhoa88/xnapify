@@ -75,7 +75,7 @@ export default function UserApiKeys({ userId }) {
   const confirmRevokeRef = useRef(null);
 
   // User Permissions State (for scope selection)
-  const userPermissionStrings = useSelector(getUserPermissions);
+  const userPermissions = useSelector(getUserPermissions);
   const permissionsLoading = useSelector(isUserPermissionsOperationLoading);
 
   // =========================================================================
@@ -98,17 +98,12 @@ export default function UserApiKeys({ userId }) {
 
   // Transform permission strings into items for CheckboxList
   const permissions = useMemo(() => {
-    if (!Array.isArray(userPermissionStrings)) return [];
-    return userPermissionStrings.map(perm => {
-      const [resource, action] = perm.split('admin:.');
-      return {
-        value: perm,
-        label: perm,
-        resource,
-        action,
-      };
-    });
-  }, [userPermissionStrings]);
+    if (!Array.isArray(userPermissions)) return [];
+    return userPermissions.map(perm => ({
+      ...perm,
+      value: `${perm.resource}:${perm.action}`,
+    }));
+  }, [userPermissions]);
 
   // =========================================================================
   // ACTIONS
@@ -450,7 +445,7 @@ export default function UserApiKeys({ userId }) {
                 <Form.CheckboxList
                   items={permissions}
                   valueKey='value'
-                  labelKey='label'
+                  labelKey='description'
                   groupBy='resource'
                   loading={permissionsLoading}
                   searchable

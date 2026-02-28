@@ -108,7 +108,7 @@ const RolePermissionsModal = forwardRef((props, ref) => {
               <div className={s.permissionsList}>
                 {permissions.map(perm => (
                   <span key={perm.id} className={s.permissionBadge}>
-                    {`${perm.resource}:${perm.action}`}
+                    {perm.resource}:{perm.action}
                   </span>
                 ))}
               </div>

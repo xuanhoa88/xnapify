@@ -9,43 +9,15 @@ import * as rbacCache from './cache';
 import { collectUserRBACData } from './collector';
 
 /**
- * Get user's complete RBAC data (roles, groups, permissions) from cache or database
- *
- * This is a shared helper used by both role and permission middlewares to avoid
- * duplicating the database query logic. Fetches the entire RBAC data structure
- * and caches it for subsequent requests.
- *
- * @param {Object} req - Express request object
- * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
- * @throws {Error} If database models are not available or user is not found
- */
-/**
- * Fetch user's complete RBAC data by ID
+ * Fetch user with full RBAC associations from DB
  *
  * @param {string} userId - User ID
- * @param {Object} context - Context containing models and cache
- * @param {Object} context.models - Database models
- * @param {Object} context.cache - Cache provider
- * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
+ * @param {Object} models - Database models
+ * @returns {Promise<Object>} User instance with roles, groups, and permissions
  */
-export async function fetchUserRBACData(userId, { models, cache }) {
-  // Check cache first
-  const cached = rbacCache.getUser(userId, cache);
-  if (cached) {
-    return cached;
-  }
-
-  if (!models) {
-    const error = new Error('Database models not available');
-    error.name = 'DatabaseModelsNotFoundError';
-    error.code = 'DATABASE_MODELS_NOT_FOUND';
-    error.status = 500;
-    throw error;
-  }
-
+export async function fetchUserWithRBAC(userId, models) {
   const { User, Role, Group, Permission } = models;
 
-  // Fetch from database with full RBAC associations
   const user = await User.findByPk(userId, {
     include: [
       {
@@ -100,7 +72,31 @@ export async function fetchUserRBACData(userId, { models, cache }) {
     throw error;
   }
 
-  // Collect and cache RBAC data
+  return user;
+}
+
+/**
+ * Fetch user's complete RBAC data by ID, with caching
+ *
+ * @param {string} userId - User ID
+ * @param {Object} context - Context containing models and cache
+ * @param {Object} context.models - Database models
+ * @param {Object} context.cache - Cache provider
+ * @returns {Promise<Object>} Object containing { roles: string[], groups: string[], permissions: string[] }
+ */
+export async function fetchUserRBACData(userId, { models, cache }) {
+  const cached = rbacCache.getUser(userId, cache);
+  if (cached) return cached;
+
+  if (!models) {
+    const error = new Error('Database models not available');
+    error.name = 'DatabaseModelsNotFoundError';
+    error.code = 'DATABASE_MODELS_NOT_FOUND';
+    error.status = 500;
+    throw error;
+  }
+
+  const user = await fetchUserWithRBAC(userId, models);
   const rbacData = collectUserRBACData(user);
   rbacCache.setUser(userId, rbacData, cache);
 

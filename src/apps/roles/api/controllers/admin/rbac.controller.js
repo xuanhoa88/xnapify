@@ -171,7 +171,6 @@ export async function getUserPermissions(req, res) {
     // Get user permissions
     const permissions = await rbacService.getUserPermissions(id, {
       models: req.app.get('models'),
-      cache: req.app.get('cache'),
     });
 
     return http.sendSuccess(res, { permissions });
