@@ -5,10 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  DEFAULT_ROLE,
-  SYSTEM_GROUPS,
-} from '../../../../../shared/api/engines/auth';
 import { logGroupActivity } from '../../utils/activity';
 
 // ========================================================================
@@ -29,7 +25,10 @@ import { logGroupActivity } from '../../utils/activity';
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Created group
  */
-export async function createGroup(groupData, { models, webhook, actorId }) {
+export async function createGroup(
+  groupData,
+  { models, webhook, actorId, defaultRole },
+) {
   const { Group, Role, User, UserProfile } = models;
   const { name, description, category, type, roles } = groupData;
 
@@ -60,9 +59,13 @@ export async function createGroup(groupData, { models, webhook, actorId }) {
     }
   } else {
     // Default role
-    const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
     if (defaultRole) {
-      await group.addRole(defaultRole);
+      const defaultRoleRecord = await Role.findOne({
+        where: { name: defaultRole },
+      });
+      if (defaultRoleRecord) {
+        await group.addRole(defaultRoleRecord);
+      }
     }
   }
 
@@ -98,24 +101,28 @@ export async function createGroup(groupData, { models, webhook, actorId }) {
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : defaultRole
+          ? [defaultRole]
+          : [],
   };
 }
 
 /**
  * Get all groups with pagination
  *
- * @param {Object} options - Query options
- * @param {number} options.page - Page number
- * @param {number} options.limit - Items per page
- * @param {string} options.search - Search term
- * @param {string} options.category - Filter by category
- * @param {string} options.type - Filter by type
- * @param {string} options.role - Filter by role name
- * @param {Object} models - Database models
+ * @param {Object} groupQuery - Query options
+ * @param {number} groupQuery.page - Page number
+ * @param {number} groupQuery.limit - Items per page
+ * @param {string} groupQuery.search - Search term
+ * @param {string} groupQuery.category - Filter by category
+ * @param {string} groupQuery.type - Filter by type
+ * @param {string} groupQuery.role - Filter by role name
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {string} options.defaultRole - Default role name
  * @returns {Promise<Object>} Groups with pagination
  */
-export async function getGroups(options, models) {
+export async function getGroups(groupQuery, options = {}) {
   const {
     page = 1,
     limit = 10,
@@ -123,8 +130,10 @@ export async function getGroups(options, models) {
     category = '',
     type = '',
     role = '',
-  } = options;
+  } = groupQuery;
   const offset = (page - 1) * limit;
+
+  const { models, defaultRole } = options;
   const { Group, Role, User } = models;
 
   const { sequelize } = Group;
@@ -198,7 +207,9 @@ export async function getGroups(options, models) {
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : defaultRole
+          ? [defaultRole]
+          : [],
     userCount: userCountsMap.get(group.id) || 0,
     roleCount: group.roles ? group.roles.length : 0,
   }));
@@ -218,10 +229,13 @@ export async function getGroups(options, models) {
  * Get group by ID
  *
  * @param {string} group_id - Group ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {string} options.defaultRole - Default role name
  * @returns {Promise<Object>} Group with roles and users
  */
-export async function getGroupById(group_id, models) {
+export async function getGroupById(group_id, options = {}) {
+  const { models, defaultRole } = options;
   const { Group, Role, User, UserProfile } = models;
 
   const group = await Group.findByPk(group_id, {
@@ -259,7 +273,9 @@ export async function getGroupById(group_id, models) {
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : defaultRole
+          ? [defaultRole]
+          : [],
   };
 }
 
@@ -277,7 +293,7 @@ export async function getGroupById(group_id, models) {
 export async function updateGroupById(
   group_id,
   groupData,
-  { models, webhook, actorId },
+  { models, webhook, actorId, defaultRole },
 ) {
   const { Group, Role, User, UserProfile } = models;
 
@@ -360,7 +376,9 @@ export async function updateGroupById(
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : defaultRole
+          ? [defaultRole]
+          : [],
   };
 }
 
@@ -374,7 +392,10 @@ export async function updateGroupById(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteGroup(group_id, { models, webhook, actorId }) {
+export async function deleteGroup(
+  group_id,
+  { models, webhook, actorId, systemGroups = [] },
+) {
   const { Group } = models;
 
   const group = await Group.findByPk(group_id);
@@ -386,7 +407,7 @@ export async function deleteGroup(group_id, { models, webhook, actorId }) {
   }
 
   // Prevent deletion of system groups
-  if (SYSTEM_GROUPS.includes(group.name)) {
+  if (systemGroups.includes(group.name)) {
     const error = new Error('Cannot delete system groups');
     error.name = 'SystemGroupDeletionError';
     error.status = 400;

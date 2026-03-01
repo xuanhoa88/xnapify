@@ -44,12 +44,16 @@ export async function createGroup(req, res) {
 
     // Get models and webhook from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     // Create group
     const group = await groupService.createGroup(
       { name, description, category, type, roles },
-      { models, webhook, actorId: req.user.id },
+      {
+        models,
+        webhook: req.app.get('webhook'),
+        actorId: req.user.id,
+        defaultRole: req.app.get('auth').DEFAULT_ROLE,
+      },
     );
 
     return http.sendSuccess(
@@ -87,8 +91,13 @@ export async function getGroups(req, res) {
 
     // Get groups
     const result = await groupService.getGroups(
-      { page, limit, search, role },
-      models,
+      {
+        page,
+        limit,
+        search,
+        role,
+      },
+      { models, defaultRole: req.app.get('auth').DEFAULT_ROLE },
     );
 
     return http.sendSuccess(res, result);
@@ -110,10 +119,10 @@ export async function getGroupById(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
-    const models = req.app.get('models');
-
-    const group = await groupService.getGroupById(id, models);
+    const group = await groupService.getGroupById(id, {
+      models: req.app.get('models'),
+      defaultRole: req.app.get('auth').DEFAULT_ROLE,
+    });
     if (!group) {
       return http.sendNotFound(res, 'Group not found');
     }
@@ -159,15 +168,16 @@ export async function updateGroupById(req, res) {
       return http.sendError(res, 'Cannot update a group you belong to', 400);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Update group
     const group = await groupService.updateGroupById(
       id,
       { name, description, category, type, roles },
-      { models, webhook, actorId: req.user.id },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user.id,
+        defaultRole: req.app.get('auth').DEFAULT_ROLE,
+      },
     );
 
     return http.sendSuccess(res, {
@@ -201,15 +211,12 @@ export async function deleteGroup(req, res) {
       return http.sendError(res, 'Cannot delete a group you belong to', 400);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Delete group (activity logged in service)
     await groupService.deleteGroup(id, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
+      systemGroups: req.app.get('auth').SYSTEM_GROUPS,
     });
 
     return http.sendSuccess(res, {
