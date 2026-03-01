@@ -178,6 +178,7 @@ const localeCache = new LRUCache({
 const appState = {
   ssrCache: new Map(),
   viewsPromise: null,
+  ssrResourcesPromise: null,
   wsServer: null,
   nodeRED: new NodeRedManager(),
 };
@@ -185,6 +186,7 @@ const appState = {
 function invalidateCaches() {
   appState.ssrCache.clear();
   appState.viewsPromise = null;
+  appState.ssrResourcesPromise = null;
   localeCache.clear();
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
@@ -301,8 +303,6 @@ async function createReduxStore({ fetch, history }, locale) {
 }
 
 // Memoized SSR resources
-let ssrResourcesPromise = null;
-
 async function fetchSsrResources$() {
   const normaliseUrl = s => `/${s}`.replace(/\/+/g, '/');
 
@@ -341,13 +341,13 @@ async function fetchSsrResources$() {
 }
 
 function getSsrResources() {
-  if (!ssrResourcesPromise) {
-    ssrResourcesPromise = fetchSsrResources$().catch(err => {
-      ssrResourcesPromise = null; // allow retry on failure
+  if (!appState.ssrResourcesPromise) {
+    appState.ssrResourcesPromise = fetchSsrResources$().catch(err => {
+      appState.ssrResourcesPromise = null; // allow retry on failure
       throw err;
     });
   }
-  return ssrResourcesPromise;
+  return appState.ssrResourcesPromise;
 }
 
 // ---------------------------------------------------------------------------
