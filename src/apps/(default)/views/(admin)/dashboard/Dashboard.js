@@ -28,9 +28,6 @@ import {
 } from './redux';
 import s from './Dashboard.css';
 
-/**
- * Get status badge style
- */
 const getStatusBadge = status => {
   switch (status) {
     case 'delivered':

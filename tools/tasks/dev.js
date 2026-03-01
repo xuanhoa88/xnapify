@@ -234,33 +234,36 @@ function loadServerBundle() {
  * - If server exists: Swaps the request listener to the new app.
  * - If server missing: Initializes a new one.
  */
-async function prepareDevServer({ createApp, initializeServer }, prevServer) {
+async function prepareDevServer(
+  { createApp, initializeServer },
+  existingServer,
+) {
   const { app: newApp, server: createdServer } = createApp();
-  app = newApp;
 
   // Reuse existing server if available
-  const newServer = prevServer || createdServer;
-
-  // Make sure to store the actual active server back into the module-level variable
-  server = newServer;
+  const activeServer = existingServer || createdServer;
 
   // Attach webpack middlewares to the new app
-  attachWebpackMiddlewares(app);
+  attachWebpackMiddlewares(newApp);
 
   // Bootstrap/initialize the app (routes, database, etc.)
-  const { start: startServer } = await initializeServer(app, newServer, {
+  const { start: startServer } = await initializeServer(newApp, activeServer, {
     port,
     host,
     publicDir: config.PUBLIC_DIR,
   });
 
-  if (prevServer) {
+  // Commit mutations only after async work succeeds
+  app = newApp;
+  server = activeServer;
+
+  if (existingServer) {
     logInfo('✅ Server reloaded successfully');
 
     // Hot-swap: Remove old listener and add the new one
     // NOTE: This relies on the fact that the 'request' listener is the Express app
-    prevServer.removeAllListeners('request');
-    prevServer.on('request', app);
+    existingServer.removeAllListeners('request');
+    existingServer.on('request', newApp);
 
     notifyBrowserSyncReady();
   }
