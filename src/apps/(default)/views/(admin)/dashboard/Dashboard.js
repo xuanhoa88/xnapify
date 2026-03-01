@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
@@ -23,6 +23,7 @@ import {
   getActivitiesTotal,
   getActivitiesPagination,
   isActivitiesLoading,
+  isActivitiesInitialized,
   getActivitiesError,
 } from './redux';
 import s from './Dashboard.css';
@@ -49,6 +50,7 @@ function Dashboard() {
   const total = useSelector(getActivitiesTotal);
   const pagination = useSelector(getActivitiesPagination);
   const loading = useSelector(isActivitiesLoading);
+  const initialized = useSelector(isActivitiesInitialized);
   const error = useSelector(getActivitiesError);
   const [search, setSearch] = useState('');
 
@@ -56,18 +58,24 @@ function Dashboard() {
     dispatch(fetchActivities({ page: 1, limit: 20 }));
   }, [dispatch]);
 
-  const handlePageChange = page => {
-    dispatch(fetchActivities({ page, limit: 20, search }));
-  };
+  const handlePageChange = useCallback(
+    page => {
+      dispatch(fetchActivities({ page, limit: 20, search }));
+    },
+    [dispatch, search],
+  );
 
-  const handleSearch = value => {
-    setSearch(value);
-    dispatch(fetchActivities({ page: 1, limit: 20, search: value }));
-  };
+  const handleSearch = useCallback(
+    value => {
+      setSearch(value);
+      dispatch(fetchActivities({ page: 1, limit: 20, search: value }));
+    },
+    [dispatch],
+  );
 
   const renderContent = () => {
-    // Loading state
-    if (loading && !activities) {
+    // Show loading on first fetch (not initialized) or when loading with no data
+    if (!initialized || (loading && activities.length === 0)) {
       return (
         <Loader
           variant='cards'

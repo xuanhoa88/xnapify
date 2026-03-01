@@ -235,10 +235,14 @@ function loadServerBundle() {
  * - If server missing: Initializes a new one.
  */
 async function prepareDevServer({ createApp, initializeServer }, prevServer) {
-  ({ app, server } = createApp());
+  const { app: newApp, server: createdServer } = createApp();
+  app = newApp;
 
   // Reuse existing server if available
-  const newServer = prevServer || server;
+  const newServer = prevServer || createdServer;
+
+  // Make sure to store the actual active server back into the module-level variable
+  server = newServer;
 
   // Attach webpack middlewares to the new app
   attachWebpackMiddlewares(app);
