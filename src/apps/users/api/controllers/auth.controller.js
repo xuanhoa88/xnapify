@@ -45,13 +45,8 @@ export async function register(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Get models and auth utilities from app context
-    const models = req.app.get('models');
+    // Get auth utilities from app context
     const auth = req.app.get('auth');
-
-    // Get webhook engine for activity tracking
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
 
     // Register user - returns complete user data with RBAC
     const userData = await authService.registerUser(
@@ -59,7 +54,13 @@ export async function register(req, res) {
         email,
         password,
       },
-      { models, auth, webhook, hook },
+      {
+        auth,
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        hook: req.app.get('hook').withContext(req.app),
+        defaultRoleName: auth.DEFAULT_ROLE,
+      },
     );
 
     // Generate token pair using configured JWT instance
@@ -114,27 +115,19 @@ export async function login(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
-    // Get webhook engine for activity tracking
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
-
     // Authenticate user - returns complete user data with RBAC in one query
     const userData = await authService.authenticateUser(email, password, {
       activityData: {
         ip_address: http.getClientIP(req),
         user_agent: http.getUserAgent(req),
       },
-      models,
-      webhook,
-      hook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     // Generate token pair using configured JWT instance
-    const jwt = req.app.get('jwt');
-    const tokens = jwt.generateTokenPair({
+    const tokens = req.app.get('jwt').generateTokenPair({
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -185,17 +178,16 @@ export async function login(req, res) {
 export async function logout(req, res) {
   const http = req.app.get('http');
   try {
-    const auth = req.app.get('auth');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
-
     // Log logout activity via service (if user is authenticated)
     if (req.user) {
-      await authService.logoutUser(req.user.id, { webhook, hook });
+      await authService.logoutUser(req.user.id, {
+        webhook: req.app.get('webhook'),
+        hook: req.app.get('hook').withContext(req.app),
+      });
     }
 
     // Clear token cookies
-    auth.clearAllAuthCookies(res);
+    req.app.get('auth').clearAllAuthCookies(res);
 
     // Also clear cache entry for this token (if present)
     if (req.token) {
@@ -228,8 +220,7 @@ export async function refreshToken(req, res) {
     }
 
     // Generate new token pair
-    const jwt = req.app.get('jwt');
-    const newTokens = jwt.refreshTokenPair(refreshToken);
+    const newTokens = req.app.get('jwt').refreshTokenPair(refreshToken);
 
     // Set new token cookies
     auth.setTokenCookie(res, newTokens.accessToken);
@@ -282,14 +273,12 @@ export async function emailVerification(req, res) {
 
     // Get models and webhook from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
 
     // Verify email with token (activity logged in service)
     const user = await authService.verifyEmail(token, {
       models,
-      webhook,
-      hook,
+      webhook: req.app.get('webhook'),
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     // Get complete user data with RBAC information
@@ -298,15 +287,14 @@ export async function emailVerification(req, res) {
     });
 
     // Generate token pair using configured JWT instance
-    const jwt = req.app.get('jwt');
-    const auth = req.app.get('auth');
-    const tokens = jwt.generateTokenPair({
+    const tokens = req.app.get('jwt').generateTokenPair({
       id: user.id,
       email: user.email,
       picture: userData.picture || null,
     });
 
     // Set token cookies
+    const auth = req.app.get('auth');
     auth.setTokenCookie(res, tokens.accessToken);
     auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -359,13 +347,12 @@ export async function resetPasswordRequest(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
-
     // Request password reset (activity logged in service)
-    await authService.resetPasswordRequest(email, { models, webhook, hook });
+    await authService.resetPasswordRequest(email, {
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
+      hook: req.app.get('hook').withContext(req.app),
+    });
 
     // Always return success for security (don't reveal if email exists)
     return http.sendSuccess(res, {
@@ -406,18 +393,12 @@ export async function resetPasswordConfirmation(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Get models, auth, and webhook from app context
-    const models = req.app.get('models');
-    const auth = req.app.get('auth');
-    const webhook = req.app.get('webhook');
-    const hook = req.app.get('hook').withContext(req.app);
-
     // Confirm reset password with token (activity logged in service)
     await authService.resetPasswordConfirmation(token, password, {
-      models,
-      auth,
-      webhook,
-      hook,
+      models: req.app.get('models'),
+      auth: req.app.get('auth'),
+      webhook: req.app.get('webhook'),
+      hook: req.app.get('hook').withContext(req.app),
     });
 
     return http.sendSuccess(res, {

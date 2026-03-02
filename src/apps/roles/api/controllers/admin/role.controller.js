@@ -40,14 +40,16 @@ export async function createRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Create role
     let role = await roleService.createRole(
       { name, description, permissions },
-      { models, webhook, actorId: req.user.id },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user.id,
+        defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
+        defaultActions: req.app.get('auth').DEFAULT_ACTIONS,
+      },
     );
 
     return http.sendSuccess(res, { role }, 201);
@@ -80,11 +82,19 @@ export async function getRoles(req, res) {
     const { page, limit } = http.getPagination(req);
     const { search = '' } = req.query;
 
-    // Get models from app context
-    const models = req.app.get('models');
-
     // Get roles
-    const result = await roleService.getRoles({ page, limit, search }, models);
+    const result = await roleService.getRoles(
+      {
+        page,
+        limit,
+        search,
+      },
+      {
+        models: req.app.get('models'),
+        defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
+        defaultActions: req.app.get('auth').DEFAULT_ACTIONS,
+      },
+    );
 
     return http.sendSuccess(res, result);
   } catch (error) {
@@ -105,10 +115,13 @@ export async function getRoleById(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
-    const role = await roleService.getRoleById(id, models);
+    const role = await roleService.getRoleById(id, {
+      models: req.app.get('models'),
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     return http.sendSuccess(res, { role });
   } catch (error) {
@@ -144,9 +157,14 @@ export async function updateRole(req, res) {
     // Get models and webhook from app context
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const auth = req.app.get('auth');
 
     // Fetch role first to check if user has this role
-    const existingRole = await roleService.getRoleById(id, models);
+    const existingRole = await roleService.getRoleById(id, {
+      models,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     // Prevent user from modifying roles they have
     const userRoles = req.user.roles || [];
@@ -157,7 +175,19 @@ export async function updateRole(req, res) {
     const role = await roleService.updateRole(
       id,
       { name, description, permissions },
-      { models, webhook, actorId: req.user.id },
+      {
+        models,
+        webhook,
+        actorId: req.user.id,
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
+        systemRoles: auth.SYSTEM_ROLES,
+        adminRoleName: auth.ADMIN_ROLE,
+        defaultRoleName: auth.DEFAULT_ROLE,
+        moderatorRoleName: auth.MODERATOR_ROLE,
+        adminGroupName: auth.ADMIN_GROUP,
+        defaultGroupName: auth.DEFAULT_GROUP,
+      },
     );
 
     return http.sendSuccess(res, { role });
@@ -192,9 +222,14 @@ export async function deleteRole(req, res) {
     // Get models and webhook from app context
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
+    const auth = req.app.get('auth');
 
     // Fetch role first to check if user has this role
-    const existingRole = await roleService.getRoleById(id, models);
+    const existingRole = await roleService.getRoleById(id, {
+      models,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     // Prevent user from deleting roles they have
     const userRoles = req.user.roles || [];
@@ -207,6 +242,14 @@ export async function deleteRole(req, res) {
       models,
       webhook,
       actorId: req.user.id,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+      systemRoles: auth.SYSTEM_ROLES,
+      adminRoleName: auth.ADMIN_ROLE,
+      defaultRoleName: auth.DEFAULT_ROLE,
+      moderatorRoleName: auth.MODERATOR_ROLE,
+      adminGroupName: auth.ADMIN_GROUP,
+      defaultGroupName: auth.DEFAULT_GROUP,
     });
 
     return http.sendSuccess(res, {
@@ -233,12 +276,10 @@ export async function getRoleUsers(req, res) {
     const { search = '' } = req.query;
 
     // Get models from app context
-    const models = req.app.get('models');
-
     const result = await roleService.getUsersWithRole(
       id,
       { page, limit, search },
-      models,
+      req.app.get('models'),
     );
 
     return http.sendSuccess(res, result);
@@ -266,12 +307,10 @@ export async function getRoleGroups(req, res) {
     const { search = '' } = req.query;
 
     // Get models from app context
-    const models = req.app.get('models');
-
     const result = await roleService.getGroupsWithRole(
       id,
       { page, limit, search },
-      models,
+      req.app.get('models'),
     );
 
     return http.sendSuccess(res, result);

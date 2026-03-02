@@ -13,7 +13,7 @@ import {
   updatePreferencesFormSchema,
 } from '../../validator/auth';
 import * as profileService from '../services/profile.service';
-import { formatUserResponse } from '../utils/formatters';
+import { formatUserResponse } from '../utils/formatter';
 
 // ========================================================================
 // PROFILE MANAGEMENT CONTROLLERS
@@ -40,7 +40,13 @@ export async function getProfile(req, res) {
     }
 
     // Format user response
-    const normalizedUser = await formatUserResponse(user);
+    const auth = req.app.get('auth');
+    const normalizedUser = await formatUserResponse(user, {
+      adminRoleName: auth.ADMIN_ROLE,
+      defaultRoleName: auth.DEFAULT_ROLE,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     // Emit hook event for plugins to modify the response
     await hook('profile').emit('retrieved', normalizedUser);
@@ -101,7 +107,13 @@ export async function updateProfile(req, res) {
     );
 
     // Format user response
-    const normalizedUser = await formatUserResponse(user);
+    const auth = req.app.get('auth');
+    const normalizedUser = await formatUserResponse(user, {
+      adminRoleName: auth.ADMIN_ROLE,
+      defaultRoleName: auth.DEFAULT_ROLE,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     return http.sendSuccess(res, { profile: normalizedUser });
   } catch (error) {

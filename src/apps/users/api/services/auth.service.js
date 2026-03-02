@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { DEFAULT_ROLE } from '../../../../shared/api/engines/auth';
 import {
   hashToken,
   verifyPassword,
@@ -13,7 +12,7 @@ import {
   validateResetToken,
 } from '../utils/password';
 import { logUserActivity } from '../utils/activity';
-import { formatUserResponse } from '../utils/formatters';
+import { formatUserResponse } from '../utils/formatter';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
@@ -34,7 +33,18 @@ import { formatUserResponse } from '../utils/formatters';
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If user already exists or creation fails
  */
-export async function registerUser(userData, { models, webhook, hook } = {}) {
+export async function registerUser(
+  userData,
+  {
+    models,
+    webhook,
+    hook,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = {},
+) {
   const { email, password } = userData;
   const { User, UserProfile, Role } = models;
 
@@ -72,7 +82,9 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
   );
 
   // Assign default role
-  const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
+  const defaultRole = await Role.findOne({
+    where: { name: defaultRoleName },
+  });
   if (defaultRole) {
     await user.addRole(defaultRole);
   }
@@ -88,10 +100,14 @@ export async function registerUser(userData, { models, webhook, hook } = {}) {
   // Return formatted user data with default RBAC for new user
   return formatUserResponse(user, {
     rbacData: {
-      roles: [DEFAULT_ROLE],
+      roles: [defaultRoleName],
       permissions: [],
       groups: [],
     },
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
   });
 }
 
@@ -129,7 +145,16 @@ export async function logoutUser(user_id, { webhook, hook } = {}) {
 export async function authenticateUser(
   email,
   password,
-  { models, webhook, activityData, hook } = {},
+  {
+    models,
+    webhook,
+    activityData,
+    hook,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = {},
 ) {
   const { User, UserProfile, Role, Permission, Group } = models;
 
@@ -244,7 +269,12 @@ export async function authenticateUser(
   );
 
   // Format user response
-  const normalizedUser = await formatUserResponse(user);
+  const normalizedUser = await formatUserResponse(user, {
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  });
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('logged_in', {

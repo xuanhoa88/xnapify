@@ -9,11 +9,6 @@
 // PERMISSION MANAGEMENT SERVICES
 // ========================================================================
 
-import {
-  DEFAULT_ACTIONS,
-  DEFAULT_RESOURCES,
-  SYSTEM_PERMISSIONS,
-} from '../../../../../shared/api/engines/auth';
 import { logPermissionActivity } from '../../utils/activity';
 
 /**
@@ -81,11 +76,11 @@ export async function createPermission(
  * @param {string} q - Search query string
  * @returns {Object|null} Parsed search with type and values, or null if invalid
  */
-function parseSearchQuery(q) {
+function parseSearchQuery(q, { defaultResources, defaultActions }) {
   if (!q) return null;
 
   const normalized = q.trim();
-  if (!normalized || normalized === DEFAULT_RESOURCES.ALL) return null;
+  if (!normalized || normalized === defaultResources.ALL) return null;
 
   // Check for colon pattern
   const colonIndex = normalized.indexOf(':');
@@ -99,8 +94,8 @@ function parseSearchQuery(q) {
   const action = normalized.slice(colonIndex + 1).trim();
 
   // Normalize wildcards to empty string
-  const isResourceEmpty = !resource || resource === DEFAULT_RESOURCES.ALL;
-  const isActionEmpty = !action || action === DEFAULT_ACTIONS.MANAGE;
+  const isResourceEmpty = !resource || resource === defaultResources.ALL;
+  const isActionEmpty = !action || action === defaultActions.MANAGE;
 
   // Invalid: both parts are empty/wildcards
   if (isResourceEmpty && isActionEmpty) return null;
@@ -122,7 +117,11 @@ function parseSearchQuery(q) {
  * @param {Object} Op - Sequelize operators
  * @returns {Object} Where condition for search
  */
-function buildSearchCondition(parsed, Op) {
+function buildSearchCondition(
+  parsed,
+  Op,
+  { defaultResources, defaultActions },
+) {
   if (!parsed) return {};
 
   switch (parsed.type) {
@@ -132,7 +131,7 @@ function buildSearchCondition(parsed, Op) {
           {
             resource: {
               [Op.and]: [
-                { [Op.ne]: DEFAULT_RESOURCES.ALL },
+                { [Op.ne]: defaultResources.ALL },
                 { [Op.like]: `%${parsed.value}%` },
               ],
             },
@@ -140,7 +139,7 @@ function buildSearchCondition(parsed, Op) {
           {
             action: {
               [Op.and]: [
-                { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+                { [Op.ne]: defaultActions.MANAGE },
                 { [Op.like]: `%${parsed.value}%` },
               ],
             },
@@ -153,7 +152,7 @@ function buildSearchCondition(parsed, Op) {
       return {
         resource: {
           [Op.and]: [
-            { [Op.ne]: DEFAULT_RESOURCES.ALL },
+            { [Op.ne]: defaultResources.ALL },
             { [Op.like]: `%${parsed.value}%` },
           ],
         },
@@ -163,7 +162,7 @@ function buildSearchCondition(parsed, Op) {
       return {
         action: {
           [Op.and]: [
-            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+            { [Op.ne]: defaultActions.MANAGE },
             { [Op.like]: `%${parsed.value}%` },
           ],
         },
@@ -173,13 +172,13 @@ function buildSearchCondition(parsed, Op) {
       return {
         resource: {
           [Op.and]: [
-            { [Op.ne]: DEFAULT_RESOURCES.ALL },
+            { [Op.ne]: defaultResources.ALL },
             { [Op.like]: `%${parsed.resource}%` },
           ],
         },
         action: {
           [Op.and]: [
-            { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+            { [Op.ne]: defaultActions.MANAGE },
             { [Op.like]: `%${parsed.action}%` },
           ],
         },
@@ -204,18 +203,23 @@ function buildSearchCondition(parsed, Op) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Permissions grouped by resource with pagination
  */
-export async function getPermissions(options, models) {
-  const { page = 1, limit = 10, search = '', status = '' } = options;
+export async function getPermissions(permissionQuery, options = {}) {
+  const { page = 1, limit = 10, search = '', status = '' } = permissionQuery;
   const offset = (page - 1) * limit;
 
+  const { models, defaultResources, defaultActions } = options;
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
   // Build where condition
   const baseWhereCondition = {
-    resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-    ...buildSearchCondition(parseSearchQuery(search), Op),
+    resource: { [Op.ne]: defaultResources.ALL },
+    ...buildSearchCondition(
+      parseSearchQuery(search, { defaultResources, defaultActions }),
+      Op,
+      { defaultResources, defaultActions },
+    ),
   };
 
   // Apply status filter
@@ -290,10 +294,15 @@ export async function getPermissions(options, models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Object with permissions array and pagination
  */
-export async function getPermissionsByResource(resource, options, models) {
-  const { search = '', page = 1, limit = 10 } = options;
+export async function getPermissionsByResource(
+  resource,
+  permissionQuery,
+  options = {},
+) {
+  const { search = '', page = 1, limit = 10 } = permissionQuery;
   const offset = (page - 1) * limit;
 
+  const { models } = options;
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
@@ -329,7 +338,8 @@ export async function getPermissionsByResource(resource, options, models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Permission
  */
-export async function getPermissionById(permission_id, models) {
+export async function getPermissionById(permission_id, options = {}) {
+  const { models } = options;
   const { Permission } = models;
 
   const permission = await Permission.findByPk(permission_id);
@@ -429,7 +439,7 @@ export async function updatePermission(
  */
 export async function deletePermission(
   permission_id,
-  { models, webhook, actorId },
+  { models, webhook, actorId, systemPermissions = [] },
 ) {
   const { Permission } = models;
 
@@ -443,7 +453,7 @@ export async function deletePermission(
 
   // Prevent deletion of system permissions
   if (
-    SYSTEM_PERMISSIONS.some(
+    systemPermissions.some(
       perm =>
         perm.resource === permission.resource &&
         perm.action === permission.action,
@@ -525,7 +535,10 @@ export async function bulkUpdateStatus(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Result with deleted count and any protected IDs
  */
-export async function bulkDelete(ids, { models, webhook, actorId }) {
+export async function bulkDelete(
+  ids,
+  { models, webhook, actorId, systemPermissions = [] },
+) {
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
@@ -538,7 +551,7 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
   // Filter out system permissions (cannot be deleted)
   const protectedIds = [];
   const deletablePermissions = permissionsToDelete.filter(permission => {
-    const isSystem = SYSTEM_PERMISSIONS.some(
+    const isSystem = systemPermissions.some(
       perm =>
         perm.resource === permission.resource &&
         perm.action === permission.action,
@@ -588,7 +601,8 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Permission statistics
  */
-export async function getPermissionStats(models) {
+export async function getPermissionStats(options = {}) {
+  const { models, defaultResources, defaultActions } = options;
   const { Permission, Role } = models;
 
   const { sequelize } = Permission;
@@ -597,24 +611,24 @@ export async function getPermissionStats(models) {
   // Get total permissions (excluding wildcards)
   const totalPermissions = await Permission.count({
     where: {
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
   });
 
   const activePermissions = await Permission.count({
     where: {
       is_active: true,
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
   });
 
   const inactivePermissions = await Permission.count({
     where: {
       is_active: false,
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
   });
 
@@ -622,8 +636,8 @@ export async function getPermissionStats(models) {
   const byResource = await Permission.findAll({
     attributes: ['resource', [fn('COUNT', col('resource')), 'count']],
     where: {
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
     group: ['resource'],
     order: [['resource', 'ASC']],
@@ -634,8 +648,8 @@ export async function getPermissionStats(models) {
   const byAction = await Permission.findAll({
     attributes: ['action', [fn('COUNT', col('action')), 'count']],
     where: {
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
     group: ['action'],
     order: [['action', 'ASC']],
@@ -659,8 +673,8 @@ export async function getPermissionStats(models) {
       },
     ],
     where: {
-      resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-      action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+      resource: { [Op.ne]: defaultResources.ALL },
+      action: { [Op.ne]: defaultActions.MANAGE },
     },
     group: ['Permission.id', 'Permission.resource', 'Permission.action'],
     order: [[fn('COUNT', col('roles.id')), 'DESC']],

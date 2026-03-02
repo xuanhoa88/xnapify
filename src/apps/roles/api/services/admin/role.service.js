@@ -5,11 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  SYSTEM_ROLES,
-  DEFAULT_RESOURCES,
-  DEFAULT_ACTIONS,
-} from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
 import { logRoleActivity } from '../../utils/activity';
 import { manageRolePermissions } from './rbac.service';
@@ -31,7 +26,8 @@ import { manageRolePermissions } from './rbac.service';
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Created role
  */
-export async function createRole(roleData, { models, webhook, actorId }) {
+export async function createRole(roleData, options = {}) {
+  const { models, webhook, actorId } = options;
   const { Role } = models;
   const { name, description, permissions } = roleData;
 
@@ -52,7 +48,16 @@ export async function createRole(roleData, { models, webhook, actorId }) {
 
   // Assign permissions if provided
   if (Array.isArray(permissions)) {
-    await manageRolePermissions(role.name, permissions, models, 'replace');
+    await manageRolePermissions(
+      role.name,
+      permissions,
+      {
+        models,
+        defaultResources: options.defaultResources,
+        defaultActions: options.defaultActions,
+      },
+      'replace',
+    );
 
     // Reload with permissions
     role.reload();
@@ -67,16 +72,19 @@ export async function createRole(roleData, { models, webhook, actorId }) {
 /**
  * Get all roles with pagination
  *
- * @param {Object} options - Query options
- * @param {number} options.page - Page number
- * @param {number} options.limit - Items per page
- * @param {string} options.search - Search term
- * @param {Object} models - Database models
+ * @param {Object} roleQuery - Query options
+ * @param {number} roleQuery.page - Page number
+ * @param {number} roleQuery.limit - Items per page
+ * @param {string} roleQuery.search - Search term
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
  * @returns {Promise<Object>} Roles with pagination
  */
-export async function getRoles(options, models) {
-  const { page = 1, limit = 10, search = '' } = options;
+export async function getRoles(roleQuery = {}, options = {}) {
+  const { page = 1, limit = 10, search = '' } = roleQuery;
   const offset = (page - 1) * limit;
+
+  const { models, defaultResources, defaultActions } = options;
   const { Role, Permission, User, Group } = models;
 
   const { sequelize } = Role;
@@ -111,8 +119,8 @@ export async function getRoles(options, models) {
     where: {
       [Op.not]: {
         [Op.and]: [
-          { resource: DEFAULT_RESOURCES.ALL },
-          { action: DEFAULT_ACTIONS.MANAGE },
+          { resource: defaultResources.ALL },
+          { action: defaultActions.MANAGE },
         ],
       },
     },
@@ -169,8 +177,8 @@ export async function getRoles(options, models) {
     // Check if role has wildcard permission
     const hasWildcard = role.permissions.some(
       p =>
-        p.resource === DEFAULT_RESOURCES.ALL &&
-        p.action === DEFAULT_ACTIONS.MANAGE,
+        p.resource === defaultResources.ALL &&
+        p.action === defaultActions.MANAGE,
     );
 
     const usersCount = userCountsMap.get(role.id) || 0;
@@ -180,8 +188,8 @@ export async function getRoles(options, models) {
       : role.permissions.filter(
           p =>
             !(
-              p.resource === DEFAULT_RESOURCES.ALL &&
-              p.action === DEFAULT_ACTIONS.MANAGE
+              p.resource === defaultResources.ALL &&
+              p.action === defaultActions.MANAGE
             ),
         ).length;
 
@@ -211,7 +219,8 @@ export async function getRoles(options, models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Role with permissions
  */
-export async function getRoleById(role_id, models) {
+export async function getRoleById(role_id, options = {}) {
+  const { models, defaultResources, defaultActions } = options;
   const { Role, Permission } = models;
 
   const role = await Role.findByPk(role_id, {
@@ -232,7 +241,7 @@ export async function getRoleById(role_id, models) {
   }
 
   // Check if role has wildcard permission (*:*)
-  const wildcardPerm = `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`;
+  const wildcardPerm = `${defaultResources.ALL}:${defaultActions.MANAGE}`;
   const hasWildcard = role.permissions.some(
     p => `${p.resource}:${p.action}` === wildcardPerm,
   );
@@ -276,11 +285,8 @@ export async function getRoleById(role_id, models) {
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Updated role
  */
-export async function updateRole(
-  role_id,
-  updateData,
-  { models, webhook, actorId },
-) {
+export async function updateRole(role_id, updateData, options = {}) {
+  const { models, webhook, actorId } = options;
   const { Role } = models;
 
   const role = await Role.findByPk(role_id);
@@ -311,7 +317,16 @@ export async function updateRole(
 
   // Update permissions if provided
   if (Array.isArray(permissions)) {
-    await manageRolePermissions(role.name, permissions, models, 'replace');
+    await manageRolePermissions(
+      role.name,
+      permissions,
+      {
+        models,
+        defaultResources: options.defaultResources,
+        defaultActions: options.defaultActions,
+      },
+      'replace',
+    );
 
     // Reload with permissions
     role.reload();
@@ -339,7 +354,10 @@ export async function updateRole(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteRole(role_id, { models, webhook, actorId }) {
+export async function deleteRole(
+  role_id,
+  { models, webhook, actorId, systemRoles },
+) {
   const { Role, UserRole } = models;
 
   const role = await Role.findByPk(role_id);
@@ -351,7 +369,7 @@ export async function deleteRole(role_id, { models, webhook, actorId }) {
   }
 
   // Prevent deletion of system roles
-  if (SYSTEM_ROLES.includes(role.name)) {
+  if (systemRoles.includes(role.name)) {
     const error = new Error('Cannot delete system roles');
     error.name = 'SystemRoleDeletionError';
     error.status = 400;

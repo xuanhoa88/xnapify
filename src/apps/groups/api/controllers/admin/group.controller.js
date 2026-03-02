@@ -52,7 +52,7 @@ export async function createGroup(req, res) {
         models,
         webhook: req.app.get('webhook'),
         actorId: req.user.id,
-        defaultRole: req.app.get('auth').DEFAULT_ROLE,
+        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
     );
 
@@ -97,7 +97,7 @@ export async function getGroups(req, res) {
         search,
         role,
       },
-      { models, defaultRole: req.app.get('auth').DEFAULT_ROLE },
+      { models, defaultRoleName: req.app.get('auth').DEFAULT_ROLE },
     );
 
     return http.sendSuccess(res, result);
@@ -121,7 +121,7 @@ export async function getGroupById(req, res) {
 
     const group = await groupService.getGroupById(id, {
       models: req.app.get('models'),
-      defaultRole: req.app.get('auth').DEFAULT_ROLE,
+      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
     });
     if (!group) {
       return http.sendNotFound(res, 'Group not found');
@@ -176,7 +176,7 @@ export async function updateGroupById(req, res) {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
         actorId: req.user.id,
-        defaultRole: req.app.get('auth').DEFAULT_ROLE,
+        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
     );
 

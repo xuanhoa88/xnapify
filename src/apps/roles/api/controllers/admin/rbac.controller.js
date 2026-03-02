@@ -30,11 +30,19 @@ import * as roleService from '../../services/admin/role.service';
 export async function initializeDefaults(req, res) {
   const http = req.app.get('http');
   try {
-    // Get models from app context
-    const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
     // Initialize RBAC
-    const result = await rbacService.initializeDefault(models);
+    const result = await rbacService.initializeDefault({
+      models: req.app.get('models'),
+      adminRoleName: auth.ADMIN_ROLE,
+      defaultRoleName: auth.DEFAULT_ROLE,
+      moderatorRoleName: auth.MODERATOR_ROLE,
+      adminGroupName: auth.ADMIN_GROUP,
+      defaultGroupName: auth.DEFAULT_GROUP,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     return http.sendSuccess(res, {
       message: 'RBAC system initialized successfully',
@@ -73,14 +81,10 @@ export async function assignRolesToUser(req, res) {
       return http.sendError(res, 'Cannot change your own roles', 400);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
     // Assign roles
-    const webhook = req.app.get('webhook');
     const user = await rbacService.assignRolesToUser(id, role_names, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -128,14 +132,10 @@ export async function assignGroupsToUser(req, res) {
       return http.sendError(res, 'Cannot change your own groups', 400);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
     // Assign groups
-    const webhook = req.app.get('webhook');
     const user = await rbacService.assignGroupsToUser(id, group_ids, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -246,13 +246,9 @@ export async function removeRoleFromUser(req, res) {
       return http.sendError(res, 'Cannot remove your own roles', 400);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
-    const webhook = req.app.get('webhook');
     await rbacService.removeRoleFromUser(id, role_id, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -282,13 +278,9 @@ export async function removeGroupFromUser(req, res) {
       return http.sendError(res, 'Cannot remove your own groups', 400);
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
-    const webhook = req.app.get('webhook');
     await rbacService.removeGroupFromUser(id, group_id, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -317,11 +309,14 @@ export async function getGroupPermissions(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
     // Get group permissions
-    const result = await rbacService.getGroupPermissions(id, models);
+    const result = await rbacService.getGroupPermissions(id, {
+      models: req.app.get('models'),
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     return http.sendSuccess(res, result);
   } catch (error) {
@@ -346,11 +341,10 @@ export async function getGroupRoles(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
-    const models = req.app.get('models');
-
     // Get group roles
-    const result = await rbacService.getGroupRoles(id, models);
+    const result = await rbacService.getGroupRoles(id, {
+      models: req.app.get('models'),
+    });
 
     return http.sendSuccess(res, result);
   } catch (error) {
@@ -395,13 +389,9 @@ export async function assignRolesToGroup(req, res) {
       );
     }
 
-    // Get models from app context
-    const models = req.app.get('models');
-
-    const webhook = req.app.get('webhook');
     const updatedGroup = await rbacService.assignRolesToGroup(id, role_names, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -442,12 +432,9 @@ export async function addRoleToGroup(req, res) {
       );
     }
 
-    const models = req.app.get('models');
-
-    const webhook = req.app.get('webhook');
     await rbacService.addRoleToGroup(id, role_id, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -488,12 +475,9 @@ export async function removeRoleFromGroup(req, res) {
       );
     }
 
-    const models = req.app.get('models');
-
-    const webhook = req.app.get('webhook');
     await rbacService.removeRoleFromGroup(id, role_id, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
     });
 
@@ -528,11 +512,14 @@ export async function getRolePermissions(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
     // Get role permissions
-    const permissions = await rbacService.getRolePermissions(id, models);
+    const permissions = await rbacService.getRolePermissions(id, {
+      models: req.app.get('models'),
+      defaultActions: auth.DEFAULT_ACTIONS,
+      defaultResources: auth.DEFAULT_RESOURCES,
+    });
 
     return http.sendSuccess(res, { permissions });
   } catch (error) {
@@ -570,8 +557,13 @@ export async function manageRolePermissions(req, res) {
     }
 
     const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
-    const role = await roleService.getRoleById(id, models);
+    const role = await roleService.getRoleById(id, {
+      models,
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+    });
 
     // Prevent user from modifying permissions for roles they have
     const userRoles = req.user.roles || [];

@@ -69,7 +69,12 @@ export async function createUser(req, res) {
         groups,
         is_active,
       },
-      { models, webhook, actorId: req.user.id },
+      {
+        models,
+        webhook,
+        actorId: req.user.id,
+        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+      },
     );
 
     return http.sendSuccess(res, {
@@ -106,7 +111,11 @@ export async function getUserList(req, res) {
     // Get user list
     const result = await userAdminService.getUserList(
       { page, limit, search, role, status, group },
-      { models, hook: req.app.get('hook').withContext(req.app) },
+      {
+        models,
+        hook: req.app.get('hook').withContext(req.app),
+        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+      },
     );
 
     return http.sendSuccess(res, {
@@ -135,7 +144,10 @@ export async function getUserById(req, res) {
     const models = req.app.get('models');
 
     // Get user by ID
-    const user = await userAdminService.getUserById(id, models);
+    const user = await userAdminService.getUserById(id, {
+      models,
+      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+    });
 
     return http.sendSuccess(res, {
       user,
@@ -198,6 +210,7 @@ export async function updateUserById(req, res) {
       models,
       webhook,
       actorId: req.user.id,
+      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
     });
 
     return http.sendSuccess(res, {

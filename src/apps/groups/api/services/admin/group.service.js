@@ -27,7 +27,7 @@ import { logGroupActivity } from '../../utils/activity';
  */
 export async function createGroup(
   groupData,
-  { models, webhook, actorId, defaultRole },
+  { models, webhook, actorId, defaultRoleName },
 ) {
   const { Group, Role, User, UserProfile } = models;
   const { name, description, category, type, roles } = groupData;
@@ -59,9 +59,9 @@ export async function createGroup(
     }
   } else {
     // Default role
-    if (defaultRole) {
+    if (defaultRoleName) {
       const defaultRoleRecord = await Role.findOne({
-        where: { name: defaultRole },
+        where: { name: defaultRoleName },
       });
       if (defaultRoleRecord) {
         await group.addRole(defaultRoleRecord);
@@ -101,8 +101,8 @@ export async function createGroup(
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : defaultRole
-          ? [defaultRole]
+        : defaultRoleName
+          ? [defaultRoleName]
           : [],
   };
 }
@@ -119,7 +119,7 @@ export async function createGroup(
  * @param {string} groupQuery.role - Filter by role name
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {string} options.defaultRole - Default role name
+ * @param {string} options.defaultRoleName - Default role name
  * @returns {Promise<Object>} Groups with pagination
  */
 export async function getGroups(groupQuery, options = {}) {
@@ -133,7 +133,7 @@ export async function getGroups(groupQuery, options = {}) {
   } = groupQuery;
   const offset = (page - 1) * limit;
 
-  const { models, defaultRole } = options;
+  const { models, defaultRoleName } = options;
   const { Group, Role, User } = models;
 
   const { sequelize } = Group;
@@ -207,8 +207,8 @@ export async function getGroups(groupQuery, options = {}) {
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : defaultRole
-          ? [defaultRole]
+        : defaultRoleName
+          ? [defaultRoleName]
           : [],
     userCount: userCountsMap.get(group.id) || 0,
     roleCount: group.roles ? group.roles.length : 0,
@@ -231,11 +231,11 @@ export async function getGroups(groupQuery, options = {}) {
  * @param {string} group_id - Group ID
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {string} options.defaultRole - Default role name
+ * @param {string} options.defaultRoleName - Default role name
  * @returns {Promise<Object>} Group with roles and users
  */
 export async function getGroupById(group_id, options = {}) {
-  const { models, defaultRole } = options;
+  const { models, defaultRoleName } = options;
   const { Group, Role, User, UserProfile } = models;
 
   const group = await Group.findByPk(group_id, {
@@ -273,8 +273,8 @@ export async function getGroupById(group_id, options = {}) {
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : defaultRole
-          ? [defaultRole]
+        : defaultRoleName
+          ? [defaultRoleName]
           : [],
   };
 }
@@ -293,7 +293,7 @@ export async function getGroupById(group_id, options = {}) {
 export async function updateGroupById(
   group_id,
   groupData,
-  { models, webhook, actorId, defaultRole },
+  { models, webhook, actorId, defaultRoleName },
 ) {
   const { Group, Role, User, UserProfile } = models;
 
@@ -376,8 +376,8 @@ export async function updateGroupById(
     roles:
       Array.isArray(group.roles) && group.roles.length > 0
         ? group.roles.map(r => r.name)
-        : defaultRole
-          ? [defaultRole]
+        : defaultRoleName
+          ? [defaultRoleName]
           : [],
   };
 }

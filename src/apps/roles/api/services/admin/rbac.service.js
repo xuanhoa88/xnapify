@@ -5,18 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  ADMIN_ROLE,
-  MODERATOR_ROLE,
-  DEFAULT_ROLE,
-  SYSTEM_ROLES,
-  ADMIN_GROUP,
-  DEFAULT_GROUP,
-  SYSTEM_GROUPS,
-  DEFAULT_ACTIONS,
-  DEFAULT_RESOURCES,
-  SYSTEM_PERMISSIONS,
-} from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
 import { logActivity } from '../../utils/activity';
 
@@ -55,16 +43,17 @@ async function logRbacActivity(
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Created/existing groups
  */
-export async function createDefaultGroups(models) {
+export async function createDefaultGroups(options = {}) {
+  const { models, adminGroup, defaultGroup, systemGroups } = options;
   const { Group } = models;
 
   const groupMetadata = {
-    [ADMIN_GROUP]: {
+    [adminGroup]: {
       description: 'System administrators with full access to all resources',
       category: 'system',
       type: 'security',
     },
-    [DEFAULT_GROUP]: {
+    [defaultGroup]: {
       description: 'Standard users with basic access permissions',
       category: 'standard',
       type: 'default',
@@ -73,18 +62,18 @@ export async function createDefaultGroups(models) {
 
   // Fetch all existing groups in one query
   const existingGroups = await Group.findAll({
-    where: { name: SYSTEM_GROUPS },
+    where: { name: systemGroups },
   });
   const existingNames = new Set(existingGroups.map(g => g.name));
 
   // Filter out groups that already exist
-  const newGroups = SYSTEM_GROUPS.filter(name => !existingNames.has(name)).map(
-    name => ({
+  const newGroups = systemGroups
+    .filter(name => !existingNames.has(name))
+    .map(name => ({
       name,
       ...groupMetadata[name],
       is_active: true,
-    }),
-  );
+    }));
 
   // Bulk create new groups
   const createdGroups =
@@ -100,7 +89,8 @@ export async function createDefaultGroups(models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Created/existing permissions
  */
-export async function createDefaultPermissions(models) {
+export async function createDefaultPermissions(options = {}) {
+  const { models, systemPermissions } = options;
   const { Permission } = models;
 
   // Fetch all existing permissions
@@ -114,14 +104,14 @@ export async function createDefaultPermissions(models) {
   );
 
   // Filter out permissions that already exist
-  const newPerms = SYSTEM_PERMISSIONS.filter(
-    p => !existingKeys.has(`${p.resource}:${p.action}`),
-  ).map(p => ({
-    resource: p.resource,
-    action: p.action,
-    description: p.description,
-    is_active: true,
-  }));
+  const newPerms = systemPermissions
+    .filter(p => !existingKeys.has(`${p.resource}:${p.action}`))
+    .map(p => ({
+      resource: p.resource,
+      action: p.action,
+      description: p.description,
+      is_active: true,
+    }));
 
   // Bulk create new permissions
   if (newPerms.length > 0) {
@@ -130,7 +120,7 @@ export async function createDefaultPermissions(models) {
 
   // Return system permissions only (filtered from all)
   const systemKeys = new Set(
-    SYSTEM_PERMISSIONS.map(p => `${p.resource}:${p.action}`),
+    systemPermissions.map(p => `${p.resource}:${p.action}`),
   );
   return existingPerms.filter(p => systemKeys.has(`${p.resource}:${p.action}`));
 }
@@ -142,35 +132,37 @@ export async function createDefaultPermissions(models) {
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Created/existing roles
  */
-export async function createDefaultRoles(models) {
+export async function createDefaultRoles(options = {}) {
+  const { models, adminRole, defaultRole, moderatorRole, systemRoles } =
+    options;
   const { Role } = models;
 
   const roleMetadata = {
-    [ADMIN_ROLE]: {
+    [adminRole]: {
       description: 'Administrator - Full system access to all resources',
     },
-    [DEFAULT_ROLE]: {
+    [defaultRole]: {
       description: 'User - Basic read access to own resources',
     },
-    [MODERATOR_ROLE]: {
+    [moderatorRole]: {
       description: 'Moderator - Content moderation and review permissions',
     },
   };
 
   // Fetch all existing roles in one query
   const existingRoles = await Role.findAll({
-    where: { name: SYSTEM_ROLES },
+    where: { name: systemRoles },
   });
   const existingNames = new Set(existingRoles.map(r => r.name));
 
   // Filter out roles that already exist
-  const newRoles = SYSTEM_ROLES.filter(name => !existingNames.has(name)).map(
-    name => ({
+  const newRoles = systemRoles
+    .filter(name => !existingNames.has(name))
+    .map(name => ({
       name,
       ...roleMetadata[name],
       is_active: true,
-    }),
-  );
+    }));
 
   // Bulk create new roles
   const createdRoles =
@@ -187,32 +179,50 @@ export async function createDefaultRoles(models) {
  * - User role: Read-only permissions
  * - Moderator role: Read + user/group update permissions
  *
- * @param {Object} models - Database models
+ * @param {Object} options - Options
+ * @param {Object} options.models - Database models
+ * @param {string} options.adminRoleName - Admin role name
+ * @param {string} options.defaultRoleName - Default role name
+ * @param {string} options.moderatorRoleName - Moderator role name
+ * @param {string} options.adminGroupName - Admin group name
+ * @param {string} options.defaultGroupName - Default group name
+ * @param {Object} options.defaultResources - Default resources
+ * @param {Object} options.defaultActions - Default actions
  * @returns {Promise<Object>} Setup result with counts and message
  */
-export async function initializeDefault(models) {
+export async function initializeDefault(options = {}) {
+  const {
+    models,
+    adminRoleName,
+    defaultRoleName,
+    moderatorRoleName,
+    adminGroupName,
+    defaultGroupName,
+    defaultResources,
+    defaultActions,
+  } = options;
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
   try {
     // Step 1: Create default resources
-    const permissions = await createDefaultPermissions(models);
-    const roles = await createDefaultRoles(models);
-    const groups = await createDefaultGroups(models);
+    const permissions = await createDefaultPermissions(options);
+    const roles = await createDefaultRoles(options);
+    const groups = await createDefaultGroups(options);
 
     // Step 2: Get role references
-    const adminRole = roles.find(r => r.name === ADMIN_ROLE);
-    const userRole = roles.find(r => r.name === DEFAULT_ROLE);
-    const moderatorRole = roles.find(r => r.name === MODERATOR_ROLE);
+    const adminRole = roles.find(r => r.name === adminRoleName);
+    const userRole = roles.find(r => r.name === defaultRoleName);
+    const moderatorRole = roles.find(r => r.name === moderatorRoleName);
 
     // Step 3: Assign permissions to roles
     if (adminRole) {
       // Admin gets super admin permission (*:*) for full access
       const superAdminPermission = await Permission.findOne({
         where: {
-          resource: DEFAULT_RESOURCES.ALL,
-          action: DEFAULT_ACTIONS.MANAGE,
+          resource: defaultResources.ALL,
+          action: defaultActions.MANAGE,
         },
       });
       if (superAdminPermission) {
@@ -223,7 +233,7 @@ export async function initializeDefault(models) {
     if (userRole) {
       // User gets read-only permissions
       const readPermissions = await Permission.findAll({
-        where: { action: DEFAULT_ACTIONS.READ },
+        where: { action: defaultActions.READ },
       });
       await userRole.setPermissions(readPermissions);
     }
@@ -233,14 +243,14 @@ export async function initializeDefault(models) {
       const modPermissions = await Permission.findAll({
         where: {
           [Op.or]: [
-            { action: DEFAULT_ACTIONS.READ },
+            { action: defaultActions.READ },
             {
-              resource: DEFAULT_RESOURCES.USERS,
-              action: DEFAULT_ACTIONS.UPDATE,
+              resource: defaultResources.USERS,
+              action: defaultActions.UPDATE,
             },
             {
-              resource: DEFAULT_RESOURCES.GROUPS,
-              action: DEFAULT_ACTIONS.UPDATE,
+              resource: defaultResources.GROUPS,
+              action: defaultActions.UPDATE,
             },
           ],
         },
@@ -249,8 +259,8 @@ export async function initializeDefault(models) {
     }
 
     // Step 4: Assign roles to groups
-    const adminGroup = groups.find(g => g.name === ADMIN_GROUP);
-    const usersGroup = groups.find(g => g.name === DEFAULT_GROUP);
+    const adminGroup = groups.find(g => g.name === adminGroupName);
+    const usersGroup = groups.find(g => g.name === defaultGroupName);
 
     if (adminGroup && adminRole) {
       await adminGroup.addRole(adminRole);
@@ -354,11 +364,8 @@ export async function assignRolesToUser(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} User with groups
  */
-export async function assignGroupsToUser(
-  user_id,
-  group_ids,
-  { models, webhook, actorId },
-) {
+export async function assignGroupsToUser(user_id, group_ids, options = {}) {
+  const { models, webhook, actorId } = options;
   const { User, Group } = models;
 
   const user = await User.findByPk(user_id);
@@ -408,7 +415,7 @@ export async function assignGroupsToUser(
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : [options.defaultRoleName || 'user'],
     groups: user.groups || [],
   };
 }
@@ -632,11 +639,11 @@ export async function removeGroupFromUser(
  * @returns {Promise<string[]>} Array of permission strings (e.g., 'users:read')
  */
 export async function getUserPermissions(user_id, options = {}) {
-  const { models } = options;
+  const { models, defaultResources, defaultActions } = options;
   const { User, Role, Group, Permission } = models;
 
   const isWildcard = p =>
-    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+    p.resource === defaultResources.ALL && p.action === defaultActions.MANAGE;
 
   const permissions = await Permission.findAll({
     distinct: true,
@@ -704,16 +711,18 @@ export async function getUserPermissions(user_id, options = {}) {
  */
 export async function userHasPermission(user_id, permissionName, options = {}) {
   try {
-    const { models, cache } = options;
+    const { models, cache, defaultResources, defaultActions } = options;
     const userPermissions = await getUserPermissions(user_id, {
       models,
       cache,
+      defaultResources,
+      defaultActions,
     });
 
     // Super admin check
     if (
       userPermissions.includes(
-        `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
+        `${defaultResources.ALL}:${defaultActions.MANAGE}`,
       )
     ) {
       return true;
@@ -751,13 +760,14 @@ export async function userHasPermission(user_id, permissionName, options = {}) {
  * @param {Object} models - Database models
  * @returns {Promise<Object>} Object containing permissions and roleDetails
  */
-export async function getGroupPermissions(group_id, models) {
+export async function getGroupPermissions(group_id, options = {}) {
+  const { models, defaultResources, defaultActions } = options;
   const { Group, Role, Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
   const isWildcard = p =>
-    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+    p.resource === defaultResources.ALL && p.action === defaultActions.MANAGE;
 
   const group = await Group.findByPk(group_id, {
     include: [
@@ -787,8 +797,8 @@ export async function getGroupPermissions(group_id, models) {
   const hasWildcardRole = group.roles.some(role =>
     role.permissions.some(
       p =>
-        p.resource === DEFAULT_RESOURCES.ALL &&
-        p.action === DEFAULT_ACTIONS.MANAGE,
+        p.resource === defaultResources.ALL &&
+        p.action === defaultActions.MANAGE,
     ),
   );
 
@@ -796,8 +806,8 @@ export async function getGroupPermissions(group_id, models) {
   const roleDetails = group.roles.map(role => {
     const roleHasWildcard = role.permissions.some(
       p =>
-        p.resource === DEFAULT_RESOURCES.ALL &&
-        p.action === DEFAULT_ACTIONS.MANAGE,
+        p.resource === defaultResources.ALL &&
+        p.action === defaultActions.MANAGE,
     );
     const filteredPerms = role.permissions.filter(p => !isWildcard(p));
     return {
@@ -815,8 +825,8 @@ export async function getGroupPermissions(group_id, models) {
       where: {
         [Op.not]: {
           [Op.and]: [
-            { resource: DEFAULT_RESOURCES.ALL },
-            { action: DEFAULT_ACTIONS.MANAGE },
+            { resource: options.defaultResources.ALL },
+            { action: options.defaultActions.MANAGE },
           ],
         },
         is_active: true,
@@ -843,8 +853,8 @@ export async function getGroupPermissions(group_id, models) {
     where: {
       [Op.not]: {
         [Op.and]: [
-          { resource: DEFAULT_RESOURCES.ALL },
-          { action: DEFAULT_ACTIONS.MANAGE },
+          { resource: defaultResources.ALL },
+          { action: defaultActions.MANAGE },
         ],
       },
     },
@@ -880,10 +890,12 @@ export async function getGroupPermissions(group_id, models) {
  * Get group's roles with permissions
  *
  * @param {string} group_id - Group ID
- * @param {Object} models - Database models
+ * @param {Object} options - Options object
+ * @param {Object} options.models - Database models
  * @returns {Promise<Object>} Group with roles
  */
-export async function getGroupRoles(group_id, models) {
+export async function getGroupRoles(group_id, options = {}) {
+  const { models } = options;
   const { Group, Role, Permission } = models;
 
   const group = await Group.findByPk(group_id, {
@@ -1301,9 +1313,9 @@ export async function removeUserFromGroup(
 export async function manageRolePermissions(
   role_name,
   permission_names,
-  models,
-  action,
+  options = {},
 ) {
+  const { models, action, defaultResources, defaultActions } = options;
   const { Role, Permission, UserRole } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
@@ -1357,8 +1369,8 @@ export async function manageRolePermissions(
       ? await Permission.findAll({
           where: {
             [Op.and]: [
-              { resource: { [Op.ne]: DEFAULT_RESOURCES.ALL } },
-              { action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE } },
+              { resource: { [Op.ne]: defaultResources.ALL } },
+              { action: { [Op.ne]: defaultActions.MANAGE } },
               {
                 [Op.or]: permissionConditions.map(
                   ({ resource, action: a }) => ({
@@ -1375,8 +1387,7 @@ export async function manageRolePermissions(
   // Get existing wildcard permissions that should be preserved
   const existingWildcards = role.permissions.filter(
     p =>
-      p.resource === DEFAULT_RESOURCES.ALL ||
-      p.action === DEFAULT_ACTIONS.MANAGE,
+      p.resource === defaultResources.ALL || p.action === defaultActions.MANAGE,
   );
 
   // Apply action
@@ -1419,8 +1430,8 @@ export async function manageRolePermissions(
         model: Permission,
         as: 'permissions',
         where: {
-          resource: { [Op.ne]: DEFAULT_RESOURCES.ALL },
-          action: { [Op.ne]: DEFAULT_ACTIONS.MANAGE },
+          resource: { [Op.ne]: defaultResources.ALL },
+          action: { [Op.ne]: defaultActions.MANAGE },
         },
         required: false,
         through: { attributes: [] },
@@ -1439,13 +1450,14 @@ export async function manageRolePermissions(
  * @param {Object} models - Database models
  * @returns {Promise<Object[]>} Array of permissions
  */
-export async function getRolePermissions(role_id, models) {
+export async function getRolePermissions(role_id, options = {}) {
+  const { models, defaultResources, defaultActions } = options;
   const { Role, Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
 
   const isWildcard = p =>
-    p.resource === DEFAULT_RESOURCES.ALL && p.action === DEFAULT_ACTIONS.MANAGE;
+    p.resource === defaultResources.ALL && p.action === defaultActions.MANAGE;
 
   const role = await Role.findByPk(role_id, {
     include: [
@@ -1472,8 +1484,8 @@ export async function getRolePermissions(role_id, models) {
       where: {
         [Op.not]: {
           [Op.and]: [
-            { resource: DEFAULT_RESOURCES.ALL },
-            { action: DEFAULT_ACTIONS.MANAGE },
+            { resource: defaultResources.ALL },
+            { action: defaultActions.MANAGE },
           ],
         },
         is_active: true,

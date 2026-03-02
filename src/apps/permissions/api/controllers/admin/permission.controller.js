@@ -43,14 +43,14 @@ export async function createPermission(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Create permission
     const permission = await permissionService.createPermission(
       { resource, action, description, is_active },
-      { models, webhook, actorId: req.user.id },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user.id,
+      },
     );
 
     return http.sendSuccess(res, { permission }, 201);
@@ -77,13 +77,21 @@ export async function getPermissions(req, res) {
     const { page, limit } = http.getPagination(req);
     const { search = '', status = '' } = req.query;
 
-    // Get models from app context
-    const models = req.app.get('models');
+    const auth = req.app.get('auth');
 
     // Get permissions
     const result = await permissionService.getPermissions(
-      { page, limit, search, status },
-      models,
+      {
+        page,
+        limit,
+        search,
+        status,
+      },
+      {
+        models: req.app.get('models'),
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
+      },
     );
 
     return http.sendSuccess(res, result);
@@ -106,11 +114,10 @@ export async function getPermissionsByResource(req, res) {
     const { resource } = req.params;
     const { page, limit } = http.getPagination(req);
     const { search = '' } = req.query;
-    const models = req.app.get('models');
     const result = await permissionService.getPermissionsByResource(
       resource,
       { search, page, limit },
-      models,
+      { models: req.app.get('models') },
     );
 
     return http.sendSuccess(res, result);
@@ -135,9 +142,9 @@ export async function getPermissionById(req, res) {
   const http = req.app.get('http');
   try {
     const { id } = req.params;
-    const models = req.app.get('models');
-
-    const permission = await permissionService.getPermissionById(id, models);
+    const permission = await permissionService.getPermissionById(id, {
+      models: req.app.get('models'),
+    });
 
     return http.sendSuccess(res, { permission });
   } catch (error) {
@@ -158,8 +165,6 @@ export async function updatePermission(req, res) {
   try {
     const { id } = req.params;
     const { resource, action, description, is_active } = req.body;
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     // Validate with Zod schema
     const [isValid, errors] = validateForm(updatePermissionFormSchema, {
@@ -176,7 +181,11 @@ export async function updatePermission(req, res) {
     const updatedPermission = await permissionService.updatePermission(
       id,
       { resource, action, description, is_active },
-      { models, webhook, actorId: req.user.id },
+      {
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        actorId: req.user.id,
+      },
     );
 
     return http.sendSuccess(res, { permission: updatedPermission });
@@ -215,17 +224,13 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Bulk update permissions (activity logged in service)
     const permissions = await permissionService.bulkUpdateStatus(
       ids,
       state === 'active',
       {
-        models,
-        webhook,
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
         actorId: req.user.id,
       },
     );
@@ -265,15 +270,12 @@ export async function deletePermissions(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Delete permissions (activity logged in service)
     const result = await permissionService.bulkDelete(ids, {
-      models,
-      webhook,
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
       actorId: req.user.id,
+      systemPermissions: req.app.get('auth').SYSTEM_PERMISSIONS,
     });
 
     return http.sendSuccess(res, {

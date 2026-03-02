@@ -5,12 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  DEFAULT_ROLE,
-  ADMIN_ROLE,
-  DEFAULT_RESOURCES,
-  DEFAULT_ACTIONS,
-} from '../../../../shared/api/engines/auth';
 import { collectUserRBACData } from './rbac/collector';
 
 /**
@@ -18,18 +12,23 @@ import { collectUserRBACData } from './rbac/collector';
  * Checks for: is_admin flag, admin role, or super admin permission (*:*)
  *
  * @param {object} user - User object with roles/permissions
+ * @param {object} options - Options containing auth constants
+ * @param {string} options.adminRoleName - Admin role name
+ * @param {object} options.defaultResources - Default resources object
+ * @param {object} options.defaultActions - Default actions object
  * @returns {boolean} True if user is an admin
  */
-function isAdmin(user) {
+function isAdmin(user, options = {}) {
+  const { adminRoleName, defaultResources, defaultActions } = options;
   try {
     if (!user) return false;
     if (user.is_admin === true) return true;
-    if (Array.isArray(user.roles) && user.roles.includes(ADMIN_ROLE))
+    if (Array.isArray(user.roles) && user.roles.includes(adminRoleName))
       return true;
     if (
       Array.isArray(user.permissions) &&
       user.permissions.includes(
-        `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,
+        `${defaultResources.ALL}:${defaultActions.MANAGE}`,
       )
     )
       return true;
@@ -50,10 +49,21 @@ function isAdmin(user) {
  * @param {Object} [options] - Formatting options
  * @param {Object} [options.rbacData] - Pre-collected RBAC data (skips collection)
  * @param {boolean} [options.includePermissions=true] - Include detailed permissions
+ * @param {string} [options.defaultRoleName] - Default role name
+ * @param {string} [options.adminRoleName] - Admin role name
+ * @param {Object} [options.defaultResources] - Default resources object
+ * @param {Object} [options.defaultActions] - Default actions object
  * @returns {Promise<Object>} Formatted user object
  */
 export async function formatUserResponse(user, options = {}) {
-  const { rbacData, includePermissions = true } = options;
+  const {
+    rbacData,
+    includePermissions = true,
+    defaultRoleName = 'user',
+    adminRoleName = 'admin',
+    defaultResources = { ALL: '*' },
+    defaultActions = { MANAGE: '*' },
+  } = options;
 
   // Collect RBAC data if not provided
   const rbac = rbacData || collectUserRBACData(user);
@@ -71,18 +81,26 @@ export async function formatUserResponse(user, options = {}) {
     profile,
 
     // RBAC fields
-    roles: rbac.roles.length > 0 ? rbac.roles : [DEFAULT_ROLE],
-    groups: rbac.groups,
+    roles:
+      Array.isArray(rbac.roles) && rbac.roles.length > 0
+        ? rbac.roles
+        : [defaultRoleName],
+    groups: Array.isArray(rbac.groups) ? rbac.groups : [],
   };
 
   // Optionally include permissions
   if (includePermissions) {
-    result.permissions = rbac.permissions;
+    result.permissions = Array.isArray(rbac.permissions)
+      ? rbac.permissions
+      : [];
   }
 
   return {
     ...result,
     // Check admin status
-    is_admin: isAdmin({ ...result, ...rbac }),
+    is_admin: isAdmin(
+      { ...result, ...rbac },
+      { adminRoleName, defaultResources, defaultActions },
+    ),
   };
 }

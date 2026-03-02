@@ -7,7 +7,6 @@
 
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
-import { DEFAULT_ROLE } from '../../../../../shared/api/engines/auth';
 import * as rbacCache from '../../utils/rbac/cache';
 import { fetchUserRBACData } from '../../utils/rbac/fetcher';
 import { logUserActivity } from '../../utils/activity';
@@ -23,7 +22,10 @@ import { logUserActivity } from '../../utils/activity';
  * @returns {Promise<Object>} Created user
  * @throws {Error} If UserAlreadyExistsError
  */
-export async function createUser(userData, { models, webhook, actorId }) {
+export async function createUser(
+  userData,
+  { models, webhook, actorId, defaultRoleName },
+) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
 
@@ -71,7 +73,9 @@ export async function createUser(userData, { models, webhook, actorId }) {
     }
   } else {
     // Default role
-    const defaultRole = await Role.findOne({ where: { name: DEFAULT_ROLE } });
+    const defaultRole = await Role.findOne({
+      where: { name: defaultRoleName },
+    });
     if (defaultRole) {
       await user.addRole(defaultRole);
     }
@@ -131,7 +135,7 @@ export async function createUser(userData, { models, webhook, actorId }) {
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : [defaultRoleName],
     groups: user.groups || [],
   };
 }
@@ -287,7 +291,7 @@ export async function getUserList(options, ctx) {
       roles:
         Array.isArray(plain.roles) && plain.roles.length > 0
           ? plain.roles.map(r => r.name)
-          : [DEFAULT_ROLE],
+          : [options.defaultRoleName],
       groups: plain.groups || [],
     };
   });
@@ -314,7 +318,7 @@ export async function getUserList(options, ctx) {
  * @returns {Promise<Object>} User with profile and additional details
  * @throws {Error} If UserNotFoundError
  */
-export async function getUserById(user_id, models) {
+export async function getUserById(user_id, { models, defaultRoleName }) {
   const { User, UserProfile, Group, Role } = models;
 
   const user = await User.findByPk(user_id, {
@@ -367,7 +371,7 @@ export async function getUserById(user_id, models) {
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : [defaultRoleName],
     groups: user.groups || [],
   };
 }
@@ -387,7 +391,7 @@ export async function getUserById(user_id, models) {
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, actorId },
+  { models, webhook, actorId, defaultRoleName },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -547,7 +551,7 @@ export async function updateUserById(
     roles:
       Array.isArray(user.roles) && user.roles.length > 0
         ? user.roles.map(r => r.name)
-        : [DEFAULT_ROLE],
+        : [defaultRoleName],
     groups: user.groups || [],
   };
 }
