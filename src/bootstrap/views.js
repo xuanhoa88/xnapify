@@ -15,6 +15,7 @@ const viewsLifecycleContext = require.context(
   true,
   /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
 );
+const lifecycleAdapter = createWebpackContextAdapter(viewsLifecycleContext);
 
 // =============================================================================
 // LOGGING
@@ -50,18 +51,16 @@ function log(message, level = 'info') {
 const LIFECYCLE_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
 
 /**
- * Discover view modules and collect their view contexts and lifecycle hooks.
+ * Discover view lifecycle modules and collect their hooks.
  *
- * Scans apps for views/index.js lifecycle files, calls hooks.views()
- * on each, and returns the collected context adapters along with
- * their full hook objects for lifecycle phases (e.g. shared).
+ * Only loads module files and extracts hook references — does NOT
+ * call any hooks (views, providers, etc.). This is intentional so
+ * the caller controls the lifecycle ordering.
  *
- * @returns {{ adapters: Map<string, object>, hooks: Map<string, object> }}
+ * @returns {Map<string, object>} Map of module name → lifecycle hooks
  */
-function discoverViewModules() {
-  const adapters = new Map();
+function discoverModuleHooks() {
   const moduleHooks = new Map();
-  const lifecycleAdapter = createWebpackContextAdapter(viewsLifecycleContext);
 
   for (const filePath of lifecycleAdapter.files()) {
     const match = filePath.match(LIFECYCLE_PATTERN);
@@ -71,30 +70,79 @@ function discoverViewModules() {
 
     try {
       const hooks = lifecycleAdapter.load(filePath);
-
-      if (hooks && typeof hooks.views === 'function') {
-        const viewContext = hooks.views();
-        if (viewContext) {
-          const rawAdapter = createWebpackContextAdapter(viewContext);
-          const prefix = `./${moduleName}/views`;
-          const wrappedAdapter = {
-            files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
-            load: p => rawAdapter.load(p.replace(prefix, '.')),
-            resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
-          };
-          adapters.set(moduleName, wrappedAdapter);
-          moduleHooks.set(moduleName, hooks);
-        }
+      if (hooks) {
+        moduleHooks.set(moduleName, hooks);
       } else {
-        log(`[${moduleName}] No views() hook found, skipping`, 'warn');
+        log(`[${moduleName}] No lifecycle hooks found, skipping`, 'warn');
+      }
+    } catch (error) {
+      log(`[${moduleName}] Failed to load module: ${error.message}`, 'error');
+    }
+  }
+
+  log(`${moduleHooks.size} module(s) discovered`);
+  return moduleHooks;
+}
+
+/**
+ * Collect view adapters by calling each module's views() hook.
+ *
+ * Must be called AFTER providers phase so that views can depend
+ * on bindings registered during providers.
+ *
+ * @param {Map<string, object>} moduleHooks - Discovered module hooks
+ * @returns {Map<string, object>} Map of module name → view adapter
+ */
+function collectViewAdapters(moduleHooks) {
+  const adapters = new Map();
+
+  for (const [moduleName, hooks] of moduleHooks) {
+    if (typeof hooks.views !== 'function') continue;
+
+    try {
+      const viewContext = hooks.views();
+      if (viewContext) {
+        const rawAdapter = createWebpackContextAdapter(viewContext);
+        const prefix = `./${moduleName}/views`;
+        adapters.set(moduleName, {
+          files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
+          load: p => rawAdapter.load(p.replace(prefix, '.')),
+          resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
+        });
       }
     } catch (error) {
       log(`[${moduleName}] Failed to load views: ${error.message}`, 'error');
     }
   }
 
-  log(`${adapters.size} view module(s) discovered`);
-  return { adapters, hooks: moduleHooks };
+  log(`${adapters.size} view adapter(s) collected`);
+  return adapters;
+}
+
+// =============================================================================
+// PROVIDER REGISTRATION
+// =============================================================================
+
+/**
+ * Run all discovered modules' providers() hooks on the given container.
+ *
+ * @param {Map<string, object>} moduleHooks - Map of module name → lifecycle hooks
+ * @param {Object} ctx - Context containing { plugin, container }
+ */
+async function runModuleProviders(moduleHooks, { container }) {
+  for (const [name, hooks] of moduleHooks) {
+    if (typeof hooks.providers === 'function') {
+      try {
+        await hooks.providers({ container });
+        log(`[${name}] Providers`);
+      } catch (error) {
+        // PersistentBindingError = idempotent re-registration on same container
+        if (error.name !== 'PersistentBindingError') {
+          log(`[${name}] Providers phase failed: ${error.message}`, 'error');
+        }
+      }
+    }
+  }
 }
 
 // =============================================================================
@@ -196,32 +244,16 @@ export default async function initializeRouter(options = {}) {
   // ─── Initialize ─────────────────────────────────────────────────────
   const { plugin, container } = options;
 
-  // Discover per-module view adapters and lifecycle hooks
-  const { adapters: viewAdapters, hooks: moduleHooks } = discoverViewModules();
+  // 1. Discover — load lifecycle modules, collect hook references only
+  const moduleHooks = discoverModuleHooks();
 
-  // ─── Shared phase ─────────────────────────────────────────────────────
-  // Call each module's providers() hook to allow cross-module sharing
-  // (e.g. registering Redux slices, shared components, DI bindings).
-  // Always re-run providers — persistent bindings on the Container itself
-  // guard against double-registration on the same instance.
-  for (const [name, hooks] of moduleHooks) {
-    if (typeof hooks.providers === 'function') {
-      try {
-        await hooks.providers({ plugin, container });
-        log(`[${name}] Providers`);
-      } catch (error) {
-        // PersistentBindingError = idempotent re-registration on same container
-        if (error.name !== 'PersistentBindingError') {
-          log(`[${name}] Providers phase failed: ${error.message}`, 'error');
-        }
-      }
-    }
-  }
+  // 2. Providers — register cross-module bindings (e.g. DI, Redux slices)
+  await runModuleProviders(moduleHooks, { container });
 
-  // ─── Merge adapters ─────────────────────────────────────────────────────
-  // Merge all adapters into one combined adapter so that layouts
-  // from any module (e.g. (default)'s admin layout) are globally
-  // visible when building routes for any other module.
+  // 3. Views — call views() on each module to get their route contexts
+  const viewAdapters = collectViewAdapters(moduleHooks);
+
+  // 4. Merge adapters so layouts from any module are globally visible
   const mergedAdapter = mergeAdapters(viewAdapters);
 
   if (!mergedAdapter) {

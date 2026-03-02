@@ -33,6 +33,8 @@ import App from './shared/renderer/App';
 const MAX_SCROLL_HISTORY = 50;
 const LOADING_DELAY_MS = 150;
 const READY_STATES = new Set(['interactive', 'complete']);
+const WS_MAX_FAILURES = 5;
+const REACT_DOM_UNAVAILABLE = false;
 
 // =============================================================================
 // INITIALIZATION
@@ -126,8 +128,10 @@ let visibilityChangeHandler = null;
 let scrollHandler = null;
 let isDOMReady = READY_STATES.has(document.readyState) && !!document.body;
 let hasStarted = false;
+let isRefreshingToken = false;
+let wsConnectionFailures = 0;
 
-const scrollPositionsHistory = {};
+const scrollPositionsHistory = new Map();
 
 // =============================================================================
 // UTILITIES: LOGGING
@@ -188,25 +192,32 @@ function updateMetadata({ title, description, image, url, type = 'website' }) {
 // UTILITIES: SCROLL MANAGEMENT
 // =============================================================================
 
+function createScrollHandler() {
+  let scrollTimeout = null;
+
+  return () => {
+    if (scrollTimeout) clearTimeout(scrollTimeout);
+    scrollTimeout = setTimeout(() => {
+      saveScrollPosition();
+      scrollTimeout = null;
+    }, 100);
+  };
+}
+
 function saveScrollPosition() {
   if (!currentLocation || !currentLocation.key) return;
 
-  scrollPositionsHistory[currentLocation.key] = {
+  // Delete first so re-insertion moves the key to the end (most recent)
+  scrollPositionsHistory.delete(currentLocation.key);
+  scrollPositionsHistory.set(currentLocation.key, {
     x: window.pageXOffset,
     y: window.pageYOffset,
-    time: Date.now(),
-  };
+  });
 
-  // Cleanup old entries
-  const keys = Object.keys(scrollPositionsHistory);
-  if (keys.length > MAX_SCROLL_HISTORY) {
-    keys
-      .sort(
-        (a, b) =>
-          scrollPositionsHistory[a].time - scrollPositionsHistory[b].time,
-      )
-      .slice(0, Math.floor(keys.length * 0.25))
-      .forEach(key => delete scrollPositionsHistory[key]);
+  // Evict oldest entries (Map iterates in insertion order)
+  while (scrollPositionsHistory.size > MAX_SCROLL_HISTORY) {
+    const oldestKey = scrollPositionsHistory.keys().next().value;
+    scrollPositionsHistory.delete(oldestKey);
   }
 }
 
@@ -233,7 +244,7 @@ function restoreScrollPosition(location) {
       return;
     }
   }
-  const pos = scrollPositionsHistory[location.key];
+  const pos = scrollPositionsHistory.get(location.key);
   window.scrollTo((pos && pos.x) || 0, (pos && pos.y) || 0);
 }
 
@@ -273,7 +284,7 @@ function buildWebSocketUrl(path = '/ws') {
 // =============================================================================
 
 async function initReactDOMClient() {
-  if (ReactDOMClient != null) return ReactDOMClient;
+  if (ReactDOMClient != null) return ReactDOMClient; // includes REACT_DOM_UNAVAILABLE
   try {
     ReactDOMClient = await import('react-dom/client');
     if (
@@ -290,7 +301,7 @@ async function initReactDOMClient() {
     // Plugins dependent on 'react-dom/client' will use this global
     window.ReactDOMClient = ReactDOMClient;
   } catch {
-    ReactDOMClient = false;
+    ReactDOMClient = REACT_DOM_UNAVAILABLE;
   }
   return ReactDOMClient;
 }
@@ -417,7 +428,7 @@ async function onLocationChange(location, action) {
   isTransitioning = true;
 
   saveScrollPosition();
-  if (action === 'PUSH') delete scrollPositionsHistory[location.key];
+  if (action === 'PUSH') scrollPositionsHistory.delete(location.key);
 
   store.dispatch({ type: 'TRANSITION_START', payload: { location, action } });
 
@@ -430,22 +441,18 @@ async function onLocationChange(location, action) {
   try {
     if (signal.aborted) return;
 
-    // Parse pathname
-    context.pathname = history.location.pathname;
-
-    // Parse query params
-    context.query = Object.fromEntries(
-      new URLSearchParams(history.location.search),
-    );
-
-    // Sync locale from Redux state to context
-    // This ensures locale changes are reflected in page actions (e.g., loading locale-specific content)
+    // Build per-transition context to avoid mutating the shared object
     const currentState = store.getState();
-    context.locale =
-      (currentState.intl && currentState.intl.locale) || context.locale;
+    const transitionContext = {
+      ...context,
+      pathname: history.location.pathname,
+      query: Object.fromEntries(new URLSearchParams(history.location.search)),
+      // Sync locale from Redux state
+      locale: (currentState.intl && currentState.intl.locale) || context.locale,
+    };
 
     const views = await initializeViews();
-    const page = await views.resolve(context);
+    const page = await views.resolve(transitionContext);
     if (!page) {
       const err = new Error(`Page ${location.pathname} not found`);
       err.name = 'PageNotFound';
@@ -465,17 +472,17 @@ async function onLocationChange(location, action) {
       payload: { page, location, action },
     });
 
-    const container = document.getElementById('app');
-    if (!container) {
+    const appContainer = document.getElementById('app');
+    if (!appContainer) {
       log('❌ Root element #app not found', 'error');
       return;
     }
 
-    const appElement = <App context={context}>{page.component}</App>;
+    const appElement = <App context={transitionContext}>{page.component}</App>;
     if (ReactDOMClient) {
-      renderReact18(appElement, container, isInitial);
+      renderReact18(appElement, appContainer, isInitial);
     } else {
-      await renderLegacy(appElement, container, isInitial);
+      await renderLegacy(appElement, appContainer, isInitial);
     }
 
     if (page.title || page.description) {
@@ -561,8 +568,15 @@ function cleanup() {
   safeCleanup('Abort fetch requests', () => {
     if (fetchAbortController) {
       fetchAbortController.abort();
-      fetchAbortController = null;
+      // Only nullify if this is a final cleanup (not HMR).
+      // HMR dispose calls cleanup(), but the signal was already captured by createFetch.
+      // Nullifying here would break subsequent fetches after HMR re-init.
     }
+  });
+
+  // Clear scroll positions history
+  safeCleanup('Clear scroll positions history', () => {
+    scrollPositionsHistory.clear();
   });
 
   log('✅ Cleanup completed', 'info');
@@ -577,11 +591,7 @@ async function initializeApp() {
   window.addEventListener('beforeunload', cleanup);
 
   // Debounced scroll tracking
-  let scrollTimeout;
-  scrollHandler = () => {
-    clearTimeout(scrollTimeout);
-    scrollTimeout = setTimeout(saveScrollPosition, 100);
-  };
+  scrollHandler = createScrollHandler();
   window.addEventListener('scroll', scrollHandler, { passive: true });
 
   // WebSocket
@@ -592,6 +602,7 @@ async function initializeApp() {
 
       // Listen for connection events
       wsClient.on(MessageType.WELCOME, data => {
+        wsConnectionFailures = 0; // Reset on successful connection
         log(`✅ WebSocket connected: ${data && data.connectionId}`);
       });
 
@@ -600,7 +611,19 @@ async function initializeApp() {
       });
 
       wsClient.on(EventType.DISCONNECTED, info => {
-        log(`🔌 WebSocket disconnected: ${info}`, 'warn');
+        wsConnectionFailures++;
+        log(
+          `🔌 WebSocket disconnected (${wsConnectionFailures}/${WS_MAX_FAILURES}): ${info}`,
+          'warn',
+        );
+
+        if (wsConnectionFailures >= WS_MAX_FAILURES) {
+          store.dispatch({
+            type: 'WS_UNAVAILABLE',
+            payload: { retries: wsConnectionFailures },
+          });
+          log('⚠️ WebSocket unavailable after multiple attempts', 'error');
+        }
       });
 
       wsClient.on(EventType.RECONNECTING, attempt => {
@@ -611,8 +634,17 @@ async function initializeApp() {
         log(`⚠️ WebSocket error: ${error}`, 'error');
       });
 
+      // Add a pending flag to prevent concurrent processing
+      let pendingPluginUpdate = null;
       wsClient.on('plugin:updated', event => {
-        pluginManager.handleEvent(event);
+        if (pendingPluginUpdate) return; // Skip if already processing
+        pendingPluginUpdate = (async () => {
+          try {
+            await pluginManager.handleEvent(event);
+          } finally {
+            pendingPluginUpdate = null;
+          }
+        })();
       });
 
       wsClient.connect();
@@ -633,17 +665,25 @@ async function initializeApp() {
   // When user returns to tab, check if session is still valid
   // Just refreshes tokens - fresh user data will be fetched on next navigation
   visibilityChangeHandler = async () => {
-    // Only check when tab becomes visible and user was authenticated
     if (document.visibilityState !== 'visible') return;
     if (!isAuthenticated(store.getState())) return;
+    if (isRefreshingToken) return; // Guard against concurrent refreshes
 
+    isRefreshingToken = true;
     try {
-      // Refresh tokens silently - unwrap() throws if rejected
-      await store.dispatch(refreshToken()).unwrap();
-    } catch {
-      // Refresh explicitly failed - session is truly expired
+      // Add timeout to prevent hanging
+      const refreshPromise = store.dispatch(refreshToken()).unwrap();
+      await Promise.race([
+        refreshPromise,
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Token refresh timeout')), 5000),
+        ),
+      ]);
+    } catch (err) {
+      log(`⚠️ Token refresh failed: ${err.message}`, 'warn');
       await store.dispatch(logout());
-      log('⚠️ Session expired while away', 'warn');
+    } finally {
+      isRefreshingToken = false;
     }
   };
   document.addEventListener('visibilitychange', visibilityChangeHandler);
@@ -662,7 +702,7 @@ async function attemptStartup() {
   try {
     await pluginManager.init({ ...context });
   } catch (error) {
-    console.error('⚠️ Plugin initialization failed:', error.message);
+    log(`⚠️ Plugin initialization failed: ${error.message}`, 'error');
     // Continue app startup even if plugins fail
   }
 
@@ -703,48 +743,66 @@ if (module.hot) {
   });
 
   // Listen for plugin rebuild events from dev server via hot middleware
-  let hmrEventSource = null;
   const RELOAD_PENDING = Symbol.for('__rsk.hmrPluginReloadPending__');
-  if (
-    // eslint-disable-next-line no-underscore-dangle
-    window.__webpack_hot_middleware_reporter__ &&
-    typeof EventSource !== 'undefined'
-  ) {
-    hmrEventSource = new EventSource('/~/__webpack_hmr');
-    hmrEventSource.addEventListener('message', event => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data && data.type === 'plugins-refreshed') {
-          log('🔌 Plugin(s) rebuilt, reload required');
+  let hmrEventSource = null;
+  let isHmrInitialized = false;
 
-          // Ensure next navigation triggers a full page reload
-          pluginManager.needsReload = true;
+  // Initialize HMR
+  (() => {
+    if (isHmrInitialized) return;
+    isHmrInitialized = true;
 
-          // Show only one confirm at a time and debounce
-          if (window[RELOAD_PENDING]) return;
-          window[RELOAD_PENDING] = true;
+    if (
+      // eslint-disable-next-line no-underscore-dangle
+      window.__webpack_hot_middleware_reporter__ &&
+      typeof EventSource !== 'undefined'
+    ) {
+      hmrEventSource = new EventSource('/~/__webpack_hmr');
 
-          setTimeout(() => {
-            // Ask user if they want to reload now
-            // eslint-disable-next-line no-alert
-            if (
-              window.confirm('Plugin(s) updated. Reload now to apply changes?')
-            ) {
-              window.location.reload();
-            } else {
-              // Cooldown to prevent spamming if canceled
-              setTimeout(() => {
-                window[RELOAD_PENDING] = false;
-              }, 3000);
-            }
-          }, 100);
+      hmrEventSource.onerror = () => {
+        log('⚠️ HMR EventSource connection error', 'warn');
+      };
+
+      const handleMessage = event => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data && data.type === 'plugins-refreshed') {
+            log('🔌 Plugin(s) rebuilt, reload required');
+
+            // Ensure next navigation triggers a full page reload
+            pluginManager.needsReload = true;
+
+            // Show only one confirm at a time and debounce
+            if (window[RELOAD_PENDING]) return;
+            window[RELOAD_PENDING] = true;
+
+            setTimeout(() => {
+              // Ask user if they want to reload now
+              // eslint-disable-next-line no-alert
+              if (
+                window.confirm(
+                  'Plugin(s) updated. Reload now to apply changes?',
+                )
+              ) {
+                window.location.reload();
+              } else {
+                // Cooldown to prevent spamming if canceled
+                setTimeout(() => {
+                  window[RELOAD_PENDING] = false;
+                }, 3000);
+              }
+            }, 100);
+          }
+        } catch (e) {
+          // Ignore non-JSON
         }
-      } catch {
-        // Ignore non-JSON messages (webpack HMR heartbeats, etc.)
-      }
-    });
-  }
+      };
 
+      hmrEventSource.addEventListener('message', handleMessage);
+    }
+  })();
+
+  // Handle HMR status updates
   module.hot.addStatusHandler(status => {
     if (
       status === 'idle' &&
@@ -762,7 +820,9 @@ if (module.hot) {
     log('🔥 HMR dispose', 'info');
     if (hmrEventSource) {
       hmrEventSource.close();
+      hmrEventSource = null;
     }
+    isHmrInitialized = false;
     cleanup();
   });
 }

@@ -7,7 +7,6 @@
 
 import 'url-polyfill';
 import 'dotenv-flow/config';
-import { performance } from 'perf_hooks';
 import path from 'path';
 import fs from 'fs/promises';
 import http from 'http';
@@ -19,7 +18,6 @@ import rateLimit from 'express-rate-limit';
 import expressRequestLanguage from 'express-request-language';
 import nodeFetch from 'node-fetch';
 import { LRUCache } from 'lru-cache';
-
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
 import { configureJwt } from './shared/jwt';
@@ -74,8 +72,10 @@ const SERVER_CONFIG = Object.freeze({
   apiPrefix: formatUrlPath(process.env.RSK_API_PREFIX || 'api'),
 
   enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
-  compressionLevel:
-    parseInt(process.env.RSK_COMPRESSION_LEVEL, 10) || (__DEV__ ? 1 : 6),
+  compressionLevel: parseInt(
+    process.env.RSK_COMPRESSION_LEVEL || (__DEV__ ? 1 : 6),
+    10,
+  ),
 
   enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
   rateLimitWindow:
@@ -88,14 +88,14 @@ const SERVER_CONFIG = Object.freeze({
   localeCacheTTL: parseInt(process.env.RSK_LOCALE_CACHE_TTL, 10) || 60_000,
   localeCacheMax: parseInt(process.env.RSK_LOCALE_CACHE_MAX, 10) || 500,
 
-  csp: [
-    "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
-    "style-src 'self' 'unsafe-inline'",
-    "img-src 'self' https: data: blob:",
-    "font-src 'self' data:",
-    "connect-src 'self' ws: wss:",
-  ].join('; '),
+  maxCookieSize: parseInt(process.env.RSK_MAX_COOKIE_SIZE, 10) || 4096,
+});
+
+// Static security headers (CSP is generated per-request with a nonce)
+const STATIC_SECURITY_HEADERS = Object.entries({
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'Referrer-Policy': 'strict-origin-when-cross-origin',
 });
 
 // ---------------------------------------------------------------------------
@@ -162,37 +162,77 @@ function extractPageMetadata(page, req) {
   return metadata;
 }
 
+function validateCookieHeader(cookieHeader) {
+  if (!cookieHeader) return '';
+
+  // Reject oversized cookies to prevent hash DoS attacks
+  if (cookieHeader.length > SERVER_CONFIG.maxCookieSize) {
+    const err = new Error('Cookie header exceeds maximum allowed size');
+    err.name = 'CookieSizeError';
+    err.status = 400;
+    throw err;
+  }
+
+  // Reject cookies with null bytes or control characters (except tab)
+  // eslint-disable-next-line no-control-regex
+  if (/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/.test(cookieHeader)) {
+    const err = new Error('Cookie header contains invalid characters');
+    err.name = 'CookieFormatError';
+    err.status = 400;
+    throw err;
+  }
+
+  return cookieHeader;
+}
+
 let requestCounter = 0;
-const requestIdPrefix = Date.now().toString(36);
+const requestIdPrefix = crypto.randomBytes(8).toString('hex');
+function generateRequestId() {
+  const timestamp = Date.now().toString(36);
+  requestCounter = (requestCounter + 1) % 0x7fffffff;
+  const counter = requestCounter.toString(36).padStart(4, '0');
+  return `${requestIdPrefix}-${timestamp}-${counter}`;
+}
+
+function buildCspHeader(nonce) {
+  return [
+    "default-src 'self'",
+    `script-src 'self' 'nonce-${nonce}'`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' https: data: blob:",
+    "font-src 'self' data:",
+    "connect-src 'self' ws: wss:",
+  ].join('; ');
+}
 
 // ---------------------------------------------------------------------------
 // Cache Management
 // ---------------------------------------------------------------------------
 
-// use an LRU cache for locale lookups instead of managing our own Map/TTL
-const localeCache = new LRUCache({
-  max: SERVER_CONFIG.localeCacheMax,
-  ttl: SERVER_CONFIG.localeCacheTTL,
-});
-
 const appState = {
-  ssrCache: new Map(),
-  viewsPromise: null,
+  ssrCache: new LRUCache({
+    max: 1000,
+    ttl: SERVER_CONFIG.ssrCacheTTL,
+    updateAgeOnGet: false, // Only evict by age, not access
+  }),
+  localeCache: new LRUCache({
+    max: SERVER_CONFIG.localeCacheMax,
+    ttl: SERVER_CONFIG.localeCacheTTL,
+  }),
   ssrResourcesPromise: null,
   wsServer: null,
   nodeRED: new NodeRedManager(),
 };
 
 function invalidateCaches() {
+  appState.localeCache.clear();
   appState.ssrCache.clear();
-  appState.viewsPromise = null;
   appState.ssrResourcesPromise = null;
-  localeCache.clear();
   if (__DEV__) console.log('🗑️  Caches cleared');
 }
 
 function computeSsrKey(req, baseUrl, locale, authHeader) {
-  if (req.method !== 'GET') return null;
+  if (!SERVER_CONFIG.enableSSRCache || req.method !== 'GET') return null;
 
   const url = new URL(req.url, baseUrl);
   const params = Array.from(url.searchParams.keys()).filter(
@@ -209,30 +249,12 @@ function computeSsrKey(req, baseUrl, locale, authHeader) {
 
 function fetchSsrCache(key) {
   if (!SERVER_CONFIG.enableSSRCache || !key) return null;
-
-  const cached = appState.ssrCache.get(key);
-  if (!cached) return null;
-
-  if (Date.now() - cached.timestamp > SERVER_CONFIG.ssrCacheTTL) {
-    appState.ssrCache.delete(key);
-    return null;
-  }
-
-  return cached;
+  return appState.ssrCache.get(key);
 }
 
 function storeSsrCache(key, data) {
   if (!SERVER_CONFIG.enableSSRCache || !key) return;
-
-  appState.ssrCache.set(key, { ...data, timestamp: Date.now() });
-
-  if (appState.ssrCache.size > 1000) {
-    const entries = Array.from(appState.ssrCache.entries()).sort(
-      (a, b) => a[1].timestamp - b[1].timestamp,
-    );
-    entries.slice(0, 50).forEach(([k]) => appState.ssrCache.delete(k));
-    if (__DEV__) console.log('🗑️  Evicted 50 old SSR cache entries');
-  }
+  appState.ssrCache.set(key, data);
 }
 
 // ---------------------------------------------------------------------------
@@ -260,32 +282,28 @@ const localeMiddleware = expressRequestLanguage({
 // ---------------------------------------------------------------------------
 
 async function initializeViews({ container }) {
-  if (!appState.viewsPromise) {
-    appState.viewsPromise = import('./bootstrap/views')
-      .then(m => {
-        const views = m.default({ plugin: pluginManager, container });
-        if (__DEV__) console.log('✅ Views initialized');
-        return views;
-      })
-      .catch(err => {
-        appState.viewsPromise = null;
-        console.error('❌ Failed to load views:', err);
-        throw err;
-      });
-  }
-  return appState.viewsPromise;
+  const m = await import('./bootstrap/views');
+  const views = await m.default({ plugin: pluginManager, container });
+  if (__DEV__) console.log('✅ Views initialized');
+  return views;
 }
 
-async function createReduxStore({ fetch, history }, locale) {
+async function createReduxStore({ fetch, history, locale }, options = {}) {
+  const { hasAuthCookie = false } = options;
+
   const store = configureStore(
     { user: { data: null } },
-    { fetch, history, i18n },
+    { fetch, history, locale, i18n },
   );
 
-  try {
-    await store.dispatch(me()).unwrap();
-  } catch {
-    // unauthenticated — expected
+  // Only fetch user profile if an auth cookie is present to avoid a
+  // wasted HTTP round-trip on every unauthenticated SSR request.
+  if (hasAuthCookie) {
+    try {
+      await store.dispatch(me()).unwrap();
+    } catch {
+      // unauthenticated — expected (e.g. expired token)
+    }
   }
 
   await store.dispatch(
@@ -374,8 +392,8 @@ async function renderToHtml({ context, component, metadata = {} }) {
 }
 
 function makeSsrMiddleware(guardControl, baseUrl) {
-  // Create dependency injection container
-  const container = new Container();
+  // Track whether pluginManager has been initialized for this middleware instance
+  let pluginsInitialized = false;
 
   return async (req, res, next) => {
     const startTime = Date.now();
@@ -385,8 +403,11 @@ function makeSsrMiddleware(guardControl, baseUrl) {
 
     const abortController = new AbortController();
 
-    const authHeader = req.headers.cookie || '';
+    const authHeader = validateCookieHeader(req.headers.cookie || '');
     const locale = req.language || DEFAULT_LOCALE;
+
+    // Extract auth-specific cookie for cache key and auth detection
+    const authCookie = (req.cookies && req.cookies['id_token']) || '';
 
     const handleClientDisconnect = () => {
       if (!res.headersSent) {
@@ -396,18 +417,23 @@ function makeSsrMiddleware(guardControl, baseUrl) {
     };
 
     try {
-      const cacheKey = computeSsrKey(req, baseUrl, locale, authHeader);
+      const cacheKey = computeSsrKey(req, baseUrl, locale, authCookie);
       const cached = fetchSsrCache(cacheKey);
 
       if (cached) {
-        res.setHeader('X-Cache', 'HIT');
-        res.setHeader('X-Render-Time', `${cached.renderTime}ms`);
-        res.setHeader('X-Cache-Age', `${Date.now() - cached.timestamp}ms`);
+        if (__DEV__) {
+          res.setHeader('X-Cache', 'HIT');
+          res.setHeader('X-Render-Time', `${cached.renderTime}ms`);
+          res.setHeader('X-Cache-Age', `${Date.now() - cached.timestamp}ms`);
+        }
         return res.status(cached.status).send(cached.html);
       }
 
-      res.setHeader('X-Cache', 'MISS');
+      if (__DEV__) res.setHeader('X-Cache', 'MISS');
       req.on('close', handleClientDisconnect);
+
+      // Create a per-request DI container to avoid state leakage between requests
+      const container = new Container();
 
       const history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
@@ -436,24 +462,35 @@ function makeSsrMiddleware(guardControl, baseUrl) {
         signal: abortController.signal,
       };
 
-      // Plugin init (restricted app access)
-      try {
-        await pluginManager.init({
-          ...context,
-          cwd: SERVER_CONFIG.cwd,
-          app: guardControl.proxy,
-        });
-      } catch (err) {
-        if (__DEV__) {
-          console.warn('⚠️  Plugin initialization failed:', err.message);
+      // Plugin init (restricted app access) — only once per middleware instance
+      if (!pluginsInitialized) {
+        try {
+          await pluginManager.init({
+            ...context,
+            cwd: SERVER_CONFIG.cwd,
+            app: guardControl.proxy,
+          });
+          pluginsInitialized = true;
+        } catch (err) {
+          if (__DEV__) {
+            console.warn('⚠️  Plugin initialization failed:', err.message);
+          }
         }
       }
 
       store = await promiseWithDeadline(
-        createReduxStore({ fetch, history }, locale),
+        createReduxStore(
+          { fetch, history, locale },
+          {
+            hasAuthCookie: !!authCookie,
+          },
+        ),
         SERVER_TIMEOUTS.STORE_INIT,
         'Redux store initialization',
       );
+      if (!store) {
+        throw new Error('Redux store initialization returned null');
+      }
       context.store = store;
 
       const views = await promiseWithDeadline(
@@ -499,11 +536,19 @@ function makeSsrMiddleware(guardControl, baseUrl) {
       const renderTime = Date.now() - startTime;
       const status = page.status || 200;
 
-      res.setHeader('X-Render-Time', `${renderTime}ms`);
-      res.setHeader('X-SSR-Locale', locale);
+      // Only expose internal timing/locale headers in development
+      if (__DEV__) {
+        res.setHeader('X-Render-Time', `${renderTime}ms`);
+        res.setHeader('X-SSR-Locale', locale);
+      }
 
       if (status === 200 && cacheKey) {
-        storeSsrCache(cacheKey, { html, status, renderTime });
+        storeSsrCache(cacheKey, {
+          html,
+          status,
+          renderTime,
+          timestamp: Date.now(),
+        });
       }
 
       res.status(status).send(html);
@@ -577,9 +622,9 @@ function makeErrorMiddleware() {
       ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    if (__DEV__) {
+    if (appState.youch && appState.youch.default) {
       try {
-        const Youch = require('youch');
+        const { default: Youch } = appState.youch;
         const youch = new Youch(err, {
           method: req.method,
           url: req.url,
@@ -595,7 +640,7 @@ function makeErrorMiddleware() {
     res.status(status).json({
       status,
       success: false,
-      error: err.message,
+      error: __DEV__ ? err.message : 'Internal server error',
       requestId: req.id,
     });
   };
@@ -883,13 +928,19 @@ export function createApp() {
 }
 
 export async function initializeServer(app, server, options = {}) {
+  // Youch is only available in dev mode
+  if (__DEV__) {
+    appState.youch = await import('youch').catch(() => null);
+  }
+
   const {
     publicDir,
     port = SERVER_CONFIG.port,
     host = SERVER_CONFIG.host,
   } = options;
-  const sanitizedHost = sanitizeHost(host);
-  const baseUrl = buildBaseUrl(port, sanitizedHost);
+
+  const displayHost = sanitizeHost(host);
+  const baseUrl = buildBaseUrl(port, displayHost);
 
   // WebSocket
   appState.wsServer = createWebSocketServer(
@@ -938,48 +989,30 @@ export async function initializeServer(app, server, options = {}) {
   }
 
   // Security headers & request ID
-  const staticSecurityHeaders = {
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-  };
-
   app.use((req, res, next) => {
-    req.id = `${requestIdPrefix}-${(++requestCounter).toString(36)}`;
-    res.setHeader('X-Request-Id', req.id);
-
-    for (const [k, v] of Object.entries(staticSecurityHeaders)) {
-      res.setHeader(k, v);
-    }
-
-    if (!__DEV__) {
-      res.setHeader('Content-Security-Policy', SERVER_CONFIG.csp);
-    }
-    next();
-  });
-
-  // Timing / metrics
-  app.use((req, res, next) => {
-    const start = performance.now();
-    res.on('finish', () => {
-      const duration = performance.now() - start;
-      if (req.app && req.app.get('metrics')) {
-        req.app.get('metrics').record('request.duration', duration, {
-          method: req.method,
-          path: req.path,
-          status: res.statusCode,
-        });
-      } else {
-        console.log(`${req.method} ${req.path} ${duration.toFixed(2)}ms`);
+    try {
+      req.id = generateRequestId();
+      res.setHeader('X-Request-Id', req.id);
+      for (const [k, v] of STATIC_SECURITY_HEADERS) {
+        res.setHeader(k, v);
       }
-    });
+
+      // Per-request nonce-based CSP (only in production)
+      if (!__DEV__) {
+        const nonce = crypto.randomBytes(16).toString('base64');
+        req.cspNonce = nonce; // Available to SSR templates
+        res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
+      }
+    } catch (err) {
+      console.error('Error setting security headers:', err);
+    }
     next();
   });
 
   // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
   app.use(
     express.static(
-      path.resolve(typeof publicDir === 'string' ? publicDir : 'public'),
+      path.resolve(typeof publicDir === 'string' ? publicDir.trim() : 'public'),
       {
         dotfiles: 'ignore',
         etag: true,
@@ -1016,7 +1049,7 @@ export async function initializeServer(app, server, options = {}) {
         ? `c:${cookieLocale}`
         : `a:${req.get('accept-language') || ''}`;
 
-    const cachedLang = localeCache.get(cacheKey);
+    const cachedLang = appState.localeCache.get(cacheKey);
     if (cachedLang) {
       req.language = cachedLang;
       return next();
@@ -1025,7 +1058,7 @@ export async function initializeServer(app, server, options = {}) {
     localeMiddleware(req, res, err => {
       if (!err) {
         // just store the language string; LRUCache handles TTL/eviction
-        localeCache.set(cacheKey, req.language);
+        appState.localeCache.set(cacheKey, req.language);
       }
       next(err);
     });
@@ -1041,6 +1074,8 @@ export async function initializeServer(app, server, options = {}) {
     const settle = () => {
       settled = true;
       clearTimeout(timeoutId);
+      res.removeListener('finish', settle);
+      res.removeListener('close', settle);
     };
 
     const timeoutId = setTimeout(() => {
@@ -1072,7 +1107,11 @@ export async function initializeServer(app, server, options = {}) {
         legacyHeaders: false,
         skip(req) {
           const ip = req.ip || req.socket.remoteAddress || '';
-          return !req.headers['x-forwarded-for'] && LOCALHOST_IPS.has(ip);
+          return (
+            req.headers &&
+            !req.headers['x-forwarded-for'] &&
+            LOCALHOST_IPS.has(ip)
+          );
         },
         handler(req, res, _next, rateLimitInfo) {
           res.status(rateLimitInfo.statusCode || 429).json({
@@ -1104,7 +1143,7 @@ export async function initializeServer(app, server, options = {}) {
   await appState.nodeRED.init(app, server, {
     ...SERVER_CONFIG,
     port,
-    host: sanitizedHost,
+    host: displayHost,
     functionGlobalContext: {
       app() {
         return guardControl.proxy;
@@ -1122,8 +1161,7 @@ export async function initializeServer(app, server, options = {}) {
   return {
     app,
     server,
-    start: () => startServer(server, baseUrl, port, sanitizedHost),
-    launch: () => startServer(server, baseUrl, port, sanitizedHost), // backwards compatibility
+    start: () => startServer(server, baseUrl, port, host),
     dispose: () => shutdownServer(server),
   };
 }

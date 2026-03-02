@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { JWT_COOKIE_NAME, REFRESH_COOKIE_NAME } from './constants';
-
 /**
  * Default cookie configuration
  */
@@ -22,11 +20,11 @@ const DEFAULT_COOKIE_CONFIG = Object.freeze({
  */
 const COOKIE_TYPES = Object.freeze({
   jwt: {
-    name: JWT_COOKIE_NAME,
+    name: 'id_token',
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
   refresh: {
-    name: REFRESH_COOKIE_NAME,
+    name: 'refresh_token',
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
   },
 });
@@ -273,7 +271,7 @@ export function clearAllAuthCookies(res, options = {}) {
   const cookieNames =
     options && Array.isArray(options.cookieNames)
       ? options.cookieNames
-      : [JWT_COOKIE_NAME, REFRESH_COOKIE_NAME];
+      : ['id_token', 'refresh_token'];
 
   // Clear each cookie
   cookieNames.forEach(name =>
