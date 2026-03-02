@@ -37,10 +37,13 @@ function createApp(registry) {
     if (!action) return res.status(400).json({ error: 'missing action' });
 
     const hookId = `ipc:${id}:${action}`;
-    if (!registry.hasHook(hookId)) return res.status(404).json({ error: 'no-handler' });
+    if (!registry.hasHook(hookId))
+      return res.status(404).json({ error: 'no-handler' });
 
     try {
-      const results = await registry.executeHook(hookId, data, { reqId: req.headers['x-req-id'] });
+      const results = await registry.executeHook(hookId, data, {
+        reqId: req.headers['x-req-id'],
+      });
       return res.json({ ok: true, results: results.slice(0, 5) }); // limit payload for response
     } catch (err) {
       return res.status(500).json({ error: String(err) });
@@ -61,19 +64,25 @@ describe('plugin-ipc-prod', () => {
     // Register handlers for PLUGIN_ID:action="echo"
     for (let i = 0; i < HANDLERS; i++) {
       // simulate lightweight async handler; optionally include I/O latency
-      registry.registerHook(`ipc:${PLUGIN_ID}:echo`, async payload => {
-        if (BENCH_IO_MS > 0) {
-          await new Promise(r => setTimeout(r, BENCH_IO_MS));
-        }
-        let s = 0;
-        for (let j = 0; j < 5; j++) s += payload && payload.blob ? payload.blob.length : 0;
-        return { handler: i, ok: true };
-      }, `plugin-${i}`);
+      registry.registerHook(
+        `ipc:${PLUGIN_ID}:echo`,
+        async payload => {
+          if (BENCH_IO_MS > 0) {
+            await new Promise(r => setTimeout(r, BENCH_IO_MS));
+          }
+          let s = 0;
+          for (let j = 0; j < 5; j++)
+            // eslint-disable-next-line no-unused-vars
+            s += payload && payload.blob ? payload.blob.length : 0;
+          return { handler: i, ok: true };
+        },
+        `plugin-${i}`,
+      );
     }
 
     const app = createApp(registry);
     server = app.listen(0, () => {
-      const port = server.address().port;
+      const { port } = server.address();
       url = `http://127.0.0.1:${port}/api/plugins/${PLUGIN_ID}/ipc`;
       done();
     });
@@ -116,7 +125,9 @@ describe('plugin-ipc-prod', () => {
     const duration = performance.now() - start;
     const throughput = (REQUESTS / duration) * 1000;
 
-    console.log(`HTTP IPC: ${REQUESTS} requests x ${HANDLERS} handlers in ${duration.toFixed(2)}ms`);
+    console.log(
+      `HTTP IPC: ${REQUESTS} requests x ${HANDLERS} handlers in ${duration.toFixed(2)}ms`,
+    );
     console.log(`throughput: ${Math.round(throughput)} req/s`);
 
     if (RECORD_PATH) {
@@ -127,13 +138,22 @@ describe('plugin-ipc-prod', () => {
         if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
         const res = {
           timestamp: new Date().toISOString(),
-          config: { HANDLERS, REQUESTS, CONCURRENCY, PAYLOAD_BYTES, BENCH_IO_MS },
+          config: {
+            HANDLERS,
+            REQUESTS,
+            CONCURRENCY,
+            PAYLOAD_BYTES,
+            BENCH_IO_MS,
+          },
           duration,
           throughput,
           latencies: {
             min: Math.min(...perRequest),
             max: Math.max(...perRequest),
-            median: perRequest.sort((a,b)=>a-b)[Math.floor(perRequest.length/2)] || 0,
+            median:
+              perRequest.sort((a, b) => a - b)[
+                Math.floor(perRequest.length / 2)
+              ] || 0,
           },
         };
         fs.writeFileSync(RECORD_PATH, JSON.stringify(res, null, 2));

@@ -15,7 +15,7 @@ export async function up({ context, Sequelize }) {
   await queryInterface.createTable('user_roles', {
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV1,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
       comment: 'Unique user-role assignment identifier',

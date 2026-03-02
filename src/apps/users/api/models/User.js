@@ -14,7 +14,7 @@ function flattenProfileEAV(instance) {
   if (!instance || !Array.isArray(instance.profile)) return;
   const flat = {};
   instance.profile.forEach(attr => {
-    // attr.attribute_value is already parsed to native JS types by UserProfile's getter
+    // attr.attribute_value is already parsed to native JS DataTypes by UserProfile's getter
     flat[attr.attribute_key] = attr.attribute_value;
   });
   if (instance.dataValues) {
@@ -54,32 +54,22 @@ function expandProfileEAV(instance) {
  * Core user model for authentication and user management.
  *
  * @param {Object} connection - Sequelize connection instance
- * @param {Object} [DataTypes] - Sequelize data types (optional, derived from connection if not provided)
+ * @param {Object} [DataTypes] - Sequelize data DataTypes (optional, derived from connection if not provided)
  * @returns {Model} User model
  */
 export default function createUserModel({ connection, DataTypes }) {
-  // Derive DataTypes from Sequelize connection if not explicitly provided
-  const types = DataTypes || connection.constructor.DataTypes;
-  /**
-   * Check if password is already hashed (salt:hash format)
-   * @param {string} password - Password to check
-   * @returns {boolean} True if already hashed
-   */
-  const isHashed = password =>
-    password && password.includes(':') && password.length > 100;
-
   const User = connection.define(
     'User',
     {
       id: {
-        type: types.UUID,
-        defaultValue: types.UUIDV1,
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         comment: 'Unique user identifier',
       },
 
       email: {
-        type: types.STRING(255),
+        type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
         validate: {
@@ -90,88 +80,110 @@ export default function createUserModel({ connection, DataTypes }) {
       },
 
       email_confirmed: {
-        type: types.BOOLEAN,
+        type: DataTypes.BOOLEAN,
         defaultValue: false,
         comment: 'Whether email has been verified',
       },
 
       password: {
-        type: types.STRING(255),
+        type: DataTypes.STRING(255),
         comment: 'Hashed password (PBKDF2) - null for OAuth-only users',
       },
 
       is_active: {
-        type: types.BOOLEAN,
+        type: DataTypes.BOOLEAN,
         defaultValue: true,
         comment: 'Whether user account is active',
       },
 
       is_locked: {
-        type: types.BOOLEAN,
+        type: DataTypes.BOOLEAN,
         defaultValue: false,
         comment: 'Whether user account is locked (security)',
       },
 
       failed_login_attempts: {
-        type: types.INTEGER,
+        type: DataTypes.INTEGER,
         defaultValue: 0,
         comment: 'Number of failed login attempts',
       },
 
       last_login_at: {
-        type: types.DATE,
+        type: DataTypes.DATE,
         comment: 'Last successful login timestamp',
       },
 
       password_changed_at: {
-        type: types.DATE,
+        type: DataTypes.DATE,
         comment: 'When password was last changed',
       },
     },
     {
       tableName: 'users',
       underscored: true,
+
+      // Soft-delete support.
+      // NOTE: paranoid only prevents hard-deletes; it does NOT filter
+      // is_active=false records. Add a default scope or service-layer
+      // guard if you need to exclude inactive users from all queries.
       paranoid: true,
       timestamps: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
       deletedAt: 'deleted_at',
+
+      indexes: [
+        // unique constraint already creates an index, but declaring it
+        // explicitly gives you control over naming and lets ORM tooling
+        // reflect it correctly.
+        { unique: true, fields: ['email'], name: 'users_email_unique' },
+      ],
+
       defaultScope: {
-        attributes: {
-          exclude: ['password'],
-        },
+        // Exclude password from every query unless the withPassword scope
+        // is explicitly chained: User.scope('withPassword').findOne(...)
+        attributes: { exclude: ['password'] },
       },
+
       scopes: {
+        // FIX: use `exclude: []` so this scope fully overrides the
+        // defaultScope exclusion. `include: ['password']` does NOT merge
+        // correctly with a defaultScope exclusion in Sequelize.
         withPassword: {
-          attributes: {
-            include: ['password'],
-          },
+          attributes: { exclude: [] },
         },
+
+        // Convenience scope — pair with paranoid for full "active user" queries
+        active: { where: { is_active: true, is_locked: false } },
       },
+
       hooks: {
         /**
-         * Hash password before creating user
+         * FIX: Use only `beforeSave` for single-instance password hashing.
+         *
+         * Sequelize fires hooks in this order on .create():
+         *   beforeValidate → afterValidate → beforeCreate → beforeSave → (SQL) → afterSave → afterCreate
+         * And on .save() after mutation:
+         *   beforeValidate → afterValidate → beforeUpdate → beforeSave → (SQL) → afterSave → afterUpdate
+         *
+         * Having BOTH beforeCreate/beforeUpdate AND beforeSave caused the
+         * password to be hashed twice. Using only beforeSave is sufficient
+         * and covers both create and update paths.
          */
-        beforeCreate: async user => {
-          if (user.password && !isHashed(user.password)) {
+        beforeSave: async user => {
+          if (user.password && user.changed('password')) {
             user.password = await hashPassword(user.password);
+            user.password_changed_at = new Date();
           }
         },
+
         /**
-         * Hash password before updating user (if password changed)
-         */
-        beforeUpdate: async user => {
-          if (user.changed('password') && !isHashed(user.password)) {
-            user.password = await hashPassword(user.password);
-          }
-        },
-        /**
-         * Hash passwords before bulk creating users
+         * Bulk create: iterate instances normally — each has .password.
          */
         beforeBulkCreate: async users => {
           await Promise.all(
             users.map(async user => {
-              if (user.password && !isHashed(user.password)) {
+              if (user.password) {
                 user.password = await hashPassword(user.password);
               }
             }),
@@ -182,23 +194,23 @@ export default function createUserModel({ connection, DataTypes }) {
   );
 
   User.associate = models => {
-    // User <-> UserLogin (One-to-Many)
+    // User → UserLogin  (1:N)
     User.hasMany(models.UserLogin, {
       foreignKey: 'user_id',
       as: 'logins',
-      onUpdate: 'cascade',
-      onDelete: 'cascade',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     });
 
-    // User <-> UserProfile (One-to-Many via EAV)
+    // User → UserProfile  (1:N, EAV)
     User.hasMany(models.UserProfile, {
       foreignKey: 'user_id',
       as: 'profile',
-      onUpdate: 'cascade',
-      onDelete: 'cascade',
+      onUpdate: 'CASCADE',
+      onDelete: 'CASCADE',
     });
 
-    // User <-> Role (Many-to-Many through UserRole)
+    // User ↔ Role  (N:M through UserRole)
     User.belongsToMany(models.Role, {
       through: models.UserRole,
       foreignKey: 'user_id',
@@ -206,7 +218,7 @@ export default function createUserModel({ connection, DataTypes }) {
       as: 'roles',
     });
 
-    // User <-> Group (Many-to-Many through UserGroup)
+    // User ↔ Group  (N:M through UserGroup)
     User.belongsToMany(models.Group, {
       through: models.UserGroup,
       foreignKey: 'user_id',
@@ -214,7 +226,7 @@ export default function createUserModel({ connection, DataTypes }) {
       as: 'groups',
     });
 
-    // User <-> PasswordResetToken (One-to-Many)
+    // User → PasswordResetToken  (1:N)
     User.hasMany(models.PasswordResetToken, {
       foreignKey: 'user_id',
       as: 'passwordResetTokens',
@@ -223,6 +235,11 @@ export default function createUserModel({ connection, DataTypes }) {
     });
   };
 
+  // ---------------------------------------------------------------------------
+  // EAV profile hooks
+  // ---------------------------------------------------------------------------
+
+  // Flatten EAV rows → plain object after any find
   User.addHook('afterFind', 'flattenProfileEAV', results => {
     if (!results) return;
     if (Array.isArray(results)) {
@@ -232,6 +249,7 @@ export default function createUserModel({ connection, DataTypes }) {
     }
   });
 
+  // Expand plain object → EAV rows before validation
   User.addHook('beforeValidate', 'expandProfileEAV', expandProfileEAV);
 
   return User;

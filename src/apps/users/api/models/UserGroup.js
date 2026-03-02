@@ -22,7 +22,7 @@ export default function createUserGroupModel({ connection, DataTypes }) {
     {
       id: {
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV1,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         comment: 'Unique user-group membership identifier',
       },

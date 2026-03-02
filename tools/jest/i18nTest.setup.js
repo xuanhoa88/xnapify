@@ -1,5 +1,10 @@
-// tools/jest/i18nTestSetup.js
-// ----------------------------
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 // Encapsulates the i18next configuration used during testing.  This
 // allows other scripts (for instance, individual test helper files)
 // to import and reuse the same setup if necessary.

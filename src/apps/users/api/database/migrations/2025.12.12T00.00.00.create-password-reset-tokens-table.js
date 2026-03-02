@@ -15,7 +15,7 @@ export async function up({ context, Sequelize }) {
   await queryInterface.createTable('password_reset_tokens', {
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV1,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
       comment: 'Unique token record identifier',

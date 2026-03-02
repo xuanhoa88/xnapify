@@ -15,7 +15,7 @@ export async function up({ context, Sequelize }) {
   await queryInterface.createTable('role_permissions', {
     id: {
       type: DataTypes.UUID,
-      defaultValue: DataTypes.UUIDV1,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
       comment: 'Unique role-permission assignment identifier',

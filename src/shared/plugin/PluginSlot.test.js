@@ -43,10 +43,12 @@ describe('PluginSlot', () => {
     const MockComponent1 = props => (
       <div
         className='mock1'
+        // eslint-disable-next-line react/prop-types
         title={JSON.stringify({ custom: props.customProp, ctx: props.context })}
       />
     );
     const MockComponent2 = props => (
+      // eslint-disable-next-line react/prop-types
       <div className='mock2'>{props.customProp}</div>
     );
 

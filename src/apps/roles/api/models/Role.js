@@ -27,7 +27,7 @@ export default function createRoleModel({ connection, DataTypes }) {
     {
       id: {
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV1,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         comment: 'Unique role identifier',
       },

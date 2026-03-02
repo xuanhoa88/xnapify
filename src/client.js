@@ -672,13 +672,20 @@ async function initializeApp() {
     isRefreshingToken = true;
     try {
       // Add timeout to prevent hanging
-      const refreshPromise = store.dispatch(refreshToken()).unwrap();
+      const refreshAction = store.dispatch(refreshToken());
+      let timeoutId;
       await Promise.race([
-        refreshPromise,
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error('Token refresh timeout')), 5000),
-        ),
-      ]);
+        refreshAction.unwrap(),
+        new Promise((_, reject) => {
+          timeoutId = setTimeout(() => {
+            if (refreshAction.abort) refreshAction.abort();
+            const err = new Error('Token refresh timeout');
+            err.name = 'TokenRefreshTimeoutError';
+            err.code = 'TOKEN_REFRESH_TIMEOUT';
+            reject(err);
+          }, 5_000);
+        }),
+      ]).finally(() => clearTimeout(timeoutId));
     } catch (err) {
       log(`⚠️ Token refresh failed: ${err.message}`, 'warn');
       await store.dispatch(logout());

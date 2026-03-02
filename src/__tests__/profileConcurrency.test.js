@@ -1,17 +1,31 @@
 const { setupTestDb, closeTestDb } = require('../../tools/jest/dbTest.setup');
-const { updateUserProfile, getUserWithProfile } = require('../apps/users/api/services/profile.service');
+const {
+  updateUserProfile,
+  getUserWithProfile,
+} = require('../apps/users/api/services/profile.service');
 
 // simple hook stub
+// eslint-disable-next-line no-unused-vars
 const hook = name => ({ emit: async () => {} });
 
 describe('concurrent profile updates', () => {
   it('handles many simultaneous profile writes without loss', async () => {
     const db = await setupTestDb();
     const { User, Role, Group } = db.models;
-    await Role.findOrCreate({ where: { name: 'member' }, defaults: { description: 'Member' } });
-    await Group.findOrCreate({ where: { name: 'default' }, defaults: { description: 'Default' } });
+    await Role.findOrCreate({
+      where: { name: 'member' },
+      defaults: { description: 'Member' },
+    });
+    await Group.findOrCreate({
+      where: { name: 'default' },
+      defaults: { description: 'Default' },
+    });
 
-    const user = await User.create({ email: 'concurrent@example.com', password: 'password', is_active: true });
+    const user = await User.create({
+      email: 'concurrent@example.com',
+      password: 'password',
+      is_active: true,
+    });
     const userId = user.id;
 
     // sanity check: user exists and count
@@ -25,7 +39,11 @@ describe('concurrent profile updates', () => {
       updates.push(
         (async idx => {
           try {
-            await updateUserProfile(userId, { profile: { counter: idx } }, { models: db.models, hook });
+            await updateUserProfile(
+              userId,
+              { profile: { counter: idx } },
+              { models: db.models, hook },
+            );
           } catch (err) {
             console.error('update error idx', idx, err.message);
             throw err;

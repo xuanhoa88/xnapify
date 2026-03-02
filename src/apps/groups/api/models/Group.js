@@ -27,7 +27,7 @@ export default function createGroupModel({ connection, DataTypes }) {
     {
       id: {
         type: DataTypes.UUID,
-        defaultValue: DataTypes.UUIDV1,
+        defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
         comment: 'Unique group identifier',
       },

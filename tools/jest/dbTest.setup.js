@@ -1,8 +1,19 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+const { v4: uuidv4 } = require('uuid');
 const SequelizeModule = require('sequelize');
 const glob = require('glob');
 const path = require('path');
 const config = require('../config');
 
+// -----------------------------------------------------------------------------
+// Test database helpers
+// -----------------------------------------------------------------------------
 const { Sequelize } = SequelizeModule;
 
 // Constants for test database setup
@@ -19,15 +30,21 @@ const SEQUELIZE_CONFIG = {
   },
 };
 
+// Get all model files
+const modelFiles = glob.sync(path.join(config.CWD, MODEL_GLOB_PATTERN));
+
 /**
  * Creates test-compatible DataTypes by polyfilling unsupported types.
- * SQLite doesn't support UUIDV1, so we fall back to UUIDV4.
+ * SQLite doesn't support UUIDV1, so we use a generator function that
+ * returns a UUID v4 string.
  * @returns {Object} Modified DataTypes object
  */
 function createTestDataTypes() {
   const testDataTypes = { ...SequelizeModule.DataTypes };
-  // SQLite doesn't support UUIDV1, use UUIDV4 instead
-  testDataTypes.UUIDV1 = SequelizeModule.UUIDV4;
+  // SQLite doesn't support UUIDV1. Using a function that returns a UUID v4
+  // instead of the UUIDV4 class avoids "Invalid value UUIDV4 {}" errors
+  // during sync/validation in some versions of Sequelize/SQLite.
+  testDataTypes.UUIDV4 = () => uuidv4();
   return testDataTypes;
 }
 
@@ -39,11 +56,11 @@ function createTestDataTypes() {
  */
 function loadModels(context) {
   const loadedModels = {};
-  const globPattern = path.join(config.CWD, MODEL_GLOB_PATTERN);
-  const modelFiles = glob.sync(globPattern);
 
   if (modelFiles.length === 0) {
-    throw new Error(`No model files found matching pattern: ${globPattern}`);
+    throw new Error(
+      `No model files found matching pattern: ${MODEL_GLOB_PATTERN}`,
+    );
   }
 
   for (const file of modelFiles) {

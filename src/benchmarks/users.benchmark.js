@@ -24,13 +24,29 @@ const {
 async function createUserWithRelations(models, idx) {
   const { User, UserProfile, Role, Group } = models;
   const email = `user${idx}@example.com`;
-  const user = await User.create({ email, password: 'password', is_active: true });
+  const user = await User.create({
+    email,
+    password: 'password',
+    is_active: true,
+  });
 
   // profile entries
   await UserProfile.bulkCreate([
-    { user_id: user.id, attribute_key: 'first_name', attribute_value: 'First' + idx },
-    { user_id: user.id, attribute_key: 'last_name', attribute_value: 'Last' + idx },
-    { user_id: user.id, attribute_key: 'display_name', attribute_value: 'User ' + idx },
+    {
+      user_id: user.id,
+      attribute_key: 'first_name',
+      attribute_value: 'First' + idx,
+    },
+    {
+      user_id: user.id,
+      attribute_key: 'last_name',
+      attribute_value: 'Last' + idx,
+    },
+    {
+      user_id: user.id,
+      attribute_key: 'display_name',
+      attribute_value: 'User ' + idx,
+    },
   ]);
 
   // role and group are created once before seeding; look them up here
@@ -88,7 +104,9 @@ describe('users.benchmark', () => {
     }
     const duration = performance.now() - start;
     const tps = count / (duration / 1000);
-    console.log(`\n  getUserWithProfile: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`);
+    console.log(
+      `\n  getUserWithProfile: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`,
+    );
     expect(tps).toBeGreaterThan(100);
 
     await closeTestDb();
@@ -98,6 +116,7 @@ describe('users.benchmark', () => {
     const db = await prepare();
     const { models } = db;
     const options = { page: 1, limit: 50, search: 'user' };
+    // eslint-disable-next-line no-unused-vars
     const ctx = { models, hook: name => ({ emit: async () => {} }) };
     const count = 50;
     const start = performance.now();
@@ -106,7 +125,9 @@ describe('users.benchmark', () => {
     }
     const duration = performance.now() - start;
     const tps = count / (duration / 1000);
-    console.log(`\n  getUserList: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`);
+    console.log(
+      `\n  getUserList: ${duration.toFixed(1)}ms (${tps.toFixed(0)} calls/sec)`,
+    );
     expect(tps).toBeGreaterThan(10);
 
     await closeTestDb();

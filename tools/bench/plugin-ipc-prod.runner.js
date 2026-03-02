@@ -101,6 +101,7 @@ function createApp(registry) {
         // light CPU work
         let s = 0;
         for (let j = 0; j < 5; j++)
+          // eslint-disable-next-line no-unused-vars
           s += payload && payload.blob ? payload.blob.length : 0;
         return { handler: i, ok: true };
       },

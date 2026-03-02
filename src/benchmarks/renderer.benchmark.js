@@ -6,7 +6,8 @@ const React = require('react');
 const ReactDOMServer = require('react-dom/server');
 const { performance } = require('perf_hooks');
 
-const configureStore = require('../shared/renderer/redux/configureStore').default;
+const configureStore =
+  require('../shared/renderer/redux/configureStore').default;
 const App = require('../shared/renderer/App').default;
 
 // simple dummy context that mimics what the real application provides
@@ -17,7 +18,8 @@ function createDummyContext() {
     fetch: () => Promise.resolve(),
     store,
     history: { listen: () => {} },
-    i18n: {  // minimal subset of i18next API used by App
+    i18n: {
+      // minimal subset of i18next API used by App
       language: 'en',
       changeLanguage: () => Promise.resolve(),
       t: key => key,
@@ -59,7 +61,9 @@ describe('renderer performance', () => {
     const html = ReactDOMServer.renderToString(element);
     const duration = performance.now() - start;
 
-    console.log(`rendered tree length ${html.length} in ${duration.toFixed(2)}ms`);
+    console.log(
+      `rendered tree length ${html.length} in ${duration.toFixed(2)}ms`,
+    );
     expect(html).toContain('leaf');
     expect(duration).toBeLessThan(300);
   });
