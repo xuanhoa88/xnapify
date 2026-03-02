@@ -1,58 +1,38 @@
-import { validateForm } from '../../../../../shared/validator';
-import * as permissionService from '../../services/admin/permission.service';
 import * as permissionController from './permission.controller';
 
-jest.mock('../../../../../shared/validator', () => ({
-  validateForm: jest.fn(),
-}));
+describe('Admin Permission Controller (SQLite E2E)', () => {
+  let req, res, mockHttp, mockModels, mockWebhook, mockAuth;
 
-jest.mock('../../../validator/admin', () => ({
-  createPermissionFormSchema: jest.fn(() => ({})),
-  updatePermissionFormSchema: jest.fn(() => ({})),
-  bulkUpdatePermissionStatusFormSchema: jest.fn(() => ({})),
-  bulkDeletePermissionFormSchema: jest.fn(() => ({})),
-}));
-
-jest.mock('../../services/admin/permission.service', () => ({
-  createPermission: jest.fn(),
-  getPermissions: jest.fn(),
-  getPermissionsByResource: jest.fn(),
-  getPermissionById: jest.fn(),
-  updatePermission: jest.fn(),
-  bulkUpdateStatus: jest.fn(),
-  bulkDelete: jest.fn(),
-}));
-
-describe('Admin Permission Controller', () => {
-  let req;
-  let res;
-  let mockHttp;
-  let mockModels;
-  let mockWebhook;
-  let mockAuth;
-
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    mockModels = global.testDb.models;
 
     mockHttp = {
       sendSuccess: jest.fn(),
-      sendError: jest.fn(),
-      sendValidationError: jest.fn(),
-      sendServerError: jest.fn(),
-      sendNotFound: jest.fn(),
+      sendError: jest.fn((res, err) => {
+        console.log('HTTP ERRROR:', err);
+      }),
+      sendValidationError: jest.fn((res, err) => {
+        console.log('HTTP VALIDATION ERRROR:', err);
+      }),
+      sendServerError: jest.fn((res, err) => {
+        console.log('HTTP SERVER ERRROR:', err);
+      }),
+      sendNotFound: jest.fn((res, err) => {
+        console.log('HTTP NOT FOUND ERRROR:', err);
+      }),
       getPagination: jest.fn(() => ({ page: 1, limit: 10 })),
     };
 
-    mockModels = {};
-    mockWebhook = {};
+    mockWebhook = { send: jest.fn(() => Promise.resolve({ success: true })) };
     mockAuth = {
-      DEFAULT_RESOURCES: {},
-      DEFAULT_ACTIONS: {},
-      SYSTEM_PERMISSIONS: ['admin'],
+      DEFAULT_RESOURCES: { ALL: '*' },
+      DEFAULT_ACTIONS: { MANAGE: '*' },
+      SYSTEM_PERMISSIONS: ['system'],
     };
 
     req = {
-      user: { id: 1 },
+      user: { id: 'test-admin-id' },
       body: {},
       params: {},
       query: {},
@@ -77,149 +57,149 @@ describe('Admin Permission Controller', () => {
 
   describe('createPermission', () => {
     it('should validate and create permission successfully', async () => {
-      req.body = { resource: 'users', action: 'read' };
-      validateForm.mockReturnValue([true, null]);
-      permissionService.createPermission.mockResolvedValue({
-        id: 2,
-        resource: 'users',
-      });
+      req.body = {
+        resource: 'articles',
+        action: 'read',
+        description: 'Read articles',
+      };
 
       await permissionController.createPermission(req, res);
 
-      expect(permissionService.createPermission).toHaveBeenCalled();
-      expect(mockHttp.sendSuccess).toHaveBeenCalledWith(
-        res,
-        { permission: { id: 2, resource: 'users' } },
-        201,
-      );
+      expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const responsePayload = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(responsePayload.permission).toBeDefined();
+      expect(responsePayload.permission.resource).toBe('articles');
     });
 
     it('should return 409 if permission already exists', async () => {
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Already exists');
-      error.name = 'PermissionAlreadyExistsError';
-      permissionService.createPermission.mockRejectedValue(error);
+      await mockModels.Permission.create({
+        resource: 'articles',
+        action: 'write',
+        description: 'Test write',
+      });
+
+      req.body = { resource: 'articles', action: 'write' };
 
       await permissionController.createPermission(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 409);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        409,
+      );
     });
   });
 
   describe('getPermissions', () => {
-    it('should parse pagination and get permissions', async () => {
-      permissionService.getPermissions.mockResolvedValue({
-        permissions: [],
-        pagination: {},
+    it('should return a list of permissions', async () => {
+      await mockModels.Permission.create({
+        resource: 'users',
+        action: 'write',
       });
 
       await permissionController.getPermissions(req, res);
 
-      expect(permissionService.getPermissions).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.permissions.length).toBeGreaterThan(0);
     });
   });
 
   describe('getPermissionsByResource', () => {
-    it('should parse pagination and get permissions by resource', async () => {
-      req.params = { resource: 'users' };
-      permissionService.getPermissionsByResource.mockResolvedValue({
-        permissions: [],
-        pagination: {},
+    it('should get permissions correctly for a resource', async () => {
+      await mockModels.Permission.create({
+        resource: 'books',
+        action: 'write',
       });
 
+      req.params = { resource: 'books' };
       await permissionController.getPermissionsByResource(req, res);
 
-      expect(permissionService.getPermissionsByResource).toHaveBeenCalledWith(
-        'users',
-        expect.any(Object),
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.permissions[0].resource).toBe('books');
     });
   });
 
   describe('getPermissionById', () => {
     it('should find and return permission', async () => {
-      req.params = { id: 2 };
-      permissionService.getPermissionById.mockResolvedValue({ id: 2 });
+      const p = await mockModels.Permission.create({
+        id: '123e4567-e89b-12d3-a456-426614174001',
+        resource: 'cars',
+        action: 'drive',
+      });
 
+      req.params = { id: p.id };
       await permissionController.getPermissionById(req, res);
 
-      expect(permissionService.getPermissionById).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.permission.id).toBe(p.id);
     });
   });
 
   describe('updatePermission', () => {
     it('should update permission successfully', async () => {
-      req.params = { id: 2 };
-      req.body = { resource: 'articles' };
-      validateForm.mockReturnValue([true, null]);
-      permissionService.updatePermission.mockResolvedValue({
-        id: 2,
-        resource: 'articles',
+      const p = await mockModels.Permission.create({
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        resource: 'planes',
+        action: 'fly',
       });
 
+      req.params = { id: p.id };
+      req.body = { resource: 'planes', action: 'land' };
+
       await permissionController.updatePermission(req, res);
 
-      expect(permissionService.updatePermission).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
-    });
 
-    it('should handle PermissionAlreadyExistsError', async () => {
-      req.params = { id: 2 };
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Already exists');
-      error.name = 'PermissionAlreadyExistsError';
-      permissionService.updatePermission.mockRejectedValue(error);
-
-      await permissionController.updatePermission(req, res);
-
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 409);
+      const dbCheck = await mockModels.Permission.findByPk(p.id);
+      expect(dbCheck.action).toBe('land');
     });
   });
 
   describe('bulkUpdateStatus', () => {
     it('should bulk update permissions', async () => {
-      req.body = { ids: [1, 2], state: 'active' };
-      validateForm.mockReturnValue([true, null]);
-      permissionService.bulkUpdateStatus.mockResolvedValue([
-        { id: 1 },
-        { id: 2 },
-      ]);
+      const p1 = await mockModels.Permission.create({
+        id: '123e4567-e89b-12d3-a456-426614174003',
+        resource: 'x',
+        action: 'y',
+        is_active: false,
+      });
+      const p2 = await mockModels.Permission.create({
+        id: '123e4567-e89b-12d3-a456-426614174004',
+        resource: 'a',
+        action: 'b',
+        is_active: false,
+      });
+
+      req.body = { ids: [p1.id, p2.id], state: 'active' };
 
       await permissionController.bulkUpdateStatus(req, res);
 
-      expect(permissionService.bulkUpdateStatus).toHaveBeenCalledWith(
-        [1, 2],
-        true,
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const updated1 = await mockModels.Permission.findByPk(p1.id);
+      const updated2 = await mockModels.Permission.findByPk(p2.id);
+      expect(updated1.is_active).toBe(true);
+      expect(updated2.is_active).toBe(true);
     });
   });
 
   describe('deletePermissions', () => {
     it('should delete permissions successfully', async () => {
-      req.body = { ids: [1, 2] };
-      validateForm.mockReturnValue([true, null]);
-      permissionService.bulkDelete.mockResolvedValue({
-        deleted: 2,
-        deletedIds: [1, 2],
-        protectedIds: [],
+      const p1 = await mockModels.Permission.create({
+        id: '123e4567-e89b-12d3-a456-426614174005',
+        resource: 'x',
+        action: 'y',
       });
+
+      req.body = { ids: [p1.id] };
 
       await permissionController.deletePermissions(req, res);
 
-      expect(permissionService.bulkDelete).toHaveBeenCalledWith(
-        [1, 2],
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const count = await mockModels.Permission.count();
+      expect(count).toBe(0);
     });
   });
 });

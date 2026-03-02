@@ -1,51 +1,34 @@
-import { validateForm } from '../../../../../shared/validator';
-import * as groupService from '../../services/admin/group.service';
 import * as groupController from './group.controller';
 
-jest.mock('../../../../../shared/validator', () => ({
-  validateForm: jest.fn(),
-}));
+describe('Admin Group Controller (SQLite E2E)', () => {
+  let req, res, mockHttp, mockModels, mockWebhook, mockAuth;
 
-jest.mock('../../../validator/admin', () => ({
-  createGroupFormSchema: jest.fn(() => ({})),
-  updateGroupFormSchema: jest.fn(() => ({})),
-}));
-
-jest.mock('../../services/admin/group.service', () => ({
-  createGroup: jest.fn(),
-  getGroups: jest.fn(),
-  getGroupById: jest.fn(),
-  updateGroupById: jest.fn(),
-  deleteGroup: jest.fn(),
-  getUsersWithGroup: jest.fn(),
-}));
-
-describe('Admin Group Controller', () => {
-  let req;
-  let res;
-  let mockHttp;
-  let mockModels;
-  let mockWebhook;
-  let mockAuth;
-
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    mockModels = global.testDb.models;
 
     mockHttp = {
       sendSuccess: jest.fn(),
-      sendError: jest.fn(),
-      sendValidationError: jest.fn(),
-      sendServerError: jest.fn(),
-      sendNotFound: jest.fn(),
+      sendError: jest.fn((res, err) => {
+        console.log('HTTP ERROR:', err);
+      }),
+      sendValidationError: jest.fn((res, err) => {
+        console.log('HTTP VALIDATION ERROR:', err);
+      }),
+      sendServerError: jest.fn((res, err) => {
+        console.log('HTTP SERVER ERROR:', err);
+      }),
+      sendNotFound: jest.fn((res, err) => {
+        console.log('HTTP NOT FOUND ERROR:', err);
+      }),
       getPagination: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
     };
 
-    mockModels = {};
-    mockWebhook = {};
+    mockWebhook = { send: jest.fn(() => Promise.resolve({ success: true })) };
     mockAuth = { DEFAULT_ROLE: 'user', SYSTEM_GROUPS: ['admin'] };
 
     req = {
-      user: { id: 1, groups: ['group-a'] },
+      user: { id: 'test-admin-id', groups: [] },
       body: {},
       params: {},
       query: {},
@@ -71,72 +54,69 @@ describe('Admin Group Controller', () => {
   describe('createGroup', () => {
     it('should validate and create group successfully', async () => {
       req.body = { name: 'admin-group' };
-      validateForm.mockReturnValue([true, null]);
-      groupService.createGroup.mockResolvedValue({
-        id: 2,
-        name: 'admin-group',
-      });
 
       await groupController.createGroup(req, res);
 
-      expect(groupService.createGroup).toHaveBeenCalled();
-      expect(mockHttp.sendSuccess).toHaveBeenCalledWith(
-        res,
-        { group: { id: 2, name: 'admin-group' } },
-        201,
-      );
+      expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const responsePayload = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(responsePayload.group).toBeDefined();
+      expect(responsePayload.group.name).toBe('admin-group');
     });
 
     it('should return 409 if group already exists', async () => {
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Already exists');
-      error.name = 'GroupAlreadyExistsError';
-      groupService.createGroup.mockRejectedValue(error);
+      await mockModels.Group.create({ name: 'existing-group' });
+      req.body = { name: 'existing-group' };
 
       await groupController.createGroup(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 409);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        409,
+      );
     });
 
     it('should return validation error if input is invalid', async () => {
-      validateForm.mockReturnValue([false, { name: 'Required' }]);
+      req.body = { name: '' }; // Empty name
 
       await groupController.createGroup(req, res);
 
-      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(res, {
-        name: 'Required',
-      });
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
+        res,
+        expect.any(Object),
+      );
     });
   });
 
   describe('getGroups', () => {
     it('should parse pagination and get list', async () => {
-      groupService.getGroups.mockResolvedValue({ groups: [], pagination: {} });
+      await mockModels.Group.create({ name: 'group-a' });
 
       await groupController.getGroups(req, res);
 
-      expect(groupService.getGroups).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.groups.length).toBeGreaterThan(0);
     });
   });
 
   describe('getGroupById', () => {
     it('should find and return group', async () => {
-      req.params = { id: 2 };
-      groupService.getGroupById.mockResolvedValue({ id: 2 });
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174001',
+        name: 'group-b',
+      });
 
+      req.params = { id: g.id };
       await groupController.getGroupById(req, res);
 
-      expect(groupService.getGroupById).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.group.id).toBe(g.id);
     });
 
     it('should return 404 if not found', async () => {
-      req.params = { id: 2 };
-      groupService.getGroupById.mockResolvedValue(null);
+      req.params = { id: '123e4567-e89b-12d3-a456-426614174999' };
 
       await groupController.getGroupById(req, res);
 
@@ -146,21 +126,29 @@ describe('Admin Group Controller', () => {
 
   describe('updateGroupById', () => {
     it('should update group successfully', async () => {
-      req.params = { id: 'some-other-group' };
-      req.body = { name: 'new-name' };
-      validateForm.mockReturnValue([true, null]);
-      groupService.updateGroupById.mockResolvedValue({
-        id: 'some-other-group',
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174002',
+        name: 'some-other-group',
       });
+
+      req.params = { id: g.id };
+      req.body = { name: 'new-name' };
 
       await groupController.updateGroupById(req, res);
 
-      expect(groupService.updateGroupById).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const dbCheck = await mockModels.Group.findByPk(g.id);
+      expect(dbCheck.name).toBe('new-name');
     });
 
     it('should prevent updating groups the user belongs to', async () => {
-      req.params = { id: 'group-a' }; // current user is in group-a
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174003',
+        name: 'group-a',
+      });
+      req.user.groups = [g.id];
+      req.params = { id: g.id };
+      req.body = { name: 'manager-new' };
 
       await groupController.updateGroupById(req, res);
 
@@ -172,21 +160,33 @@ describe('Admin Group Controller', () => {
     });
 
     it('should handle GroupAlreadyExistsError', async () => {
-      req.params = { id: 'some-other-group' };
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Exists');
-      error.name = 'GroupAlreadyExistsError';
-      groupService.updateGroupById.mockRejectedValue(error);
+      await mockModels.Group.create({ name: 'existing-group' });
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174004',
+        name: 'target-group',
+      });
+
+      req.params = { id: g.id };
+      req.body = { name: 'existing-group' };
 
       await groupController.updateGroupById(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 409);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        409,
+      );
     });
   });
 
   describe('deleteGroup', () => {
     it('should prevent deleting groups the user belongs to', async () => {
-      req.params = { id: 'group-a' }; // current user is in group-a
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174005',
+        name: 'group-a',
+      });
+      req.user.groups = [g.id];
+      req.params = { id: g.id };
 
       await groupController.deleteGroup(req, res);
 
@@ -197,33 +197,36 @@ describe('Admin Group Controller', () => {
       );
     });
 
-    it('should bulk delete other groups', async () => {
-      req.params = { id: 'group-b' };
-      groupService.deleteGroup.mockResolvedValue();
+    it('should delete other groups successfully', async () => {
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174006',
+        name: 'group-b',
+      });
+
+      req.params = { id: g.id };
 
       await groupController.deleteGroup(req, res);
 
-      expect(groupService.deleteGroup).toHaveBeenCalledWith(
-        'group-b',
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const count = await mockModels.Group.count();
+      expect(count).toBe(0);
     });
   });
 
   describe('getGroupUsers', () => {
     it('should fetch users for group', async () => {
-      req.params = { id: 'group-b' };
-      groupService.getUsersWithGroup.mockResolvedValue({ users: [] });
+      const g = await mockModels.Group.create({
+        id: '123e4567-e89b-12d3-a456-426614174007',
+        name: 'group-b',
+      });
+
+      req.params = { id: g.id };
 
       await groupController.getGroupUsers(req, res);
 
-      expect(groupService.getUsersWithGroup).toHaveBeenCalledWith(
-        'group-b',
-        expect.any(Object),
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(Array.isArray(result.users)).toBe(true);
     });
   });
 });

@@ -4,11 +4,19 @@ jest.mock('fs', () => {
   const mockMkdir = jest.fn();
   const mockRename = jest.fn();
   const mockUnlink = jest.fn();
-  const mockExistsSync = jest.fn();
+  const actualFs = jest.requireActual('fs');
+  const mockExistsSync = jest.fn(path => {
+    if (typeof path === 'string' && path.includes('node_modules')) {
+      return actualFs.existsSync(path);
+    }
+    return false;
+  });
   const mockAccess = jest.fn();
 
   const mockFs = {
+    ...actualFs,
     promises: {
+      ...actualFs.promises,
       rm: mockRm,
       mkdir: mockMkdir,
       rename: mockRename,

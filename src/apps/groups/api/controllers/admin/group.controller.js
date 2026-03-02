@@ -131,6 +131,9 @@ export async function getGroupById(req, res) {
       group,
     });
   } catch (error) {
+    if (error.name === 'GroupNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
     return http.sendServerError(res, 'Failed to get group', error);
   }
 }

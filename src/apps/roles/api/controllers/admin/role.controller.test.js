@@ -1,51 +1,33 @@
-import { validateForm } from '../../../../../shared/validator';
-import * as roleService from '../../services/admin/role.service';
 import * as roleController from './role.controller';
 
-jest.mock('../../../../../shared/validator', () => ({
-  validateForm: jest.fn(),
-}));
+describe('Admin Role Controller (SQLite E2E)', () => {
+  let req, res, mockHttp, mockModels, mockWebhook, mockAuth;
 
-jest.mock('../../../validator/admin', () => ({
-  createRoleFormSchema: jest.fn(() => ({})),
-  updateRoleFormSchema: jest.fn(() => ({})),
-}));
-
-jest.mock('../../services/admin/role.service', () => ({
-  createRole: jest.fn(),
-  getRoles: jest.fn(),
-  getRoleById: jest.fn(),
-  updateRole: jest.fn(),
-  deleteRole: jest.fn(),
-  getUsersWithRole: jest.fn(),
-  getGroupsWithRole: jest.fn(),
-}));
-
-describe('Admin Role Controller', () => {
-  let req;
-  let res;
-  let mockHttp;
-  let mockModels;
-  let mockWebhook;
-  let mockAuth;
-
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
+    mockModels = global.testDb.models;
 
     mockHttp = {
       sendSuccess: jest.fn(),
-      sendError: jest.fn(),
-      sendValidationError: jest.fn(),
-      sendServerError: jest.fn(),
-      sendNotFound: jest.fn(),
+      sendError: jest.fn((res, err) => {
+        console.log('HTTP ERROR:', err);
+      }),
+      sendValidationError: jest.fn((res, err) => {
+        console.log('HTTP VALIDATION ERROR:', err);
+      }),
+      sendServerError: jest.fn((res, err) => {
+        console.log('HTTP SERVER ERROR:', err);
+      }),
+      sendNotFound: jest.fn((res, err) => {
+        console.log('HTTP NOT FOUND ERROR:', err);
+      }),
       getPagination: jest.fn(() => ({ page: 1, limit: 10 })),
     };
 
-    mockModels = {};
-    mockWebhook = {};
+    mockWebhook = { send: jest.fn(() => Promise.resolve({ success: true })) };
     mockAuth = {
-      DEFAULT_RESOURCES: {},
-      DEFAULT_ACTIONS: {},
+      DEFAULT_RESOURCES: { ALL: '*' },
+      DEFAULT_ACTIONS: { MANAGE: '*' },
       SYSTEM_ROLES: ['admin'],
       ADMIN_ROLE: 'admin',
       DEFAULT_ROLE: 'user',
@@ -55,7 +37,7 @@ describe('Admin Role Controller', () => {
     };
 
     req = {
-      user: { id: 1, roles: ['manager'] },
+      user: { id: 'test-admin-id', roles: ['manager'] },
       body: {},
       params: {},
       query: {},
@@ -80,90 +62,94 @@ describe('Admin Role Controller', () => {
 
   describe('createRole', () => {
     it('should validate and create role successfully', async () => {
-      req.body = { name: 'admin-role' };
-      validateForm.mockReturnValue([true, null]);
-      roleService.createRole.mockResolvedValue({ id: 2, name: 'admin-role' });
+      req.body = { name: 'new-role' };
 
       await roleController.createRole(req, res);
 
-      expect(roleService.createRole).toHaveBeenCalled();
-      expect(mockHttp.sendSuccess).toHaveBeenCalledWith(
-        res,
-        { role: { id: 2, name: 'admin-role' } },
-        201,
-      );
+      expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const responsePayload = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(responsePayload.role).toBeDefined();
+      expect(responsePayload.role.name).toBe('new-role');
     });
 
     it('should return 409 if role already exists', async () => {
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Already exists');
-      error.name = 'RoleAlreadyExistsError';
-      roleService.createRole.mockRejectedValue(error);
+      await mockModels.Role.create({ name: 'existing-role' });
+      req.body = { name: 'existing-role' };
 
       await roleController.createRole(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 409);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        409,
+      );
     });
 
-    it('should handle PermissionNotFoundError', async () => {
-      validateForm.mockReturnValue([true, null]);
-      const error = new Error('Missing perm');
-      error.name = 'PermissionNotFoundError';
-      roleService.createRole.mockRejectedValue(error);
+    it('should handle invalid payload validation errors', async () => {
+      req.body = { name: 'new-role', permissions: 'not-an-array' };
 
       await roleController.createRole(req, res);
 
-      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(res, {
-        permissions: error.message,
-      });
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
+        res,
+        expect.any(Object),
+      );
     });
   });
 
   describe('getRoles', () => {
     it('should parse pagination and get list', async () => {
-      roleService.getRoles.mockResolvedValue({ roles: [], pagination: {} });
+      await mockModels.Role.create({ name: 'role-a' });
 
       await roleController.getRoles(req, res);
 
-      expect(roleService.getRoles).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.roles.length).toBeGreaterThan(0);
     });
   });
 
   describe('getRoleById', () => {
     it('should find and return role', async () => {
-      req.params = { id: 2 };
-      roleService.getRoleById.mockResolvedValue({ id: 2 });
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174010',
+        name: 'role-b',
+      });
 
+      req.params = { id: r.id };
       await roleController.getRoleById(req, res);
 
-      expect(roleService.getRoleById).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(result.role.id).toBe(r.id);
     });
   });
 
   describe('updateRole', () => {
     it('should update role successfully', async () => {
-      req.params = { id: 2 };
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174011',
+        name: 'other-role',
+      });
+
+      req.params = { id: r.id };
       req.body = { name: 'new-name' };
-      validateForm.mockReturnValue([true, null]);
-      // The controller fetches the role first to check if the user is a member
-      roleService.getRoleById.mockResolvedValue({ name: 'other-role' });
-      roleService.updateRole.mockResolvedValue({ id: 2, name: 'new-name' });
 
       await roleController.updateRole(req, res);
 
-      expect(roleService.updateRole).toHaveBeenCalled();
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const dbCheck = await mockModels.Role.findByPk(r.id);
+      expect(dbCheck.name).toBe('new-name');
     });
 
     it('should prevent updating roles the user currently has', async () => {
-      req.params = { id: 2 };
-      validateForm.mockReturnValue([true, null]);
-      roleService.getRoleById.mockResolvedValue({ name: 'manager' }); // Intersects with req.user.roles
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174012',
+        name: 'manager', // req.user.roles is ['manager']
+      });
+
+      req.params = { id: r.id };
+      req.body = { name: 'manager-new' };
 
       await roleController.updateRole(req, res);
 
@@ -177,8 +163,12 @@ describe('Admin Role Controller', () => {
 
   describe('deleteRole', () => {
     it('should prevent deleting roles the user currently has', async () => {
-      req.params = { id: 2 };
-      roleService.getRoleById.mockResolvedValue({ name: 'manager' }); // Intersects with req.user.roles
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174013',
+        name: 'manager',
+      });
+
+      req.params = { id: r.id };
 
       await roleController.deleteRole(req, res);
 
@@ -190,71 +180,76 @@ describe('Admin Role Controller', () => {
     });
 
     it('should delete other roles successfully', async () => {
-      req.params = { id: 2 };
-      roleService.getRoleById.mockResolvedValue({ name: 'other-role' });
-      roleService.deleteRole.mockResolvedValue();
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174014',
+        name: 'other-role',
+      });
+
+      req.params = { id: r.id };
 
       await roleController.deleteRole(req, res);
 
-      expect(roleService.deleteRole).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const count = await mockModels.Role.count();
+      expect(count).toBe(0);
     });
   });
 
   describe('getRoleUsers', () => {
     it('should fetch users for role', async () => {
-      req.params = { id: 2 };
-      roleService.getUsersWithRole.mockResolvedValue({ users: [] });
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174015',
+        name: 'role-c',
+      });
+
+      req.params = { id: r.id };
 
       await roleController.getRoleUsers(req, res);
 
-      expect(roleService.getUsersWithRole).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(Array.isArray(result.users)).toBe(true);
     });
 
     it('should handle RoleNotFoundError', async () => {
-      req.params = { id: 2 };
-      const error = new Error('Not found');
-      error.name = 'RoleNotFoundError';
-      roleService.getUsersWithRole.mockRejectedValue(error);
+      req.params = { id: '123e4567-e89b-12d3-a456-426614174999' }; // Non-existent
 
       await roleController.getRoleUsers(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 404);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        404,
+      );
     });
   });
 
   describe('getRoleGroups', () => {
     it('should fetch groups for role', async () => {
-      req.params = { id: 2 };
-      roleService.getGroupsWithRole.mockResolvedValue({ groups: [] });
+      const r = await mockModels.Role.create({
+        id: '123e4567-e89b-12d3-a456-426614174016',
+        name: 'role-d',
+      });
+
+      req.params = { id: r.id };
 
       await roleController.getRoleGroups(req, res);
 
-      expect(roleService.getGroupsWithRole).toHaveBeenCalledWith(
-        2,
-        expect.any(Object),
-        expect.any(Object),
-      );
       expect(mockHttp.sendSuccess).toHaveBeenCalled();
+      const result = mockHttp.sendSuccess.mock.calls[0][1];
+      expect(Array.isArray(result.groups)).toBe(true);
     });
 
     it('should handle RoleNotFoundError', async () => {
-      req.params = { id: 2 };
-      const error = new Error('Not found');
-      error.name = 'RoleNotFoundError';
-      roleService.getGroupsWithRole.mockRejectedValue(error);
+      req.params = { id: '123e4567-e89b-12d3-a456-426614174998' };
 
       await roleController.getRoleGroups(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(res, error.message, 404);
+      expect(mockHttp.sendError).toHaveBeenCalledWith(
+        res,
+        expect.any(String),
+        404,
+      );
     });
   });
 });

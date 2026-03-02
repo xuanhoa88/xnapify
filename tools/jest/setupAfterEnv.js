@@ -10,30 +10,45 @@
  * but before each test file is executed.
  */
 
-const i18n = require('i18next');
-const { initReactI18next } = require('react-i18next');
+// jest/setupAfterEnv.js
+// ----------------------
+// Runs after the environment has been set up but before any individual
+// test file executes.  We use it to configure i18next (so components
+// render without errors) and to wire up an in‑memory database that can
+// be reused across tests.
 
-/**
- * Initialize i18next for testing environment
- * Uses minimal configuration with test translations
- */
-i18n.use(initReactI18next).init({
-  lng: 'en-US',
-  fallbackLng: 'en-US',
-  ns: ['translation'],
-  defaultNS: 'translation',
-  resources: {
-    'en-US': {
-      translation: {
-        // Add test translations here if needed
-        test: 'Test',
-      },
-    },
-  },
-  interpolation: {
-    escapeValue: false, // React already escapes
-  },
-  react: {
-    useSuspense: false, // Required for testing
-  },
+const { setupTestDb, closeTestDb } = require('./dbTest.setup');
+const { initI18nForTesting } = require('./i18nTest.setup');
+
+// -----------------------------------------------------------------------------
+// i18n initialization for tests (delegated)
+// -----------------------------------------------------------------------------
+initI18nForTesting();
+
+// -----------------------------------------------------------------------------
+// Test database helpers
+// -----------------------------------------------------------------------------
+// `setupTestDb()` maintains its own singleton connection; calling it
+// repeatedly will force-sync the schema (clearing data).  We expose the
+// returned object on `global.testDb` for convenience in tests.
+
+async function resetTestDb() {
+  global.testDb = await setupTestDb();
+}
+
+beforeAll(async () => {
+  // create the database once before all tests
+  await resetTestDb();
+});
+
+beforeEach(async () => {
+  // clear the database before each test by re-initializing
+  await resetTestDb();
+});
+
+afterAll(async () => {
+  if (global.testDb) {
+    await closeTestDb();
+    delete global.testDb;
+  }
 });
