@@ -44,6 +44,6 @@ describe('concurrent profile updates', () => {
     expect(userFinal.profile.counter).toBeGreaterThanOrEqual(0);
     expect(userFinal.profile.counter).toBeLessThan(50);
 
-    await closeTestDb();
+    await closeTestDb(db.sequelize);
   });
 });
