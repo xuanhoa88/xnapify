@@ -39,9 +39,9 @@ export function mount({ store, i18n, path }) {
 /**
  * Default export - Page component
  */
-export default function EditUserPage({ context: { params } }) {
-  const { userId } = params;
-  return <EditUser userId={userId} />;
+export default function EditUserPage({ context }) {
+  const { userId } = context.params;
+  return <EditUser userId={userId} context={context} />;
 }
 
 EditUserPage.propTypes = {

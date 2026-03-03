@@ -279,7 +279,10 @@ export default async function initializeRouter(options = {}) {
       });
     },
     async onRouteInit(route, ctx) {
-      const ns = route.workspace || (route.module && route.module.workspace);
+      const ns =
+        route.workspace ||
+        (route.module && route.module.workspace) ||
+        route.path;
       const manager = ctx.plugin || plugin;
 
       if (ns && manager) {
@@ -294,7 +297,10 @@ export default async function initializeRouter(options = {}) {
       }
     },
     async onRouteDestroy(route, ctx) {
-      const ns = route.workspace || (route.module && route.module.workspace);
+      const ns =
+        route.workspace ||
+        (route.module && route.module.workspace) ||
+        route.path;
       const manager = ctx.plugin || plugin;
 
       if (ns && manager) {

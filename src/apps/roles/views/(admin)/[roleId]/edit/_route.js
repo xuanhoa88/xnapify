@@ -39,9 +39,9 @@ export function mount({ store, i18n, path }) {
 /**
  * Default export - Page component
  */
-export default function EditRolePage({ context: { params } }) {
-  const { roleId } = params;
-  return <EditRole roleId={roleId} />;
+export default function EditRolePage({ context }) {
+  const { roleId } = context.params;
+  return <EditRole roleId={roleId} context={context} />;
 }
 
 EditRolePage.propTypes = {

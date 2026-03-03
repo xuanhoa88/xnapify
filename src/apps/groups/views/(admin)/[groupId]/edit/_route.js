@@ -39,9 +39,9 @@ export function mount({ store, i18n, path }) {
 /**
  * Default export - Page component
  */
-export default function EditGroupPage({ context: { params } }) {
-  const { groupId } = params;
-  return <EditGroup groupId={groupId} />;
+export default function EditGroupPage({ context }) {
+  const { groupId } = context.params;
+  return <EditGroup groupId={groupId} context={context} />;
 }
 
 EditGroupPage.propTypes = {
