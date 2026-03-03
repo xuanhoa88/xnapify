@@ -78,6 +78,7 @@ export async function up({ context, Sequelize }) {
 
   await queryInterface.addIndex('user_api_keys', ['user_id']);
   await queryInterface.addIndex('user_api_keys', ['is_active']);
+  await queryInterface.addIndex('user_api_keys', ['expires_at']);
 }
 
 /**

@@ -55,6 +55,10 @@ export async function up({ context, Sequelize }) {
 
   // Add indexes for better query performance
   await queryInterface.addIndex('user_logins', ['user_id']);
+  await queryInterface.addIndex('user_logins', ['name']);
+  await queryInterface.addIndex('user_logins', ['user_id', 'name'], {
+    unique: true,
+  });
 }
 
 /**

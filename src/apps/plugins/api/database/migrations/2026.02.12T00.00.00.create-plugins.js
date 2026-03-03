@@ -5,44 +5,54 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+/**
+ * Run the migration
+ */
 export async function up({ context, Sequelize }) {
   const { queryInterface } = context;
   const { DataTypes } = Sequelize;
 
   await queryInterface.createTable('plugins', {
     id: {
-      type: Sequelize.UUID,
-      defaultValue: Sequelize.UUIDV4,
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
       primaryKey: true,
       allowNull: false,
+      comment: 'Unique plugin identifier',
     },
     name: {
-      type: Sequelize.STRING(100),
+      type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
+      comment: 'Plugin name',
     },
     key: {
-      type: Sequelize.STRING(100),
+      type: DataTypes.STRING(100),
       allowNull: false,
       unique: true,
+      comment: 'Plugin unique key',
     },
     description: {
-      type: Sequelize.STRING(255),
+      type: DataTypes.STRING(255),
       allowNull: true,
+      comment: 'Plugin description',
     },
     version: {
-      type: Sequelize.STRING(20),
+      type: DataTypes.STRING(20),
       allowNull: false,
       defaultValue: '1.0.0',
+      comment: 'Plugin version',
     },
     is_active: {
-      type: Sequelize.BOOLEAN,
+      type: DataTypes.BOOLEAN,
       defaultValue: true,
       allowNull: false,
+      comment: 'Whether plugin is active globally',
     },
     options: {
-      type: Sequelize.JSON,
+      type: DataTypes.JSON,
       defaultValue: {},
+      comment: 'Plugin configuration options',
     },
     created_at: {
       type: DataTypes.DATE,
@@ -55,8 +65,17 @@ export async function up({ context, Sequelize }) {
       defaultValue: DataTypes.NOW,
     },
   });
+
+  // Add indexes for better query performance
+  await queryInterface.addIndex('plugins', ['name'], { unique: true });
+  await queryInterface.addIndex('plugins', ['key'], { unique: true });
+  await queryInterface.addIndex('plugins', ['is_active']);
 }
 
-export async function down({ context: { queryInterface } }) {
+/**
+ * Revert the migration
+ */
+export async function down({ context }) {
+  const { queryInterface } = context;
   await queryInterface.dropTable('plugins');
 }

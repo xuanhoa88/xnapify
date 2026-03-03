@@ -36,6 +36,9 @@ export default function createRoleModel({ connection, DataTypes }) {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Role name (e.g., admin, user, mod)',
       },
 

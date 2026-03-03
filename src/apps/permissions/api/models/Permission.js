@@ -33,12 +33,18 @@ export default function createPermissionModel({ connection, DataTypes }) {
       resource: {
         type: DataTypes.STRING(50),
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Resource type (e.g., users, posts, comments)',
       },
 
       action: {
         type: DataTypes.STRING(50),
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Action type (e.g., read, write, delete, update)',
       },
 

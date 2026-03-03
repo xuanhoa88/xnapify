@@ -38,6 +38,7 @@ export default function createPasswordResetTokenModel({
       hashed_token: {
         type: DataTypes.STRING(64),
         allowNull: false,
+        unique: true,
         comment: 'SHA-256 hash of the reset token (64 hex chars)',
       },
 

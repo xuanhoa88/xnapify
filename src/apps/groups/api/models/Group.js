@@ -36,6 +36,9 @@ export default function createGroupModel({ connection, DataTypes }) {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Group name',
       },
 

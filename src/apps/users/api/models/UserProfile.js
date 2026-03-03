@@ -94,6 +94,7 @@ export default function createUserProfileModel({ connection, DataTypes }) {
       underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
+      deletedAt: 'deleted_at',
     },
   );
 

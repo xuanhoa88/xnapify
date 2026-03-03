@@ -41,12 +41,18 @@ export default function createUserLoginModel({ connection, DataTypes }) {
       name: {
         type: DataTypes.STRING(50),
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'OAuth provider name (google, facebook, github, etc.)',
       },
 
       key: {
         type: DataTypes.STRING(255),
         allowNull: false,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'OAuth provider user ID',
       },
     },

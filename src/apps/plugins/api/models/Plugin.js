@@ -30,6 +30,9 @@ export default function createPluginModel({ connection, DataTypes }) {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Plugin name',
       },
 
@@ -37,6 +40,9 @@ export default function createPluginModel({ connection, DataTypes }) {
         type: DataTypes.STRING(100),
         allowNull: false,
         unique: true,
+        validate: {
+          notEmpty: true,
+        },
         comment: 'Plugin unique key',
       },
 

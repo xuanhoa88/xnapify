@@ -61,7 +61,10 @@ export async function up({ context, Sequelize }) {
 
   // Add indexes for better query performance
   await queryInterface.addIndex('password_reset_tokens', ['user_id']);
-  await queryInterface.addIndex('password_reset_tokens', ['hashed_token']);
+  await queryInterface.addIndex('password_reset_tokens', ['hashed_token'], {
+    unique: true,
+  });
+  await queryInterface.addIndex('password_reset_tokens', ['expires_at']);
 }
 
 /**

@@ -72,6 +72,7 @@ export default function createUserModel({ connection, DataTypes }) {
         type: DataTypes.STRING(255),
         allowNull: false,
         unique: true,
+        index: true,
         validate: {
           isEmail: true,
           notEmpty: true,
@@ -132,17 +133,10 @@ export default function createUserModel({ connection, DataTypes }) {
       updatedAt: 'updated_at',
       deletedAt: 'deleted_at',
 
-      indexes: [
-        // unique constraint already creates an index, but declaring it
-        // explicitly gives you control over naming and lets ORM tooling
-        // reflect it correctly.
-        { unique: true, fields: ['email'], name: 'users_email_unique' },
-      ],
-
       defaultScope: {
         // Exclude password from every query unless the withPassword scope
         // is explicitly chained: User.scope('withPassword').findOne(...)
-        attributes: { exclude: ['password'] },
+        attributes: { exclude: ['password', 'password_changed_at'] },
       },
 
       scopes: {
@@ -154,7 +148,9 @@ export default function createUserModel({ connection, DataTypes }) {
         },
 
         // Convenience scope — pair with paranoid for full "active user" queries
-        active: { where: { is_active: true, is_locked: false } },
+        active: {
+          where: { is_active: true, is_locked: false, deleted_at: null },
+        },
       },
 
       hooks: {

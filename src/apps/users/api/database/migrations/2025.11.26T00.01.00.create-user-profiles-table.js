@@ -29,15 +29,18 @@ export async function up({ context, Sequelize }) {
       type: DataTypes.STRING(255),
       primaryKey: true,
       allowNull: false,
+      comment: 'Attribute key/name',
     },
     attribute_value: {
       type: DataTypes.TEXT,
       allowNull: false,
+      comment: 'Attribute value stored as text',
     },
     attribute_type: {
       type: DataTypes.ENUM('string', 'number', 'boolean', 'json', 'date'),
       allowNull: false,
       defaultValue: 'string',
+      comment: 'Data type for casting attribute_value',
     },
     created_at: {
       type: DataTypes.DATE,
