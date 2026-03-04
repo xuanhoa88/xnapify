@@ -184,18 +184,18 @@ function configureWebpackForDev(cfg, isClient = true) {
  * This ensures all dependencies of the server bundle (like Node-RED) are reloaded
  * without clearing unrelated modules (like webpack/build tools).
  */
-function clearModuleCache(modulePath, visited = new Set()) {
-  if (visited.has(modulePath)) return;
-  visited.add(modulePath);
-
-  const module = require.cache[modulePath];
-  if (!module) return;
-
-  if (module.children) {
-    module.children.forEach(child => clearModuleCache(child.id, visited));
-  }
-
-  delete require.cache[modulePath];
+function clearModuleCache() {
+  // Clear all application code (anything inside project root) but leave
+  // node_modules intact.  This preserves singletons like React across HMR
+  // while guaranteeing a fresh application state for the new bundle.
+  Object.keys(require.cache).forEach(key => {
+    if (
+      key.startsWith(config.CWD) &&
+      !key.startsWith(config.NODE_MODULES_DIR)
+    ) {
+      delete require.cache[key];
+    }
+  });
 }
 
 /**
@@ -207,10 +207,10 @@ function clearModuleCache(modulePath, visited = new Set()) {
 
 function loadServerBundle() {
   try {
-    // Recursively clear cache starting from the server bundle
-    // This removes the bundle AND all its dependencies (including node_modules/node-red/*)
-    // from the cache, ensuring a fresh start for the next require().
-    clearModuleCache(require.resolve(WEBPACK_SERVER_BUNDLE_PATH));
+    // Clear application code from cache while leaving node_modules intact.
+    // This preserves singletons (like React) while giving us a totally fresh
+    // application state for the new bundle load.
+    clearModuleCache();
 
     // Load the server bundle
     const { hot, ...bundle } = require(WEBPACK_SERVER_BUNDLE_PATH);
@@ -373,11 +373,13 @@ async function checkForUpdate() {
 
     // No updates found
     if (!updatedModules || updatedModules.length === 0) {
-      if (verbose) logInfo('No HMR updates available.');
-      return false;
+      if (verbose) logInfo('No HMR updates available (ignoring for debug).');
+      // return false;
     }
 
-    logInfo(`🔥 HMR: Detected ${updatedModules.length} updated module(s).`);
+    logInfo(
+      `🔥 HMR: Detected ${updatedModules ? updatedModules.length : 0} updated module(s).`,
+    );
 
     // Clean up previous bundle resources (Node-RED, etc.)
     if (typeof dispose === 'function') {
@@ -386,6 +388,12 @@ async function checkForUpdate() {
       } catch (err) {
         logError('❌ Error disposing previous bundle:', err);
       }
+    }
+
+    // Stop accepting new requests on the old server instance
+    // while the new bundle is being initialized
+    if (server) {
+      server.removeAllListeners('request');
     }
 
     // Load new server bundle

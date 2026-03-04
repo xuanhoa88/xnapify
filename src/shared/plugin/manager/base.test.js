@@ -137,6 +137,7 @@ describe('BasePluginManager', () => {
       expect(registry.define).toHaveBeenCalledWith(
         mockPluginInstance,
         mockContext,
+        { id: 'test-plugin', main: 'index.js' },
       );
       expect(mockPluginInstance.onLoad).toHaveBeenCalledWith(mockContext);
 
@@ -158,6 +159,40 @@ describe('BasePluginManager', () => {
       const meta = manager[PLUGIN_METADATA].get('fail-plugin');
       expect(meta.state).toBe(PluginState.FAILED);
       expect(meta.error.message).toBe('Not found');
+    });
+  });
+
+  describe('loadDependencies', () => {
+    it('skips loading if all dependencies are already active', async () => {
+      manager[INITIALIZED] = true;
+      manager.init(mockContext);
+
+      manager[ACTIVE_PLUGINS].set('dep-1', {});
+      const loadPluginSpy = jest.spyOn(manager, 'loadPlugin');
+
+      await manager.loadDependencies('plugin-1', { 'dep-1': '^1.0.0' });
+
+      expect(loadPluginSpy).not.toHaveBeenCalled();
+    });
+
+    it('loads missing dependencies in parallel', async () => {
+      manager[INITIALIZED] = true;
+      manager.init(mockContext);
+
+      manager[ACTIVE_PLUGINS].set('existing-dep', {});
+      const loadPluginSpy = jest
+        .spyOn(manager, 'loadPlugin')
+        .mockResolvedValue({});
+
+      await manager.loadDependencies('plugin-1', {
+        'existing-dep': '^1.0.0',
+        'missing-dep-1': '^2.0.0',
+        'missing-dep-2': '^3.0.0',
+      });
+
+      expect(loadPluginSpy).toHaveBeenCalledTimes(2);
+      expect(loadPluginSpy).toHaveBeenCalledWith('missing-dep-1');
+      expect(loadPluginSpy).toHaveBeenCalledWith('missing-dep-2');
     });
   });
 

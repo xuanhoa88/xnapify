@@ -136,9 +136,19 @@ export default function Html({
         {url && <link rel='canonical' href={url} />}
 
         {/* CSS stylesheets */}
-        {styleLinks.map(href => (
-          <link key={href} rel='stylesheet' type='text/css' href={href} />
-        ))}
+        {styleLinks.map(entry => {
+          const href = typeof entry === 'string' ? entry : entry.href;
+          const id = typeof entry === 'object' ? entry.id : undefined;
+          return (
+            <link
+              key={href}
+              rel='stylesheet'
+              type='text/css'
+              href={href}
+              {...(id ? { 'data-plugin-id': id } : {})}
+            />
+          );
+        })}
 
         {/* Application state for client hydration */}
         <script
@@ -148,9 +158,19 @@ export default function Html({
         />
 
         {/* Preload JavaScript bundles for faster loading */}
-        {scriptLinks.map(src => (
-          <link key={src} rel='preload' href={src} as='script' />
-        ))}
+        {scriptLinks.map(entry => {
+          const src = typeof entry === 'string' ? entry : entry.src;
+          const id = typeof entry === 'object' ? entry.id : undefined;
+          return (
+            <link
+              key={`preload-${src}`}
+              rel='preload'
+              href={src}
+              as='script'
+              {...(id ? { 'data-plugin-id': id } : {})}
+            />
+          );
+        })}
 
         {/* PWA manifest and icons */}
         <link rel='manifest' href='/site.webmanifest' />
@@ -161,9 +181,18 @@ export default function Html({
         <div id='app' dangerouslySetInnerHTML={{ __html: children }} />
 
         {/* JavaScript bundles */}
-        {scriptLinks.map(src => (
-          <script key={src} type='text/javascript' src={src} />
-        ))}
+        {scriptLinks.map(entry => {
+          const src = typeof entry === 'string' ? entry : entry.src;
+          const id = typeof entry === 'object' ? entry.id : undefined;
+          return (
+            <script
+              key={src}
+              type='text/javascript'
+              src={src}
+              {...(id ? { 'data-plugin-id': id } : {})}
+            />
+          );
+        })}
       </body>
     </html>
   );
@@ -185,10 +214,20 @@ Html.propTypes = {
   type: PropTypes.string,
   /** Document locale (e.g., 'en-US', 'fr-FR') */
   locale: PropTypes.string,
-  /** CSS file URLs to link in the document head */
-  styleLinks: PropTypes.arrayOf(PropTypes.string),
-  /** JavaScript file URLs to load */
-  scriptLinks: PropTypes.arrayOf(PropTypes.string),
+  /** CSS entries: URLs (string) or { href, id } objects */
+  styleLinks: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({ href: PropTypes.string, id: PropTypes.string }),
+    ]),
+  ),
+  /** JS entries: URLs (string) or { src, id } objects */
+  scriptLinks: PropTypes.arrayOf(
+    PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.shape({ src: PropTypes.string, id: PropTypes.string }),
+    ]),
+  ),
   /** Application state for client-side hydration */
   appState: PropTypes.shape({
     redux: PropTypes.object.isRequired,

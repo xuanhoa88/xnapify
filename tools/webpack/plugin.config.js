@@ -9,6 +9,7 @@ const path = require('path');
 const webpack = require('webpack');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const { logWarn } = require('../utils/logger');
+const { toContainerName } = require('../utils/plugin');
 const {
   createCacheGroups,
   createWebpackConfig,
@@ -88,7 +89,7 @@ function validatePlugin(plugin) {
     apiPath: plugin.manifest.main
       ? path.resolve(plugin.path, plugin.manifest.main)
       : null,
-    libraryName: `plugin_${plugin.name}`,
+    libraryName: toContainerName(plugin.name),
   };
 }
 

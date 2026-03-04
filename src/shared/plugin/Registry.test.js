@@ -67,25 +67,29 @@ describe('PluginRegistry', () => {
 
   describe('Definitions', () => {
     test('defines and finds plugin definitions', () => {
-      const definition = {
-        register: () => ['core', 'plugin-1', { version: '1.0' }],
+      const definition = { init: jest.fn() };
+      const manifest = {
+        name: 'plugin-1',
+        description: 'Test',
+        rsk: { subscribe: ['core'], name: 'plugin-1' },
       };
 
-      registry.define(definition, { appContext: true });
+      registry.define(definition, { appContext: true }, manifest);
       const def = registry.findDefinition('plugin-1');
 
       expect(def).toBeDefined();
-      expect(def.id).toBe('plugin-1');
-      expect(def.version).toBe('1.0');
+      expect(def.name).toBe('plugin-1');
       expect(registry.getDefinitions('core').size).toBe(1);
     });
 
-    test('can define array of namespaces', () => {
-      const definition = {
-        register: () => [['core', 'ui'], 'plugin-multi-ns', {}],
+    test('can define multiple namespaces via subscribe', () => {
+      const definition = { init: jest.fn() };
+      const manifest = {
+        name: 'plugin-multi-ns',
+        rsk: { subscribe: ['core', 'ui'], name: 'plugin-multi-ns' },
       };
 
-      registry.define(definition);
+      registry.define(definition, {}, manifest);
 
       expect(registry.getDefinitions('core').size).toBe(1);
       expect(registry.getDefinitions('ui').size).toBe(1);
@@ -94,12 +98,13 @@ describe('PluginRegistry', () => {
 
     test('installs a plugin by ID', async () => {
       const install = jest.fn().mockResolvedValue();
-      const definition = {
-        install,
-        register: () => ['core', 'plugin-to-install', {}],
+      const definition = { install };
+      const manifest = {
+        name: 'plugin-to-install',
+        rsk: { subscribe: ['core'], name: 'plugin-to-install' },
       };
 
-      registry.define(definition, { contextVal: 42 });
+      registry.define(definition, { contextVal: 42 }, manifest);
       const result = await registry.installPlugin('plugin-to-install');
 
       expect(result).toBe(true);
@@ -108,12 +113,13 @@ describe('PluginRegistry', () => {
 
     test('uninstalls a plugin by ID', async () => {
       const uninstall = jest.fn().mockResolvedValue();
-      const definition = {
-        uninstall,
-        register: () => ['core', 'plugin-to-uninstall', {}],
+      const definition = { uninstall };
+      const manifest = {
+        name: 'plugin-to-uninstall',
+        rsk: { subscribe: ['core'], name: 'plugin-to-uninstall' },
       };
 
-      registry.define(definition, { contextVal: 42 });
+      registry.define(definition, { contextVal: 42 }, manifest);
       const result = await registry.uninstallPlugin('plugin-to-uninstall');
 
       expect(result).toBe(true);
@@ -127,12 +133,13 @@ describe('PluginRegistry', () => {
       // Initial mock plugin already registered
       await registry.register('plugin-updatable', { destroy });
 
-      const definition = {
-        init,
-        register: () => ['core', 'plugin-updatable', {}],
+      const definition = { init };
+      const manifest = {
+        name: 'plugin-updatable',
+        rsk: { subscribe: ['core'], name: 'plugin-updatable' },
       };
 
-      registry.define(definition, { contextVal: 42 });
+      registry.define(definition, { contextVal: 42 }, manifest);
 
       const result = await registry.updatePlugin('plugin-updatable');
 

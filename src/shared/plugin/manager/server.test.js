@@ -62,15 +62,14 @@ describe('ServerPluginManager', () => {
   });
 
   describe('loadPluginModule', () => {
-    it('throws if internalId is missing', async () => {
+    it('throws if plugin name is missing', async () => {
       await expect(
         serverManager.loadPluginModule('test', 'api.js', {}, {}),
-      ).rejects.toThrow('Internal ID required');
+      ).rejects.toThrow('Plugin name required');
     });
 
     it('loads and boots API plugin', async () => {
-      const internalId = 'plugin-uuid';
-      const manifest = { id: 'test', main: 'api.js', internalId };
+      const manifest = { name: 'test_plugin', id: 'test', main: 'api.js' };
 
       const mockApi = {
         init: jest.fn().mockResolvedValue(true),
@@ -78,14 +77,14 @@ describe('ServerPluginManager', () => {
 
       jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
       jest
-        .spyOn(serverManager, 'getPluginBundlePath')
+        .spyOn(serverManager, '_getPluginBundlePath')
         .mockReturnValue('/abs/path/api.js');
 
       const result = await serverManager.loadPluginModule(
         'test',
         'api.js',
         manifest,
-        { internalId },
+        {},
       );
 
       expect(mockApi.init).toHaveBeenCalledWith(registry, mockContext);
@@ -94,35 +93,97 @@ describe('ServerPluginManager', () => {
     });
 
     it('loads View module from server.js', async () => {
-      const internalId = 'plugin-uuid';
-      const manifest = { id: 'test', browser: 'src/index.js', internalId };
+      const manifest = {
+        name: 'test_plugin',
+        id: 'test',
+        browser: 'src/index.js',
+      };
 
       const mockView = { default: { name: 'ViewPlugin' } };
       jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockView);
       jest
-        .spyOn(serverManager, 'getPluginBundlePath')
+        .spyOn(serverManager, '_getPluginBundlePath')
         .mockReturnValue('/abs/path/server.js');
 
       const result = await serverManager.loadPluginModule(
         'test',
         'server.js',
         manifest,
-        { internalId },
+        {},
       );
 
       expect(result).toBe(mockView.default);
     });
   });
 
-  describe('CSS handling', () => {
-    it('stores CSS URLs on plugin:loaded event', async () => {
-      const manifest = { cssFiles: ['style.css'] };
-      serverManager[PLUGIN_METADATA].set('p1', { manifest });
+  describe('installPlugin', () => {
+    it('calls install hook if exported by plugin API', async () => {
+      const mockApi = { install: jest.fn().mockResolvedValue() };
+      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest
+        .spyOn(serverManager, '_getPluginBundlePath')
+        .mockReturnValue('/abs/path/api.js');
 
-      await serverManager.emit('plugin:loaded', { id: 'p1' });
+      const manifest = { name: 'test_plugin', main: 'api.js' };
 
-      const cssUrls = serverManager.getPluginCssUrls();
-      expect(cssUrls).toContain('/api/plugins/p1/static/style.css');
+      const result = await serverManager.installPlugin(
+        'test_plugin_id',
+        manifest,
+      );
+
+      expect(serverManager.loadModule).toHaveBeenCalledWith('/abs/path/api.js');
+      expect(mockApi.install).toHaveBeenCalledWith(registry, mockContext);
+      expect(result).toBe(true);
+    });
+
+    it('skips install hook if not exported', async () => {
+      const mockApi = { init: jest.fn() }; // no install()
+      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest
+        .spyOn(serverManager, '_getPluginBundlePath')
+        .mockReturnValue('/abs/path/api.js');
+
+      const manifest = { name: 'test_plugin', main: 'api.js' };
+
+      const result = await serverManager.installPlugin(
+        'test_plugin_id',
+        manifest,
+      );
+
+      expect(mockApi.init).not.toHaveBeenCalled();
+      expect(result).toBe(true); // Still conceptually successful (no-op)
+    });
+
+    it('skips install hook if manifest has no main', async () => {
+      const manifest = { name: 'test_plugin' }; // no "main"
+
+      const result = await serverManager.installPlugin(
+        'test_plugin_id',
+        manifest,
+      );
+
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('uninstallPlugin', () => {
+    it('calls uninstall hook if exported by plugin API', async () => {
+      const mockApi = { uninstall: jest.fn().mockResolvedValue() };
+      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest
+        .spyOn(serverManager, '_getPluginBundlePath')
+        .mockReturnValue('/abs/path/api.js');
+
+      const manifest = { name: 'test_plugin', main: 'api.js' };
+
+      const result = await serverManager.uninstallPlugin(
+        'test_plugin_id',
+        manifest,
+      );
+
+      expect(serverManager.loadModule).toHaveBeenCalledWith('/abs/path/api.js');
+      expect(mockApi.uninstall).toHaveBeenCalledWith(registry, mockContext);
+      expect(result).toBe(true);
     });
   });
 });

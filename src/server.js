@@ -222,6 +222,8 @@ const appState = {
   ssrResourcesPromise: null,
   wsServer: null,
   nodeRED: new NodeRedManager(),
+  onPluginRefreshed: null,
+  isRefreshingPlugins: false,
 };
 
 function invalidateCaches() {
@@ -324,9 +326,30 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
 async function fetchSsrResources$() {
   const normaliseUrl = s => `/${s}`.replace(/\/+/g, '/');
 
+  // Normalise an entry that is either a plain string or { href/src, pluginId }
+  const normaliseEntry = entry => {
+    if (typeof entry === 'string') return normaliseUrl(entry);
+    if (entry.href) return { ...entry, href: normaliseUrl(entry.href) };
+    if (entry.src) return { ...entry, src: normaliseUrl(entry.src) };
+    return entry;
+  };
+
+  // Deduplicate by extracting the URL string from each entry
+  const dedup = entries => {
+    const seen = new Set();
+    return entries.filter(entry => {
+      const key =
+        typeof entry === 'string' ? entry : entry.href || entry.src || '';
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   const scriptLinks = [];
   const styleLinks = [];
 
+  // Load stats.json
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
     const stats = await fs.readFile(statsPath, 'utf8');
@@ -334,14 +357,29 @@ async function fetchSsrResources$() {
 
     scriptLinks.push(...scripts);
     styleLinks.push(...stylesheets);
-
-    const pluginCssUrls = pluginManager.getPluginCssUrls();
-    if (pluginCssUrls.length > 0) {
-      styleLinks.push(...pluginCssUrls);
-    }
   } catch (err) {
     if (__DEV__) {
       console.error('❌ Failed to load stats.json:', err.message);
+    }
+  }
+
+  // Load plugin CSS entries ({ href, pluginId })
+  try {
+    const { cssUrls: pluginCssEntries = [] } = pluginManager;
+    styleLinks.push(...pluginCssEntries);
+  } catch (err) {
+    if (__DEV__) {
+      console.error('❌ Failed to load plugin CSS URLs:', err.message);
+    }
+  }
+
+  // Load plugin script entries ({ src, pluginId })
+  try {
+    const { scriptUrls: pluginScriptEntries = [] } = pluginManager;
+    scriptLinks.push(...pluginScriptEntries);
+  } catch (err) {
+    if (__DEV__) {
+      console.error('❌ Failed to load plugin Script URLs:', err.message);
     }
   }
 
@@ -351,8 +389,8 @@ async function fetchSsrResources$() {
   ]);
 
   return {
-    scriptLinks: [...new Set(scriptLinks)].map(normaliseUrl),
-    styleLinks: [...new Set(styleLinks)].map(normaliseUrl),
+    scriptLinks: dedup(scriptLinks).map(normaliseEntry),
+    styleLinks: dedup(styleLinks).map(normaliseEntry),
     App,
     Html,
   };
@@ -1169,6 +1207,11 @@ export async function initializeServer(app, server, options = {}) {
 export async function shutdownServer(server) {
   console.info('🛑 Stopping background services...');
 
+  if (appState.onPluginRefreshed) {
+    process.removeListener('message', appState.onPluginRefreshed);
+    appState.onPluginRefreshed = null;
+  }
+
   const errors = [];
 
   try {
@@ -1249,20 +1292,44 @@ if (module.hot) {
     console.log('🔄 HMR: Caches cleared');
   });
 
-  process.on('message', async msg => {
+  appState.onPluginRefreshed = async msg => {
     if (msg && msg.type === 'plugins-refreshed') {
-      console.log('🔌 Refreshing plugins...');
+      if (appState.isRefreshingPlugins) {
+        if (__DEV__) {
+          console.log('🔌 Plugin refresh already in progress, skipping...');
+        }
+        return;
+      }
+
+      const pluginIds = Array.isArray(msg.plugins) ? msg.plugins : [];
+      const specific = pluginIds.length > 0;
+
+      console.log(
+        `🔌 Refreshing ${specific ? `plugins: ${pluginIds.join(', ')}` : 'all plugins'}...`,
+      );
+
+      appState.isRefreshingPlugins = true;
+      const start = Date.now();
+
       try {
         if (typeof pluginManager.refresh === 'function') {
-          await pluginManager.refresh(...(msg.plugins || []));
+          await pluginManager.refresh(...pluginIds);
         }
         invalidateCaches();
-        console.log('✅ Plugins refreshed');
+        const duration = Date.now() - start;
+        console.log(`✅ Plugins refreshed in ${duration}ms`);
       } catch (err) {
-        console.error('❌ Failed to refresh plugins:', err.message);
+        console.error(
+          `❌ Failed to refresh ${specific ? 'plugins' : 'all plugins'}:`,
+          err.message,
+        );
+      } finally {
+        appState.isRefreshingPlugins = false;
       }
     }
-  });
+  };
+
+  process.on('message', appState.onPluginRefreshed);
 
   exports.hot = module.hot;
 } else {

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa/rapid-rsk/)
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -43,7 +43,7 @@ export const PluginState = Object.freeze({
  * @property {string} version - Plugin version
  * @property {Error|null} error - Last error if any
  * @property {number} loadedAt - Timestamp when loaded
- * @property {Array<string>} dependencies - Plugin dependencies
+ * @property {Object<string, string>} require - Plugin dependencies
  * @property {Object} manifest - Full plugin manifest
  */
 
@@ -191,7 +191,7 @@ export class BasePluginManager {
    * @param {string} _id - Plugin ID
    * @param {string} _entryPoint - Resolved entry point filename
    * @param {Object} _manifest - Plugin manifest
-   * @param {Object} _options - Additional options (containerName, internalId)
+   * @param {Object} _options - Additional options (containerName)
    * @returns {Promise<Object|null>} Plugin instance or null if skipped
    */
   async loadPluginModule(_id, _entryPoint, _manifest, _options) {
@@ -202,10 +202,10 @@ export class BasePluginManager {
   /**
    * Load plugin dependencies
    * @param {string} pluginId - Plugin requesting dependencies
-   * @param {Array<string>} dependencies - Array of dependency IDs
+   * @param {Array<Object<string, string>>} dependencies - Array of dependency IDs
    */
   async loadDependencies(pluginId, dependencies) {
-    const missing = dependencies.filter(
+    const missing = Object.keys(dependencies).filter(
       depId => !this[ACTIVE_PLUGINS].has(depId),
     );
 
@@ -224,7 +224,7 @@ export class BasePluginManager {
    * @param {string} id - Plugin ID
    * @param {string} entryPoint - Resolved entry point filename
    * @param {Object} manifest - Plugin manifest
-   * @param {Object} options - Additional options (containerName, internalId)
+   * @param {Object} options - Additional options (containerName)
    * @returns {Promise<Object|null>} Plugin instance or null if skipped
    */
   async executePlugin(id, entryPoint, manifest, options) {
@@ -308,13 +308,13 @@ export class BasePluginManager {
       throw error;
     }
 
-    // Check for either 'name' property OR 'register' function
+    // Plugins must have at least an init function or a name property
+    const hasInit = typeof plugin.init === 'function';
     const hasName = 'name' in plugin;
-    const hasRegister = typeof plugin.register === 'function';
 
-    if (!hasName && !hasRegister) {
+    if (!hasInit && !hasName) {
       const error = new Error(
-        'Plugin must have either a "name" property or a "register" function',
+        'Plugin must have either an "init" function or a "name" property',
       );
       error.name = 'PluginManagerError';
       throw error;
@@ -348,10 +348,10 @@ export class BasePluginManager {
     this[PLUGIN_METADATA].set(id, {
       id,
       state: PluginState.LOADING,
-      version: (manifest && manifest.version) || 'unknown',
+      version: (manifest && manifest.version) || '0.0.0',
       error: null,
       loadedAt: null,
-      dependencies: (manifest && manifest.dependencies) || [],
+      require: (manifest && manifest.rsk && manifest.rsk.require) || [],
       manifest,
     });
 
@@ -362,10 +362,11 @@ export class BasePluginManager {
       // Dependencies are loaded recursively before the plugin itself
       if (
         manifest &&
-        manifest.dependencies &&
-        manifest.dependencies.length > 0
+        manifest.rsk &&
+        manifest.rsk.require &&
+        manifest.rsk.require.length > 0
       ) {
-        await this.loadDependencies(id, manifest.dependencies);
+        await this.loadDependencies(id, manifest.rsk.require);
       }
 
       // Fetch plugin bundle from API
@@ -378,14 +379,8 @@ export class BasePluginManager {
         throw error;
       }
 
-      const {
-        containerName,
-        manifest: serverManifest,
-        internalId,
-      } = response.data;
+      const { containerName, manifest: serverManifest } = response.data;
       if (serverManifest) manifest = serverManifest;
-      // Add internalId to manifest for server-side loading
-      if (internalId && manifest) manifest.internalId = internalId;
 
       // Resolve entry point (main vs browser)
       const entryPoint = this.resolveEntryPoint(manifest);
@@ -407,7 +402,6 @@ export class BasePluginManager {
       // Load the plugin via MF container or require
       let plugin = await this.executePlugin(id, entryPoint, manifest, {
         containerName,
-        internalId,
       });
 
       // Handle null return (plugin was skipped by loadPluginModule)
@@ -429,7 +423,7 @@ export class BasePluginManager {
       if (__DEV__) {
         console.log(`[PluginManager] Defining plugin in registry: ${id}`);
       }
-      await registry.define(plugin, this[PLUGIN_CONTEXT]);
+      await registry.define(plugin, this[PLUGIN_CONTEXT], manifest);
 
       // Plugin activation (init/destroy) is deferred to loadNamespace.
       // loadPlugin only fetches, validates, and defines.
@@ -687,12 +681,8 @@ export class BasePluginManager {
     await this.emit('namespace:loading', { ns });
 
     try {
-      if (__DEV__) {
-        console.log(`[PluginManager] loadNamespace called for: ${ns}`);
-      }
       const plugins = registry.getDefinitions(ns);
       if (!plugins) {
-        console.warn(`[PluginManager] No plugins found for namespace: ${ns}`);
         return;
       }
       if (__DEV__) {

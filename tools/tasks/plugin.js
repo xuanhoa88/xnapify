@@ -8,9 +8,13 @@
 const webpack = require('webpack');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const snakeCase = require('lodash/snakeCase');
+const pick = require('lodash/pick');
+const semver = require('semver');
 const config = require('../config');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
+const { toContainerName } = require('../utils/plugin');
 const createPluginConfig = require('../webpack/plugin.config');
 
 // Configuration
@@ -41,12 +45,11 @@ function discoverPlugins() {
           manifest.browser &&
           fs.existsSync(path.join(pluginPath, manifest.browser));
 
-        manifest.name = snakeCase(manifest.name || name);
-
         if (hasMain || hasBrowser) {
           return {
             manifest,
-            name: manifest.name,
+            name: snakeCase(manifest.name || name),
+            version: semver.clean(manifest.version),
             path: pluginPath,
           };
         }
@@ -59,25 +62,73 @@ function discoverPlugins() {
 }
 
 /**
+ * Compute SHA-256 checksum of all built files in a directory
+ * @param {string} dir - Directory path
+ * @returns {string} Hex-encoded SHA-256 hash
+ */
+function computeChecksum(dir) {
+  const hash = crypto.createHash('sha256');
+  const files = fs.readdirSync(dir).sort();
+
+  for (const file of files) {
+    const filePath = path.join(dir, file);
+    const stat = fs.statSync(filePath);
+
+    if (stat.isFile() && file !== 'package.json') {
+      hash.update(file); // Include filename for ordering
+      hash.update(fs.readFileSync(filePath));
+    }
+  }
+
+  return hash.digest('hex');
+}
+
+/**
  * Generate package.json for each built plugin
  * @param {Array} plugins - Array of plugin objects
  */
 function generateManifests(plugins) {
-  for (const { name, manifest } of plugins) {
+  for (const { name, version, manifest } of plugins) {
     const outputDir = path.join(PLUGINS_BUILD_DIR, name);
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
     }
 
+    // Compute checksum of all built files
+    const checksum = computeChecksum(outputDir);
+
     const outputManifest = {
-      ...manifest,
+      ...pick(manifest, [
+        'version',
+        'description',
+        'dependencies',
+        'peerDependencies',
+        'keywords',
+        'author',
+        'license',
+        'homepage',
+        'repository',
+        'rsk',
+      ]),
       ...(manifest.main && {
         main: './api.js',
       }),
       ...(manifest.browser && {
         browser: './browser.js',
       }),
+    };
+
+    // Set name to snake_case
+    outputManifest.name = name;
+    outputManifest.version = version;
+
+    // Set rsk metadata with original name, containerName, and checksum
+    outputManifest.rsk = {
+      ...outputManifest.rsk,
+      name: manifest.name,
+      containerName: toContainerName(name),
+      checksum,
     };
 
     fs.writeFileSync(

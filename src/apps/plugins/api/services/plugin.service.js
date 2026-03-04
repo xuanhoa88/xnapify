@@ -8,19 +8,89 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
 import { encryptPluginId, decryptPluginId } from '../utils/crypto';
 import { logPluginActivity } from '../utils/activity';
+
+// Promisify execFile
+const execFileAsync = promisify(execFile);
 
 // Cache for plugin list
 const CACHE_TTL = 60 * 1000; // 1 minute
 
 // Plugin path getters
-const getPluginPath = () => process.env.RSK_PLUGIN_PATH || 'plugins';
+const getPluginPath = () =>
+  process.env.RSK_PLUGIN_PATH || path.join(os.homedir(), '.rsk', 'plugins');
+
 const getDevPluginPath = () => process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins';
 
 // Resolve plugins directory
 const resolvePluginsDir = (cwd, pluginPath) =>
   path.resolve(cwd || process.cwd(), pluginPath);
+
+/**
+ * Install plugin dependencies
+ * @param {string} pluginDir - Plugin directory path
+ * @param {object} plugin - Plugin object
+ */
+async function installPluginDependencies(pluginDir, plugin) {
+  try {
+    if (__DEV__) {
+      console.log(`[PluginService] Running npm install in ${pluginDir}`);
+    }
+    await execFileAsync(
+      'npm',
+      [
+        'install',
+        '--no-audit',
+        '--no-update-notifier',
+        '--no-fund',
+        '--production',
+        '--engine-strict',
+      ],
+      {
+        cwd: pluginDir,
+      },
+    );
+    if (__DEV__) {
+      console.log('[PluginService] npm install completed successfully');
+    }
+  } catch (npmErr) {
+    console.error('[PluginService] npm install failed:', npmErr);
+    const err = new Error(
+      `Failed to install dependencies for plugin ${plugin.name}`,
+    );
+    err.status = 500;
+    throw err;
+  }
+}
+
+/**
+ * Uninstall plugin dependencies
+ * @param {string} pluginDir - Plugin directory path
+ * @param {object} plugin - Plugin object
+ */
+async function uninstallPluginDependencies(pluginDir, plugin) {
+  try {
+    if (__DEV__) {
+      console.log(`[PluginService] Running npm uninstall in ${pluginDir}`);
+    }
+    await execFileAsync('npm', ['uninstall'], {
+      cwd: pluginDir,
+    });
+    if (__DEV__) {
+      console.log('[PluginService] npm uninstall completed successfully');
+    }
+  } catch (npmErr) {
+    console.error('[PluginService] npm uninstall failed:', npmErr);
+    const err = new Error(
+      `Failed to uninstall dependencies for plugin ${plugin.name}`,
+    );
+    err.status = 500;
+    throw err;
+  }
+}
 
 /**
  * Invalidate plugin caches
@@ -65,10 +135,8 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
           fsPluginsMap.set(dirent.name, {
             ...manifest,
             id: encryptedId,
-            internalId: dirent.name,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'
-            isLocal: source === 'local',
           });
         }
       }
@@ -118,6 +186,7 @@ export async function managePlugins({ models, cwd }) {
   // 1. Scan File Systems (Remote & Local)
   // This populates fsPluginsMap with what's physically available
   await scanDirectory(installedPluginsDir, 'remote', fsPluginsMap);
+
   // Only scan local dir if it differs from installed dir to avoid duplicate scanning
   if (localPluginsDir !== installedPluginsDir) {
     await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
@@ -139,18 +208,15 @@ export async function managePlugins({ models, cwd }) {
         ...fsPlugin,
         ...dbPlugin.toJSON(),
         id: dbPlugin.id,
-        dbId: dbPlugin.id,
         isActive: dbPlugin.is_active,
         isInstalled: true,
         source: 'db+remote',
-        isMissing: false,
       });
     } else {
       // Plugin in DB but not on disk (Missing)
       plugins.push({
         ...dbPlugin.toJSON(),
         id: dbPlugin.id,
-        isMissing: true,
         source: 'db',
         isActive: false,
       });
@@ -165,7 +231,6 @@ export async function managePlugins({ models, cwd }) {
         isInstalled: false,
         isActive: false,
         source: fsPlugin.source,
-        isMissing: false,
       });
     }
   }
@@ -235,12 +300,9 @@ export async function getActivePlugins({ models, cache, cwd }) {
         ...manifest,
         ...dbPlugin.toJSON(),
         id: dbPlugin.id,
-        dbId: dbPlugin.id,
         isActive: true,
         isInstalled: true,
         source: isLocal ? 'local' : 'remote',
-        isLocal,
-        isMissing: false,
       });
     } else {
       // Logic decision: If active in DB but missing on disk, do we return it?
@@ -288,7 +350,37 @@ export async function deletePlugin(
   }
 
   if (!plugin) {
-    throw new Error('Plugin not found');
+    const err = new Error('Plugin not found');
+    err.name = 'PluginNotFound';
+    err.status = 404;
+    throw err;
+  }
+
+  // 1.5. Run uninstall lifecycle hook before unloading
+  if (pluginManager && cwd) {
+    try {
+      // Read the manifest from disk so we can locate the API bundle
+      const dirs = [
+        resolvePluginsDir(cwd, getPluginPath()),
+        resolvePluginsDir(cwd, getDevPluginPath()),
+      ];
+      let manifest = null;
+      for (const baseDir of dirs) {
+        const pkgPath = path.join(baseDir, plugin.key, 'package.json');
+        if (fs.existsSync(pkgPath)) {
+          manifest = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
+          break;
+        }
+      }
+      if (manifest) {
+        await pluginManager.uninstallPlugin(plugin.key, manifest);
+      }
+    } catch (err) {
+      console.warn(
+        `[pluginService] Failed to run uninstall hook for ${plugin.key}:`,
+        err.message,
+      );
+    }
   }
 
   // 2. Unload the plugin via PluginManager before deleting files
@@ -325,6 +417,8 @@ export async function deletePlugin(
         !path.isAbsolute(relative)
       ) {
         if (fs.existsSync(pluginDir)) {
+          // Uninstall dependencies first before deleting the folder
+          await uninstallPluginDependencies(pluginDir, plugin);
           await fs.promises.rm(pluginDir, { recursive: true, force: true });
         }
       }
@@ -399,21 +493,46 @@ export async function getPluginById({ cwd, models, cache }, id) {
     throw err;
   }
 
-  // Create safe container name from plugin key (must match webpack config)
-  const containerName = `plugin_${pluginKey.replace(/[^a-zA-Z0-9]/g, '_')}`;
+  // Read container name from manifest (written by the build step)
+  const containerName = (manifest.rsk && manifest.rsk.containerName) || null;
 
   try {
     const assetsPath = path.join(resolvedDir, pluginKey, 'plugin.css');
     await fs.promises.access(assetsPath);
-    manifest.cssFiles = [path.basename(assetsPath)];
+    manifest.hasClientCss = true;
   } catch {
     // plugin.css might not exist if plugin has no CSS or build failed
+  }
+
+  try {
+    const assetsPath = path.join(resolvedDir, pluginKey, 'remote.js');
+    await fs.promises.access(assetsPath);
+    manifest.hasClientScript = true;
+  } catch {
+    // remote.js might not exist if plugin has no remote or build failed
+  }
+
+  // Validate checksum against DB (if both values exist)
+  if (models) {
+    const { Plugin } = models;
+    const dbPlugin = await Plugin.findOne({ where: { key: pluginKey } });
+    if (
+      dbPlugin &&
+      dbPlugin.checksum &&
+      manifest.rsk &&
+      manifest.rsk.checksum &&
+      dbPlugin.checksum !== manifest.rsk.checksum
+    ) {
+      console.warn(
+        `[pluginService] Checksum mismatch for plugin "${pluginKey}": ` +
+          `DB=${dbPlugin.checksum}, manifest=${manifest.rsk.checksum}`,
+      );
+    }
   }
 
   const result = {
     containerName,
     manifest,
-    internalId: pluginKey,
   };
 
   // Cache the result
@@ -550,7 +669,11 @@ export async function installPluginFromPackage(
     );
 
     // 4. Validate manifest
-    if (!manifest.name || !manifest.version) {
+    const pluginName =
+      typeof manifest.name === 'string' ? manifest.name.trim() : '';
+    const pluginVersion =
+      typeof manifest.version === 'string' ? manifest.version.trim() : '';
+    if (pluginName.length === 0 || pluginVersion.length === 0) {
       const err = new Error(
         'Invalid plugin manifest: missing required fields (name, version)',
       );
@@ -558,12 +681,9 @@ export async function installPluginFromPackage(
       err.status = 400;
       throw err;
     }
-    const pluginKey =
-      (manifest.rsk && manifest.rsk.plugin && manifest.rsk.plugin.key) ||
-      manifest.name.toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
     // 5. Move to final destination
-    const finalPluginDir = path.join(pluginsDir, pluginKey);
+    const finalPluginDir = path.join(pluginsDir, pluginName);
 
     if (fs.existsSync(finalPluginDir)) {
       await fs.promises.rm(finalPluginDir, { recursive: true, force: true });
@@ -571,23 +691,52 @@ export async function installPluginFromPackage(
 
     await fs.promises.rename(pluginRoot, finalPluginDir);
 
+    // 5.5 Install plugin dependencies if any
+    if (
+      manifest.dependencies &&
+      Object.keys(manifest.dependencies).length > 0
+    ) {
+      console.info(
+        `[pluginService] Installing backend dependencies for ${pluginName} (omit=dev)...`,
+      );
+      try {
+        await installPluginDependencies(finalPluginDir);
+        console.info(
+          `[pluginService] Successfully installed dependencies for ${pluginName}`,
+        );
+      } catch (installErr) {
+        console.error(
+          `[pluginService] Failed to install dependencies for ${pluginName}:`,
+          installErr,
+        );
+        const err = new Error(
+          `Failed to install plugin dependencies: ${installErr.message}`,
+        );
+        err.name = 'PluginInstallDependenciesError';
+        err.status = 500;
+        throw err;
+      }
+    }
+
     // 6. Create or update DB record
     const [plugin, created] = await Plugin.findOrCreate({
-      where: { key: pluginKey },
+      where: { key: pluginName },
       defaults: {
-        name: manifest.name,
+        name: pluginName,
         description: manifest.description,
-        version: manifest.version,
+        version: pluginVersion,
         is_active: true,
+        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
       },
     });
 
     if (!created) {
       await plugin.update({
-        name: manifest.name,
+        name: pluginName,
         description: manifest.description,
-        version: manifest.version,
+        version: pluginVersion,
         is_active: true,
+        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
       });
     }
 
@@ -595,6 +744,17 @@ export async function installPluginFromPackage(
 
     // 7. Load the plugin via PluginManager
     if (pluginManager) {
+      if (created) {
+        try {
+          await pluginManager.installPlugin(pluginName, manifest);
+        } catch (err) {
+          console.warn(
+            `[pluginService] Failed to run install hook for ${pluginName}:`,
+            err.message,
+          );
+        }
+      }
+
       try {
         await pluginManager.reloadPlugin(plugin.id);
 
@@ -602,7 +762,6 @@ export async function installPluginFromPackage(
         if (
           metadata &&
           metadata.manifest &&
-          Array.isArray(metadata.manifest.cssFiles) &&
           !pluginManager.isPluginLoaded(plugin.id)
         ) {
           await pluginManager.emit('plugin:loaded', { id: plugin.id });
@@ -620,7 +779,7 @@ export async function installPluginFromPackage(
       webhook,
       created ? 'installed' : 'upgraded',
       plugin.id,
-      { version: manifest.version },
+      { version: pluginVersion },
       actorId,
     );
 
@@ -684,16 +843,33 @@ export async function togglePluginStatus(
         }
 
         if (!manifest) {
-          throw new Error('Plugin not found on disk');
+          const err = new Error('Plugin not found on disk');
+          err.name = 'PluginNotFound';
+          err.status = 404;
+          throw err;
+        }
+
+        const pluginName =
+          typeof manifest.name === 'string' ? manifest.name.trim() : '';
+        const pluginVersion =
+          typeof manifest.version === 'string' ? manifest.version.trim() : '';
+        if (pluginName.length === 0 || pluginVersion.length === 0) {
+          const err = new Error(
+            'Invalid plugin manifest: missing required fields (name, version)',
+          );
+          err.name = 'InvalidPluginPackage';
+          err.status = 400;
+          throw err;
         }
 
         [plugin] = await Plugin.findOrCreate({
           where: { key: pluginKey },
           defaults: {
-            name: manifest.name || pluginKey,
+            name: pluginName,
             description: manifest.description || '',
-            version: manifest.version || '0.0.0',
+            version: pluginVersion,
             is_active: isActive,
+            checksum: (manifest.rsk && manifest.rsk.checksum) || null,
           },
         });
       }
@@ -701,7 +877,55 @@ export async function togglePluginStatus(
   }
 
   if (!plugin) {
-    throw new Error('Plugin not found');
+    const err = new Error('Plugin not found');
+    err.name = 'PluginNotFound';
+    err.status = 404;
+    throw err;
+  }
+
+  // Resolve plugin physical directory on disk
+  let pluginDir = null;
+  if (cwd && plugin.key) {
+    const prodPath = path.join(
+      resolvePluginsDir(cwd, getPluginPath()),
+      plugin.key,
+    );
+    const devPath = path.join(
+      resolvePluginsDir(cwd, getDevPluginPath()),
+      plugin.key,
+    );
+
+    if (fs.existsSync(prodPath)) {
+      pluginDir = prodPath;
+    } else if (fs.existsSync(devPath)) {
+      pluginDir = devPath;
+    }
+  }
+
+  // Handle NPM dependencies based on toggle state
+  if (pluginDir) {
+    if (isActive) {
+      // Install dependencies when activating
+      try {
+        if (__DEV__) {
+          console.log(`[PluginService] Running npm install in ${pluginDir}`);
+        }
+        await installPluginDependencies(pluginDir);
+        if (__DEV__) {
+          console.log('[PluginService] npm install completed successfully');
+        }
+      } catch (npmErr) {
+        console.error('[PluginService] npm install failed:', npmErr);
+        const err = new Error(
+          `Failed to install dependencies for plugin ${plugin.name}`,
+        );
+        err.status = 500;
+        throw err;
+      }
+    } else {
+      // Uninstall dependencies when deactivating
+      await uninstallPluginDependencies(pluginDir, plugin);
+    }
   }
 
   await plugin.update({ is_active: isActive });
@@ -721,7 +945,6 @@ export async function togglePluginStatus(
         if (
           metadata &&
           metadata.manifest &&
-          Array.isArray(metadata.manifest.cssFiles) &&
           !pluginManager.isPluginLoaded(plugin.id)
         ) {
           await pluginManager.emit('plugin:loaded', { id: plugin.id });
@@ -777,7 +1000,10 @@ export async function upgradePlugin(
   }
 
   if (!plugin) {
-    throw new Error('Plugin not found');
+    const err = new Error('Plugin not found');
+    err.name = 'PluginNotFound';
+    err.status = 404;
+    throw err;
   }
 
   await plugin.update(data);

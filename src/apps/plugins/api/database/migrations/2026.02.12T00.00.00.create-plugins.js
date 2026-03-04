@@ -40,8 +40,14 @@ export async function up({ context, Sequelize }) {
     version: {
       type: DataTypes.STRING(20),
       allowNull: false,
-      defaultValue: '1.0.0',
+      defaultValue: '0.0.0',
       comment: 'Plugin version',
+    },
+    checksum: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      unique: true,
+      comment: 'SHA-256 checksum of built plugin files',
     },
     is_active: {
       type: DataTypes.BOOLEAN,

@@ -107,3 +107,7 @@ App.propTypes = {
   context: contextPropTypes,
   children: PropTypes.node.isRequired,
 };
+
+/* test 2 */
+
+/* test 3 */

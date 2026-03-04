@@ -36,27 +36,14 @@ export default {
   // Store handlers for cleanup
   [HANDLERS]: {},
 
-  // Metadata & registration config
-  register() {
-    return [
-      ['profile', 'dashboard'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
-
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
     return translationsContext;
   },
 
-  // Lifecycle: init (called when plugin is initialized on server)
-  async init(registry, context) {
-    console.log(
-      '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
-    );
-
-    // Get database connection
+  // Lifecycle: install (called once when the user clicks 'Install Plugin')
+  async install(registry, context) {
+    console.log('[Test Plugin] Installing...', __PLUGIN_NAME__);
     const db = context.app.get('db');
     if (db) {
       try {
@@ -82,6 +69,13 @@ export default {
         console.error('[Test Plugin] Database seed failed:', error.message);
       }
     }
+  },
+
+  // Lifecycle: init (called when plugin is initialized on server)
+  async init(registry, context) {
+    console.log(
+      '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
+    );
 
     // Get hook engine
     const hook = context.app.get('hook');
@@ -229,10 +223,9 @@ export default {
     );
   },
 
-  // Lifecycle: destroy (called when plugin is disabled)
-  async destroy(registry, context) {
-    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
-
+  // Lifecycle: uninstall (called once when the user deletes the plugin)
+  async uninstall(registry, context) {
+    console.log('[Test Plugin] Uninstalling...', __PLUGIN_NAME__);
     const db = context.app.get('db');
     if (db) {
       try {
@@ -257,6 +250,11 @@ export default {
         );
       }
     }
+  },
+
+  // Lifecycle: destroy (called when plugin is disabled)
+  async destroy(registry, context) {
+    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
 
     // Unsubscribe from hooks
     const hook = context.app.get('hook');

@@ -201,18 +201,18 @@ describe('Plugin Service', () => {
 
       // Let's adjust expectations:
 
-      const fsPlugin = result.find(p => p.internalId === 'fs-plugin');
+      const fsPlugin = result.find(p => p.name === 'FS Plugin');
       expect(fsPlugin).toBeDefined();
       expect(fsPlugin.isInstalled).toBe(false);
-      expect(fsPlugin.isLocal).toBe(false); // Should be remote
+      expect(fsPlugin.source).toBe('remote');
 
-      const localPlugin = result.find(p => p.internalId === 'local-plugin');
+      const localPlugin = result.find(p => p.name === 'Local Plugin');
       expect(localPlugin).toBeDefined();
-      expect(localPlugin.isLocal).toBe(true);
+      expect(localPlugin.source).toBe('local');
 
       const dbPlugin = result.find(p => p.key === 'db-plugin');
       expect(dbPlugin).toBeDefined();
-      expect(dbPlugin.isMissing).toBe(true);
+      expect(dbPlugin.source).toBe('db');
     });
 
     it('should mark DB plugins as missing if not found on FS', async () => {
@@ -233,7 +233,6 @@ describe('Plugin Service', () => {
       const result = await managePlugins(mockContext);
       const missingPlugin = result.find(p => p.key === 'missing-plugin');
       expect(missingPlugin).toBeDefined();
-      expect(missingPlugin.isMissing).toBe(true);
       expect(missingPlugin.source).toBe('db');
     });
 
@@ -261,7 +260,7 @@ describe('Plugin Service', () => {
 
       expect(result).toHaveLength(1);
       const plugin = result[0];
-      expect(plugin.internalId).toBe('new-plugin');
+      expect(plugin.name).toBe('New Plugin');
       expect(plugin.isInstalled).toBe(false);
       expect(plugin.isActive).toBe(false);
     });

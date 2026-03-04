@@ -55,7 +55,7 @@ export default function createPluginModel({ connection, DataTypes }) {
       version: {
         type: DataTypes.STRING(20),
         allowNull: false,
-        defaultValue: '1.0.0',
+        defaultValue: '0.0.0',
         comment: 'Plugin version',
       },
 
@@ -70,6 +70,13 @@ export default function createPluginModel({ connection, DataTypes }) {
         type: DataTypes.JSON,
         defaultValue: {},
         comment: 'Plugin configuration options',
+      },
+
+      checksum: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        unique: true,
+        comment: 'SHA-256 checksum of built plugin files',
       },
     },
     {

@@ -81,15 +81,6 @@ export default {
   // Store composed handlers for cleanup
   [HANDLERS]: {},
 
-  // Metadata & registration config
-  register() {
-    return [
-      ['profile', 'dashboard'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
-
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
     return translationsContext;

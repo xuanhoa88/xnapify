@@ -8,20 +8,12 @@
 /* eslint-env jest */
 
 import clientManager from './client';
-import {
-  ACTIVE_PLUGINS,
-  PLUGIN_METADATA,
-  INITIALIZED,
-  PLUGIN_MANAGER_INIT,
-} from './base';
+import { INITIALIZED, PLUGIN_MANAGER_INIT } from './base';
 
 describe('ClientPluginManager', () => {
   let mockContext;
 
   beforeEach(async () => {
-    // Reset singleton state
-    clientManager[ACTIVE_PLUGINS].clear();
-    clientManager[PLUGIN_METADATA].clear();
     clientManager[INITIALIZED] = false;
     clientManager[PLUGIN_MANAGER_INIT] = null;
 
@@ -47,45 +39,6 @@ describe('ClientPluginManager', () => {
     jest.restoreAllMocks();
   });
 
-  describe('CSS Injection', () => {
-    it('injects CSS links on plugin:loaded event', async () => {
-      const manifest = { cssFiles: ['style.css'] };
-
-      await clientManager.emit('plugin:loaded', { id: 'test-p', manifest });
-
-      const link = document.querySelector('link[rel="stylesheet"]');
-      expect(link).toBeTruthy();
-      expect(link.href).toContain('/api/plugins/test-p/static/style.css');
-      expect(link.getAttribute('data-plugin-id')).toBe('test-p');
-    });
-
-    it('removes CSS links on plugin:unloaded event', async () => {
-      const link = document.createElement('link');
-      link.rel = 'stylesheet';
-      link.href = '/api/plugins/test-p/static/style.css';
-      document.head.appendChild(link);
-
-      await clientManager.emit('plugin:unloaded', { id: 'test-p' });
-
-      expect(document.querySelector('link')).toBeFalsy();
-    });
-  });
-
-  describe('loadScript', () => {
-    it('creates a script tag and waits for load', async () => {
-      const loadPromise = clientManager.loadScript('/test.js', 'test-p');
-
-      const script = document.querySelector('script');
-      expect(script).toBeTruthy();
-      expect(script.src).toContain('/test.js');
-
-      // Manually trigger load event
-      script.dispatchEvent(new Event('load'));
-
-      await expect(loadPromise).resolves.toBeUndefined();
-    });
-  });
-
   describe('initializeContainer', () => {
     it('initializes MF container with shared scope', async () => {
       const mockContainer = {
@@ -103,23 +56,132 @@ describe('ClientPluginManager', () => {
     });
   });
 
-  describe('handleEvent', () => {
-    it('handles PLUGIN_INSTALLED event', async () => {
-      const loadPluginSpy = jest
-        .spyOn(clientManager, 'loadPlugin')
-        .mockResolvedValue({});
-
-      await clientManager.handleEvent({
-        type: 'PLUGIN_INSTALLED',
-        pluginId: 'new-plugin',
-        data: { manifest: { id: 'new-plugin' } },
+  describe('plugin:loaded hook', () => {
+    it('injects CSS link when manifest.hasClientCss is true', async () => {
+      await clientManager.emit('plugin:loaded', {
+        id: 'test-p',
+        manifest: { hasClientCss: true },
       });
 
-      expect(loadPluginSpy).toHaveBeenCalledWith(
-        'new-plugin',
-        expect.any(Object),
-      );
+      const link = document.querySelector('link[data-plugin-id="test-p"]');
+      expect(link).toBeTruthy();
+      expect(link.rel).toBe('stylesheet');
+      expect(link.href).toContain('/api/plugins/test-p/static/plugin.css');
+    });
+
+    it('injects script when manifest.hasClientScript is true', async () => {
+      await clientManager.emit('plugin:loaded', {
+        id: 'test-p',
+        manifest: { hasClientScript: true },
+      });
+
+      const script = document.querySelector('script[data-plugin-id="test-p"]');
+      expect(script).toBeTruthy();
+      expect(script.src).toContain('/api/plugins/test-p/static/remote.js');
+    });
+
+    it('skips if manifest is null', async () => {
+      await clientManager.emit('plugin:loaded', { id: 'test-p' });
+
+      expect(
+        document.querySelector('link[data-plugin-id="test-p"]'),
+      ).toBeNull();
+      expect(
+        document.querySelector('script[data-plugin-id="test-p"]'),
+      ).toBeNull();
+    });
+
+    it('does not duplicate already present elements', async () => {
+      const manifest = { hasClientCss: true, hasClientScript: true };
+      await clientManager.emit('plugin:loaded', { id: 'test-p', manifest });
+      await clientManager.emit('plugin:loaded', { id: 'test-p', manifest });
+
+      expect(
+        document.querySelectorAll('link[data-plugin-id="test-p"]'),
+      ).toHaveLength(1);
+      expect(
+        document.querySelectorAll('script[data-plugin-id="test-p"]'),
+      ).toHaveLength(1);
+    });
+  });
+
+  describe('plugin:unloaded hook', () => {
+    it('removes CSS and script tags', async () => {
+      // Inject first
+      await clientManager.emit('plugin:loaded', {
+        id: 'test-p',
+        manifest: { hasClientCss: true, hasClientScript: true },
+      });
+
+      expect(
+        document.querySelector('link[data-plugin-id="test-p"]'),
+      ).toBeTruthy();
+      expect(
+        document.querySelector('script[data-plugin-id="test-p"]'),
+      ).toBeTruthy();
+
+      // Then unload
+      await clientManager.emit('plugin:unloaded', { id: 'test-p' });
+
+      expect(
+        document.querySelector('link[data-plugin-id="test-p"]'),
+      ).toBeNull();
+      expect(
+        document.querySelector('script[data-plugin-id="test-p"]'),
+      ).toBeNull();
+    });
+  });
+
+  describe('handleEvent', () => {
+    beforeEach(() => {
+      clientManager.needsReload = false;
+    });
+
+    it('injects resources and sets needsReload on PLUGIN_INSTALLED', async () => {
+      await clientManager.handleEvent({
+        type: 'PLUGIN_INSTALLED',
+        pluginId: 'new-p',
+        data: { manifest: { hasClientCss: true } },
+      });
+
+      expect(
+        document.querySelector('link[data-plugin-id="new-p"]'),
+      ).toBeTruthy();
       expect(clientManager.needsReload).toBe(true);
+    });
+
+    it('removes resources and sets needsReload on PLUGIN_UNINSTALLED', async () => {
+      // Pre-inject
+      await clientManager.emit('plugin:loaded', {
+        id: 'old-p',
+        manifest: { hasClientCss: true },
+      });
+      clientManager.needsReload = false;
+
+      await clientManager.handleEvent({
+        type: 'PLUGIN_UNINSTALLED',
+        pluginId: 'old-p',
+      });
+
+      expect(document.querySelector('link[data-plugin-id="old-p"]')).toBeNull();
+      expect(clientManager.needsReload).toBe(true);
+    });
+
+    it('sets needsReload on PLUGIN_UPDATED', async () => {
+      await clientManager.handleEvent({
+        type: 'PLUGIN_UPDATED',
+        pluginId: 'existing-p',
+        data: { manifest: { hasClientScript: true } },
+      });
+
+      expect(clientManager.needsReload).toBe(true);
+    });
+
+    it('ignores invalid events', async () => {
+      await clientManager.handleEvent(null);
+      await clientManager.handleEvent({});
+
+      expect(clientManager.needsReload).toBe(false);
     });
   });
 });

@@ -1,5 +1,5 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa/rapid-rsk/)
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
@@ -15,19 +15,53 @@ import {
 } from './base';
 
 // Symbols for internal state
-const PLUGIN_API_INSTANCES = Symbol('__rsk.pluginApiInstances__');
+const PLUGIN_API_ENTRY_POINTS = Symbol('__rsk.pluginApiEntryPoints__');
 const PLUGIN_CSS_ENTRY_POINTS = Symbol('__rsk.pluginCssEntryPoints__');
+const PLUGIN_SCRIPT_ENTRY_POINTS = Symbol('__rsk.pluginScriptEntryPoints__');
 
 class ServerPluginManager extends BasePluginManager {
   constructor() {
     super();
-    this[PLUGIN_API_INSTANCES] = new Map();
-    this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> cssFiles array
+    this[PLUGIN_API_ENTRY_POINTS] = new Map(); // id -> api instances
+    this[PLUGIN_CSS_ENTRY_POINTS] = new Map(); // id -> css URL string
+    this[PLUGIN_SCRIPT_ENTRY_POINTS] = new Map(); // id -> script URL string
+
+    // Store CSS entry points when plugin is loaded
+    this.on('plugin:loaded', async ({ id }) => {
+      try {
+        const metadata = this[PLUGIN_METADATA].get(id);
+        const manifest = metadata && metadata.manifest;
+        const currentVersion = (manifest && manifest.version) || '0.0.0';
+
+        // Store CSS entry points when plugin is loaded
+        if (manifest && manifest.hasClientCss) {
+          this[PLUGIN_CSS_ENTRY_POINTS].set(
+            id,
+            this.getPluginAssetUrl(id, `plugin.css?v=${currentVersion}`),
+          );
+        }
+
+        // Store script entry points when plugin is loaded
+        // Include the browser MF container (remote.js) so it is SSR-injected
+        if (manifest && manifest.hasClientScript) {
+          this[PLUGIN_SCRIPT_ENTRY_POINTS].set(
+            id,
+            this.getPluginAssetUrl(id, `remote.js?v=${currentVersion}`),
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[PluginManager] Failed to store CSS entry points for ${id}:`,
+          err,
+        );
+        this.emit('plugin:error', { id, error: err, phase: 'script-setup' });
+      }
+    });
 
     // Clean up API instances when plugin is unloaded
     this.on('plugin:unloaded', async ({ id }) => {
       try {
-        const apiPlugin = this[PLUGIN_API_INSTANCES].get(id);
+        const apiPlugin = this[PLUGIN_API_ENTRY_POINTS].get(id);
         if (apiPlugin && typeof apiPlugin.destroy === 'function') {
           await apiPlugin.destroy(this.registry, this[PLUGIN_CONTEXT]);
           if (__DEV__) {
@@ -38,64 +72,55 @@ class ServerPluginManager extends BasePluginManager {
         console.error(`[PluginManager] Failed to destroy API for ${id}:`, err);
         this.emit('plugin:error', { id, error: err, phase: 'api-destroy' });
       }
-      this[PLUGIN_API_INSTANCES].delete(id);
+      this[PLUGIN_API_ENTRY_POINTS].delete(id);
       this[PLUGIN_CSS_ENTRY_POINTS].delete(id);
-    });
-
-    // Store CSS entry points when plugin is loaded
-    this.on('plugin:loaded', async ({ id }) => {
-      try {
-        const metadata = this[PLUGIN_METADATA].get(id);
-        const manifest = metadata && metadata.manifest;
-
-        if (manifest && Array.isArray(manifest.cssFiles)) {
-          this[PLUGIN_CSS_ENTRY_POINTS].set(
-            id,
-            manifest.cssFiles.map(cssFile =>
-              this.getPluginAssetUrl(id, cssFile),
-            ),
-          );
-        }
-      } catch (err) {
-        console.error(
-          `[PluginManager] Failed to store CSS entry points for ${id}:`,
-          err,
-        );
-        this.emit('plugin:error', { id, error: err, phase: 'css-setup' });
-      }
+      this[PLUGIN_SCRIPT_ENTRY_POINTS].delete(id);
     });
 
     // Clear internal maps when manager is destroyed
     this.on('manager:destroyed', () => {
-      this[PLUGIN_API_INSTANCES].clear();
+      this[PLUGIN_API_ENTRY_POINTS].clear();
       this[PLUGIN_CSS_ENTRY_POINTS].clear();
+      this[PLUGIN_SCRIPT_ENTRY_POINTS].clear();
     });
   }
 
   /**
-   * Get all plugin CSS URLs for SSR injection
-   * @returns {Array<string>} Array of CSS URLs
+   * Get all plugin CSS entries for SSR injection
+   * @returns {Array<{href: string, id: string}>}
    */
-  getPluginCssUrls() {
-    const urls = [];
-    for (const [, cssFiles] of this[PLUGIN_CSS_ENTRY_POINTS]) {
-      urls.push(...cssFiles);
+  get cssUrls() {
+    const entries = [];
+    for (const [id, href] of this[PLUGIN_CSS_ENTRY_POINTS]) {
+      entries.push({ href, id });
     }
-    return urls;
+    return entries;
   }
 
   /**
-   * Get the plugin bundle path
-   * @param {string} internalId - Plugin internal ID (folder name)
-   * @param {string} filename - Bundle filename
-   * @returns {string} Plugin bundle path
+   * Get all plugin script entries for SSR injection
+   * @returns {Array<{src: string, id: string}>}
    */
-  getPluginBundlePath(internalId, filename) {
-    const pluginDir = path.resolve(
+  get scriptUrls() {
+    const entries = [];
+    for (const [id, src] of this[PLUGIN_SCRIPT_ENTRY_POINTS]) {
+      entries.push({ src, id });
+    }
+    return entries;
+  }
+
+  /**
+   * Get the path to a plugin's bundle file
+   * @param {string} pluginDir - Plugin directory name
+   * @param {string} filename - Bundle filename
+   * @returns {string} Absolute path to the bundle file
+   */
+  _getPluginBundlePath(pluginDir, filename) {
+    const baseDir = path.resolve(
       this[PLUGIN_CONTEXT].cwd,
       process.env.RSK_PLUGIN_PATH || 'plugins',
     );
-    return path.join(pluginDir, internalId, filename);
+    return path.join(baseDir, pluginDir, filename);
   }
 
   /**
@@ -162,11 +187,6 @@ class ServerPluginManager extends BasePluginManager {
   /**
    * Resolve the plugin entry point based on manifest
    * @param {Object} manifest - Plugin manifest
-   * @returns {string} Entry point filename
-   */
-  /**
-   * Resolve the plugin entry point based on manifest
-   * @param {Object} manifest - Plugin manifest
    * @returns {string|null} Entry point filename or null
    */
   resolveEntryPoint(manifest) {
@@ -177,14 +197,136 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
+   * Run a lifecycle hook from the plugin's API module.
+   * Uses the provided manifest to resolve the API bundle path and calls the
+   * named export.  The caller MUST supply the manifest — this method does NOT
+   * perform any API fetch.
+   *
+   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
+   * @param {string} hookName - Name of the hook (e.g. 'install', 'uninstall')
+   * @param {Object} manifest - Plugin manifest (must contain `name` and `main`)
+   * @returns {Promise<void>}
+   * @private
+   */
+  async _runLifecycleHook(id, hookName, manifest) {
+    if (!manifest || !manifest.main) {
+      if (__DEV__) {
+        console.log(
+          `[ServerPluginManager] Skipping ${hookName} hook for ${id} (no API entry point)`,
+        );
+      }
+      return;
+    }
+
+    const pluginDir = manifest.name;
+    if (!pluginDir) return;
+
+    // eslint-disable-next-line no-underscore-dangle
+    const apiBundlePath = this._getPluginBundlePath(pluginDir, manifest.main);
+
+    // eslint-disable-next-line no-underscore-dangle
+    await this._ensureReady();
+
+    const apiModule = this.loadModule(apiBundlePath);
+    const pluginApi = apiModule.default || apiModule;
+
+    if (pluginApi && typeof pluginApi[hookName] === 'function') {
+      if (__DEV__) {
+        const version = manifest.version || '0.0.0';
+        console.log(
+          `[ServerPluginManager] Running ${hookName} hook for ${id} (v${version})`,
+        );
+      }
+      await pluginApi[hookName](this.registry, this[PLUGIN_CONTEXT]);
+      console.log(
+        `[ServerPluginManager] Successfully executed ${hookName} hook for ${id}`,
+      );
+    } else if (__DEV__) {
+      console.log(
+        `[ServerPluginManager] Plugin ${id} does not expose a ${hookName} hook. Skipping.`,
+      );
+    }
+  }
+
+  /**
+   * Install a plugin — calls the plugin's install() lifecycle hook.
+   * Overrides BasePluginManager to load the API module from disk
+   * (the plugin may not yet be registered in the Registry).
+   *
+   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
+   * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
+   * @returns {Promise<boolean>} True if the hook ran successfully
+   */
+  async installPlugin(id, manifest) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      await this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
+    await this.emit('plugin:installing', { id });
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      await this._runLifecycleHook(id, 'install', manifest);
+      await this.emit('plugin:installed', { id });
+      return true;
+    } catch (error) {
+      console.error(
+        `[ServerPluginManager] Failed to install plugin "${id}":`,
+        error,
+      );
+      await this.emit('plugin:install-failed', { id, error });
+      throw error;
+    }
+  }
+
+  /**
+   * Uninstall a plugin — calls the plugin's uninstall() lifecycle hook.
+   * Overrides BasePluginManager to load the API module from disk
+   * (the plugin may already be unloaded from the Registry).
+   *
+   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
+   * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
+   * @returns {Promise<boolean>} True if the hook ran successfully
+   */
+  async uninstallPlugin(id, manifest) {
+    if (typeof id !== 'string' || id.trim().length === 0) {
+      const error = new Error('Plugin ID must be a non-empty string');
+      error.name = 'PluginManagerError';
+      await this.emit('plugin:validation-failed', { id, error });
+      console.error(error);
+      return false;
+    }
+
+    await this.emit('plugin:uninstalling', { id });
+
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      await this._runLifecycleHook(id, 'uninstall', manifest);
+      await this.emit('plugin:uninstalled', { id });
+      return true;
+    } catch (error) {
+      console.error(
+        `[ServerPluginManager] Failed to uninstall plugin "${id}":`,
+        error,
+      );
+      await this.emit('plugin:uninstall-failed', { id, error });
+      throw error;
+    }
+  }
+
+  /**
    * Load plugin module (server uses require, not MF containers)
    * @param {string} id - Plugin ID
    * @param {string|null} entryPoint - Resolved entry point filename
-   * @param {object} manifest - Plugin manifest with internalId
-   * @param {object} options - Additional options (internalId)
+   * @param {object} manifest - Plugin manifest
+   * @param {object} options - Additional options (containerName)
    * @returns {Promise<Object|null>} Plugin module or null
    */
-  async loadPluginModule(id, entryPoint, manifest, options) {
+  async loadPluginModule(id, entryPoint, manifest, _options) {
     // Skip if no entry point resolved (e.g. client-only plugin)
     if (!entryPoint) {
       if (__DEV__) {
@@ -197,16 +339,16 @@ class ServerPluginManager extends BasePluginManager {
 
     const startTime = Date.now();
     const currentVersion = (manifest && manifest.version) || '0.0.0';
-    const internalId =
-      (options && options.internalId) || (manifest && manifest.internalId);
+    // The manifest name IS the FS directory name (set by the build task)
+    const pluginDir = manifest && manifest.name;
 
     try {
-      // Validate internalId early (fail-fast)
-      if (!internalId) {
+      // Validate plugin directory name early (fail-fast)
+      if (!pluginDir) {
         const error = new Error(
-          `Internal ID required for server-side plugin loading: ${id}`,
+          `Plugin name required for server-side plugin loading: ${id}`,
         );
-        error.code = 'INTERNAL_ID_REQUIRED';
+        error.code = 'PLUGIN_NAME_REQUIRED';
         error.pluginId = id;
         throw error;
       }
@@ -223,8 +365,8 @@ class ServerPluginManager extends BasePluginManager {
 
       // 1. Load View Module if browser entry exists
       if (manifest && manifest.browser) {
-        const bundlePath = this.getPluginBundlePath(
-          path.join(internalId, path.dirname(manifest.browser)),
+        const bundlePath = this._getPluginBundlePath(
+          path.join(pluginDir, path.dirname(manifest.browser)),
           'server.js',
         );
         if (__DEV__) {
@@ -238,8 +380,8 @@ class ServerPluginManager extends BasePluginManager {
 
       // 2. Boot API if main entry exists
       if (manifest && manifest.main) {
-        const apiBundlePath = this.getPluginBundlePath(
-          internalId,
+        const apiBundlePath = this._getPluginBundlePath(
+          pluginDir,
           manifest.main,
         );
         try {
@@ -254,7 +396,7 @@ class ServerPluginManager extends BasePluginManager {
             try {
               await pluginApi.init(this.registry, this[PLUGIN_CONTEXT]);
               // Store API instance for destroy during unload
-              this[PLUGIN_API_INSTANCES].set(id, pluginApi);
+              this[PLUGIN_API_ENTRY_POINTS].set(id, pluginApi);
             } catch (error) {
               console.error(
                 `[ServerPluginManager] Failed to boot API for ${id}:`,
@@ -310,11 +452,10 @@ class ServerPluginManager extends BasePluginManager {
       const error = new Error(`Failed to load plugin "${id}": ${err.message}`);
       error.code = err.code || 'PLUGIN_LOAD_FAILED';
       error.pluginId = id;
-      error.internalId = internalId;
       error.originalError = err;
 
       console.error(`[ServerPluginManager] ${error.message}`, {
-        internalId,
+        pluginDir,
         pluginId: id,
         version: currentVersion,
         error: err.message,

@@ -1,20 +1,14 @@
 /**
- * React Starter Kit (https://github.com/xuanhoa/rapid-rsk/)
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
  * This source code is licensed under the MIT license found in the
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  BasePluginManager,
-  LOADED_VERSIONS,
-  PLUGIN_CONTEXT,
-  PLUGIN_MANAGER_INIT,
-  PLUGIN_METADATA,
-} from './base';
+import { BasePluginManager, PLUGIN_MANAGER_INIT } from './base';
 
 // Private symbol for reload state
-const NEEDS_RELOAD = Symbol('__rsk.needsReload__');
+const NEEDS_RELOAD = Symbol('__rsk.needsReloadPlugins__');
 
 class ClientPluginManager extends BasePluginManager {
   constructor() {
@@ -22,62 +16,57 @@ class ClientPluginManager extends BasePluginManager {
 
     this[NEEDS_RELOAD] = false;
 
-    // Clean up DOM resources when plugin is unloaded
-    this.on('plugin:unloaded', ({ id }) => {
-      try {
-        // Remove CSS links (SSR-injected or dynamically added)
-        const cssLinks = document.querySelectorAll(
-          `link[href^="/api/plugins/${id}/static/"][rel="stylesheet"]`,
-        );
-        cssLinks.forEach(link => {
-          link.remove();
-          if (__DEV__) {
-            console.log(`[PluginManager] Removed CSS: ${link.href}`);
-          }
-        });
+    // Inject CSS and script tags when a plugin is loaded at runtime
+    this.on('plugin:loaded', ({ id, manifest }) => {
+      if (!manifest) return;
 
-        // Remove JS scripts (by plugin ID data attribute)
-        const scripts = document.querySelectorAll(
-          `script[data-plugin-id="${id}"]`,
-        );
-        scripts.forEach(script => {
-          script.remove();
+      const version = manifest.version || '0.0.0';
+
+      // Inject plugin.css
+      if (manifest.hasClientCss) {
+        if (!document.querySelector(`link[data-plugin-id="${id}"]`)) {
+          const href = this.getPluginAssetUrl(id, `plugin.css?v=${version}`);
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.href = href;
+          link.setAttribute('data-plugin-id', id);
+          document.head.appendChild(link);
           if (__DEV__) {
-            console.log(`[PluginManager] Removed script for: ${id}`);
+            console.log(`[PluginManager] Injected CSS: ${href}`);
           }
-        });
-      } catch (error) {
-        console.error(
-          `[PluginManager] Failed to remove resources for ${id}:`,
-          error,
-        );
-        this.emit('plugin:error', { id, error, phase: 'dom-cleanup' });
+        }
+      }
+
+      // Inject remote.js (MF container)
+      if (manifest.hasClientScript) {
+        if (!document.querySelector(`script[data-plugin-id="${id}"]`)) {
+          const src = this.getPluginAssetUrl(id, `remote.js?v=${version}`);
+          const script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.setAttribute('data-plugin-id', id);
+          document.body.appendChild(script);
+          if (__DEV__) {
+            console.log(`[PluginManager] Injected script: ${src}`);
+          }
+        }
       }
     });
 
-    // Inject CSS when plugin is loaded dynamically
-    this.on('plugin:loaded', ({ id, manifest }) => {
-      try {
-        if (manifest && Array.isArray(manifest.cssFiles)) {
-          manifest.cssFiles.forEach(cssFile => {
-            const href = this.getPluginAssetUrl(id, cssFile);
-            // Skip if already present (e.g. SSR-injected)
-            if (document.querySelector(`link[href="${href}"]`)) {
-              return;
-            }
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = href;
-            link.setAttribute('data-plugin-id', id);
-            document.head.appendChild(link);
-            if (__DEV__) {
-              console.log(`[PluginManager] Injected CSS: ${href}`);
-            }
-          });
-        }
-      } catch (error) {
-        console.error(`[PluginManager] Failed to inject CSS for ${id}:`, error);
-        this.emit('plugin:error', { id, error, phase: 'css-inject' });
+    // Remove CSS and script tags when a plugin is unloaded at runtime
+    this.on('plugin:unloaded', ({ id }) => {
+      // Remove CSS links
+      document
+        .querySelectorAll(`link[data-plugin-id="${id}"]`)
+        .forEach(el => el.remove());
+
+      // Remove script tags
+      document
+        .querySelectorAll(`script[data-plugin-id="${id}"]`)
+        .forEach(el => el.remove());
+
+      if (__DEV__) {
+        console.log(`[PluginManager] Removed resources for: ${id}`);
       }
     });
   }
@@ -90,52 +79,6 @@ class ClientPluginManager extends BasePluginManager {
   /** @private */
   set needsReload(value) {
     this[NEEDS_RELOAD] = value;
-  }
-
-  /**
-   * Load a script dynamically
-   * @param {string} url - Script URL
-   * @param {string} pluginId - Plugin ID for cleanup tracking
-   * @param {Object} options - Loading options
-   * @returns {Promise<void>}
-   */
-  async loadScript(url, pluginId, options = {}) {
-    return new Promise((resolve, reject) => {
-      let script = document.querySelector(`script[src="${url}"]`);
-
-      // Check if already loaded
-      if (script && script.complete) {
-        return resolve();
-      }
-
-      if (!script) {
-        script = document.createElement('script');
-        script.src = url;
-        script.async = options.async !== false;
-        script.setAttribute('data-plugin-id', pluginId);
-        document.body.appendChild(script);
-      }
-
-      // If link exists (SSR or just created) but not loaded, wait for it
-      const handleLoad = () => {
-        script.removeEventListener('load', handleLoad);
-        script.removeEventListener('error', handleError);
-        resolve();
-      };
-
-      const handleError = e => {
-        script.removeEventListener('load', handleLoad);
-        script.removeEventListener('error', handleError);
-        const error = new Error(`Failed to load script: ${url}`);
-        error.code = 'SCRIPT_LOAD_FAILED';
-        error.url = url;
-        error.originalError = e;
-        reject(error);
-      };
-
-      script.addEventListener('load', handleLoad);
-      script.addEventListener('error', handleError);
-    });
   }
 
   /**
@@ -228,13 +171,65 @@ class ClientPluginManager extends BasePluginManager {
   }
 
   /**
+   * Load a script and wait for it to finish executing.
+   * Re-uses an existing SSR-injected <script> tag if present.
+   * @param {string} url - Script URL
+   * @param {string} pluginId - Plugin ID for tracking
+   * @returns {Promise<void>}
+   * @private
+   */
+  // eslint-disable-next-line class-methods-use-this
+  _loadScript(url, pluginId) {
+    return new Promise((resolve, reject) => {
+      // Find by data-plugin-id (handles SSR scripts with different ?v= params)
+      let script = document.querySelector(
+        `script[data-plugin-id="${pluginId}"]`,
+      );
+
+      // Already present and fully loaded
+      if (script && script.getAttribute('data-loaded')) {
+        return resolve();
+      }
+
+      if (!script) {
+        script = document.createElement('script');
+        script.src = url;
+        script.async = true;
+        script.setAttribute('data-plugin-id', pluginId);
+        document.body.appendChild(script);
+      }
+
+      const cleanup = () => {
+        script.removeEventListener('load', onLoad);
+        script.removeEventListener('error', onError);
+      };
+      const onLoad = () => {
+        script.setAttribute('data-loaded', 'true');
+        cleanup();
+        resolve();
+      };
+      const onError = e => {
+        cleanup();
+        const error = new Error(`Failed to load script: ${url}`);
+        error.code = 'SCRIPT_LOAD_FAILED';
+        error.url = url;
+        error.originalError = e;
+        reject(error);
+      };
+
+      script.addEventListener('load', onLoad);
+      script.addEventListener('error', onError);
+    });
+  }
+
+  /**
    * Resolve the plugin entry point based on manifest
    * @param {Object} manifest - Plugin manifest
    * @returns {string|null} Entry point filename or null to skip
    */
   resolveEntryPoint(manifest) {
-    // If browser entry exists, we always load 'remote.js' which is the Webpack MF container
-    return manifest && manifest.browser ? 'remote.js' : null;
+    // If the build produced a remote.js, load it as the Webpack MF container
+    return manifest && manifest.hasClientScript ? 'remote.js' : null;
   }
 
   /**
@@ -255,8 +250,6 @@ class ClientPluginManager extends BasePluginManager {
       return null;
     }
 
-    const startTime = Date.now();
-    const currentVersion = (manifest && manifest.version) || '0.0.0';
     const containerName = options && options.containerName;
 
     try {
@@ -264,26 +257,19 @@ class ClientPluginManager extends BasePluginManager {
       // eslint-disable-next-line no-underscore-dangle
       await this._ensureReady();
 
-      // Version-based cache invalidation via URL query parameter
-      const loadedVersion = this[LOADED_VERSIONS].get(id);
-      const versionChanged = currentVersion && loadedVersion !== currentVersion;
-
-      // Load remote.js (MF container)
-      const baseUrl = this.getPluginAssetUrl(id, entryPoint);
-      const scriptUrl = versionChanged
-        ? `${baseUrl}?v=${currentVersion}`
-        : baseUrl;
-
-      if (__DEV__) {
-        console.log(
-          `[ClientPluginManager] Loading plugin ${id} from ${scriptUrl}`,
-        );
+      // If the MF container is not yet on window (SSR script hasn't
+      // executed or was not injected), load the script dynamically.
+      if (!window[containerName]) {
+        const scriptUrl = this.getPluginAssetUrl(id, entryPoint);
+        if (__DEV__) {
+          console.log(
+            `[ClientPluginManager] Container ${containerName} not on window, loading ${scriptUrl}`,
+          );
+        }
+        // eslint-disable-next-line no-underscore-dangle
+        await this._loadScript(scriptUrl, id);
       }
 
-      // Load the plugin script
-      await this.loadScript(scriptUrl, id);
-
-      // Get the container from window
       const container = window[containerName];
       if (!container) {
         const error = new Error(
@@ -300,20 +286,8 @@ class ClientPluginManager extends BasePluginManager {
       // Get the exposed plugin module
       const pluginModule = await this.getContainerModule(container);
 
-      // Track loaded version for future cache invalidation
-      this[LOADED_VERSIONS].set(id, currentVersion);
-
-      // Performance monitoring
-      const loadTime = Date.now() - startTime;
       if (__DEV__) {
-        console.log(
-          `[ClientPluginManager] Successfully loaded plugin: ${id} v${currentVersion} (${loadTime}ms)`,
-        );
-        if (loadTime > 500) {
-          console.warn(
-            `[ClientPluginManager] Slow plugin load detected: ${id} took ${loadTime}ms`,
-          );
-        }
+        console.log(`[ClientPluginManager] Successfully loaded plugin: ${id}`);
       }
 
       return pluginModule.default || pluginModule;
@@ -328,7 +302,6 @@ class ClientPluginManager extends BasePluginManager {
       console.error(`[ClientPluginManager] ${error.message}`, {
         pluginId: id,
         containerName,
-        version: currentVersion,
         error: err.message,
         stack: __DEV__ ? err.stack : undefined,
       });
@@ -355,63 +328,24 @@ class ClientPluginManager extends BasePluginManager {
     }
 
     const { type, pluginId, data } = event;
+    const manifest = data && data.manifest;
 
-    try {
-      switch (type) {
-        case 'PLUGIN_INSTALLED':
-          await this.loadPlugin(pluginId, data && data.manifest);
-          this.needsReload = true;
-          break;
+    switch (type) {
+      case 'PLUGIN_INSTALLED':
+      case 'PLUGIN_UPDATED':
+        // Instantly inject CSS/script so user sees the effect
+        await this.emit('plugin:loaded', { id: pluginId, manifest });
+        this.needsReload = true;
+        break;
 
-        case 'PLUGIN_UNINSTALLED': {
-          // Resolve the registry plugin name (logical name differs from UUID)
-          const metadata = this[PLUGIN_METADATA].get(pluginId);
-          const manifestName =
-            (data && data.manifest && data.manifest.name) ||
-            (metadata && metadata.manifest && metadata.manifest.name);
+      case 'PLUGIN_UNINSTALLED':
+        // Remove CSS/script tags from the DOM
+        await this.emit('plugin:unloaded', { id: pluginId });
+        this.needsReload = true;
+        break;
 
-          // Try unloading via ACTIVE_PLUGINS (uses logical name from loadNamespace)
-          if (manifestName && this.isPluginLoaded(manifestName)) {
-            await this.unloadPlugin(manifestName);
-          } else if (manifestName) {
-            // Plugin was defined but not activated in a namespace.
-            // Clean up registry (slots, hooks) and emit unloaded for DOM cleanup.
-            await this.registry.unregister(manifestName, this[PLUGIN_CONTEXT]);
-          }
-
-          // Remove definition to prevent re-loading via loadNamespace
-          if (manifestName) {
-            this.registry.undefine(manifestName);
-          }
-
-          // Clean up metadata and DOM resources (using UUID)
-          this[PLUGIN_METADATA].delete(pluginId);
-          this[LOADED_VERSIONS].delete(pluginId);
-          await this.emit('plugin:unloaded', { id: pluginId });
-
-          this.needsReload = true;
-          break;
-        }
-
-        case 'PLUGIN_UPDATED': {
-          // If plugin is loaded, unload it first
-          if (this.isPluginLoaded(pluginId)) {
-            await this.unloadPlugin(pluginId);
-          }
-          // Then install the new version
-          await this.loadPlugin(pluginId, data && data.manifest);
-          this.needsReload = true;
-          break;
-        }
-
-        default:
-          console.warn(`[ClientPluginManager] Unknown event type: ${type}`);
-      }
-    } catch (error) {
-      console.error(
-        `[ClientPluginManager] Error handling event "${type}":`,
-        error,
-      );
+      default:
+        console.warn(`[ClientPluginManager] Unknown event type: ${type}`);
     }
   }
 }

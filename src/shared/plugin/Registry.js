@@ -140,27 +140,34 @@ class PluginRegistry {
   // =========================================================================
 
   /**
-   * Register a plugin definition (from register() export)
-   * Expected format: { register: () => [{ namespace }, { id, ... }], install, uninstall }
-   * @param {Object} definition - Plugin definition object
+   * Register a plugin definition using manifest metadata
+   * Namespaces and identity come from the manifest's rsk.subscribe, rsk.name, and description fields.
+   * @param {Object} definition - Plugin definition object (init, destroy, translations)
    * @param {Object} context - Plugin context
+   * @param {Object} manifest - Plugin manifest from package.json
    */
-  define(definition, context) {
-    if (typeof definition.register !== 'function') {
+  define(definition, context, manifest) {
+    if (!manifest || !manifest.rsk) {
       console.warn(
-        '[PluginRegistry] Invalid plugin definition: missing register()',
+        '[PluginRegistry] Invalid plugin definition: missing manifest or rsk key',
       );
       return this;
     }
 
-    const [nsOrArr, id, meta] = definition.register(context);
+    const namespaces = manifest.rsk.subscribe || [];
+    const pluginId = manifest.name;
+    const meta = { description: manifest.description };
 
-    if (!nsOrArr) {
-      console.warn('[PluginRegistry] Plugin definition missing ns (namespace)');
+    if (!pluginId) {
+      console.warn('[PluginRegistry] Plugin definition missing name');
       return this;
     }
 
-    const namespaces = Array.isArray(nsOrArr) ? nsOrArr : [nsOrArr];
+    if (namespaces.length === 0) {
+      console.warn(
+        `[PluginRegistry] Plugin "${pluginId}" has no subscribed namespaces`,
+      );
+    }
 
     for (const ns of namespaces) {
       if (!this[DEFINITIONS].has(ns)) {
@@ -172,14 +179,13 @@ class PluginRegistry {
       const newDef = {
         ...definition,
         ...meta,
-        id,
         context,
-        name: meta.name || id,
+        name: pluginId,
       };
 
       // Remove existing definition with same ID if present (update/overwrite)
       for (const def of definitions) {
-        if (def.id === id) {
+        if (def.name === pluginId) {
           definitions.delete(def);
           break;
         }
@@ -199,7 +205,7 @@ class PluginRegistry {
   findDefinition(id) {
     for (const [, definitions] of this[DEFINITIONS]) {
       for (const def of definitions) {
-        if (def.id === id) return def;
+        if (def.name === id) return def;
       }
     }
     return null;
@@ -214,7 +220,7 @@ class PluginRegistry {
     let removed = false;
     for (const [, definitions] of this[DEFINITIONS]) {
       for (const def of definitions) {
-        if (def.id === id) {
+        if (def.name === id) {
           definitions.delete(def);
           removed = true;
           // Don't break here, as plugin might be defined in multiple namespaces

@@ -29,11 +29,6 @@ export async function middleware({ store, pathname }, next) {
 }
 
 /**
- * Plugin workspace to load
- */
-export const workspace = 'profile';
-
-/**
  * Mount Hook - Runs when entering the route
  */
 export async function mount() {
