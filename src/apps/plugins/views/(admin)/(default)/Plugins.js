@@ -17,6 +17,8 @@ import {
   ConfirmModal,
 } from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
+import { useWebSocket } from '../../../../../shared/ws/client';
+import { showWarningMessage } from '../../../../../shared/renderer/redux/features/ui/slice';
 import PluginCard from './components/PluginCard';
 import {
   fetchPlugins,
@@ -54,6 +56,31 @@ function Plugins() {
   useEffect(() => {
     dispatch(fetchPlugins());
   }, [dispatch]);
+
+  // Listen for background job completion via WebSocket to refresh plugin list
+  const ws = useWebSocket();
+  useEffect(() => {
+    if (!ws) return;
+    const handler = data => {
+      dispatch(fetchPlugins());
+
+      // Show flash warning when a tampered plugin is detected
+      if (data && data.type === 'PLUGIN_TAMPERED') {
+        dispatch(
+          showWarningMessage({
+            message: t(
+              'admin:plugins.tampered',
+              'A plugin failed integrity verification and has been deactivated for security.',
+            ),
+          }),
+        );
+      }
+    };
+    ws.on('plugin:updated', handler);
+    return () => {
+      ws.off('plugin:updated', handler);
+    };
+  }, [ws, dispatch, t]);
 
   const handleSearchChange = useCallback(value => {
     setSearch(value);

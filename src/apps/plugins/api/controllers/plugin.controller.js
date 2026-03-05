@@ -55,6 +55,18 @@ export const getPlugin = async (req, res) => {
       },
       req.params.id,
     );
+
+    // Broadcast tamper warning via WS so admin UI shows a flash message
+    if (pluginData.manifest && pluginData.manifest.isTampered) {
+      const ws = req.app.get('ws');
+      if (ws) {
+        ws.sendToPublicChannel('plugin:updated', {
+          type: 'PLUGIN_TAMPERED',
+          pluginId: req.params.id,
+        });
+      }
+    }
+
     return http.sendSuccess(res, pluginData);
   } catch (err) {
     return http.sendServerError(res, 'Failed to get plugin details', err);
@@ -98,6 +110,7 @@ export const managePlugins = async (req, res) => {
       cwd: req.app.get('cwd'),
       webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
+      queue: req.app.get('queue'),
     });
     return http.sendSuccess(res, { plugins });
   } catch (err) {
@@ -122,9 +135,8 @@ export const deletePlugin = async (req, res) => {
       models,
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
-      pluginManager: req.app.get('plugin'),
-      webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
+      queue: req.app.get('queue'),
     });
 
     const ws = req.app.get('ws');
@@ -170,21 +182,26 @@ export const uploadPlugin = async (req, res) => {
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
       fs,
-      pluginManager: req.app.get('plugin'),
-      webhook: req.app.get('webhook'),
       actorId: req.user ? req.user.id : null,
+      queue: req.app.get('queue'),
     });
+
+    // Convert to plain object and inject active job status for immediate frontend feedback
+    const pluginData = {
+      ...(typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin),
+      job_status: 'ACTIVE',
+    };
 
     const ws = req.app.get('ws');
     ws.sendToPublicChannel('plugin:updated', {
       type: 'PLUGIN_INSTALLED',
-      pluginId: plugin.id,
-      data: { manifest: plugin },
+      pluginId: pluginData.id,
+      data: { manifest: pluginData },
     });
 
     return http.sendSuccess(
       res,
-      { plugin, message: 'Plugin installed successfully' },
+      { plugin: pluginData, message: 'Plugin installed successfully' },
       201,
     );
   } catch (error) {
@@ -213,20 +230,25 @@ export const updatePluginStatus = async (req, res) => {
         models,
         cache: req.app.get('cache'),
         cwd: req.app.get('cwd'),
-        pluginManager: req.app.get('plugin'),
-        webhook: req.app.get('webhook'),
         actorId: req.user ? req.user.id : null,
+        queue: req.app.get('queue'),
       },
     );
+
+    // Convert to plain object and inject active job status for immediate frontend feedback
+    const pluginData = {
+      ...(typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin),
+      job_status: 'ACTIVE',
+    };
 
     const ws = req.app.get('ws');
     ws.sendToPublicChannel('plugin:updated', {
       type: result.is_active ? 'PLUGIN_INSTALLED' : 'PLUGIN_UNINSTALLED',
       pluginId: id,
-      data: { manifest: plugin },
+      data: { manifest: pluginData },
     });
 
-    return http.sendSuccess(res, { plugin });
+    return http.sendSuccess(res, { plugin: pluginData });
   } catch (error) {
     return http.sendServerError(res, 'Failed to update plugin status', error);
   }

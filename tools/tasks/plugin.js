@@ -8,13 +8,13 @@
 const webpack = require('webpack');
 const path = require('path');
 const fs = require('fs');
-const crypto = require('crypto');
 const snakeCase = require('lodash/snakeCase');
 const pick = require('lodash/pick');
 const semver = require('semver');
 const config = require('../config');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { toContainerName } = require('../utils/plugin');
+const { computeChecksum } = require('../utils/checksum');
 const createPluginConfig = require('../webpack/plugin.config');
 
 // Configuration
@@ -60,34 +60,11 @@ function discoverPlugins() {
     })
     .filter(Boolean);
 }
-
-/**
- * Compute SHA-256 checksum of all built files in a directory
- * @param {string} dir - Directory path
- * @returns {string} Hex-encoded SHA-256 hash
- */
-function computeChecksum(dir) {
-  const hash = crypto.createHash('sha256');
-  const files = fs.readdirSync(dir).sort();
-
-  for (const file of files) {
-    const filePath = path.join(dir, file);
-    const stat = fs.statSync(filePath);
-
-    if (stat.isFile() && file !== 'package.json') {
-      hash.update(file); // Include filename for ordering
-      hash.update(fs.readFileSync(filePath));
-    }
-  }
-
-  return hash.digest('hex');
-}
-
 /**
  * Generate package.json for each built plugin
  * @param {Array} plugins - Array of plugin objects
  */
-function generateManifests(plugins) {
+async function generateManifests(plugins) {
   for (const { name, version, manifest } of plugins) {
     const outputDir = path.join(PLUGINS_BUILD_DIR, name);
 
@@ -96,7 +73,7 @@ function generateManifests(plugins) {
     }
 
     // Compute checksum of all built files
-    const checksum = computeChecksum(outputDir);
+    const checksum = await computeChecksum(outputDir);
 
     const outputManifest = {
       ...pick(manifest, [
@@ -251,10 +228,21 @@ async function buildPlugins(options = {}) {
       // If run via dev.js, it continues to next step.
 
       return new Promise(resolve => {
-        watcher.watch({ aggregateTimeout: 300 }, () => {
-          // Resolve on first build (even if placeholder)
-          resolve();
-        });
+        watcher.watch(
+          {
+            ignored: [
+              '**/node_modules/**',
+              '**/*.test.js',
+              '**/*.spec.js',
+              '**/__tests__/**',
+            ],
+            aggregateTimeout: 300,
+          },
+          () => {
+            // Resolve on first build (even if placeholder)
+            resolve();
+          },
+        );
       });
     }
     return;
@@ -273,7 +261,7 @@ async function buildPlugins(options = {}) {
   return new Promise((resolve, reject) => {
     let initialBuildComplete = false;
 
-    const onBuild = (err, stats) => {
+    const onBuild = async (err, stats) => {
       const error = handleBuildResult(err, stats, isWatch);
 
       if (error && !isWatch) {
@@ -281,7 +269,7 @@ async function buildPlugins(options = {}) {
         return;
       }
 
-      generateManifests(plugins);
+      await generateManifests(plugins);
 
       const duration = Date.now() - start;
       logInfo(`✅ Plugin build completed in ${formatDuration(duration)}`);
@@ -313,7 +301,18 @@ async function buildPlugins(options = {}) {
 
     if (isWatch) {
       logInfo('👀 Watching for plugin changes...');
-      compiler.watch({ aggregateTimeout: 300 }, onBuild);
+      compiler.watch(
+        {
+          ignored: [
+            '**/node_modules/**',
+            '**/*.test.js',
+            '**/*.spec.js',
+            '**/__tests__/**',
+          ],
+          aggregateTimeout: 300,
+        },
+        onBuild,
+      );
     } else {
       compiler.run(onBuild);
     }

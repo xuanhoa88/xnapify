@@ -445,7 +445,12 @@ function setupServerBundleWatcher(serverCompiler) {
   // Start watch mode on the server compiler
   serverCompiler.watch(
     {
-      ignored: /node_modules/,
+      ignored: [
+        '**/node_modules/**',
+        '**/*.test.js',
+        '**/*.spec.js',
+        '**/__tests__/**',
+      ],
       aggregateTimeout: 200,
       followSymlinks: false,
       // poll: 500 // uncomment for WSL/VM/Docker

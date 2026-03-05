@@ -12,6 +12,7 @@ import { execFile } from 'child_process';
 import { promisify } from 'util';
 import { encryptPluginId, decryptPluginId } from '../utils/crypto';
 import { logPluginActivity } from '../utils/activity';
+import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
 
 // Promisify execFile
 const execFileAsync = promisify(execFile);
@@ -174,7 +175,7 @@ export async function readPluginManifest(pluginsDir, pluginName) {
  * @param {string} options.cwd - Current working directory
  * @returns {Promise<Array>} Array of plugin objects
  */
-export async function managePlugins({ models, cwd }) {
+export async function managePlugins({ models, cwd, queue }) {
   const installedPluginsDir = resolvePluginsDir(cwd, getPluginPath());
   const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
 
@@ -237,6 +238,41 @@ export async function managePlugins({ models, cwd }) {
 
   // Convert Map to Array
   plugins.push(...fsPluginsMap.values());
+
+  // Attach job_status if there are active queue jobs for these plugins
+  if (queue) {
+    const queueChannel = queue('plugins');
+    if (
+      queueChannel &&
+      queueChannel.queue &&
+      typeof queueChannel.queue.getJobs === 'function'
+    ) {
+      const allJobs = queueChannel.queue.getJobs();
+      const busyJobs = allJobs.filter(j =>
+        ['pending', 'active', 'delayed'].includes(j.status),
+      );
+      const busyPluginIds = new Set();
+      const busyPluginKeys = new Set();
+
+      for (const job of busyJobs) {
+        if (job.data.pluginId) busyPluginIds.add(job.data.pluginId);
+        if (job.data.pluginKey) busyPluginKeys.add(job.data.pluginKey);
+        // Special case for install which might only have pluginDir/pluginName before DB is known
+        if (job.data.pluginDir)
+          busyPluginKeys.add(path.basename(job.data.pluginDir));
+      }
+
+      for (const p of plugins) {
+        if (
+          busyPluginIds.has(p.id) ||
+          busyPluginKeys.has(p.key) ||
+          busyPluginKeys.has(p.name)
+        ) {
+          p.job_status = 'ACTIVE';
+        }
+      }
+    }
+  }
 
   console.debug(`[managePlugins] Total plugins found: ${plugins.length}`);
 
@@ -333,10 +369,7 @@ export async function getActivePlugins({ models, cache, cwd }) {
  * @param {string} id - Plugin UUID or encrypted plugin key
  * @param {Object} context - App context
  */
-export async function deletePlugin(
-  id,
-  { models, cache, cwd, pluginManager, webhook, actorId },
-) {
+export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
   const { Plugin } = models;
 
   // 1. Resolve plugin record (same pattern as togglePluginStatus)
@@ -356,86 +389,20 @@ export async function deletePlugin(
     throw err;
   }
 
-  // 1.5. Run uninstall lifecycle hook before unloading
-  if (pluginManager && cwd) {
-    try {
-      // Read the manifest from disk so we can locate the API bundle
-      const dirs = [
-        resolvePluginsDir(cwd, getPluginPath()),
-        resolvePluginsDir(cwd, getDevPluginPath()),
-      ];
-      let manifest = null;
-      for (const baseDir of dirs) {
-        const pkgPath = path.join(baseDir, plugin.key, 'package.json');
-        if (fs.existsSync(pkgPath)) {
-          manifest = JSON.parse(fs.readFileSync(pkgPath, 'utf8'));
-          break;
-        }
-      }
-      if (manifest) {
-        await pluginManager.uninstallPlugin(plugin.key, manifest);
-      }
-    } catch (err) {
-      console.warn(
-        `[pluginService] Failed to run uninstall hook for ${plugin.key}:`,
-        err.message,
-      );
-    }
+  // 1.5. Check if we have context to enqueue the deletion
+  if (queue && cwd) {
+    const queueChannel = queue('plugins');
+    queueChannel.emit('delete', {
+      pluginId: plugin.id,
+      pluginKey: plugin.key,
+      actorId,
+    });
+  } else {
+    // Fallback if app context is missing: destroy DB record immediately
+    await plugin.destroy();
   }
 
-  // 2. Unload the plugin via PluginManager before deleting files
-  if (pluginManager) {
-    try {
-      if (pluginManager.isPluginLoaded(plugin.id)) {
-        await pluginManager.unloadPlugin(plugin.id);
-      } else {
-        await pluginManager.emit('plugin:unloaded', { id: plugin.id });
-      }
-    } catch (err) {
-      console.warn(
-        `[pluginService] Failed to unload plugin ${plugin.id} via PluginManager:`,
-        err.message,
-      );
-    }
-  }
-
-  // 3. Delete from FS — check both installed and dev directories
-  if (cwd) {
-    const dirs = [
-      resolvePluginsDir(cwd, getPluginPath()),
-      resolvePluginsDir(cwd, getDevPluginPath()),
-    ];
-
-    for (const baseDir of dirs) {
-      const pluginDir = path.join(baseDir, plugin.key);
-      const relative = path.relative(baseDir, pluginDir);
-
-      // Safety: only delete if the resolved path is inside the base dir
-      if (
-        relative &&
-        !relative.startsWith('..') &&
-        !path.isAbsolute(relative)
-      ) {
-        if (fs.existsSync(pluginDir)) {
-          // Uninstall dependencies first before deleting the folder
-          await uninstallPluginDependencies(pluginDir, plugin);
-          await fs.promises.rm(pluginDir, { recursive: true, force: true });
-        }
-      }
-    }
-  }
-
-  // 4. Remove DB record and invalidate cache
-  await plugin.destroy();
   if (cache) await invalidateCache(cache);
-
-  await logPluginActivity(
-    webhook,
-    'deleted',
-    plugin.id,
-    { key: plugin.key },
-    actorId,
-  );
 
   return true;
 }
@@ -512,8 +479,9 @@ export async function getPluginById({ cwd, models, cache }, id) {
     // remote.js might not exist if plugin has no remote or build failed
   }
 
-  // Validate checksum against DB (if both values exist)
-  if (models) {
+  // Validate checksum against DB (only for production plugins, not dev)
+  const isDevPlugin = resolvedDir === localPluginsDir;
+  if (models && !isDevPlugin) {
     const { Plugin } = models;
     const dbPlugin = await Plugin.findOne({ where: { key: pluginKey } });
     if (
@@ -523,10 +491,20 @@ export async function getPluginById({ cwd, models, cache }, id) {
       manifest.rsk.checksum &&
       dbPlugin.checksum !== manifest.rsk.checksum
     ) {
-      console.warn(
-        `[pluginService] Checksum mismatch for plugin "${pluginKey}": ` +
-          `DB=${dbPlugin.checksum}, manifest=${manifest.rsk.checksum}`,
+      console.error(
+        `[pluginService] ⛔ Checksum mismatch for plugin "${pluginKey}": ` +
+          `DB=${dbPlugin.checksum}, manifest=${manifest.rsk.checksum}. ` +
+          `Auto-deactivating plugin — possible code tampering detected.`,
       );
+
+      // Auto-deactivate the tampered plugin
+      await dbPlugin.update({ is_active: false });
+
+      // Invalidate cache so stale data isn't served
+      if (cache) await invalidateCache(cache, dbPlugin.id);
+
+      // Flag it so the frontend can display a warning
+      manifest.isTampered = true;
     }
   }
 
@@ -593,7 +571,7 @@ export async function getPluginStaticDir({ cwd, models }, id) {
  */
 export async function installPluginFromPackage(
   file,
-  { models, cache, cwd, fs: fsEngine, pluginManager, webhook, actorId },
+  { models, cache, cwd, fs: fsEngine, actorId, queue },
 ) {
   if (!file || !file.path) {
     const err = new Error('No file provided');
@@ -691,33 +669,6 @@ export async function installPluginFromPackage(
 
     await fs.promises.rename(pluginRoot, finalPluginDir);
 
-    // 5.5 Install plugin dependencies if any
-    if (
-      manifest.dependencies &&
-      Object.keys(manifest.dependencies).length > 0
-    ) {
-      console.info(
-        `[pluginService] Installing backend dependencies for ${pluginName} (omit=dev)...`,
-      );
-      try {
-        await installPluginDependencies(finalPluginDir);
-        console.info(
-          `[pluginService] Successfully installed dependencies for ${pluginName}`,
-        );
-      } catch (installErr) {
-        console.error(
-          `[pluginService] Failed to install dependencies for ${pluginName}:`,
-          installErr,
-        );
-        const err = new Error(
-          `Failed to install plugin dependencies: ${installErr.message}`,
-        );
-        err.name = 'PluginInstallDependenciesError';
-        err.status = 500;
-        throw err;
-      }
-    }
-
     // 6. Create or update DB record
     const [plugin, created] = await Plugin.findOrCreate({
       where: { key: pluginName },
@@ -740,48 +691,15 @@ export async function installPluginFromPackage(
       });
     }
 
-    if (cache) await invalidateCache(cache);
-
-    // 7. Load the plugin via PluginManager
-    if (pluginManager) {
-      if (created) {
-        try {
-          await pluginManager.installPlugin(pluginName, manifest);
-        } catch (err) {
-          console.warn(
-            `[pluginService] Failed to run install hook for ${pluginName}:`,
-            err.message,
-          );
-        }
-      }
-
-      try {
-        await pluginManager.reloadPlugin(plugin.id);
-
-        const metadata = pluginManager.getPluginMetadata(plugin.id);
-        if (
-          metadata &&
-          metadata.manifest &&
-          !pluginManager.isPluginLoaded(plugin.id)
-        ) {
-          await pluginManager.emit('plugin:loaded', { id: plugin.id });
-        }
-      } catch (err) {
-        console.warn(
-          `[pluginService] Failed to load plugin ${plugin.id} via PluginManager:`,
-          err.message,
-        );
-      }
-    }
-
-    // 8. Log activity
-    await logPluginActivity(
-      webhook,
-      created ? 'installed' : 'upgraded',
-      plugin.id,
-      { version: pluginVersion },
+    // 7. Enqueue the heavy dependencies install and module reload
+    const queueChannel = queue('plugins');
+    queueChannel.emit('install', {
+      pluginDir: finalPluginDir,
+      pluginId: plugin.id,
       actorId,
-    );
+    });
+
+    if (cache) await invalidateCache(cache);
 
     return plugin;
   } catch (err) {
@@ -814,7 +732,7 @@ export async function installPluginFromPackage(
 export async function togglePluginStatus(
   id,
   isActive,
-  { models, cache, cwd, pluginManager, webhook, actorId },
+  { models, cache, cwd, actorId, queue },
 ) {
   const { Plugin } = models;
 
@@ -885,6 +803,7 @@ export async function togglePluginStatus(
 
   // Resolve plugin physical directory on disk
   let pluginDir = null;
+  let isDevPlugin = false;
   if (cwd && plugin.key) {
     const prodPath = path.join(
       resolvePluginsDir(cwd, getPluginPath()),
@@ -899,78 +818,25 @@ export async function togglePluginStatus(
       pluginDir = prodPath;
     } else if (fs.existsSync(devPath)) {
       pluginDir = devPath;
-    }
-  }
-
-  // Handle NPM dependencies based on toggle state
-  if (pluginDir) {
-    if (isActive) {
-      // Install dependencies when activating
-      try {
-        if (__DEV__) {
-          console.log(`[PluginService] Running npm install in ${pluginDir}`);
-        }
-        await installPluginDependencies(pluginDir);
-        if (__DEV__) {
-          console.log('[PluginService] npm install completed successfully');
-        }
-      } catch (npmErr) {
-        console.error('[PluginService] npm install failed:', npmErr);
-        const err = new Error(
-          `Failed to install dependencies for plugin ${plugin.name}`,
-        );
-        err.status = 500;
-        throw err;
-      }
-    } else {
-      // Uninstall dependencies when deactivating
-      await uninstallPluginDependencies(pluginDir, plugin);
+      isDevPlugin = true;
     }
   }
 
   await plugin.update({ is_active: isActive });
   if (cache) await invalidateCache(cache, id);
 
-  // Notify Plugin Manager to load/unload the plugin
-  if (pluginManager) {
-    try {
-      if (isActive) {
-        // Use reloadPlugin to ensure a clean load (handles stale state)
-        await pluginManager.reloadPlugin(plugin.id);
-
-        // If loadPlugin hit an early return (no server entry point),
-        // plugin:loaded may not have fired — manually emit it so the
-        // CSS entry-point handler in ServerPluginManager picks it up.
-        const metadata = pluginManager.getPluginMetadata(plugin.id);
-        if (
-          metadata &&
-          metadata.manifest &&
-          !pluginManager.isPluginLoaded(plugin.id)
-        ) {
-          await pluginManager.emit('plugin:loaded', { id: plugin.id });
-        }
-      } else if (pluginManager.isPluginLoaded(plugin.id)) {
-        // Plugin is actively loaded — full unload lifecycle
-        await pluginManager.unloadPlugin(plugin.id);
-      } else {
-        // Plugin was defined but not activated — emit event for cleanup
-        await pluginManager.emit('plugin:unloaded', { id: plugin.id });
-      }
-    } catch (err) {
-      console.warn(
-        `[pluginService] Failed to ${isActive ? 'load' : 'unload'} plugin ${plugin.id} via PluginManager:`,
-        err.message,
-      );
-    }
+  // Enqueue the background job for NPM dependencies and module reloading
+  if (queue) {
+    const queueChannel = queue('plugins');
+    queueChannel.emit('toggle', {
+      pluginId: plugin.id,
+      pluginKey: plugin.key,
+      pluginDir,
+      isActive,
+      actorId,
+      isDevPlugin,
+    });
   }
-
-  await logPluginActivity(
-    webhook,
-    'status_changed',
-    plugin.id,
-    { isActive },
-    actorId,
-  );
 
   return plugin;
 }
@@ -1012,4 +878,254 @@ export async function upgradePlugin(
   await logPluginActivity(webhook, 'upgraded', plugin.id, data, actorId);
 
   return plugin;
+}
+
+/**
+ * Register background workers for plugin tasks.
+ * Called during server initialization.
+ */
+export function registerPluginWorkers(app) {
+  const queue = app.get('queue')('plugins');
+
+  // WORKER: Install Plugin
+  queue.on('install', async job => {
+    const { pluginDir, pluginId, actorId } = job.data;
+    const pluginManager = app.get('plugin');
+    const webhook = app.get('webhook');
+    try {
+      job.updateProgress(10);
+      await installPluginDependencies(pluginDir);
+      job.updateProgress(50);
+
+      // Compute and store checksum after clean install
+      const checksum = await computeChecksum(pluginDir);
+      const { Plugin } = app.get('models');
+      await Plugin.update({ checksum }, { where: { id: pluginId } });
+      job.updateProgress(60);
+
+      if (pluginManager) {
+        await pluginManager.reloadPlugin(pluginId);
+        const metadata = pluginManager.getPluginMetadata(pluginId);
+        if (
+          metadata &&
+          metadata.manifest &&
+          !pluginManager.isPluginLoaded(pluginId)
+        ) {
+          await pluginManager.emit('plugin:loaded', { id: pluginId });
+        }
+      }
+      job.updateProgress(90);
+
+      await logPluginActivity(
+        webhook,
+        'installed',
+        pluginId,
+        { path: pluginDir, checksum },
+        actorId,
+      );
+
+      const ws = app.get('ws');
+      if (ws) {
+        // Include manifest data so ClientPluginManager can inject CSS/JS tags
+        const metadata = pluginManager
+          ? pluginManager.getPluginMetadata(pluginId)
+          : null;
+        ws.sendToPublicChannel('plugin:updated', {
+          type: 'PLUGIN_INSTALLED',
+          pluginId,
+          data: {
+            manifest:
+              metadata && metadata.manifest
+                ? {
+                    hasClientCss: metadata.manifest.hasClientCss || false,
+                    hasClientScript: metadata.manifest.hasClientScript || false,
+                    version: metadata.manifest.version || '0.0.0',
+                  }
+                : null,
+          },
+        });
+      }
+      job.updateProgress(100);
+      return { success: true };
+    } catch (err) {
+      console.error(`[PluginWorker] Install failed for ${pluginId}:`, err);
+      throw err;
+    }
+  });
+
+  // WORKER: Delete Plugin
+  queue.on('delete', async job => {
+    const { pluginId, pluginKey, actorId } = job.data;
+    const cwd = app.get('cwd');
+    const pluginManager = app.get('plugin');
+    const webhook = app.get('webhook');
+    const { Plugin } = app.get('models');
+
+    try {
+      if (pluginManager) {
+        if (pluginManager.isPluginLoaded(pluginId)) {
+          await pluginManager.unloadPlugin(pluginId);
+        } else {
+          await pluginManager.emit('plugin:unloaded', { id: pluginId });
+        }
+      }
+
+      // Remove files
+      if (cwd) {
+        const dirs = [
+          resolvePluginsDir(cwd, getPluginPath()),
+          resolvePluginsDir(cwd, getDevPluginPath()),
+        ];
+        for (const baseDir of dirs) {
+          const pDir = path.join(baseDir, pluginKey);
+          const relative = path.relative(baseDir, pDir);
+          if (
+            relative &&
+            !relative.startsWith('..') &&
+            !path.isAbsolute(relative)
+          ) {
+            if (fs.existsSync(pDir)) {
+              await uninstallPluginDependencies(pDir);
+              await fs.promises.rm(pDir, { recursive: true, force: true });
+            }
+          }
+        }
+      }
+
+      await Plugin.destroy({ where: { id: pluginId } });
+      await logPluginActivity(
+        webhook,
+        'deleted',
+        pluginId,
+        { key: pluginKey },
+        actorId,
+      );
+
+      const ws = app.get('ws');
+      if (ws) {
+        ws.sendToPublicChannel('plugin:updated', {
+          type: 'PLUGIN_UNINSTALLED',
+          pluginId,
+        });
+      }
+
+      return { success: true };
+    } catch (err) {
+      console.error(`[PluginWorker] Delete failed for ${pluginId}:`, err);
+      throw err;
+    }
+  });
+
+  // WORKER: Toggle Plugin
+  queue.on('toggle', async job => {
+    const { pluginId, isActive, actorId, pluginDir, isDevPlugin } = job.data;
+    const pluginManager = app.get('plugin');
+    const webhook = app.get('webhook');
+
+    try {
+      // Security: verify checksum before activating (skip for dev plugins)
+      if (isActive && pluginDir && !isDevPlugin) {
+        const { Plugin } = app.get('models');
+        const dbPlugin = await Plugin.findByPk(pluginId);
+        if (dbPlugin && dbPlugin.checksum) {
+          const { valid, actual } = await verifyPluginChecksum(
+            pluginDir,
+            dbPlugin.checksum,
+          );
+          if (!valid) {
+            console.error(
+              `[PluginWorker] ⛔ Checksum verification FAILED for plugin ${pluginId}. ` +
+                `Expected: ${dbPlugin.checksum}, Got: ${actual}. ` +
+                `Refusing to activate — possible code injection detected.`,
+            );
+            await dbPlugin.update({ is_active: false });
+
+            const ws = app.get('ws');
+            if (ws) {
+              ws.sendToPublicChannel('plugin:updated', {
+                type: 'PLUGIN_TAMPERED',
+                pluginId,
+              });
+            }
+            return { success: false, reason: 'checksum_mismatch' };
+          }
+        }
+      }
+
+      if (pluginDir) {
+        if (isActive) {
+          await installPluginDependencies(pluginDir);
+
+          // Recompute and store checksum after fresh npm install
+          const checksum = await computeChecksum(pluginDir);
+          const { Plugin } = app.get('models');
+          await Plugin.update({ checksum }, { where: { id: pluginId } });
+        } else {
+          await uninstallPluginDependencies(pluginDir);
+        }
+      }
+
+      if (pluginManager) {
+        if (isActive) {
+          await pluginManager.reloadPlugin(pluginId);
+          const metadata = pluginManager.getPluginMetadata(pluginId);
+          if (
+            metadata &&
+            metadata.manifest &&
+            !pluginManager.isPluginLoaded(pluginId)
+          ) {
+            await pluginManager.emit('plugin:loaded', { id: pluginId });
+          }
+        } else {
+          if (pluginManager.isPluginLoaded(pluginId)) {
+            await pluginManager.unloadPlugin(pluginId);
+          } else {
+            await pluginManager.emit('plugin:unloaded', { id: pluginId });
+          }
+        }
+      }
+
+      await logPluginActivity(
+        webhook,
+        'status_changed',
+        pluginId,
+        { isActive },
+        actorId,
+      );
+
+      const ws = app.get('ws');
+      if (ws) {
+        if (isActive) {
+          // Include manifest data so ClientPluginManager can inject CSS/JS tags
+          const metadata = pluginManager
+            ? pluginManager.getPluginMetadata(pluginId)
+            : null;
+          ws.sendToPublicChannel('plugin:updated', {
+            type: 'PLUGIN_UPDATED',
+            pluginId,
+            data: {
+              manifest:
+                metadata && metadata.manifest
+                  ? {
+                      hasClientCss: metadata.manifest.hasClientCss || false,
+                      hasClientScript:
+                        metadata.manifest.hasClientScript || false,
+                      version: metadata.manifest.version || '0.0.0',
+                    }
+                  : null,
+            },
+          });
+        } else {
+          ws.sendToPublicChannel('plugin:updated', {
+            type: 'PLUGIN_UNINSTALLED',
+            pluginId,
+          });
+        }
+      }
+      return { success: true };
+    } catch (err) {
+      console.error(`[PluginWorker] Toggle failed for ${pluginId}:`, err);
+      throw err;
+    }
+  });
 }

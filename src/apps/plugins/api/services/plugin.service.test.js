@@ -60,9 +60,7 @@ import {
   getActivePlugins,
   togglePluginStatus,
 } from './plugin.service';
-import * as activityUtils from '../utils/activity';
 import fs from 'fs';
-// import { readdir, readFile } from 'fs/promises'; // Unused now
 
 const mockCache = {
   get: jest.fn(),
@@ -78,6 +76,15 @@ const mockModels = {
   },
 };
 
+const mockQueueChannel = {
+  emit: jest.fn(),
+  on: jest.fn(),
+  queue: {
+    getJobs: jest.fn(() => []),
+  },
+};
+const mockQueue = jest.fn(() => mockQueueChannel);
+
 const mockWebhook = { send: jest.fn() };
 const mockContext = {
   models: mockModels,
@@ -85,6 +92,7 @@ const mockContext = {
   webhook: mockWebhook,
   actorId: 'user-123',
   cwd: '/test/cwd',
+  queue: mockQueue,
 };
 
 describe('Plugin Service', () => {
@@ -305,9 +313,10 @@ describe('Plugin Service', () => {
   });
 
   describe('togglePluginStatus', () => {
-    it('should update status and log activity', async () => {
+    it('should update status and enqueue background job', async () => {
       const mockPlugin = {
         id: 'p1',
+        key: 'plugin-1',
         update: jest.fn(),
       };
       mockModels.Plugin.findByPk.mockResolvedValue(mockPlugin);
@@ -315,13 +324,15 @@ describe('Plugin Service', () => {
       await togglePluginStatus('p1', true, mockContext);
 
       expect(mockPlugin.update).toHaveBeenCalledWith({ is_active: true });
-      expect(activityUtils.logPluginActivity).toHaveBeenCalledWith(
-        mockWebhook,
-        'status_changed',
-        'p1',
-        { isActive: true },
-        'user-123',
-      );
+      expect(mockQueue).toHaveBeenCalledWith('plugins');
+      expect(mockQueueChannel.emit).toHaveBeenCalledWith('toggle', {
+        pluginId: 'p1',
+        pluginKey: 'plugin-1',
+        pluginDir: expect.any(String),
+        isActive: true,
+        actorId: 'user-123',
+        isDevPlugin: false,
+      });
     });
   });
 });

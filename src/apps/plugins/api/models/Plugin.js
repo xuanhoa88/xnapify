@@ -70,6 +70,43 @@ export default function createPluginModel({ connection, DataTypes }) {
         type: DataTypes.JSON,
         defaultValue: {},
         comment: 'Plugin configuration options',
+        get() {
+          const raw = this.getDataValue('options');
+          if (raw == null) return {};
+          if (typeof raw === 'string') {
+            try {
+              return JSON.parse(raw);
+            } catch {
+              return {};
+            }
+          }
+          return typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+        },
+        set(value) {
+          if (value == null) {
+            this.setDataValue('options', {});
+            return;
+          }
+          if (typeof value === 'string') {
+            try {
+              const parsed = JSON.parse(value);
+              this.setDataValue(
+                'options',
+                typeof parsed === 'object' && !Array.isArray(parsed)
+                  ? parsed
+                  : {},
+              );
+            } catch {
+              this.setDataValue('options', {});
+            }
+            return;
+          }
+          if (typeof value === 'object' && !Array.isArray(value)) {
+            this.setDataValue('options', value);
+          } else {
+            this.setDataValue('options', {});
+          }
+        },
       },
 
       checksum: {
@@ -85,8 +122,50 @@ export default function createPluginModel({ connection, DataTypes }) {
       underscored: true,
       createdAt: 'created_at',
       updatedAt: 'updated_at',
+      hooks: {
+        beforeCreate(instance) {
+          sanitizeOptions(instance);
+        },
+        beforeUpdate(instance) {
+          if (instance.changed('options')) {
+            sanitizeOptions(instance);
+          }
+        },
+      },
     },
   );
 
   return Plugin;
+}
+
+/**
+ * Sanitize the `options` field to ensure it is always a plain object.
+ * Strips any keys with `undefined` values and rejects arrays/primitives.
+ */
+function sanitizeOptions(instance) {
+  let opts = instance.getDataValue('options');
+
+  // Parse string values
+  if (typeof opts === 'string') {
+    try {
+      opts = JSON.parse(opts);
+    } catch {
+      opts = {};
+    }
+  }
+
+  // Must be a plain object (not null, not array)
+  if (opts == null || typeof opts !== 'object' || Array.isArray(opts)) {
+    instance.setDataValue('options', {});
+    return;
+  }
+
+  // Strip undefined values (JSON.stringify drops them, but be explicit)
+  const cleaned = {};
+  for (const [key, val] of Object.entries(opts)) {
+    if (val !== undefined) {
+      cleaned[key] = val;
+    }
+  }
+  instance.setDataValue('options', cleaned);
 }
