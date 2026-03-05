@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { registerPluginWorkers } from './services/plugin.workers';
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -71,4 +73,13 @@ export function models() {
  */
 export function routes() {
   return routesContext;
+}
+
+/**
+ * Init hook — register plugin workers.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function init(app) {
+  registerPluginWorkers(app);
 }

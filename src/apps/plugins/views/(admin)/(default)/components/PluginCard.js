@@ -11,6 +11,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import Card from '../../../../../../shared/renderer/components/Card';
 import Tag from '../../../../../../shared/renderer/components/Tag';
+import Icon from '../../../../../../shared/renderer/components/Icon';
 import PluginActionsDropdown from './PluginActionsDropdown';
 import s from './PluginCard.css';
 
@@ -62,7 +63,6 @@ function PluginCard({
               </div>
             ) : (
               <div className={s.badges}>
-                <span className={s.version}>v{plugin.version}</span>
                 <Tag
                   variant={plugin.is_active ? 'success' : 'neutral'}
                   {...(canUpdate && {
@@ -92,25 +92,69 @@ function PluginCard({
         }
       >
         {isLoading ? (
-          <div className={clsx(s.skeleton, s.skeletonTitle)} />
+          <div className={s.headerLeft}>
+            <div className={clsx(s.skeleton, s.skeletonTitle)} />
+            <div className={clsx(s.skeleton, s.skeletonVersion)} />
+          </div>
         ) : (
-          <h3 className={s.name}>{plugin.name}</h3>
+          <div className={s.headerLeft}>
+            <h3 className={s.name}>{plugin.name}</h3>
+            <span className={s.version}>v{plugin.version}</span>
+          </div>
         )}
       </Card.Header>
       <Card.Body className={s.body}>
         {isLoading ? (
-          <div>
+          <div className={s.skeletonWrapper}>
             <div className={clsx(s.skeleton, s.skeletonText)} />
             <div className={clsx(s.skeleton, s.skeletonText)} />
+            <div className={clsx(s.skeleton, s.skeletonMeta)} />
           </div>
         ) : (
-          <p className={s.description}>
-            {plugin.description ||
-              t(
-                'admin:plugins.noDescriptionAvailable',
-                'No description available',
-              )}
-          </p>
+          <>
+            <p className={s.description}>
+              {plugin.description ||
+                t(
+                  'admin:plugins.noDescriptionAvailable',
+                  'No description available',
+                )}
+            </p>
+            {plugin.options &&
+            (plugin.options.author || plugin.options.repository) ? (
+              <div className={s.metaGroup}>
+                {plugin.options.author && (
+                  <span className={s.metaItem} title='Author'>
+                    <svg
+                      className={s.metaIcon}
+                      viewBox='0 0 24 24'
+                      fill='none'
+                      stroke='currentColor'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                    >
+                      <path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' />
+                      <circle cx='12' cy='7' r='4' />
+                    </svg>
+                    {plugin.options.author}
+                  </span>
+                )}
+                {plugin.options.repository && (
+                  <a
+                    href={plugin.options.repository}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className={clsx(s.metaItem, s.metaLink)}
+                    title='Repository'
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Icon name='github' />
+                    Repository
+                  </a>
+                )}
+              </div>
+            ) : null}
+          </>
         )}
       </Card.Body>
     </Card>
@@ -125,6 +169,10 @@ PluginCard.propTypes = {
     version: PropTypes.string,
     is_active: PropTypes.bool,
     job_status: PropTypes.string,
+    options: PropTypes.shape({
+      author: PropTypes.string,
+      repository: PropTypes.string,
+    }),
   }).isRequired,
   activeDropdownId: PropTypes.string,
   onToggleDropdown: PropTypes.func.isRequired,

@@ -73,6 +73,7 @@ const mockModels = {
     findAll: jest.fn(),
     create: jest.fn(),
     findByPk: jest.fn(),
+    findOne: jest.fn(),
   },
 };
 
@@ -162,52 +163,12 @@ describe('Plugin Service', () => {
         },
       ]);
 
-      // Override environment variable for local path in test context if needed,
-      // but since service uses process.env, we might need to mock getPluginsDir behavior or env.
-      // However, managing env mocks can be tricky.
-      // Instead, we can rely on how `getPluginsDir` works.
-      // The issue is `getPluginsDir` uses process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins'.
-      // If we can't change env, both dirs are the same.
-      // We need to mock `getPluginsDir` or the values it returns.
-      // Since `getPluginsDir` is internal, we can't easily mock it without rewriting the test to import it?
-      // Actually, the service exports `managePlugins`.
-      // Let's assume for this test we want to verify distinct behavior.
-      // If we can't easily change the paths, we can at least verify the property based on the source arg passed to scanDirectory.
-      // But scanDirectory is internal.
-
-      // WAIT: The user request is to "check again for scanDirectory to matching with my expect isLocal".
-      // The fix is to ensure the TEST reflects reality.
-      // In this specific test file, we don't control process.env easily inside the module scope variables.
-      // But we can check if `local-plugin` gets `isLocal: true` and `fs-plugin` gets `isLocal: false`
-      // IF we could force them to be scanned from different source calls.
-
-      // Let's modify the test to manually checking what we get.
-      // Actually, we can just spy on scanDirectory? No, it's not exported.
-
-      // Let's rely on the fact that `managePlugins` calls:
-      // await scanDirectory(installedPluginsDir, 'remote', fsPluginsMap);
-      // await scanDirectory(localPluginsDir, 'local', fsPluginsMap);
-
-      // If installedPluginsDir === localPluginsDir, then 'remote' scan happens first, then 'local' scan.
-      // The second scan ('local') will OVERWRITE the first one for the SAME directory.
-      // So EVERYTHING becomes local.
-
-      // We need to Mock `getPluginsDir` or `process.env`.
+      // Set local plugin path to differ from installed path
       process.env.RSK_LOCAL_PLUGIN_PATH = 'local-plugins';
 
       const result = await managePlugins(mockContext);
 
       expect(result).toHaveLength(3);
-      // local-plugins -> [local-plugin]
-
-      // And DB has 'db-plugin'.
-      // Logic:
-      // 1. Scan remote (plugins) -> found fs-plugin
-      // 2. Scan local (local-plugins) -> found local-plugin
-      // 3. DB has db-plugin.
-      // if db-plugin is NOT in fsPluginsMap, it's marked missing.
-
-      // Let's adjust expectations:
 
       const fsPlugin = result.find(p => p.name === 'FS Plugin');
       expect(fsPlugin).toBeDefined();

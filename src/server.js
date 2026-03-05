@@ -39,7 +39,6 @@ import pluginManager from './shared/plugin/manager/server';
 import { createWebSocketServer } from './shared/ws/server';
 import { Container } from './shared/container';
 import queue from './shared/api/engines/queue';
-import { registerPluginWorkers } from './apps/plugins/api/services/plugin.service';
 
 // ---------------------------------------------------------------------------
 // Constants & Configuration
@@ -1003,8 +1002,7 @@ export async function initializeServer(app, server, options = {}) {
   app.set('plugin', pluginManager);
   app.set('queue', queue);
 
-  registerPluginWorkers(app);
-
+  // Trust proxy
   app.set(
     'trust proxy',
     SERVER_CONFIG.nodeEnv === 'production' ? 1 : 'loopback',

@@ -8,114 +8,33 @@
 import os from 'os';
 import fs from 'fs';
 import path from 'path';
-import { execFile } from 'child_process';
-import { promisify } from 'util';
-import { encryptPluginId, decryptPluginId } from '../utils/crypto';
 import { logPluginActivity } from '../utils/activity';
-import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
+import {
+  CACHE_TTL,
+  PluginError,
+  getPluginPath,
+  getDevPluginPath,
+  resolvePluginsDir,
+  resolvePlugin,
+  resolvePluginDir,
+  readPluginManifest,
+  validateManifest,
+  sanitizePluginName,
+  invalidateCache,
+  encryptPluginId,
+} from './plugin.helpers';
 
-// Promisify execFile
-const execFileAsync = promisify(execFile);
-
-// Cache for plugin list
-const CACHE_TTL = 60 * 1000; // 1 minute
-
-// Plugin path getters
-const getPluginPath = () =>
-  process.env.RSK_PLUGIN_PATH || path.join(os.homedir(), '.rsk', 'plugins');
-
-const getDevPluginPath = () => process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins';
-
-// Resolve plugins directory
-const resolvePluginsDir = (cwd, pluginPath) =>
-  path.resolve(cwd || process.cwd(), pluginPath);
-
-/**
- * Install plugin dependencies
- * @param {string} pluginDir - Plugin directory path
- * @param {object} plugin - Plugin object
- */
-async function installPluginDependencies(pluginDir, plugin) {
-  try {
-    if (__DEV__) {
-      console.log(`[PluginService] Running npm install in ${pluginDir}`);
-    }
-    await execFileAsync(
-      'npm',
-      [
-        'install',
-        '--no-audit',
-        '--no-update-notifier',
-        '--no-fund',
-        '--production',
-        '--engine-strict',
-        '--no-package-lock',
-      ],
-      {
-        cwd: pluginDir,
-      },
-    );
-    if (__DEV__) {
-      console.log('[PluginService] npm install completed successfully');
-    }
-  } catch (npmErr) {
-    console.error('[PluginService] npm install failed:', npmErr);
-    const err = new Error(
-      `Failed to install dependencies for plugin ${plugin.name}`,
-    );
-    err.status = 500;
-    throw err;
-  }
-}
-
-/**
- * Uninstall plugin dependencies
- * @param {string} pluginDir - Plugin directory path
- * @param {object} plugin - Plugin object
- */
-async function uninstallPluginDependencies(pluginDir, plugin) {
-  try {
-    if (__DEV__) {
-      console.log(`[PluginService] Running npm uninstall in ${pluginDir}`);
-    }
-    await execFileAsync('npm', ['uninstall'], {
-      cwd: pluginDir,
-    });
-    if (__DEV__) {
-      console.log('[PluginService] npm uninstall completed successfully');
-    }
-  } catch (npmErr) {
-    console.error('[PluginService] npm uninstall failed:', npmErr);
-    const err = new Error(
-      `Failed to uninstall dependencies for plugin ${plugin.name}`,
-    );
-    err.status = 500;
-    throw err;
-  }
-}
-
-/**
- * Invalidate plugin caches
- * @param {object} cache - Cache engine instance
- * @param {string} [pluginId] - Optional plugin ID to invalidate detail cache
- */
-async function invalidateCache(cache, pluginId) {
-  if (cache) {
-    await cache.delete('plugins:list:all');
-    await cache.delete('plugins:list:active');
-    if (pluginId) {
-      await cache.delete(`plugins:detail:${pluginId}`);
-    }
-  }
-}
+// ========================================================================
+// Internal Helpers
+// ========================================================================
 
 /**
  * Scan a directory and add plugins to the map
  * @param {string} dirPath - Directory path
- * @param {string} source - Source of plugins
+ * @param {string} source - Source of plugins ('remote' or 'local')
  * @param {Map} fsPluginsMap - Map to store plugins
  */
-const scanDirectory = async (dirPath, source, fsPluginsMap) => {
+async function scanDirectory(dirPath, source, fsPluginsMap) {
   try {
     if (!fs.existsSync(dirPath)) {
       console.debug(`[managePlugins] ${source} dir not found: ${dirPath}`);
@@ -136,6 +55,7 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
           const encryptedId = encryptPluginId(dirent.name);
           fsPluginsMap.set(dirent.name, {
             ...manifest,
+            name: (manifest.rsk && manifest.rsk.name) || dirent.name,
             id: encryptedId,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'
@@ -148,26 +68,11 @@ const scanDirectory = async (dirPath, source, fsPluginsMap) => {
   } catch (err) {
     console.warn(`Failed to scan plugins dir: ${dirPath}`, err.message);
   }
-};
-
-/**
- * Read plugin manifest from directory
- * @param {string} pluginsDir - Plugins directory path
- * @param {string} pluginName - Plugin directory name
- * @returns {Promise<Object|null>} Plugin manifest or null if invalid
- */
-export async function readPluginManifest(pluginsDir, pluginName) {
-  try {
-    const manifestPath = path.join(pluginsDir, pluginName, 'package.json');
-    const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
-    return JSON.parse(manifestContent);
-  } catch (e) {
-    console.debug(
-      `[readPluginManifest] Failed to read manifest for ${pluginName}: ${e.message}`,
-    );
-    return null;
-  }
 }
+
+// ========================================================================
+// Service Functions
+// ========================================================================
 
 /**
  * Get all plugins (Admin) - Merged from DB and FS
@@ -339,7 +244,6 @@ export async function getActivePlugins({ models, cache, cwd }) {
       // Logic decision: If active in DB but missing on disk, do we return it?
       // For frontend loader, a missing plugin cannot be loaded.
       // So we skip it.
-      // Optionally log a warning.
       console.warn(`Active plugin ${key} missing from disk.`);
     }
   }
@@ -358,33 +262,15 @@ export async function getActivePlugins({ models, cache, cwd }) {
  * Follows the same lookup pattern as `togglePluginStatus`:
  *  1. Try `findByPk(id)` for installed plugins.
  *  2. Fall back to `decryptPluginId` for FS-only plugins.
- *  3. Unload via `pluginManager` before deletion.
- *  4. Remove files from whichever directory the plugin lives in.
+ *  3. Enqueue deletion via queue if available.
  *
  * @param {string} id - Plugin UUID or encrypted plugin key
  * @param {Object} context - App context
  */
 export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
-  const { Plugin } = models;
+  const { plugin } = await resolvePlugin(models, id);
 
-  // 1. Resolve plugin record (same pattern as togglePluginStatus)
-  let plugin = await Plugin.findByPk(id);
-
-  if (!plugin) {
-    const pluginKey = decryptPluginId(id);
-    if (pluginKey) {
-      plugin = await Plugin.findOne({ where: { key: pluginKey } });
-    }
-  }
-
-  if (!plugin) {
-    const err = new Error('Plugin not found');
-    err.name = 'PluginNotFound';
-    err.status = 404;
-    throw err;
-  }
-
-  // 1.5. Check if we have context to enqueue the deletion
+  // Enqueue the background deletion job
   if (queue && cwd) {
     const queueChannel = queue('plugins');
     queueChannel.emit('delete', {
@@ -397,7 +283,7 @@ export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
     await plugin.destroy();
   }
 
-  if (cache) await invalidateCache(cache);
+  if (cache) await invalidateCache(cache, plugin.id);
 
   return true;
 }
@@ -407,7 +293,7 @@ export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
  * @param {object} context - Context with cwd, models, and cache
  * @param {string} id - Plugin ID (DB UUID or encrypted key)
  * @returns {Promise<Object>} Plugin data with containerName and manifest
- * @throws {Error} If plugin ID is invalid or plugin not found
+ * @throws {PluginError} If plugin ID is invalid or plugin not found
  */
 export async function getPluginById({ cwd, models, cache }, id) {
   const cacheKey = `plugins:detail:${id}`;
@@ -418,49 +304,34 @@ export async function getPluginById({ cwd, models, cache }, id) {
     if (cached) return cached;
   }
 
-  const pluginsDir = resolvePluginsDir(cwd, getPluginPath());
-  const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
-
-  // Try decrypting as encrypted key first
-  let pluginKey = decryptPluginId(id);
-
-  // If decryption failed, it might be a DB UUID
-  if (!pluginKey && models) {
-    const { Plugin } = models;
-    const dbPlugin = await Plugin.findByPk(id);
-    if (dbPlugin) {
-      pluginKey = dbPlugin.key;
-    }
-  }
+  // Resolve plugin key from mixed ID
+  const { plugin: dbPluginRecord, pluginKey } = await resolvePlugin(
+    models,
+    id,
+    { required: false },
+  );
 
   if (!pluginKey) {
-    const err = new Error('Invalid plugin ID');
-    err.name = 'InvalidPluginId';
-    err.status = 400;
-    throw err;
+    throw PluginError.invalidId();
   }
 
-  let manifest, resolvedDir;
+  // Resolve directory and manifest
+  const { dir: resolvedDir, isDevPlugin } = resolvePluginDir(cwd, pluginKey);
 
-  // Read manifest (check local/dev first for dev override, then installed)
-  if ((manifest = await readPluginManifest(localPluginsDir, pluginKey))) {
-    resolvedDir = localPluginsDir;
-  } else if ((manifest = await readPluginManifest(pluginsDir, pluginKey))) {
-    resolvedDir = pluginsDir;
+  let manifest = null;
+  if (resolvedDir) {
+    manifest = await readPluginManifest(path.dirname(resolvedDir), pluginKey);
   }
 
   if (!manifest) {
-    const err = new Error('Plugin not found');
-    err.name = 'PluginNotFound';
-    err.status = 404;
-    throw err;
+    throw PluginError.notFound(pluginKey);
   }
 
   // Read container name from manifest (written by the build step)
   const containerName = (manifest.rsk && manifest.rsk.containerName) || null;
 
   try {
-    const assetsPath = path.join(resolvedDir, pluginKey, 'plugin.css');
+    const assetsPath = path.join(resolvedDir, 'plugin.css');
     await fs.promises.access(assetsPath);
     manifest.hasClientCss = true;
   } catch {
@@ -468,7 +339,7 @@ export async function getPluginById({ cwd, models, cache }, id) {
   }
 
   try {
-    const assetsPath = path.join(resolvedDir, pluginKey, 'remote.js');
+    const assetsPath = path.join(resolvedDir, 'remote.js');
     await fs.promises.access(assetsPath);
     manifest.hasClientScript = true;
   } catch {
@@ -476,10 +347,10 @@ export async function getPluginById({ cwd, models, cache }, id) {
   }
 
   // Validate checksum against DB (only for production plugins, not dev)
-  const isDevPlugin = resolvedDir === localPluginsDir;
   if (models && !isDevPlugin) {
-    const { Plugin } = models;
-    const dbPlugin = await Plugin.findOne({ where: { key: pluginKey } });
+    const dbPlugin =
+      dbPluginRecord ||
+      (await models.Plugin.findOne({ where: { key: pluginKey } }));
     if (
       dbPlugin &&
       dbPlugin.checksum &&
@@ -524,31 +395,11 @@ export async function getPluginById({ cwd, models, cache }, id) {
  * @returns {Promise<string|null>} Plugin static files directory path or null if invalid
  */
 export async function getPluginStaticDir({ cwd, models }, id) {
-  const pluginsDir = resolvePluginsDir(cwd, getPluginPath());
-  const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
-
-  // Try decrypting as encrypted key first
-  let pluginKey = decryptPluginId(id);
-
-  // If decryption failed, it might be a DB UUID
-  if (!pluginKey && models) {
-    const { Plugin } = models;
-    const dbPlugin = await Plugin.findByPk(id);
-    if (dbPlugin) {
-      pluginKey = dbPlugin.key;
-    }
-  }
-
+  const { pluginKey } = await resolvePlugin(models, id, { required: false });
   if (!pluginKey) return null;
 
-  // Check installed dir first, then local/dev
-  const installedPath = path.join(pluginsDir, pluginKey);
-  if (fs.existsSync(installedPath)) return installedPath;
-
-  const localPath = path.join(localPluginsDir, pluginKey);
-  if (fs.existsSync(localPath)) return localPath;
-
-  return null;
+  const { dir } = resolvePluginDir(cwd, pluginKey);
+  return dir;
 }
 
 /**
@@ -559,7 +410,7 @@ export async function getPluginStaticDir({ cwd, models }, id) {
  *  2. Read and validate the manifest (package.json).
  *  3. Move files to the final plugins directory.
  *  4. Create or update the DB record.
- *  5. Load the plugin via `pluginManager`.
+ *  5. Enqueue the heavy dependencies install and module reload.
  *  6. Log activity and invalidate cache.
  *
  * @param {Object}  file    - Uploaded file object ({ path, originalname })
@@ -570,17 +421,11 @@ export async function installPluginFromPackage(
   { models, cache, cwd, fs: fsEngine, actorId, queue },
 ) {
   if (!file || !file.path) {
-    const err = new Error('No file provided');
-    err.name = 'InvalidPluginPackage';
-    err.status = 400;
-    throw err;
+    throw PluginError.invalidPackage('No file provided');
   }
 
   if (!fsEngine || typeof fsEngine.extract !== 'function') {
-    const err = new Error('FS engine required for installation');
-    err.name = 'InvalidPluginPackage';
-    err.status = 400;
-    throw err;
+    throw PluginError.invalidPackage('FS engine required for installation');
   }
 
   const { Plugin } = models;
@@ -629,13 +474,10 @@ export async function installPluginFromPackage(
     }
 
     if (!fs.existsSync(manifestPath)) {
-      const err = new Error(
+      throw PluginError.invalidPackage(
         'Invalid plugin package: package.json not found. ' +
           'Ensure the zip contains package.json at the root, or in a single subdirectory.',
       );
-      err.name = 'InvalidPluginPackage';
-      err.status = 400;
-      throw err;
     }
 
     const manifest = JSON.parse(
@@ -643,18 +485,11 @@ export async function installPluginFromPackage(
     );
 
     // 4. Validate manifest
-    const pluginName =
-      typeof manifest.name === 'string' ? manifest.name.trim() : '';
-    const pluginVersion =
-      typeof manifest.version === 'string' ? manifest.version.trim() : '';
-    if (pluginName.length === 0 || pluginVersion.length === 0) {
-      const err = new Error(
-        'Invalid plugin manifest: missing required fields (name, version)',
-      );
-      err.name = 'InvalidPluginPackage';
-      err.status = 400;
-      throw err;
-    }
+    const { name: pluginName, version: pluginVersion } =
+      validateManifest(manifest);
+
+    // 4a. Security: prevent path traversal via crafted plugin names
+    sanitizePluginName(pluginName, pluginsDir);
 
     // 5. Move to final destination
     const finalPluginDir = path.join(pluginsDir, pluginName);
@@ -669,20 +504,28 @@ export async function installPluginFromPackage(
     const [plugin, created] = await Plugin.findOrCreate({
       where: { key: pluginName },
       defaults: {
-        name: pluginName,
+        name: (manifest.rsk && manifest.rsk.name) || pluginName,
         description: manifest.description,
         version: pluginVersion,
         is_active: true,
+        options: {
+          author: manifest.author,
+          repository: manifest.repository,
+        },
         checksum: (manifest.rsk && manifest.rsk.checksum) || null,
       },
     });
 
     if (!created) {
       await plugin.update({
-        name: pluginName,
+        name: (manifest.rsk && manifest.rsk.name) || pluginName,
         description: manifest.description,
         version: pluginVersion,
         is_active: true,
+        options: {
+          author: manifest.author,
+          repository: manifest.repository,
+        },
         checksum: (manifest.rsk && manifest.rsk.checksum) || null,
       });
     }
@@ -692,6 +535,7 @@ export async function installPluginFromPackage(
     queueChannel.emit('install', {
       pluginDir: finalPluginDir,
       pluginId: plugin.id,
+      pluginKey: pluginName,
       actorId,
     });
 
@@ -715,16 +559,22 @@ export async function installPluginFromPackage(
       if (fs.existsSync(tempPath)) {
         await fs.promises.unlink(tempPath);
       }
-    } catch (_) {
-      /* cleanup errors are non-fatal */
+    } catch (cleanupErr) {
+      console.warn(
+        '[installPluginFromPackage] Cleanup failed:',
+        cleanupErr.message,
+      );
     }
   }
 }
 
 /**
- * Toggle plugin status
+ * Toggle plugin status (activate / deactivate).
+ *
+ * @param {string} id - Plugin UUID or encrypted plugin key
+ * @param {boolean} isActive - Desired status
+ * @param {Object} context - App context
  */
-
 export async function togglePluginStatus(
   id,
   isActive,
@@ -732,92 +582,51 @@ export async function togglePluginStatus(
 ) {
   const { Plugin } = models;
 
-  // Try finding by DB primary key first (for installed plugins)
-  let plugin = await Plugin.findByPk(id);
+  // Resolve plugin — may need to create DB record for FS-only plugin
+  let { plugin, pluginKey } = await resolvePlugin(models, id, {
+    required: false,
+  });
 
-  // If not found, the ID might be an encrypted plugin key (FS-only plugin)
-  if (!plugin) {
-    const pluginKey = decryptPluginId(id);
-    if (pluginKey) {
-      plugin = await Plugin.findOne({ where: { key: pluginKey } });
+  // FS-only plugin with no DB record yet — create one
+  if (!plugin && pluginKey && cwd) {
+    const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
+    const installedPluginsDir = resolvePluginsDir(cwd, getPluginPath());
 
-      // FS-only plugin with no DB record yet — create one
-      if (!plugin && cwd) {
-        // Check local/dev first (dev override), then installed
-        let manifest = await readPluginManifest(
-          resolvePluginsDir(cwd, getDevPluginPath()),
-          pluginKey,
-        );
-        if (!manifest) {
-          manifest = await readPluginManifest(
-            resolvePluginsDir(cwd, getPluginPath()),
-            pluginKey,
-          );
-        }
-
-        if (!manifest) {
-          const err = new Error('Plugin not found on disk');
-          err.name = 'PluginNotFound';
-          err.status = 404;
-          throw err;
-        }
-
-        const pluginName =
-          typeof manifest.name === 'string' ? manifest.name.trim() : '';
-        const pluginVersion =
-          typeof manifest.version === 'string' ? manifest.version.trim() : '';
-        if (pluginName.length === 0 || pluginVersion.length === 0) {
-          const err = new Error(
-            'Invalid plugin manifest: missing required fields (name, version)',
-          );
-          err.name = 'InvalidPluginPackage';
-          err.status = 400;
-          throw err;
-        }
-
-        [plugin] = await Plugin.findOrCreate({
-          where: { key: pluginKey },
-          defaults: {
-            name: pluginName,
-            description: manifest.description || '',
-            version: pluginVersion,
-            is_active: isActive,
-            checksum: (manifest.rsk && manifest.rsk.checksum) || null,
-          },
-        });
-      }
+    // Check local/dev first (dev override), then installed
+    let manifest = await readPluginManifest(localPluginsDir, pluginKey);
+    if (!manifest) {
+      manifest = await readPluginManifest(installedPluginsDir, pluginKey);
     }
+
+    if (!manifest) {
+      throw PluginError.notFound('on disk');
+    }
+
+    const { name: pluginName, version: pluginVersion } =
+      validateManifest(manifest);
+
+    [plugin] = await Plugin.findOrCreate({
+      where: { key: pluginKey },
+      defaults: {
+        name: (manifest.rsk && manifest.rsk.name) || pluginName,
+        description: manifest.description || '',
+        version: pluginVersion,
+        is_active: isActive,
+        checksum: (manifest.rsk && manifest.rsk.checksum) || null,
+      },
+    });
   }
 
   if (!plugin) {
-    const err = new Error('Plugin not found');
-    err.name = 'PluginNotFound';
-    err.status = 404;
-    throw err;
+    throw PluginError.notFound();
   }
 
   // Resolve plugin physical directory on disk
-  let pluginDir = null;
-  let isDevPlugin = false;
-  if (cwd && plugin.key) {
-    const devPath = path.join(
-      resolvePluginsDir(cwd, getDevPluginPath()),
-      plugin.key,
-    );
-    const prodPath = path.join(
-      resolvePluginsDir(cwd, getPluginPath()),
-      plugin.key,
-    );
+  const { dir: pluginDir, isDevPlugin } = resolvePluginDir(cwd, plugin.key);
 
-    if (fs.existsSync(devPath)) {
-      pluginDir = devPath;
-      isDevPlugin = true;
-    } else if (fs.existsSync(prodPath)) {
-      pluginDir = prodPath;
-    }
-  }
-
+  // Update plugin status
   await plugin.update({ is_active: isActive });
+
   if (cache) await invalidateCache(cache, id);
 
   // Enqueue the background job for NPM dependencies and module reloading
@@ -847,25 +656,7 @@ export async function upgradePlugin(
   data,
   { models, cache, webhook, actorId },
 ) {
-  const { Plugin } = models;
-
-  // Try finding by DB primary key first (for installed plugins)
-  let plugin = await Plugin.findByPk(id);
-
-  // If not found, the ID might be an encrypted plugin key
-  if (!plugin) {
-    const pluginKey = decryptPluginId(id);
-    if (pluginKey) {
-      plugin = await Plugin.findOne({ where: { key: pluginKey } });
-    }
-  }
-
-  if (!plugin) {
-    const err = new Error('Plugin not found');
-    err.name = 'PluginNotFound';
-    err.status = 404;
-    throw err;
-  }
+  const { plugin } = await resolvePlugin(models, id);
 
   await plugin.update(data);
   if (cache) await invalidateCache(cache, id);
@@ -873,254 +664,4 @@ export async function upgradePlugin(
   await logPluginActivity(webhook, 'upgraded', plugin.id, data, actorId);
 
   return plugin;
-}
-
-/**
- * Register background workers for plugin tasks.
- * Called during server initialization.
- */
-export function registerPluginWorkers(app) {
-  const queue = app.get('queue')('plugins');
-
-  // WORKER: Install Plugin
-  queue.on('install', async job => {
-    const { pluginDir, pluginId, actorId } = job.data;
-    const pluginManager = app.get('plugin');
-    const webhook = app.get('webhook');
-    try {
-      job.updateProgress(10);
-      await installPluginDependencies(pluginDir);
-      job.updateProgress(50);
-
-      // Compute and store checksum after clean install
-      const checksum = await computeChecksum(pluginDir);
-      const { Plugin } = app.get('models');
-      await Plugin.update({ checksum }, { where: { id: pluginId } });
-      job.updateProgress(60);
-
-      if (pluginManager) {
-        await pluginManager.reloadPlugin(pluginId);
-        const metadata = pluginManager.getPluginMetadata(pluginId);
-        if (
-          metadata &&
-          metadata.manifest &&
-          !pluginManager.isPluginLoaded(pluginId)
-        ) {
-          await pluginManager.emit('plugin:loaded', { id: pluginId });
-        }
-      }
-      job.updateProgress(90);
-
-      await logPluginActivity(
-        webhook,
-        'installed',
-        pluginId,
-        { path: pluginDir, checksum },
-        actorId,
-      );
-
-      const ws = app.get('ws');
-      if (ws) {
-        // Include manifest data so ClientPluginManager can inject CSS/JS tags
-        const metadata = pluginManager
-          ? pluginManager.getPluginMetadata(pluginId)
-          : null;
-        ws.sendToPublicChannel('plugin:updated', {
-          type: 'PLUGIN_INSTALLED',
-          pluginId,
-          data: {
-            manifest:
-              metadata && metadata.manifest
-                ? {
-                    hasClientCss: metadata.manifest.hasClientCss || false,
-                    hasClientScript: metadata.manifest.hasClientScript || false,
-                    version: metadata.manifest.version || '0.0.0',
-                  }
-                : null,
-          },
-        });
-      }
-      job.updateProgress(100);
-      return { success: true };
-    } catch (err) {
-      console.error(`[PluginWorker] Install failed for ${pluginId}:`, err);
-      throw err;
-    }
-  });
-
-  // WORKER: Delete Plugin
-  queue.on('delete', async job => {
-    const { pluginId, pluginKey, actorId } = job.data;
-    const cwd = app.get('cwd');
-    const pluginManager = app.get('plugin');
-    const webhook = app.get('webhook');
-    const { Plugin } = app.get('models');
-
-    try {
-      if (pluginManager) {
-        if (pluginManager.isPluginLoaded(pluginId)) {
-          await pluginManager.unloadPlugin(pluginId);
-        } else {
-          await pluginManager.emit('plugin:unloaded', { id: pluginId });
-        }
-      }
-
-      // Remove files
-      if (cwd) {
-        const dirs = [
-          resolvePluginsDir(cwd, getPluginPath()),
-          resolvePluginsDir(cwd, getDevPluginPath()),
-        ];
-        for (const baseDir of dirs) {
-          const pDir = path.join(baseDir, pluginKey);
-          const relative = path.relative(baseDir, pDir);
-          if (
-            relative &&
-            !relative.startsWith('..') &&
-            !path.isAbsolute(relative)
-          ) {
-            if (fs.existsSync(pDir)) {
-              await uninstallPluginDependencies(pDir);
-              await fs.promises.rm(pDir, { recursive: true, force: true });
-            }
-          }
-        }
-      }
-
-      await Plugin.destroy({ where: { id: pluginId } });
-      await logPluginActivity(
-        webhook,
-        'deleted',
-        pluginId,
-        { key: pluginKey },
-        actorId,
-      );
-
-      const ws = app.get('ws');
-      if (ws) {
-        ws.sendToPublicChannel('plugin:updated', {
-          type: 'PLUGIN_UNINSTALLED',
-          pluginId,
-        });
-      }
-
-      return { success: true };
-    } catch (err) {
-      console.error(`[PluginWorker] Delete failed for ${pluginId}:`, err);
-      throw err;
-    }
-  });
-
-  // WORKER: Toggle Plugin
-  queue.on('toggle', async job => {
-    const { pluginId, isActive, actorId, pluginDir, isDevPlugin } = job.data;
-    const pluginManager = app.get('plugin');
-    const webhook = app.get('webhook');
-
-    try {
-      // Security: verify checksum before activating (skip for dev plugins)
-      if (isActive && pluginDir && !isDevPlugin) {
-        const { Plugin } = app.get('models');
-        const dbPlugin = await Plugin.findByPk(pluginId);
-        if (dbPlugin && dbPlugin.checksum) {
-          const { valid, actual } = await verifyPluginChecksum(
-            pluginDir,
-            dbPlugin.checksum,
-          );
-          if (!valid) {
-            console.error(
-              `[PluginWorker] ⛔ Checksum verification FAILED for plugin ${pluginId}. ` +
-                `Expected: ${dbPlugin.checksum}, Got: ${actual}. ` +
-                `Refusing to activate — possible code injection detected.`,
-            );
-            await dbPlugin.update({ is_active: false });
-
-            const ws = app.get('ws');
-            if (ws) {
-              ws.sendToPublicChannel('plugin:updated', {
-                type: 'PLUGIN_TAMPERED',
-                pluginId,
-              });
-            }
-            return { success: false, reason: 'checksum_mismatch' };
-          }
-        }
-      }
-
-      if (pluginDir) {
-        if (isActive) {
-          await installPluginDependencies(pluginDir);
-
-          // Recompute and store checksum after fresh npm install
-          const checksum = await computeChecksum(pluginDir);
-          const { Plugin } = app.get('models');
-          await Plugin.update({ checksum }, { where: { id: pluginId } });
-        } else {
-          await uninstallPluginDependencies(pluginDir);
-        }
-      }
-
-      if (pluginManager) {
-        if (isActive) {
-          await pluginManager.reloadPlugin(pluginId);
-          const metadata = pluginManager.getPluginMetadata(pluginId);
-          if (
-            metadata &&
-            metadata.manifest &&
-            !pluginManager.isPluginLoaded(pluginId)
-          ) {
-            await pluginManager.emit('plugin:loaded', { id: pluginId });
-          }
-        } else {
-          if (pluginManager.isPluginLoaded(pluginId)) {
-            await pluginManager.unloadPlugin(pluginId);
-          } else {
-            await pluginManager.emit('plugin:unloaded', { id: pluginId });
-          }
-        }
-      }
-
-      await logPluginActivity(
-        webhook,
-        'status_changed',
-        pluginId,
-        { isActive },
-        actorId,
-      );
-
-      const ws = app.get('ws');
-      if (ws) {
-        if (isActive) {
-          // Include manifest data so ClientPluginManager can inject CSS/JS tags
-          const metadata = pluginManager
-            ? pluginManager.getPluginMetadata(pluginId)
-            : null;
-          ws.sendToPublicChannel('plugin:updated', {
-            type: 'PLUGIN_UPDATED',
-            pluginId,
-            data: {
-              manifest:
-                metadata && metadata.manifest
-                  ? {
-                      hasClientCss: metadata.manifest.hasClientCss || false,
-                      hasClientScript:
-                        metadata.manifest.hasClientScript || false,
-                      version: metadata.manifest.version || '0.0.0',
-                    }
-                  : null,
-            },
-          });
-        } else {
-          ws.sendToPublicChannel('plugin:updated', {
-            type: 'PLUGIN_UNINSTALLED',
-            pluginId,
-          });
-        }
-      }
-      return { success: true };
-    } catch (err) {
-      console.error(`[PluginWorker] Toggle failed for ${pluginId}:`, err);
-      throw err;
-    }
-  });
 }

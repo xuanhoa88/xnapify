@@ -472,14 +472,12 @@ function writeConfig(config, rootPath) {
 }
 
 /**
- * Main plugin export
+ * Handle flows started event
  * @param {object} RED - Node-RED runtime
+ * @returns {function} - Event handler
  */
-export default function flowSplitter(RED) {
-  RED.log.info(`${PLUGIN_LOG_PREFIX} Initializing...`);
-
-  // Listen for flow start events (deploy or boot)
-  RED.events.on('flows:started', async eventData => {
+function handleFlowsStarted(RED) {
+  return async eventData => {
     RED.log.info(`${PLUGIN_LOG_PREFIX} Flow start event detected`);
 
     const { userDir } = RED.settings;
@@ -570,5 +568,23 @@ export default function flowSplitter(RED) {
     }
 
     RED.log.info(`${PLUGIN_LOG_PREFIX} Split complete ✅`);
-  });
+  };
+}
+
+/**
+ * Main plugin export
+ * @param {object} RED - Node-RED runtime
+ */
+export default function flowSplitter(RED) {
+  RED.log.info(`${PLUGIN_LOG_PREFIX} Initializing...`);
+
+  if (RED.events.rskFlowSplitterHandler) {
+    RED.events.removeListener(
+      'flows:started',
+      RED.events.rskFlowSplitterHandler,
+    );
+  }
+
+  RED.events.rskFlowSplitterHandler = handleFlowsStarted(RED);
+  RED.events.on('flows:started', RED.events.rskFlowSplitterHandler);
 }

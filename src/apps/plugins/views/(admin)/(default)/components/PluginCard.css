@@ -7,46 +7,86 @@
 
 @import '../../../../../../shared/renderer/components/variables.css';
 
+/* Clean, Premium Card Root styling */
 .root {
   display: flex;
   flex-direction: column;
   position: relative;
-  transition: all 0.2s ease-in-out;
+  transition:
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+  overflow: hidden;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border-subtle, #eaeaea);
+  border-radius: 12px; /* Smooth rounded corners matching mockup */
+}
+
+.root:hover {
+  box-shadow: 0 4px 16px rgb(0 0 0 / 6%);
+  border-color: var(--color-border-default, #d1d5db);
 }
 
 .root.loading {
   pointer-events: none;
+  opacity: 0.8;
 }
 
+/* Header Enhancements */
 .header {
   border-bottom: none;
+  padding-bottom: 0; /* Let body padding handle the spacing */
+  align-items: flex-start;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1, 4px);
 }
 
 .body {
-  padding-top: 0;
+  padding-top: var(--spacing-4, 16px);
+  display: flex;
+  flex-direction: column;
+  flex: 1;
 }
 
+/* Typography styles */
 .name {
   margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-bold);
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
   color: var(--color-text-primary);
-  line-height: 1.4;
+  line-height: 1.2;
   word-break: break-word;
 }
 
-.description {
-  margin: 0 0 var(--spacing-3) 0;
-  color: var(--color-text-secondary);
-  line-height: 1.5;
-  font-size: var(--font-size-sm);
+.version {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary, #6b7280);
+  font-family: var(--font-family-mono);
+
+  /* Removed background to match mockup */
+  display: block;
 }
 
+.description {
+  margin: 0 0 var(--spacing-4) 0;
+  color: var(--color-text-secondary, #4b5563);
+  line-height: 1.5;
+  font-size: var(
+    --font-size-base,
+    1rem
+  ); /* Standard text size for readability */
+}
+
+/* Actions and Tag alignments */
 .headerRight {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--spacing-3, 12px);
   flex-shrink: 0;
+  height: 32px; /* Align vertically with title */
 }
 
 .badges {
@@ -55,14 +95,40 @@
   flex-wrap: nowrap;
 }
 
-.version {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary);
-  font-family: var(--font-family-mono);
-  margin-right: var(--spacing-2);
+/* Meta Group (Author & Repo) - Clean and understated */
+.metaGroup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--spacing-4, 16px);
+  margin-top: auto;
 }
 
-/* Skeleton Styles */
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6b7280);
+  gap: var(--spacing-2, 6px);
+}
+
+.metaIcon {
+  width: 16px;
+  height: 16px;
+  opacity: 0.8;
+  color: currentcolor;
+}
+
+.metaLink {
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.metaLink:hover {
+  color: var(--color-primary-default, #2563eb);
+}
+
+/* Skeleton Enhancements */
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -85,8 +151,14 @@
   }
 }
 
+.skeletonWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
 .skeletonTitle {
-  width: 120px;
+  width: 150px;
   height: 24px;
 }
 
@@ -100,14 +172,20 @@
   width: 80%;
 }
 
+.skeletonMeta {
+  width: 60%;
+  height: 16px;
+  margin-top: var(--spacing-2);
+}
+
 .skeletonBadge {
-  width: 60px;
-  height: 24px;
+  width: 68px;
+  height: 28px;
   border-radius: var(--radius-full);
 }
 
 .skeletonVersion {
-  width: 40px;
+  width: 60px;
   height: 16px;
 }
 
@@ -117,37 +195,21 @@
 
 @media (max-width: 768px) {
   .root {
-    padding: var(--spacing-4);
-    border-radius: var(--radius-lg);
+    padding: var(--spacing-3);
   }
 
   .name {
-    font-size: var(--font-size-base);
+    font-size: 1rem;
     flex: 1;
     min-width: 120px;
-  }
-
-  .description {
-    font-size: var(--font-size-xs);
-    min-height: auto;
-    margin-bottom: var(--spacing-3);
-    line-height: 1.5;
   }
 
   .headerRight {
     gap: var(--spacing-2);
   }
-
-  .badges {
-    gap: var(--spacing-1);
-  }
 }
 
 @media (max-width: 375px) {
-  .root {
-    padding: var(--spacing-2);
-  }
-
   .name {
     font-size: var(--font-size-sm);
   }
