@@ -119,7 +119,6 @@ export default {
       'profile.personal_info.formData',
       handleProfileDefaults,
     );
-
     console.log('[Test Plugin] Initialized');
   },
 

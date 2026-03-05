@@ -41,7 +41,6 @@ module.exports = {
   BUILD_DIR: getDirFromEnv('BUILD_DIR', 'build'),
   APP_DIR: getDirFromEnv('APP_DIR', 'src'),
   PUBLIC_DIR: getDirFromEnv('PUBLIC_DIR', 'public'),
-  NODE_MODULES_DIR: getDirFromEnv('NODE_MODULES_DIR', 'node_modules'),
 
   // Shared bundle config
   bundleMaxAssetSize: env('BUNDLE_MAX_ASSET_SIZE', 250_000), // 250KB

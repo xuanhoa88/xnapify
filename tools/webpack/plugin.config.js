@@ -82,6 +82,7 @@ function validatePlugin(plugin) {
 
   return {
     pluginName: plugin.name,
+    pluginPath: plugin.path,
     pluginDescription: plugin.manifest.description || plugin.name,
     clientPath: plugin.manifest.browser
       ? path.resolve(plugin.path, plugin.manifest.browser)
@@ -121,87 +122,93 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
   const outputPath = path.join(buildPath, pluginName);
   const localIdentName = getPluginLocalIdentName(pluginName);
 
-  return [
-    // Browser build (Module Federation)
-    createWebpackConfig('client', {
-      entry: clientPath,
-      experiments: { outputModule: false },
-      output: {
-        path: outputPath,
-        filename: 'browser.js',
-        chunkFilename: isDev
-          ? '[name].chunk.js'
-          : '[name].[contenthash:8].chunk.js',
-        publicPath: 'auto',
-        uniqueName: libraryName,
+  const clientConfig = createWebpackConfig('client', {
+    entry: clientPath,
+    experiments: { outputModule: false },
+    output: {
+      path: outputPath,
+      filename: 'browser.js',
+      chunkFilename: isDev
+        ? '[name].chunk.js'
+        : '[name].[contenthash:8].chunk.js',
+      publicPath: 'auto',
+      uniqueName: libraryName,
+    },
+    optimization: {
+      runtimeChunk: false, // remotes must not emit a separate runtime
+      splitChunks: {
+        chunks: 'async',
+        cacheGroups: createCacheGroups('async'),
       },
-      optimization: {
-        runtimeChunk: false, // remotes must not emit a separate runtime
-        splitChunks: {
-          chunks: 'async',
-          cacheGroups: createCacheGroups('async'),
+    },
+    performance: false, // plugins are async remotes — size hints not meaningful
+    module: {
+      rules: [
+        createCSSRule({
+          exportOnlyLocals: true,
+          localIdentName,
+        }),
+      ],
+    },
+    plugins: [
+      new webpack.ProvidePlugin({
+        process: require.resolve('process/browser'),
+      }),
+      pluginDefines,
+      createEnvDefine(),
+      new webpack.container.ModuleFederationPlugin({
+        name: libraryName,
+        filename: 'remote.js',
+        exposes: {
+          './plugin': clientPath,
         },
-      },
-      performance: false, // plugins are async remotes — size hints not meaningful
-      module: {
-        rules: [
-          createCSSRule({
-            exportOnlyLocals: true,
-            localIdentName,
-          }),
-        ],
-      },
-      plugins: [
-        new webpack.ProvidePlugin({
-          process: require.resolve('process/browser'),
+        shared: createSharedDependencies(pkg.dependencies || {}, {
+          eager: false,
+          singleton: true,
+          strictVersion: false,
         }),
-        pluginDefines,
-        createEnvDefine(),
-        new webpack.container.ModuleFederationPlugin({
-          name: libraryName,
-          filename: 'remote.js',
-          exposes: {
-            './plugin': clientPath,
-          },
-          shared: createSharedDependencies(pkg.dependencies || {}, {
-            eager: false,
-            singleton: true,
-            strictVersion: false,
-          }),
-        }),
-        createProgressPlugin(),
-      ].filter(Boolean),
-    }),
+      }),
+      createProgressPlugin(),
+    ].filter(Boolean),
+  });
 
-    // Server build (CommonJS + CSS extraction)
-    createWebpackConfig('server', {
-      entry: clientPath,
-      experiments: { outputModule: false },
-      output: {
-        path: outputPath,
-        filename: 'server.js',
-        library: { type: 'commonjs' },
-      },
-      module: {
-        rules: [
-          createCSSRule({
-            extractLoader: MiniCssExtractPlugin.loader,
-            localIdentName,
-          }),
-        ],
-      },
-      plugins: [
-        pluginDefines,
-        createEnvDefine(),
-        new MiniCssExtractPlugin({
-          filename: 'plugin.css',
-          ignoreOrder: isDev,
+  clientConfig.resolve.modules.unshift(
+    path.join(pluginData.pluginPath, 'node_modules'),
+  );
+
+  // Server build (CommonJS + CSS extraction)
+  const serverConfig = createWebpackConfig('server', {
+    entry: clientPath,
+    experiments: { outputModule: false },
+    output: {
+      path: outputPath,
+      filename: 'server.js',
+    },
+    module: {
+      rules: [
+        createCSSRule({
+          extractLoader: MiniCssExtractPlugin.loader,
+          localIdentName,
         }),
-        new StripRootCSSPlugin(),
-        createProgressPlugin(),
-      ].filter(Boolean),
-    }),
-  ];
+      ],
+    },
+    plugins: [
+      pluginDefines,
+      createEnvDefine(),
+      new MiniCssExtractPlugin({
+        filename: 'plugin.css',
+        ignoreOrder: isDev,
+      }),
+      new StripRootCSSPlugin(),
+      createProgressPlugin(),
+    ].filter(Boolean),
+  });
+
+  serverConfig.resolve.modules.unshift(
+    path.join(pluginData.pluginPath, 'node_modules'),
+  );
+
+  return [clientConfig, serverConfig];
 }
 
 /**
@@ -212,22 +219,23 @@ function createApiConfig(pluginData, pluginDefines, buildPath) {
 
   if (!apiPath) return [];
 
-  return [
-    createWebpackConfig('server', {
-      entry: apiPath,
-      experiments: { outputModule: false },
-      output: {
-        path: path.join(buildPath, pluginName),
-        filename: 'api.js',
-        library: { type: 'commonjs' },
-      },
-      plugins: [
-        pluginDefines,
-        createEnvDefine(),
-        createProgressPlugin(),
-      ].filter(Boolean),
-    }),
-  ];
+  const apiConfig = createWebpackConfig('server', {
+    entry: apiPath,
+    experiments: { outputModule: false },
+    output: {
+      path: path.join(buildPath, pluginName),
+      filename: 'api.js',
+    },
+    plugins: [pluginDefines, createEnvDefine(), createProgressPlugin()].filter(
+      Boolean,
+    ),
+  });
+
+  apiConfig.resolve.modules.unshift(
+    path.join(pluginData.pluginPath, 'node_modules'),
+  );
+
+  return [apiConfig];
 }
 
 // =============================================================================

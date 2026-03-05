@@ -11,11 +11,17 @@ const fs = require('fs');
 const snakeCase = require('lodash/snakeCase');
 const pick = require('lodash/pick');
 const semver = require('semver');
+const util = require('util');
 const config = require('../config');
+const { execFile } = require('child_process');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { toContainerName } = require('../utils/plugin');
 const { computeChecksum } = require('../utils/checksum');
 const createPluginConfig = require('../webpack/plugin.config');
+const { isDev } = require('../webpack/base.config');
+
+// Promisify execFile
+const execFileAsync = util.promisify(execFile);
 
 // Configuration
 const PLUGIN_PATH = process.env.RSK_PLUGIN_PATH || 'plugins';
@@ -250,6 +256,37 @@ async function buildPlugins(options = {}) {
 
   logInfo(`🚀 Building ${plugins.length} plugin(s)...`);
   const start = Date.now();
+
+  // Ensure all plugins have their dependencies installed before building
+  if (isDev) {
+    logInfo(`📦 Installing dependencies for ${plugins.length} plugin(s)...`);
+    for (const plugin of plugins) {
+      if (fs.existsSync(path.join(plugin.path, 'package.json'))) {
+        try {
+          await execFileAsync(
+            'npm',
+            [
+              'install',
+              '--no-audit',
+              '--no-update-notifier',
+              '--no-fund',
+              '--engine-strict',
+              '--no-package-lock',
+            ],
+            { cwd: plugin.path },
+          );
+          if (process.env.NODE_ENV === 'development') {
+            console.log(
+              `[PluginBuild] npm install completed for ${plugin.name}`,
+            );
+          }
+        } catch (npmErr) {
+          logError(`Failed to install dependencies for plugin ${plugin.name}`);
+          console.error(npmErr);
+        }
+      }
+    }
+  }
 
   const compiler = webpack(
     createPluginConfig({

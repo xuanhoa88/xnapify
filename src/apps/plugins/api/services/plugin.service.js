@@ -49,6 +49,7 @@ async function installPluginDependencies(pluginDir, plugin) {
         '--no-fund',
         '--production',
         '--engine-strict',
+        '--no-package-lock',
       ],
       {
         cwd: pluginDir,

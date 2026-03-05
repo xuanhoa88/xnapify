@@ -121,21 +121,6 @@ async function copyFiles() {
 }
 
 /**
- * Validate build prerequisites
- */
-async function validatePrerequisites() {
-  if (!(await pathExists(config.APP_DIR))) {
-    throw new BuildError('src directory not found');
-  }
-
-  if (!(await pathExists(config.NODE_MODULES_DIR))) {
-    throw new BuildError('node_modules not found - run npm install');
-  }
-
-  logDebug('✅ Prerequisites validated');
-}
-
-/**
  * Analyze webpack compilation stats
  * Uses webpack's built-in stats.toJson() for comprehensive data
  */
@@ -330,9 +315,6 @@ async function main() {
   }
 
   try {
-    // Validate prerequisites
-    await validatePrerequisites();
-
     // Setup graceful shutdown
     setupGracefulShutdown(() => {
       logInfo(`🛑 Build operation interrupted`);

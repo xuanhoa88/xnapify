@@ -5,11 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { normalizeState } from './utils';
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+const selectRuntimeRaw = state => state && state.runtime;
 
 /**
  * Safely get runtime state with normalization
@@ -17,9 +20,9 @@ import { normalizeState } from './utils';
  * @param {Object} state - Redux state
  * @returns {Object} Normalized runtime state
  */
-const getRuntimeState = state => {
-  return normalizeState(state && state.runtime);
-};
+const getRuntimeState = createSelector([selectRuntimeRaw], runtime =>
+  normalizeState(runtime),
+);
 
 // =============================================================================
 // TYPED SELECTORS (for known runtime variables)

@@ -212,9 +212,7 @@ const serverConfig = createWebpackConfig('server', {
   output: {
     path: config.BUILD_DIR,
     filename: '[name].js',
-    libraryTarget: 'commonjs2',
   },
-
   module: {
     rules: [createCSSRule({ exportOnlyLocals: true })],
   },

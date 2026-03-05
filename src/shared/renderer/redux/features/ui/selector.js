@@ -5,11 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { normalizeState } from './utils';
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+const selectUiRaw = state => state && state.ui;
 
 /**
  * Safely get UI state with normalization
@@ -17,9 +20,7 @@ import { normalizeState } from './utils';
  * @param {Object} state - Redux state
  * @returns {Object} Normalized UI state
  */
-const getUiState = state => {
-  return normalizeState(state && state.ui);
-};
+const getUiState = createSelector([selectUiRaw], ui => normalizeState(ui));
 
 // =============================================================================
 // DRAWER SELECTORS
@@ -95,10 +96,10 @@ export const getFlashMessageText = state => {
  * @param {Object} state - Redux state
  * @returns {Object} Breadcrumbs object { namespace: [...items] }
  */
-export const getAllBreadcrumbs = state => {
-  const ui = getUiState(state);
-  return ui.breadcrumbs || {};
-};
+export const getAllBreadcrumbs = createSelector(
+  [getUiState],
+  ui => ui.breadcrumbs || {},
+);
 
 /**
  * Get breadcrumbs for 'admin' namespace (convenience selector)

@@ -604,14 +604,12 @@ function createWebpackConfig(name, options = {}) {
 
       output: {
         publicPath: '/',
+        libraryTarget: isServer ? 'commonjs2' : 'umd',
       },
 
       resolve: {
-        modules: [config.NODE_MODULES_DIR, config.APP_DIR],
+        modules: ['node_modules', config.APP_DIR],
         extensions: ['.js', '.jsx', '.json'],
-        alias: {
-          yjs: path.resolve(config.NODE_MODULES_DIR, 'yjs'),
-        },
         fallback: {
           events: require.resolve('events'),
         },
@@ -652,7 +650,11 @@ function createWebpackConfig(name, options = {}) {
       },
     },
     options,
-    { output: { clean: false } },
+    {
+      output: {
+        clean: false,
+      },
+    },
   );
 }
 

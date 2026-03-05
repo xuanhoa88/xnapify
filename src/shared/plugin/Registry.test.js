@@ -78,7 +78,7 @@ describe('PluginRegistry', () => {
       const def = registry.findDefinition('plugin-1');
 
       expect(def).toBeDefined();
-      expect(def.name).toBe('plugin-1');
+      expect(def.id).toBe('plugin-1');
       expect(registry.getDefinitions('core').size).toBe(1);
     });
 

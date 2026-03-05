@@ -5,11 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { normalizeState } from './utils';
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
+
+const selectIntlRaw = state => state && state.intl;
 
 /**
  * Safely get intl state with normalization
@@ -17,9 +20,9 @@ import { normalizeState } from './utils';
  * @param {Object} state - Redux state
  * @returns {Object} Normalized intl state
  */
-const getIntlState = state => {
-  return normalizeState(state && state.intl);
-};
+const getIntlState = createSelector([selectIntlRaw], intl =>
+  normalizeState(intl),
+);
 
 // =============================================================================
 // LOCALE SELECTORS
@@ -104,10 +107,10 @@ export const getAvailableLocales = state => {
  * @param {Object} state - Redux state
  * @returns {string[]} Array of available locale codes
  */
-export const getAvailableLocaleCodes = state => {
-  const locales = getAvailableLocales(state);
-  return Object.keys(locales);
-};
+export const getAvailableLocaleCodes = createSelector(
+  [getAvailableLocales],
+  locales => Object.keys(locales),
+);
 
 /**
  * Check if a locale is available

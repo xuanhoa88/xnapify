@@ -180,12 +180,12 @@ class PluginRegistry {
         ...definition,
         ...meta,
         context,
-        name: pluginId,
+        id: pluginId,
       };
 
       // Remove existing definition with same ID if present (update/overwrite)
       for (const def of definitions) {
-        if (def.name === pluginId) {
+        if (def.id === pluginId) {
           definitions.delete(def);
           break;
         }
@@ -205,7 +205,7 @@ class PluginRegistry {
   findDefinition(id) {
     for (const [, definitions] of this[DEFINITIONS]) {
       for (const def of definitions) {
-        if (def.name === id) return def;
+        if (def.id === id) return def;
       }
     }
     return null;
@@ -220,7 +220,7 @@ class PluginRegistry {
     let removed = false;
     for (const [, definitions] of this[DEFINITIONS]) {
       for (const def of definitions) {
-        if (def.name === id) {
+        if (def.id === id) {
           definitions.delete(def);
           removed = true;
           // Don't break here, as plugin might be defined in multiple namespaces
@@ -373,7 +373,7 @@ class PluginRegistry {
     if (!slotMap) return [];
 
     return Array.from(slotMap.entries())
-      .map(([component, options]) => ({ component, ...options }))
+      .map(([component, options]) => ({ ...options, component }))
       .sort((a, b) => a.order - b.order);
   }
 

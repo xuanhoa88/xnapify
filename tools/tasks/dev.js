@@ -189,10 +189,7 @@ function clearModuleCache() {
   // node_modules intact.  This preserves singletons like React across HMR
   // while guaranteeing a fresh application state for the new bundle.
   Object.keys(require.cache).forEach(key => {
-    if (
-      key.startsWith(config.CWD) &&
-      !key.startsWith(config.NODE_MODULES_DIR)
-    ) {
+    if (key.startsWith(config.CWD) && !key.includes('node_modules')) {
       delete require.cache[key];
     }
   });

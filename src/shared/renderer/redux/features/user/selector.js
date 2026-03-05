@@ -5,17 +5,27 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createSelector } from '@reduxjs/toolkit';
 import { normalizeState } from './utils';
 
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
 
+const selectUserRaw = state => state && state.user;
+
+/**
+ * Memoized normalized user state
+ */
+const getNormalizedUserState = createSelector([selectUserRaw], user =>
+  normalizeState(user),
+);
+
 /**
  * Safely get nested property from state
  */
 const getOperationState = (state, operationKey) => {
-  const normalized = normalizeState(state && state.user);
+  const normalized = getNormalizedUserState(state);
   if (!normalized.operations) return null;
   return normalized.operations[operationKey] || null;
 };
@@ -24,7 +34,7 @@ const getOperationState = (state, operationKey) => {
  * Get user data from state (handles all formats)
  */
 const getUserState = state => {
-  const normalized = normalizeState(state && state.user);
+  const normalized = getNormalizedUserState(state);
   return normalized.data;
 };
 
@@ -104,9 +114,10 @@ export const getUserPreferencesData = state => {
 /**
  * Get user roles
  */
+const EMPTY_ROLES = [];
 export const getUserRoles = state => {
   const user = getUserState(state);
-  return (user && user.roles) || [];
+  return (user && user.roles) || EMPTY_ROLES;
 };
 
 // =============================================================================
@@ -229,7 +240,7 @@ export const getPreferencesError = state => {
  * @deprecated Use operation-specific selectors instead (isAuthLoading, getAuthError, etc.)
  */
 export const isUserLoading = state => {
-  const normalized = normalizeState(state && state.user);
+  const normalized = getNormalizedUserState(state);
   if (!normalized.operations) {
     return false;
   }
@@ -241,7 +252,7 @@ export const isUserLoading = state => {
  * @deprecated Use operation-specific selectors instead
  */
 export const getUserError = state => {
-  const normalized = normalizeState(state && state.user);
+  const normalized = getNormalizedUserState(state);
   if (!normalized.operations) {
     return null;
   }
