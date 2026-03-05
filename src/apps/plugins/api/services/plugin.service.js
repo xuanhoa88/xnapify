@@ -317,18 +317,12 @@ export async function getActivePlugins({ models, cache, cwd }) {
     let isLocal = false;
 
     // Check Local first (dev override)
-    const localPath = path.join(localPluginsDir, key);
-    if (fs.existsSync(localPath)) {
-      manifest = await readPluginManifest(localPluginsDir, key);
+    if ((manifest = await readPluginManifest(localPluginsDir, key))) {
       isLocal = true;
-    }
-
-    // Check Installed if not found locally
-    if (!manifest) {
-      const installedPath = path.join(installedPluginsDir, key);
-      if (fs.existsSync(installedPath)) {
-        manifest = await readPluginManifest(installedPluginsDir, key);
-      }
+    } else if (
+      (manifest = await readPluginManifest(installedPluginsDir, key))
+    ) {
+      isLocal = false;
     }
 
     if (manifest) {
@@ -446,12 +440,13 @@ export async function getPluginById({ cwd, models, cache }, id) {
     throw err;
   }
 
-  // Read manifest (check installed dir first, then local/dev)
-  let manifest = await readPluginManifest(pluginsDir, pluginKey);
-  let resolvedDir = pluginsDir;
-  if (!manifest) {
-    manifest = await readPluginManifest(localPluginsDir, pluginKey);
+  let manifest, resolvedDir;
+
+  // Read manifest (check local/dev first for dev override, then installed)
+  if ((manifest = await readPluginManifest(localPluginsDir, pluginKey))) {
     resolvedDir = localPluginsDir;
+  } else if ((manifest = await readPluginManifest(pluginsDir, pluginKey))) {
+    resolvedDir = pluginsDir;
   }
 
   if (!manifest) {
@@ -748,15 +743,14 @@ export async function togglePluginStatus(
 
       // FS-only plugin with no DB record yet — create one
       if (!plugin && cwd) {
+        // Check local/dev first (dev override), then installed
         let manifest = await readPluginManifest(
-          resolvePluginsDir(cwd, getPluginPath()),
+          resolvePluginsDir(cwd, getDevPluginPath()),
           pluginKey,
         );
-
-        // Also check local/dev plugins directory
         if (!manifest) {
           manifest = await readPluginManifest(
-            resolvePluginsDir(cwd, getDevPluginPath()),
+            resolvePluginsDir(cwd, getPluginPath()),
             pluginKey,
           );
         }
@@ -806,20 +800,20 @@ export async function togglePluginStatus(
   let pluginDir = null;
   let isDevPlugin = false;
   if (cwd && plugin.key) {
-    const prodPath = path.join(
-      resolvePluginsDir(cwd, getPluginPath()),
-      plugin.key,
-    );
     const devPath = path.join(
       resolvePluginsDir(cwd, getDevPluginPath()),
       plugin.key,
     );
+    const prodPath = path.join(
+      resolvePluginsDir(cwd, getPluginPath()),
+      plugin.key,
+    );
 
-    if (fs.existsSync(prodPath)) {
-      pluginDir = prodPath;
-    } else if (fs.existsSync(devPath)) {
+    if (fs.existsSync(devPath)) {
       pluginDir = devPath;
       isDevPlugin = true;
+    } else if (fs.existsSync(prodPath)) {
+      pluginDir = prodPath;
     }
   }
 

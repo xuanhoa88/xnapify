@@ -331,7 +331,7 @@ describe('Plugin Service', () => {
         pluginDir: expect.any(String),
         isActive: true,
         actorId: 'user-123',
-        isDevPlugin: false,
+        isDevPlugin: true, // local/dev path is checked first
       });
     });
   });
