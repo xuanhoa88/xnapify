@@ -38,4 +38,9 @@ export const SEED_PERMISSIONS = Object.freeze({
   apiKeysCreate: uuidv4(),
   apiKeysRead: uuidv4(),
   apiKeysDelete: uuidv4(),
+  // Files CRUD
+  filesCreate: uuidv4(),
+  filesRead: uuidv4(),
+  filesUpdate: uuidv4(),
+  filesDelete: uuidv4(),
 });

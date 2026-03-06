@@ -73,8 +73,9 @@ const CORE_MODULES = new Set([
   'roles',
   'groups',
   'users',
-  'plugins',
   'auth',
+  'files',
+  'plugins',
   ...parseEnvCoreModules(),
 ]);
 

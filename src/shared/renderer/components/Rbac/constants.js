@@ -26,4 +26,5 @@ export const DEFAULT_RESOURCES = Object.freeze({
   GROUPS: 'groups',
   PERMISSIONS: 'permissions',
   API_KEYS: 'apiKeys',
+  FILES: 'files',
 });

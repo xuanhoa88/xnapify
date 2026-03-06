@@ -87,6 +87,7 @@ export const DEFAULT_RESOURCES = Object.freeze({
   PERMISSIONS: 'permissions',
   API_KEYS: 'apiKeys',
   NODE_RED: 'nodered',
+  FILES: 'files',
 });
 
 /**
@@ -211,12 +212,29 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
   },
   {
     resource: DEFAULT_RESOURCES.API_KEYS,
-    action: DEFAULT_ACTIONS.READ,
-    description: 'View API keys',
-  },
-  {
-    resource: DEFAULT_RESOURCES.API_KEYS,
     action: DEFAULT_ACTIONS.DELETE,
     description: 'Delete API keys',
+  },
+
+  // File management (CRUD)
+  {
+    resource: DEFAULT_RESOURCES.FILES,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Create/Upload files',
+  },
+  {
+    resource: DEFAULT_RESOURCES.FILES,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View files',
+  },
+  {
+    resource: DEFAULT_RESOURCES.FILES,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Update/Rename/Move files',
+  },
+  {
+    resource: DEFAULT_RESOURCES.FILES,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete files',
   },
 ]);
