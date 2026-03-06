@@ -9,7 +9,14 @@ import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Icon } from '../../../../../shared/renderer/components/Admin';
-import { fetchFiles, selectCurrentView, selectCurrentFolderId } from '../redux';
+import {
+  fetchFiles,
+  selectCurrentView,
+  selectCurrentFolderId,
+  selectSearch,
+  selectPage,
+  selectPageSize,
+} from '../redux';
 import FileSidebar from '../components/FileSidebar';
 import FileToolbar from '../components/FileToolbar';
 import FileGrid from '../components/FileGrid';
@@ -26,12 +33,23 @@ function Files() {
   const dispatch = useDispatch();
   const currentView = useSelector(selectCurrentView);
   const currentFolderId = useSelector(selectCurrentFolderId);
+  const search = useSelector(selectSearch);
+  const page = useSelector(selectPage);
+  const pageSize = useSelector(selectPageSize);
   const shareModalRef = useRef(null);
 
-  // Initial fetch and fetch on view/folder change
+  // Initial fetch and fetch on view/folder/search/pagination change
   useEffect(() => {
-    dispatch(fetchFiles({ view: currentView, parentId: currentFolderId }));
-  }, [dispatch, currentView, currentFolderId]);
+    dispatch(
+      fetchFiles({
+        view: currentView,
+        parentId: currentFolderId,
+        search,
+        page,
+        pageSize,
+      }),
+    );
+  }, [dispatch, currentView, currentFolderId, search, page, pageSize]);
 
   return (
     <div className={s.root}>

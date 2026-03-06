@@ -10,6 +10,7 @@ import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
+import SearchBar from '../../../../../shared/renderer/components/Admin/Table/SearchBar';
 import Button from '../../../../../shared/renderer/components/Button';
 import {
   setView,
@@ -17,6 +18,8 @@ import {
   selectCurrentView,
   selectBreadcrumbs,
   selectViewMode,
+  selectSearch,
+  setSearch,
 } from '../redux';
 import s from './FileToolbar.css';
 
@@ -26,6 +29,7 @@ export default function FileToolbar() {
   const currentView = useSelector(selectCurrentView);
   const breadcrumbs = useSelector(selectBreadcrumbs);
   const viewMode = useSelector(selectViewMode);
+  const search = useSelector(selectSearch);
 
   const handleBreadcrumbClick = crumb => {
     if (crumb.id === 'root' || crumb.id === currentView) {
@@ -64,6 +68,15 @@ export default function FileToolbar() {
             </React.Fragment>
           );
         })}
+      </div>
+
+      <div className={s.searchContainer}>
+        <SearchBar
+          value={search}
+          onChange={val => dispatch(setSearch(val))}
+          placeholder={t('files:toolbar.search_placeholder', 'Search files...')}
+          className={s.searchBar}
+        />
       </div>
 
       <div className={s.actionsContainer}>

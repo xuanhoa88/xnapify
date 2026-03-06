@@ -25,11 +25,17 @@ import {
 export async function getFiles(req, res) {
   const http = req.app.get('http');
   try {
-    const { view, parentId } = req.query;
+    const { view, parentId, search, page, pageSize } = req.query;
 
     const result = await fileService.listFiles(
       req.user.id,
-      { view: view || 'my_drive', parentId: parentId || null },
+      {
+        view: view || 'my_drive',
+        parentId: parentId || null,
+        search: search || '',
+        page: page || 1,
+        pageSize: pageSize || 50,
+      },
       { models: req.app.get('models') },
     );
 

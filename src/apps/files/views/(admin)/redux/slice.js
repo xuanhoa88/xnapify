@@ -19,6 +19,12 @@ const initialState = {
   selectedFileIds: [],
   viewMode: 'grid', // 'grid' | 'list'
 
+  // Pagination & Search
+  search: '',
+  page: 1,
+  pageSize: 50,
+  total: 0,
+
   // Async states
   loadingFiles: false,
   initializedFiles: false,
@@ -38,6 +44,20 @@ export const filesSlice = createSlice({
       state.currentFolderId = action.payload.folderId || null;
       state.selectedFileIds = [];
       state.error = null;
+      // Reset pagination and search on view change
+      state.page = 1;
+      state.search = '';
+    },
+    setSearch(state, action) {
+      state.search = action.payload;
+      state.page = 1; // Reset to first page on search
+    },
+    setPage(state, action) {
+      state.page = action.payload;
+    },
+    setPageSize(state, action) {
+      state.pageSize = action.payload;
+      state.page = 1; // Reset to first page on page size change
     },
     toggleSelection(state, action) {
       const { fileId, multi } = action.payload;
@@ -93,6 +113,7 @@ export const filesSlice = createSlice({
       state.files = action.payload.files;
       state.currentFolder = action.payload.currentFolder;
       state.breadcrumbs = action.payload.breadcrumbs;
+      state.total = action.payload.total || 0;
     });
     builder.addCase(thunks.fetchFiles.rejected, (state, action) => {
       state.loadingFiles = false;
@@ -180,6 +201,9 @@ export const {
   addUploadItem,
   updateUploadProgress,
   clearCompletedUploads,
+  setSearch,
+  setPage,
+  setPageSize,
 } = filesSlice.actions;
 
 export default filesSlice.reducer;

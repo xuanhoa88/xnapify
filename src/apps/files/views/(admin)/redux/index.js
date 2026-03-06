@@ -21,6 +21,9 @@ export {
   addUploadItem,
   updateUploadProgress,
   clearCompletedUploads,
+  setSearch,
+  setPage,
+  setPageSize,
   SLICE_NAME,
 } from './slice';
 

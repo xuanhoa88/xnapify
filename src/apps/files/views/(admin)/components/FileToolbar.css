@@ -23,6 +23,60 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.searchContainer {
+  flex: 1;
+  max-width: 600px;
+  margin: 0 24px;
+}
+
+.searchBar {
+  width: 100%;
+}
+
+.searchBar :global(.search-container) {
+  background: var(--color-background-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  height: 40px;
+  width: 100%;
+  transition: all 0.2s ease;
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchBar :global(.search-container):hover {
+  border-color: var(--color-border-hover);
+}
+
+.searchBar :global(.search-container):focus-within {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
+  background: var(--color-background);
+}
+
+.searchBar :global(.search-input) {
+  background: transparent !important;
+  border: none !important;
+  color: var(--color-text);
+  font-size: 14px;
+  width: 100% !important;
+  height: 100% !important;
+  outline: none !important;
+  padding-left: 40px !important; /* Space for absolute icon */
+  box-shadow: none !important;
+}
+
+.searchBar :global(.search-icon) {
+  left: 12px !important;
+  color: var(--color-text-tertiary);
+}
+
+.searchBar :global(.search-container):focus-within :global(.search-icon) {
+  color: var(--color-primary);
 }
 
 .crumbBtn {

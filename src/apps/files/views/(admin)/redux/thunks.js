@@ -16,7 +16,13 @@ const ADMIN_API_BASE = '/api/admin/files';
 export const fetchFiles = createAsyncThunk(
   'admin/files/fetchFiles',
   async (
-    { view = 'my_drive', parentId = null } = {},
+    {
+      view = 'my_drive',
+      parentId = null,
+      search = '',
+      page = 1,
+      pageSize = 50,
+    } = {},
     { extra: { fetch }, rejectWithValue },
   ) => {
     try {
@@ -24,9 +30,12 @@ export const fetchFiles = createAsyncThunk(
         query: {
           view,
           parentId: parentId || undefined,
+          search: search || undefined,
+          page,
+          pageSize,
         },
       });
-      return data; // { files, currentFolder, breadcrumbs }
+      return data; // { files, currentFolder, breadcrumbs, total }
     } catch (error) {
       return rejectWithValue(error.message);
     }

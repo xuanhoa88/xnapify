@@ -282,3 +282,10 @@
 .gridView .fileItem.selected .iconContainer {
   background-color: transparent; /* blend with the soft primary bg of the selection */
 }
+
+.paginationWrapper {
+  margin-top: 32px;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 24px;
+}

@@ -260,7 +260,12 @@ const Item = forwardRef(
     if (groups && !hasGroup(groups)) return null;
     if (ownerId && !isOwner(ownerId)) return null;
 
-    const ComponentType = props.to || props.href ? 'a' : Component;
+    const ComponentType =
+      Component !== 'button'
+        ? Component
+        : props.to || props.href
+          ? 'a'
+          : Component;
 
     return (
       <ComponentType

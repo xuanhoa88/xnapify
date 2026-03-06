@@ -29,6 +29,12 @@ export const selectError = state => (state.files && state.files.error) || null;
 export const selectUploadModalOpen = state =>
   (state.files && state.files.uploadModalOpen) || false;
 export const selectActiveUploads = state => state.files.activeUploads;
+export const selectSearch = state => (state.files && state.files.search) || '';
+export const selectPage = state => (state.files && state.files.page) || 1;
+export const selectPageSize = state =>
+  (state.files && state.files.pageSize) || 50;
+export const selectTotalItems = state =>
+  (state.files && state.files.total) || 0;
 
 // Derived selector
 export const selectSelectedFilesData = state => {

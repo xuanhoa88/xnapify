@@ -14,6 +14,7 @@ import {
   Loader,
   ConfirmModal,
 } from '../../../../../shared/renderer/components/Admin';
+import Pagination from '../../../../../shared/renderer/components/Admin/Table/Pagination';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import { validateForm } from '../../../../../shared/validator';
 import { renameFileFormSchema } from '../../../validator/admin/file';
@@ -31,6 +32,10 @@ import {
   selectLoadingFiles,
   selectInitializedFiles,
   selectCurrentView,
+  selectPage,
+  selectPageSize,
+  selectTotalItems,
+  setPage,
 } from '../redux';
 import s from './FileGrid.css';
 
@@ -43,6 +48,10 @@ export default function FileGrid({ onShare }) {
   const loading = useSelector(selectLoadingFiles);
   const initialized = useSelector(selectInitializedFiles);
   const currentView = useSelector(selectCurrentView);
+  const page = useSelector(selectPage);
+  const pageSize = useSelector(selectPageSize);
+  const totalItems = useSelector(selectTotalItems);
+  const totalPages = Math.ceil(totalItems / pageSize);
 
   const [contextMenu, setContextMenu] = useState(null);
   const [targetFile, setTargetFile] = useState(null);
@@ -263,7 +272,6 @@ export default function FileGrid({ onShare }) {
           );
         })}
       </div>
-
       {/* Context Menu */}
       {contextMenu && (
         <div
@@ -324,12 +332,23 @@ export default function FileGrid({ onShare }) {
           </div>
         </div>
       )}
-
       {/* RENAME PROMPT */}
       <ConfirmModal.Prompt
         ref={renamePromptRef}
         onSubmit={handleRenameSubmit}
       />
+      {/* PAGINATION */}
+      {totalPages > 1 && (
+        <div className={s.paginationWrapper}>
+          <Pagination
+            currentPage={page}
+            totalPages={totalPages}
+            totalItems={totalItems}
+            onPageChange={newPage => dispatch(setPage(newPage))}
+            loading={loading}
+          />
+        </div>
+      )}
     </div>
   );
 }

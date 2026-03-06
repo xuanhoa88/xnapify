@@ -48,7 +48,13 @@ async function findAccessibleFile(
  */
 export async function listFiles(
   userId,
-  { view = 'my_drive', parentId = null } = {},
+  {
+    view = 'my_drive',
+    parentId = null,
+    search = '',
+    page = 1,
+    pageSize = 50,
+  } = {},
   { models },
 ) {
   const { File } = models;
@@ -68,14 +74,30 @@ export async function listFiles(
     paranoid: true, // Only show non-deleted by default
   };
 
+  // Pagination logic
+  if (page && pageSize) {
+    queryOptions.limit = parseInt(pageSize, 10);
+    queryOptions.offset = (parseInt(page, 10) - 1) * queryOptions.limit;
+  }
+
+  // Search logic
+  if (search) {
+    where.name = { [Op.like]: `%${search}%` };
+    // If searching, we often want to search globally or within the view
+    // but ignoring parentId if search is provided is a common pattern for "search all"
+    // However, if the user is in "Trash", they expect to search within trash.
+  }
+
   switch (view) {
     case 'my_drive':
-      where.parent_id = parentId; // null = root
+      if (!search) {
+        where.parent_id = parentId; // null = root
+      }
       break;
     case 'recent':
       where.type = 'file';
       queryOptions.order = [['updated_at', 'DESC']];
-      queryOptions.limit = 50;
+      if (!pageSize) queryOptions.limit = 50;
       break;
     case 'starred':
       where.is_starred = true;
@@ -84,12 +106,12 @@ export async function listFiles(
       queryOptions.paranoid = false;
       where.deleted_at = { [Op.not]: null };
       break;
-    // case 'shared_with_me': // Future advanced implementation
     default:
       throw new Error(`Invalid view type: ${view}`);
   }
 
-  const files = await File.findAll(queryOptions);
+  const { rows: files, count: total } =
+    await File.findAndCountAll(queryOptions);
 
   // If viewing a specific folder, also return the folder details and breadcrumbs
   let currentFolder = null;
@@ -106,7 +128,7 @@ export async function listFiles(
     breadcrumbs = [{ id: 'root', name: 'My Drive' }];
   }
 
-  return { files, currentFolder, breadcrumbs };
+  return { files, currentFolder, breadcrumbs, total };
 }
 
 /**
