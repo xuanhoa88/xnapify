@@ -8,12 +8,8 @@
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import {
-  Icon,
-  Table,
-} from '../../../../../../shared/renderer/components/Admin';
-
-const { ActionsDropdown } = Table;
+import { Icon } from '../../../../../../shared/renderer/components/Admin';
+import ContextMenu from '../../../../../../shared/renderer/components/ContextMenu';
 
 /**
  * PluginActionsDropdown - Dropdown menu for plugin actions
@@ -32,32 +28,32 @@ function PluginActionsDropdown({
   }, [isOpen, plugin.id, onToggle]);
 
   return (
-    <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger
+    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+      <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
       >
         <Icon name='more-vertical' size={18} />
-      </ActionsDropdown.Trigger>
-      <ActionsDropdown.Menu>
-        <ActionsDropdown.Item
+      </ContextMenu.Trigger>
+      <ContextMenu.Menu>
+        <ContextMenu.Item
           onClick={() => onUpgrade(plugin)}
           icon={<Icon name='arrowUp' size={16} />}
           disabled={!plugin.isInstalled}
           permission='plugins:update'
         >
           {t('admin:plugins.checkForUpdates', 'Check for Updates')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Divider />
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Divider />
+        <ContextMenu.Item
           onClick={() => onDelete(plugin)}
           icon={<Icon name='trash' size={16} />}
           variant='danger'
           permission='plugins:delete'
         >
           {t('admin:plugins.uninstall', 'Uninstall')}
-        </ActionsDropdown.Item>
-      </ActionsDropdown.Menu>
-    </ActionsDropdown>
+        </ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

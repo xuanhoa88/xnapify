@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import Button from '../../../Button';
 import Icon from '../../../Icon';
-import ActionsDropdown from '../ActionsDropdown';
+import ContextMenu from '../../../ContextMenu';
 import s from './BulkActionsBar.css';
 
 /**
@@ -67,13 +67,13 @@ function BulkActionsBar({
             </Button>
           ))}
         {Array.isArray(moreActions) && moreActions.length > 0 && (
-          <ActionsDropdown
+          <ContextMenu
             isOpen={isMoreOpen}
             onToggle={handleMoreToggle}
             align='left'
             className={s.moreDropdown}
           >
-            <ActionsDropdown.Trigger
+            <ContextMenu.Trigger
               className={s.moreButton}
               title={t(
                 'shared:components.bulkActions.moreActions',
@@ -81,24 +81,24 @@ function BulkActionsBar({
               )}
             >
               <Icon name='more-vertical' size={16} />
-            </ActionsDropdown.Trigger>
-            <ActionsDropdown.Menu>
+            </ContextMenu.Trigger>
+            <ContextMenu.Menu>
               {moreActions.map((action, index) =>
                 action.type === 'divider' ? (
-                  <ActionsDropdown.Divider key={`divider-${index}`} />
+                  <ContextMenu.Divider key={`divider-${index}`} />
                 ) : (
-                  <ActionsDropdown.Item
+                  <ContextMenu.Item
                     key={action.label}
                     onClick={action.onClick}
                     icon={action.icon}
                     variant={action.variant}
                   >
                     {action.label}
-                  </ActionsDropdown.Item>
+                  </ContextMenu.Item>
                 ),
               )}
-            </ActionsDropdown.Menu>
-          </ActionsDropdown>
+            </ContextMenu.Menu>
+          </ContextMenu>
         )}
       </div>
       <Button

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
@@ -22,7 +22,7 @@ import {
 } from '../../../../../../shared/renderer/redux';
 import { useWebSocket } from '../../../../../../shared/ws/client';
 import Icon from '../../../../../../shared/renderer/components/Icon';
-import Button from '../../../../../../shared/renderer/components/Button';
+import ContextMenu from '../../../../../../shared/renderer/components/ContextMenu';
 import { checkPermission } from '../../../../../../shared/renderer/components/Rbac';
 import s from './ProfileDropdown.css';
 
@@ -44,30 +44,8 @@ function ProfileDropdown() {
 
   // Local state
   const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = event => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
 
   // Handlers
-  const handleToggle = useCallback(() => {
-    setIsOpen(prev => !prev);
-  }, []);
-
   const handleClose = useCallback(() => {
     setIsOpen(false);
   }, []);
@@ -109,90 +87,64 @@ function ProfileDropdown() {
   }, [roles, t]);
 
   return (
-    <div className={s.userMenu} ref={dropdownRef}>
-      <Button
-        variant='unstyled'
-        className={s.userMenuBtn}
-        onClick={handleToggle}
-      >
-        <div className={s.userAvatar}>
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt=''
-              className={s.userAvatarImg}
-              onError={e => {
-                e.target.style.display = 'none';
-              }}
-            />
-          ) : (
-            avatarInitial
-          )}
-        </div>
-        <div className={s.userInfo}>
-          <span className={s.userName}>{displayName}</span>
-          <span className={s.userRole}>{displayRole}</span>
-        </div>
-        <Icon
-          name='chevronDown'
-          size={12}
-          className={clsx(s.dropdownIcon, {
-            [s.dropdownIconOpen]: isOpen,
-          })}
-        />
-      </Button>
-
-      {isOpen && (
-        <div className={s.userDropdown} role='menu'>
-          <div className={s.dropdownHeader}>
-            <div className={s.dropdownUserName}>{displayName}</div>
-            <div className={s.dropdownUserEmail}>{displayRole}</div>
+    <div className={s.userMenu}>
+      <ContextMenu isOpen={isOpen} onToggle={setIsOpen}>
+        <ContextMenu.Trigger variant='unstyled' className={s.userMenuBtn}>
+          <div className={s.userAvatar}>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt=''
+                className={s.userAvatarImg}
+                onError={e => {
+                  e.target.style.display = 'none';
+                }}
+              />
+            ) : (
+              avatarInitial
+            )}
           </div>
+          <div className={s.userInfo}>
+            <span className={s.userName}>{displayName}</span>
+            <span className={s.userRole}>{displayRole}</span>
+          </div>
+          <Icon
+            name='chevronDown'
+            size={12}
+            className={clsx(s.dropdownIcon, {
+              [s.dropdownIconOpen]: isOpen,
+            })}
+          />
+        </ContextMenu.Trigger>
 
-          <Link
-            className={s.dropdownItem}
-            to='/profile'
-            onClick={handleClose}
-            role='menuitem'
-          >
+        <ContextMenu.Menu>
+          <ContextMenu.Header title={displayName} subtitle={displayRole} />
+
+          <ContextMenu.Item as={Link} to='/profile' onClick={handleClose}>
             <Icon name='user' size={16} />
             {t('navigation.profile', 'Profile')}
-          </Link>
+          </ContextMenu.Item>
 
           {checkPermission(userProfile, 'nodered:admin') && (
-            <a
-              className={s.dropdownItem}
-              href='/~/red/admin'
-              onClick={handleClose}
-              role='menuitem'
-            >
+            <ContextMenu.Item as='a' href='/~/red/admin' onClick={handleClose}>
               <Icon name='node-red' size={16} />
               Node-RED
-            </a>
+            </ContextMenu.Item>
           )}
 
-          <Link
-            className={s.dropdownItem}
-            to='/'
-            onClick={handleClose}
-            role='menuitem'
-          >
+          <ContextMenu.Item as={Link} to='/' onClick={handleClose}>
             <Icon name='arrowUp' size={16} />
             {t('navigation.backToSite', 'Back to Site')}
-          </Link>
+          </ContextMenu.Item>
 
-          <div className={s.dropdownDivider} />
+          <ContextMenu.Divider />
 
-          <Button
-            variant='unstyled'
-            className={clsx(s.dropdownItem, s.dropdownItemDanger)}
-            onClick={handleLogout}
-          >
+          <ContextMenu.Item onClick={handleLogout} variant='danger'>
             <Icon name='logout' size={16} />
             {t('navigation.logout', 'Logout')}
-          </Button>
-        </div>
-      )}
+          </ContextMenu.Item>
+        </ContextMenu.Menu>
+      </ContextMenu>
     </div>
   );
 }

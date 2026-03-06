@@ -11,9 +11,8 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../shared/renderer/components/History';
 import { getUserId } from '../../../../../shared/renderer/redux';
-import { Icon, Table } from '../../../../../shared/renderer/components/Admin';
-
-const { ActionsDropdown } = Table;
+import { Icon } from '../../../../../shared/renderer/components/Admin';
+import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
 
 /**
  * UserActionsDropdown - Dropdown menu for user actions
@@ -46,67 +45,67 @@ function UserActionsDropdown({
   );
 
   return (
-    <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger
+    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+      <ContextMenu.Trigger
         title={t('admin:users.list.moreActions', 'More actions')}
       >
         <Icon name='more-vertical' size={18} />
-      </ActionsDropdown.Trigger>
-      <ActionsDropdown.Menu>
-        <ActionsDropdown.Item
+      </ContextMenu.Trigger>
+      <ContextMenu.Menu>
+        <ContextMenu.Item
           onClick={() => history.push(`/admin/users/${user.id}/api-keys`)}
           icon={<Icon name='key' size={16} />}
           permission='apiKeys:read'
         >
           {t('admin:users.list.manageApiKeys', 'Manage API Keys')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Item
           onClick={() => onManageGroups(user)}
           icon={<Icon name='folder' size={16} />}
           permission='groups:*'
         >
           {t('admin:users.list.manageGroups', 'Manage Groups')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Item
           onClick={() => onManageRoles(user)}
           icon={<Icon name='shield' size={16} />}
           permission='roles:*'
         >
           {t('admin:users.list.manageRoles', 'Manage Roles')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Divider />
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Divider />
+        <ContextMenu.Item
           onClick={() => onViewPermissions(user)}
           icon={<Icon name='lock' size={16} />}
           permission='permissions:read'
         >
           {t('admin:users.list.viewPermissions', 'View Permissions')}
-        </ActionsDropdown.Item>
+        </ContextMenu.Item>
         {!isCurrentUser && (
           <>
-            <ActionsDropdown.Divider />
+            <ContextMenu.Divider />
             {user.is_active ? (
-              <ActionsDropdown.Item
+              <ContextMenu.Item
                 onClick={() => onDeactivate(user)}
                 icon={<Icon name='close' size={16} />}
                 variant='danger'
                 permission={['users:update', 'users:delete']}
               >
                 {t('admin:users.list.deactivate', 'Deactivate')}
-              </ActionsDropdown.Item>
+              </ContextMenu.Item>
             ) : (
-              <ActionsDropdown.Item
+              <ContextMenu.Item
                 onClick={() => onActivate(user)}
                 icon={<Icon name='check' size={16} />}
                 permission={['users:update', 'users:delete']}
               >
                 {t('admin:users.list.activate', 'Activate')}
-              </ActionsDropdown.Item>
+              </ContextMenu.Item>
             )}
           </>
         )}
-      </ActionsDropdown.Menu>
-    </ActionsDropdown>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

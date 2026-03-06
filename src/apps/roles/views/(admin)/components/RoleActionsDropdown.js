@@ -8,9 +8,8 @@
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { Icon, Table } from '../../../../../shared/renderer/components/Admin';
-
-const { ActionsDropdown } = Table;
+import { Icon } from '../../../../../shared/renderer/components/Admin';
+import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
 
 /**
  * RoleActionsDropdown - Dropdown menu for role actions
@@ -36,52 +35,52 @@ function RoleActionsDropdown({
   }, [isOpen, role.id, onToggle]);
 
   return (
-    <ActionsDropdown isOpen={isOpen} onToggle={handleToggle}>
-      <ActionsDropdown.Trigger
+    <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
+      <ContextMenu.Trigger
         title={t('admin:common.moreActions', 'More actions')}
       >
         <Icon name='more-vertical' size={18} />
-      </ActionsDropdown.Trigger>
-      <ActionsDropdown.Menu>
-        <ActionsDropdown.Item
+      </ContextMenu.Trigger>
+      <ContextMenu.Menu>
+        <ContextMenu.Item
           onClick={() => onViewUsers(role)}
           icon={<Icon name='users' size={16} />}
           permission='users:read'
         >
           {t('admin:roles.viewUsers', 'View Users')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Item
           onClick={() => onViewGroups(role)}
           icon={<Icon name='folder' size={16} />}
           permission='groups:read'
         >
           {t('admin:roles.viewGroups', 'View Groups')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Item
           onClick={() => onViewPermissions(role)}
           icon={<Icon name='key' size={16} />}
           permission='permissions:read'
         >
           {t('admin:roles.viewPermissions', 'View Permissions')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Divider />
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Divider />
+        <ContextMenu.Item
           onClick={() => onEdit(role)}
           icon={<Icon name='edit' size={16} />}
           permission='roles:update'
         >
           {t('admin:roles.editRole', 'Edit Role')}
-        </ActionsDropdown.Item>
-        <ActionsDropdown.Item
+        </ContextMenu.Item>
+        <ContextMenu.Item
           onClick={() => onDelete(role)}
           icon={<Icon name='trash' size={16} />}
           variant='danger'
           permission='roles:delete'
         >
           {t('admin:roles.deleteRole', 'Delete Role')}
-        </ActionsDropdown.Item>
-      </ActionsDropdown.Menu>
-    </ActionsDropdown>
+        </ContextMenu.Item>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 
