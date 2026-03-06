@@ -714,12 +714,22 @@ export async function getUserPermissions(user_id, options = {}) {
           ],
         },
       },
-      attributes: ['resource', 'action'],
+      attributes: ['resource', 'action', 'description'],
     });
-    result = allPermissions.map(p => `${p.resource}:${p.action}`);
+    result = allPermissions.map(p => ({
+      resource: p.resource,
+      action: p.action,
+      name: `${p.resource}:${p.action}`,
+      description: p.description,
+    }));
   } else {
     // Regular user, return their specific permissions
-    result = permissions.map(p => `${p.resource}:${p.action}`);
+    result = permissions.map(p => ({
+      resource: p.resource,
+      action: p.action,
+      name: `${p.resource}:${p.action}`,
+      description: p.description,
+    }));
   }
 
   // 4. Update cache
@@ -764,15 +774,17 @@ export async function userHasPermission(user_id, permissionName, options = {}) {
 
     // Super admin check
     if (
-      userPermissions.includes(
-        `${defaultResources.ALL}:${defaultActions.MANAGE}`,
+      userPermissions.find(
+        p =>
+          p.resource === defaultResources.ALL &&
+          p.action === defaultActions.MANAGE,
       )
     ) {
       return true;
     }
 
     // Exact match
-    if (userPermissions.includes(permissionName)) {
+    if (userPermissions.find(p => p.name === permissionName)) {
       return true;
     }
 
@@ -781,11 +793,15 @@ export async function userHasPermission(user_id, permissionName, options = {}) {
 
     // Resource-only check (e.g., 'users' matches any 'users:*')
     if (!action) {
-      return userPermissions.some(perm => perm.startsWith(`${resource}:`));
+      return userPermissions.some(perm => perm.resource === resource);
     }
 
     // Wildcard action check (e.g., 'users:*' matches 'users:read')
-    if (userPermissions.includes(`${resource}:*`)) {
+    if (
+      userPermissions.find(
+        p => p.resource === resource && p.action === defaultActions.MANAGE,
+      )
+    ) {
       return true;
     }
   } catch (error) {

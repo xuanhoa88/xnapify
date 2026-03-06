@@ -444,7 +444,7 @@ export default function UserApiKeys({ userId }) {
               >
                 <Form.CheckboxList
                   items={permissions}
-                  valueKey='value'
+                  valueKey='name'
                   labelKey='description'
                   groupBy='resource'
                   loading={permissionsLoading}
