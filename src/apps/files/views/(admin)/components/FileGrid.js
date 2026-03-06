@@ -45,6 +45,7 @@ export default function FileGrid({ onShare }) {
   const currentView = useSelector(selectCurrentView);
 
   const [contextMenu, setContextMenu] = useState(null);
+  const [targetFile, setTargetFile] = useState(null);
   const renamePromptRef = useRef(null);
 
   // Close context menu on any outside click
@@ -91,13 +92,17 @@ export default function FileGrid({ onShare }) {
 
   const onRename = () => {
     if (!contextMenu) return;
+    const { file } = contextMenu;
+    setTargetFile(file);
     renamePromptRef.current.open({
       title: t('files:grid.rename', 'Rename'),
-      defaultValue: contextMenu.file.name,
+      defaultValue: file.name,
     });
   };
 
   const handleRenameSubmit = async newName => {
+    if (!targetFile) return { success: false, error: 'No file selected' };
+
     const [isValid, errors] = validateForm(renameFileFormSchema, {
       name: newName,
     });
@@ -113,8 +118,9 @@ export default function FileGrid({ onShare }) {
 
     try {
       await dispatch(
-        renameItem({ id: contextMenu.file.id, name: newName.trim() }),
+        renameItem({ id: targetFile.id, name: newName.trim() }),
       ).unwrap();
+      setTargetFile(null);
       return { success: true };
     } catch (err) {
       return {
