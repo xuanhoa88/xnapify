@@ -1,0 +1,284 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../shared/renderer/components/variables.css';
+
+.container {
+  min-height: 100%;
+  width: 100%;
+  padding-bottom: 40px;
+}
+
+/* --- COMMON --- */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 400px;
+  color: var(--color-text-secondary);
+}
+
+.emptyStateIcon {
+  margin-bottom: 16px;
+  opacity: 0.8;
+}
+
+.emptyStateIcon svg {
+  color: var(--color-border);
+}
+
+.emptyState h3 {
+  font-size: 18px;
+  font-weight: 400;
+  margin: 0 0 8px;
+  color: var(--color-text);
+}
+
+.emptyState p {
+  font-size: 14px;
+  margin: 0;
+}
+
+.starBadge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.fileIcon {
+  color: var(--color-text-secondary);
+  fill: var(--color-text-secondary);
+}
+
+.starIcon {
+  color: var(--color-warning, #f4b400);
+  fill: var(--color-warning, #f4b400);
+}
+
+/* --- BASE GRID/LIST ELEMENTS (Specificity 0,2,0) --- */
+
+.gridView .grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.listView .grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.gridView .fileItem {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s,
+    border-color 0.2s;
+}
+
+.listView .fileItem {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 48px;
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.listView .fileItem:last-child {
+  border-bottom: none;
+}
+
+.gridView .iconContainer {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-background-tertiary);
+  position: relative;
+}
+
+.listView .iconContainer {
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.listView .iconContainer svg {
+  width: 24px;
+  height: 24px;
+}
+
+.gridView .nameContainer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+}
+
+.listView .nameContainer {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+}
+
+.gridView .fileName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listView .fileName {
+  font-size: 14px;
+  color: var(--color-text);
+  width: 40%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 16px;
+}
+
+.listView .fileDetail {
+  width: 20%;
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listView .starBadge {
+  top: 0;
+  right: -10px;
+}
+
+/* --- HOVER / SELECTED STATES (Specificity 0,3,0+) --- */
+
+.gridView .fileItem:hover {
+  background-color: var(--color-background-hover);
+  box-shadow: var(--shadow-sm);
+}
+
+.listView .fileItem:hover {
+  background-color: var(--color-background-hover);
+}
+
+.gridView .fileItem.selected {
+  background-color: var(--color-primary-bg, #eff6ff);
+  border-color: var(--color-primary);
+}
+
+.listView .fileItem.selected {
+  background-color: var(--color-primary-bg, #eff6ff);
+}
+
+/* Make text inside selected items primary-dark for contrast */
+.gridView .fileItem.selected .fileName,
+.listView .fileItem.selected .fileName {
+  color: var(--color-primary-dark);
+}
+
+.gridView .fileItem.selected .fileIcon,
+.listView .fileItem.selected .fileIcon {
+  color: var(--color-primary);
+  fill: var(--color-primary);
+}
+
+/* --- CONTEXT MENU --- */
+.contextMenu {
+  position: fixed;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  padding: 8px 0;
+  min-width: 200px;
+  z-index: 1000;
+}
+
+.menuItem {
+  padding: 8px 16px;
+  font-size: 14px;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.menuItem:hover {
+  background-color: var(--color-background-hover);
+}
+
+.menuDivider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 8px 0;
+}
+
+.dangerItem {
+  color: var(--color-error);
+}
+
+.dangerItem:hover {
+  background-color: var(--color-error-light, #fce8e6);
+}
+
+/* Dark mode overwrites (High Specificity 0,3,0) */
+:global(.theme-dark) .gridView .fileItem {
+  background-color: var(--color-background);
+  border-color: var(--color-border);
+}
+
+:global(.theme-dark) .gridView .iconContainer {
+  background-color: var(--color-background-tertiary);
+}
+
+:global(.theme-dark) .gridView .fileItem:hover {
+  background-color: var(--color-background-hover);
+}
+
+:global(.theme-dark) .gridView .fileItem.selected {
+  background-color: rgb(59 130 246 / 15%);
+  border-color: var(--color-primary);
+}
+
+:global(.theme-dark) .gridView .fileItem.selected .fileName {
+  color: var(--color-primary-light);
+}
+
+:global(.theme-dark) .contextMenu {
+  background: var(--color-background);
+  border-color: var(--color-border);
+}
+
+:global(.theme-dark) .menuItem:hover {
+  background-color: var(--color-background-hover);
+}
+
+:global(.theme-dark) .dangerItem:hover {
+  background-color: var(--color-error-light);
+}
+
+/* Most specific rules (0,4,0) placed at the end to avoid descending specificity */
+.gridView .fileItem.selected .iconContainer {
+  background-color: transparent; /* blend with the soft primary bg of the selection */
+}

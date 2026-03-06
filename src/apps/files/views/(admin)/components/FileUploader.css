@@ -1,0 +1,241 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+.hiddenInput {
+  display: none;
+}
+
+/* MODAL / DROPDOWN */
+.backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+.newMenuModal {
+  position: absolute;
+  top: calc(100% + var(--spacing-2));
+  left: 0;
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  z-index: 1001;
+  min-width: 200px;
+  overflow: hidden;
+  color: var(--color-text);
+}
+
+.menuOptions {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  width: 100%;
+  cursor: pointer;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  transition: background-color 0.15s;
+}
+
+.menuItem:hover {
+  background-color: var(--color-background-hover);
+}
+
+.divider {
+  height: 1px;
+  background-color: var(--color-border);
+  margin: 4px 0;
+}
+
+/* FOLDER INPUT DIALOG */
+.folderInputContainer {
+  padding: 24px;
+}
+
+.folderInputContainer h3 {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.inputField {
+  width: 100%;
+  padding: 8px;
+  border: 2px solid #1a73e8;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 24px;
+}
+
+.dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 24px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  font-family: inherit;
+}
+
+.btnText {
+  background: transparent;
+  color: #1a73e8;
+}
+
+.btnText:hover {
+  background-color: #f1f3f4;
+}
+
+.btnPrimary {
+  background-color: #1a73e8;
+  color: white;
+}
+
+.btnPrimary:hover {
+  background-color: #1b66c9;
+}
+
+/* UPLOAD TRACKER */
+.uploadTracker {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 320px;
+  background: var(--bg-surface-elevated, #fff);
+  border: 1px solid var(--border-subtle, #e0e0e0);
+  box-shadow: 0 4px 12px rgb(60 64 67 / 15%);
+  border-radius: 8px 8px 0 0; /* Attach to bottom */
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: Inter, sans-serif;
+}
+
+.trackerHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #323232;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.trackerList {
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.trackerItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border-subtle, #f1f3f4);
+}
+
+.trackerName {
+  font-size: 13px;
+  color: var(--text-primary, #3c4043);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+
+.trackerStatus {
+  width: 60px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.progressBar {
+  width: 100%;
+  height: 4px;
+  background-color: #e0e0e0;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: #1a73e8;
+  transition: width 0.2s;
+}
+
+.successText {
+  color: #188038;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.errorText {
+  color: #d93025;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Dark mode */
+:global(.theme-dark) .newMenuModal,
+:global(.theme-dark) .uploadTracker {
+  background: var(--bg-surface-elevated, #242424);
+  border-color: var(--border-subtle, #333);
+}
+
+:global(.theme-dark) .menuItem {
+  color: var(--text-primary, #fff);
+}
+
+:global(.theme-dark) .menuItem:hover {
+  background-color: var(--bg-surface-hover, #333);
+}
+
+:global(.theme-dark) .inputField {
+  background: var(--bg-surface-default, #181818);
+  color: white;
+  border-color: #8ab4f8;
+}
+
+:global(.theme-dark) .btnText:hover {
+  background-color: #333;
+}

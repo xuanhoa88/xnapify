@@ -1,0 +1,113 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../shared/renderer/components/variables.css';
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 24px;
+  background: var(--color-background);
+  height: 64px;
+}
+
+.breadcrumbsContainer {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crumbBtn {
+  background: none;
+  border: none;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.crumbBtn:hover:not(:disabled) {
+  background-color: var(--color-background-hover);
+  color: var(--color-text);
+}
+
+.activeCrumb {
+  color: var(--color-text);
+  font-size: 22px; /* Emphasize current location */
+}
+
+.separator {
+  color: var(--color-text-muted);
+  display: flex;
+  align-items: center;
+}
+
+.actionsContainer {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.viewToggles {
+  display: flex;
+  align-items: center;
+  background: var(--color-background-secondary);
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 4px;
+}
+
+.iconBtn {
+  background: transparent;
+  border: none;
+  padding: 6px 10px !important;
+  border-radius: var(--radius-sm) !important;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+}
+
+.iconBtn:hover {
+  background-color: var(--color-background-secondary);
+  color: var(--color-text-primary);
+}
+
+.iconBtn.active {
+  background-color: var(--color-primary-bg, #eff6ff);
+  color: var(--color-primary-dark);
+}
+
+:global(.theme-dark) .toolbar {
+  background: var(--color-background);
+  border-color: var(--color-border);
+}
+
+:global(.theme-dark) .crumbBtn:hover:not(:disabled) {
+  background-color: var(--color-background-hover);
+}
+
+:global(.theme-dark) .iconBtn:hover {
+  background-color: var(--color-background-hover);
+}
+
+:global(.theme-dark) .iconBtn.active {
+  background-color: rgb(59 130 246 / 15%);
+  color: var(--color-primary-light);
+}

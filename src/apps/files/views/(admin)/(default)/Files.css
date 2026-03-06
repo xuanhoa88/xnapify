@@ -1,0 +1,81 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../shared/renderer/components/variables.css';
+
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+.filesAppContainer {
+  display: flex;
+  height: calc(100vh - 180px); /* Adjust based on top nav and header */
+  gap: var(--spacing-6); /* Add gap between sidebar and main pane */
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+/* Sidebar Styling */
+.sidebarPane {
+  width: 240px; /* Slightly narrower */
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Main Content Styling */
+.mainPane {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0; /* Prevent flex overflow */
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+
+.contentArea {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: var(--spacing-4) var(--spacing-6);
+}
+
+/* Scrollbar customization for webkit to feel premium */
+.contentArea::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.contentArea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.contentArea::-webkit-scrollbar-thumb {
+  background-color: var(--color-border-hover);
+  border-radius: var(--radius-sm);
+}
+
+.contentArea::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-text-tertiary);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+}
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+}

@@ -3,10 +3,12 @@ Add a new module with backend API routes, frontend views, database models, and a
 ## Module Overview
 
 A module is a self-contained feature bundle with:
+
 - **Backend (API):** Routes, controllers, services, models, migrations, seeds
 - **Frontend (Views):** Pages, components, styles, Redux state
 
 The application uses **auto-discovery** to load modules from `src/apps/{module-name}/`:
+
 - API modules are discovered via `api/index.js` lifecycle hooks
 - Frontend views are discovered via `views/index.js` lifecycle hooks
 
@@ -77,6 +79,7 @@ mkdir -p src/apps/{module-name}/{api,views}/{(admin),(default)}
 ```
 
 **Example:**
+
 ```json
 {
   "name": "@rsk-module/products",
@@ -113,18 +116,10 @@ const seedsContext = require.context(
 );
 
 // Auto-load models
-const modelsContext = require.context(
-  './models',
-  false,
-  /\.[cm]?[jt]s$/i,
-);
+const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 
 // Auto-load routes (file-based dynamic routing)
-const routesContext = require.context(
-  './routes',
-  true,
-  /\.[cm]?[jt]s$/i,
-);
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
 // LOGGING
@@ -153,7 +148,7 @@ function log(message, level = 'info') {
 /**
  * Providers hook — share services with other modules via container.
  * Called during API bootstrap before initialization.
- * 
+ *
  * @param {Object} app - Express app instance
  */
 export async function providers(app) {
@@ -190,7 +185,7 @@ export function translations() {
 /**
  * Migrations hook — run database migrations.
  * Called after core migrations, before seeds.
- * 
+ *
  * @param {Object} app - Express app instance
  */
 export async function migrations(app) {
@@ -211,7 +206,7 @@ export async function migrations(app) {
 /**
  * Seeds hook — run database seeds.
  * Called after migrations.
- * 
+ *
  * @param {Object} app - Express app instance
  */
 export async function seeds(app) {
@@ -232,14 +227,14 @@ export async function seeds(app) {
 /**
  * Init hook — initialize module after all models are loaded.
  * Register auth strategies, webhooks, scheduled tasks, etc.
- * 
+ *
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
   const hook = app.get('hook');
 
   // Example: Register webhooks
-  hook('{module-name}').on('created', async (entity) => {
+  hook('{module-name}').on('created', async entity => {
     console.log('Entity created:', entity);
   });
 
@@ -249,7 +244,7 @@ export async function init(app) {
 /**
  * Models hook — return webpack require.context for models.
  * Called during model discovery phase.
- * 
+ *
  * @returns {Object} Webpack require.context object
  */
 export function models() {
@@ -259,7 +254,7 @@ export function models() {
 /**
  * Routes hook — return webpack require.context for routes.
  * Called during dynamic router setup.
- * 
+ *
  * @returns {Object} Webpack require.context object
  */
 export function routes() {
@@ -282,16 +277,13 @@ import * as controller from '../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const { middlewares: { requirePermission } } = req.app.get('auth');
-    return requirePermission(permission)(req, res, next);
+    const auth = req.app.get('auth');
+    return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
 
 // GET /api/{module-name}
-export const get = [
-  requirePermission('{module-name}:read'),
-  controller.list,
-];
+export const get = [requirePermission('{module-name}:read'), controller.list];
 
 // POST /api/{module-name}
 export const post = [
@@ -327,16 +319,13 @@ import * as controller from '../../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const { middlewares: { requirePermission } } = req.app.get('auth');
-    return requirePermission(permission)(req, res, next);
+    const auth = req.app.get('auth');
+    return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
 
 // GET /api/{module-name}/:id
-export const get = [
-  requirePermission('{module-name}:read'),
-  controller.getOne,
-];
+export const get = [requirePermission('{module-name}:read'), controller.getOne];
 
 // PATCH /api/{module-name}/:id
 export const patch = [
@@ -354,6 +343,7 @@ export { del as delete };
 ```
 
 **Route Method Mappings:**
+
 - `get` → GET
 - `post` → POST
 - `put` → PUT / PATCH (both work)
@@ -575,7 +565,7 @@ function log(phase) {
 /**
  * Providers hook — share client-side services with other modules.
  * Called during view bootstrap before route initialization.
- * 
+ *
  * @param {Object} context - Shared context (container, plugin, etc.)
  */
 export function providers({ container }) {
@@ -587,11 +577,7 @@ export function providers({ container }) {
   );
 
   // Bind UI components
-  container.bind(
-    '{module-name}:admin:components',
-    () => ({ RoleTag }),
-    true,
-  );
+  container.bind('{module-name}:admin:components', () => ({ RoleTag }), true);
 
   log('Providers registered');
 }
@@ -612,7 +598,7 @@ export function translations() {
 /**
  * Views hook — return webpack require.context for module views.
  * Called during view route discovery phase.
- * 
+ *
  * @returns {Object} Webpack require.context for views
  */
 export function views() {
@@ -738,7 +724,9 @@ import s from './ModuleList.css';
 function ModuleList({ items }) {
   const dispatch = useDispatch();
   const { t } = useTranslation('{module-name}');
-  const { items: modules, loading } = useSelector(state => state['{module-name}']);
+  const { items: modules, loading } = useSelector(
+    state => state['{module-name}'],
+  );
 
   useEffect(() => {
     if (!modules.length) {
@@ -871,14 +859,17 @@ export const createModule = createAsyncThunk(
 Modules are auto-discovered during application bootstrap:
 
 **Backend:** `src/bootstrap/api/index.js`
+
 - Scans `src/apps/*/api/index.js` for lifecycle hooks
 - Hooks called in order: `providers` → `migrations` → `seeds` → `init`
 
 **Frontend:** `src/bootstrap/views.js`
+
 - Scans `src/apps/*/views/index.js` for lifecycle hooks
 - Calls `views()` to get webpack context for route discovery
 
 **Naming Convention:**
+
 - Use alphanumeric + underscore for module names
 - Module name controls load order
 - Examples: `(default)`, `auth`, `users`, `permissions`
@@ -887,28 +878,29 @@ Modules are auto-discovered during application bootstrap:
 
 ### Backend (API)
 
-| Hook | Purpose | Called When | Async |
-|------|---------|-------------|-------|
-| `providers(app)` | Bind services to container | Module loaded | Yes |
-| `migrations(app)` | Run database migrations | After core migrations | Yes |
-| `seeds(app)` | Run database seeds | After module migrations | Yes |
-| `init(app)` | Initialize module | All models loaded | Yes |
-| `models()` | Return models webpack context | Model discovery phase | No |
-| `routes()` | Return routes webpack context | Router setup phase | No |
-| `translations()` | Provide webpack context for i18n files | Module loaded (optional) | No |
+| Hook              | Purpose                                | Called When              | Async |
+| ----------------- | -------------------------------------- | ------------------------ | ----- |
+| `providers(app)`  | Bind services to container             | Module loaded            | Yes   |
+| `migrations(app)` | Run database migrations                | After core migrations    | Yes   |
+| `seeds(app)`      | Run database seeds                     | After module migrations  | Yes   |
+| `init(app)`       | Initialize module                      | All models loaded        | Yes   |
+| `models()`        | Return models webpack context          | Model discovery phase    | No    |
+| `routes()`        | Return routes webpack context          | Router setup phase       | No    |
+| `translations()`  | Provide webpack context for i18n files | Module loaded (optional) | No    |
 
 ### Frontend (Views)
 
-| Hook | Purpose | Called When | Async |
-|------|---------|-------------|-------|
-| `providers(context)` | Bind client services | Module loaded | No |
-| `views()` | Return views webpack context | View discovery phase | No |
+| Hook                 | Purpose                      | Called When          | Async |
+| -------------------- | ---------------------------- | -------------------- | ----- |
+| `providers(context)` | Bind client services         | Module loaded        | No    |
+| `views()`            | Return views webpack context | View discovery phase | No    |
 
 ## API File-Based Routing
 
 Routes are discovered from `api/routes/` using Express HTTP methods as exports:
 
 **Routes Pattern:**
+
 ```
 api/routes/
 ├── (group)/          # Route group (not in URL)
@@ -923,6 +915,7 @@ api/routes/
 Routes are discovered from `views/` using special files:
 
 **Route Files:**
+
 - `_route.js` - Page route definition
 - `_layout.js` - Layout wrapper for nested routes
 - `(group)/` - Grouping (optional, not in URL)
@@ -939,7 +932,7 @@ Routes are discovered from `views/` using special files:
 7. **Container:** Bind reusable services to container in providers hook
 8. **Webpack Context:** Use `require.context()` for auto-loading files
 9. **Translations:** Prefix i18n keys with module name (e.g., `{module-name}:label.key`)
-10. **Testing:** Create test files adjacent to code (*.test.js)
+10. **Testing:** Create test files adjacent to code (\*.test.js)
 
 ## Common Issues
 
@@ -973,6 +966,7 @@ Routes are discovered from `views/` using special files:
 ## Example: Complete Products Module
 
 See `src/apps/users/` for a complete working example with:
+
 - Multi-level routes with dynamic segments
 - Database models with relationships
 - Migrations and seeds

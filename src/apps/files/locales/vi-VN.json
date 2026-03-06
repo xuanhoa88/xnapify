@@ -1,0 +1,55 @@
+{
+  "sidebar": {
+    "my_drive": "Drive của tôi",
+    "recent": "Gần đây",
+    "starred": "Có gắn dấu sao",
+    "trash": "Thùng rác",
+    "new": "Mới",
+    "storage": "Đã dùng {{used}} GB trong tổng số {{total}} GB"
+  },
+  "toolbar": {
+    "list_view": "Chế độ xem danh sách",
+    "grid_view": "Chế độ xem lưới"
+  },
+  "grid": {
+    "loading": "Đang tải tệp...",
+    "empty_title": "Không có tệp nào ở đây",
+    "empty_desc": "Thả tệp vào đây hoặc sử dụng nút \"Mới\".",
+    "owner_me": "Tôi",
+    "rename": "Đổi tên",
+    "share": "Chia sẻ",
+    "download": "Tải xuống",
+    "add_star": "Thêm dấu sao",
+    "remove_star": "Xóa dấu sao",
+    "delete_permanently": "Xóa vĩnh viễn",
+    "move_to_trash": "Chuyển vào thùng rác"
+  },
+  "uploader": {
+    "untitled_folder": "Thư mục không có tiêu đề",
+    "new_folder": "Thư mục mới",
+    "file_upload": "Tải tệp lên",
+    "cancel": "Hủy",
+    "create": "Tạo",
+    "uploads_status": "Đang tải lên ({{count}}/{{total}})",
+    "done": "Đã xong",
+    "failed": "Thất bại"
+  },
+  "share": {
+    "title": "Chia sẻ \"{{name}}\"",
+    "general_access": "Quyền truy cập chung",
+    "restricted": "Bị hạn chế",
+    "public_link": "Bất kỳ ai có liên kết",
+    "specific_users": "Người dùng cụ thể",
+    "restricted_desc": "Chỉ những người có quyền truy cập mới có thể mở bằng liên kết này",
+    "public_link_desc": "Bất kỳ ai trên Internet có liên kết này đều có thể xem",
+    "specific_users_desc": "Chỉ những người dùng cụ thể bạn thêm bên dưới mới có thể truy cập",
+    "copy_link": "Sao chép liên kết",
+    "saving": "Đang lưu...",
+    "done": "Xong",
+    "link_copied": "Đã sao chép liên kết vào bộ nhớ tạm!"
+  },
+  "page": {
+    "title": "Quản lý tệp",
+    "subtitle": "Quản lý tệp và thư mục của bạn như Google Drive"
+  }
+}

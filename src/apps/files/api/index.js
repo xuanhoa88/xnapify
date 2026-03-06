@@ -1,0 +1,55 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+// Auto-load migrations
+const migrationsContext = require.context(
+  './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+
+// Auto-load models
+const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
+
+// Auto-load routes
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+
+// =============================================================================
+// PUBLIC LIFECYCLE HOOKS
+// =============================================================================
+
+/**
+ * Migrations hook — run database migrations.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function migrations(app) {
+  const db = app.get('db');
+
+  await db.connection.runMigrations(
+    [{ context: migrationsContext, prefix: 'files' }],
+    { app },
+  );
+}
+
+/**
+ * Models hook — returns the webpack require.context for this module's models.
+ *
+ * @returns {object} Webpack require.context for models
+ */
+export function models() {
+  return modelsContext;
+}
+
+/**
+ * Routes hook — returns the webpack require.context for this module's routes.
+ *
+ * @returns {object} Webpack require.context for routes
+ */
+export function routes() {
+  return routesContext;
+}

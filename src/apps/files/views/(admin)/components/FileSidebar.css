@@ -1,0 +1,125 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+@import '../../../../../shared/renderer/components/variables.css';
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.newButtonContainer {
+  display: flex;
+  position: relative;
+
+  /* Push New Button container so button padding perfectly lines up with nav items */
+  padding: var(--spacing-6) var(--spacing-4);
+}
+
+.navMenu {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+
+  /* Create standard margin-based spacing for a centered pill look */
+  margin: 0 var(--spacing-4) 0 var(--spacing-4);
+
+  /* Indent inner content so it aligns with btnNew's + icon */
+  padding: 0 var(--spacing-4) 0 var(--spacing-4);
+  height: 48px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(
+    --radius-full
+  ); /* Fully rounded on BOTH sides like the image */
+
+  color: var(--color-text-secondary);
+  font-family: inherit;
+  transition: all var(--transition-base);
+}
+
+.navItem:hover {
+  background-color: transparent; /* Second screenshot has transparent hover */
+  color: #0b1c3c; /* Very dark navy text on hover */
+}
+
+.navItem.active {
+  background-color: var(--color-primary-bg, #eff6ff); /* Very soft blue pill */
+  color: var(--color-primary-dark);
+}
+
+:global(.theme-dark) .navItem.active {
+  background-color: rgb(59 130 246 / 15%);
+  color: var(--color-primary-light);
+}
+
+.navIconWrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  margin-right: var(--spacing-4);
+}
+
+/* Ensure active icon takes primary color */
+.navItem.active .navIconWrapper > svg {
+  color: currentcolor;
+  fill: currentcolor;
+}
+
+.navItem:hover .navIconWrapper > svg {
+  color: currentcolor;
+  fill: currentcolor;
+}
+
+.navLabel {
+  font-size: var(--font-size-sm);
+  letter-spacing: 0.2px;
+  font-weight: var(--font-weight-medium);
+}
+
+.navItem.active .navLabel {
+  font-weight: var(--font-weight-bold);
+}
+
+.storageWidget {
+  padding: var(--spacing-6);
+  margin-top: auto;
+  border-top: 1px solid var(--color-border);
+  background: transparent;
+}
+
+.storageBar {
+  height: 6px;
+  width: 100%;
+  background-color: var(--color-border);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--spacing-2);
+}
+
+.storageFill {
+  height: 100%;
+  background-color: var(--color-primary);
+  border-radius: var(--radius-full);
+  width: var(--fill-width, 0%);
+  transition: width 0.5s ease-out;
+}
+
+.storageText {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+}

@@ -435,10 +435,14 @@ export default PostsList;
 ### 5. API Module Structure
 
 ```javascript
-// @apps/my-module/api/index.js
-export default function initMyModule(app, { db, auth }) {
-  const router = require('./routes').default; // Auto-discovered from ./routes/index.js if exists, or manual import
-  app.use('/api/my-module', router);
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+
+export function routes() {
+  return routesContext;
+}
+
+export async function init(app) {
+  // Initialize module
 }
 
 // @apps/my-module/api/routes.js

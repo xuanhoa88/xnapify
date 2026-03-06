@@ -148,6 +148,10 @@ export const post = [
 ];
 ```
 
+- `del` / `delete` → DELETE
+- `head` → HEAD
+- `options` → OPTIONS
+
 ### 5. Error Handling
 
 Route handler errors are automatically normalized into a consistent `RouterError` shape with `status`, `message`, `code`, and `details` properties, then passed to Express error middleware via `next(err)`.
@@ -174,17 +178,29 @@ app.use((err, req, res, next) => {
 
 ### 6. Registering with Express
 
-Depending on your loader, you instantiate the router and link it via Express's `app.use()`.
+The API router is typically integrated via the `bootstrap/api/index.js` during the application startup. It uses `discoverModules` to find `api/index.js` files in your apps.
+
+Each module's `api/index.js` should export a `routes()` function that returns the webpack `require.context` for its routes:
 
 ```javascript
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
-import Router from './router';
+// @apps/users/api/index.js
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
-// In autoloader's discoverModules setup:
-const apiAdapter = createWebpackContextAdapter(modulesContext);
-const apiRouter = new Router(apiAdapter);
+export function routes() {
+  return routesContext;
+}
+```
 
-app.use('/api', apiRouter.resolve);
+The bootstrapper then instantiates the router for each module:
+
+```javascript
+import { Router as DynamicRouter } from '@shared/api/router';
+
+// In bootstrap logic:
+for (const [name, adapter] of apiRoutes) {
+  const dynamicRouter = new DynamicRouter(adapter);
+  router.use('/api', dynamicRouter.resolve);
+}
 ```
 
 ### 7. Dynamic Plugins (Add / Remove Base Routes)

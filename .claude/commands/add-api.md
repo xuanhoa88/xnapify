@@ -5,17 +5,19 @@ Add a new API module with models, controllers, routes, and services.
 ```
 @apps/{module-name}/
 ├── api/
-│   ├── index.js              # Module entry (routes, migrations, seeds)
+│   ├── index.js              # Module entry (lifecycle hooks)
 │   ├── models/
 │   │   └── {Model}.js        # Model definition
 │   ├── controllers/
 │   │   └── {entity}.controller.js
 │   ├── routes/
-│   │   └── {entity}.routes.js
+│   │   └── (admin)/          # Optional route group
+│   │       ├── (default)/
+│   │       │   └── _route.js # GET /api/{module-name}
+│   │       └── [id]/
+│   │           └── _route.js # GET /api/{module-name}/:id
 │   ├── services/
 │   │   └── {entity}.service.js
-│   ├── middlewares/
-│   │   └── index.js
 │   ├── database/
 │   │   ├── migrations/       # Schema migrations
 │   │   └── seeds/            # Seed data
@@ -29,257 +31,57 @@ Add a new API module with models, controllers, routes, and services.
 
 ## 1. Create Model
 
+...
+
+## 5. Create Routes (\_route.js)
+
+Routes are defined using the file-based dynamic router. Place `_route.js` files in `api/routes/` and export HTTP methods.
+
 ```javascript
-// @apps/{module}/api/models/Post.js
-export default function createPostModel({ connection, DataTypes }) {
-  const types = DataTypes || connection.constructor.DataTypes;
+// @apps/{module}/api/routes/(admin)/(default)/_route.js
+import * as postController from '../../../controllers/post.controller';
 
-  const Post = connection.define(
-    'Post',
-    {
-      id: {
-        type: types.UUID,
-        defaultValue: types.UUIDV1,
-        primaryKey: true,
-      },
-      title: {
-        type: types.STRING(255),
-        allowNull: false,
-      },
-      content: {
-        type: types.TEXT,
-        allowNull: false,
-      },
-      user_id: {
-        type: types.UUID,
-        allowNull: false,
-      },
-    },
-    {
-      tableName: 'posts',
-      underscored: true,
-      timestamps: true,
-    },
-  );
+/**
+ * Middleware hook - applies to this route and all children.
+ * Return false to drop parent middlewares, or an array of middlewares.
+ */
+// export const middleware = [requireAuth];
 
-  Post.associate = function (models) {
-    const { User } = models;
+// GET /api/posts
+export const get = postController.getAll;
 
-    // Post belongs to User
-    Post.belongsTo(User, { foreignKey: 'user_id', as: 'author' });
-  };
-
-  return Post;
-}
+// POST /api/posts
+export const post = postController.create;
 ```
 
----
-
-## 3. Create Service
-
-Services receive dependencies as an options object for consistency:
-
 ```javascript
-// @apps/{module}/api/services/post.service.js
+// @apps/{module}/api/routes/(admin)/[id]/_route.js
+import * as postController from '../../../../controllers/post.controller';
 
-export async function getAll(options = {}) {
-  const { models, limit = 20, offset = 0 } = options;
-  return models.Post.findAndCountAll({ limit, offset });
-}
+// GET /api/posts/:id
+export const get = postController.getById;
 
-export async function getById(id, { models }) {
-  return models.Post.findByPk(id);
-}
+// PUT /api/posts/:id
+export const put = postController.update;
 
-export async function create(data, { models, webhook }) {
-  const post = await models.Post.create(data);
+// DELETE /api/posts/:id
+export const del = postController.destroy;
 
-  // Log activity via webhook (optional)
-  if (webhook) {
-    await webhook.dispatch('post.created', { postId: post.id });
-  }
-
-  return post;
-}
-
-export async function update(id, data, { models, webhook }) {
-  const post = await models.Post.findByPk(id);
-  if (!post) return null;
-
-  await post.update(data);
-
-  if (webhook) {
-    await webhook.dispatch('post.updated', { postId: post.id });
-  }
-
-  return post;
-}
-
-export async function destroy(id, { models, webhook }) {
-  const post = await models.Post.findByPk(id);
-  if (!post) return false;
-
-  await post.destroy();
-
-  if (webhook) {
-    await webhook.dispatch('post.deleted', { postId: id });
-  }
-
-  return true;
-}
-```
-
----
-
-## 4. Create Controller
-
-```javascript
-// @apps/{module}/api/controllers/post.controller.js
-import { validateForm } from '@/shared/validator';
-import { createPostSchema, updatePostSchema } from '../utils/validation';
-import * as postService from '../services/post.service';
-
-export async function getAll(req, res) {
-  const http = req.app.get('http');
-  try {
-    const models = req.app.get('models');
-    const { page = 1, limit = 20 } = req.query;
-    const offset = (page - 1) * limit;
-
-    const { count, rows } = await postService.getAll({ models, limit, offset });
-
-    return http.sendSuccess(res, {
-      data: rows,
-      pagination: { total: count, page, limit },
-    });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to fetch posts');
-  }
-}
-
-export async function getById(req, res) {
-  const http = req.app.get('http');
-  try {
-    const models = req.app.get('models');
-    const post = await postService.getById(req.params.id, { models });
-
-    if (!post) {
-      return http.sendNotFound(res, 'Post not found');
-    }
-
-    return http.sendSuccess(res, { data: post });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to fetch post');
-  }
-}
-
-export async function create(req, res) {
-  const http = req.app.get('http');
-  try {
-    // Validate input
-    const [isValid, errors] = validateForm(createPostSchema, req.body);
-    if (!isValid) {
-      return http.sendValidationError(res, errors[0]);
-    }
-
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
-    const post = await postService.create(
-      {
-        ...req.body,
-        user_id: req.user.id,
-      },
-      { models, webhook },
-    );
-
-    return http.sendSuccess(res, { data: post }, 201);
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to create post');
-  }
-}
-
-export async function update(req, res) {
-  const http = req.app.get('http');
-  try {
-    // Validate input
-    const [isValid, errors] = validateForm(updatePostSchema, req.body);
-    if (!isValid) {
-      return http.sendValidationError(res, errors[0]);
-    }
-
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
-    const post = await postService.update(req.params.id, req.body, {
-      models,
-      webhook,
-    });
-
-    if (!post) {
-      return http.sendNotFound(res, 'Post not found');
-    }
-
-    return http.sendSuccess(res, { data: post });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to update post');
-  }
-}
-
-export async function destroy(req, res) {
-  const http = req.app.get('http');
-  try {
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
-    const deleted = await postService.destroy(req.params.id, {
-      models,
-      webhook,
-    });
-
-    if (!deleted) {
-      return http.sendNotFound(res, 'Post not found');
-    }
-
-    return http.sendSuccess(res, { message: 'Post deleted successfully' });
-  } catch (error) {
-    return http.sendServerError(res, 'Failed to delete post');
-  }
-}
-```
-
----
-
-## 5. Create Routes
-
-```javascript
-// @apps/{module}/api/routes/post.routes.js
-import * as postController from '../controllers/post.controller';
-
-export default function postRoutes(deps, middlewares, app) {
-  const auth = app.get('auth');
-  const requireAuth = auth.requireAuthMiddleware();
-  const router = deps.Router();
-
-  router.get('/', postController.getAll);
-  router.get('/:id', postController.getById);
-  router.post('/', requireAuth, postController.create);
-  router.put('/:id', requireAuth, postController.update);
-  router.delete('/:id', requireAuth, postController.destroy);
-
-  return router;
-}
+// Alias for delete keyword
+export { del as delete };
 ```
 
 ---
 
 ## 6. Create Module Entry
 
+The module entry defines lifecycle hooks for the bootstrapper.
+
 ```javascript
 // @apps/{module}/api/index.js
-import * as postMiddlewares from './middlewares';
-import postRoutes from './routes/post.routes';
+import * as postController from './controllers/post.controller';
 
+// Auto-load migrations and seeds
 const migrationsContext = require.context(
   './database/migrations',
   false,
@@ -287,26 +89,40 @@ const migrationsContext = require.context(
 );
 const seedsContext = require.context('./database/seeds', false, /\.js$/);
 
-export default async function postModule(deps, app) {
-  const db = app.get('db');
+// Auto-load routes for the dynamic router
+const routesContext = require.context('./routes', true, /\.js$/);
 
-  // Run migrations and seeds
+/**
+ * Migrations hook - called to run module migrations.
+ */
+export async function migrations(app) {
+  const db = app.get('db');
   await db.connection.runMigrations([
     { context: migrationsContext, prefix: 'posts' },
   ]);
-  await db.connection.runSeeds([
-    { context: seedsContext, prefix: 'posts' },
-  );
+}
 
-  // Register module middlewares for reuse by other modules
-  app.set('post.middlewares', postMiddlewares);
+/**
+ * Seeds hook - called to run module seeds.
+ */
+export async function seeds(app) {
+  const db = app.get('db');
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'posts' }]);
+}
 
-  // Create router
-  const router = deps.Router();
-  router.use('/posts', postRoutes(deps, postMiddlewares, app));
+/**
+ * Routes hook - returns the webpack context for dynamic routing.
+ */
+export function routes() {
+  return routesContext;
+}
 
-  console.info('✅ Post module loaded');
-  return router;
+/**
+ * Providers hook - share services with other modules.
+ */
+export async function providers(app) {
+  const container = app.get('container');
+  container.bind('posts:controllers', () => ({ post: postController }), true);
 }
 ```
 
