@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,15 +31,18 @@ export default function FileToolbar() {
   const viewMode = useSelector(selectViewMode);
   const search = useSelector(selectSearch);
 
-  const handleBreadcrumbClick = crumb => {
-    if (crumb.id === 'root' || crumb.id === currentView) {
-      // Go back to absolute root of current view
-      dispatch(setView({ view: currentView, folderId: null }));
-    } else {
-      // Go to specific folder
-      dispatch(setView({ view: 'my_drive', folderId: crumb.id }));
-    }
-  };
+  const handleBreadcrumbClick = useCallback(
+    crumb => {
+      if (crumb.id === 'root' || crumb.id === currentView) {
+        // Go back to absolute root of current view
+        dispatch(setView({ view: currentView, folderId: null }));
+      } else {
+        // Go to specific folder
+        dispatch(setView({ view: 'my_drive', folderId: crumb.id }));
+      }
+    },
+    [currentView, dispatch],
+  );
 
   return (
     <div className={s.toolbar}>

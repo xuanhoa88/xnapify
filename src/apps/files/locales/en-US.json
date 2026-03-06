@@ -5,7 +5,7 @@
     "starred": "Starred",
     "trash": "Trash",
     "new": "New",
-    "storage": "{{used}} GB of {{total}} GB used"
+    "storage": "{{used}} of {{total}} used"
   },
   "toolbar": {
     "list_view": "List view",
@@ -49,7 +49,7 @@
     "link_copied": "Link copied to clipboard!"
   },
   "page": {
-    "title": "File Manager",
-    "subtitle": "Manage your files and folders like Google Drive"
+    "title": "Files",
+    "subtitle": "Manage your files and folders"
   }
 }

@@ -47,9 +47,9 @@ export function register({ store, i18n }) {
       item: {
         ns: i18n.t('admin:navigation.management', 'Management'),
         path: '/admin/files',
-        label: i18n.t('files:page.title', 'File Manager'),
+        label: i18n.t('files:page.title', 'Files'),
         icon: 'folder', // Assuming a folder or drive icon is available in the UI icon set
-        order: 15,
+        order: 50,
       },
     }),
   );
@@ -79,7 +79,7 @@ export function init({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('files:page.title', 'File Manager'),
+    title: i18n.t('files:page.title', 'Files'),
   };
 }
 
@@ -89,7 +89,7 @@ export async function getInitialProps({ i18n }) {
 export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
-      { label: i18n.t('files:page.title', 'File Manager'), url: path },
+      { label: i18n.t('files:page.title', 'Files'), url: path },
       'admin',
     ),
   );

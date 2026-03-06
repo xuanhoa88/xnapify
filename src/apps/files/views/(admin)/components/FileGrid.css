@@ -114,11 +114,12 @@
 }
 
 .listView .iconContainer {
-  width: 40px;
+  width: 48px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   position: relative;
+  margin-right: 8px;
 }
 
 .listView .iconContainer svg {
@@ -137,6 +138,7 @@
   display: flex;
   align-items: center;
   flex-grow: 1;
+  padding-left: 8px;
 }
 
 .gridView .fileName {
@@ -168,8 +170,9 @@
 }
 
 .listView .starBadge {
-  top: 0;
-  right: -10px;
+  top: -4px;
+  right: -4px;
+  z-index: 1;
 }
 
 /* --- HOVER / SELECTED STATES (Specificity 0,3,0+) --- */

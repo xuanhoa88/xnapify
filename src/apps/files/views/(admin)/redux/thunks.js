@@ -130,7 +130,7 @@ export const trashItems = createAsyncThunk(
         ),
       );
 
-      // Re-fetch the current view so the trash operation is reflected in the UI
+      // Re-fetch the current view and storage
       const state = getState().files;
       dispatch(
         fetchFiles({
@@ -138,6 +138,7 @@ export const trashItems = createAsyncThunk(
           parentId: state.currentFolderId,
         }),
       );
+      dispatch(fetchStorageUsage());
 
       return { ids };
     } catch (error) {
@@ -165,6 +166,7 @@ export const restoreItems = createAsyncThunk(
           parentId: state.currentFolderId,
         }),
       );
+      dispatch(fetchStorageUsage());
 
       return { ids };
     } catch (error) {
@@ -175,7 +177,7 @@ export const restoreItems = createAsyncThunk(
 
 export const deleteItemsPermanently = createAsyncThunk(
   'admin/files/deleteItemsPermanently',
-  async (ids, { extra: { fetch }, rejectWithValue }) => {
+  async (ids, { dispatch, extra: { fetch }, rejectWithValue }) => {
     try {
       await Promise.all(
         ids.map(id =>
@@ -184,6 +186,7 @@ export const deleteItemsPermanently = createAsyncThunk(
           }),
         ),
       );
+      dispatch(fetchStorageUsage());
       return { ids };
     } catch (error) {
       return rejectWithValue(error.message);
@@ -193,11 +196,12 @@ export const deleteItemsPermanently = createAsyncThunk(
 
 export const emptyTrash = createAsyncThunk(
   'admin/files/emptyTrash',
-  async (_, { extra: { fetch }, rejectWithValue }) => {
+  async (_, { dispatch, extra: { fetch }, rejectWithValue }) => {
     try {
       await fetch(`${ADMIN_API_BASE}/trash/empty`, {
         method: 'DELETE',
       });
+      dispatch(fetchStorageUsage());
       return true;
     } catch (error) {
       return rejectWithValue(error.message);
@@ -222,7 +226,7 @@ export const updateSharing = createAsyncThunk(
 
 export const uploadFile = createAsyncThunk(
   'admin/files/uploadFile',
-  async (formData, { extra: { fetch }, rejectWithValue }) => {
+  async (formData, { dispatch, extra: { fetch }, rejectWithValue }) => {
     try {
       // Note: We use the raw fetch options for FormData to let the browser
       // set the correct Content-Type with the multipart boundary
@@ -230,7 +234,20 @@ export const uploadFile = createAsyncThunk(
         method: 'POST',
         body: formData,
       });
+      dispatch(fetchStorageUsage());
       return data; // { file }
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+export const fetchStorageUsage = createAsyncThunk(
+  'admin/files/fetchStorageUsage',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch(`${ADMIN_API_BASE}/storage`);
+      return data; // { used, total }
     } catch (error) {
       return rejectWithValue(error.message);
     }

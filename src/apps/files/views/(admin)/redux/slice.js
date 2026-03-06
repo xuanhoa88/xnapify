@@ -33,6 +33,12 @@ const initialState = {
   // Upload UI State
   uploadModalOpen: false,
   activeUploads: [], // Array of { id, name, progress, status }
+
+  // Storage usage
+  storage: {
+    used: 0,
+    total: 100 * 1024 * 1024 * 1024, // Initial 100 GB
+  },
 };
 
 export const filesSlice = createSlice({
@@ -188,6 +194,11 @@ export const filesSlice = createSlice({
       if (index !== -1) {
         state.files[index].share_type = action.payload.file.share_type;
       }
+    });
+
+    // Fetch Storage
+    builder.addCase(thunks.fetchStorageUsage.fulfilled, (state, action) => {
+      state.storage = action.payload;
     });
   },
 });

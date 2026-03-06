@@ -373,3 +373,21 @@ export async function getPhysicalFileStream(userId, fileId, { models, fs }) {
     size: file.size,
   };
 }
+
+/**
+ * Get total storage usage for a user
+ */
+export async function getStorageUsage(userId, { models }) {
+  const { File } = models;
+  const totalSize = await File.sum('size', {
+    where: {
+      owner_id: userId,
+      type: 'file',
+    },
+  });
+
+  return {
+    used: parseInt(totalSize || 0, 10),
+    total: 100 * 1024 * 1024 * 1024, // 100 GB (hardcoded for now)
+  };
+}

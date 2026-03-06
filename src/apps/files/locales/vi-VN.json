@@ -5,7 +5,7 @@
     "starred": "Có gắn dấu sao",
     "trash": "Thùng rác",
     "new": "Mới",
-    "storage": "Đã dùng {{used}} GB trong tổng số {{total}} GB"
+    "storage": "Đã dùng {{used}} trong tổng số {{total}}"
   },
   "toolbar": {
     "list_view": "Chế độ xem danh sách",

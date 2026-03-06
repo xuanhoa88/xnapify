@@ -359,3 +359,21 @@ export async function downloadFile(req, res) {
     return http.sendServerError(res, 'Failed to download file', error);
   }
 }
+
+/**
+ * Get storage usage
+ *
+ * @route   GET /api/files/storage
+ */
+export async function getStorage(req, res) {
+  const http = req.app.get('http');
+  try {
+    const result = await fileService.getStorageUsage(req.user.id, {
+      models: req.app.get('models'),
+    });
+
+    return http.sendSuccess(res, result);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to fetch storage usage', error);
+  }
+}

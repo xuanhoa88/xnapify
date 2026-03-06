@@ -1,17 +1,16 @@
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
+import { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
 import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
-import { setView, setUploadModalOpen, selectCurrentView } from '../redux';
+import {
+  setView,
+  setUploadModalOpen,
+  selectCurrentView,
+  fetchStorageUsage,
+} from '../redux';
 import FileUploader from './FileUploader';
 import s from './FileSidebar.css';
 
@@ -22,14 +21,37 @@ const NAV_ITEMS = [
   { id: 'trash', label: 'sidebar.trash', icon: 'trash' },
 ];
 
+const formatStorage = bytes => {
+  if (!bytes) return '0 GB';
+  const mb = bytes / (1024 * 1024);
+  if (mb < 100) return `${mb.toFixed(1)} MB`;
+  const gb = bytes / (1024 * 1024 * 1024);
+  return `${gb.toFixed(1)} GB`;
+};
+
 export default function FileSidebar() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const currentView = useSelector(selectCurrentView);
+  const storage = useSelector(state => state.files.storage);
 
-  const handleNavClick = viewId => {
-    dispatch(setView({ view: viewId }));
-  };
+  useEffect(() => {
+    dispatch(fetchStorageUsage());
+  }, [dispatch]);
+
+  const handleNavClick = useCallback(
+    viewId => {
+      dispatch(setView({ view: viewId }));
+    },
+    [dispatch],
+  );
+
+  const usedDisplay = formatStorage(storage.used);
+  const totalDisplay = formatStorage(storage.total);
+
+  const rawPercentage = (storage.used / storage.total) * 100;
+  const percentage =
+    storage.used > 0 ? Math.max(1, Math.round(rawPercentage)) : 0;
 
   return (
     <div className={s.sidebar}>
@@ -81,13 +103,19 @@ export default function FileSidebar() {
         ))}
       </nav>
 
-      {/* Storage Quota placeholder - can be linked to real data later */}
+      {/* Storage Quota */}
       <div className={s.storageWidget}>
         <div className={s.storageBar}>
-          <div className={s.storageFill} style={{ '--fill-width': '45%' }} />
+          <div
+            className={s.storageFill}
+            style={{ '--fill-width': `${percentage}%` }}
+          />
         </div>
         <div className={s.storageText}>
-          {t('files:sidebar.storage', { used: 45, total: 100 })}
+          {t('files:sidebar.storage', {
+            used: usedDisplay,
+            total: totalDisplay,
+          })}
         </div>
       </div>
     </div>

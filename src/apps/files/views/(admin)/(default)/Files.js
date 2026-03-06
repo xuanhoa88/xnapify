@@ -55,11 +55,8 @@ function Files() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='folder' size={24} />}
-        title={t('files:page.title', 'File Manager')}
-        subtitle={t(
-          'files:page.subtitle',
-          'Manage your files and folders like Google Drive',
-        )}
+        title={t('files:page.title', 'Files')}
+        subtitle={t('files:page.subtitle', 'Manage your files and folders')}
       />
       <div className={s.filesAppContainer}>
         {/* Left Sidebar Pane */}

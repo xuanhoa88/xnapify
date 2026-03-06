@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useRef, useEffect } from 'react';
+import { useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
@@ -54,109 +54,115 @@ function FileUploader() {
     }
   }, [isOpen, dispatch, t]);
 
-  const handleCreateFolder = async folderName => {
-    // Client-side validation using Zod
-    const [isValid, errors] = validateForm(createFolderFormSchema, {
-      name: folderName,
-      parentId: currentFolderId,
-    });
+  const handleCreateFolder = useCallback(
+    async folderName => {
+      // Client-side validation using Zod
+      const [isValid, errors] = validateForm(createFolderFormSchema, {
+        name: folderName,
+        parentId: currentFolderId,
+      });
 
-    if (!isValid) {
-      // Return error in the format ConfirmModal.Prompt expects
-      return {
-        success: false,
-        error:
-          (errors.name && errors.name[0]) ||
-          t('files:uploader.invalid_name', 'Invalid folder name'),
-      };
-    }
-
-    try {
-      const result = await dispatch(
-        createFolder({ name: folderName.trim(), parentId: currentFolderId }),
-      ).unwrap();
-      return result;
-    } catch (err) {
-      return {
-        success: false,
-        error:
-          err.message ||
-          t('files:uploader.create_failed', 'Failed to create folder'),
-      };
-    }
-  };
-
-  const handleFileChange = async e => {
-    const { files } = e.target;
-    if (!files || files.length === 0) return;
-
-    // Process each file
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const uploadId = uuidv4();
-
-      // Start tracking upload in redux state
-      dispatch(
-        addUploadItem({
-          id: uploadId,
-          name: file.name,
-          progress: 0,
-          status: 'uploading',
-        }),
-      );
-
-      const formData = new FormData();
-      formData.append('file', file);
-      if (currentFolderId) {
-        formData.append('parentId', currentFolderId);
+      if (!isValid) {
+        // Return error in the format ConfirmModal.Prompt expects
+        return {
+          success: false,
+          error:
+            (errors.name && errors.name[0]) ||
+            t('files:uploader.invalid_name', 'Invalid folder name'),
+        };
       }
 
       try {
-        const resultAction = await dispatch(uploadFile(formData));
+        const result = await dispatch(
+          createFolder({ name: folderName.trim(), parentId: currentFolderId }),
+        ).unwrap();
+        return result;
+      } catch (err) {
+        return {
+          success: false,
+          error:
+            err.message ||
+            t('files:uploader.create_failed', 'Failed to create folder'),
+        };
+      }
+    },
+    [currentFolderId, dispatch, t],
+  );
 
-        if (uploadFile.fulfilled.match(resultAction)) {
-          dispatch(
-            updateUploadProgress({
-              id: uploadId,
-              progress: 100,
-              status: 'completed',
-            }),
-          );
-          // Trigger refresh
-          dispatch(
-            fetchFiles({ view: currentView, parentId: currentFolderId }),
-          );
-        } else {
-          // Promise rejected
-          console.error(
-            'Upload failed with error',
-            resultAction.payload || resultAction.error,
-          );
+  const handleFileChange = useCallback(
+    async e => {
+      const { files } = e.target;
+      if (!files || files.length === 0) return;
+
+      // Process each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadId = uuidv4();
+
+        // Start tracking upload in redux state
+        dispatch(
+          addUploadItem({
+            id: uploadId,
+            name: file.name,
+            progress: 0,
+            status: 'uploading',
+          }),
+        );
+
+        const formData = new FormData();
+        formData.append('file', file);
+        if (currentFolderId) {
+          formData.append('parentId', currentFolderId);
+        }
+
+        try {
+          const resultAction = await dispatch(uploadFile(formData));
+
+          if (uploadFile.fulfilled.match(resultAction)) {
+            dispatch(
+              updateUploadProgress({
+                id: uploadId,
+                progress: 100,
+                status: 'completed',
+              }),
+            );
+            // Trigger refresh
+            dispatch(
+              fetchFiles({ view: currentView, parentId: currentFolderId }),
+            );
+          } else {
+            // Promise rejected
+            console.error(
+              'Upload failed with error',
+              resultAction.payload || resultAction.error,
+            );
+            dispatch(
+              updateUploadProgress({
+                id: uploadId,
+                status: 'error',
+                error:
+                  resultAction.payload ||
+                  t('files:uploader.failed', 'Upload failed'),
+              }),
+            );
+          }
+        } catch (err) {
+          console.error('File Upload Error', err);
           dispatch(
             updateUploadProgress({
               id: uploadId,
               status: 'error',
-              error:
-                resultAction.payload ||
-                t('files:uploader.failed', 'Upload failed'),
+              error: err.message,
             }),
           );
         }
-      } catch (err) {
-        console.error('File Upload Error', err);
-        dispatch(
-          updateUploadProgress({
-            id: uploadId,
-            status: 'error',
-            error: err.message,
-          }),
-        );
       }
-    }
 
-    // Reset file input
-    e.target.value = null;
-  };
+      // Reset file input
+      e.target.value = null;
+    },
+    [currentFolderId, currentView, dispatch, t],
+  );
 
   return (
     <>

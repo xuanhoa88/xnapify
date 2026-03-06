@@ -46,15 +46,13 @@ const ShareModal = forwardRef((props, ref) => {
     [resetState],
   );
 
-  const handleClose = () => {
+  const handleClose = useCallback(() => {
     if (!loading) {
       resetState();
     }
-  };
+  }, [loading, resetState]);
 
-  if (!isOpen || !file) return null;
-
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     const [isValid, errors] = validateForm(shareFileFormSchema, { shareType });
 
     if (!isValid) {
@@ -77,13 +75,15 @@ const ShareModal = forwardRef((props, ref) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dispatch, file, handleClose, shareType, t]);
 
-  const copyLink = () => {
+  const copyLink = useCallback(() => {
     const link = `${window.location.origin}/api/admin/files/${file.id}/download`;
     navigator.clipboard.writeText(link);
     alert(t('files:share.link_copied', 'Link copied to clipboard!'));
-  };
+  }, [file, t]);
+
+  if (!isOpen || !file) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>

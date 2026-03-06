@@ -34,7 +34,7 @@ export function register({ store, i18n }) {
         label: i18n.t('admin:navigation.plugins', 'Plugins'),
         icon: 'extension', // or 'puzzle-piece' if available, checking lucide icons
         permission: 'plugins:read',
-        order: 30,
+        order: 20,
       },
     }),
   );

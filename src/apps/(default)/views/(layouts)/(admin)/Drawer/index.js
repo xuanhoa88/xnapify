@@ -149,6 +149,7 @@ function Drawer() {
             label: t('admin:navigation.nodeRed', 'Node-RED'),
             icon: 'node-red',
             external: true,
+            order: 10,
           },
         ],
         order: 100,
@@ -165,15 +166,23 @@ function Drawer() {
         const existingSection = acc.find(sec => sec.ns === section.ns);
         if (existingSection) {
           existingSection.items.push(...validItems);
+          // Sort items within the section by order
+          existingSection.items.sort(
+            (a, b) => (a.order || 99) - (b.order || 99),
+          );
           // Keep the lower order (higher priority)
           existingSection.order = Math.min(
             existingSection.order,
             section.order,
           );
         } else {
+          // Sort items for the new section
+          const sortedItems = [...validItems].sort(
+            (a, b) => (a.order || 99) - (b.order || 99),
+          );
           acc.push({
             ...section,
-            items: validItems,
+            items: sortedItems,
           });
         }
         return acc;

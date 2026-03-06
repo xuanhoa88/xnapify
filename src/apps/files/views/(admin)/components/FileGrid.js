@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -64,42 +64,51 @@ export default function FileGrid({ onShare }) {
     return () => window.removeEventListener('click', closeMenu);
   }, []);
 
-  const handleFileClick = (e, fileId) => {
-    e.stopPropagation(); // Prevent deselecting
-    const multi = e.ctrlKey || e.metaKey;
-    dispatch(toggleSelection({ fileId, multi }));
-  };
+  const handleFileClick = useCallback(
+    (e, fileId) => {
+      e.stopPropagation(); // Prevent deselecting
+      const multi = e.ctrlKey || e.metaKey;
+      dispatch(toggleSelection({ fileId, multi }));
+    },
+    [dispatch],
+  );
 
-  const handleContainerClick = () => {
+  const handleContainerClick = useCallback(() => {
     dispatch(clearSelection());
-  };
+  }, [dispatch]);
 
-  const handleDoubleClick = file => {
-    if (file.type === 'folder') {
-      dispatch(setView({ view: 'my_drive', folderId: file.id }));
-    } else {
-      // For now, downloading/previewing
-      window.open(`/api/admin/files/${file.id}/download`, '_blank');
-    }
-  };
+  const handleDoubleClick = useCallback(
+    file => {
+      if (file.type === 'folder') {
+        dispatch(setView({ view: 'my_drive', folderId: file.id }));
+      } else {
+        // For now, downloading/previewing
+        window.open(`/api/admin/files/${file.id}/download`, '_blank');
+      }
+    },
+    [dispatch],
+  );
 
-  const handleContextMenu = (e, file) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleContextMenu = useCallback(
+    (e, file) => {
+      e.preventDefault();
+      e.stopPropagation();
 
-    // Select the file if not already selected
-    if (!selectedIds.includes(file.id)) {
-      dispatch(toggleSelection({ fileId: file.id, multi: false }));
-    }
+      // Select the file if not already selected
+      if (!selectedIds.includes(file.id)) {
+        dispatch(toggleSelection({ fileId: file.id, multi: false }));
+      }
 
-    setContextMenu({
-      x: e.clientX,
-      y: e.clientY,
-      file,
-    });
-  };
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        file,
+      });
+    },
+    [dispatch, selectedIds],
+  );
 
-  const onRename = () => {
+  const onRename = useCallback(() => {
     if (!contextMenu) return;
     const { file } = contextMenu;
     setTargetFile(file);
@@ -107,39 +116,42 @@ export default function FileGrid({ onShare }) {
       title: t('files:grid.rename', 'Rename'),
       defaultValue: file.name,
     });
-  };
+  }, [contextMenu, t]);
 
-  const handleRenameSubmit = async newName => {
-    if (!targetFile) return { success: false, error: 'No file selected' };
+  const handleRenameSubmit = useCallback(
+    async newName => {
+      if (!targetFile) return { success: false, error: 'No file selected' };
 
-    const [isValid, errors] = validateForm(renameFileFormSchema, {
-      name: newName,
-    });
+      const [isValid, errors] = validateForm(renameFileFormSchema, {
+        name: newName,
+      });
 
-    if (!isValid) {
-      return {
-        success: false,
-        error:
-          (errors.name && errors.name[0]) ||
-          t('files:grid.invalid_name', 'Invalid name'),
-      };
-    }
+      if (!isValid) {
+        return {
+          success: false,
+          error:
+            (errors.name && errors.name[0]) ||
+            t('files:grid.invalid_name', 'Invalid name'),
+        };
+      }
 
-    try {
-      await dispatch(
-        renameItem({ id: targetFile.id, name: newName.trim() }),
-      ).unwrap();
-      setTargetFile(null);
-      return { success: true };
-    } catch (err) {
-      return {
-        success: false,
-        error: err.message || t('files:grid.rename_failed', 'Rename failed'),
-      };
-    }
-  };
+      try {
+        await dispatch(
+          renameItem({ id: targetFile.id, name: newName.trim() }),
+        ).unwrap();
+        setTargetFile(null);
+        return { success: true };
+      } catch (err) {
+        return {
+          success: false,
+          error: err.message || t('files:grid.rename_failed', 'Rename failed'),
+        };
+      }
+    },
+    [dispatch, targetFile, t],
+  );
 
-  const onTrash = () => {
+  const onTrash = useCallback(() => {
     if (!contextMenu) return;
     const idsToDelete =
       selectedIds.length > 0 ? selectedIds : [contextMenu.file.id];
@@ -149,9 +161,9 @@ export default function FileGrid({ onShare }) {
     } else {
       dispatch(trashItems(idsToDelete));
     }
-  };
+  }, [contextMenu, currentView, dispatch, selectedIds]);
 
-  const onStar = () => {
+  const onStar = useCallback(() => {
     if (!contextMenu) return;
     dispatch(
       toggleStarItem({
@@ -159,20 +171,20 @@ export default function FileGrid({ onShare }) {
         isStarred: !contextMenu.file.is_starred,
       }),
     );
-  };
+  }, [contextMenu, dispatch]);
 
-  const onDownload = () => {
+  const onDownload = useCallback(() => {
     if (!contextMenu) return;
     window.open(
       `/api/admin/files/${contextMenu.file.id}/download?download=true`,
       '_blank',
     );
-  };
+  }, [contextMenu]);
 
-  const handleShare = () => {
+  const handleShare = useCallback(() => {
     if (!contextMenu) return;
     if (onShare) onShare(contextMenu.file);
-  };
+  }, [contextMenu, onShare]);
 
   if (!initialized || (loading && (!files || files.length === 0))) {
     return (
