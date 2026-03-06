@@ -9,118 +9,6 @@
   display: none;
 }
 
-/* MODAL / DROPDOWN */
-.backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 1000;
-}
-
-.newMenuModal {
-  position: absolute;
-  top: calc(100% + var(--spacing-2));
-  left: 0;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-lg);
-  border-radius: var(--radius-lg);
-  z-index: 1001;
-  min-width: 200px;
-  overflow: hidden;
-  color: var(--color-text);
-}
-
-.menuOptions {
-  display: flex;
-  flex-direction: column;
-  padding: 8px;
-}
-
-.menuItem {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border: none;
-  background: transparent;
-  width: 100%;
-  cursor: pointer;
-  color: var(--color-text);
-  font-size: 14px;
-  font-weight: 500;
-  border-radius: var(--radius-md);
-  transition: background-color 0.15s;
-}
-
-.menuItem:hover {
-  background-color: var(--color-background-hover);
-}
-
-.divider {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: 4px 0;
-}
-
-/* FOLDER INPUT DIALOG */
-.folderInputContainer {
-  padding: 24px;
-}
-
-.folderInputContainer h3 {
-  margin: 0 0 16px;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.inputField {
-  width: 100%;
-  padding: 8px;
-  border: 2px solid #1a73e8;
-  border-radius: 4px;
-  outline: none;
-  font-size: 14px;
-  font-family: inherit;
-  margin-bottom: 24px;
-}
-
-.dialogActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.btn {
-  padding: 8px 24px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  border: none;
-  font-family: inherit;
-}
-
-.btnText {
-  background: transparent;
-  color: #1a73e8;
-}
-
-.btnText:hover {
-  background-color: #f1f3f4;
-}
-
-.btnPrimary {
-  background-color: #1a73e8;
-  color: white;
-}
-
-.btnPrimary:hover {
-  background-color: #1b66c9;
-}
-
 /* UPLOAD TRACKER */
 .uploadTracker {
   position: fixed;
@@ -216,26 +104,7 @@
 }
 
 /* Dark mode */
-:global(.theme-dark) .newMenuModal,
 :global(.theme-dark) .uploadTracker {
   background: var(--bg-surface-elevated, #242424);
   border-color: var(--border-subtle, #333);
-}
-
-:global(.theme-dark) .menuItem {
-  color: var(--text-primary, #fff);
-}
-
-:global(.theme-dark) .menuItem:hover {
-  background-color: var(--bg-surface-hover, #333);
-}
-
-:global(.theme-dark) .inputField {
-  background: var(--bg-surface-default, #181818);
-  color: white;
-  border-color: #8ab4f8;
-}
-
-:global(.theme-dark) .btnText:hover {
-  background-color: #333;
 }

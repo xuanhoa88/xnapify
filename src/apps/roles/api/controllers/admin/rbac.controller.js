@@ -169,8 +169,12 @@ export async function getUserPermissions(req, res) {
     const { id } = req.params;
 
     // Get user permissions
+    const auth = req.app.get('auth');
     const permissions = await rbacService.getUserPermissions(id, {
       models: req.app.get('models'),
+      defaultResources: auth.DEFAULT_RESOURCES,
+      defaultActions: auth.DEFAULT_ACTIONS,
+      cache: req.app.get('cache'),
     });
 
     return http.sendSuccess(res, { permissions });
@@ -203,12 +207,15 @@ export async function checkUserPermission(req, res) {
     }
 
     // Check permission
+    const auth = req.app.get('auth');
     const hasPermission = await rbacService.userHasPermission(
       id,
       permissionName,
       {
         models: req.app.get('models'),
         cache: req.app.get('cache'),
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
       },
     );
 

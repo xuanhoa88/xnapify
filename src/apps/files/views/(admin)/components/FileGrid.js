@@ -5,28 +5,33 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Loader } from '../../../../../shared/renderer/components/Admin';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import { toggleSelection, clearSelection, setView } from '../redux';
 import {
+  Loader,
+  ConfirmModal,
+} from '../../../../../shared/renderer/components/Admin';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import { validateForm } from '../../../../../shared/validator';
+import { renameFileFormSchema } from '../../../validator/admin/file';
+import {
+  toggleSelection,
+  clearSelection,
+  setView,
   trashItems,
   toggleStarItem,
   renameItem,
   deleteItemsPermanently,
-} from '../redux/thunks';
-import {
   selectFiles,
   selectViewMode,
   selectSelectedFileIds,
   selectLoadingFiles,
   selectInitializedFiles,
   selectCurrentView,
-} from '../redux/selector';
+} from '../redux';
 import s from './FileGrid.css';
 
 export default function FileGrid({ onShare }) {
@@ -40,6 +45,7 @@ export default function FileGrid({ onShare }) {
   const currentView = useSelector(selectCurrentView);
 
   const [contextMenu, setContextMenu] = useState(null);
+  const renamePromptRef = useRef(null);
 
   // Close context menu on any outside click
   useEffect(() => {
@@ -85,12 +91,36 @@ export default function FileGrid({ onShare }) {
 
   const onRename = () => {
     if (!contextMenu) return;
-    const newName = window.prompt(
-      t('files:grid.rename_prompt', 'Enter new name:'),
-      contextMenu.file.name,
-    );
-    if (newName && newName.trim() !== '') {
-      dispatch(renameItem({ id: contextMenu.file.id, name: newName.trim() }));
+    renamePromptRef.current.open({
+      title: t('files:grid.rename', 'Rename'),
+      defaultValue: contextMenu.file.name,
+    });
+  };
+
+  const handleRenameSubmit = async newName => {
+    const [isValid, errors] = validateForm(renameFileFormSchema, {
+      name: newName,
+    });
+
+    if (!isValid) {
+      return {
+        success: false,
+        error:
+          (errors.name && errors.name[0]) ||
+          t('files:grid.invalid_name', 'Invalid name'),
+      };
+    }
+
+    try {
+      await dispatch(
+        renameItem({ id: contextMenu.file.id, name: newName.trim() }),
+      ).unwrap();
+      return { success: true };
+    } catch (err) {
+      return {
+        success: false,
+        error: err.message || t('files:grid.rename_failed', 'Rename failed'),
+      };
     }
   };
 
@@ -288,6 +318,12 @@ export default function FileGrid({ onShare }) {
           </div>
         </div>
       )}
+
+      {/* RENAME PROMPT */}
+      <ConfirmModal.Prompt
+        ref={renamePromptRef}
+        onSubmit={handleRenameSubmit}
+      />
     </div>
   );
 }

@@ -10,9 +10,9 @@ import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
+import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
+import { setView, setUploadModalOpen, selectCurrentView } from '../redux';
 import FileUploader from './FileUploader';
-import { setView, setUploadModalOpen } from '../redux';
-import { selectCurrentView } from '../redux/selector';
 import s from './FileSidebar.css';
 
 const NAV_ITEMS = [
@@ -31,17 +31,37 @@ export default function FileSidebar() {
     dispatch(setView({ view: viewId }));
   };
 
-  const handleNewClick = () => {
-    dispatch(setUploadModalOpen(true));
-  };
-
   return (
     <div className={s.sidebar}>
       <div className={s.newButtonContainer}>
-        <Button variant='primary' fullWidth onClick={handleNewClick}>
-          <Icon name='plus' size={24} />
-          {t('files:sidebar.new', 'New')}
-        </Button>
+        <ContextMenu align='left'>
+          <ContextMenu.Trigger as={Button} variant='primary' fullWidth>
+            <Icon name='plus' size={24} />
+            {t('files:sidebar.new', 'New')}
+          </ContextMenu.Trigger>
+          <ContextMenu.Menu>
+            <ContextMenu.Item
+              icon={<Icon name='folder' size={18} />}
+              onClick={() => dispatch(setUploadModalOpen(true))}
+            >
+              {t('files:uploader.new_folder', 'New folder')}
+            </ContextMenu.Item>
+            <ContextMenu.Divider />
+            <ContextMenu.Item
+              icon={<Icon name='upload' size={18} />}
+              onClick={() => {
+                // Pass a signal to open file dialog natively
+                const inputElement =
+                  document.getElementById('hidden-file-upload');
+                if (inputElement) {
+                  inputElement.click();
+                }
+              }}
+            >
+              {t('files:uploader.file_upload', 'File upload')}
+            </ContextMenu.Item>
+          </ContextMenu.Menu>
+        </ContextMenu>
         <FileUploader />
       </div>
 

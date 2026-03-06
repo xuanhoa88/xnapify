@@ -11,12 +11,13 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
-import { setView, setViewMode } from '../redux';
 import {
+  setView,
+  setViewMode,
   selectCurrentView,
   selectBreadcrumbs,
   selectViewMode,
-} from '../redux/selector';
+} from '../redux';
 import s from './FileToolbar.css';
 
 export default function FileToolbar() {

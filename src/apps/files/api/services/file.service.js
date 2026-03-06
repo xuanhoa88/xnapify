@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { Op } from 'sequelize';
-
 // ========================================================================
 // FILE SERVICE - Core Business Logic for Drive
 // ========================================================================
@@ -53,7 +51,9 @@ export async function listFiles(
   { view = 'my_drive', parentId = null } = {},
   { models },
 ) {
-  const { File, User } = models;
+  const { File } = models;
+  const { sequelize } = File;
+  const { Op } = sequelize.Sequelize;
 
   const where = {
     owner_id: userId,
@@ -268,6 +268,8 @@ export async function deleteFilePermanently(userId, fileId, { models, fs }) {
  */
 export async function emptyTrash(userId, { models, fs }) {
   const { File } = models;
+  const { sequelize } = File;
+  const { Op } = sequelize.Sequelize;
   const trashedFiles = await File.findAll({
     where: {
       owner_id: userId,

@@ -11,7 +11,9 @@ import { useDispatch } from 'react-redux';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import Button from '../../../../../shared/renderer/components/Button';
-import { updateSharing } from '../redux/thunks';
+import { validateForm } from '../../../../../shared/validator';
+import { shareFileFormSchema } from '../../../validator/admin/file';
+import { updateSharing } from '../redux';
 import s from './ShareModal.css';
 
 const ShareModal = forwardRef((props, ref) => {
@@ -21,12 +23,14 @@ const ShareModal = forwardRef((props, ref) => {
   const [file, setFile] = useState(null);
   const [shareType, setShareType] = useState('private');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const resetState = useCallback(() => {
     setIsOpen(false);
     setFile(null);
     setShareType('private');
     setLoading(false);
+    setError(null);
   }, []);
 
   useImperativeHandle(
@@ -51,12 +55,25 @@ const ShareModal = forwardRef((props, ref) => {
   if (!isOpen || !file) return null;
 
   const handleSave = async () => {
+    const [isValid, errors] = validateForm(shareFileFormSchema, { shareType });
+
+    if (!isValid) {
+      setError(
+        (errors.shareType && errors.shareType[0]) ||
+          t('files:share.invalid_type', 'Invalid share type'),
+      );
+      return;
+    }
+
     setLoading(true);
+    setError(null);
     try {
       await dispatch(updateSharing({ id: file.id, shareType })).unwrap();
       handleClose();
     } catch (e) {
-      console.error(e);
+      setError(
+        e.message || t('files:share.save_failed', 'Failed to save settings'),
+      );
     } finally {
       setLoading(false);
     }
@@ -74,7 +91,7 @@ const ShareModal = forwardRef((props, ref) => {
         {t('files:share.title', { name: file.name })}
       </Modal.Header>
 
-      <Modal.Body>
+      <Modal.Body error={error}>
         <div className={s.section}>
           <h4>{t('files:share.general_access', 'General access')}</h4>
           <div className={s.accessRow}>

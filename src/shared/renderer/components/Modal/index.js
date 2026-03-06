@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -193,9 +194,9 @@ const Modal = ({ isOpen, onClose, placement = 'center', children }) => {
     return () => clearTimeout(timer);
   }, [isOpen, shouldRender]);
 
-  if (!shouldRender) return null;
+  if (!shouldRender || typeof document === 'undefined') return null;
 
-  return (
+  return createPortal(
     <div
       className={clsx(s.modalOverlay, {
         [s.modalOverlayRight]: placement === 'right',
@@ -218,7 +219,8 @@ const Modal = ({ isOpen, onClose, placement = 'center', children }) => {
       >
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 

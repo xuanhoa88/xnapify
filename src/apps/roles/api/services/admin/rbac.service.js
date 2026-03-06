@@ -639,12 +639,19 @@ export async function removeGroupFromUser(
  * @returns {Promise<string[]>} Array of permission strings (e.g., 'users:read')
  */
 export async function getUserPermissions(user_id, options = {}) {
-  const { models, defaultResources, defaultActions } = options;
+  const { models, cache, defaultResources, defaultActions } = options;
   const { User, Role, Group, Permission } = models;
+
+  // 1. Try to get from cache
+  const cachedData = rbacCache.getUser(user_id, cache);
+  if (cachedData && cachedData.permissions) {
+    return cachedData.permissions;
+  }
 
   const isWildcard = p =>
     p.resource === defaultResources.ALL && p.action === defaultActions.MANAGE;
 
+  // 2. Fetch all permissions for the user (from roles and groups)
   const permissions = await Permission.findAll({
     distinct: true,
     where: { is_active: true },
@@ -654,7 +661,7 @@ export async function getUserPermissions(user_id, options = {}) {
         as: 'roles',
         through: { attributes: [] },
         required: true,
-        attributes: [],
+        attributes: ['id', 'name'],
         include: [
           {
             model: User,
@@ -690,7 +697,43 @@ export async function getUserPermissions(user_id, options = {}) {
     ],
   });
 
-  return permissions.filter(p => !isWildcard(p));
+  // 3. Check for wildcard permission
+  const hasWildcard = permissions.some(isWildcard);
+
+  let result;
+  if (hasWildcard) {
+    const { Op } = Permission.sequelize.Sequelize;
+    // If super admin, fetch ALL active permissions (excluding the wildcard itself)
+    const allPermissions = await Permission.findAll({
+      where: {
+        is_active: true,
+        [Op.not]: {
+          [Op.and]: [
+            { resource: defaultResources.ALL },
+            { action: defaultActions.MANAGE },
+          ],
+        },
+      },
+      attributes: ['resource', 'action'],
+    });
+    result = allPermissions.map(p => `${p.resource}:${p.action}`);
+  } else {
+    // Regular user, return their specific permissions
+    result = permissions.map(p => `${p.resource}:${p.action}`);
+  }
+
+  // 4. Update cache
+  const existingCache = cachedData || {};
+  rbacCache.setUser(
+    user_id,
+    {
+      ...existingCache,
+      permissions: result,
+    },
+    cache,
+  );
+
+  return result;
 }
 
 /**

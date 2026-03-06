@@ -6,6 +6,12 @@
  */
 
 import * as fileService from '../services/file.service';
+import { validateForm } from '../../../../shared/validator';
+import {
+  createFolderFormSchema,
+  renameFileFormSchema,
+  shareFileFormSchema,
+} from '../../validator/admin/file';
 
 // ========================================================================
 // FILE CONTROLLERS
@@ -41,11 +47,13 @@ export async function getFiles(req, res) {
 export async function createFolder(req, res) {
   const http = req.app.get('http');
   try {
-    const { name, parentId } = req.body;
+    const [isValid, errors] = validateForm(createFolderFormSchema, req.body);
 
-    if (!name) {
-      return http.sendValidationError(res, { name: 'Folder name is required' });
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
+
+    const { name, parentId } = errors;
 
     const folder = await fileService.createFolder(req.user.id, name, parentId, {
       models: req.app.get('models'),
@@ -112,10 +120,13 @@ export async function uploadFile(req, res) {
 export async function renameFile(req, res) {
   const http = req.app.get('http');
   try {
-    const { name } = req.body;
-    if (!name) {
-      return http.sendValidationError(res, { name: 'Name is required' });
+    const [isValid, errors] = validateForm(renameFileFormSchema, req.body);
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
     }
+
+    const { name } = errors;
 
     const file = await fileService.renameFile(
       req.user.id,
@@ -268,7 +279,14 @@ export async function emptyTrash(req, res) {
 export async function updateSharing(req, res) {
   const http = req.app.get('http');
   try {
-    const { shareType } = req.body;
+    const [isValid, errors] = validateForm(shareFileFormSchema, req.body);
+
+    if (!isValid) {
+      return http.sendValidationError(res, errors);
+    }
+
+    const { shareType } = errors;
+
     const file = await fileService.updateSharing(
       req.user.id,
       req.params.id,

@@ -36,11 +36,13 @@ async function generateReportLogic(payload) {
 
   // Heavy processing here
   const { connection } = require('@/shared/api/db');
-  const models = connection.models;
-  const posts = await models.Post.findAll({
+  const { Post } = connection.models;
+  const { sequelize } = Post;
+  const { Op } = sequelize.Sequelize;
+  const posts = await Post.findAll({
     where: {
       createdAt: {
-        [models.Sequelize.Op.between]: [startDate, endDate],
+        [Op.between]: [startDate, endDate],
       },
     },
   });

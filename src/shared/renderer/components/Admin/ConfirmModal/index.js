@@ -7,6 +7,7 @@
 
 import Back from './Back';
 import Delete from './Delete';
+import Prompt from './Prompt';
 
 /**
  * ConfirmModal - Namespace for confirmation modal components
@@ -14,17 +15,13 @@ import Delete from './Delete';
  * Usage:
  *   import { ConfirmModal } from '../../../components/Admin';
  *   <ConfirmModal.Back ref={confirmBackModalRef} onConfirm={handleConfirmBack} />
- *   <ConfirmModal.Delete
- *     ref={deleteModalRef}
- *     title="Delete User"
- *     getItemName={item => item.name}
- *     onDelete={item => dispatch(deleteUser(item.id))}
- *     onSuccess={handleDeleteSuccess}
- *   />
+ *   <ConfirmModal.Delete ... />
+ *   <ConfirmModal.Prompt ... />
  */
 const ConfirmModal = {
   Back,
   Delete,
+  Prompt,
 };
 
 export default ConfirmModal;

@@ -37,6 +37,7 @@ function ContextMenu({
   className,
 }) {
   const triggerRef = useRef(null);
+  const menuRef = useRef(null);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
 
   const isControlled = controlledIsOpen !== undefined;
@@ -64,6 +65,10 @@ function ContextMenu({
       if (triggerRef.current && triggerRef.current.contains(event.target)) {
         return;
       }
+      // Don't close if clicking inside the menu itself
+      if (menuRef.current && menuRef.current.contains(event.target)) {
+        return;
+      }
       onToggle(null);
     };
 
@@ -74,7 +79,7 @@ function ContextMenu({
 
   return (
     <ContextMenuContext.Provider
-      value={{ isOpen, onToggle, align, triggerRef }}
+      value={{ isOpen, onToggle, align, triggerRef, menuRef }}
     >
       <div className={clsx(s.dropdown, { [s.open]: isOpen }, className)}>
         {children}
@@ -172,6 +177,7 @@ function Menu({ children, className }) {
 
   return createPortal(
     <div
+      ref={ctx.menuRef}
       className={clsx(s.menu, className)}
       style={{
         position: 'fixed',

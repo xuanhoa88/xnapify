@@ -5,10 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as selectors from './(admin)/redux/selector';
-import slice from './(admin)/redux/slice';
-import * as thunks from './(admin)/redux/thunks';
-
 // Auto-load view routes via require.context
 const viewsContext = require.context(
   '.',
@@ -19,19 +15,6 @@ const viewsContext = require.context(
 // =============================================================================
 // PUBLIC LIFECYCLE HOOK
 // =============================================================================
-
-/**
- * Providers hook — called during view bootstrap to share
- * client-side services/state with other view modules.
- */
-export function providers({ container }) {
-  // Bind admin state
-  container.bind(
-    'files:admin:state',
-    () => ({ slice, selectors, thunks }),
-    true,
-  );
-}
 
 /**
  * Views hook — returns the webpack require.context for this module's views.

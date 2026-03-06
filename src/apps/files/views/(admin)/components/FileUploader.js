@@ -5,27 +5,30 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useRef, useState } from 'react';
-
-import clsx from 'clsx';
+import { useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
-import { Icon } from '../../../../../shared/renderer/components/Admin';
+import {
+  Icon,
+  ConfirmModal,
+} from '../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../shared/renderer/components/Button';
+import { validateForm } from '../../../../../shared/validator';
+import { createFolderFormSchema } from '../../../validator/admin/file';
 import {
   setUploadModalOpen,
   addUploadItem,
   updateUploadProgress,
   clearCompletedUploads,
-} from '../redux';
-import { createFolder, fetchFiles, uploadFile } from '../redux/thunks';
-import {
+  createFolder,
+  fetchFiles,
+  uploadFile,
   selectUploadModalOpen,
   selectCurrentFolderId,
   selectCurrentView,
   selectActiveUploads,
-} from '../redux/selector';
+} from '../redux';
 import s from './FileUploader.css';
 
 function FileUploader() {
@@ -37,37 +40,55 @@ function FileUploader() {
   const activeUploads = useSelector(selectActiveUploads);
 
   const fileInputRef = useRef(null);
-  const [folderName, setFolderName] = useState(
-    t('files:uploader.untitled_folder', 'Untitled folder'),
-  );
-  const [showFolderInput, setShowFolderInput] = useState(false);
+  const promptRef = useRef(null);
 
-  const handleClose = () => {
-    dispatch(setUploadModalOpen(false));
-    setShowFolderInput(false);
-    setFolderName(t('files:uploader.untitled_folder', 'Untitled folder'));
-  };
-
-  const handleCreateFolder = () => {
-    if (folderName.trim()) {
-      dispatch(
-        createFolder({ name: folderName.trim(), parentId: currentFolderId }),
-      );
-      handleClose();
+  // Trigger modal open from Redux state changes
+  useEffect(() => {
+    if (isOpen && promptRef.current) {
+      promptRef.current.open({
+        title: t('files:uploader.new_folder', 'New folder'),
+        defaultValue: t('files:uploader.untitled_folder', 'Untitled folder'),
+      });
+      // Immediately reset redux state so it can be re-triggered
+      dispatch(setUploadModalOpen(false));
     }
-  };
+  }, [isOpen, dispatch, t]);
 
-  const triggerFileInput = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
+  const handleCreateFolder = async folderName => {
+    // Client-side validation using Zod
+    const [isValid, errors] = validateForm(createFolderFormSchema, {
+      name: folderName,
+      parentId: currentFolderId,
+    });
+
+    if (!isValid) {
+      // Return error in the format ConfirmModal.Prompt expects
+      return {
+        success: false,
+        error:
+          (errors.name && errors.name[0]) ||
+          t('files:uploader.invalid_name', 'Invalid folder name'),
+      };
+    }
+
+    try {
+      const result = await dispatch(
+        createFolder({ name: folderName.trim(), parentId: currentFolderId }),
+      ).unwrap();
+      return result;
+    } catch (err) {
+      return {
+        success: false,
+        error:
+          err.message ||
+          t('files:uploader.create_failed', 'Failed to create folder'),
+      };
     }
   };
 
   const handleFileChange = async e => {
     const { files } = e.target;
     if (!files || files.length === 0) return;
-
-    handleClose(); // Close the "New" modal
 
     // Process each file
     for (let i = 0; i < files.length; i++) {
@@ -140,6 +161,7 @@ function FileUploader() {
   return (
     <>
       <input
+        id='hidden-file-upload'
         type='file'
         ref={fileInputRef}
         className={s.hiddenInput}
@@ -147,70 +169,14 @@ function FileUploader() {
         multiple
       />
 
-      {/* NEW MENU DIALOG */}
-      {isOpen && (
-        <>
-          {/* Backdrop for click-away */}
-          <div
-            role='presentation'
-            className={s.backdrop}
-            onClick={handleClose}
-          />
-
-          <div className={s.newMenuModal}>
-            {!showFolderInput ? (
-              <div className={s.menuOptions}>
-                <Button
-                  variant='ghost'
-                  className={s.menuItem}
-                  onClick={() => setShowFolderInput(true)}
-                >
-                  <Icon name='folder' size={24} />
-                  <span>{t('files:uploader.new_folder', 'New folder')}</span>
-                </Button>
-                <div className={s.divider} />
-                <Button
-                  variant='ghost'
-                  className={s.menuItem}
-                  onClick={triggerFileInput}
-                >
-                  <Icon name='upload' size={24} />
-                  <span>{t('files:uploader.file_upload', 'File upload')}</span>
-                </Button>
-              </div>
-            ) : (
-              <div className={s.folderInputContainer}>
-                <h3>{t('files:uploader.new_folder', 'New folder')}</h3>
-                <input
-                  type='text'
-                  value={folderName}
-                  onChange={e => setFolderName(e.target.value)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') handleCreateFolder();
-                  }}
-                  className={s.inputField}
-                />
-                <div className={s.dialogActions}>
-                  <Button
-                    variant='outline'
-                    className={clsx(s.btn, s.btnText)}
-                    onClick={handleClose}
-                  >
-                    {t('files:uploader.cancel', 'Cancel')}
-                  </Button>
-                  <Button
-                    variant='primary'
-                    className={clsx(s.btn, s.btnPrimary)}
-                    onClick={handleCreateFolder}
-                  >
-                    {t('files:uploader.create', 'Create')}
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+      {/* NEW FOLDER DIALOG */}
+      <ConfirmModal.Prompt
+        ref={promptRef}
+        onSubmit={handleCreateFolder}
+        onSuccess={() => {
+          /* Success handled explicitly if needed */
+        }}
+      />
 
       {/* UPLOAD PROGRESS TRACKER (Bottom Right) */}
       {activeUploads.length > 0 && (

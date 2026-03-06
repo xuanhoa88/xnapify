@@ -304,7 +304,7 @@ export default MyComponent;
 ### 2. Redux Toolkit Patterns
 
 ```javascript
-// Module-level slice (@apps/blog/views/admin/posts/redux/slice.js)
+// Module-level slice (@apps/blog/views/(admin)/posts/redux/slice.js)
 import { createSlice } from '@reduxjs/toolkit';
 import { fetchPosts, createPost } from './thunks';
 
@@ -337,7 +337,7 @@ const postsSlice = createSlice({
 export const { clearError } = postsSlice.actions;
 export default postsSlice.reducer;
 
-// Thunks (@apps/blog/views/admin/posts/redux/thunks.js)
+// Thunks (@apps/blog/views/(admin)/redux/thunks.js)
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 export const fetchPosts = createAsyncThunk(
@@ -367,7 +367,7 @@ function MyComponent() {
 ### 4. Page Routing with Lifecycle Hooks
 
 ```javascript
-// @apps/blog/views/admin/posts/_route.js
+// @apps/blog/views/(admin)/posts/_route.js
 import reducer, { SLICE_NAME } from './redux';
 import PostsList from './PostsList';
 import {

@@ -182,13 +182,13 @@ export default AdminLayout;
 Create a folder with brackets `[paramName]` for dynamic segments or `(group)` for organization:
 
 ```
-@apps/users/views/admin/[id]/
+@apps/users/views/(admin)/[id]/
 ├── _route.js
 └── UserProfile.js
 ```
 
 ```javascript
-// @apps/users/views/admin/[id]/_route.js
+// @apps/users/views/(admin)/[id]/_route.js
 import UserProfile from './UserProfile';
 
 export async function getInitialProps({ fetch, params }) {
@@ -223,7 +223,7 @@ Use parentheses `(groupName)` to organize routes without affecting the URL path:
 ## Protected Routes Example
 
 ```javascript
-// @apps/(default)/views/admin/dashboard/_route.js
+// @apps/(default)/views/(admin)/dashboard/_route.js
 import { isAuthenticated, hasPermission } from '@/shared/renderer/redux';
 import Dashboard from './Dashboard';
 
