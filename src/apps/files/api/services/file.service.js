@@ -343,7 +343,11 @@ export async function updateSharing(userId, fileId, shareType, { models }) {
 /**
  * Download or Preview a file
  */
-export async function getPhysicalFileStream(userId, fileId, { models, fs }) {
+export async function getPhysicalFileStream(
+  userId,
+  fileId,
+  { models, fs, download = false },
+) {
   // Try to find file without ownership strict test first to allow shared files
   const { File } = models;
   const file = await File.findByPk(fileId);
@@ -360,7 +364,13 @@ export async function getPhysicalFileStream(userId, fileId, { models, fs }) {
   }
 
   // Use the fs service to stream
-  const result = await fs.preview(file.path);
+  // If download is requested, use the dedicated download service
+  // which might trigger worker processing or zip creation for batches (not here but consistent)
+  // and provides standard attachment headers.
+  const result = await (download
+    ? fs.download(file.path)
+    : fs.preview(file.path));
+
   if (!result.success) {
     throw new Error('File data not found on server');
   }

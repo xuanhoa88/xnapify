@@ -318,39 +318,33 @@ export async function updateSharing(req, res) {
  * @route   GET /api/files/:id/download
  */
 export async function downloadFile(req, res) {
-  const fs = req.app.get('fs');
   const http = req.app.get('http');
 
   try {
+    const isDownload = req.query.download === 'true';
+
     const result = await fileService.getPhysicalFileStream(
       req.user.id,
       req.params.id,
       {
         models: req.app.get('models'),
-        fs,
+        fs: req.app.get('fs'),
+        download: isDownload,
       },
     );
 
-    // Set headers from the FS preview result, plus attachment content disposition
+    // Set headers from the FS result (it provides Content-Type, Content-Length, Content-Disposition, etc.)
     Object.entries(result.headers).forEach(([key, value]) => {
       res.setHeader(key, value);
     });
-    res.setHeader(
-      'Content-Type',
-      result.mimeType || 'application/octet-stream',
-    );
 
-    // Add custom header for suggested filename when downloading
-    // Only force download if query param ?download=true is passed.
-    if (req.query.download === 'true') {
+    // Special case: we still want to ensure the filename from our DB is used if FS provider doesn't know it
+    // though fs.download/preview usually set it correctly if metadata was available.
+    // If we want to override it with the DB filename:
+    if (isDownload) {
       res.setHeader(
         'Content-Disposition',
         `attachment; filename="${encodeURIComponent(result.filename)}"`,
-      );
-    } else {
-      res.setHeader(
-        'Content-Disposition',
-        `inline; filename="${encodeURIComponent(result.filename)}"`,
       );
     }
 
