@@ -68,29 +68,44 @@ import NoOpCache from './adapters/noop';
 export function withNamespace(namespace, baseCache) {
   // Validate namespace
   if (!namespace || typeof namespace !== 'string') {
-    throw new Error('Namespace must be a non-empty string');
+    const err = new Error('Namespace must be a non-empty string');
+    err.name = 'InvalidNamespaceError';
+    err.status = 400;
+    throw err;
   }
 
   const trimmed = namespace.trim();
   if (trimmed.length === 0) {
-    throw new Error('Namespace cannot be whitespace-only');
+    const err = new Error('Namespace cannot be whitespace-only');
+    err.name = 'InvalidNamespaceError';
+    err.status = 400;
+    throw err;
   }
 
   if (trimmed.length > 100) {
-    throw new Error('Namespace too long (maximum 100 characters)');
+    const err = new Error('Namespace too long (maximum 100 characters)');
+    err.name = 'InvalidNamespaceError';
+    err.status = 400;
+    throw err;
   }
 
   // Validate base cache
   if (!baseCache) {
-    throw new Error(
+    const err = new Error(
       'Base cache is required. Use cache.withNamespace() or provide a cache instance.',
     );
+    err.name = 'InvalidCacheError';
+    err.status = 400;
+    throw err;
   }
 
   if (typeof baseCache.get !== 'function') {
-    throw new Error(
+    const err = new Error(
       'Base cache must be a valid cache adapter with required methods',
     );
+    err.name = 'InvalidCacheError';
+    err.status = 400;
+    throw err;
   }
 
   const prefix = `${trimmed}:`;
@@ -220,10 +235,14 @@ export function createFactory(options = {}) {
         adapter = new MemoryCache(config);
         break;
 
-      default:
-        throw new Error(
+      default: {
+        const err = new Error(
           `Invalid cache type: "${type}". Supported types: memory, file`,
         );
+        err.name = 'InvalidCacheTypeError';
+        err.status = 400;
+        throw err;
+      }
     }
   }
 

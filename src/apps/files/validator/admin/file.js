@@ -65,4 +65,13 @@ export const shareFileFormSchema = ({ i18n, z }) =>
         ),
       }),
     }),
+    shares: z
+      .array(
+        z.object({
+          userId: z.string().uuid().nullable().optional(),
+          groupId: z.string().uuid().nullable().optional(),
+          permission: z.enum(['viewer', 'editor']).optional(),
+        }),
+      )
+      .optional(),
   });

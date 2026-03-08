@@ -5,6 +5,7 @@
     "starred": "Starred",
     "trash": "Trash",
     "new": "New",
+    "shared_with_me": "Shared with me",
     "storage": "{{used}} of {{total}} used"
   },
   "toolbar": {
@@ -39,10 +40,10 @@
     "general_access": "General access",
     "restricted": "Restricted",
     "public_link": "Anyone with the link",
-    "specific_users": "Specific Users",
+    "specific_users": "Specific User or Group",
     "restricted_desc": "Only people with access can open with the link",
     "public_link_desc": "Anyone on the internet with this link can view",
-    "specific_users_desc": "Only specific users you add below can access",
+    "specific_users_desc": "Only specific users or groups you add below can access",
     "copy_link": "Copy link",
     "saving": "Saving...",
     "done": "Done",

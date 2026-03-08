@@ -243,7 +243,10 @@ export class BasePluginManager {
             `[PluginManager] Plugin ${id} returned null module (skipped)`,
           );
         }
-        throw new Error(`Plugin "${id}" returned null module (skipped)`);
+        const err = new Error(`Plugin "${id}" returned null module (skipped)`);
+        err.name = 'PluginSkippedError';
+        err.status = 400;
+        throw err;
       }
 
       // Handle various export formats

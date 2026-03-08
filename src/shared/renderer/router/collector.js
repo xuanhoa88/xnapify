@@ -152,7 +152,12 @@ const COLLECTORS = Object.freeze({
  */
 export function collect(source, type) {
   const config = COLLECTORS[type];
-  if (!config) throw new Error(`Unknown collector type: ${type}`);
+  if (!config) {
+    const err = new Error(`Unknown collector type: ${type}`);
+    err.name = 'UnknownCollectorError';
+    err.status = 400;
+    throw err;
+  }
 
   const results = new Map();
   const filePaths = source.files().filter(p => config.pattern.test(p));

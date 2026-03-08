@@ -191,11 +191,6 @@ export default {
         try {
           const models = context.app.get('models');
           const { UserProfile } = models;
-
-          if (!UserProfile) {
-            throw new Error('UserProfile model not found');
-          }
-
           const existing = await UserProfile.findOne({
             where: {
               attribute_key: 'nickname',

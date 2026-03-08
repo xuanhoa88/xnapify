@@ -40,7 +40,10 @@ export function createJwt(config = {}) {
   const { secret, ...options } = config || {};
 
   if (!secret) {
-    throw new Error('JWT secret is required');
+    const err = new Error('JWT secret is required');
+    err.name = 'InvalidJWTConfigError';
+    err.status = 400;
+    throw err;
   }
 
   // Merge with defaults

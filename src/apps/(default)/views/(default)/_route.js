@@ -13,10 +13,16 @@ import Home from './components/Home';
  * Load news data from API
  */
 export async function getInitialProps({ fetch, i18n }) {
-  const { data } = await fetch('/api/news');
+  let news = [];
+  try {
+    const res = await fetch('/api/news');
+    news = (res && res.data && res.data.news) || (res && res.news) || [];
+  } catch (err) {
+    console.error('Failed to load news during SSR:', err.message);
+  }
 
   return {
-    news: data.news || [],
+    news,
     features: featuresData,
     title: i18n.t('navigation.home', 'Home'),
   };

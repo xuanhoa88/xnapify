@@ -291,12 +291,12 @@ export async function updateSharing(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    const { shareType } = errors;
+    const { shareType, shares } = errors;
 
     const file = await fileService.updateSharing(
       req.user.id,
       req.params.id,
-      shareType,
+      { shareType, shares },
       {
         models: req.app.get('models'),
       },
@@ -309,6 +309,24 @@ export async function updateSharing(req, res) {
       'Failed to update sharing settings',
       error,
     );
+  }
+}
+
+/**
+ * Get current sharing status
+ *
+ * @route   GET /api/files/:id/shares
+ */
+export async function getFileShares(req, res) {
+  const http = req.app.get('http');
+  try {
+    const shares = await fileService.getFileShares(req.user.id, req.params.id, {
+      models: req.app.get('models'),
+    });
+
+    return http.sendSuccess(res, shares);
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to fetch sharing settings', error);
   }
 }
 

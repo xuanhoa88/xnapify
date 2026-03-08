@@ -6,10 +6,6 @@
  */
 
 import * as fileController from '../../../../controllers/file.controller';
-import { requirePermission } from '../../utils';
 
 // GET /api/files/:id/download
-export const get = [
-  requirePermission('files:read'),
-  fileController.downloadFile,
-];
+export const get = [fileController.downloadFile];

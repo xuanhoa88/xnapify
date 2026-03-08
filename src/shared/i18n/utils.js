@@ -19,7 +19,10 @@ import { resolveInstance, getStoreLocales } from './getInstance';
  */
 function validateNamespace(namespace) {
   if (!namespace || typeof namespace !== 'string') {
-    throw new Error('Namespace must be a non-empty string');
+    const err = new Error('Namespace must be a non-empty string');
+    err.name = 'InvalidNamespaceError';
+    err.status = 400;
+    throw err;
   }
 }
 
@@ -32,9 +35,12 @@ function validateTranslations(translations) {
     typeof translations !== 'object' ||
     Array.isArray(translations)
   ) {
-    throw new Error(
+    const err = new Error(
       'Translations must be an object mapping locale codes to translation objects',
     );
+    err.name = 'InvalidTranslationsError';
+    err.status = 400;
+    throw err;
   }
 }
 // ---------------------------------------------------------------------------

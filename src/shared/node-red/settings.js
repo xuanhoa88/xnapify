@@ -184,24 +184,35 @@ function writeClientScripts(userDir) {
  */
 function validateConfig(options) {
   if (options.port && (options.port < 1 || options.port > 65535)) {
-    throw new Error(`Invalid port: ${options.port}. Must be between 1-65535`);
+    const err = new Error(
+      `Invalid port: ${options.port}. Must be between 1-65535`,
+    );
+    err.name = 'InvalidPortError';
+    err.status = 400;
+    throw err;
   }
 
   if (
     options.protocol &&
     !['http', 'https'].includes(options.protocol.toLowerCase())
   ) {
-    throw new Error(
+    const err = new Error(
       `Invalid protocol: ${options.protocol}. Must be 'http' or 'https'`,
     );
+    err.name = 'InvalidProtocolError';
+    err.status = 400;
+    throw err;
   }
 
   if (options.logLevel) {
     const validLevels = ['fatal', 'error', 'warn', 'info', 'debug', 'trace'];
     if (!validLevels.includes(options.logLevel.toLowerCase())) {
-      throw new Error(
+      const err = new Error(
         `Invalid logLevel: ${options.logLevel}. Must be one of: ${validLevels.join(', ')}`,
       );
+      err.name = 'InvalidLogLevelError';
+      err.status = 400;
+      throw err;
     }
   }
 }
@@ -259,9 +270,12 @@ export default function createSettings(options = {}) {
   try {
     coreNodesDir = path.dirname(moduleRequire.resolve('@node-red/nodes'));
   } catch (error) {
-    throw new Error(
+    const err = new Error(
       `Failed to resolve @node-red/nodes: ${error.message}. Ensure Node-RED is installed.`,
     );
+    err.name = 'NodeRedResolutionError';
+    err.status = 500;
+    throw err;
   }
 
   // Build default global context with safe requires

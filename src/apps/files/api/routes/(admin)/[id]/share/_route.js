@@ -6,10 +6,12 @@
  */
 
 import * as fileController from '../../../../controllers/file.controller';
-import { requirePermission } from '../../utils';
 
 // PUT /api/files/:id/share
 export const put = [
-  requirePermission('files:update'),
+  (req, res, next) => {
+    const { middlewares } = req.app.get('auth');
+    return middlewares.requirePermission('files:update')(req, res, next);
+  },
   fileController.updateSharing,
 ];

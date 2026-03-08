@@ -178,7 +178,10 @@ function mergeAdapters(adapters) {
     load: path => {
       const adapter = fileMap.get(path);
       if (!adapter) {
-        throw new Error(`View file not found in any module: ${path}`);
+        const err = new Error(`View file not found in any module: ${path}`);
+        err.name = 'ViewFileNotFoundError';
+        err.status = 404;
+        throw err;
       }
       return adapter.load(path);
     },
@@ -257,7 +260,10 @@ export default async function initializeRouter(options = {}) {
   const mergedAdapter = mergeAdapters(viewAdapters);
 
   if (!mergedAdapter) {
-    throw new Error('No view modules found — cannot initialize router');
+    const err = new Error('No view modules found — cannot initialize router');
+    err.name = 'NoViewModulesError';
+    err.status = 500;
+    throw err;
   }
 
   const router = new AppRouter(mergedAdapter, {

@@ -151,11 +151,19 @@ const COLLECTORS = Object.freeze({
  */
 export function collect(source, type) {
   if (!source || !source.files || !source.load) {
-    throw new Error('Source adapter must implement files() and load()');
+    const err = new Error('Source adapter must implement files() and load()');
+    err.name = 'InvalidSourceAdapterError';
+    err.status = 500;
+    throw err;
   }
 
   const config = COLLECTORS[type];
-  if (!config) throw new Error(`Unknown API collector type: ${type}`);
+  if (!config) {
+    const err = new Error(`Unknown API collector type: ${type}`);
+    err.name = 'UnknownAPICollectorTypeError';
+    err.status = 500;
+    throw err;
+  }
 
   const results = new Map();
   const filePaths = source.files().filter(p => config.pattern.test(p));

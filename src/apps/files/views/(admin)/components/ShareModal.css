@@ -11,8 +11,8 @@
 }
 
 .section h4 {
-  margin: 0 0 16px;
-  font-size: 16px;
+  margin: 0 0 12px;
+  font-size: 14px;
   font-weight: 500;
   color: var(--text-primary, #202124);
 }
@@ -73,6 +73,97 @@
   color: var(--text-secondary, #5f6368);
 }
 
+.searchWrapper {
+  margin-top: 24px;
+}
+
+.shareList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 24px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.shareItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
+}
+
+.shareItem:hover {
+  background-color: var(--bg-surface-subtle, #f8f9fa);
+}
+
+.avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: var(--primary-color, #1a73e8);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.groupAvatar {
+  background-color: #5f6368;
+}
+
+.shareInfo {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.shareName {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-primary, #202124);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shareRole {
+  font-size: 12px;
+  color: var(--text-secondary, #5f6368);
+}
+
+.permissionSelect {
+  background: transparent;
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--text-primary, #202124);
+  cursor: pointer;
+}
+
+.permissionSelect:hover {
+  border-color: var(--border-color, #dadce0);
+  background-color: var(--bg-surface-default, #fff);
+}
+
+.removeBtn {
+  color: var(--text-secondary, #5f6368);
+  opacity: 0.6;
+}
+
+.removeBtn:hover {
+  color: var(--danger-color, #d93025);
+  opacity: 1;
+}
+
 /* Dark mode overrides */
 :global(.theme-dark) .accessRow {
   background-color: var(--bg-surface-subtle, #303134);
@@ -80,4 +171,12 @@
 
 :global(.theme-dark) .accessIcon {
   background-color: var(--bg-surface-default, #202124);
+}
+
+:global(.theme-dark) .shareItem:hover {
+  background-color: var(--bg-surface-subtle, #3c4043);
+}
+
+:global(.theme-dark) .permissionSelect:hover {
+  background-color: var(--bg-surface-subtle, #3c4043);
 }

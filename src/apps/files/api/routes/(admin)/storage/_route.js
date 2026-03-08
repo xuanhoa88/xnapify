@@ -6,7 +6,12 @@
  */
 
 import * as fileController from '../../../controllers/file.controller';
-import { requirePermission } from '../utils';
 
 // GET /api/files/storage
-export const get = [requirePermission('files:read'), fileController.getStorage];
+export const get = [
+  (req, res, next) => {
+    const { middlewares } = req.app.get('auth');
+    return middlewares.requirePermission('files:read')(req, res, next);
+  },
+  fileController.getStorage,
+];

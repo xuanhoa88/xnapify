@@ -211,13 +211,25 @@ export const emptyTrash = createAsyncThunk(
 
 export const updateSharing = createAsyncThunk(
   'admin/files/updateSharing',
-  async ({ id, shareType }, { extra: { fetch }, rejectWithValue }) => {
+  async ({ id, shareType, shares }, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch(`${ADMIN_API_BASE}/${id}/share`, {
         method: 'PUT',
-        body: { shareType },
+        body: { shareType, shares },
       });
       return data; // { file }
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);
+
+export const fetchFileShares = createAsyncThunk(
+  'admin/files/fetchFileShares',
+  async (id, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch(`${ADMIN_API_BASE}/${id}/shares`);
+      return data;
     } catch (error) {
       return rejectWithValue(error.message);
     }

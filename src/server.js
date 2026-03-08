@@ -20,6 +20,7 @@ import nodeFetch from 'node-fetch';
 import { LRUCache } from 'lru-cache';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
+import toString from 'lodash/toString';
 import { configureJwt } from './shared/jwt';
 import { createFetch } from './shared/fetch';
 import i18n, {
@@ -117,7 +118,27 @@ function validatePort(port, defaultPort = 1337) {
 }
 
 function sanitizeHost(host) {
-  return LOCALHOST_IPS.has(host) ? '127.0.0.1' : host;
+  // Non-local hosts are returned as-is (e.g. '192.168.1.10')
+  if (!LOCALHOST_IPS.has(host)) return host;
+
+  // 'localhost' → '127.0.0.1': node-fetch resolves 'localhost' to IPv4
+  // but Node.js server.listen('localhost') binds to IPv6 (::1).
+  // Force IPv4 to avoid ECONNREFUSED during SSR self-fetch.
+  if (host === 'localhost') return '127.0.0.1';
+
+  // Wildcard addresses → their respective loopback
+  if (host === '0.0.0.0') return '127.0.0.1';
+  if (host === '::') return '[::1]';
+
+  // IPv4-mapped IPv6 (::ffff:127.0.0.1) is effectively IPv4
+  if (host.startsWith('::ffff:')) return '127.0.0.1';
+
+  // Bare IPv6 must be wrapped in brackets for valid URLs
+  // e.g. fetch('http://::1:1337/') crashes → must be http://[::1]:1337/
+  if (host === '::1') return '[::1]';
+
+  // '127.0.0.1' returned as-is
+  return host;
 }
 
 function formatUrlPath(urlPath) {
@@ -323,64 +344,53 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
   return store;
 }
 
-// Memoized SSR resources
-async function fetchSsrResources$() {
-  const normaliseUrl = s => `/${s}`.replace(/\/+/g, '/');
-
-  // Normalise an entry that is either a plain string or { href/src, pluginId }
+async function loadSsrResources$() {
   const normaliseEntry = entry => {
-    if (typeof entry === 'string') return normaliseUrl(entry);
-    if (entry.href) return { ...entry, href: normaliseUrl(entry.href) };
-    if (entry.src) return { ...entry, src: normaliseUrl(entry.src) };
-    return entry;
+    if (typeof entry === 'string') return formatUrlPath(entry);
+    if (entry && typeof entry === 'object') {
+      if (entry.href) return { ...entry, href: formatUrlPath(entry.href) };
+      if (entry.src) return { ...entry, src: formatUrlPath(entry.src) };
+    }
+    if (__DEV__)
+      console.warn('⚠️ Unrecognised resource entry shape, skipping:', entry);
+    return null;
   };
 
-  // Deduplicate by extracting the URL string from each entry
   const dedup = entries => {
     const seen = new Set();
     return entries.filter(entry => {
-      const key =
+      if (entry == null) return false;
+      const url =
         typeof entry === 'string' ? entry : entry.href || entry.src || '';
-      if (seen.has(key)) return false;
+      const key = toString(url);
+      if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
     });
   };
 
-  const scriptLinks = [];
-  const styleLinks = [];
+  const rawScripts = [];
+  const rawStyles = [];
 
-  // Load stats.json
   try {
     const statsPath = path.resolve(__dirname, 'stats.json');
-    const stats = await fs.readFile(statsPath, 'utf8');
-    const { scripts = [], stylesheets = [] } = JSON.parse(stats);
-
-    scriptLinks.push(...scripts);
-    styleLinks.push(...stylesheets);
+    const { scripts = [], stylesheets = [] } = JSON.parse(
+      await fs.readFile(statsPath, 'utf8'),
+    );
+    rawScripts.push(...scripts);
+    rawStyles.push(...stylesheets);
   } catch (err) {
-    if (__DEV__) {
-      console.error('❌ Failed to load stats.json:', err.message);
-    }
+    if (__DEV__) console.error('❌ Failed to load stats.json:', err);
   }
 
-  // Load plugin CSS entries ({ href, pluginId })
-  try {
-    const { cssUrls: pluginCssEntries = [] } = pluginManager;
-    styleLinks.push(...pluginCssEntries);
-  } catch (err) {
-    if (__DEV__) {
-      console.error('❌ Failed to load plugin CSS URLs:', err.message);
-    }
-  }
-
-  // Load plugin script entries ({ src, pluginId })
-  try {
-    const { scriptUrls: pluginScriptEntries = [] } = pluginManager;
-    scriptLinks.push(...pluginScriptEntries);
-  } catch (err) {
-    if (__DEV__) {
-      console.error('❌ Failed to load plugin Script URLs:', err.message);
+  for (const [key, target] of [
+    ['scriptUrls', rawScripts],
+    ['cssUrls', rawStyles],
+  ]) {
+    try {
+      target.push(...(pluginManager[key] || []));
+    } catch (err) {
+      if (__DEV__) console.error(`❌ Failed to load plugin ${key}:`, err);
     }
   }
 
@@ -390,8 +400,8 @@ async function fetchSsrResources$() {
   ]);
 
   return {
-    scriptLinks: dedup(scriptLinks).map(normaliseEntry),
-    styleLinks: dedup(styleLinks).map(normaliseEntry),
+    scriptLinks: dedup(rawScripts.map(normaliseEntry)),
+    styleLinks: dedup(rawStyles.map(normaliseEntry)),
     App,
     Html,
   };
@@ -399,8 +409,8 @@ async function fetchSsrResources$() {
 
 function getSsrResources() {
   if (!appState.ssrResourcesPromise) {
-    appState.ssrResourcesPromise = fetchSsrResources$().catch(err => {
-      appState.ssrResourcesPromise = null; // allow retry on failure
+    appState.ssrResourcesPromise = loadSsrResources$().catch(err => {
+      appState.ssrResourcesPromise = null;
       throw err;
     });
   }
@@ -528,7 +538,10 @@ function makeSsrMiddleware(guardControl, baseUrl) {
         'Redux store initialization',
       );
       if (!store) {
-        throw new Error('Redux store initialization returned null');
+        const err = new Error('Redux store initialization returned null');
+        err.name = 'ReduxStoreInitError';
+        err.status = 500;
+        throw err;
       }
       context.store = store;
 
@@ -978,8 +991,10 @@ export async function initializeServer(app, server, options = {}) {
     host = SERVER_CONFIG.host,
   } = options;
 
-  const displayHost = sanitizeHost(host);
-  const baseUrl = buildBaseUrl(port, displayHost);
+  // Sanitize host so server.listen() and SSR self-fetch use the same address.
+  // e.g. 'localhost' → '127.0.0.1' prevents IPv4/IPv6 mismatch with node-fetch.
+  const resolvedHost = sanitizeHost(host);
+  const baseUrl = buildBaseUrl(port, resolvedHost);
 
   // WebSocket
   appState.wsServer = createWebSocketServer(
@@ -1184,7 +1199,7 @@ export async function initializeServer(app, server, options = {}) {
   await appState.nodeRED.init(app, server, {
     ...SERVER_CONFIG,
     port,
-    host: displayHost,
+    host: resolvedHost,
     functionGlobalContext: {
       app() {
         return guardControl.proxy;
@@ -1202,7 +1217,7 @@ export async function initializeServer(app, server, options = {}) {
   return {
     app,
     server,
-    start: () => startServer(server, baseUrl, port, host),
+    start: () => startServer(server, baseUrl, port, resolvedHost),
     dispose: () => shutdownServer(server),
   };
 }

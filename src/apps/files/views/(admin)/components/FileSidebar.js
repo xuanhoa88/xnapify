@@ -16,6 +16,7 @@ import s from './FileSidebar.css';
 
 const NAV_ITEMS = [
   { id: 'my_drive', label: 'sidebar.my_drive', icon: 'hard-drive' },
+  { id: 'shared_with_me', label: 'sidebar.shared_with_me', icon: 'users' },
   { id: 'recent', label: 'sidebar.recent', icon: 'clock' },
   { id: 'starred', label: 'sidebar.starred', icon: 'star' },
   { id: 'trash', label: 'sidebar.trash', icon: 'trash' },

@@ -59,7 +59,10 @@ function log(message, level = 'info') {
 function registerEngines(app) {
   Object.entries(engines).forEach(([name, engine]) => {
     if (!engine) {
-      throw new Error(`Invalid engine definition for "${name}"`);
+      const err = new Error(`Invalid engine definition for "${name}"`);
+      err.name = 'InvalidEngineError';
+      err.status = 500;
+      throw err;
     }
     app.set(name, engine);
   });

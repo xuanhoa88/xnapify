@@ -106,7 +106,10 @@ class WebSocketServer extends EventEmitter {
    */
   start(httpServer = null) {
     if (this.isRunning) {
-      throw new Error('Server is already running');
+      const err = new Error('Server is already running');
+      err.name = 'ServerAlreadyRunningError';
+      err.status = 400;
+      throw err;
     }
 
     this.server = new WebSocket.Server({

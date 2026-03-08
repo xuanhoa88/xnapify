@@ -203,7 +203,10 @@ export function setupWorkerProcess(
       `Worker registry full (${MAX_REGISTRY_SIZE}), ` +
         `possible memory leak detected`,
     );
-    throw new Error('Worker registry size limit exceeded');
+    const err = new Error('Worker registry size limit exceeded');
+    err.name = 'WorkerRegistrySizeLimitExceededError';
+    err.status = 500;
+    throw err;
   }
 
   // Check if worker is already registered and clean up previous instance

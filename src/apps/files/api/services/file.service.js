@@ -16,25 +16,80 @@ async function findAccessibleFile(
   fileId,
   userId,
   models,
-  requiredAccess = 'owner',
+  requiredAccess = 'viewer',
 ) {
-  const { File, FileShare } = models;
+  const { File, FileShare, UserGroup } = models;
 
-  const file = await File.findByPk(fileId, {
-    paranoid: false, // In case we need to find trashed files
-    include: [{ model: FileShare, as: 'shares' }],
+  // 1. Get user groups for group-based sharing
+  const userGroups = await UserGroup.findAll({
+    where: { user_id: userId },
+    attributes: ['group_id'],
   });
+  const groupIds = userGroups.map(ug => ug.group_id);
 
-  if (!file) {
-    throw new Error('File not found');
+  // 2. Helper to check if a single file has access
+  const checkDirectAccess = async id => {
+    const f = await File.findByPk(id, {
+      paranoid: false,
+      include: [{ model: FileShare, as: 'shares' }],
+    });
+    if (!f) return null;
+
+    if (f.owner_id === userId) return { file: f, permission: 'editor' };
+    if (f.share_type === 'public_link')
+      return { file: f, permission: 'viewer' };
+
+    let best = null;
+    for (const s of f.shares) {
+      if (
+        s.user_id === userId ||
+        (s.group_id && groupIds.includes(s.group_id))
+      ) {
+        if (s.permission === 'editor') return { file: f, permission: 'editor' };
+        best = 'viewer';
+      }
+    }
+    return best ? { file: f, permission: best } : null;
+  };
+
+  // 3. Check target file first
+  let target = await File.findByPk(fileId, { paranoid: false });
+  if (!target) {
+    const err = new Error('File not found');
+    err.name = 'FileNotFoundError';
+    err.status = 404;
+    throw err;
   }
 
-  if (requiredAccess === 'owner' && file.owner_id !== userId) {
-    throw new Error('Permission denied. Must be owner.');
+  let access = await checkDirectAccess(fileId);
+  if (
+    access &&
+    (requiredAccess === 'viewer' || access.permission === 'editor')
+  ) {
+    return access.file;
   }
 
-  // TODO: Implement more complex permission checks (viewer, editor) if needed
-  return file;
+  // 4. Traverse up for inheritance
+  let currentId = target.parent_id;
+  while (currentId) {
+    access = await checkDirectAccess(currentId);
+    if (access) {
+      // If we found access in a parent, it applies to children
+      if (requiredAccess === 'viewer' || access.permission === 'editor') {
+        return target;
+      }
+      break; // Found some access but not enough?
+    }
+    const parent = await File.findByPk(currentId, {
+      attributes: ['parent_id'],
+    });
+    currentId = parent ? parent.parent_id : null;
+  }
+
+  const err = new Error(`Permission denied. Required: ${requiredAccess}`);
+  err.name = 'PermissionDeniedError';
+  err.status = 403;
+  throw err;
 }
 
 /**
@@ -57,21 +112,18 @@ export async function listFiles(
   } = {},
   { models },
 ) {
-  const { File } = models;
+  const { File, FileShare, UserGroup } = models;
   const { sequelize } = File;
   const { Op } = sequelize.Sequelize;
 
-  const where = {
-    owner_id: userId,
-  };
-
+  const where = {};
   const queryOptions = {
     where,
     order: [
-      ['type', 'DESC'], // Folders first
+      ['type', 'DESC'],
       ['name', 'ASC'],
     ],
-    paranoid: true, // Only show non-deleted by default
+    paranoid: true,
   };
 
   // Pagination logic
@@ -83,31 +135,62 @@ export async function listFiles(
   // Search logic
   if (search) {
     where.name = { [Op.like]: `%${search}%` };
-    // If searching, we often want to search globally or within the view
-    // but ignoring parentId if search is provided is a common pattern for "search all"
-    // However, if the user is in "Trash", they expect to search within trash.
   }
 
   switch (view) {
     case 'my_drive':
-      if (!search) {
-        where.parent_id = parentId; // null = root
+      if (parentId) {
+        // If navigating into a folder, ensure access exists
+        // (This will also handle shared folders due to inheritance in findAccessibleFile)
+        await findAccessibleFile(parentId, userId, models, 'viewer');
+        where.parent_id = parentId;
+      } else {
+        where.owner_id = userId;
+        if (!search) {
+          where.parent_id = null; // null = root of My Drive
+        }
       }
       break;
+    case 'shared_with_me': {
+      const userGroups = await UserGroup.findAll({
+        where: { user_id: userId },
+        attributes: ['group_id'],
+      });
+      const groupIds = userGroups.map(ug => ug.group_id);
+
+      const sharedFiles = await FileShare.findAll({
+        where: {
+          [Op.or]: [{ user_id: userId }, { group_id: { [Op.in]: groupIds } }],
+        },
+        attributes: ['file_id'],
+      });
+      const sharedIds = [...new Set(sharedFiles.map(s => s.file_id))];
+
+      where.id = { [Op.in]: sharedIds };
+      where.owner_id = { [Op.ne]: userId }; // Don't show owned files in shared
+      break;
+    }
     case 'recent':
+      where.owner_id = userId;
       where.type = 'file';
       queryOptions.order = [['updated_at', 'DESC']];
       if (!pageSize) queryOptions.limit = 50;
       break;
     case 'starred':
+      where.owner_id = userId;
       where.is_starred = true;
       break;
     case 'trash':
+      where.owner_id = userId;
       queryOptions.paranoid = false;
       where.deleted_at = { [Op.not]: null };
       break;
-    default:
-      throw new Error(`Invalid view type: ${view}`);
+    default: {
+      const err = new Error(`Invalid view type: ${view}`);
+      err.name = 'InvalidViewTypeError';
+      err.status = 400;
+      throw err;
+    }
   }
 
   const { rows: files, count: total } =
@@ -201,7 +284,7 @@ export async function uploadFile(
  * Rename a file or folder
  */
 export async function renameFile(userId, fileId, newName, { models }) {
-  const file = await findAccessibleFile(fileId, userId, models, 'owner');
+  const file = await findAccessibleFile(fileId, userId, models, 'editor');
   file.name = newName;
   return file.save();
 }
@@ -210,12 +293,15 @@ export async function renameFile(userId, fileId, newName, { models }) {
  * Move a file or folder
  */
 export async function moveFile(userId, fileId, newParentId, { models }) {
-  const file = await findAccessibleFile(fileId, userId, models, 'owner');
+  const file = await findAccessibleFile(fileId, userId, models, 'editor');
 
   if (newParentId) {
     // Prevent moving a folder into itself or its children
     if (file.id === newParentId) {
-      throw new Error('Cannot move a folder into itself');
+      const err = new Error('Cannot move a folder into itself');
+      err.name = 'CannotMoveFolderError';
+      err.status = 400;
+      throw err;
     }
     await findAccessibleFile(newParentId, userId, models, 'owner');
     // TODO: Add complex cyclic check if moving folders
@@ -229,7 +315,7 @@ export async function moveFile(userId, fileId, newParentId, { models }) {
  * Toggle starred status
  */
 export async function toggleStar(userId, fileId, isStarred, { models }) {
-  const file = await findAccessibleFile(fileId, userId, models, 'owner');
+  const file = await findAccessibleFile(fileId, userId, models, 'viewer');
   file.is_starred = isStarred;
   return file.save();
 }
@@ -250,7 +336,10 @@ export async function trashFile(userId, fileId, { models }) {
 export async function restoreFile(userId, fileId, { models }) {
   const file = await findAccessibleFile(fileId, userId, models, 'owner');
   if (!file.deleted_at) {
-    throw new Error('File is not in trash');
+    const err = new Error('File is not in trash');
+    err.name = 'FileNotInTrashError';
+    err.status = 400;
+    throw err;
   }
   await file.restore();
   return file;
@@ -328,16 +417,85 @@ export async function emptyTrash(userId, { models, fs }) {
 /**
  * Update Sharing Settings
  */
-export async function updateSharing(userId, fileId, shareType, { models }) {
+export async function updateSharing(
+  userId,
+  fileId,
+  { shareType, shares = [] },
+  { models },
+) {
+  const { File, FileShare, User, Group } = models;
   const file = await findAccessibleFile(fileId, userId, models, 'owner');
-  const validTypes = ['private', 'public_link', 'shared_users'];
 
+  const validTypes = ['private', 'public_link', 'shared_users'];
   if (!validTypes.includes(shareType)) {
-    throw new Error('Invalid share type');
+    const err = new Error('Invalid share type');
+    err.name = 'InvalidShareTypeError';
+    err.status = 400;
+    throw err;
   }
 
-  file.share_type = shareType;
-  return file.save();
+  return models.sequelize.transaction(async t => {
+    file.share_type = shareType;
+    await file.save({ transaction: t });
+
+    // Sync shares
+    // 1. Delete old shares
+    await FileShare.destroy({
+      where: { file_id: fileId },
+      transaction: t,
+    });
+
+    // 2. Add new ones if share_type is search-based
+    if (shareType === 'shared_users' && shares.length > 0) {
+      const shareRecords = shares.map(s => ({
+        file_id: fileId,
+        user_id: s.userId || null,
+        group_id: s.groupId || null,
+        permission: s.permission || 'viewer',
+      }));
+
+      await FileShare.bulkCreate(shareRecords, { transaction: t });
+    }
+
+    // Return the updated file with shares included
+    return File.findByPk(fileId, {
+      include: [
+        {
+          model: FileShare,
+          as: 'shares',
+          include: [
+            { model: User, as: 'user', attributes: ['id', 'email'] },
+            { model: Group, as: 'group', attributes: ['id', 'name'] },
+          ],
+        },
+      ],
+      transaction: t,
+    });
+  });
+}
+
+/**
+ * Get current sharing status
+ */
+export async function getFileShares(userId, fileId, { models }) {
+  const { File, FileShare, User, Group } = models;
+
+  // Must be owner or have at least editor access to see who it's shared with
+  await findAccessibleFile(fileId, userId, models, 'editor');
+
+  return File.findByPk(fileId, {
+    attributes: ['id', 'name', 'share_type'],
+    include: [
+      {
+        model: FileShare,
+        as: 'shares',
+        include: [
+          { model: User, as: 'user', attributes: ['id', 'email'] },
+          { model: Group, as: 'group', attributes: ['id', 'name'] },
+        ],
+      },
+    ],
+  });
 }
 
 /**
@@ -348,19 +506,16 @@ export async function getPhysicalFileStream(
   fileId,
   { models, fs, download = false },
 ) {
-  // Try to find file without ownership strict test first to allow shared files
-  const { File } = models;
-  const file = await File.findByPk(fileId);
-
-  if (!file) throw new Error('File not found');
-
-  // Basic permission check
-  if (file.owner_id !== userId && file.share_type === 'private') {
-    throw new Error('Permission denied');
-  }
+  // Centralized permission check. If user is downloading, they need 'editor' access (Edit/Download)
+  // If they are just previewing, 'viewer' access is sufficient.
+  const requiredAccess = download ? 'editor' : 'viewer';
+  const file = await findAccessibleFile(fileId, userId, models, requiredAccess);
 
   if (file.type !== 'file' || !file.path) {
-    throw new Error('Requested item is not a downloadable file');
+    const err = new Error('Requested item is not a downloadable file');
+    err.name = 'NotADownloadFileError';
+    err.status = 400;
+    throw err;
   }
 
   // Use the fs service to stream
@@ -372,7 +527,10 @@ export async function getPhysicalFileStream(
     : fs.preview(file.path));
 
   if (!result.success) {
-    throw new Error('File data not found on server');
+    const err = new Error('File data not found on server');
+    err.name = 'FileNotFoundError';
+    err.status = 404;
+    throw err;
   }
 
   return {

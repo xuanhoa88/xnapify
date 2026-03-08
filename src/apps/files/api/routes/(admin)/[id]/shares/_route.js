@@ -7,11 +7,10 @@
 
 import * as fileController from '../../../../controllers/file.controller';
 
-// PUT /api/files/:id/rename
-export const put = [
+export const get = [
   (req, res, next) => {
     const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:update')(req, res, next);
+    return middlewares.requirePermission('files:read')(req, res, next);
   },
-  fileController.renameFile,
+  fileController.getFileShares,
 ];

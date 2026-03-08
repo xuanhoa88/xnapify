@@ -355,9 +355,12 @@ export default function configureStore(
    */
   store.batchInjectReducers = (reducers, options = {}) => {
     if (!reducers || typeof reducers !== 'object' || Array.isArray(reducers)) {
-      throw new Error(
+      const err = new Error(
         '[Redux] batchInjectReducers: reducers must be a plain object',
       );
+      err.name = 'InvalidReducersError';
+      err.status = 400;
+      throw err;
     }
 
     const injected = [];
@@ -405,7 +408,12 @@ export default function configureStore(
    */
   store.batchRemoveReducers = (keys, options = {}) => {
     if (!Array.isArray(keys)) {
-      throw new Error('[Redux] batchRemoveReducers: keys must be an array');
+      const err = new Error(
+        '[Redux] batchRemoveReducers: keys must be an array',
+      );
+      err.name = 'InvalidKeysError';
+      err.status = 400;
+      throw err;
     }
 
     const removed = [];
@@ -473,7 +481,12 @@ export default function configureStore(
    */
   store.onReducerChange = listener => {
     if (typeof listener !== 'function') {
-      throw new Error('[Redux] onReducerChange: listener must be a function');
+      const err = new Error(
+        '[Redux] onReducerChange: listener must be a function',
+      );
+      err.name = 'InvalidListenerError';
+      err.status = 400;
+      throw err;
     }
 
     reducerListeners.add(listener);

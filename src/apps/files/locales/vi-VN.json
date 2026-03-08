@@ -5,6 +5,7 @@
     "starred": "Có gắn dấu sao",
     "trash": "Thùng rác",
     "new": "Mới",
+    "shared_with_me": "Được chia sẻ với tôi",
     "storage": "Đã dùng {{used}} trong tổng số {{total}}"
   },
   "toolbar": {
@@ -39,10 +40,10 @@
     "general_access": "Quyền truy cập chung",
     "restricted": "Bị hạn chế",
     "public_link": "Bất kỳ ai có liên kết",
-    "specific_users": "Người dùng cụ thể",
+    "specific_users": "Người dùng hoặc Nhóm cụ thể",
     "restricted_desc": "Chỉ những người có quyền truy cập mới có thể mở bằng liên kết này",
     "public_link_desc": "Bất kỳ ai trên Internet có liên kết này đều có thể xem",
-    "specific_users_desc": "Chỉ những người dùng cụ thể bạn thêm bên dưới mới có thể truy cập",
+    "specific_users_desc": "Chỉ những người dùng hoặc nhóm cụ thể bạn thêm bên dưới mới có thể truy cập",
     "copy_link": "Sao chép liên kết",
     "saving": "Đang lưu...",
     "done": "Xong",

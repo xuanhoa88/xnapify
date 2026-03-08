@@ -26,7 +26,10 @@ class HookFactory {
    */
   channel(name) {
     if (!name || typeof name !== 'string') {
-      throw new Error('Channel name must be a non-empty string');
+      const err = new Error('Channel name must be a non-empty string');
+      err.name = 'InvalidChannelNameError';
+      err.status = 400;
+      throw err;
     }
 
     const key = name.trim();
