@@ -21,6 +21,8 @@
  */
 
 import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
+import { getTranslations } from '../i18n/loader';
+import { addNamespace } from '../i18n/utils';
 
 // =============================================================================
 // CONSTANTS
@@ -39,6 +41,7 @@ const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
  *   routes     — mount routes last, once the app is fully initialised
  */
 const LIFECYCLE_PHASES = [
+  'translations',
   'models',
   'providers',
   'migrations',
@@ -333,7 +336,20 @@ export async function discoverModules(modulesContext, app) {
   );
   const errors = [...loadErrors];
 
-  // ─── Phase 1: models ──────────────────────────────────────────────────────
+  // ─── Phase 1: translations ────────────────────────────────────────────────
+  errors.push(
+    ...(await runPhase('translations', lifecycles, (name, hook) => {
+      const translationContext = hook();
+      if (translationContext) {
+        const translations = getTranslations(translationContext);
+        if (translations && Object.keys(translations).length > 0) {
+          addNamespace(name, translations);
+        }
+      }
+    })),
+  );
+
+  // ─── Phase 2: models ──────────────────────────────────────────────────────
   const db = app.get('db');
   const apiModels = {};
 
@@ -385,23 +401,23 @@ export async function discoverModules(modulesContext, app) {
 
   app.set('models', apiModels);
 
-  // ─── Phase 2: providers ───────────────────────────────────────────────────
+  // ─── Phase 3: providers ───────────────────────────────────────────────────
   errors.push(
     ...(await runPhase('providers', lifecycles, (_, hook) => hook(app))),
   );
 
-  // ─── Phase 3: migrations ──────────────────────────────────────────────────
+  // ─── Phase 4: migrations ──────────────────────────────────────────────────
   errors.push(
     ...(await runPhase('migrations', lifecycles, (_, hook) => hook(app))),
   );
 
-  // ─── Phase 4: seeds ───────────────────────────────────────────────────────
+  // ─── Phase 5: seeds ───────────────────────────────────────────────────────
   errors.push(...(await runPhase('seeds', lifecycles, (_, hook) => hook(app))));
 
-  // ─── Phase 5: init ────────────────────────────────────────────────────────
+  // ─── Phase 6: init ────────────────────────────────────────────────────────
   errors.push(...(await runPhase('init', lifecycles, (_, hook) => hook(app))));
 
-  // ─── Phase 6: routes ──────────────────────────────────────────────────────
+  // ─── Phase 7: routes ──────────────────────────────────────────────────────
   const apiRoutes = new Map();
   errors.push(
     ...(await runPhase('routes', lifecycles, (name, hook) => {

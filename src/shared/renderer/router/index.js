@@ -13,7 +13,12 @@ import {
 } from './constants';
 import { createError, decodeUrl, isDescendant, log } from './utils';
 import { collect } from './collector';
-import { runTranslations, runInit, runMount, runUnmount } from './lifecycle';
+import {
+  loadRouteTranslations,
+  runInit,
+  runMount,
+  runUnmount,
+} from './lifecycle';
 import { createMatcher } from './matcher';
 import { buildRoutes, validateConfig, linkParents } from './builder';
 
@@ -653,7 +658,7 @@ export class Router {
       }
 
       // Run translations hook (once per route, parent → child)
-      await runTranslations(state.current.route, state.current);
+      await loadRouteTranslations(state.current.route, state.current);
 
       // Run init hook (config + route-level, parent → child, once per route)
       await runInit(state.current.route, state.current);

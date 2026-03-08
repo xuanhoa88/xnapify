@@ -8,6 +8,8 @@
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
 import { createWebpackContextAdapter } from '../shared/utils/webpackContextAdapter';
+import { getTranslations } from '../shared/i18n/loader';
+import { addNamespace } from '../shared/i18n/utils';
 
 // Discover view lifecycle modules from apps directory
 const viewsLifecycleContext = require.context(
@@ -146,6 +148,35 @@ async function runModuleProviders(moduleHooks, { container }) {
 }
 
 // =============================================================================
+// TRANSLATIONS REGISTRATION
+// =============================================================================
+
+/**
+ * Run all discovered modules' translations() hooks.
+ * Loads locale JSON files and registers them as i18n namespaces.
+ *
+ * @param {Map<string, object>} moduleHooks - Map of module name → lifecycle hooks
+ */
+async function runModuleTranslations(moduleHooks) {
+  for (const [name, hooks] of moduleHooks) {
+    if (typeof hooks.translations !== 'function') continue;
+
+    try {
+      const translationContext = await hooks.translations();
+      if (translationContext) {
+        const translations = getTranslations(translationContext);
+        if (translations && Object.keys(translations).length > 0) {
+          addNamespace(name, translations);
+          log(`[${name}] Translations`);
+        }
+      }
+    } catch (error) {
+      log(`[${name}] Translations phase failed: ${error.message}`, 'error');
+    }
+  }
+}
+
+// =============================================================================
 // ADAPTER MERGING
 // =============================================================================
 
@@ -250,13 +281,16 @@ export default async function initializeRouter(options = {}) {
   // 1. Discover — load lifecycle modules, collect hook references only
   const moduleHooks = discoverModuleHooks();
 
-  // 2. Providers — register cross-module bindings (e.g. DI, Redux slices)
+  // 2. Translations — register module-level i18n translations
+  await runModuleTranslations(moduleHooks);
+
+  // 3. Providers — register cross-module bindings (e.g. DI, Redux slices)
   await runModuleProviders(moduleHooks, { container });
 
-  // 3. Views — call views() on each module to get their route contexts
+  // 4. Views — call views() on each module to get their route contexts
   const viewAdapters = collectViewAdapters(moduleHooks);
 
-  // 4. Merge adapters so layouts from any module are globally visible
+  // 5. Merge adapters so layouts from any module are globally visible
   const mergedAdapter = mergeAdapters(viewAdapters);
 
   if (!mergedAdapter) {

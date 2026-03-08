@@ -10,7 +10,7 @@ import { getRootSegment } from './utils';
 import {
   createInit,
   createMount,
-  createTranslations,
+  buildTranslationsLoader,
   createAction,
 } from './lifecycle';
 
@@ -136,7 +136,7 @@ export function buildRoutes(
       module,
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedMiddlewares),
-      translations: createTranslations(
+      translations: buildTranslationsLoader(
         matchedConfigs,
         module.translations,
         pathname,

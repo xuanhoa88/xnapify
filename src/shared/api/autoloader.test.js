@@ -1,8 +1,17 @@
+jest.mock('../i18n/loader', () => ({
+  getTranslations: jest.fn(),
+}));
+
+jest.mock('../i18n/utils', () => ({
+  addNamespace: jest.fn(),
+}));
+
 describe('shared/api/autoloader', () => {
   const ORIGINAL_ENV = process.env;
 
   beforeEach(() => {
     jest.resetModules();
+    jest.clearAllMocks();
     process.env = { ...ORIGINAL_ENV };
   });
 
@@ -19,6 +28,7 @@ describe('shared/api/autoloader', () => {
         './groups/api/index.js',
         './permissions/api/index.js',
         './auth/api/index.js',
+        './files/api/index.js',
         './plugins/api/index.js',
         './other/api/index.js',
       ];
@@ -50,6 +60,7 @@ describe('shared/api/autoloader', () => {
         './groups/api/index.js',
         './permissions/api/index.js',
         './auth/api/index.js',
+        './files/api/index.js',
         './plugins/api/index.js',
         './custom/api/index.js',
       ];
@@ -116,6 +127,48 @@ describe('shared/api/autoloader', () => {
       mockApp.get.mockClear();
     });
 
+    it('should load translations via hooks.translations()', async () => {
+      const { discoverModules } = require('./autoloader');
+      const { getTranslations } = require('../i18n/loader');
+      const { addNamespace } = require('../i18n/utils');
+
+      // Setup translations mocks
+      getTranslations.mockReturnValue({ 'en-US': { hello: 'world' } });
+
+      const mockContext = jest.fn();
+      mockContext.keys = jest
+        .fn()
+        .mockReturnValue([
+          './users/api/index.js',
+          './roles/api/index.js',
+          './groups/api/index.js',
+          './permissions/api/index.js',
+          './auth/api/index.js',
+          './files/api/index.js',
+          './plugins/api/index.js',
+        ]);
+
+      const mockTranslationsContext = jest.fn();
+
+      mockContext.mockImplementation(key => {
+        if (key === './users/api/index.js') {
+          return {
+            translations: () => mockTranslationsContext,
+            init: jest.fn(),
+            routes: jest.fn(),
+          };
+        }
+        return { init: jest.fn() };
+      });
+
+      await discoverModules(mockContext, mockApp);
+
+      expect(getTranslations).toHaveBeenCalledWith(mockTranslationsContext);
+      expect(addNamespace).toHaveBeenCalledWith('users', {
+        'en-US': { hello: 'world' },
+      });
+    });
+
     it('should load models via hooks.models() and call init', async () => {
       const { discoverModules } = require('./autoloader');
 
@@ -129,6 +182,7 @@ describe('shared/api/autoloader', () => {
           './groups/api/index.js',
           './permissions/api/index.js',
           './auth/api/index.js',
+          './files/api/index.js',
           './plugins/api/index.js',
         ]);
 
@@ -178,6 +232,7 @@ describe('shared/api/autoloader', () => {
             './groups/api/index.js',
             './permissions/api/index.js',
             './auth/api/index.js',
+            './files/api/index.js',
           ].includes(key)
         ) {
           return { init: jest.fn() };
@@ -210,6 +265,7 @@ describe('shared/api/autoloader', () => {
           './groups/api/index.js',
           './permissions/api/index.js',
           './auth/api/index.js',
+          './files/api/index.js',
           './plugins/api/index.js',
         ]);
 
@@ -241,6 +297,7 @@ describe('shared/api/autoloader', () => {
             './groups/api/index.js',
             './permissions/api/index.js',
             './auth/api/index.js',
+            './files/api/index.js',
           ].includes(key)
         ) {
           return { init: jest.fn() };

@@ -160,7 +160,7 @@ export function createUnmount(configs, routeUnmount) {
  * @param {string} moduleName - The module name to use as i18n namespace
  * @returns {Function|undefined} Registration function or undefined
  */
-export function createTranslations(
+export function buildTranslationsLoader(
   configs,
   routeTranslations,
   routePath,
@@ -177,8 +177,9 @@ export function createTranslations(
     return undefined;
   }
 
-  return function () {
-    const merged = {};
+  return function (inheritedTranslations = {}) {
+    // Start with inherited translations (deep clone to avoid mutating parent)
+    const merged = merge({}, inheritedTranslations);
 
     // 1. Collect config translations first
     for (const config of translatableConfigs) {
@@ -217,6 +218,9 @@ export function createTranslations(
     } catch (error) {
       log(`addNamespace error for "${routePath}": ${error.message}`, 'error');
     }
+
+    // Return merged translations so they can be passed to the next child
+    return merged;
   };
 }
 
@@ -224,7 +228,7 @@ export function createTranslations(
  * Runs translation registration for a route hierarchy (parent → child).
  * Each route's translations are registered once (tracked via ROUTE_TRANSLATIONS_KEY).
  */
-export async function runTranslations(route, _ctx) {
+export async function loadRouteTranslations(route, _ctx) {
   if (!route) return;
 
   const hierarchy = [];
@@ -234,11 +238,19 @@ export async function runTranslations(route, _ctx) {
     current = current.parent;
   }
 
+  // Track the accumulated translations as we move down the tree
+  let accumulatedTranslations = {};
+
   for (const r of hierarchy) {
-    if (typeof r.translations === 'function' && !r[ROUTE_TRANSLATIONS_KEY]) {
+    if (typeof r.translations === 'function') {
       try {
-        r.translations();
-        r[ROUTE_TRANSLATIONS_KEY] = true;
+        if (!r[ROUTE_TRANSLATIONS_KEY]) {
+          accumulatedTranslations =
+            r.translations(accumulatedTranslations) || accumulatedTranslations;
+          r[ROUTE_TRANSLATIONS_KEY] = accumulatedTranslations;
+        } else {
+          accumulatedTranslations = r[ROUTE_TRANSLATIONS_KEY];
+        }
       } catch (error) {
         log(`Translations error for "${r.path}": ${error.message}`, 'error');
       }
