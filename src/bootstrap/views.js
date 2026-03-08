@@ -7,9 +7,7 @@
 
 import Router from '../shared/renderer/router';
 import { getAppName, getAppDescription } from '../shared/renderer/redux';
-import { createWebpackContextAdapter } from '../shared/utils/webpackContextAdapter';
-import { getTranslations } from '../shared/i18n/loader';
-import { addNamespace } from '../shared/i18n/utils';
+import { discoverModules } from '../shared/renderer/autoloader';
 
 // Discover view lifecycle modules from apps directory
 const viewsLifecycleContext = require.context(
@@ -17,7 +15,6 @@ const viewsLifecycleContext = require.context(
   true,
   /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
 );
-const lifecycleAdapter = createWebpackContextAdapter(viewsLifecycleContext);
 
 // =============================================================================
 // LOGGING
@@ -43,184 +40,6 @@ function log(message, level = 'info') {
     default:
       console.info(`${prefix} ✅ ${message}`);
   }
-}
-
-// =============================================================================
-// VIEW MODULE DISCOVERY
-// =============================================================================
-
-/** Pattern to match view lifecycle files: ./moduleName/views/index.js */
-const LIFECYCLE_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
-
-/**
- * Discover view lifecycle modules and collect their hooks.
- *
- * Only loads module files and extracts hook references — does NOT
- * call any hooks (views, providers, etc.). This is intentional so
- * the caller controls the lifecycle ordering.
- *
- * @returns {Map<string, object>} Map of module name → lifecycle hooks
- */
-function discoverModuleHooks() {
-  const moduleHooks = new Map();
-
-  for (const filePath of lifecycleAdapter.files()) {
-    const match = filePath.match(LIFECYCLE_PATTERN);
-    if (!match) continue;
-
-    const moduleName = match[1];
-
-    try {
-      const hooks = lifecycleAdapter.load(filePath);
-      if (hooks) {
-        moduleHooks.set(moduleName, hooks);
-      } else {
-        log(`[${moduleName}] No lifecycle hooks found, skipping`, 'warn');
-      }
-    } catch (error) {
-      log(`[${moduleName}] Failed to load module: ${error.message}`, 'error');
-    }
-  }
-
-  log(`${moduleHooks.size} module(s) discovered`);
-  return moduleHooks;
-}
-
-/**
- * Collect view adapters by calling each module's views() hook.
- *
- * Must be called AFTER providers phase so that views can depend
- * on bindings registered during providers.
- *
- * @param {Map<string, object>} moduleHooks - Discovered module hooks
- * @returns {Map<string, object>} Map of module name → view adapter
- */
-function collectViewAdapters(moduleHooks) {
-  const adapters = new Map();
-
-  for (const [moduleName, hooks] of moduleHooks) {
-    if (typeof hooks.views !== 'function') continue;
-
-    try {
-      const viewContext = hooks.views();
-      if (viewContext) {
-        const rawAdapter = createWebpackContextAdapter(viewContext);
-        const prefix = `./${moduleName}/views`;
-        adapters.set(moduleName, {
-          files: () => rawAdapter.files().map(p => p.replace(/^\./, prefix)),
-          load: p => rawAdapter.load(p.replace(prefix, '.')),
-          resolve: p => rawAdapter.resolve(p.replace(prefix, '.')),
-        });
-      }
-    } catch (error) {
-      log(`[${moduleName}] Failed to load views: ${error.message}`, 'error');
-    }
-  }
-
-  log(`${adapters.size} view adapter(s) collected`);
-  return adapters;
-}
-
-// =============================================================================
-// PROVIDER REGISTRATION
-// =============================================================================
-
-/**
- * Run all discovered modules' providers() hooks on the given container.
- *
- * @param {Map<string, object>} moduleHooks - Map of module name → lifecycle hooks
- * @param {Object} ctx - Context containing { plugin, container }
- */
-async function runModuleProviders(moduleHooks, { container }) {
-  for (const [name, hooks] of moduleHooks) {
-    if (typeof hooks.providers === 'function') {
-      try {
-        await hooks.providers({ container });
-        log(`[${name}] Providers`);
-      } catch (error) {
-        // PersistentBindingError = idempotent re-registration on same container
-        if (error.name !== 'PersistentBindingError') {
-          log(`[${name}] Providers phase failed: ${error.message}`, 'error');
-        }
-      }
-    }
-  }
-}
-
-// =============================================================================
-// TRANSLATIONS REGISTRATION
-// =============================================================================
-
-/**
- * Run all discovered modules' translations() hooks.
- * Loads locale JSON files and registers them as i18n namespaces.
- *
- * @param {Map<string, object>} moduleHooks - Map of module name → lifecycle hooks
- */
-async function runModuleTranslations(moduleHooks) {
-  for (const [name, hooks] of moduleHooks) {
-    if (typeof hooks.translations !== 'function') continue;
-
-    try {
-      const translationContext = await hooks.translations();
-      if (translationContext) {
-        const translations = getTranslations(translationContext);
-        if (translations && Object.keys(translations).length > 0) {
-          addNamespace(name, translations);
-          log(`[${name}] Translations`);
-        }
-      }
-    } catch (error) {
-      log(`[${name}] Translations phase failed: ${error.message}`, 'error');
-    }
-  }
-}
-
-// =============================================================================
-// ADAPTER MERGING
-// =============================================================================
-
-/**
- * Merges multiple per-module adapters into a single unified adapter.
- * This ensures layouts from any module (e.g. the (default) module's admin layout)
- * are globally visible when building routes for any other module.
- *
- * @param {Map<string, object>} adapters - Map of module name → adapter
- * @returns {object|null} Merged adapter or null if no adapters
- */
-function mergeAdapters(adapters) {
-  if (adapters.size === 0) return null;
-
-  // Build file → adapter lookup for O(1) resolution
-  const fileMap = new Map();
-  const allFiles = [];
-
-  for (const adapter of adapters.values()) {
-    for (const file of adapter.files()) {
-      if (!fileMap.has(file)) {
-        fileMap.set(file, adapter);
-        allFiles.push(file);
-      }
-    }
-  }
-
-  return {
-    files: () => allFiles,
-    load: path => {
-      const adapter = fileMap.get(path);
-      if (!adapter) {
-        const err = new Error(`View file not found in any module: ${path}`);
-        err.name = 'ViewFileNotFoundError';
-        err.status = 404;
-        throw err;
-      }
-      return adapter.load(path);
-    },
-    resolve: path => {
-      const adapter = fileMap.get(path);
-      return adapter ? adapter.resolve(path) : null;
-    },
-  };
 }
 
 // =============================================================================
@@ -278,20 +97,10 @@ export default async function initializeRouter(options = {}) {
   // ─── Initialize ─────────────────────────────────────────────────────
   const { plugin, container } = options;
 
-  // 1. Discover — load lifecycle modules, collect hook references only
-  const moduleHooks = discoverModuleHooks();
-
-  // 2. Translations — register module-level i18n translations
-  await runModuleTranslations(moduleHooks);
-
-  // 3. Providers — register cross-module bindings (e.g. DI, Redux slices)
-  await runModuleProviders(moduleHooks, { container });
-
-  // 4. Views — call views() on each module to get their route contexts
-  const viewAdapters = collectViewAdapters(moduleHooks);
-
-  // 5. Merge adapters so layouts from any module are globally visible
-  const mergedAdapter = mergeAdapters(viewAdapters);
+  // Discover modules and run lifecycle phases (translations → providers → views)
+  const { mergedAdapter } = await discoverModules(viewsLifecycleContext, {
+    container,
+  });
 
   if (!mergedAdapter) {
     const err = new Error('No view modules found — cannot initialize router');
