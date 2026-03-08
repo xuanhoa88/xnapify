@@ -208,6 +208,8 @@ const ShareModal = forwardRef((props, ref) => {
             <div className={s.accessIcon}>
               {shareType === 'private' ? (
                 <Icon name='lock' size={24} className={s.restrictedIcon} />
+              ) : shareType === 'shared_users' ? (
+                <Icon name='users' size={24} className={s.usersIcon} />
               ) : (
                 <Icon name='globe' size={24} className={s.publicIcon} />
               )}

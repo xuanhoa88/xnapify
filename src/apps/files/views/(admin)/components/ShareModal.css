@@ -44,6 +44,10 @@
   color: #188038;
 }
 
+.usersIcon {
+  color: #1a73e8;
+}
+
 .spacer {
   flex-grow: 1;
 }
@@ -75,6 +79,7 @@
 
 .searchWrapper {
   margin-top: 24px;
+  margin-bottom: 24px;
 }
 
 .shareList {

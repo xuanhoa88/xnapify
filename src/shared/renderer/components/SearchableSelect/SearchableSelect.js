@@ -6,6 +6,7 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -56,6 +57,40 @@ function SearchableSelect({
   const inputRef = useRef(null);
   const optionsListRef = useRef(null);
   const debounceTimer = useRef(null);
+  const [menuStyle, setMenuStyle] = useState({});
+
+  // Dynamic positioning for Portal
+  const updatePosition = useCallback(() => {
+    if (!containerRef.current || !isOpen) return;
+    const rect = containerRef.current.getBoundingClientRect();
+
+    // Check if dropdown would go off bottom of screen
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const menuHeight = 300; // estimated max height
+    const openUpwards = spaceBelow < menuHeight && rect.top > menuHeight;
+
+    setMenuStyle({
+      position: 'fixed',
+      top: openUpwards ? 'auto' : rect.bottom + 4,
+      bottom: openUpwards ? window.innerHeight - rect.top + 4 : 'auto',
+      left: rect.left,
+      width: rect.width,
+      zIndex: 99999,
+    });
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePosition();
+      // Use capture phase to catch scrolls even on overflowing divs
+      window.addEventListener('scroll', updatePosition, true);
+      window.addEventListener('resize', updatePosition);
+      return () => {
+        window.removeEventListener('scroll', updatePosition, true);
+        window.removeEventListener('resize', updatePosition);
+      };
+    }
+  }, [isOpen, updatePosition]);
 
   // Normalize value to array for consistent comparisons
   const selectedValues = useMemo(() => {
@@ -213,6 +248,7 @@ function SearchableSelect({
       className={clsx(s.container, className, {
         [s.disabled]: disabled,
         [s.open]: isOpen,
+        'searchable-select-is-open': isOpen,
       })}
       ref={containerRef}
     >
@@ -249,92 +285,104 @@ function SearchableSelect({
         </div>
       </div>
 
-      {isOpen && (
-        <div className={s.menu}>
-          {showSearch && (
-            <div className={s.searchContainer}>
-              <input
-                ref={inputRef}
-                type='text'
-                className={s.searchInput}
-                value={searchTerm}
-                onChange={handleSearchChange}
-                placeholder={displaySearchPlaceholder}
-                onClick={e => e.stopPropagation()}
-                onKeyDown={e => e.key === 'Escape' && setIsOpen(false)}
-              />
-              {loading && (
-                <Icon name='loader' size={16} className={s.loadingIndicator} />
-              )}
-            </div>
-          )}
-          <ul
-            ref={optionsListRef}
-            className={s.optionsList}
-            onScroll={handleScroll}
-            role='listbox'
-            aria-multiselectable={multiple}
-          >
-            {loading ? (
-              <li className={s.noOptions}>
-                {t('shared:components.searchableSelect.loading', 'Loading...')}
-              </li>
-            ) : filteredOptions.length > 0 ? (
-              <>
-                {filteredOptions.map(option => {
-                  const optSelected = isSelected(option.value);
-                  return (
-                    <li
-                      key={option.value}
-                      role='option'
-                      tabIndex={0}
-                      aria-selected={optSelected}
-                      className={clsx(s.option, { [s.selected]: optSelected })}
-                      onClick={() => handleSelect(option.value)}
-                      onKeyDown={e =>
-                        e.key === 'Enter' && handleSelect(option.value)
-                      }
-                    >
-                      {multiple && (
-                        <span className={s.checkbox}>
-                          <Icon
-                            name={optSelected ? 'check-circle' : 'circle'}
-                            size={16}
-                          />
-                        </span>
-                      )}
-                      <span className={s.optionLabel}>{option.label}</span>
-                    </li>
-                  );
-                })}
-                {loadingMore && (
-                  <li className={s.loadingMore}>
-                    {t(
-                      'shared:components.searchableSelect.loadingMore',
-                      'Loading more...',
-                    )}
-                  </li>
+      {isOpen &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div className={s.menu} style={menuStyle}>
+            {showSearch && (
+              <div className={s.searchContainer}>
+                <input
+                  ref={inputRef}
+                  type='text'
+                  className={s.searchInput}
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder={displaySearchPlaceholder}
+                  onClick={e => e.stopPropagation()}
+                  onKeyDown={e => e.key === 'Escape' && setIsOpen(false)}
+                />
+                {loading && (
+                  <Icon
+                    name='loader'
+                    size={16}
+                    className={s.loadingIndicator}
+                  />
                 )}
-                {!loadingMore && hasMore && (
-                  <li className={s.loadMoreHint}>
-                    {t(
-                      'shared:components.searchableSelect.scrollForMore',
-                      'Scroll for more',
-                    )}
-                  </li>
-                )}
-              </>
-            ) : (
-              <li className={s.noOptions}>
-                {t(
-                  'shared:components.searchableSelect.noOptions',
-                  'No options found',
-                )}
-              </li>
+              </div>
             )}
-          </ul>
-        </div>
-      )}
+            <ul
+              ref={optionsListRef}
+              className={s.optionsList}
+              onScroll={handleScroll}
+              role='listbox'
+              aria-multiselectable={multiple}
+            >
+              {loading ? (
+                <li className={s.noOptions}>
+                  {t(
+                    'shared:components.searchableSelect.loading',
+                    'Loading...',
+                  )}
+                </li>
+              ) : filteredOptions.length > 0 ? (
+                <>
+                  {filteredOptions.map(option => {
+                    const optSelected = isSelected(option.value);
+                    return (
+                      <li
+                        key={option.value}
+                        role='option'
+                        tabIndex={0}
+                        aria-selected={optSelected}
+                        className={clsx(s.option, {
+                          [s.selected]: optSelected,
+                        })}
+                        onClick={() => handleSelect(option.value)}
+                        onKeyDown={e =>
+                          e.key === 'Enter' && handleSelect(option.value)
+                        }
+                      >
+                        {multiple && (
+                          <span className={s.checkbox}>
+                            <Icon
+                              name={optSelected ? 'check-circle' : 'circle'}
+                              size={16}
+                            />
+                          </span>
+                        )}
+                        <span className={s.optionLabel}>{option.label}</span>
+                      </li>
+                    );
+                  })}
+                  {loadingMore && (
+                    <li className={s.loadingMore}>
+                      {t(
+                        'shared:components.searchableSelect.loadingMore',
+                        'Loading more...',
+                      )}
+                    </li>
+                  )}
+                  {!loadingMore && hasMore && (
+                    <li className={s.loadMoreHint}>
+                      {t(
+                        'shared:components.searchableSelect.scrollForMore',
+                        'Scroll for more',
+                      )}
+                    </li>
+                  )}
+                </>
+              ) : (
+                <li className={s.noOptions}>
+                  {t(
+                    'shared:components.searchableSelect.noOptions',
+                    'No options found',
+                  )}
+                </li>
+              )}
+            </ul>
+          </div>,
+          document.body,
+        )}
     </div>
   );
 }

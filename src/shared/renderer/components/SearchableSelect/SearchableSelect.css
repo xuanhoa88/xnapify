@@ -114,13 +114,8 @@
   border-color: #444;
 }
 
-/* Dropdown Menu */
+/* Dropdown Menu (Positioned via Portals and JS) */
 .menu {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  margin-top: 4px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
