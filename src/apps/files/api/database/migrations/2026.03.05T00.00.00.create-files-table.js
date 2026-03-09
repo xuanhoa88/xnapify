@@ -68,12 +68,6 @@ export async function up({ context, Sequelize }) {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    is_starred: {
-      type: DataTypes.BOOLEAN,
-      defaultValue: false,
-      allowNull: false,
-      comment: 'Starred for quick access',
-    },
     share_type: {
       type: DataTypes.ENUM('private', 'public_link', 'shared_users'),
       defaultValue: 'private',
@@ -100,7 +94,6 @@ export async function up({ context, Sequelize }) {
   // Add indexes for efficient queries typically used in a Drive interface
   await queryInterface.addIndex('files', ['owner_id']);
   await queryInterface.addIndex('files', ['parent_id']);
-  await queryInterface.addIndex('files', ['is_starred']);
   await queryInterface.addIndex('files', ['type']);
   await queryInterface.addIndex('files', ['deleted_at']); // For finding items in Trash
 }

@@ -42,11 +42,26 @@ async function findAccessibleFile(
 
   // 2. Helper to check if a single file has access
   const checkDirectAccess = async id => {
+    const include = [{ model: FileShare, as: 'shares' }];
+    if (userId && models.FileStar) {
+      include.push({
+        model: models.FileStar,
+        as: 'stars',
+        required: false,
+        where: { user_id: userId },
+        attributes: ['id'],
+      });
+    }
+
     const f = await File.findByPk(id, {
       paranoid: false,
-      include: [{ model: FileShare, as: 'shares' }],
+      include,
     });
+
     if (!f) return null;
+
+    // Inject personal star status natively
+    f.dataValues.is_starred = Array.isArray(f.stars) && f.stars.length > 0;
 
     if (userId && f.owner_id === userId) {
       return { file: f, permission: 'owner' };
@@ -129,7 +144,7 @@ export async function listFiles(
   } = {},
   { models },
 ) {
-  const { File, FileShare, UserGroup } = models;
+  const { File, FileShare, UserGroup, FileStar } = models;
   const { sequelize } = File;
   const { Op } = sequelize.Sequelize;
 
@@ -141,6 +156,15 @@ export async function listFiles(
       ['name', 'ASC'],
     ],
     paranoid: true,
+    include: [
+      {
+        model: FileStar,
+        as: 'stars',
+        required: view === 'starred',
+        where: { user_id: userId },
+        attributes: ['id'],
+      },
+    ],
   };
 
   // Pagination logic
@@ -205,10 +229,30 @@ export async function listFiles(
       queryOptions.order = [['updated_at', 'DESC']];
       if (!pageSize) queryOptions.limit = 50;
       break;
-    case 'starred':
-      where.owner_id = userId;
-      where.is_starred = true;
+    case 'starred': {
+      const userGroups = await UserGroup.findAll({
+        where: { user_id: userId },
+        attributes: ['group_id'],
+      });
+      const groupIds = userGroups.map(ug => ug.group_id);
+
+      const entityConditions = [{ entity_type: 'user', entity_id: userId }];
+      if (groupIds.length > 0) {
+        entityConditions.push({
+          entity_type: 'group',
+          entity_id: { [Op.in]: groupIds },
+        });
+      }
+
+      const sharedFiles = await FileShare.findAll({
+        where: { [Op.or]: entityConditions },
+        attributes: ['file_id'],
+      });
+      const sharedIds = [...new Set(sharedFiles.map(s => s.file_id))];
+
+      where[Op.or] = [{ owner_id: userId }, { id: { [Op.in]: sharedIds } }];
       break;
+    }
     case 'trash':
       where.owner_id = userId;
       queryOptions.paranoid = false;
@@ -257,7 +301,14 @@ export async function listFiles(
     breadcrumbs = [{ id: 'root', name: 'My Drive' }];
   }
 
-  return { files, currentFolder, breadcrumbs, total };
+  const processedFiles = files.map(file => {
+    const f = file.toJSON();
+    f.is_starred = Array.isArray(f.stars) && f.stars.length > 0;
+    delete f.stars;
+    return f;
+  });
+
+  return { files: processedFiles, currentFolder, breadcrumbs, total };
 }
 
 /**
@@ -361,9 +412,24 @@ export async function moveFile(userId, fileId, newParentId, { models }) {
  * Toggle starred status
  */
 export async function toggleStar(userId, fileId, isStarred, { models }) {
+  const { FileStar } = models;
   const file = await findAccessibleFile(fileId, userId, models, 'viewer');
-  file.is_starred = isStarred;
-  return file.save();
+
+  if (isStarred) {
+    await FileStar.findOrCreate({
+      where: { user_id: userId, file_id: file.id },
+    });
+  } else {
+    await FileStar.destroy({
+      where: { user_id: userId, file_id: file.id },
+    });
+  }
+
+  // Frontend expects file object with is_starred appended
+  return {
+    ...(file.toJSON ? file.toJSON() : file),
+    is_starred: isStarred,
+  };
 }
 
 /**
@@ -558,9 +624,9 @@ export async function getPhysicalFileStream(
   fileId,
   { models, fs, download = false },
 ) {
-  // Centralized permission check. If user is downloading, they need 'editor' access (Edit/Download)
-  // If they are just previewing, 'viewer' access is sufficient.
-  const requiredAccess = download ? 'editor' : 'viewer';
+  // Both downloading and previewing only require 'viewer' access.
+  // (A public link grants 'viewer' access, so this allows guests to download).
+  const requiredAccess = 'viewer';
   const file = await findAccessibleFile(fileId, userId, models, requiredAccess);
 
   if (file.type !== 'file' || !file.path) {

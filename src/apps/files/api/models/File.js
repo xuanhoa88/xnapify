@@ -71,13 +71,6 @@ export default function createFileModel({ connection, DataTypes }) {
         comment: 'User who owns this file/folder',
       },
 
-      is_starred: {
-        type: DataTypes.BOOLEAN,
-        defaultValue: false,
-        allowNull: false,
-        comment: 'Starred for quick access',
-      },
-
       share_type: {
         type: DataTypes.ENUM('private', 'public_link', 'shared_users'),
         defaultValue: 'private',
@@ -124,6 +117,16 @@ export default function createFileModel({ connection, DataTypes }) {
       File.hasMany(models.FileShare, {
         foreignKey: 'file_id',
         as: 'shares',
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE',
+      });
+    }
+
+    // Personal Stars
+    if (models.FileStar) {
+      File.hasMany(models.FileStar, {
+        foreignKey: 'file_id',
+        as: 'stars',
         onUpdate: 'CASCADE',
         onDelete: 'CASCADE',
       });
