@@ -183,6 +183,14 @@ export default function FileGrid({ onShare }) {
     );
   }, [contextMenu]);
 
+  const onCopyLink = useCallback(() => {
+    if (!contextMenu) return;
+    setContextMenu(null); // Close menu
+    const link = `${window.location.origin}/api/files/${contextMenu.file.id}/download`;
+    navigator.clipboard.writeText(link);
+    alert(t('files:grid.link_copied', 'Link copied to clipboard!'));
+  }, [contextMenu, t]);
+
   const handleShare = useCallback(() => {
     if (!contextMenu) return;
     setContextMenu(null); // Close menu
@@ -303,9 +311,16 @@ export default function FileGrid({ onShare }) {
               )}
               <ContextMenu.Item
                 onClick={handleShare}
-                icon={<Icon name='share-2' size={16} />}
+                icon={<Icon name='share' size={16} />}
               >
                 {t('files:grid.share', 'Share')}
+              </ContextMenu.Item>
+
+              <ContextMenu.Item
+                onClick={onCopyLink}
+                icon={<Icon name='copy' size={16} />}
+              >
+                {t('files:grid.copy_link', 'Copy link')}
               </ContextMenu.Item>
 
               {contextMenu.file.type === 'file' && (
@@ -332,7 +347,7 @@ export default function FileGrid({ onShare }) {
                   <ContextMenu.Item
                     onClick={onTrash}
                     variant='danger'
-                    icon={<Icon name='trash-2' size={16} />}
+                    icon={<Icon name='trash' size={16} />}
                   >
                     {currentView === 'trash'
                       ? t('files:grid.delete_permanently', 'Delete Permanently')
