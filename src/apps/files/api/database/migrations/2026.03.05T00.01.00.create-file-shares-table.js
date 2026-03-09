@@ -31,27 +31,15 @@ export async function up({ context, Sequelize }) {
       onUpdate: 'CASCADE',
       onDelete: 'CASCADE',
     },
-    user_id: {
+    entity_id: {
       type: DataTypes.UUID,
-      allowNull: true,
-      comment: 'User granted access',
-      references: {
-        model: 'users',
-        key: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE',
+      allowNull: false,
+      comment: 'ID of the user or group granted access',
     },
-    group_id: {
-      type: DataTypes.UUID,
-      allowNull: true,
-      comment: 'Group granted access',
-      references: {
-        model: 'groups', // Assuming there's a groups table
-        key: 'id',
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE',
+    entity_type: {
+      type: DataTypes.ENUM('user', 'group'),
+      allowNull: false,
+      comment: 'Type of entity: user or group',
     },
     permission: {
       type: DataTypes.ENUM('viewer', 'editor'),
@@ -73,8 +61,7 @@ export async function up({ context, Sequelize }) {
 
   // Indexes for querying shared files quickly
   await queryInterface.addIndex('file_shares', ['file_id']);
-  await queryInterface.addIndex('file_shares', ['user_id']);
-  await queryInterface.addIndex('file_shares', ['group_id']);
+  await queryInterface.addIndex('file_shares', ['entity_type', 'entity_id']);
 }
 
 /**

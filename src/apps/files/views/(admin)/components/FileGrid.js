@@ -38,11 +38,13 @@ import {
   selectTotalItems,
   setPage,
 } from '../redux';
+import { getUserId } from '../../../../../shared/renderer/redux/features/user/selector';
 import s from './FileGrid.css';
 
 export default function FileGrid({ onShare }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const currentUserId = useSelector(getUserId);
   const files = useSelector(selectFiles);
   const viewMode = useSelector(selectViewMode);
   const selectedIds = useSelector(selectSelectedFileIds);
@@ -79,7 +81,7 @@ export default function FileGrid({ onShare }) {
         dispatch(setView({ view: currentView, folderId: file.id }));
       } else {
         // For now, downloading/previewing
-        window.open(`/api/admin/files/${file.id}/download`, '_blank');
+        window.open(`/api/files/${file.id}/download`, '_blank');
       }
     },
     [dispatch, currentView],
@@ -176,7 +178,7 @@ export default function FileGrid({ onShare }) {
     if (!contextMenu) return;
     setContextMenu(null); // Close menu
     window.open(
-      `/api/admin/files/${contextMenu.file.id}/download?download=true`,
+      `/api/files/${contextMenu.file.id}/download?download=true`,
       '_blank',
     );
   }, [contextMenu]);
@@ -291,12 +293,14 @@ export default function FileGrid({ onShare }) {
         >
           <div className={s.contextMenuContainer}>
             <ContextMenu.Menu>
-              <ContextMenu.Item
-                onClick={onRename}
-                icon={<Icon name='edit-2' size={16} />}
-              >
-                {t('files:grid.rename', 'Rename')}
-              </ContextMenu.Item>
+              {contextMenu.file.owner_id === currentUserId && (
+                <ContextMenu.Item
+                  onClick={onRename}
+                  icon={<Icon name='edit-2' size={16} />}
+                >
+                  {t('files:grid.rename', 'Rename')}
+                </ContextMenu.Item>
+              )}
               <ContextMenu.Item
                 onClick={handleShare}
                 icon={<Icon name='share-2' size={16} />}
@@ -322,17 +326,20 @@ export default function FileGrid({ onShare }) {
                   : t('files:grid.add_star', 'Add Star')}
               </ContextMenu.Item>
 
-              <ContextMenu.Divider />
-
-              <ContextMenu.Item
-                onClick={onTrash}
-                variant='danger'
-                icon={<Icon name='trash-2' size={16} />}
-              >
-                {currentView === 'trash'
-                  ? t('files:grid.delete_permanently', 'Delete Permanently')
-                  : t('files:grid.move_to_trash', 'Move to Trash')}
-              </ContextMenu.Item>
+              {contextMenu.file.owner_id === currentUserId && (
+                <>
+                  <ContextMenu.Divider />
+                  <ContextMenu.Item
+                    onClick={onTrash}
+                    variant='danger'
+                    icon={<Icon name='trash-2' size={16} />}
+                  >
+                    {currentView === 'trash'
+                      ? t('files:grid.delete_permanently', 'Delete Permanently')
+                      : t('files:grid.move_to_trash', 'Move to Trash')}
+                  </ContextMenu.Item>
+                </>
+              )}
             </ContextMenu.Menu>
           </div>
         </ContextMenu>

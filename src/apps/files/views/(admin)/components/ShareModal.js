@@ -27,6 +27,7 @@ const ShareModal = forwardRef((props, ref) => {
   const [file, setFile] = useState(null);
   const [shareType, setShareType] = useState('private');
   const [shares, setShares] = useState(/** @type {any[]} */ ([]));
+  const [fileOwner, setFileOwner] = useState(null);
   const [searchResults, setSearchResults] = useState(/** @type {any[]} */ ([]));
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -38,6 +39,7 @@ const ShareModal = forwardRef((props, ref) => {
     setFile(null);
     setShareType('private');
     setShares([]);
+    setFileOwner(null);
     setSearchResults([]);
     setLoading(false);
     setSearching(false);
@@ -56,6 +58,7 @@ const ShareModal = forwardRef((props, ref) => {
         try {
           const data = await dispatch(fetchFileShares(targetFile.id)).unwrap();
           setShares(data.shares || []);
+          setFileOwner(data.owner || targetFile.owner || null);
         } catch (e) {
           let errorMessage = t(
             'files:share.load_failed',
@@ -167,16 +170,20 @@ const ShareModal = forwardRef((props, ref) => {
       if (!option) return;
 
       // Check if already added
-      const exists = shares.find(share =>
-        type === 'user' ? share.user_id === id : share.group_id === id,
+      const exists = shares.find(
+        share => share.entity_type === type && share.entity_id === id,
       );
 
       if (exists) return;
 
+      // Prevent adding the file owner as a share recipient
+      if (type === 'user' && file && id === file.owner_id) return;
+
       const newShare = {
-        user_id: type === 'user' ? id : null,
-        group_id: type === 'group' ? id : null,
+        entity_id: id,
+        entity_type: type,
         permission: 'viewer',
+        isNew: true,
         user: type === 'user' ? { email: option.label } : null,
         group: type === 'group' ? { name: option.label } : null,
       };
@@ -184,7 +191,7 @@ const ShareModal = forwardRef((props, ref) => {
       setShares(prev => [...prev, newShare]);
       setShareType('shared_users');
     },
-    [searchResults, shares],
+    [searchResults, shares, file],
   );
 
   const handleRemoveShare = useCallback(index => {
@@ -203,8 +210,8 @@ const ShareModal = forwardRef((props, ref) => {
     const payload = {
       shareType,
       shares: shares.map(share => ({
-        userId: share.user_id,
-        groupId: share.group_id,
+        entityId: share.entity_id,
+        entityType: share.entity_type,
         permission: share.permission,
       })),
     };
@@ -234,12 +241,14 @@ const ShareModal = forwardRef((props, ref) => {
   }, [dispatch, file, handleClose, shareType, shares, t]);
 
   const copyLink = useCallback(() => {
-    const link = `${window.location.origin}/api/admin/files/${file.id}/download`;
+    const link = `${window.location.origin}/api/files/${file.id}/download`;
     navigator.clipboard.writeText(link);
     alert(t('files:share.link_copied', 'Link copied to clipboard!'));
   }, [file, t]);
 
   if (!isOpen || !file) return null;
+
+  const isOwner = file.owner_id === currentUserId;
 
   return (
     <Modal isOpen={isOpen} onClose={handleClose}>
@@ -277,6 +286,7 @@ const ShareModal = forwardRef((props, ref) => {
                     className={s.accessSelect}
                     value={shareType}
                     onChange={e => setShareType(e.target.value)}
+                    disabled={!isOwner}
                   >
                     <option value='private'>
                       {t('files:share.restricted', 'Restricted')}
@@ -328,7 +338,7 @@ const ShareModal = forwardRef((props, ref) => {
                     />
                   </div>
 
-                  {shares.length > 0 && (
+                  {(shares.length > 0 || fileOwner) && (
                     <>
                       <h4>
                         {t(
@@ -337,15 +347,44 @@ const ShareModal = forwardRef((props, ref) => {
                         )}
                       </h4>
                       <div className={s.shareList}>
+                        {fileOwner && (
+                          <div className={s.shareItem}>
+                            <div className={clsx(s.avatar)}>
+                              <Icon name='user' size={16} />
+                            </div>
+                            <div className={s.shareInfo}>
+                              <span className={s.shareName}>
+                                {fileOwner.name || fileOwner.email}
+                              </span>
+                              <span className={s.shareRole}>
+                                {t('files:share.owner', 'Owner')}
+                              </span>
+                            </div>
+                            <span
+                              className={s.permissionSelect}
+                              style={{
+                                border: 'none',
+                                cursor: 'default',
+                                color: 'var(--text-secondary, #5f6368)',
+                              }}
+                            >
+                              {t('files:share.owner', 'Owner')}
+                            </span>
+                            <div style={{ width: 28 }} />
+                            {/* Spacer for remove button */}
+                          </div>
+                        )}
                         {shares.map((item, index) => (
                           <div key={index} className={s.shareItem}>
                             <div
                               className={clsx(s.avatar, {
-                                [s.groupAvatar]: !!item.group_id,
+                                [s.groupAvatar]: item.entity_type === 'group',
                               })}
                             >
                               <Icon
-                                name={item.user_id ? 'user' : 'users'}
+                                name={
+                                  item.entity_type === 'user' ? 'user' : 'users'
+                                }
                                 size={16}
                               />
                             </div>
@@ -355,7 +394,7 @@ const ShareModal = forwardRef((props, ref) => {
                                   (item.group && item.group.name)}
                               </span>
                               <span className={s.shareRole}>
-                                {item.user_id
+                                {item.entity_type === 'user'
                                   ? t('files:share.user', 'User')
                                   : t('files:share.group', 'Group')}
                               </span>
@@ -366,6 +405,7 @@ const ShareModal = forwardRef((props, ref) => {
                               onChange={e =>
                                 handlePermissionChange(index, e.target.value)
                               }
+                              disabled={!isOwner && !item.isNew}
                             >
                               <option value='viewer'>
                                 {t('files:share.permission_view', 'View')}
@@ -377,15 +417,17 @@ const ShareModal = forwardRef((props, ref) => {
                                 )}
                               </option>
                             </select>
-                            <Button
-                              variant='ghost'
-                              size='small'
-                              iconOnly
-                              className={s.removeBtn}
-                              onClick={() => handleRemoveShare(index)}
-                            >
-                              <Icon name='close' size={14} />
-                            </Button>
+                            {(isOwner || item.isNew) && (
+                              <Button
+                                variant='ghost'
+                                size='small'
+                                iconOnly
+                                className={s.removeBtn}
+                                onClick={() => handleRemoveShare(index)}
+                              >
+                                <Icon name='close' size={14} />
+                              </Button>
+                            )}
                           </div>
                         ))}
                       </div>

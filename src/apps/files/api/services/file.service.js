@@ -10,6 +10,16 @@
 // ========================================================================
 
 /**
+ * Permission hierarchy: owner > editor > viewer
+ * Returns true if `actual` permission is sufficient for `required` permission.
+ */
+const PERMISSION_LEVELS = { viewer: 1, editor: 2, owner: 3 };
+
+function hasEnoughPermission(actual, required) {
+  return (PERMISSION_LEVELS[actual] || 0) >= (PERMISSION_LEVELS[required] || 0);
+}
+
+/**
  * Helper: Find file and verify ownership/access
  */
 async function findAccessibleFile(
@@ -20,12 +30,15 @@ async function findAccessibleFile(
 ) {
   const { File, FileShare, UserGroup } = models;
 
-  // 1. Get user groups for group-based sharing
-  const userGroups = await UserGroup.findAll({
-    where: { user_id: userId },
-    attributes: ['group_id'],
-  });
-  const groupIds = userGroups.map(ug => ug.group_id);
+  // 1. Get user groups for group-based sharing (only if logged in)
+  let groupIds = [];
+  if (userId) {
+    const userGroups = await UserGroup.findAll({
+      where: { user_id: userId },
+      attributes: ['group_id'],
+    });
+    groupIds = userGroups.map(ug => ug.group_id);
+  }
 
   // 2. Helper to check if a single file has access
   const checkDirectAccess = async id => {
@@ -35,18 +48,25 @@ async function findAccessibleFile(
     });
     if (!f) return null;
 
-    if (f.owner_id === userId) return { file: f, permission: 'editor' };
-    if (f.share_type === 'public_link')
+    if (userId && f.owner_id === userId) {
+      return { file: f, permission: 'owner' };
+    }
+    if (f.share_type === 'public_link') {
       return { file: f, permission: 'viewer' };
+    }
 
     let best = null;
-    for (const s of f.shares) {
-      if (
-        s.user_id === userId ||
-        (s.group_id && groupIds.includes(s.group_id))
-      ) {
-        if (s.permission === 'editor') return { file: f, permission: 'editor' };
-        best = 'viewer';
+    if (userId) {
+      for (const s of f.shares) {
+        if (
+          (s.entity_type === 'user' && s.entity_id === userId) ||
+          (s.entity_type === 'group' && groupIds.includes(s.entity_id))
+        ) {
+          if (s.permission === 'editor') {
+            return { file: f, permission: 'editor' };
+          }
+          best = 'viewer';
+        }
       }
     }
     return best ? { file: f, permission: best } : null;
@@ -62,10 +82,7 @@ async function findAccessibleFile(
   }
 
   let access = await checkDirectAccess(fileId);
-  if (
-    access &&
-    (requiredAccess === 'viewer' || access.permission === 'editor')
-  ) {
+  if (access && hasEnoughPermission(access.permission, requiredAccess)) {
     return access.file;
   }
 
@@ -75,7 +92,7 @@ async function findAccessibleFile(
     access = await checkDirectAccess(currentId);
     if (access) {
       // If we found access in a parent, it applies to children
-      if (requiredAccess === 'viewer' || access.permission === 'editor') {
+      if (hasEnoughPermission(access.permission, requiredAccess)) {
         return target;
       }
       break; // Found some access but not enough?
@@ -163,10 +180,16 @@ export async function listFiles(
         });
         const groupIds = userGroups.map(ug => ug.group_id);
 
+        const entityConditions = [{ entity_type: 'user', entity_id: userId }];
+        if (groupIds.length > 0) {
+          entityConditions.push({
+            entity_type: 'group',
+            entity_id: { [Op.in]: groupIds },
+          });
+        }
+
         const sharedFiles = await FileShare.findAll({
-          where: {
-            [Op.or]: [{ user_id: userId }, { group_id: { [Op.in]: groupIds } }],
-          },
+          where: { [Op.or]: entityConditions },
           attributes: ['file_id'],
         });
         const sharedIds = [...new Set(sharedFiles.map(s => s.file_id))];
@@ -307,7 +330,7 @@ export async function uploadFile(
  * Rename a file or folder
  */
 export async function renameFile(userId, fileId, newName, { models }) {
-  const file = await findAccessibleFile(fileId, userId, models, 'editor');
+  const file = await findAccessibleFile(fileId, userId, models, 'owner');
   file.name = newName;
   return file.save();
 }
@@ -316,7 +339,7 @@ export async function renameFile(userId, fileId, newName, { models }) {
  * Move a file or folder
  */
 export async function moveFile(userId, fileId, newParentId, { models }) {
-  const file = await findAccessibleFile(fileId, userId, models, 'editor');
+  const file = await findAccessibleFile(fileId, userId, models, 'owner');
 
   if (newParentId) {
     // Prevent moving a folder into itself or its children
@@ -447,7 +470,7 @@ export async function updateSharing(
   { models },
 ) {
   const { File, FileShare, User, Group } = models;
-  const file = await findAccessibleFile(fileId, userId, models, 'owner');
+  const file = await findAccessibleFile(fileId, userId, models, 'editor');
 
   const validTypes = ['private', 'public_link', 'shared_users'];
   if (!validTypes.includes(shareType)) {
@@ -473,8 +496,8 @@ export async function updateSharing(
     if (shareType === 'shared_users' && shares.length > 0) {
       const shareRecords = shares.map(s => ({
         file_id: fileId,
-        user_id: s.userId || null,
-        group_id: s.groupId || null,
+        entity_id: s.entityId,
+        entity_type: s.entityType,
         permission: s.permission || 'viewer',
       }));
 
@@ -508,8 +531,13 @@ export async function getFileShares(userId, fileId, { models }) {
   await findAccessibleFile(fileId, userId, models, 'editor');
 
   return File.findByPk(fileId, {
-    attributes: ['id', 'name', 'share_type'],
+    attributes: ['id', 'name', 'share_type', 'owner_id'],
     include: [
+      {
+        model: User,
+        as: 'owner',
+        attributes: ['id', 'email'],
+      },
       {
         model: FileShare,
         as: 'shares',

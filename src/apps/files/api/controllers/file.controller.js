@@ -342,7 +342,7 @@ export async function downloadFile(req, res) {
     const isDownload = req.query.download === 'true';
 
     const result = await fileService.getPhysicalFileStream(
-      req.user.id,
+      req.user && req.user.id ? req.user.id : null,
       req.params.id,
       {
         models: req.app.get('models'),

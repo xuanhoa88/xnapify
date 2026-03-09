@@ -9,6 +9,7 @@
  * FileShare Model Factory
  *
  * Represents permissions granted to other users or groups for specific files/folders.
+ * Uses a polymorphic association: entity_id + entity_type to reference either a User or Group.
  *
  * @param {Object} connection - Sequelize connection instance
  * @param {Object} [DataTypes] - Sequelize DataTypes
@@ -31,16 +32,16 @@ export default function createFileShareModel({ connection, DataTypes }) {
         comment: 'File or folder being shared',
       },
 
-      user_id: {
+      entity_id: {
         type: DataTypes.UUID,
-        allowNull: true,
-        comment: 'User granted access',
+        allowNull: false,
+        comment: 'ID of the user or group granted access',
       },
 
-      group_id: {
-        type: DataTypes.UUID,
-        allowNull: true,
-        comment: 'Group granted access',
+      entity_type: {
+        type: DataTypes.ENUM('user', 'group'),
+        allowNull: false,
+        comment: 'Type of entity: user or group',
       },
 
       permission: {
@@ -68,18 +69,20 @@ export default function createFileShareModel({ connection, DataTypes }) {
       });
     }
 
-    // Granted User
+    // Polymorphic: Granted User (only when entity_type === 'user')
     if (models.User) {
       FileShare.belongsTo(models.User, {
-        foreignKey: 'user_id',
+        foreignKey: 'entity_id',
+        constraints: false,
         as: 'user',
       });
     }
 
-    // Granted Group
+    // Polymorphic: Granted Group (only when entity_type === 'group')
     if (models.Group) {
       FileShare.belongsTo(models.Group, {
-        foreignKey: 'group_id',
+        foreignKey: 'entity_id',
+        constraints: false,
         as: 'group',
       });
     }
