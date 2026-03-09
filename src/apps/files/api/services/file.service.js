@@ -434,7 +434,8 @@ export async function updateSharing(
     throw err;
   }
 
-  return models.sequelize.transaction(async t => {
+  const { sequelize } = File;
+  return sequelize.transaction(async t => {
     file.share_type = shareType;
     await file.save({ transaction: t });
 

@@ -15,7 +15,7 @@ import Button from '../../../../../shared/renderer/components/Button';
 import { SearchableSelect } from '../../../../../shared/renderer/components/SearchableSelect';
 import { validateForm } from '../../../../../shared/validator';
 import { shareFileFormSchema } from '../../../validator/admin/file';
-import { updateSharing, fetchFileShares } from '../redux';
+import { updateSharing, fetchFileShares, searchUsersAndGroups } from '../redux';
 import s from './ShareModal.css';
 
 const ShareModal = forwardRef((props, ref) => {
@@ -69,47 +69,67 @@ const ShareModal = forwardRef((props, ref) => {
     }
   }, [loading, resetState]);
 
-  const handleSearch = useCallback(async term => {
-    if (!term || term.length < 2) {
-      setSearchResults([]);
-      return;
-    }
+  const handleSearch = useCallback(
+    async term => {
+      if (!term || term.length < 2) {
+        setSearchResults([]);
+        return;
+      }
 
-    setSearching(true);
-    try {
-      // Search users and groups in parallel
-      const [usersRes, groupsRes] = await Promise.all([
-        fetch(`/api/admin/users/list?search=${term}`).then(r => r.json()),
-        fetch(`/api/admin/groups?search=${term}`).then(r => r.json()),
-      ]);
+      setSearching(true);
+      try {
+        const { results } = await dispatch(searchUsersAndGroups(term)).unwrap();
 
-      const userOptions =
-        usersRes.data && usersRes.data.users
-          ? usersRes.data.users.map(u => ({
-              value: `user:${u.id}`,
-              label: u.email,
-              type: 'user',
-              data: u,
-            }))
-          : [];
+        const options = (results || []).map(r => {
+          const isGroup =
+            r.entityType === 'group' || r.entityType === 'groups:group';
+          return {
+            value: `${isGroup ? 'group' : 'user'}:${r.entityId}`,
+            label: r.title,
+            type: isGroup ? 'group' : 'user',
+            data: r,
+          };
+        });
 
-      const groupOptions =
-        groupsRes.data && groupsRes.data.groups
-          ? groupsRes.data.groups.map(g => ({
-              value: `group:${g.id}`,
-              label: g.name,
-              type: 'group',
-              data: g,
-            }))
-          : [];
+        setSearchResults(options);
+      } catch (e) {
+        console.error('Search failed', e);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [dispatch],
+  );
 
-      setSearchResults([...userOptions, ...groupOptions]);
-    } catch (e) {
-      console.error('Search failed', e);
-    } finally {
-      setSearching(false);
-    }
-  }, []);
+  const renderSearchResult = useCallback(
+    option => {
+      const isGroup = option.type === 'group';
+      const r = option.data;
+
+      // Use profile data if available, otherwise email/name
+      let primaryName = option.label;
+      let secondaryName = isGroup
+        ? t('files:share.group', 'Group')
+        : r.email || t('files:share.user', 'User');
+
+      return (
+        <div className={s.searchResultItem}>
+          <div
+            className={clsx(s.avatar, s.smallAvatar, {
+              [s.groupAvatar]: isGroup,
+            })}
+          >
+            <Icon name={isGroup ? 'users' : 'user'} size={14} />
+          </div>
+          <div className={s.shareInfo}>
+            <span className={s.shareName}>{primaryName}</span>
+            <span className={s.shareRole}>{secondaryName}</span>
+          </div>
+        </div>
+      );
+    },
+    [t],
+  );
 
   const handleAddShare = useCallback(
     selectedValue => {
@@ -263,6 +283,7 @@ const ShareModal = forwardRef((props, ref) => {
                   loading={searching}
                   value=''
                   clearable
+                  renderOption={renderSearchResult}
                 />
               </div>
 

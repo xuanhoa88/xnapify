@@ -99,7 +99,7 @@ export async function getUserWithProfile(user_id, { models }) {
 export async function updateUserProfile(
   user_id,
   formData,
-  { models, webhook, hook },
+  { models, webhook, searchWorker, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -166,6 +166,11 @@ export async function updateUserProfile(
 
   // Re-fetch user with full profile (not reload, as reload skips afterFind hooks)
   const updatedUser = await getUserWithProfile(user_id, { models });
+
+  // Re-index user in search
+  if (searchWorker) {
+    await searchWorker.indexUser(updatedUser);
+  }
 
   return updatedUser;
 }
@@ -315,7 +320,7 @@ export async function getUserPreferences(user_id, { models, hook }) {
 export async function deleteUserAccount(
   user_id,
   password,
-  { models, webhook, hook },
+  { models, webhook, searchWorker, hook },
 ) {
   const { User, UserProfile } = models;
 
@@ -354,6 +359,11 @@ export async function deleteUserAccount(
   await logUserActivity(webhook, 'account_deleted', user_id, {
     email: userEmail,
   });
+
+  // Remove from search index
+  if (searchWorker) {
+    await searchWorker.removeUser(user_id);
+  }
 
   return true;
 }

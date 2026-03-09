@@ -55,10 +55,6 @@ export async function createUser(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
-    const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
-
     // Create user
     const user = await userAdminService.createUser(
       {
@@ -70,8 +66,9 @@ export async function createUser(req, res) {
         is_active,
       },
       {
-        models,
-        webhook,
+        models: req.app.get('models'),
+        webhook: req.app.get('webhook'),
+        searchWorker: req.app.get('container').resolve('search:worker'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
@@ -209,6 +206,7 @@ export async function updateUserById(req, res) {
     const user = await userAdminService.updateUserById(id, updateData, {
       models,
       webhook,
+      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
       defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
     });
@@ -330,6 +328,7 @@ export async function bulkDelete(req, res) {
     const result = await userAdminService.bulkDelete(ids, {
       models,
       webhook,
+      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
     });
 
@@ -359,6 +358,7 @@ export async function deleteUser(req, res) {
     const result = await userAdminService.bulkDelete([id], {
       models,
       webhook,
+      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
     });
 

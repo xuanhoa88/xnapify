@@ -41,6 +41,7 @@ function SearchableSelect({
   multiple = false,
   showSearch = true,
   clearable = false,
+  renderOption,
 }) {
   const { t } = useTranslation();
 
@@ -350,7 +351,9 @@ function SearchableSelect({
                             />
                           </span>
                         )}
-                        <span className={s.optionLabel}>{option.label}</span>
+                        <span className={s.optionLabel}>
+                          {renderOption ? renderOption(option) : option.label}
+                        </span>
                       </li>
                     );
                   })}
@@ -411,6 +414,7 @@ SearchableSelect.propTypes = {
   multiple: PropTypes.bool,
   showSearch: PropTypes.bool,
   clearable: PropTypes.bool,
+  renderOption: PropTypes.func,
   placeholder: PropTypes.string,
   searchPlaceholder: PropTypes.string,
   debounceMs: PropTypes.number,

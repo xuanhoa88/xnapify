@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -40,7 +41,8 @@ export default class FileCache {
    * @param {number} [options.ttl=300000] - Default TTL in ms (5 min)
    */
   constructor(options = {}) {
-    this.directory = options.directory || path.join(process.cwd(), '.cache');
+    this.directory =
+      options.directory || path.join(os.homedir(), '.rsk', 'caches');
     this.maxSize = options.maxSize || 10000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
     this.locks = new Map(); // In-memory locks for race condition prevention

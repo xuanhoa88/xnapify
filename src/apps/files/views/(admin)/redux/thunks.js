@@ -265,3 +265,18 @@ export const fetchStorageUsage = createAsyncThunk(
     }
   },
 );
+
+export const searchUsersAndGroups = createAsyncThunk(
+  'admin/files/searchUsersAndGroups',
+  async (query, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/search', {
+        query: { q: query },
+      });
+
+      return data; // { query, results, count }
+    } catch (error) {
+      return rejectWithValue(error.message);
+    }
+  },
+);

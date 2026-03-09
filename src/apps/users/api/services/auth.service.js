@@ -38,6 +38,7 @@ export async function registerUser(
   {
     models,
     webhook,
+    searchWorker,
     hook,
     defaultRoleName,
     adminRoleName,
@@ -96,6 +97,11 @@ export async function registerUser(
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('registered', { user_id: user.id, email });
+
+  // Index user in search
+  if (searchWorker) {
+    await searchWorker.indexUser(user);
+  }
 
   // Return formatted user data with default RBAC for new user
   return formatUserResponse(user, {

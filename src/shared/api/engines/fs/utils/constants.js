@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import os from 'os';
 import path from 'path';
 
 /**
@@ -35,7 +36,7 @@ export const MAX_FILENAME_LENGTH =
   parseInt(process.env.RSK_FS_MAX_FILENAME_LENGTH, 10) || 255;
 
 export const UPLOAD_DIR =
-  process.env.RSK_FS_UPLOAD_DIR || path.join(process.cwd(), 'uploads');
+  process.env.RSK_FS_UPLOAD_DIR || path.join(os.homedir(), '.rsk', 'uploads');
 
 export const ALLOWED_EXTENSIONS = process.env.RSK_FS_ALLOWED_EXTENSIONS
   ? process.env.RSK_FS_ALLOWED_EXTENSIONS.split(',').map(ext => ext.trim())

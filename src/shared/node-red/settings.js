@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import os from 'os';
 import path from 'path';
 import fs from 'fs';
 import merge from 'lodash/merge';
@@ -248,7 +249,7 @@ export default function createSettings(options = {}) {
     port = 1337,
     protocol = 'http',
     userDir = path.join(
-      process.env.RSK_NODE_RED_HOME || process.cwd(),
+      process.env.RSK_NODE_RED_HOME || path.join(os.homedir(), '.rsk'),
       '.node-red',
     ),
     logLevel = process.env.RSK_NODE_RED_LOG_LEVEL || 'info',

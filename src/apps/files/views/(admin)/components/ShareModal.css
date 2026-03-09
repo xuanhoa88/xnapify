@@ -119,6 +119,18 @@
   text-transform: uppercase;
 }
 
+.smallAvatar {
+  width: 24px;
+  height: 24px;
+}
+
+.searchResultItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
 .groupAvatar {
   background-color: #5f6368;
 }

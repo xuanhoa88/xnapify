@@ -102,6 +102,7 @@ export async function updateProfile(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
+        searchWorker: req.app.get('container').resolve('search:worker'),
         hook,
       },
     );
@@ -458,6 +459,7 @@ export async function deleteAccount(req, res) {
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
+      searchWorker: req.app.get('container').resolve('search:worker'),
       hook: req.app.get('hook').withContext(req.app),
     });
 

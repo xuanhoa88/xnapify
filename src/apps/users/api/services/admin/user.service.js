@@ -24,7 +24,7 @@ import { logUserActivity } from '../../utils/activity';
  */
 export async function createUser(
   userData,
-  { models, webhook, actorId, defaultRoleName },
+  { models, webhook, searchWorker, actorId, defaultRoleName },
 ) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
@@ -124,6 +124,11 @@ export async function createUser(
 
   // Log activity
   await logUserActivity(webhook, 'created', user.id, { email }, actorId);
+
+  // Index user in search
+  if (searchWorker) {
+    await searchWorker.indexUser(user);
+  }
 
   return {
     id: user.id,
@@ -391,7 +396,7 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, actorId, defaultRoleName },
+  { models, webhook, searchWorker, actorId, defaultRoleName },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -539,6 +544,11 @@ export async function updateUserById(
     { email: user.email },
     actorId,
   );
+
+  // Re-index user in search
+  if (searchWorker) {
+    await searchWorker.indexUser(user);
+  }
 
   return {
     id: user.id,
@@ -723,7 +733,10 @@ export async function bulkUpdateStatus(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Result with deleted count
  */
-export async function bulkDelete(ids, { models, webhook, actorId }) {
+export async function bulkDelete(
+  ids,
+  { models, webhook, searchWorker, actorId },
+) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -756,6 +769,11 @@ export async function bulkDelete(ids, { models, webhook, actorId }) {
         );
       }),
     );
+
+    // Remove from search index
+    if (searchWorker) {
+      await Promise.all(deletedIds.map(id => searchWorker.removeUser(id)));
+    }
   }
 
   return {
