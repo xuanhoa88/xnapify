@@ -34,6 +34,8 @@ function ContextMenu({
   isOpen: controlledIsOpen,
   onToggle: controlledOnToggle,
   align = 'right',
+  x = null,
+  y = null,
   className,
 }) {
   const triggerRef = useRef(null);
@@ -79,7 +81,7 @@ function ContextMenu({
 
   return (
     <ContextMenuContext.Provider
-      value={{ isOpen, onToggle, align, triggerRef, menuRef }}
+      value={{ isOpen, onToggle, align, x, y, triggerRef, menuRef }}
     >
       <div className={clsx(s.dropdown, { [s.open]: isOpen }, className)}>
         {children}
@@ -93,6 +95,8 @@ ContextMenu.propTypes = {
   isOpen: PropTypes.bool,
   onToggle: PropTypes.func,
   align: PropTypes.oneOf(['left', 'right']),
+  x: PropTypes.number,
+  y: PropTypes.number,
   className: PropTypes.string,
 };
 
@@ -155,7 +159,15 @@ function Menu({ children, className }) {
 
   // Calculate position when menu opens
   useEffect(() => {
-    if (!ctx.isOpen || !ctx.triggerRef.current) return;
+    if (!ctx.isOpen) return;
+
+    if (ctx.x !== null && ctx.y !== null) {
+      // Explicit coordinates provided (e.g. for right-click context menus without a trigger button)
+      setPosition({ top: ctx.y, left: ctx.x, right: 'auto' });
+      return;
+    }
+
+    if (!ctx.triggerRef.current) return;
 
     const rect = ctx.triggerRef.current.getBoundingClientRect();
     const newPosition = {
@@ -171,7 +183,7 @@ function Menu({ children, className }) {
     }
 
     setPosition(newPosition);
-  }, [ctx.isOpen, ctx.align, ctx.triggerRef]);
+  }, [ctx.isOpen, ctx.align, ctx.triggerRef, ctx.x, ctx.y]);
 
   if (!ctx.isOpen) return null;
 

@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
@@ -15,6 +15,7 @@ import {
   ConfirmModal,
 } from '../../../../../shared/renderer/components/Admin';
 import Pagination from '../../../../../shared/renderer/components/Admin/Table/Pagination';
+import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import { validateForm } from '../../../../../shared/validator';
 import { renameFileFormSchema } from '../../../validator/admin/file';
@@ -57,12 +58,7 @@ export default function FileGrid({ onShare }) {
   const [targetFile, setTargetFile] = useState(null);
   const renamePromptRef = useRef(null);
 
-  // Close context menu on any outside click
-  useEffect(() => {
-    const closeMenu = () => setContextMenu(null);
-    window.addEventListener('click', closeMenu);
-    return () => window.removeEventListener('click', closeMenu);
-  }, []);
+  // Close context menu on any outside click handled by Shared ContextMenu so we don't need body click listener
 
   const handleFileClick = useCallback(
     (e, fileId) => {
@@ -80,13 +76,13 @@ export default function FileGrid({ onShare }) {
   const handleDoubleClick = useCallback(
     file => {
       if (file.type === 'folder') {
-        dispatch(setView({ view: 'my_drive', folderId: file.id }));
+        dispatch(setView({ view: currentView, folderId: file.id }));
       } else {
         // For now, downloading/previewing
         window.open(`/api/admin/files/${file.id}/download`, '_blank');
       }
     },
-    [dispatch],
+    [dispatch, currentView],
   );
 
   const handleContextMenu = useCallback(
@@ -111,6 +107,7 @@ export default function FileGrid({ onShare }) {
   const onRename = useCallback(() => {
     if (!contextMenu) return;
     const { file } = contextMenu;
+    setContextMenu(null); // Close the menu
     setTargetFile(file);
     renamePromptRef.current.open({
       title: t('files:grid.rename', 'Rename'),
@@ -156,6 +153,7 @@ export default function FileGrid({ onShare }) {
     const idsToDelete =
       selectedIds.length > 0 ? selectedIds : [contextMenu.file.id];
 
+    setContextMenu(null); // Close menu
     if (currentView === 'trash') {
       dispatch(deleteItemsPermanently(idsToDelete));
     } else {
@@ -165,6 +163,7 @@ export default function FileGrid({ onShare }) {
 
   const onStar = useCallback(() => {
     if (!contextMenu) return;
+    setContextMenu(null); // Close menu
     dispatch(
       toggleStarItem({
         id: contextMenu.file.id,
@@ -175,6 +174,7 @@ export default function FileGrid({ onShare }) {
 
   const onDownload = useCallback(() => {
     if (!contextMenu) return;
+    setContextMenu(null); // Close menu
     window.open(
       `/api/admin/files/${contextMenu.file.id}/download?download=true`,
       '_blank',
@@ -183,6 +183,7 @@ export default function FileGrid({ onShare }) {
 
   const handleShare = useCallback(() => {
     if (!contextMenu) return;
+    setContextMenu(null); // Close menu
     if (onShare) onShare(contextMenu.file);
   }, [contextMenu, onShare]);
 
@@ -230,119 +231,111 @@ export default function FileGrid({ onShare }) {
     >
       {/* File Items */}
       <div className={s.grid}>
-        {files.map(file => {
-          const isSelected = selectedIds.includes(file.id);
-
-          return (
-            <div
-              key={file.id}
-              role='button'
-              tabIndex={0}
-              className={clsx(s.fileItem, {
-                [s.selected]: isSelected,
-              })}
-              onClick={e => handleFileClick(e, file.id)}
-              onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
-              onDoubleClick={() => handleDoubleClick(file)}
-              onContextMenu={e => handleContextMenu(e, file)}
-            >
-              <div className={s.iconContainer}>
-                {file.type === 'folder' ? (
-                  <Icon name='folder' size={48} className={s.fileIcon} />
-                ) : (
-                  <Icon name='file' size={48} className={s.fileIcon} />
-                )}
-                {file.is_starred && currentView !== 'trash' && (
-                  <div className={s.starBadge}>
-                    <Icon name='star' size={16} className={s.starIcon} />
-                  </div>
-                )}
-              </div>
-              <div className={s.nameContainer}>
-                <span className={s.fileName} title={file.name}>
-                  {file.name}
-                </span>
-                {viewMode === 'list' && (
-                  <>
-                    <span className={s.fileDetail}>
-                      {file.owner && file.owner.email
-                        ? file.owner.email
-                        : t('files:grid.owner_me', 'Me')}
-                    </span>
-                    <span className={s.fileDetail}>
-                      {new Date(file.updated_at).toLocaleDateString()}
-                    </span>
-                    <span className={s.fileDetail}>
-                      {file.size
-                        ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                        : '-'}
-                    </span>
-                  </>
-                )}
-              </div>
+        {files.map(file => (
+          <div
+            key={file.id}
+            role='button'
+            tabIndex={0}
+            className={clsx(s.fileItem, {
+              [s.selected]: selectedIds.includes(file.id),
+            })}
+            onClick={e => handleFileClick(e, file.id)}
+            onKeyDown={e => e.key === 'Enter' && handleDoubleClick(file)}
+            onDoubleClick={() => handleDoubleClick(file)}
+            onContextMenu={e => handleContextMenu(e, file)}
+          >
+            <div className={s.iconContainer}>
+              {file.type === 'folder' ? (
+                <Icon name='folder' size={48} className={s.fileIcon} />
+              ) : (
+                <Icon name='file' size={48} className={s.fileIcon} />
+              )}
+              {file.is_starred && currentView !== 'trash' && (
+                <div className={s.starBadge}>
+                  <Icon name='star' size={16} className={s.starIcon} />
+                </div>
+              )}
             </div>
-          );
-        })}
+            <div className={s.nameContainer}>
+              <span className={s.fileName} title={file.name}>
+                {file.name}
+              </span>
+              {viewMode === 'list' && (
+                <>
+                  <span className={s.fileDetail}>
+                    {file.owner && file.owner.email
+                      ? file.owner.email
+                      : t('files:grid.owner_me', 'Me')}
+                  </span>
+                  <span className={s.fileDetail}>
+                    {new Date(file.updated_at).toLocaleDateString()}
+                  </span>
+                  <span className={s.fileDetail}>
+                    {file.size
+                      ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
+                      : '-'}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
-      {/* Context Menu */}
+      {/* Context Menu logic utilizing shared component */}
       {contextMenu && (
-        <div
-          className={s.contextMenu}
-          style={{ top: contextMenu.y, left: contextMenu.x }}
+        <ContextMenu
+          isOpen={true}
+          onToggle={() => setContextMenu(null)}
+          x={contextMenu.x}
+          y={contextMenu.y}
         >
-          <div
-            role='button'
-            tabIndex={0}
-            className={s.menuItem}
-            onClick={onRename}
-            onKeyDown={e => e.key === 'Enter' && onRename()}
-          >
-            {t('files:grid.rename', 'Rename')}
+          <div className={s.contextMenuContainer}>
+            <ContextMenu.Menu>
+              <ContextMenu.Item
+                onClick={onRename}
+                icon={<Icon name='edit-2' size={16} />}
+              >
+                {t('files:grid.rename', 'Rename')}
+              </ContextMenu.Item>
+              <ContextMenu.Item
+                onClick={handleShare}
+                icon={<Icon name='share-2' size={16} />}
+              >
+                {t('files:grid.share', 'Share')}
+              </ContextMenu.Item>
+
+              {contextMenu.file.type === 'file' && (
+                <ContextMenu.Item
+                  onClick={onDownload}
+                  icon={<Icon name='download' size={16} />}
+                >
+                  {t('files:grid.download', 'Download')}
+                </ContextMenu.Item>
+              )}
+
+              <ContextMenu.Item
+                onClick={onStar}
+                icon={<Icon name='star' size={16} />}
+              >
+                {contextMenu.file.is_starred
+                  ? t('files:grid.remove_star', 'Remove Star')
+                  : t('files:grid.add_star', 'Add Star')}
+              </ContextMenu.Item>
+
+              <ContextMenu.Divider />
+
+              <ContextMenu.Item
+                onClick={onTrash}
+                variant='danger'
+                icon={<Icon name='trash-2' size={16} />}
+              >
+                {currentView === 'trash'
+                  ? t('files:grid.delete_permanently', 'Delete Permanently')
+                  : t('files:grid.move_to_trash', 'Move to Trash')}
+              </ContextMenu.Item>
+            </ContextMenu.Menu>
           </div>
-          <div
-            role='button'
-            tabIndex={0}
-            className={s.menuItem}
-            onClick={handleShare}
-            onKeyDown={e => e.key === 'Enter' && handleShare()}
-          >
-            {t('files:grid.share', 'Share')}
-          </div>
-          {contextMenu.file.type === 'file' && (
-            <div
-              role='button'
-              tabIndex={0}
-              className={s.menuItem}
-              onClick={onDownload}
-              onKeyDown={e => e.key === 'Enter' && onDownload()}
-            >
-              {t('files:grid.download', 'Download')}
-            </div>
-          )}
-          <div
-            role='button'
-            tabIndex={0}
-            className={s.menuItem}
-            onClick={onStar}
-            onKeyDown={e => e.key === 'Enter' && onStar()}
-          >
-            {contextMenu.file.is_starred
-              ? t('files:grid.remove_star', 'Remove Star')
-              : t('files:grid.add_star', 'Add Star')}
-          </div>
-          <div className={s.menuDivider} />
-          <div
-            role='button'
-            tabIndex={0}
-            className={clsx(s.menuItem, s.dangerItem)}
-            onClick={onTrash}
-            onKeyDown={e => e.key === 'Enter' && onTrash()}
-          >
-            {currentView === 'trash'
-              ? t('files:grid.delete_permanently', 'Delete Permanently')
-              : t('files:grid.move_to_trash', 'Move to Trash')}
-          </div>
-        </div>
+        </ContextMenu>
       )}
       {/* RENAME PROMPT */}
       <ConfirmModal.Prompt

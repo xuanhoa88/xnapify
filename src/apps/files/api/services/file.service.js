@@ -152,22 +152,28 @@ export async function listFiles(
       }
       break;
     case 'shared_with_me': {
-      const userGroups = await UserGroup.findAll({
-        where: { user_id: userId },
-        attributes: ['group_id'],
-      });
-      const groupIds = userGroups.map(ug => ug.group_id);
+      if (parentId) {
+        // If navigating into a folder that has been shared with the user
+        await findAccessibleFile(parentId, userId, models, 'viewer');
+        where.parent_id = parentId;
+      } else {
+        const userGroups = await UserGroup.findAll({
+          where: { user_id: userId },
+          attributes: ['group_id'],
+        });
+        const groupIds = userGroups.map(ug => ug.group_id);
 
-      const sharedFiles = await FileShare.findAll({
-        where: {
-          [Op.or]: [{ user_id: userId }, { group_id: { [Op.in]: groupIds } }],
-        },
-        attributes: ['file_id'],
-      });
-      const sharedIds = [...new Set(sharedFiles.map(s => s.file_id))];
+        const sharedFiles = await FileShare.findAll({
+          where: {
+            [Op.or]: [{ user_id: userId }, { group_id: { [Op.in]: groupIds } }],
+          },
+          attributes: ['file_id'],
+        });
+        const sharedIds = [...new Set(sharedFiles.map(s => s.file_id))];
 
-      where.id = { [Op.in]: sharedIds };
-      where.owner_id = { [Op.ne]: userId }; // Don't show owned files in shared
+        where.id = { [Op.in]: sharedIds };
+        where.owner_id = { [Op.ne]: userId }; // Don't show owned files in shared root
+      }
       break;
     }
     case 'recent':
@@ -200,13 +206,30 @@ export async function listFiles(
   let currentFolder = null;
   let breadcrumbs = [];
 
-  if (parentId && view === 'my_drive') {
+  if (parentId) {
     currentFolder = await File.findByPk(parentId);
     breadcrumbs = await getBreadcrumbs(parentId, { models });
+
+    // If not in standard 'my_drive', prepend the root virtual category string so users can jump back
+    if (view !== 'my_drive') {
+      const formattedViewName = view
+        .split('_')
+        .map((word, i) =>
+          i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word,
+        )
+        .join(' ');
+
+      // Remove 'root = My Drive' and prepend 'view = Shared with me'
+      breadcrumbs[0] = { id: view, name: formattedViewName };
+    }
   } else if (view !== 'my_drive') {
-    breadcrumbs = [
-      { id: view, name: view.charAt(0).toUpperCase() + view.slice(1) },
-    ];
+    const formattedViewName = view
+      .split('_')
+      .map((word, i) =>
+        i === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word,
+      )
+      .join(' ');
+    breadcrumbs = [{ id: view, name: formattedViewName }];
   } else {
     breadcrumbs = [{ id: 'root', name: 'My Drive' }];
   }

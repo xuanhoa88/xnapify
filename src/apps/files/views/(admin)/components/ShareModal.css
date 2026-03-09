@@ -17,6 +17,36 @@
   color: var(--text-primary, #202124);
 }
 
+.initErrorState {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 48px 24px;
+  text-align: center;
+  min-height: 250px;
+}
+
+.initErrorIcon {
+  color: var(--text-secondary, #5f6368);
+  margin-bottom: 24px;
+  background: var(--bg-surface-subtle, #f1f3f4);
+  width: 80px;
+  height: 80px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.initErrorMessage {
+  font-size: 16px;
+  color: var(--text-primary, #202124);
+  max-width: 320px;
+  line-height: 1.5;
+  margin: 0;
+}
+
 .accessRow {
   display: flex;
   align-items: center;
@@ -196,4 +226,8 @@
 
 :global(.theme-dark) .permissionSelect:hover {
   background-color: var(--bg-surface-subtle, #3c4043);
+}
+
+:global(.theme-dark) .initErrorIcon {
+  background-color: var(--bg-surface-subtle, #303134);
 }

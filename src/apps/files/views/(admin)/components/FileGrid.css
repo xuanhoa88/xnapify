@@ -207,42 +207,8 @@
   fill: var(--color-primary);
 }
 
-/* --- CONTEXT MENU --- */
-.contextMenu {
-  position: fixed;
-  background: var(--color-background);
-  border: 1px solid var(--color-border);
-  box-shadow: var(--shadow-md);
-  border-radius: var(--radius-md);
-  padding: 8px 0;
-  min-width: 200px;
-  z-index: 1000;
-}
-
-.menuItem {
-  padding: 8px 16px;
-  font-size: 14px;
-  color: var(--color-text);
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.menuItem:hover {
-  background-color: var(--color-background-hover);
-}
-
-.menuDivider {
-  height: 1px;
-  background-color: var(--color-border);
-  margin: 8px 0;
-}
-
-.dangerItem {
-  color: var(--color-error);
-}
-
-.dangerItem:hover {
-  background-color: var(--color-error-light, #fce8e6);
+.contextMenuContainer {
+  display: block;
 }
 
 /* Dark mode overwrites (High Specificity 0,3,0) */
@@ -268,18 +234,7 @@
   color: var(--color-primary-light);
 }
 
-:global(.theme-dark) .contextMenu {
-  background: var(--color-background);
-  border-color: var(--color-border);
-}
-
-:global(.theme-dark) .menuItem:hover {
-  background-color: var(--color-background-hover);
-}
-
-:global(.theme-dark) .dangerItem:hover {
-  background-color: var(--color-error-light);
-}
+/* No dark mode overrides needed for standard context menu component */
 
 /* Most specific rules (0,4,0) placed at the end to avoid descending specificity */
 .gridView .fileItem.selected .iconContainer {

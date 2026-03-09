@@ -7,8 +7,9 @@
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
+import { getUserId } from '../../../../../shared/renderer/redux/features/user/selector';
 import { Icon } from '../../../../../shared/renderer/components/Admin';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import Button from '../../../../../shared/renderer/components/Button';
@@ -21,6 +22,7 @@ import s from './ShareModal.css';
 const ShareModal = forwardRef((props, ref) => {
   const { t } = useTranslation();
   const dispatch = useDispatch();
+  const currentUserId = useSelector(getUserId);
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState(null);
   const [shareType, setShareType] = useState('private');
@@ -29,6 +31,7 @@ const ShareModal = forwardRef((props, ref) => {
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState(null);
+  const [initError, setInitError] = useState(null);
 
   const resetState = useCallback(() => {
     setIsOpen(false);
@@ -39,6 +42,7 @@ const ShareModal = forwardRef((props, ref) => {
     setLoading(false);
     setSearching(false);
     setError(null);
+    setInitError(null);
   }, []);
 
   useImperativeHandle(
@@ -53,7 +57,20 @@ const ShareModal = forwardRef((props, ref) => {
           const data = await dispatch(fetchFileShares(targetFile.id)).unwrap();
           setShares(data.shares || []);
         } catch (e) {
-          setError(t('files:share.load_failed', 'Failed to load permissions'));
+          let errorMessage = t(
+            'files:share.load_failed',
+            'Failed to load permissions',
+          );
+          if (
+            e.status === 403 ||
+            (e.message && e.message.includes('Permission denied'))
+          ) {
+            errorMessage = t(
+              'files:share.no_permission',
+              "You don't have permission to manage sharing for this file.",
+            );
+          }
+          setInitError(errorMessage);
         } finally {
           setLoading(false);
         }
@@ -80,16 +97,25 @@ const ShareModal = forwardRef((props, ref) => {
       try {
         const { results } = await dispatch(searchUsersAndGroups(term)).unwrap();
 
-        const options = (results || []).map(r => {
-          const isGroup =
-            r.entityType === 'group' || r.entityType === 'groups:group';
-          return {
-            value: `${isGroup ? 'group' : 'user'}:${r.entityId}`,
-            label: r.title,
-            type: isGroup ? 'group' : 'user',
-            data: r,
-          };
-        });
+        const options = (results || [])
+          .filter(r => {
+            const isUser =
+              r.entityType === 'user' || r.entityType === 'users:user';
+            if (isUser && r.entityId === currentUserId) {
+              return false; // prevent sharing with self
+            }
+            return true;
+          })
+          .map(r => {
+            const isGroup =
+              r.entityType === 'group' || r.entityType === 'groups:group';
+            return {
+              value: `${isGroup ? 'group' : 'user'}:${r.entityId}`,
+              label: r.title,
+              type: isGroup ? 'group' : 'user',
+              data: r,
+            };
+          });
 
         setSearchResults(options);
       } catch (e) {
@@ -98,7 +124,7 @@ const ShareModal = forwardRef((props, ref) => {
         setSearching(false);
       }
     },
-    [dispatch],
+    [dispatch, currentUserId],
   );
 
   const renderSearchResult = useCallback(
@@ -221,146 +247,174 @@ const ShareModal = forwardRef((props, ref) => {
         {t('files:share.title', { name: file.name })}
       </Modal.Header>
 
-      <Modal.Body error={error} loading={loading && !shares.length}>
-        <div className={s.section}>
-          <h4>{t('files:share.general_access', 'General access')}</h4>
-          <div className={s.accessRow}>
-            <div className={s.accessIcon}>
-              {shareType === 'private' ? (
-                <Icon name='lock' size={24} className={s.restrictedIcon} />
-              ) : shareType === 'shared_users' ? (
-                <Icon name='users' size={24} className={s.usersIcon} />
-              ) : (
-                <Icon name='globe' size={24} className={s.publicIcon} />
-              )}
+      <Modal.Body
+        error={error}
+        loading={loading && !shares.length && !initError}
+      >
+        {initError ? (
+          <div className={s.initErrorState}>
+            <div className={s.initErrorIcon}>
+              <Icon name='lock' size={48} />
             </div>
-            <div className={s.accessSelectBlock}>
-              <select
-                className={s.accessSelect}
-                value={shareType}
-                onChange={e => setShareType(e.target.value)}
-              >
-                <option value='private'>
-                  {t('files:share.restricted', 'Restricted')}
-                </option>
-                <option value='public_link'>
-                  {t('files:share.public_link', 'Anyone with the link')}
-                </option>
-                <option value='shared_users'>
-                  {t('files:share.specific_users', 'Specific User or Group')}
-                </option>
-              </select>
-              <p className={s.accessHelper}>
-                {shareType === 'private'
-                  ? t(
-                      'files:share.restricted_desc',
-                      'Only people with access can open with the link',
-                    )
-                  : shareType === 'public_link'
-                    ? t(
-                        'files:share.public_link_desc',
-                        'Anyone on the internet with this link can view',
-                      )
-                    : t(
-                        'files:share.specific_users_desc',
-                        'Only specific users or groups you add below can access',
-                      )}
-              </p>
-            </div>
+            <p className={s.initErrorMessage}>{initError}</p>
           </div>
-
-          {shareType === 'shared_users' && (
-            <>
-              <div className={s.searchWrapper}>
-                <SearchableSelect
-                  placeholder={t(
-                    'files:share.add_people_hint',
-                    'Add people and groups',
+        ) : (
+          <>
+            <div className={s.section}>
+              <h4>{t('files:share.general_access', 'General access')}</h4>
+              <div className={s.accessRow}>
+                <div className={s.accessIcon}>
+                  {shareType === 'private' ? (
+                    <Icon name='lock' size={24} className={s.restrictedIcon} />
+                  ) : shareType === 'shared_users' ? (
+                    <Icon name='users' size={24} className={s.usersIcon} />
+                  ) : (
+                    <Icon name='globe' size={24} className={s.publicIcon} />
                   )}
-                  onSearch={handleSearch}
-                  onChange={handleAddShare}
-                  options={searchResults}
-                  loading={searching}
-                  value=''
-                  clearable
-                  renderOption={renderSearchResult}
-                />
+                </div>
+                <div className={s.accessSelectBlock}>
+                  <select
+                    className={s.accessSelect}
+                    value={shareType}
+                    onChange={e => setShareType(e.target.value)}
+                  >
+                    <option value='private'>
+                      {t('files:share.restricted', 'Restricted')}
+                    </option>
+                    <option value='public_link'>
+                      {t('files:share.public_link', 'Anyone with the link')}
+                    </option>
+                    <option value='shared_users'>
+                      {t(
+                        'files:share.specific_users',
+                        'Specific User or Group',
+                      )}
+                    </option>
+                  </select>
+                  <p className={s.accessHelper}>
+                    {shareType === 'private'
+                      ? t(
+                          'files:share.restricted_desc',
+                          'Only people with access can open with the link',
+                        )
+                      : shareType === 'public_link'
+                        ? t(
+                            'files:share.public_link_desc',
+                            'Anyone on the internet with this link can view',
+                          )
+                        : t(
+                            'files:share.specific_users_desc',
+                            'Only specific users or groups you add below can access',
+                          )}
+                  </p>
+                </div>
               </div>
 
-              {shares.length > 0 && (
+              {shareType === 'shared_users' && (
                 <>
-                  <h4>
-                    {t('files:share.people_with_access', 'People with access')}
-                  </h4>
-                  <div className={s.shareList}>
-                    {shares.map((item, index) => (
-                      <div key={index} className={s.shareItem}>
-                        <div
-                          className={clsx(s.avatar, {
-                            [s.groupAvatar]: !!item.group_id,
-                          })}
-                        >
-                          <Icon
-                            name={item.user_id ? 'user' : 'users'}
-                            size={16}
-                          />
-                        </div>
-                        <div className={s.shareInfo}>
-                          <span className={s.shareName}>
-                            {(item.user && item.user.email) ||
-                              (item.group && item.group.name)}
-                          </span>
-                          <span className={s.shareRole}>
-                            {item.user_id
-                              ? t('files:share.user', 'User')
-                              : t('files:share.group', 'Group')}
-                          </span>
-                        </div>
-                        <select
-                          className={s.permissionSelect}
-                          value={item.permission}
-                          onChange={e =>
-                            handlePermissionChange(index, e.target.value)
-                          }
-                        >
-                          <option value='viewer'>
-                            {t('files:share.permission_view', 'View')}
-                          </option>
-                          <option value='editor'>
-                            {t(
-                              'files:share.permission_edit_download',
-                              'Edit / Download',
-                            )}
-                          </option>
-                        </select>
-                        <Button
-                          variant='ghost'
-                          size='small'
-                          iconOnly
-                          className={s.removeBtn}
-                          onClick={() => handleRemoveShare(index)}
-                        >
-                          <Icon name='close' size={14} />
-                        </Button>
-                      </div>
-                    ))}
+                  <div className={s.searchWrapper}>
+                    <SearchableSelect
+                      placeholder={t(
+                        'files:share.add_people_hint',
+                        'Add people and groups',
+                      )}
+                      onSearch={handleSearch}
+                      onChange={handleAddShare}
+                      options={searchResults}
+                      loading={searching}
+                      value=''
+                      clearable
+                      renderOption={renderSearchResult}
+                    />
                   </div>
+
+                  {shares.length > 0 && (
+                    <>
+                      <h4>
+                        {t(
+                          'files:share.people_with_access',
+                          'People with access',
+                        )}
+                      </h4>
+                      <div className={s.shareList}>
+                        {shares.map((item, index) => (
+                          <div key={index} className={s.shareItem}>
+                            <div
+                              className={clsx(s.avatar, {
+                                [s.groupAvatar]: !!item.group_id,
+                              })}
+                            >
+                              <Icon
+                                name={item.user_id ? 'user' : 'users'}
+                                size={16}
+                              />
+                            </div>
+                            <div className={s.shareInfo}>
+                              <span className={s.shareName}>
+                                {(item.user && item.user.email) ||
+                                  (item.group && item.group.name)}
+                              </span>
+                              <span className={s.shareRole}>
+                                {item.user_id
+                                  ? t('files:share.user', 'User')
+                                  : t('files:share.group', 'Group')}
+                              </span>
+                            </div>
+                            <select
+                              className={s.permissionSelect}
+                              value={item.permission}
+                              onChange={e =>
+                                handlePermissionChange(index, e.target.value)
+                              }
+                            >
+                              <option value='viewer'>
+                                {t('files:share.permission_view', 'View')}
+                              </option>
+                              <option value='editor'>
+                                {t(
+                                  'files:share.permission_edit_download',
+                                  'Edit / Download',
+                                )}
+                              </option>
+                            </select>
+                            <Button
+                              variant='ghost'
+                              size='small'
+                              iconOnly
+                              className={s.removeBtn}
+                              onClick={() => handleRemoveShare(index)}
+                            >
+                              <Icon name='close' size={14} />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </>
               )}
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </Modal.Body>
 
       <Modal.Footer>
         <Modal.Actions>
-          <Button variant='outline' size='small' onClick={copyLink}>
-            {t('files:share.copy_link', 'Copy link')}
-          </Button>
-          <div className={s.spacer} />
-          <Button variant='primary' onClick={handleSave} loading={loading}>
-            {t('files:share.done', 'Done')}
-          </Button>
+          {!initError ? (
+            <>
+              <Button variant='outline' size='small' onClick={copyLink}>
+                {t('files:share.copy_link', 'Copy link')}
+              </Button>
+              <div className={s.spacer} />
+              <Button variant='primary' onClick={handleSave} loading={loading}>
+                {t('files:share.done', 'Done')}
+              </Button>
+            </>
+          ) : (
+            <Button variant='primary' onClick={handleClose}>
+              {t('files:share.close', 'Close')}
+            </Button>
+          )}
         </Modal.Actions>
       </Modal.Footer>
     </Modal>

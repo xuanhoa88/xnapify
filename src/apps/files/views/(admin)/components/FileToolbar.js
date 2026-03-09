@@ -66,7 +66,9 @@ export default function FileToolbar() {
                 onClick={() => !isLast && handleBreadcrumbClick(crumb)}
                 disabled={isLast}
               >
-                {crumb.name}
+                {crumb.id !== 'root' &&
+                  t(`files:sidebar.${crumb.id}`, crumb.name)}
+                {crumb.id === 'root' && t('files:sidebar.my_drive', 'My Drive')}
               </Button>
             </React.Fragment>
           );
