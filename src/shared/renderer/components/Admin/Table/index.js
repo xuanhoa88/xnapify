@@ -5,8 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as Error } from './Error';
-export { default as Empty } from './Empty';
-export { default as Pagination } from './Pagination';
-export { default as BulkActionsBar } from './BulkActionsBar';
-export { default as SearchBar } from './SearchBar';
+import Table from './Table';
+import Error from './Error';
+import Empty from './Empty';
+import Pagination from './Pagination';
+import BulkActionsBar from './BulkActionsBar';
+import SearchBar from './SearchBar';
+
+Table.Error = Error;
+Table.Empty = Empty;
+Table.Pagination = Pagination;
+Table.BulkActionsBar = BulkActionsBar;
+Table.SearchBar = SearchBar;
+
+export default Table;

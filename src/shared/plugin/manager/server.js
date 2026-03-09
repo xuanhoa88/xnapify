@@ -365,6 +365,7 @@ class ServerPluginManager extends BasePluginManager {
 
       // 1. Load View Module if browser entry exists
       if (manifest && manifest.browser) {
+        // eslint-disable-next-line no-underscore-dangle
         const bundlePath = this._getPluginBundlePath(
           path.join(pluginDir, path.dirname(manifest.browser)),
           'server.js',
@@ -380,6 +381,7 @@ class ServerPluginManager extends BasePluginManager {
 
       // 2. Boot API if main entry exists
       if (manifest && manifest.main) {
+        // eslint-disable-next-line no-underscore-dangle
         const apiBundlePath = this._getPluginBundlePath(
           pluginDir,
           manifest.main,

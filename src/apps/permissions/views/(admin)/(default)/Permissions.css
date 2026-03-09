@@ -37,47 +37,6 @@
   align-items: center;
 }
 
-/* Table Container - matches Users.css */
-.tableContainer {
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
-  overflow-x: auto;
-}
-
-.table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 700px;
-}
-
-.table th {
-  padding: var(--spacing-3) var(--spacing-4);
-  text-align: left;
-  font-weight: var(--font-weight-semibold);
-  font-size: var(--font-size-sm);
-  color: var(--color-text-secondary);
-  background: var(--color-background-secondary);
-  border-bottom: 1px solid var(--color-border);
-  white-space: nowrap;
-}
-
-.table td {
-  padding: var(--spacing-3) var(--spacing-4);
-  border-bottom: 1px solid var(--color-border);
-  font-size: var(--font-size-sm);
-  vertical-align: middle;
-}
-
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.table tbody tr:hover {
-  background: var(--color-background-tertiary);
-}
-
 /* Checkbox Column */
 .checkboxCol {
   width: 40px;
@@ -138,11 +97,6 @@
   .filterActions {
     grid-column: 1 / -1;
     display: flex;
-  }
-
-  .table th,
-  .table td {
-    padding: var(--spacing-2) var(--spacing-3);
   }
 
   .descriptionCell {

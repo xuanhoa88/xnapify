@@ -193,15 +193,13 @@ function Roles() {
         <Button
           variant='primary'
           onClick={handleAddRole}
-          disabled={!canCreate}
-          title={
-            !canCreate
-              ? t(
-                  'admin:roles.noPermissionToCreate',
-                  'You do not have permission to create roles',
-                )
-              : undefined
-          }
+          {...(!canCreate && {
+            disabled: true,
+            title: t(
+              'admin:roles.noPermissionToCreate',
+              'You do not have permission to create roles',
+            ),
+          })}
         >
           <Icon name='plus' size={16} />
           {t('admin:roles.addRole', 'Add Role')}
@@ -228,15 +226,13 @@ function Roles() {
           <Button
             variant='primary'
             onClick={handleAddRole}
-            disabled={!canCreate}
-            title={
-              !canCreate
-                ? t(
-                    'admin:roles.noPermissionToCreate',
-                    'You do not have permission to create roles',
-                  )
-                : undefined
-            }
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:roles.noPermissionToCreate',
+                'You do not have permission to create roles',
+              ),
+            })}
           >
             {t('admin:roles.addRole', 'Add Role')}
           </Button>

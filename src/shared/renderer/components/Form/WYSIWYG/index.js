@@ -566,22 +566,27 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
                 <>
                   <ToolbarButton
                     icon={Icons.comment}
-                    label={
-                      activeCommentId
-                        ? t(
+                    {...(activeCommentId
+                      ? {
+                          label: t(
                             'shared.form.wysiwyg.viewAndReplyComment',
                             'View & Reply Comment',
-                          )
-                        : t('shared.form.wysiwyg.addComment', 'Add Comment')
-                    }
-                    title={
-                      activeCommentId
-                        ? t(
+                          ),
+                          title: t(
                             'shared.form.wysiwyg.viewAndReplyComment',
                             'View & Reply Comment',
-                          )
-                        : t('shared.form.wysiwyg.addComment', 'Add Comment')
-                    }
+                          ),
+                        }
+                      : {
+                          label: t(
+                            'shared.form.wysiwyg.addComment',
+                            'Add Comment',
+                          ),
+                          title: t(
+                            'shared.form.wysiwyg.addComment',
+                            'Add Comment',
+                          ),
+                        })}
                     onClick={handleOpenCommentPopup}
                     isActive={!!activeCommentId}
                   />

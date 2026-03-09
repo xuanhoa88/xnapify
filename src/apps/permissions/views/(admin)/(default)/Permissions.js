@@ -293,15 +293,13 @@ function Permissions() {
         <Button
           variant='primary'
           onClick={handleAdd}
-          disabled={!canCreate}
-          title={
-            !canCreate
-              ? t(
-                  'admin:permissions.noPermissionToCreate',
-                  'You do not have permission to create permissions',
-                )
-              : undefined
-          }
+          {...(!canCreate && {
+            disabled: true,
+            title: t(
+              'admin:permissions.noPermissionToCreate',
+              'You do not have permission to create permissions',
+            ),
+          })}
         >
           <Icon name='plus' size={16} />
           {t('admin:permissions.addPermission', 'Add Permission')}
@@ -387,136 +385,130 @@ function Permissions() {
       {permissions.length === 0 ? (
         <Table.Empty
           icon='key'
-          title={
-            search
-              ? t('admin:permissions.noMatchesFound', 'No matches found')
-              : t(
-                  'admin:permissions.noPermissionsFound',
-                  'No permissions found',
-                )
-          }
-          description={
-            search
-              ? t(
+          {...(search
+            ? {
+                title: t(
+                  'admin:permissions.noMatchesFound',
+                  'No matches found',
+                ),
+                description: t(
                   'admin:permissions.noMatchesFound',
                   'No permissions match "{search}". Try a different search.',
                   { search },
-                )
-              : t(
+                ),
+              }
+            : {
+                title: t(
+                  'admin:permissions.noPermissionsFound',
+                  'No permissions found',
+                ),
+                description: t(
                   'admin:permissions.noPermissionsFound',
                   'Create granular permissions to control access to resources.',
-                )
-          }
+                ),
+              })}
         >
           <Button
             variant='primary'
             onClick={search ? () => handleSearchChange('') : handleAdd}
-            disabled={!search && !canCreate}
-            title={
-              !search && !canCreate
-                ? t(
-                    'admin:permissions.noPermissionToCreate',
-                    'You do not have permission to create permissions',
-                  )
-                : undefined
-            }
+            {...(!search &&
+              !canCreate && {
+                disabled: true,
+                title: t(
+                  'admin:permissions.noPermissionToCreate',
+                  'You do not have permission to create permissions',
+                ),
+              })}
           >
             {search ? 'Clear Search' : 'Add Permission'}
           </Button>
         </Table.Empty>
       ) : (
-        <div className={s.tableContainer}>
-          <table className={s.table}>
-            <thead>
-              <tr>
-                <th className={s.checkboxCol}>
-                  <input
-                    type='checkbox'
-                    className={s.checkbox}
-                    checked={
-                      selectedPermissions.length === permissions.length &&
-                      permissions.length > 0
-                    }
-                    onChange={handleSelectAll}
-                  />
-                </th>
-                <th>{t('admin:permissions.resource', 'Resource')}</th>
-                <th>{t('admin:permissions.action', 'Action')}</th>
-                <th>{t('admin:permissions.description', 'Description')}</th>
-                <th>{t('admin:permissions.status', 'Status')}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {sortedResources.map(resource =>
-                groupedPermissions[resource].map((permission, index) => (
-                  <tr key={permission.id}>
-                    <td className={s.checkboxCol}>
-                      <input
-                        type='checkbox'
-                        className={s.checkbox}
-                        checked={selectedPermissions.includes(permission.id)}
-                        onChange={e =>
-                          handleSelectPermission(
-                            permission.id,
-                            e.target.checked,
-                          )
-                        }
-                      />
-                    </td>
-                    {/* Show resource name only on first row of group */}
-                    <td>
-                      {index === 0 ? (
-                        <Tag variant='primary'>{resource}</Tag>
-                      ) : (
-                        <span className={s.resourceEmpty} />
-                      )}
-                    </td>
-                    <td>
-                      <Tag variant='secondary'>{permission.action}</Tag>
-                    </td>
-                    <td className={s.descriptionCell}>
-                      {permission.description || (
-                        <span className={s.noDescription}>—</span>
-                      )}
-                    </td>
-                    <td>
-                      <Tag
-                        variant={permission.is_active ? 'success' : 'neutral'}
+        <Table>
+          <thead>
+            <tr>
+              <th className={s.checkboxCol}>
+                <input
+                  type='checkbox'
+                  className={s.checkbox}
+                  checked={
+                    selectedPermissions.length === permissions.length &&
+                    permissions.length > 0
+                  }
+                  onChange={handleSelectAll}
+                />
+              </th>
+              <th>{t('admin:permissions.resource', 'Resource')}</th>
+              <th>{t('admin:permissions.action', 'Action')}</th>
+              <th>{t('admin:permissions.description', 'Description')}</th>
+              <th>{t('admin:permissions.status', 'Status')}</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {sortedResources.map(resource =>
+              groupedPermissions[resource].map((permission, index) => (
+                <tr key={permission.id}>
+                  <td className={s.checkboxCol}>
+                    <input
+                      type='checkbox'
+                      className={s.checkbox}
+                      checked={selectedPermissions.includes(permission.id)}
+                      onChange={e =>
+                        handleSelectPermission(permission.id, e.target.checked)
+                      }
+                    />
+                  </td>
+                  {/* Show resource name only on first row of group */}
+                  <td>
+                    {index === 0 ? (
+                      <Tag variant='primary'>{resource}</Tag>
+                    ) : (
+                      <span className={s.resourceEmpty} />
+                    )}
+                  </td>
+                  <td>
+                    <Tag variant='secondary'>{permission.action}</Tag>
+                  </td>
+                  <td className={s.descriptionCell}>
+                    {permission.description || (
+                      <span className={s.noDescription}>—</span>
+                    )}
+                  </td>
+                  <td>
+                    <Tag variant={permission.is_active ? 'success' : 'neutral'}>
+                      {permission.is_active
+                        ? t('admin:permissions.active', 'Active')
+                        : t('admin:permissions.inactive', 'Inactive')}
+                    </Tag>
+                  </td>
+                  <td>
+                    <div className={s.actions}>
+                      <Button
+                        variant='ghost'
+                        size='small'
+                        iconOnly
+                        title={t('admin:permissions.edit', 'Edit')}
+                        onClick={() => handleEdit(permission.id)}
                       >
-                        {permission.is_active
-                          ? t('admin:permissions.active', 'Active')
-                          : t('admin:permissions.inactive', 'Inactive')}
-                      </Tag>
-                    </td>
-                    <td>
-                      <div className={s.actions}>
-                        <Button
-                          variant='ghost'
-                          size='small'
-                          iconOnly
-                          title={t('admin:permissions.edit', 'Edit')}
-                          onClick={() => handleEdit(permission.id)}
-                        >
-                          <Icon name='edit' size={16} />
-                        </Button>
-                        <Button
-                          variant='ghost'
-                          size='small'
-                          iconOnly
-                          title={t('admin:permissions.delete', 'Delete')}
-                          onClick={() => handleDelete(permission)}
-                        >
-                          <Icon name='trash' size={16} />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                )),
-              )}
-            </tbody>
-          </table>
-        </div>
+                        <Icon name='edit' size={16} />
+                      </Button>
+                      <Button
+                        variant='ghost'
+                        size='small'
+                        iconOnly
+                        title={t('admin:permissions.delete', 'Delete')}
+                        onClick={() => handleDelete(permission)}
+                      >
+                        <Icon name='trash' size={16} />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              )),
+            )}
+          </tbody>
+        </Table>
       )}
 
       {/* Pagination */}

@@ -246,15 +246,13 @@ function Groups({ context }) {
         <Button
           variant='primary'
           onClick={handleAddGroup}
-          disabled={!canCreate}
-          title={
-            !canCreate
-              ? t(
-                  'admin:groups.noPermissionToCreate',
-                  'You do not have permission to create groups',
-                )
-              : undefined
-          }
+          {...(!canCreate && {
+            disabled: true,
+            title: t(
+              'admin:groups.noPermissionToCreate',
+              'You do not have permission to create groups',
+            ),
+          })}
         >
           <Icon name='plus' size={16} />
           {t('admin:groups.addGroup', 'Add Group')}
@@ -308,15 +306,13 @@ function Groups({ context }) {
           <Button
             variant='primary'
             onClick={handleAddGroup}
-            disabled={!canCreate}
-            title={
-              !canCreate
-                ? t(
-                    'admin:groups.noPermissionToCreate',
-                    'You do not have permission to create groups',
-                  )
-                : undefined
-            }
+            {...(!canCreate && {
+              disabled: true,
+              title: t(
+                'admin:groups.noPermissionToCreate',
+                'You do not have permission to create groups',
+              ),
+            })}
           >
             {t('admin:groups.addGroup', 'Add Group')}
           </Button>

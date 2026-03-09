@@ -118,7 +118,7 @@ function Dashboard() {
               />
             </div>
             {activities && activities.length > 0 ? (
-              <table className={s.table}>
+              <Table>
                 <thead>
                   <tr>
                     <th>{t('admin:dashboard.event', 'Event')}</th>
@@ -175,7 +175,7 @@ function Dashboard() {
                     );
                   })}
                 </tbody>
-              </table>
+              </Table>
             ) : (
               <Table.Empty
                 icon='activity'

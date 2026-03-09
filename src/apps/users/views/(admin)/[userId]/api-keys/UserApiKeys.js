@@ -18,6 +18,7 @@ import {
   Icon,
   Loader,
   ConfirmModal,
+  Table,
 } from '../../../../../../shared/renderer/components/Admin';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Form from '../../../../../../shared/renderer/components/Form';
@@ -195,15 +196,15 @@ export default function UserApiKeys({ userId }) {
         <Button
           variant='primary'
           onClick={() => setIsCreateOpen(true)}
-          disabled={!canCreate}
-          title={
-            !canCreate
-              ? t(
+          {...(canCreate
+            ? { title: t('admin:users.apiKeys.generateKey', 'Generate Key') }
+            : {
+                disabled: true,
+                title: t(
                   'admin:users.apiKeys.noPermissionToCreate',
                   'You do not have permission to create API keys',
-                )
-              : t('admin:users.apiKeys.generateKey', 'Generate Key')
-          }
+                ),
+              })}
         >
           <Icon name='plus' size={16} />
           {t('admin:users.apiKeys.generateKey', 'Generate Key')}
@@ -302,70 +303,68 @@ export default function UserApiKeys({ userId }) {
             <p>{t('admin:users.apiKeys.emptyState', 'No API keys yet')}</p>
           </div>
         ) : (
-          <div className={s.tableContainer}>
-            <table className={s.table}>
-              <thead>
-                <tr>
-                  <th>{t('admin:users.apiKeys.name', 'Name')}</th>
-                  <th>{t('admin:users.apiKeys.prefix', 'Prefix')}</th>
-                  <th>{t('admin:users.apiKeys.created', 'Created')}</th>
-                  <th>{t('admin:users.apiKeys.lastUsed', 'Last Used')}</th>
-                  <th>{t('admin:users.apiKeys.status', 'Status')}</th>
-                  <th className={s.actionsCol}></th>
+          <Table>
+            <thead>
+              <tr>
+                <th>{t('admin:users.apiKeys.name', 'Name')}</th>
+                <th>{t('admin:users.apiKeys.prefix', 'Prefix')}</th>
+                <th>{t('admin:users.apiKeys.created', 'Created')}</th>
+                <th>{t('admin:users.apiKeys.lastUsed', 'Last Used')}</th>
+                <th>{t('admin:users.apiKeys.status', 'Status')}</th>
+                <th className={s.actionsCol}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map(key => (
+                <tr
+                  key={key.id}
+                  className={cn({ [s.revoked]: !key.is_active })}
+                >
+                  <td>{key.name}</td>
+                  <td>
+                    <code>{key.token_prefix}…</code>
+                  </td>
+                  <td>
+                    {key.created_at
+                      ? format(new Date(key.created_at), 'yyyy-MM-dd')
+                      : '—'}
+                  </td>
+                  <td>
+                    {key.last_used_at
+                      ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
+                      : '—'}
+                  </td>
+                  <td>
+                    <span
+                      className={cn(
+                        s.badge,
+                        key.is_active ? s.badgeActive : s.badgeRevoked,
+                      )}
+                    >
+                      {key.is_active
+                        ? t('admin:users.apiKeys.statusActive', 'Active')
+                        : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={s.actions}>
+                      {key.is_active && (
+                        <Button
+                          variant='ghost'
+                          size='small'
+                          iconOnly
+                          onClick={() => handleRevoke(key)}
+                          title={t('admin:users.apiKeys.revoke', 'Revoke')}
+                        >
+                          <Icon name='trash' size={16} />
+                        </Button>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {keys.map(key => (
-                  <tr
-                    key={key.id}
-                    className={cn({ [s.revoked]: !key.is_active })}
-                  >
-                    <td>{key.name}</td>
-                    <td>
-                      <code>{key.token_prefix}…</code>
-                    </td>
-                    <td>
-                      {key.created_at
-                        ? format(new Date(key.created_at), 'yyyy-MM-dd')
-                        : '—'}
-                    </td>
-                    <td>
-                      {key.last_used_at
-                        ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
-                        : '—'}
-                    </td>
-                    <td>
-                      <span
-                        className={cn(
-                          s.badge,
-                          key.is_active ? s.badgeActive : s.badgeRevoked,
-                        )}
-                      >
-                        {key.is_active
-                          ? t('admin:users.apiKeys.statusActive', 'Active')
-                          : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={s.actions}>
-                        {key.is_active && (
-                          <Button
-                            variant='ghost'
-                            size='small'
-                            iconOnly
-                            onClick={() => handleRevoke(key)}
-                            title={t('admin:users.apiKeys.revoke', 'Revoke')}
-                          >
-                            <Icon name='trash' size={16} />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </Table>
         )}
       </div>
 

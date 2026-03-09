@@ -11,5 +11,5 @@ export { default as Loader } from './Loader';
 export { default as ConfirmModal } from './ConfirmModal';
 
 // Namespaced exports
-export * as Table from './Table';
+export { default as Table } from './Table';
 export * as Box from './Box';
