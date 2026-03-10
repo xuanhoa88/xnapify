@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
 // Auto-load engines via require.context
 const enginesAdapter = createWebpackContextAdapter(

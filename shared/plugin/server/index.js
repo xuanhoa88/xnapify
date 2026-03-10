@@ -12,7 +12,7 @@ import {
   LOADED_VERSIONS,
   PLUGIN_MANAGER_INIT,
   PLUGIN_METADATA,
-} from './base';
+} from '../utils/BasePluginManager';
 
 // Symbols for internal state
 const PLUGIN_API_ENTRY_POINTS = Symbol('__rsk.pluginApiEntryPoints__');

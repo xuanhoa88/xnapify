@@ -14,10 +14,10 @@ import {
   usePluginValidator,
   usePluginFormData,
 } from './usePlugin';
-import { registry } from './Registry';
+import { registry } from '../utils/Registry';
 
 // Mock Registry
-jest.mock('./Registry', () => ({
+jest.mock('../utils/Registry', () => ({
   registry: {
     executeHook: jest.fn(),
   },

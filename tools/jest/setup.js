@@ -7,9 +7,6 @@
 
 /**
  * Jest setup file that runs BEFORE the test environment is set up.
- * Used to mock webpack-specific features like require.context.
+ * Note: require.context hook is registered in setupAfterEnv.js instead,
+ * because it needs to be available in the test environment (jsdom).
  */
-
-// Register require.context hook for Jest
-// This is required by @storybook/babel-plugin-require-context-hook
-require('@storybook/babel-plugin-require-context-hook/register')();

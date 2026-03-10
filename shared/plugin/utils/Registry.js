@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { composeMiddleware } from '../utils/composer';
+import { composeMiddleware } from '@shared/utils/composer';
 import Hook from './Hook';
 
 // Private property symbols

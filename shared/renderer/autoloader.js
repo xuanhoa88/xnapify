@@ -17,9 +17,9 @@
  * Mirrors the API autoloader pattern (shared/api/autoloader.js).
  */
 
-import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';
-import { getTranslations } from '../i18n/loader';
-import { addNamespace } from '../i18n/utils';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace } from '@shared/i18n/utils';
 
 // =============================================================================
 // CONSTANTS

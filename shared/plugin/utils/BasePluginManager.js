@@ -10,9 +10,9 @@
  * Handles dynamic loading, unloading, and synchronization of plugins.
  * Shared logic for both server and client.
  */
-import { registry } from '../Registry';
-import { addNamespace } from '../../i18n/utils';
-import { getTranslations } from '../../i18n/loader';
+import { registry } from './Registry';
+import { addNamespace } from '@shared/i18n/utils';
+import { getTranslations } from '@shared/i18n/loader';
 
 // Symbols for internal state
 export const INITIALIZED = Symbol('__rsk.initializedPlugins__');

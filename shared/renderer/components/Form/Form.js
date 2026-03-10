@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { zodResolver } from '@hookform/resolvers/zod';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { z } from '../../../validator';
+import { z } from '@shared/validator';
 import { FormValidationContext } from './FormContext';
 import s from './Form.css';
 

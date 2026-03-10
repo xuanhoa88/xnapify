@@ -1,8 +1,8 @@
-jest.mock('../i18n/loader', () => ({
+jest.mock('@shared/i18n/loader', () => ({
   getTranslations: jest.fn(),
 }));
 
-jest.mock('../i18n/utils', () => ({
+jest.mock('@shared/i18n/utils', () => ({
   addNamespace: jest.fn(),
 }));
 
@@ -129,8 +129,8 @@ describe('shared/api/autoloader', () => {
 
     it('should load translations via hooks.translations()', async () => {
       const { discoverModules } = require('./autoloader');
-      const { getTranslations } = require('../i18n/loader');
-      const { addNamespace } = require('../i18n/utils');
+      const { getTranslations } = require('@shared/i18n/loader');
+      const { addNamespace } = require('@shared/i18n/utils');
 
       // Setup translations mocks
       getTranslations.mockReturnValue({ 'en-US': { hello: 'world' } });

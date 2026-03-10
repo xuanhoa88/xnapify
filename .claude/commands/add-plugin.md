@@ -110,7 +110,7 @@ export default {
   register() {
     return [
       ['profile', 'dashboard'], // Namespaces that this plugin extends
-      __PLUGIN_NAME__,            // Plugin ID
+      __PLUGIN_NAME__, // Plugin ID
       { description: __PLUGIN_DESCRIPTION__ }, // Plugin metadata
     ];
   },
@@ -179,9 +179,7 @@ export default {
       console.log(`[Plugin] IPC Request started`);
       const start = Date.now();
       const result = await next();
-      console.log(
-        `[Plugin] IPC Request ended in ${Date.now() - start}ms`,
-      );
+      console.log(`[Plugin] IPC Request ended in ${Date.now() - start}ms`);
       return result;
     };
 
@@ -189,14 +187,14 @@ export default {
     this[HANDLERS].ipcHello = registry.createPipeline(
       loggingMiddleware,
       async data => {
-        return { 
+        return {
           message: `Hello from ${__PLUGIN_NAME__}!`,
           received: data,
           timestamp: new Date().toISOString(),
         };
       },
     );
-    
+
     // Register IPC handler - include plugin name for auto-cleanup
     registry.registerHook(
       `ipc:${__PLUGIN_NAME__}:hello`,
@@ -414,7 +412,7 @@ export default {
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Form from '../../../shared/renderer/components/Form';
+import Form from '@shared/renderer/components/Form';
 import s from './PluginField.scss';
 
 /**
@@ -692,20 +690,14 @@ export default {
       order: 10,
     });
 
-    registry.registerHook(
-      'posts.comments.validator',
-      extendCommentValidator,
-    );
+    registry.registerHook('posts.comments.validator', extendCommentValidator);
 
     console.log('[Comments Plugin] Initialized');
   },
 
   destroy(registry) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
-    registry.unregisterHook(
-      'posts.comments.validator',
-      extendCommentValidator,
-    );
+    registry.unregisterHook('posts.comments.validator', extendCommentValidator);
     this[HANDLERS] = {};
     console.log('[Comments Plugin] Destroyed');
   },
@@ -760,12 +752,12 @@ export default {
     }
 
     const hook = context.app.get('hook');
-    
+
     // Example handler for comment creation hook
-    this[HANDLERS].onCommentCreated = function(comment) {
+    this[HANDLERS].onCommentCreated = function (comment) {
       console.log('[Comments Plugin] New comment created:', comment.id);
     };
-    
+
     hook('posts').on('comment:created', this[HANDLERS].onCommentCreated);
 
     console.log('[Comments Plugin] Backend initialized');
@@ -773,7 +765,7 @@ export default {
 
   async destroy(registry, context) {
     const hook = context.app.get('hook');
-    
+
     if (this[HANDLERS].onCommentCreated) {
       hook('posts').off('comment:created', this[HANDLERS].onCommentCreated);
     }
@@ -830,16 +822,13 @@ IPC handlers allow frontend components to call backend logic via HTTP POST reque
 
 ```javascript
 // In a plugin component
-const response = await context.fetch(
-  `/api/plugins/${__PLUGIN_NAME__}/ipc`,
-  {
-    method: 'POST',
-    body: {
-      action: 'checkNickname',  // Handler name
-      data: { nickname: value }, // Payload
-    },
+const response = await context.fetch(`/api/plugins/${__PLUGIN_NAME__}/ipc`, {
+  method: 'POST',
+  body: {
+    action: 'checkNickname', // Handler name
+    data: { nickname: value }, // Payload
   },
-);
+});
 
 if (response.success) {
   console.log(response.data);
@@ -862,10 +851,10 @@ this[HANDLERS].ipcCheckNickname = registry.createPipeline(
   async (data, { req }) => {
     // req is the Express request object with user info
     const { nickname } = data || {};
-    
+
     // Your business logic
     const exists = await checkNicknameExists(nickname);
-    
+
     return { exists };
   },
 );

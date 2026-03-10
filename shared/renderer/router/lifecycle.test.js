@@ -1,12 +1,12 @@
 import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle';
-import { addNamespace } from '../../i18n/utils';
+import { addNamespace } from '@shared/i18n/utils';
 import { ROUTE_TRANSLATIONS_KEY } from './constants';
 
-jest.mock('../../i18n/utils', () => ({
+jest.mock('@shared/i18n/utils', () => ({
   addNamespace: jest.fn(),
 }));
 
-jest.mock('../../i18n/loader', () => ({
+jest.mock('@shared/i18n/loader', () => ({
   getTranslations: jest.fn(val => val), // Pass through map
 }));
 

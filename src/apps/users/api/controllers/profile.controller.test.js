@@ -95,6 +95,7 @@ describe('Profile Controller', () => {
             webhook: mockWebhook,
             hook: mockHook,
             i18n: mockI18n,
+            container: { resolve: jest.fn() },
           };
           return deps[key];
         }),

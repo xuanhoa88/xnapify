@@ -20,7 +20,7 @@
 import { fork } from 'child_process';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
-import { createWebpackContextAdapter } from '../../../utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 import { WorkerError } from './errors';
 
 /**

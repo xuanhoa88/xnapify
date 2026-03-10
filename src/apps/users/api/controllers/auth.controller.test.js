@@ -104,6 +104,8 @@ describe('Auth Controller', () => {
               return mockWebhook;
             case 'hook':
               return mockHook;
+            case 'container':
+              return { resolve: jest.fn() };
             default:
               return null;
           }

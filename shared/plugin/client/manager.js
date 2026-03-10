@@ -5,7 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { BasePluginManager, PLUGIN_MANAGER_INIT } from './base';
+import {
+  BasePluginManager,
+  PLUGIN_MANAGER_INIT,
+} from '../utils/BasePluginManager';
 
 // Private symbol for reload state
 const NEEDS_RELOAD = Symbol('__rsk.needsReloadPlugins__');

@@ -36,7 +36,7 @@ import {
   setLocale,
   me,
 } from '@shared/renderer/redux';
-import pluginManager from '@shared/plugin/manager/server';
+import pluginManager from '@shared/plugin/server';
 import { createWebSocketServer } from '@shared/ws/server';
 import { Container } from '@shared/container';
 import queue from '@shared/api/engines/queue';

@@ -22,7 +22,7 @@ import {
   MessageType,
   setWebSocketClient,
 } from '@shared/ws/client';
-import pluginManager from '@shared/plugin/manager/client';
+import pluginManager from '@shared/plugin/client';
 import { Container } from '@shared/container';
 import App from '@shared/renderer/App';
 

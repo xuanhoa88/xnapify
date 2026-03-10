@@ -27,7 +27,7 @@ import {
   usePluginHooks,
   usePluginValidator,
   usePluginFormData,
-} from '@shared/plugin';
+} from '@shared/plugin/client';
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
 import Loader from './Loader';
 import s from './PersonalInfoCard.css';

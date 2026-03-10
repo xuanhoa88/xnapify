@@ -16,11 +16,11 @@ import {
   ACTIVE_PLUGINS,
   INITIALIZED,
   PLUGIN_METADATA,
-} from './base';
-import { registry } from '../Registry';
+} from './BasePluginManager';
+import { registry } from './Registry';
 
 // Mock Registry
-jest.mock('../Registry', () => ({
+jest.mock('./Registry', () => ({
   registry: {
     define: jest.fn().mockResolvedValue(true),
     register: jest.fn().mockResolvedValue(true),
@@ -31,10 +31,10 @@ jest.mock('../Registry', () => ({
 }));
 
 // Mock i18n utilities used by translations phase
-jest.mock('../../i18n/utils', () => ({
+jest.mock('@shared/i18n/utils', () => ({
   addNamespace: jest.fn(),
 }));
-jest.mock('../../i18n/loader', () => ({
+jest.mock('@shared/i18n/loader', () => ({
   getTranslations: jest.fn(ctx => ctx),
 }));
 

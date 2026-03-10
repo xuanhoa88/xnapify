@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export { default as PluginSlot } from './PluginSlot';
-export {
-  usePluginHooks,
-  usePluginValidator,
-  usePluginFormData,
-} from './usePlugin';
+export { default as Hook } from './Hook';
+export { default as PluginRegistry, registry } from './Registry';
+export * from './BasePluginManager';

@@ -9,10 +9,10 @@
 
 import renderer, { act } from 'react-test-renderer';
 import PluginSlot from './PluginSlot';
-import { registry } from './Registry';
+import { registry } from '../utils/Registry';
 
 // Mock AppContext
-jest.mock('../renderer/AppContext', () => ({
+jest.mock('@shared/renderer/AppContext', () => ({
   useAppContext: () => ({ mockContext: true }),
 }));
 

@@ -147,6 +147,11 @@ module.exports = {
    * with a single module (e.g., images, styles).
    */
   moduleNameMapper: {
+    // Resolve @shared alias to the shared directory
+    // This ensures jest.mock('@shared/...') resolves the same way
+    // as babel-plugin-module-resolver does for import statements
+    '^@shared/(.*)$': '<rootDir>/shared/$1',
+
     // Style files
     '\\.(css|less|styl|scss|sass|sss)$': 'identity-obj-proxy',
 

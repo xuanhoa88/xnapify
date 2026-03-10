@@ -121,18 +121,18 @@ describe('Plugin Service', () => {
         if (path.includes('fs-plugin')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'FS Plugin',
+              name: 'fs-plugin',
               version: '1.0.0',
-              rsk: { plugin: { key: 'fs-plugin' } },
+              rsk: { name: 'FS Plugin', plugin: { key: 'fs-plugin' } },
             }),
           );
         }
         if (path.includes('local-plugin')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'Local Plugin',
+              name: 'local-plugin',
               version: '1.0.0',
-              rsk: { plugin: { key: 'local-plugin' } },
+              rsk: { name: 'Local Plugin', plugin: { key: 'local-plugin' } },
             }),
           );
         }
@@ -140,9 +140,9 @@ describe('Plugin Service', () => {
         if (path.includes('db-plugin')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'DB Plugin',
+              name: 'db-plugin',
               version: '1.0.0',
-              rsk: { plugin: { key: 'db-plugin' } },
+              rsk: { name: 'DB Plugin', plugin: { key: 'db-plugin' } },
             }),
           );
         }
@@ -214,9 +214,9 @@ describe('Plugin Service', () => {
         if (p.includes('new-plugin')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'New Plugin',
+              name: 'new-plugin',
               version: '1.0.0',
-              rsk: { plugin: { key: 'new-plugin' } },
+              rsk: { name: 'New Plugin', plugin: { key: 'new-plugin' } },
             }),
           );
         }
