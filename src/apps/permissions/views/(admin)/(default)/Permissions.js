@@ -369,8 +369,10 @@ function Permissions() {
               size='small'
               type='button'
               onClick={handleClearFilters}
+              title={t('admin:permissions.clearFilters', 'Reset all filters')}
             >
-              {t('admin:permissions.clearFilters', '✕ Clear Filters')}
+              <Icon name='x' size={12} />
+              {t('admin:permissions.clearFilters', 'Clear Filters')}
             </Button>
           )}
         </div>

@@ -118,98 +118,100 @@ function Dashboard() {
             )}
             className={s.filters}
           />
-          {activities && activities.length > 0 ? (
-            <Table
-              rowKey='id'
-              dataSource={activities}
-              pagination={false}
-              columns={[
-                {
-                  title: t('admin:dashboard.event', 'Event'),
-                  key: 'event',
-                  render: (_, activity) => (
-                    <code className={s.eventCode}>
-                      {(activity.metadata && activity.metadata.event) ||
-                        activity.event ||
-                        'N/A'}
-                    </code>
-                  ),
-                },
-                {
-                  title: t('admin:dashboard.entity', 'Entity'),
-                  key: 'entity',
-                  render: (_, activity) =>
-                    activity.metadata &&
-                    activity.metadata.entity_type &&
-                    activity.metadata.entity_id ? (
-                      <span className={s.entityCell}>
-                        <span className={s.entityType}>
-                          {activity.metadata.entity_type}
-                        </span>
-                        <span className={s.entityId}>
-                          {activity.metadata.entity_id}
-                        </span>
+          <Table
+            rowKey='id'
+            dataSource={activities || []}
+            pagination={
+              pagination && pagination.total > pagination.limit
+                ? {
+                    current: pagination.page,
+                    pageSize: pagination.limit,
+                    total: pagination.total,
+                    onChange: handlePageChange,
+                  }
+                : false
+            }
+            columns={[
+              {
+                title: t('admin:dashboard.event', 'Event'),
+                key: 'event',
+                render: (_, activity) => (
+                  <code className={s.eventCode}>
+                    {(activity.metadata && activity.metadata.event) ||
+                      activity.event ||
+                      'N/A'}
+                  </code>
+                ),
+              },
+              {
+                title: t('admin:dashboard.entity', 'Entity'),
+                key: 'entity',
+                render: (_, activity) =>
+                  activity.metadata &&
+                  activity.metadata.entity_type &&
+                  activity.metadata.entity_id ? (
+                    <span className={s.entityCell}>
+                      <span className={s.entityType}>
+                        {activity.metadata.entity_type}
                       </span>
-                    ) : (
-                      <span className={s.emptyValue}>N/A</span>
-                    ),
-                },
-                {
-                  title: t('admin:dashboard.action', 'Action'),
-                  key: 'action',
-                  render: (_, activity) =>
-                    (activity.metadata && activity.metadata.action) || (
-                      <span className={s.emptyValue}>N/A</span>
-                    ),
-                },
-                {
-                  title: t('admin:dashboard.status', 'Status'),
-                  key: 'status',
-                  render: (_, activity) => (
-                    <Tag variant={getStatusTagVariant(activity.status)}>
-                      {activity.status === 'delivered'
-                        ? t('admin:dashboard.statusDelivered', 'Delivered')
-                        : activity.status === 'failed'
-                          ? t('admin:dashboard.statusFailed', 'Failed')
-                          : t('admin:dashboard.statusPending', 'Pending')}
-                    </Tag>
+                      <span className={s.entityId}>
+                        {activity.metadata.entity_id}
+                      </span>
+                    </span>
+                  ) : (
+                    <span className={s.emptyValue}>N/A</span>
                   ),
-                },
-                {
-                  title: t('admin:dashboard.time', 'Time'),
-                  key: 'time',
-                  render: (_, activity) =>
-                    activity.created_at ? (
-                      formatDistanceToNow(new Date(activity.created_at), {
-                        addSuffix: true,
-                      })
-                    ) : (
-                      <span className={s.emptyValue}>N/A</span>
-                    ),
-                },
-              ]}
-            />
-          ) : (
-            <Table.Empty
-              icon='activity'
-              title={t(
-                'admin:dashboard.noRecentActivity',
-                'No recent activity',
-              )}
-              description={t(
-                'admin:dashboard.noRecentActivityDescription',
-                'Activity will appear here as users interact with the system.',
-              )}
-            />
-          )}
-          {pagination && pagination.total > pagination.limit && (
-            <Table.Pagination
-              currentPage={pagination.page}
-              totalPages={Math.ceil(pagination.total / pagination.limit)}
-              totalItems={pagination.total}
-              onPageChange={handlePageChange}
-            />
-          )}
+              },
+              {
+                title: t('admin:dashboard.action', 'Action'),
+                key: 'action',
+                render: (_, activity) =>
+                  (activity.metadata && activity.metadata.action) || (
+                    <span className={s.emptyValue}>N/A</span>
+                  ),
+              },
+              {
+                title: t('admin:dashboard.status', 'Status'),
+                key: 'status',
+                render: (_, activity) => (
+                  <Tag variant={getStatusTagVariant(activity.status)}>
+                    {activity.status === 'delivered'
+                      ? t('admin:dashboard.statusDelivered', 'Delivered')
+                      : activity.status === 'failed'
+                        ? t('admin:dashboard.statusFailed', 'Failed')
+                        : t('admin:dashboard.statusPending', 'Pending')}
+                  </Tag>
+                ),
+              },
+              {
+                title: t('admin:dashboard.time', 'Time'),
+                key: 'time',
+                render: (_, activity) =>
+                  activity.created_at ? (
+                    formatDistanceToNow(new Date(activity.created_at), {
+                      addSuffix: true,
+                    })
+                  ) : (
+                    <span className={s.emptyValue}>N/A</span>
+                  ),
+              },
+            ]}
+            locale={{
+              emptyText: (
+                <Table.Empty
+                  icon='activity'
+                  title={t(
+                    'admin:dashboard.noRecentActivity',
+                    'No recent activity',
+                  )}
+                  description={t(
+                    'admin:dashboard.noRecentActivityDescription',
+                    'Activity will appear here as users interact with the system.',
+                  )}
+                />
+              ),
+            }}
+          />
         </div>
       </div>
     );

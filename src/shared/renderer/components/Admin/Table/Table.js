@@ -69,13 +69,17 @@ function Table({
   if (columns) {
     const defaultPagination = {
       current: 1,
+      pageSize: 20,
       total: 0,
-      pages: 0,
       onChange: () => {},
     };
     const pOptions = pagination
       ? { ...defaultPagination, ...pagination }
       : null;
+
+    const totalPages = pOptions
+      ? pOptions.pages || Math.ceil(pOptions.total / pOptions.pageSize)
+      : 0;
 
     return (
       <div className={clsx(s.tableWrapper, containerClassName)}>
@@ -181,11 +185,11 @@ function Table({
             </div>
           )}
         </div>
-        {pagination && (pOptions.pages > 1 || pOptions.total > 0) && (
+        {pagination && pOptions && (totalPages > 1 || pOptions.total > 0) && (
           <div className={s.paginationWrapper}>
             <Pagination
               currentPage={pOptions.current}
-              totalPages={pOptions.pages}
+              totalPages={totalPages}
               totalItems={pOptions.total}
               onPageChange={pOptions.onChange}
               loading={loading}

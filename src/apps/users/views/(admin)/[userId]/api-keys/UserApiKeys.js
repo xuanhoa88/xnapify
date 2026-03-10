@@ -355,10 +355,10 @@ export default function UserApiKeys({ userId }) {
           rowClassName={record => cn({ [s.revoked]: !record.is_active })}
           locale={{
             emptyText: (
-              <div className={s.emptyState}>
-                <Icon name='key' size={32} />
-                <p>{t('admin:users.apiKeys.emptyState', 'No API keys yet')}</p>
-              </div>
+              <Table.Empty
+                icon='key'
+                title={t('admin:users.apiKeys.emptyState', 'No API keys yet')}
+              />
             ),
           }}
         />

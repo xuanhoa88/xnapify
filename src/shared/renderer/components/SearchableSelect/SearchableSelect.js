@@ -57,6 +57,7 @@ function SearchableSelect({
   const containerRef = useRef(null);
   const inputRef = useRef(null);
   const optionsListRef = useRef(null);
+  const menuRef = useRef(null);
   const debounceTimer = useRef(null);
   const [menuStyle, setMenuStyle] = useState({});
 
@@ -143,7 +144,8 @@ function SearchableSelect({
     const handleClickOutside = event => {
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target)
+        !containerRef.current.contains(event.target) &&
+        (!menuRef.current || !menuRef.current.contains(event.target))
       ) {
         setIsOpen(false);
         setSearchTerm('');
@@ -289,7 +291,7 @@ function SearchableSelect({
       {isOpen &&
         typeof document !== 'undefined' &&
         createPortal(
-          <div className={s.menu} style={menuStyle}>
+          <div ref={menuRef} className={s.menu} style={menuStyle}>
             {showSearch && (
               <div className={s.searchContainer}>
                 <input

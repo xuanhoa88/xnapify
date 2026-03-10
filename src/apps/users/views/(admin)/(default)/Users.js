@@ -425,7 +425,7 @@ function Users({ context }) {
               type='button'
               title={t('admin:users.list.resetAllFilters', 'Reset all filters')}
             >
-              <Icon name='trash' size={12} />
+              <Icon name='x' size={12} />
               {t('admin:users.list.clearFilters', 'Clear Filters')}
             </Button>
           )}

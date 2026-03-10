@@ -288,7 +288,8 @@ function Groups({ context }) {
               type='button'
               title={t('admin:groups.clearFilters', 'Reset all filters')}
             >
-              {t('admin:groups.clearFilters', '✕ Clear Filters')}
+              <Icon name='x' size={12} />
+              {t('admin:groups.clearFilters', 'Clear Filters')}
             </Button>
           )}
         </div>
