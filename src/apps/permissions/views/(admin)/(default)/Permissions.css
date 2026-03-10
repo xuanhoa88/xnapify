@@ -37,18 +37,6 @@
   align-items: center;
 }
 
-/* Checkbox Column */
-.checkboxCol {
-  width: 40px;
-  text-align: center;
-}
-
-.checkbox {
-  width: 16px;
-  height: 16px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
 
 /* Resource Empty (used for grouped rows) */
 .resourceEmpty {

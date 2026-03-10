@@ -222,19 +222,7 @@ function Users({ context }) {
     setCurrentPage(1);
   }, []);
 
-  // Bulk selection
-  const handleSelectAll = useCallback(
-    e => {
-      setSelectedUsers(e.target.checked ? users.map(u => u.id) : []);
-    },
-    [users],
-  );
-
-  const handleSelectUser = useCallback((userId, checked) => {
-    setSelectedUsers(prev =>
-      checked ? [...prev, userId] : prev.filter(id => id !== userId),
-    );
-  }, []);
+  // Bulk selection handled by Table's rowSelection component.
 
   // Modal handlers
   const openRolesModal = useCallback(
@@ -444,183 +432,182 @@ function Users({ context }) {
         </div>
       </Table.SearchBar>
 
-      <Table>
-        <thead>
-          <tr>
-            <th className={s.checkboxCol}>
-              <input
-                type='checkbox'
-                className={s.checkbox}
-                checked={
-                  selectedUsers.length === users.length && users.length > 0
-                }
-                onChange={handleSelectAll}
-              />
-            </th>
-            <th>{t('admin:users.list.user', 'User')}</th>
-            <th>{t('admin:users.list.email', 'Email')}</th>
-            <th>{t('admin:users.list.roles', 'Roles')}</th>
-            <th>{t('admin:users.list.groups', 'Groups')}</th>
-            <th>{t('admin:users.list.status', 'Status')}</th>
-            <th>{t('admin:users.list.joined', 'Joined')}</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {users.map(user => (
-            <tr key={user.id}>
-              <td className={s.checkboxCol}>
-                <input
-                  type='checkbox'
-                  className={s.checkbox}
-                  checked={selectedUsers.includes(user.id)}
-                  onChange={e => handleSelectUser(user.id, e.target.checked)}
+      <Table
+        rowSelection={{
+          selectedRowKeys: selectedUsers,
+          onChange: keys => setSelectedUsers(keys),
+        }}
+        columns={[
+          {
+            title: t('admin:users.list.user', 'User'),
+            key: 'user',
+            render: (_, user) => (
+              <div className={s.userCell}>
+                <Avatar
+                  name={
+                    (user.profile && user.profile.display_name) || user.email
+                  }
+                  size='small'
                 />
-              </td>
-              <td>
-                <div className={s.userCell}>
-                  <Avatar
-                    name={
-                      (user.profile && user.profile.display_name) || user.email
-                    }
-                    size='small'
-                  />
-                  <span>
-                    {(user.profile && user.profile.display_name) || user.email}
-                    {currentUser && currentUser.id === user.id && (
-                      <span className={s.youBadge}>
-                        {t('admin:users.list.you', '(You)')}
-                      </span>
-                    )}
-                  </span>
-                </div>
-              </td>
-              <td>{user.email}</td>
-              <td>
-                <Tag.List
-                  emptyText={t(
-                    'admin:users.list.noRolesAssigned',
-                    'No roles assigned',
+                <span>
+                  {(user.profile && user.profile.display_name) || user.email}
+                  {currentUser && currentUser.id === user.id && (
+                    <span className={s.youBadge}>
+                      {t('admin:users.list.you', '(You)')}
+                    </span>
                   )}
+                </span>
+              </div>
+            ),
+          },
+          {
+            title: t('admin:users.list.email', 'Email'),
+            dataIndex: 'email',
+          },
+          {
+            title: t('admin:users.list.roles', 'Roles'),
+            key: 'roles',
+            render: (_, user) => (
+              <Tag.List
+                emptyText={t(
+                  'admin:users.list.noRolesAssigned',
+                  'No roles assigned',
+                )}
+              >
+                {user.roles &&
+                  user.roles.length > 0 &&
+                  user.roles.map(role => <RoleTag key={role} name={role} />)}
+              </Tag.List>
+            ),
+          },
+          {
+            title: t('admin:users.list.groups', 'Groups'),
+            key: 'groups',
+            render: (_, user) => (
+              <Tag.List
+                emptyText={t(
+                  'admin:users.list.noGroupsAssigned',
+                  'No groups assigned',
+                )}
+              >
+                {user.groups &&
+                  user.groups.map(group => (
+                    <GroupTag key={group.id} name={group.name} />
+                  ))}
+              </Tag.List>
+            ),
+          },
+          {
+            title: t('admin:users.list.status', 'Status'),
+            key: 'status',
+            render: (_, user) => (
+              <Tag variant={user.is_active ? 'success' : 'error'}>
+                {user.is_active
+                  ? t('admin:users.list.statusActive', 'Active')
+                  : t('admin:users.list.statusInactive', 'Inactive')}
+              </Tag>
+            ),
+          },
+          {
+            title: t('admin:users.list.joined', 'Joined'),
+            dataIndex: 'created_at',
+            render: date =>
+              date ? format(new Date(date), 'MMM dd, yyyy') : '—',
+          },
+          {
+            key: 'actions',
+            render: (_, user) => (
+              <div className={s.actions}>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconOnly
+                  {...(currentUser && currentUser.id === user.id
+                    ? {
+                        disabled: true,
+                        title: t(
+                          'admin:users.list.cannotEditSelf',
+                          'Cannot edit your own account',
+                        ),
+                      }
+                    : { title: t('admin:users.list.edit', 'Edit') })}
+                  onClick={() => history.push(`/admin/users/${user.id}/edit`)}
                 >
-                  {user.roles &&
-                    user.roles.length > 0 &&
-                    user.roles.map(role => <RoleTag key={role} name={role} />)}
-                </Tag.List>
-              </td>
-              <td>
-                <Tag.List
-                  emptyText={t(
-                    'admin:users.list.noGroupsAssigned',
-                    'No groups assigned',
-                  )}
+                  <Icon name='edit' size={16} />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconOnly
+                  {...(currentUser && currentUser.id === user.id
+                    ? {
+                        disabled: true,
+                        title: t(
+                          'admin:users.list.cannotDeleteSelf',
+                          'Cannot delete your own account',
+                        ),
+                      }
+                    : { title: t('admin:users.list.delete', 'Delete') })}
+                  onClick={() => handleDelete(user)}
                 >
-                  {user.groups &&
-                    user.groups.map(group => (
-                      <GroupTag key={group.id} name={group.name} />
-                    ))}
-                </Tag.List>
-              </td>
-              <td>
-                <Tag variant={user.is_active ? 'success' : 'error'}>
-                  {user.is_active
-                    ? t('admin:users.list.statusActive', 'Active')
-                    : t('admin:users.list.statusInactive', 'Inactive')}
-                </Tag>
-              </td>
-              <td>
-                {user.created_at
-                  ? format(new Date(user.created_at), 'MMM dd, yyyy')
-                  : '—'}
-              </td>
-              <td>
-                <div className={s.actions}>
-                  <Button
-                    variant='ghost'
-                    size='small'
-                    iconOnly
-                    {...(currentUser && currentUser.id === user.id
-                      ? {
-                          disabled: true,
-                          title: t(
-                            'admin:users.list.cannotEditSelf',
-                            'Cannot edit your own account',
-                          ),
-                        }
-                      : { title: t('admin:users.list.edit', 'Edit') })}
-                    onClick={() => history.push(`/admin/users/${user.id}/edit`)}
-                  >
-                    <Icon name='edit' size={16} />
-                  </Button>
-                  <Button
-                    variant='ghost'
-                    size='small'
-                    iconOnly
-                    {...(currentUser && currentUser.id === user.id
-                      ? {
-                          disabled: true,
-                          title: t(
-                            'admin:users.list.cannotDeleteSelf',
-                            'Cannot delete your own account',
-                          ),
-                        }
-                      : { title: t('admin:users.list.delete', 'Delete') })}
-                    onClick={() => handleDelete(user)}
-                  >
-                    <Icon name='trash' size={16} />
-                  </Button>
-                  <UserActionsDropdown
-                    user={user}
-                    isOpen={activeDropdownId === user.id}
-                    onToggle={id =>
-                      setActiveDropdownId(prev => (prev === id ? null : id))
-                    }
-                    onManageRoles={openRolesModal}
-                    onManageGroups={openGroupsModal}
-                    onViewPermissions={openPermissionsModal}
-                    onActivate={handleActivate}
-                    onDeactivate={handleDeactivate}
-                  />
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </Table>
-
-      {users.length === 0 && (
-        <Table.Empty
-          icon='users'
-          title={t('admin:users.list.noUsersFound', 'No users found')}
-          description={t(
-            'admin:users.list.noUsersFoundDescription',
-            'Try adjusting your search or filter criteria, or add a new user to get started.',
-          )}
-        >
-          <Button
-            variant='primary'
-            onClick={() => history.push('/admin/users/create')}
-            {...(!canCreate && {
-              disabled: true,
-              title: t(
-                'admin:users.noPermissionToCreate',
-                'You do not have permission to create users',
-              ),
-            })}
-          >
-            {t('admin:users.list.addUser', 'Add User')}
-          </Button>
-        </Table.Empty>
-      )}
-
-      {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-        />
-      )}
+                  <Icon name='trash' size={16} />
+                </Button>
+                <UserActionsDropdown
+                  user={user}
+                  isOpen={activeDropdownId === user.id}
+                  onToggle={id =>
+                    setActiveDropdownId(prev => (prev === id ? null : id))
+                  }
+                  onManageRoles={openRolesModal}
+                  onManageGroups={openGroupsModal}
+                  onViewPermissions={openPermissionsModal}
+                  onActivate={handleActivate}
+                  onDeactivate={handleDeactivate}
+                />
+              </div>
+            ),
+          },
+        ]}
+        dataSource={users}
+        rowKey='id'
+        loading={loading}
+        pagination={
+          pagination && pagination.pages > 1
+            ? {
+                current: currentPage,
+                pages: pagination.pages,
+                total: pagination.total,
+                onChange: setCurrentPage,
+              }
+            : false
+        }
+        locale={{
+          emptyText: (
+            <Table.Empty
+              icon='users'
+              title={t('admin:users.list.noUsersFound', 'No users found')}
+              description={t(
+                'admin:users.list.noUsersFoundDescription',
+                'Try adjusting your search or filter criteria, or add a new user to get started.',
+              )}
+            >
+              <Button
+                variant='primary'
+                onClick={() => history.push('/admin/users/create')}
+                {...(!canCreate && {
+                  disabled: true,
+                  title: t(
+                    'admin:users.noPermissionToCreate',
+                    'You do not have permission to create users',
+                  ),
+                })}
+              >
+                {t('admin:users.list.addUser', 'Add User')}
+              </Button>
+            </Table.Empty>
+          ),
+        }}
+      />
 
       <UserRolesModal
         ref={rolesModalRef}

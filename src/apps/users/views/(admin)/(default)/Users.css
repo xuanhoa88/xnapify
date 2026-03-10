@@ -54,17 +54,6 @@
   font-style: italic;
 }
 
-.checkboxCol {
-  width: 40px;
-  text-align: center;
-}
-
-.checkbox {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
 
 /* =============================================================================
    RESPONSIVE DESIGN - MOBILE
@@ -99,15 +88,7 @@
     gap: var(--spacing-2);
   }
 
-  /* Checkbox column */
-  .checkboxCol {
-    width: 32px;
-  }
 
-  .checkbox {
-    width: 16px;
-    height: 16px;
-  }
 }
 
 /* Extra small mobile */

@@ -82,3 +82,54 @@
     min-width: 600px;
   }
 }
+
+/* Antd Refactor Additions */
+.tableWrapper {
+  position: relative;
+  margin-bottom: var(--spacing-6);
+}
+
+.tableWrapper .tableContainer {
+  margin-bottom: 0; 
+}
+
+.checkboxCol {
+  width: 48px;
+  text-align: center !important;
+}
+
+.checkbox {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.selectedRow {
+  background-color: var(--color-primary-50) !important;
+}
+
+.loadingCell,
+.emptyCell {
+  text-align: center !important;
+  padding: var(--spacing-8) var(--spacing-4) !important;
+  background-color: var(--color-background);
+}
+
+.loadingOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgb(255 255 255 / 50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.paginationWrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--spacing-4);
+}

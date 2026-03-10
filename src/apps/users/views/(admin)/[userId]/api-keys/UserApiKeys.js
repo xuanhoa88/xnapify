@@ -20,6 +20,7 @@ import {
   ConfirmModal,
   Table,
 } from '../../../../../../shared/renderer/components/Admin';
+import Tag from '../../../../../../shared/renderer/components/Tag';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Form from '../../../../../../shared/renderer/components/Form';
 import Modal from '../../../../../../shared/renderer/components/Modal';
@@ -233,17 +234,19 @@ export default function UserApiKeys({ userId }) {
     return (
       <div className={s.root}>
         {getHeader()}
-        <div className={s.content}>
-          <div className={s.error}>
-            {userError ||
-              t('admin:users.apiKeys.userNotFoundError', 'User not found')}
-            <Button
-              variant='secondary'
-              onClick={() => history.push('/admin/users')}
-            >
-              {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
-            </Button>
-          </div>
+        <div style={{ marginTop: 'var(--spacing-6)' }}>
+          <Table.Error
+            title={t('admin:users.apiKeys.userNotFoundError', 'User not found')}
+            error={userError}
+            action={
+              <Button
+                variant='secondary'
+                onClick={() => history.push('/admin/users')}
+              >
+                {t('admin:users.apiKeys.backToUsers', 'Back to Users')}
+              </Button>
+            }
+          />
         </div>
       </div>
     );
@@ -253,7 +256,7 @@ export default function UserApiKeys({ userId }) {
     <div className={s.root}>
       {getHeader()}
 
-      <div className={s.content}>
+      <div style={{ marginTop: 'var(--spacing-6)' }}>
         {/* New key banner — shown once after generation */}
         {newKey && (
           <div className={s.newKeyAlert}>
@@ -292,80 +295,73 @@ export default function UserApiKeys({ userId }) {
           </div>
         )}
 
-        {/* Key list */}
-        {keysLoading && keys.length === 0 ? (
-          <div className={s.loadingState}>
-            <Loader variant='spinner' />
-          </div>
-        ) : keys.length === 0 ? (
-          <div className={s.emptyState}>
-            <Icon name='key' size={32} />
-            <p>{t('admin:users.apiKeys.emptyState', 'No API keys yet')}</p>
-          </div>
-        ) : (
-          <Table>
-            <thead>
-              <tr>
-                <th>{t('admin:users.apiKeys.name', 'Name')}</th>
-                <th>{t('admin:users.apiKeys.prefix', 'Prefix')}</th>
-                <th>{t('admin:users.apiKeys.created', 'Created')}</th>
-                <th>{t('admin:users.apiKeys.lastUsed', 'Last Used')}</th>
-                <th>{t('admin:users.apiKeys.status', 'Status')}</th>
-                <th className={s.actionsCol}></th>
-              </tr>
-            </thead>
-            <tbody>
-              {keys.map(key => (
-                <tr
-                  key={key.id}
-                  className={cn({ [s.revoked]: !key.is_active })}
-                >
-                  <td>{key.name}</td>
-                  <td>
-                    <code>{key.token_prefix}…</code>
-                  </td>
-                  <td>
-                    {key.created_at
-                      ? format(new Date(key.created_at), 'yyyy-MM-dd')
-                      : '—'}
-                  </td>
-                  <td>
-                    {key.last_used_at
-                      ? format(new Date(key.last_used_at), 'yyyy-MM-dd HH:mm')
-                      : '—'}
-                  </td>
-                  <td>
-                    <span
-                      className={cn(
-                        s.badge,
-                        key.is_active ? s.badgeActive : s.badgeRevoked,
-                      )}
+        <Table
+          columns={[
+            {
+              title: t('admin:users.apiKeys.name', 'Name'),
+              dataIndex: 'name',
+            },
+            {
+              title: t('admin:users.apiKeys.prefix', 'Prefix'),
+              dataIndex: 'token_prefix',
+              render: prefix => <code>{prefix}…</code>,
+            },
+            {
+              title: t('admin:users.apiKeys.created', 'Created'),
+              dataIndex: 'created_at',
+              render: date =>
+                date ? format(new Date(date), 'yyyy-MM-dd') : '—',
+            },
+            {
+              title: t('admin:users.apiKeys.lastUsed', 'Last Used'),
+              dataIndex: 'last_used_at',
+              render: date =>
+                date ? format(new Date(date), 'yyyy-MM-dd HH:mm') : '—',
+            },
+            {
+              title: t('admin:users.apiKeys.status', 'Status'),
+              key: 'status',
+              render: (_, key) => (
+                <Tag variant={key.is_active ? 'success' : 'neutral'}>
+                  {key.is_active
+                    ? t('admin:users.apiKeys.statusActive', 'Active')
+                    : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
+                </Tag>
+              ),
+            },
+            {
+              key: 'actions',
+              className: s.actionsCol,
+              render: (_, key) => (
+                <div className={s.actions}>
+                  {key.is_active && (
+                    <Button
+                      variant='ghost'
+                      size='small'
+                      iconOnly
+                      onClick={() => handleRevoke(key)}
+                      title={t('admin:users.apiKeys.revoke', 'Revoke')}
                     >
-                      {key.is_active
-                        ? t('admin:users.apiKeys.statusActive', 'Active')
-                        : t('admin:users.apiKeys.statusRevoked', 'Revoked')}
-                    </span>
-                  </td>
-                  <td>
-                    <div className={s.actions}>
-                      {key.is_active && (
-                        <Button
-                          variant='ghost'
-                          size='small'
-                          iconOnly
-                          onClick={() => handleRevoke(key)}
-                          title={t('admin:users.apiKeys.revoke', 'Revoke')}
-                        >
-                          <Icon name='trash' size={16} />
-                        </Button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </Table>
-        )}
+                      <Icon name='trash' size={16} />
+                    </Button>
+                  )}
+                </div>
+              ),
+            },
+          ]}
+          dataSource={keys}
+          loading={keysLoading}
+          rowKey='id'
+          rowClassName={record => cn({ [s.revoked]: !record.is_active })}
+          locale={{
+            emptyText: (
+              <div className={s.emptyState}>
+                <Icon name='key' size={32} />
+                <p>{t('admin:users.apiKeys.emptyState', 'No API keys yet')}</p>
+              </div>
+            ),
+          }}
+        />
       </div>
 
       {/* Create key modal */}

@@ -8,7 +8,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
+
 import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import {
   Box,
@@ -16,7 +16,7 @@ import {
   Loader,
   Table,
 } from '../../../../../shared/renderer/components/Admin';
-import Card from '../../../../../shared/renderer/components/Card';
+import Tag from '../../../../../shared/renderer/components/Tag';
 import {
   fetchActivities,
   getActivities,
@@ -28,15 +28,15 @@ import {
 } from './redux';
 import s from './Dashboard.css';
 
-const getStatusBadge = status => {
+const getStatusTagVariant = status => {
   switch (status) {
     case 'delivered':
-      return { className: s.badgeSuccess, label: 'Delivered' };
+      return 'success';
     case 'failed':
-      return { className: s.badgeError, label: 'Failed' };
+      return 'error';
     case 'pending':
     default:
-      return { className: s.badgeWarning, label: 'Pending' };
+      return 'warning';
   }
 };
 
@@ -98,109 +98,119 @@ function Dashboard() {
     return (
       <div className={s.dashboardGrid}>
         {/* Activities Table */}
-        <Card variant='default' className={s.fullWidthCard}>
-          <Card.Header className={s.tableCardHeader}>
-            <h3 className={s.cardTitle}>
+        <div className={s.fullWidthSection}>
+          <div className={s.sectionHeader}>
+            <h3 className={s.sectionTitle}>
               {t('admin:dashboard.recentActivities', 'Recent Activities')}
-              {total > 0 && <span>({total})</span>}
+              {total > 0 && (
+                <Tag variant='neutral' className={s.countBadge}>
+                  {total}
+                </Tag>
+              )}
             </h3>
-          </Card.Header>
-          <Card.Body className={s.tableCardBody}>
-            <div className={s.tableToolbar}>
-              <Table.SearchBar
-                value={search}
-                onChange={handleSearch}
-                placeholder={t(
-                  'admin:dashboard.searchEvents',
-                  'Search events or metadata...',
-                )}
-                className={s.searchBar}
-              />
-            </div>
-            {activities && activities.length > 0 ? (
-              <Table>
-                <thead>
-                  <tr>
-                    <th>{t('admin:dashboard.event', 'Event')}</th>
-                    <th>{t('admin:dashboard.entity', 'Entity')}</th>
-                    <th>{t('admin:dashboard.action', 'Action')}</th>
-                    <th>{t('admin:dashboard.status', 'Status')}</th>
-                    <th>{t('admin:dashboard.time', 'Time')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {activities.map(activity => {
-                    const metadata = activity.metadata || {};
-                    const statusBadge = getStatusBadge(activity.status);
-                    return (
-                      <tr key={activity.id}>
-                        <td>
-                          <code className={s.eventCode}>
-                            {metadata.event || activity.event || 'N/A'}
-                          </code>
-                        </td>
-                        <td>
-                          {metadata.entity_type && metadata.entity_id ? (
-                            <span className={s.entityCell}>
-                              <span className={s.entityType}>
-                                {metadata.entity_type}
-                              </span>
-                              <span className={s.entityId}>
-                                {metadata.entity_id}
-                              </span>
-                            </span>
-                          ) : (
-                            'N/A'
-                          )}
-                        </td>
-                        <td>{metadata.action || 'N/A'}</td>
-                        <td>
-                          <span
-                            className={clsx(s.badge, statusBadge.className)}
-                          >
-                            {statusBadge.label}
-                          </span>
-                        </td>
-                        <td>
-                          {activity.created_at
-                            ? formatDistanceToNow(
-                                new Date(activity.created_at),
-                                {
-                                  addSuffix: true,
-                                },
-                              )
-                            : 'N/A'}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </Table>
-            ) : (
-              <Table.Empty
-                icon='activity'
-                title={t(
-                  'admin:dashboard.noRecentActivity',
-                  'No recent activity',
-                )}
-                description={t(
-                  'admin:dashboard.noRecentActivityDescription',
-                  'Activity will appear here as users interact with the system.',
-                )}
-              />
+          </div>
+          <Table.SearchBar
+            value={search}
+            onChange={handleSearch}
+            placeholder={t(
+              'admin:dashboard.searchEvents',
+              'Search events or metadata...',
             )}
-          </Card.Body>
-          {pagination && pagination.total > pagination.limit && (
-            <Card.Footer className={s.tableCardFooter}>
-              <Table.Pagination
-                currentPage={pagination.page}
-                totalPages={Math.ceil(pagination.total / pagination.limit)}
-                totalItems={pagination.total}
-                onPageChange={handlePageChange}
-              />
-            </Card.Footer>
+            className={s.filters}
+          />
+          {activities && activities.length > 0 ? (
+            <Table
+              rowKey='id'
+              dataSource={activities}
+              pagination={false}
+              columns={[
+                {
+                  title: t('admin:dashboard.event', 'Event'),
+                  key: 'event',
+                  render: (_, activity) => (
+                    <code className={s.eventCode}>
+                      {(activity.metadata && activity.metadata.event) ||
+                        activity.event ||
+                        'N/A'}
+                    </code>
+                  ),
+                },
+                {
+                  title: t('admin:dashboard.entity', 'Entity'),
+                  key: 'entity',
+                  render: (_, activity) =>
+                    activity.metadata &&
+                    activity.metadata.entity_type &&
+                    activity.metadata.entity_id ? (
+                      <span className={s.entityCell}>
+                        <span className={s.entityType}>
+                          {activity.metadata.entity_type}
+                        </span>
+                        <span className={s.entityId}>
+                          {activity.metadata.entity_id}
+                        </span>
+                      </span>
+                    ) : (
+                      <span className={s.emptyValue}>N/A</span>
+                    ),
+                },
+                {
+                  title: t('admin:dashboard.action', 'Action'),
+                  key: 'action',
+                  render: (_, activity) =>
+                    (activity.metadata && activity.metadata.action) || (
+                      <span className={s.emptyValue}>N/A</span>
+                    ),
+                },
+                {
+                  title: t('admin:dashboard.status', 'Status'),
+                  key: 'status',
+                  render: (_, activity) => (
+                    <Tag variant={getStatusTagVariant(activity.status)}>
+                      {activity.status === 'delivered'
+                        ? t('admin:dashboard.statusDelivered', 'Delivered')
+                        : activity.status === 'failed'
+                          ? t('admin:dashboard.statusFailed', 'Failed')
+                          : t('admin:dashboard.statusPending', 'Pending')}
+                    </Tag>
+                  ),
+                },
+                {
+                  title: t('admin:dashboard.time', 'Time'),
+                  key: 'time',
+                  render: (_, activity) =>
+                    activity.created_at ? (
+                      formatDistanceToNow(new Date(activity.created_at), {
+                        addSuffix: true,
+                      })
+                    ) : (
+                      <span className={s.emptyValue}>N/A</span>
+                    ),
+                },
+              ]}
+            />
+          ) : (
+            <Table.Empty
+              icon='activity'
+              title={t(
+                'admin:dashboard.noRecentActivity',
+                'No recent activity',
+              )}
+              description={t(
+                'admin:dashboard.noRecentActivityDescription',
+                'Activity will appear here as users interact with the system.',
+              )}
+            />
           )}
-        </Card>
+          {pagination && pagination.total > pagination.limit && (
+            <Table.Pagination
+              currentPage={pagination.page}
+              totalPages={Math.ceil(pagination.total / pagination.limit)}
+              totalItems={pagination.total}
+              onPageChange={handlePageChange}
+            />
+          )}
+        </div>
       </div>
     );
   };

@@ -169,23 +169,7 @@ function Permissions() {
     setCurrentPage(1);
   }, []);
 
-  // Selection handlers
-  const handleSelectAll = useCallback(
-    e => {
-      setSelectedPermissions(
-        e.target.checked ? permissions.map(p => p.id) : [],
-      );
-    },
-    [permissions],
-  );
-
-  const handleSelectPermission = useCallback((permissionId, checked) => {
-    setSelectedPermissions(prev =>
-      checked
-        ? [...prev, permissionId]
-        : prev.filter(id => id !== permissionId),
-    );
-  }, []);
+  // Selection handlers handled internally by Table rowSelection
 
   // Bulk action handlers
   const handleBulkActivate = useCallback(() => {
@@ -236,6 +220,16 @@ function Permissions() {
     () => Object.keys(groupedPermissions).sort(),
     [groupedPermissions],
   );
+
+  const flatPermissions = useMemo(() => {
+    return sortedResources.flatMap(resource =>
+      groupedPermissions[resource].map((permission, index) => ({
+        ...permission,
+        groupIndex: index,
+        resourceName: resource,
+      })),
+    );
+  }, [sortedResources, groupedPermissions]);
 
   // Show loading on first fetch (not initialized) or when loading with no data
   if (!initialized || (loading && permissions.length === 0)) {
@@ -382,145 +376,133 @@ function Permissions() {
         </div>
       </Table.SearchBar>
 
-      {permissions.length === 0 ? (
-        <Table.Empty
-          icon='key'
-          {...(search
+      <Table
+        rowSelection={{
+          selectedRowKeys: selectedPermissions,
+          onChange: keys => setSelectedPermissions(keys),
+        }}
+        columns={[
+          {
+            title: t('admin:permissions.resource', 'Resource'),
+            key: 'resource',
+            render: (_, permission) =>
+              permission.groupIndex === 0 ? (
+                <Tag variant='primary'>{permission.resourceName}</Tag>
+              ) : (
+                <span className={s.resourceEmpty} />
+              ),
+          },
+          {
+            title: t('admin:permissions.action', 'Action'),
+            key: 'action',
+            render: (_, permission) => (
+              <Tag variant='secondary'>{permission.action}</Tag>
+            ),
+          },
+          {
+            title: t('admin:permissions.description', 'Description'),
+            key: 'description',
+            className: s.descriptionCell,
+            render: (_, permission) =>
+              permission.description || (
+                <span className={s.noDescription}>—</span>
+              ),
+          },
+          {
+            title: t('admin:permissions.status', 'Status'),
+            key: 'status',
+            render: (_, permission) => (
+              <Tag variant={permission.is_active ? 'success' : 'neutral'}>
+                {permission.is_active
+                  ? t('admin:permissions.active', 'Active')
+                  : t('admin:permissions.inactive', 'Inactive')}
+              </Tag>
+            ),
+          },
+          {
+            key: 'actions',
+            render: (_, permission) => (
+              <div className={s.actions}>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconOnly
+                  title={t('admin:permissions.edit', 'Edit')}
+                  onClick={() => handleEdit(permission.id)}
+                >
+                  <Icon name='edit' size={16} />
+                </Button>
+                <Button
+                  variant='ghost'
+                  size='small'
+                  iconOnly
+                  title={t('admin:permissions.delete', 'Delete')}
+                  onClick={() => handleDelete(permission)}
+                >
+                  <Icon name='trash' size={16} />
+                </Button>
+              </div>
+            ),
+          },
+        ]}
+        dataSource={flatPermissions}
+        rowKey='id'
+        loading={loading}
+        pagination={
+          pagination && pagination.pages > 1
             ? {
-                title: t(
-                  'admin:permissions.noMatchesFound',
-                  'No matches found',
-                ),
-                description: t(
-                  'admin:permissions.noMatchesFound',
-                  'No permissions match "{search}". Try a different search.',
-                  { search },
-                ),
+                current: currentPage,
+                pages: pagination.pages,
+                total: pagination.total,
+                onChange: setCurrentPage,
               }
-            : {
-                title: t(
-                  'admin:permissions.noPermissionsFound',
-                  'No permissions found',
-                ),
-                description: t(
-                  'admin:permissions.noPermissionsFound',
-                  'Create granular permissions to control access to resources.',
-                ),
-              })}
-        >
-          <Button
-            variant='primary'
-            onClick={search ? () => handleSearchChange('') : handleAdd}
-            {...(!search &&
-              !canCreate && {
-                disabled: true,
-                title: t(
-                  'admin:permissions.noPermissionToCreate',
-                  'You do not have permission to create permissions',
-                ),
-              })}
-          >
-            {search ? 'Clear Search' : 'Add Permission'}
-          </Button>
-        </Table.Empty>
-      ) : (
-        <Table>
-          <thead>
-            <tr>
-              <th className={s.checkboxCol}>
-                <input
-                  type='checkbox'
-                  className={s.checkbox}
-                  checked={
-                    selectedPermissions.length === permissions.length &&
-                    permissions.length > 0
+            : false
+        }
+        locale={{
+          emptyText: (
+            <Table.Empty
+              icon='key'
+              {...(search
+                ? {
+                    title: t(
+                      'admin:permissions.noMatchesFound',
+                      'No matches found',
+                    ),
+                    description: t(
+                      'admin:permissions.noMatchesFound',
+                      'No permissions match "{search}". Try a different search.',
+                      { search },
+                    ),
                   }
-                  onChange={handleSelectAll}
-                />
-              </th>
-              <th>{t('admin:permissions.resource', 'Resource')}</th>
-              <th>{t('admin:permissions.action', 'Action')}</th>
-              <th>{t('admin:permissions.description', 'Description')}</th>
-              <th>{t('admin:permissions.status', 'Status')}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {sortedResources.map(resource =>
-              groupedPermissions[resource].map((permission, index) => (
-                <tr key={permission.id}>
-                  <td className={s.checkboxCol}>
-                    <input
-                      type='checkbox'
-                      className={s.checkbox}
-                      checked={selectedPermissions.includes(permission.id)}
-                      onChange={e =>
-                        handleSelectPermission(permission.id, e.target.checked)
-                      }
-                    />
-                  </td>
-                  {/* Show resource name only on first row of group */}
-                  <td>
-                    {index === 0 ? (
-                      <Tag variant='primary'>{resource}</Tag>
-                    ) : (
-                      <span className={s.resourceEmpty} />
-                    )}
-                  </td>
-                  <td>
-                    <Tag variant='secondary'>{permission.action}</Tag>
-                  </td>
-                  <td className={s.descriptionCell}>
-                    {permission.description || (
-                      <span className={s.noDescription}>—</span>
-                    )}
-                  </td>
-                  <td>
-                    <Tag variant={permission.is_active ? 'success' : 'neutral'}>
-                      {permission.is_active
-                        ? t('admin:permissions.active', 'Active')
-                        : t('admin:permissions.inactive', 'Inactive')}
-                    </Tag>
-                  </td>
-                  <td>
-                    <div className={s.actions}>
-                      <Button
-                        variant='ghost'
-                        size='small'
-                        iconOnly
-                        title={t('admin:permissions.edit', 'Edit')}
-                        onClick={() => handleEdit(permission.id)}
-                      >
-                        <Icon name='edit' size={16} />
-                      </Button>
-                      <Button
-                        variant='ghost'
-                        size='small'
-                        iconOnly
-                        title={t('admin:permissions.delete', 'Delete')}
-                        onClick={() => handleDelete(permission)}
-                      >
-                        <Icon name='trash' size={16} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              )),
-            )}
-          </tbody>
-        </Table>
-      )}
-
-      {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
-        <Table.Pagination
-          currentPage={currentPage}
-          totalPages={pagination.pages}
-          totalItems={pagination.total}
-          onPageChange={setCurrentPage}
-          loading={loading}
-        />
-      )}
+                : {
+                    title: t(
+                      'admin:permissions.noPermissionsFound',
+                      'No permissions found',
+                    ),
+                    description: t(
+                      'admin:permissions.noPermissionsFound',
+                      'Create granular permissions to control access to resources.',
+                    ),
+                  })}
+            >
+              <Button
+                variant='primary'
+                onClick={search ? () => handleSearchChange('') : handleAdd}
+                {...(!search &&
+                  !canCreate && {
+                    disabled: true,
+                    title: t(
+                      'admin:permissions.noPermissionToCreate',
+                      'You do not have permission to create permissions',
+                    ),
+                  })}
+              >
+                {search ? 'Clear Search' : 'Add Permission'}
+              </Button>
+            </Table.Empty>
+          ),
+        }}
+      />
 
       <ConfirmModal.Delete
         ref={deleteModalRef}
