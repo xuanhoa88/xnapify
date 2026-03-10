@@ -19,12 +19,10 @@ import {
   getFetchedPermission,
   getPermissionFetchError,
 } from '../../redux';
-import {
-  Box,
-  Icon,
-  ConfirmModal,
-  Loader,
-} from '../../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../../shared/renderer/components/Icon';
+import ConfirmModal from '../../../../../../shared/renderer/components/ConfirmModal';
+import Loader from '../../../../../../shared/renderer/components/Loader';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,

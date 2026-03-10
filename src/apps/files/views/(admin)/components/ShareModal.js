@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import { getUserId } from '../../../../../shared/renderer/redux/features/user/selector';
-import { Icon } from '../../../../../shared/renderer/components/Admin';
+import Icon from '../../../../../shared/renderer/components/Icon';
 import Modal from '../../../../../shared/renderer/components/Modal';
 import Button from '../../../../../shared/renderer/components/Button';
 import { SearchableSelect } from '../../../../../shared/renderer/components/SearchableSelect';

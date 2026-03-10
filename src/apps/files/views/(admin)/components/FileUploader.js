@@ -9,10 +9,8 @@ import { useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Icon,
-  ConfirmModal,
-} from '../../../../../shared/renderer/components/Admin';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
 import Button from '../../../../../shared/renderer/components/Button';
 import { validateForm } from '../../../../../shared/validator';
 import { createFolderFormSchema } from '../../../validator/admin/file';

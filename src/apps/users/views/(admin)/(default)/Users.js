@@ -17,12 +17,10 @@ import {
   useSearchableSelect,
 } from '../../../../../shared/renderer/components/SearchableSelect';
 import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import {
-  Box,
-  Icon,
-  Loader,
-  Table,
-} from '../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import Loader from '../../../../../shared/renderer/components/Loader';
+import Table from '../../../../../shared/renderer/components/Table';
 import Tag from '../../../../../shared/renderer/components/Tag';
 import Button from '../../../../../shared/renderer/components/Button';
 import Avatar from '../../../../../shared/renderer/components/Avatar';

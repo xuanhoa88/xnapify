@@ -8,7 +8,7 @@
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Modal from '../../Modal';
+import Modal from '../Modal';
 
 /**
  * ConfirmBackModal - Confirmation modal for navigating back from forms

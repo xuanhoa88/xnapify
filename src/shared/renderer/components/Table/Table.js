@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import s from './Table.css';
 import Pagination from './Pagination';
 import Empty from './Empty';
-import { Loader } from '..';
+import Loader from '../Loader';
 
 function Table({
   columns,

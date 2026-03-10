@@ -16,12 +16,10 @@ import {
   showSuccessMessage,
 } from '../../../../../../shared/renderer/redux';
 import { useDebounce } from '../../../../../../shared/renderer/components/InfiniteScroll';
-import {
-  Box,
-  Icon,
-  Loader,
-  ConfirmModal,
-} from '../../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../../shared/renderer/components/Icon';
+import Loader from '../../../../../../shared/renderer/components/Loader';
+import ConfirmModal from '../../../../../../shared/renderer/components/ConfirmModal';
 import Button from '../../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,

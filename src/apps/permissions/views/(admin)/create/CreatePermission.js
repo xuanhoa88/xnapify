@@ -11,11 +11,9 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../shared/renderer/components/History';
 import { createPermission, isPermissionCreateLoading } from '../redux';
-import {
-  Box,
-  Icon,
-  ConfirmModal,
-} from '../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
 import Button from '../../../../../shared/renderer/components/Button';
 import Form, {
   useFormContext,

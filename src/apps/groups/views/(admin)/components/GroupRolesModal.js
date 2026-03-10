@@ -17,7 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import clsx from 'clsx';
 import Modal from '../../../../../shared/renderer/components/Modal';
-import { Table } from '../../../../../shared/renderer/components/Admin';
+import Table from '../../../../../shared/renderer/components/Table';
 import {
   assignRolesToGroup,
   fetchGroups,

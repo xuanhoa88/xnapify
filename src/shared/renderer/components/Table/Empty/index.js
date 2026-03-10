@@ -8,7 +8,7 @@
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../Icon';
+import Icon from '../../Icon';
 
 import s from './Empty.css';
 

@@ -9,8 +9,8 @@ import React, { useCallback } from 'react';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Icon } from '../../../../../shared/renderer/components/Admin';
-import SearchBar from '../../../../../shared/renderer/components/Admin/Table/SearchBar';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import SearchBar from '../../../../../shared/renderer/components/Table/SearchBar';
 import Button from '../../../../../shared/renderer/components/Button';
 import {
   setView,

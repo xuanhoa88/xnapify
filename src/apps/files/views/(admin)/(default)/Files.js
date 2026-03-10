@@ -8,7 +8,8 @@
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Icon } from '../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../shared/renderer/components/Icon';
 import {
   fetchFiles,
   selectCurrentView,

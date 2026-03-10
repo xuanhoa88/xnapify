@@ -10,11 +10,9 @@ import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  Loader,
-  ConfirmModal,
-} from '../../../../../shared/renderer/components/Admin';
-import Pagination from '../../../../../shared/renderer/components/Admin/Table/Pagination';
+import Loader from '../../../../../shared/renderer/components/Loader';
+import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
+import Pagination from '../../../../../shared/renderer/components/Table/Pagination';
 import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
 import Icon from '../../../../../shared/renderer/components/Icon';
 import { validateForm } from '../../../../../shared/validator';

@@ -15,13 +15,11 @@ import {
   useSearchableSelect,
 } from '../../../../../shared/renderer/components/SearchableSelect';
 import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import {
-  Box,
-  Icon,
-  Loader,
-  Table,
-  ConfirmModal,
-} from '../../../../../shared/renderer/components/Admin';
+import * as Box from '../../../../../shared/renderer/components/Box';
+import Icon from '../../../../../shared/renderer/components/Icon';
+import Loader from '../../../../../shared/renderer/components/Loader';
+import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
+import Table from '../../../../../shared/renderer/components/Table';
 import Button from '../../../../../shared/renderer/components/Button';
 import Card from '../../../../../shared/renderer/components/Card';
 import Tag from '../../../../../shared/renderer/components/Tag';

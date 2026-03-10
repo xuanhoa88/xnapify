@@ -11,7 +11,7 @@ import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import { useHistory } from '../../../../../shared/renderer/components/History';
 import { getUserId } from '../../../../../shared/renderer/redux';
-import { Icon } from '../../../../../shared/renderer/components/Admin';
+import Icon from '../../../../../shared/renderer/components/Icon';
 import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
 
 /**
