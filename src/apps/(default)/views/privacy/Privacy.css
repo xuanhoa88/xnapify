@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-@import '../../../../shared/renderer/components/variables.css';
-
 /* Standard page root layout */
 .root {
   padding: var(--spacing-10) var(--spacing-6) var(--spacing-12);

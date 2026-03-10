@@ -6,8 +6,6 @@
  */
 
 /* Re-export shared variables for Admin components */
-@import '../../../../../shared/renderer/components/variables.css';
-
 .root {
   display: flex;
   flex-direction: column;
