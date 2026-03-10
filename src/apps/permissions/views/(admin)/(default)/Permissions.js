@@ -8,7 +8,7 @@
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { useHistory } from '../../../../../shared/renderer/components/History';
+import { useHistory } from '@shared/renderer/components/History';
 import {
   fetchPermissions,
   getPermissions,
@@ -18,15 +18,15 @@ import {
   getPermissionsPagination,
   bulkDeletePermissions,
 } from '../redux';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../shared/renderer/components/Loader';
-import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
-import Table from '../../../../../shared/renderer/components/Table';
-import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import Button from '../../../../../shared/renderer/components/Button';
-import Tag from '../../../../../shared/renderer/components/Tag';
-import { SearchableSelect } from '../../../../../shared/renderer/components/SearchableSelect';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Table from '@shared/renderer/components/Table';
+import { useRbac } from '@shared/renderer/components/Rbac';
+import Button from '@shared/renderer/components/Button';
+import Tag from '@shared/renderer/components/Tag';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
 import ChangeStatusPermissionModal from '../components/ChangeStatusPermissionModal';
 import s from './Permissions.css';
 

@@ -14,15 +14,13 @@ import {
   isResetPasswordLoading,
   getResetPasswordError,
   clearResetPasswordError,
-} from '../../../../shared/renderer/redux';
-import { Link } from '../../../../shared/renderer/components/History';
-import Button from '../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../shared/renderer/components/Form';
+} from '@shared/renderer/redux';
+import { Link } from '@shared/renderer/components/History';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { passwordResetRequestFormSchema } from '../../../users/validator/auth';
 import s from './ResetPasswordRequest.css';
-import Icon from '../../../../shared/renderer/components/Icon';
+import Icon from '@shared/renderer/components/Icon';
 
 /**
  * Reset Password Request Page Component

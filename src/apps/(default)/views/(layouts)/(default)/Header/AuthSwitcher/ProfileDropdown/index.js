@@ -15,15 +15,12 @@ import {
   getUserAvatarUrl,
   getUserProfile,
   logout,
-} from '../../../../../../../../shared/renderer/redux';
-import {
-  Link,
-  useHistory,
-} from '../../../../../../../../shared/renderer/components/History';
-import { useWebSocket } from '../../../../../../../../shared/ws/client';
-import Icon from '../../../../../../../../shared/renderer/components/Icon';
-import ContextMenu from '../../../../../../../../shared/renderer/components/ContextMenu';
-import { checkPermission } from '../../../../../../../../shared/renderer/components/Rbac';
+} from '@shared/renderer/redux';
+import { Link, useHistory } from '@shared/renderer/components/History';
+import { useWebSocket } from '@shared/ws/client';
+import Icon from '@shared/renderer/components/Icon';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
+import { checkPermission } from '@shared/renderer/components/Rbac';
 import s from './ProfileDropdown.css';
 
 /**

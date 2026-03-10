@@ -8,9 +8,9 @@
 import { useState, useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../../shared/renderer/components/Icon';
-import Button from '../../../../shared/renderer/components/Button';
-import Form from '../../../../shared/renderer/components/Form';
+import Icon from '@shared/renderer/components/Icon';
+import Button from '@shared/renderer/components/Button';
+import Form from '@shared/renderer/components/Form';
 import s from './Contact.css';
 
 /**

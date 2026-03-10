@@ -5,10 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import {
-  isAuthenticated,
-  setBreadcrumbs,
-} from '../../../../shared/renderer/redux';
+import { isAuthenticated, setBreadcrumbs } from '@shared/renderer/redux';
 
 /**
  * Admin route config

@@ -8,7 +8,7 @@
 import { useEffect, useCallback, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../shared/renderer/components/History';
+import { useHistory } from '@shared/renderer/components/History';
 import {
   fetchRoles,
   getRoles,
@@ -18,14 +18,14 @@ import {
   getRolesListError,
   deleteRole,
 } from '../redux';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../shared/renderer/components/Loader';
-import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
-import Table from '../../../../../shared/renderer/components/Table';
-import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import Button from '../../../../../shared/renderer/components/Button';
-import Card from '../../../../../shared/renderer/components/Card';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Table from '@shared/renderer/components/Table';
+import { useRbac } from '@shared/renderer/components/Rbac';
+import Button from '@shared/renderer/components/Button';
+import Card from '@shared/renderer/components/Card';
 import RoleActionsDropdown from '../components/RoleActionsDropdown';
 import RolePermissionsModal from '../components/RolePermissionsModal';
 import RoleUsersModal from '../components/RoleUsersModal';

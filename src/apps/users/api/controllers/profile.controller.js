@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { validateForm, z } from '../../../../shared/validator';
+import { validateForm, z } from '@shared/validator';
 import {
   updateProfileFormSchema,
   changePasswordFormSchema,

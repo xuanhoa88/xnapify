@@ -9,7 +9,7 @@ import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import PropTypes from 'prop-types';
-import Modal from '../../../../../shared/renderer/components/Modal';
+import Modal from '@shared/renderer/components/Modal';
 import { bulkDeletePermissions } from '../redux';
 
 /**

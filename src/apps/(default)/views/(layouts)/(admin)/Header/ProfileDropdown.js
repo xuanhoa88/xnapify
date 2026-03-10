@@ -9,21 +9,18 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import clsx from 'clsx';
-import {
-  Link,
-  useHistory,
-} from '../../../../../../shared/renderer/components/History';
+import { Link, useHistory } from '@shared/renderer/components/History';
 import {
   getUserDisplayName,
   getUserAvatarUrl,
   getUserRoles,
   getUserProfile,
   logout,
-} from '../../../../../../shared/renderer/redux';
-import { useWebSocket } from '../../../../../../shared/ws/client';
-import Icon from '../../../../../../shared/renderer/components/Icon';
-import ContextMenu from '../../../../../../shared/renderer/components/ContextMenu';
-import { checkPermission } from '../../../../../../shared/renderer/components/Rbac';
+} from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+import Icon from '@shared/renderer/components/Icon';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
+import { checkPermission } from '@shared/renderer/components/Rbac';
 import s from './ProfileDropdown.css';
 
 /**

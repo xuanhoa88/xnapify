@@ -7,8 +7,8 @@
 
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import { Link } from '../../../../../shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import { Link } from '@shared/renderer/components/History';
 import { featuresData } from '../data';
 import s from './FeatureDetails.css';
 

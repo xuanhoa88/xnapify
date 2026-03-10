@@ -18,14 +18,12 @@ import {
   showSuccessMessage,
   getFlashMessage,
   clearFlashMessage,
-} from '../../../../shared/renderer/redux';
-import Toast from '../../../../shared/renderer/components/Toast';
-import Icon from '../../../../shared/renderer/components/Icon';
-import { Link } from '../../../../shared/renderer/components/History';
-import Button from '../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../shared/renderer/components/Form';
+} from '@shared/renderer/redux';
+import Toast from '@shared/renderer/components/Toast';
+import Icon from '@shared/renderer/components/Icon';
+import { Link } from '@shared/renderer/components/History';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { passwordResetConfirmFormSchema } from '../../../users/validator/auth';
 import s from './ResetPasswordConfirmation.css';
 

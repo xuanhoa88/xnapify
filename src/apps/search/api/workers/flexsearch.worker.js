@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWorkerHandler } from '../../../../shared/api/engines/worker';
+import { createWorkerHandler } from '@shared/api/engines/worker';
 
 /**
  * Process search indexing for all users and groups.

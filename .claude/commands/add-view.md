@@ -82,7 +82,7 @@ export default MyView;
 ## 4. Add Navigation Link
 
 ```javascript
-import { Link } from '@/shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History';
 
 <Link to='/my-view'>My View</Link>;
 ```
@@ -109,7 +109,7 @@ Use `export async function middleware` for authentication, authorization, or red
 
 ```javascript
 // @apps/(default)/views/dashboard/_route.js
-import { isAuthenticated } from '@/shared/renderer/redux';
+import { isAuthenticated } from '@shared/renderer/redux';
 import Dashboard from './Dashboard';
 
 /**
@@ -224,7 +224,7 @@ Use parentheses `(groupName)` to organize routes without affecting the URL path:
 
 ```javascript
 // @apps/(default)/views/(admin)/dashboard/_route.js
-import { isAuthenticated, hasPermission } from '@/shared/renderer/redux';
+import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
 import Dashboard from './Dashboard';
 
 export async function middleware(context, next) {

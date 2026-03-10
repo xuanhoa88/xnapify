@@ -19,6 +19,7 @@ const maxWorkers = config.env('JEST_MAX_WORKERS', isCI ? 2 : '50%');
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
+const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
 
 module.exports = {
   /**
@@ -40,11 +41,16 @@ module.exports = {
    */
   collectCoverageFrom: [
     `${appDir}/**/*.{js,jsx}`,
+    `${sharedDir}/**/*.{js,jsx}`,
     // Exclude common non-testable files
     `!${appDir}/**/*.test.{js,jsx}`,
     `!${appDir}/**/*.spec.{js,jsx}`,
     `!${appDir}/**/__tests__/**`,
     `!${appDir}/**/__mocks__/**`,
+    `!${sharedDir}/**/*.test.{js,jsx}`,
+    `!${sharedDir}/**/*.spec.{js,jsx}`,
+    `!${sharedDir}/**/__tests__/**`,
+    `!${sharedDir}/**/__mocks__/**`,
     '!**/node_modules/**',
     '!**/tools/**',
     '!**/vendor/**',
@@ -159,7 +165,7 @@ module.exports = {
    * This limits Jest to only look in the src directory, automatically excluding
    * tools, build, release, out, and coverage directories.
    */
-  roots: [config.APP_DIR],
+  roots: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
 
   /**
    * The glob patterns Jest uses to detect test files.

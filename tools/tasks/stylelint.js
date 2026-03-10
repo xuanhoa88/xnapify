@@ -23,6 +23,7 @@ const {
 
 // Relative path to app directory
 const appDir = path.relative(config.CWD, config.APP_DIR);
+const sharedDir = path.relative(config.CWD, path.resolve(config.CWD, 'shared'));
 
 // Cache silent check for use throughout the task
 const silent = isSilent();
@@ -62,6 +63,10 @@ async function main() {
             `${appDir}/**/*.scss`,
             `${appDir}/**/*.sass`,
             `${appDir}/**/*.less`,
+            `${sharedDir}/**/*.css`,
+            `${sharedDir}/**/*.scss`,
+            `${sharedDir}/**/*.sass`,
+            `${sharedDir}/**/*.less`,
           ];
 
     logVerbose(`📂 Linting patterns: ${filesToLint.join(', ')}`);

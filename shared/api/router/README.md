@@ -4,7 +4,7 @@ A file-based dynamic routing engine for Express, modeled after Next.js and the R
 
 ## Philosophy
 
-The API router maps the file system directory structure directly into URL endpoints, allowing you to intuitively organize backend code. It heavily mirrors the `src/shared/renderer/router` so developers can use the same mental model for both frontend React pages and backend Express APIs.
+The API router maps the file system directory structure directly into URL endpoints, allowing you to intuitively organize backend code. It heavily mirrors the `shared/renderer/router` so developers can use the same mental model for both frontend React pages and backend Express APIs.
 
 ### Architecture
 

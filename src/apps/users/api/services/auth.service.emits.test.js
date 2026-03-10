@@ -1,5 +1,5 @@
 import * as authService from './auth.service';
-import { createFactory } from '../../../../shared/api/engines/hook/factory';
+import { createFactory } from '@shared/api/engines/hook/factory';
 
 // Mock password utilities where needed
 jest.mock('../utils/password', () => ({

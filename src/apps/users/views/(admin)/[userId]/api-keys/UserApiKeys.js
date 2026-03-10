@@ -11,17 +11,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
 import format from 'date-fns/format';
 import cn from 'clsx';
-import { useRbac } from '../../../../../../shared/renderer/components/Rbac';
-import { useHistory } from '../../../../../../shared/renderer/components/History';
-import * as Box from '../../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../../shared/renderer/components/Loader';
-import ConfirmModal from '../../../../../../shared/renderer/components/ConfirmModal';
-import Table from '../../../../../../shared/renderer/components/Table';
-import Tag from '../../../../../../shared/renderer/components/Tag';
-import Button from '../../../../../../shared/renderer/components/Button';
-import Form from '../../../../../../shared/renderer/components/Form';
-import Modal from '../../../../../../shared/renderer/components/Modal';
+import { useRbac } from '@shared/renderer/components/Rbac';
+import { useHistory } from '@shared/renderer/components/History';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Table from '@shared/renderer/components/Table';
+import Tag from '@shared/renderer/components/Tag';
+import Button from '@shared/renderer/components/Button';
+import Form from '@shared/renderer/components/Form';
+import Modal from '@shared/renderer/components/Modal';
 import {
   fetchUserById,
   getFetchedUser,
@@ -42,7 +42,7 @@ import {
   getUserPermissions,
   isUserPermissionsOperationLoading,
 } from '../../redux';
-import { showSuccessMessage } from '../../../../../../shared/renderer/redux';
+import { showSuccessMessage } from '@shared/renderer/redux';
 import { createApiKeyFormSchema } from '../../../../validator/admin';
 import s from './UserApiKeys.css';
 

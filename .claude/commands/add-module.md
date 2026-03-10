@@ -618,7 +618,7 @@ Frontend routes work similarly to backend routes, but use React:
  * File: (admin)/(default)/_route.js = /admin/{module-name}
  */
 
-import { isAuthenticated, hasPermission } from '@/shared/renderer/redux';
+import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
 import ModuleList from './ModuleList';
 import reducer, { SLICE_NAME } from '../redux/slice';
 

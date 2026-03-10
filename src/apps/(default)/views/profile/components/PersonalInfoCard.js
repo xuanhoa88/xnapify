@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 import PropTypes from 'prop-types';
 import merge from 'lodash/merge';
-import { z } from '../../../../../shared/validator';
+import { z } from '@shared/validator';
 import {
   getUserProfile,
   updateUserProfile,
@@ -18,18 +18,16 @@ import {
   getProfileError,
   clearProfileError,
   showSuccessMessage,
-} from '../../../../../shared/renderer/redux';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Button from '../../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../../shared/renderer/components/Form';
+} from '@shared/renderer/redux';
+import Icon from '@shared/renderer/components/Icon';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import {
   PluginSlot,
   usePluginHooks,
   usePluginValidator,
   usePluginFormData,
-} from '../../../../../shared/plugin';
+} from '@shared/plugin';
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
 import Loader from './Loader';
 import s from './PersonalInfoCard.css';

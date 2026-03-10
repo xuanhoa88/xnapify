@@ -22,7 +22,7 @@ Use workers for:
 
 ```javascript
 // @apps/posts/workers/generate-report.worker.js
-import { createWorkerHandler } from '@/shared/api/worker';
+import { createWorkerHandler } from '@shared/api/worker';
 
 /**
  * Generate posts report
@@ -35,7 +35,7 @@ async function generateReportLogic(payload) {
   const { startDate, endDate } = payload;
 
   // Heavy processing here
-  const { connection } = require('@/shared/api/db');
+  const { connection } = require('@shared/api/db');
   const { Post } = connection.models;
   const { sequelize } = Post;
   const { Op } = sequelize.Sequelize;
@@ -65,7 +65,7 @@ export default createWorkerHandler(generateReportLogic, 'GENERATE_REPORT');
 
 ```javascript
 // @apps/posts/workers/index.js
-import { createWorkerPool } from '@/shared/api/worker';
+import { createWorkerPool } from '@shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
 
@@ -109,7 +109,7 @@ export async function generateReport(req, res) {
 
 ```javascript
 // @apps/posts/index.js
-import schedule from '@/shared/api/schedule';
+import schedule from '@shared/api/schedule';
 import workerPool from './workers';
 
 export default async function postsModule(deps, app) {
@@ -142,7 +142,7 @@ export default async function postsModule(deps, app) {
 
 ```javascript
 // @apps/posts/workers/process-images.worker.js
-import { createWorkerHandler } from '@/shared/api/worker';
+import { createWorkerHandler } from '@shared/api/worker';
 
 async function processImagesLogic(payload) {
   const { postId, images } = payload;

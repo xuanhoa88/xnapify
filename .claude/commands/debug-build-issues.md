@@ -143,7 +143,7 @@ app.get('/api/ws-debug', (req, res) => {
 });
 
 // Client-side: Debug connection
-import { useWebSocket } from '@/shared/ws/client';
+import { useWebSocket } from '@shared/ws/client';
 
 const ws = useWebSocket();
 ws.on('connected', () => console.log('✅ WebSocket connected'));
@@ -208,7 +208,7 @@ fetch('/api/auth/me')
 
 ```javascript
 // Check migration status
-const db = require('@/shared/api/db');
+const db = require('@shared/api/db');
 const { connection } = db;
 
 const status = await db.getMigrationStatus(null, connection);

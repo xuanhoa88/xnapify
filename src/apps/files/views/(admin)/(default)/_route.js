@@ -9,8 +9,8 @@ import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
-} from '../../../../../shared/renderer/redux';
-import { requirePermission } from '../../../../../shared/renderer/components/Rbac';
+} from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
 import reducer, { SLICE_NAME } from '../redux';
 import Files from './Files';
 

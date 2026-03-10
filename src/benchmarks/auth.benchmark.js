@@ -11,7 +11,7 @@ describe('auth.benchmark', () => {
 
   beforeAll(() => {
     // Load via Jest transpilation (avoids ES module issues)
-    const authMiddleModule = require('../shared/api/engines/auth/middlewares');
+    const authMiddleModule = require('@shared/api/engines/auth/middlewares');
 
     requireAuth = authMiddleModule.requireAuth;
   });

@@ -6,8 +6,8 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import Tabs from '../../../../shared/renderer/components/Tabs';
-import Icon from '../../../../shared/renderer/components/Icon';
+import Tabs from '@shared/renderer/components/Tabs';
+import Icon from '@shared/renderer/components/Icon';
 import ProfileHeader from './components/ProfileHeader';
 import PersonalInfoCard from './components/PersonalInfoCard';
 import PreferencesCard from './components/PreferencesCard';

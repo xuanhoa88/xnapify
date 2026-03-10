@@ -11,8 +11,8 @@ import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
-} from '../../../../../shared/renderer/redux';
-import { requirePermission } from '../../../../../shared/renderer/components/Rbac';
+} from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
 
 export const middleware = requirePermission('users:read');
 

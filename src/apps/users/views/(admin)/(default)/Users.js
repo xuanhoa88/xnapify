@@ -10,20 +10,20 @@ import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import format from 'date-fns/format';
-import { getUserProfile } from '../../../../../shared/renderer/redux';
-import { useHistory } from '../../../../../shared/renderer/components/History';
+import { getUserProfile } from '@shared/renderer/redux';
+import { useHistory } from '@shared/renderer/components/History';
 import {
   SearchableSelect,
   useSearchableSelect,
-} from '../../../../../shared/renderer/components/SearchableSelect';
-import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../shared/renderer/components/Loader';
-import Table from '../../../../../shared/renderer/components/Table';
-import Tag from '../../../../../shared/renderer/components/Tag';
-import Button from '../../../../../shared/renderer/components/Button';
-import Avatar from '../../../../../shared/renderer/components/Avatar';
+} from '@shared/renderer/components/SearchableSelect';
+import { useRbac } from '@shared/renderer/components/Rbac';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import Table from '@shared/renderer/components/Table';
+import Tag from '@shared/renderer/components/Tag';
+import Button from '@shared/renderer/components/Button';
+import Avatar from '@shared/renderer/components/Avatar';
 import {
   fetchUsers,
   getUsers,

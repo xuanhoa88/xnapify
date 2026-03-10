@@ -2,9 +2,9 @@ import { useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Button from '../../../../../shared/renderer/components/Button';
-import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
+import Icon from '@shared/renderer/components/Icon';
+import Button from '@shared/renderer/components/Button';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 import {
   setView,
   setUploadModalOpen,

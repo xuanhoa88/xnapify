@@ -8,15 +8,15 @@
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRbac } from '../../../../../shared/renderer/components/Rbac';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../shared/renderer/components/Loader';
-import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
-import Table from '../../../../../shared/renderer/components/Table';
-import Button from '../../../../../shared/renderer/components/Button';
-import { useWebSocket } from '../../../../../shared/ws/client';
-import { showWarningMessage } from '../../../../../shared/renderer/redux/features/ui/slice';
+import { useRbac } from '@shared/renderer/components/Rbac';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Table from '@shared/renderer/components/Table';
+import Button from '@shared/renderer/components/Button';
+import { useWebSocket } from '@shared/ws/client';
+import { showWarningMessage } from '@shared/renderer/redux/features/ui/slice';
 import PluginCard from './components/PluginCard';
 import {
   fetchPlugins,

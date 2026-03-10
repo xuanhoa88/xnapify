@@ -12,9 +12,9 @@ import {
   getLocale,
   setLocale,
   getAvailableLocales,
-} from '../../../../../../shared/renderer/redux';
-import Icon from '../../../../../../shared/renderer/components/Icon';
-import Button from '../../../../../../shared/renderer/components/Button';
+} from '@shared/renderer/redux';
+import Icon from '@shared/renderer/components/Icon';
+import Button from '@shared/renderer/components/Button';
 import s from './LanguageSwitcher.css';
 
 /**

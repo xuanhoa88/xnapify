@@ -106,7 +106,7 @@ app.use('/public', express.static('public', { maxAge: '1y' }));
 
 ```javascript
 // Offload heavy tasks to workers
-import workerPool from '@/shared/api/worker';
+import workerPool from '@shared/api/worker';
 
 // Instead of blocking the request
 export async function generateReport(req, res) {

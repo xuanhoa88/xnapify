@@ -9,13 +9,15 @@
 ```
 react-starter-kit/
 ├── src/                          # Application source code
-├── bootstrap/                    # Application bootstrap & configuration
-├── apps/                      # Business logic & Views (auto-discovered)
-│   ├── (default)/                # Default module (homepage, etc.)
-│   │   ├── api/                  # Backend logic
-│   │   └── views/                # Frontend views
-│   └── ...                       # Other modules
-├── shared/                       # Shared utilities
+│   ├── bootstrap/                # Application bootstrap & configuration
+│   ├── apps/                     # Business logic & Views (auto-discovered)
+│   │   ├── (default)/            # Default module (homepage, etc.)
+│   │   │   ├── api/              # Backend logic
+│   │   │   └── views/            # Frontend views
+│   │   └── ...                   # Other modules
+│   ├── client.js                 # Client entry point
+│   └── server.js                 # Server entry point
+├── shared/                       # Shared utilities (aliased as @shared)
 │   ├── api/                      # Core API infrastructure
 │   │   ├── auth/                 # Auth middlewares & cookies
 │   │   ├── db/                   # Database & Sequelize
@@ -25,10 +27,8 @@ react-starter-kit/
 │   ├── fetch/                    # API client
 │   ├── ws/                       # WebSocket client
 │   ├── i18n/                     # i18n utilities
-│   └── validator/                # SSR validator utilities
+│   ├── validator/                # SSR validator utilities
 │   └── node-red/                 # Node-RED integration & migrations
-├── client.js                     # Client entry point
-├── server.js                     # Server entry point
 ├── tools/                        # Build tools and tasks
 │   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
 │   ├── utils/                    # Build utilities (fs, logger, etc.)
@@ -37,8 +37,6 @@ react-starter-kit/
 │   └── run.js                    # Task runner
 ├── build/                        # Production build output
 ├── public/                       # Static assets
-├── uploads/                      # Uploaded files during development/runtime
-├── .node-red/                    # Node-RED runtime state and flows (hidden)
 ├── .claude/                      # AI assistant command guides
 │   └── commands/                 # Development command documentation
 ├── database.sqlite               # Local SQLite database (dev)
@@ -137,7 +135,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 ### 2. Shared API vs Modules
 
-**Shared API** (`src/shared/api/` & `src/shared/jwt/`):
+**Shared API** (`shared/api/` & `shared/jwt/`):
 
 - Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`, `jwt`
 - Provide reusable capabilities for modules
@@ -159,9 +157,9 @@ The application uses an auto-discovery system for both API modules and page comp
 ### 4. State Management
 
 - **Redux Toolkit** for global state management
-- **Global Features:** `runtime`, `user`, `ui`, `intl` (in `src/shared/renderer/redux/features/`)
+- **Global Features:** `runtime`, `user`, `ui`, `intl` (in `shared/renderer/redux/features/`)
 - **Module-level Features:** Colocated in `views/{view-path}/redux/` with dynamic injection
-- **Store Configuration:** `src/shared/renderer/redux/configureStore.js`
+- **Store Configuration:** `shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
 - **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in route `boot` hook
@@ -170,7 +168,7 @@ The application uses an auto-discovery system for both API modules and page comp
 
 - **JWT-based authentication** with HTTP-only cookies
 - **RBAC system:** Users, Roles, Groups, Permissions
-- **Middleware:** `src/shared/api/auth/middlewares.js`
+- **Middleware:** `shared/api/auth/middlewares.js`
 - **Protected routes:** Use `requireAuth` middleware
 - **API endpoints:** `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/register`
 
@@ -178,12 +176,12 @@ The application uses an auto-discovery system for both API modules and page comp
 
 - WebSocket server runs alongside Express server
 - Token-based authentication for WebSocket connections
-- Client connects via `src/shared/ws/`
+- Client connects via `shared/ws/`
 - Server implementation in `src/server.js` (`initWebSocket`)
 
 ### 7. Plugin System
 
-The application features a robust plugin system (`src/shared/plugin`) for extending functionality without modifying core code.
+The application features a robust plugin system (`shared/plugin`) for extending functionality without modifying core code.
 
 **Core Concepts:**
 
@@ -195,7 +193,7 @@ The application features a robust plugin system (`src/shared/plugin`) for extend
 
 ```javascript
 // Register a plugin
-import { registry } from '@/shared/plugin';
+import { registry } from '@shared/plugin';
 
 registry.register('my-plugin', {
   init: async (reg, context) => {
@@ -208,12 +206,12 @@ registry.register('my-plugin', {
 });
 
 // Render a Slot (in your component)
-import { PluginSlot } from '@/shared/plugin';
+import { PluginSlot } from '@shared/plugin';
 
 <PluginSlot name='profile.actions' props={userData} />;
 
 // Execute Hooks (in your logic)
-import { usePluginHooks } from '@/shared/plugin';
+import { usePluginHooks } from '@shared/plugin';
 
 const hooks = usePluginHooks();
 const results = await hooks.execute('user.validate', userData);
@@ -221,19 +219,19 @@ const results = await hooks.execute('user.validate', userData);
 
 ### 8. Node-RED Integration
 
-The application embeds Node-RED (`src/shared/node-red`) for visual workflow automation, fully integrated with the app's authentication and deployment lifecycle.
+The application embeds Node-RED (`shared/node-red`) for visual workflow automation, fully integrated with the app's authentication and deployment lifecycle.
 
 **Key Features:**
 
 - **Embedded Architecture:** Runs as middleware within the Express app, sharing the same port and server instance.
 - **Unified Authentication:** Uses the application's RBAC system. Users need `nodered:read` or `nodered:admin` permissions to access the editor.
-- **Flow Splitter Plugin:** Automatically splits the monolithic `flows.json` and creates versioned snapshots in `src/shared/node-red/migrations/`.
+- **Flow Splitter Plugin:** Automatically splits the monolithic `flows.json` and creates versioned snapshots in `shared/node-red/migrations/`.
   - **Development:** Edits in the UI are split and saved as a new migration timestamp on deploy.
   - **Production:** Rebuilds `flows.json` from the latest migration snapshot on startup.
 
 **Configuration:**
 
-Controlled via `src/shared/node-red/settings.js` and environment variables.
+Controlled via `shared/node-red/settings.js` and environment variables.
 
 - **Dev:** Verbose logging, diagnostic endpoints enabled.
 - **Prod:** Minimal logging, metrics enabled, admin endpoints secured.
@@ -244,7 +242,7 @@ For heavy processing, use the Worker Engine:
 
 ```javascript
 // 1. Define worker
-import { createWorkerHandler } from '@/shared/api/worker';
+import { createWorkerHandler } from '@shared/api/worker';
 // ... (omitting lines for brevity in tool call, standardizing on contiguous blocks is better but small edits are fine) with context:
 // wait, I need exact match.
 
@@ -256,7 +254,7 @@ const myTaskLogic = async payload => {
 export default createWorkerHandler(myTaskLogic, 'MY_TASK_TYPE');
 
 // 2. Create worker pool
-import { createWorkerPool } from '@/shared/api/worker';
+import { createWorkerPool } from '@shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
 const workerPool = createWorkerPool(workersContext, {
@@ -374,8 +372,8 @@ import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
-} from '@/shared/renderer/redux';
-import { requirePermission } from '@/shared/renderer/components/Rbac';
+} from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
 
 // 1. Middleware - permission check
 export const middleware = requirePermission('posts:read');
@@ -476,7 +474,7 @@ export async function getAll() {
 ```javascript
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from '@/shared/validator';
+import { z } from '@shared/validator';
 
 const schema = z.object({
   email: z.string().email(),
@@ -616,7 +614,7 @@ docker run -p 1337:1337 \
 - Real-time bidirectional communication
 - Token-based authentication
 - Automatic reconnection handling
-- Client API in `src/shared/ws/`
+- Client API in `shared/ws/`
 
 ### Worker Processes
 
@@ -653,7 +651,7 @@ export default UsersPage;
 ### Protected Routes
 
 ```javascript
-import { requireAuth } from '@/shared/api/auth/middlewares';
+import { requireAuth } from '@shared/api/auth/middlewares';
 
 router.get('/protected', requireAuth, (req, res) => {
   // req.user is available
@@ -664,7 +662,7 @@ router.get('/protected', requireAuth, (req, res) => {
 ### Scheduled Tasks
 
 ```javascript
-import schedule from '@/shared/api/schedule';
+import schedule from '@shared/api/schedule';
 
 schedule.register('daily-cleanup', '0 0 * * *', async () => {
   // Lightweight task or dispatch to worker
@@ -704,7 +702,7 @@ describe('MyComponent', () => {
 });
 
 // Redux tests
-import configureStore from '@/shared/renderer/redux/configureStore';
+import configureStore from '@shared/renderer/redux/configureStore';
 import { increment } from './slice';
 
 describe('myFeature slice', () => {

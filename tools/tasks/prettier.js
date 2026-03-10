@@ -129,7 +129,9 @@ async function main() {
   try {
     // Get target directory or pattern from args
     const targetArg = process.argv[2];
-    const targetDir = targetArg || config.APP_DIR;
+    const targetDirs = targetArg
+      ? [targetArg]
+      : [config.APP_DIR, require('path').resolve(config.CWD, 'shared')];
 
     // Check if it's a --check mode (no modifications)
     const checkOnly = process.argv.includes('--check');
@@ -139,7 +141,10 @@ async function main() {
     }
 
     // Find all formattable files
-    const files = await findFiles(targetDir);
+    const files = [];
+    for (const dir of targetDirs) {
+      files.push(...(await findFiles(dir)));
+    }
 
     if (verbose) {
       logInfo(`📂 Found ${files.length} files to process`);

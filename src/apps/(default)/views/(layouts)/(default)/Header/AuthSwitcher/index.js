@@ -6,7 +6,7 @@
  */
 
 import { useSelector } from 'react-redux';
-import { isAuthenticated } from '../../../../../../../shared/renderer/redux';
+import { isAuthenticated } from '@shared/renderer/redux';
 import GuestMode from './GuestMode';
 import ProfileDropdown from './ProfileDropdown';
 

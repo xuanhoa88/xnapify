@@ -6,7 +6,7 @@
  */
 
 import * as fileService from '../services/file.service';
-import { validateForm } from '../../../../shared/validator';
+import { validateForm } from '@shared/validator';
 import {
   createFolderFormSchema,
   renameFileFormSchema,

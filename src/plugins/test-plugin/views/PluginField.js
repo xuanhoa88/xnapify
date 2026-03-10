@@ -8,7 +8,7 @@
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Form from '../../../shared/renderer/components/Form';
+import Form from '@shared/renderer/components/Form';
 import s from './PluginField.scss';
 
 export default function PluginField({ register, context }) {

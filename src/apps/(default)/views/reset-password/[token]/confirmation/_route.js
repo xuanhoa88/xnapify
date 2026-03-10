@@ -6,7 +6,7 @@
  */
 
 import PropTypes from 'prop-types';
-import { isAuthenticated } from '../../../../../../shared/renderer/redux';
+import { isAuthenticated } from '@shared/renderer/redux';
 import ResetPasswordConfirmation from '../../ResetPasswordConfirmation';
 
 /**

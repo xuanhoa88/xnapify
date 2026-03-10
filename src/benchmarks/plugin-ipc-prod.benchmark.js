@@ -7,7 +7,7 @@ const express = require('express');
 const fetch = require('node-fetch');
 const bodyParser = require('body-parser');
 const { performance } = require('perf_hooks');
-const PluginRegistryClass = require('../shared/plugin/Registry').default;
+const PluginRegistryClass = require('@shared/plugin/Registry').default;
 
 // Configurable via environment variables (with sensible defaults)
 const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '50', 10);

@@ -7,9 +7,9 @@
 
 import { Fragment } from 'react';
 import { useSelector } from 'react-redux';
-import { Link } from '../../../../../../shared/renderer/components/History';
-import Icon from '../../../../../../shared/renderer/components/Icon';
-import { getBreadcrumbs } from '../../../../../../shared/renderer/redux';
+import { Link } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import { getBreadcrumbs } from '@shared/renderer/redux';
 import s from './Breadcrumbs.css';
 
 /**

@@ -6,8 +6,8 @@
  */
 
 import express from 'express';
-import { discoverModules, engines } from '../../shared/api';
-import { Router as DynamicRouter } from '../../shared/api/router';
+import { discoverModules, engines } from '@shared/api';
+import { Router as DynamicRouter } from '@shared/api/router';
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 

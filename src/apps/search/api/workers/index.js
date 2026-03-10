@@ -10,7 +10,7 @@
  * Uses the shared worker engine for background indexing tasks.
  */
 
-import { createWorkerPool } from '../../../../shared/api/engines/worker';
+import { createWorkerPool } from '@shared/api/engines/worker';
 
 // Auto-load workers via require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);

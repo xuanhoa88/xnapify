@@ -8,23 +8,23 @@
 import 'url-polyfill';
 import 'whatwg-fetch';
 import { createBrowserHistory } from 'history';
-import { createFetch } from './shared/fetch';
+import { createFetch } from '@shared/fetch';
 import {
   configureStore,
   refreshToken,
   logout,
   isAuthenticated,
-} from './shared/renderer/redux';
-import i18n, { DEFAULT_LOCALE } from './shared/i18n';
+} from '@shared/renderer/redux';
+import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
 import {
   createWebSocketClient,
   EventType,
   MessageType,
   setWebSocketClient,
-} from './shared/ws/client';
-import pluginManager from './shared/plugin/manager/client';
-import { Container } from './shared/container';
-import App from './shared/renderer/App';
+} from '@shared/ws/client';
+import pluginManager from '@shared/plugin/manager/client';
+import { Container } from '@shared/container';
+import App from '@shared/renderer/App';
 
 // =============================================================================
 // CONSTANTS & CONFIGURATION

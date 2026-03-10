@@ -158,7 +158,7 @@ export async function down({ context: queryInterface }) {
 
 ```javascript
 // @apps/{module}/api/utils/validation.js
-import { z } from '@/shared/validator';
+import { z } from '@shared/validator';
 
 export const createPostSchema = z.object({
   title: z.string().min(3).max(255),
@@ -173,7 +173,7 @@ export const updatePostSchema = createPostSchema.partial();
 Usage in controller:
 
 ```javascript
-import { validateForm } from '@/shared/validator';
+import { validateForm } from '@shared/validator';
 import { createPostSchema } from '../utils/validation';
 
 export async function create(req, res) {
@@ -199,7 +199,7 @@ export async function create(req, res) {
 4. **Routes**: Inject `deps`, `middlewares`, and `app` for flexibility
 5. **Migrations**: Use `require.context` for auto-discovery
 6. **Auth**: Use `app.get('auth').requireAuthMiddleware()` for protected routes
-7. **Validation**: Use `validateForm` from `@/shared/validator`
+7. **Validation**: Use `validateForm` from `@shared/validator`
 
 ---
 
@@ -296,7 +296,7 @@ For heavy tasks, dispatch to worker instead of blocking the request:
 
 ```javascript
 // @apps/{module}/api/controllers/post.controller.js
-import workerPool from '@/shared/api/worker';
+import workerPool from '@shared/api/worker';
 
 export async function generateReport(req, res) {
   const http = req.app.get('http');

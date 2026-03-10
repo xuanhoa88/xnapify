@@ -14,17 +14,15 @@ import {
   isAuthLoading,
   getAuthError,
   clearAuthError,
-} from '../../../../shared/renderer/redux';
+} from '@shared/renderer/redux';
 import {
   Link,
   useHistory,
   useQuery,
-} from '../../../../shared/renderer/components/History';
-import { useWebSocket } from '../../../../shared/ws/client';
-import Button from '../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../shared/renderer/components/Form';
+} from '@shared/renderer/components/History';
+import { useWebSocket } from '@shared/ws/client';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { registerFormSchema } from '../../../users/validator/auth';
 import s from './Register.css';
 

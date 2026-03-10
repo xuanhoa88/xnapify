@@ -1,10 +1,10 @@
-import { validateForm } from '../../../../shared/validator';
+import { validateForm } from '@shared/validator';
 import * as authService from '../services/auth.service';
 import * as profileService from '../services/profile.service';
 import * as authController from './auth.controller';
 
 // Mock dependencies
-jest.mock('../../../../shared/validator', () => ({
+jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
 }));
 

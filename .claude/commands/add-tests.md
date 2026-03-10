@@ -195,7 +195,7 @@ Test thunks with mocked `fetch` via store helpers:
 
 ```javascript
 // @apps/blog/views/(admin)/posts/redux/thunks.test.js
-import configureStore from '@/shared/renderer/redux/configureStore';
+import configureStore from '@shared/renderer/redux/configureStore';
 import { fetchPosts, createPost } from './thunks';
 import reducer, { SLICE_NAME } from './slice';
 import { getPosts, isPostsListLoading, getPostsListError } from './selector';
@@ -264,8 +264,8 @@ Components that use Redux, i18n, or History need the full `App` context:
 // src/shared/renderer/components/MyComponent/MyComponent.test.js
 import renderer, { act } from 'react-test-renderer';
 import configureStore from 'redux-mock-store';
-import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '@/shared/i18n';
-import App from '@/shared/renderer/App';
+import i18n, { DEFAULT_LOCALE, AVAILABLE_LOCALES } from '@shared/i18n';
+import App from '@shared/renderer/App';
 import MyComponent from './index';
 
 const mockStore = configureStore();
@@ -464,8 +464,8 @@ Mock global selectors (like User or UI) from `shared/renderer`:
 
 ```javascript
 // Mock user selector
-jest.mock('@/shared/renderer/redux/features/user/selector', () => ({
-  ...jest.requireActual('@/shared/renderer/redux/features/user/selector'),
+jest.mock('@shared/renderer/redux/features/user/selector', () => ({
+  ...jest.requireActual('@shared/renderer/redux/features/user/selector'),
   isAuthenticated: jest.fn(() => true),
   getUserProfile: jest.fn(() => ({ id: 1, name: 'Test User' })),
 }));

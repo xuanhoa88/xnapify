@@ -93,7 +93,9 @@ const createCSSRule = ({
     sourceMap: isDev,
     esModule: false,
     modules: {
-      auto: resourcePath => resourcePath.includes(config.APP_DIR),
+      auto: resourcePath =>
+        resourcePath.includes(config.APP_DIR) ||
+        resourcePath.includes(path.resolve(config.CWD, 'shared')),
       exportOnlyLocals,
       localIdentName:
         localIdentName ||
@@ -388,7 +390,7 @@ function createCacheGroups(
  */
 const createScriptRule = () => ({
   test: reScript,
-  include: [config.APP_DIR, __dirname],
+  include: [config.APP_DIR, path.resolve(config.CWD, 'shared')],
   use: [
     {
       loader: 'babel-loader',
@@ -610,6 +612,9 @@ function createWebpackConfig(name, options = {}) {
       resolve: {
         modules: ['node_modules', config.APP_DIR],
         extensions: ['.js', '.jsx', '.json'],
+        alias: {
+          '@shared': path.resolve(config.CWD, 'shared'),
+        },
         fallback: {
           events: require.resolve('events'),
         },

@@ -522,9 +522,9 @@ Use route lifecycle hooks in the view's `_route.js`:
 // @apps/blog/views/(admin)/posts/_route.js
 import reducer, { SLICE_NAME } from './redux';
 import PostsList from './PostsList';
-import { addBreadcrumb } from '@/shared/renderer/redux';
-import { requirePermission } from '@/shared/renderer/components/Rbac';
-import { registerMenu, unregisterMenu } from '@/shared/renderer/redux';
+import { addBreadcrumb } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
+import { registerMenu, unregisterMenu } from '@shared/renderer/redux';
 
 /**
  * Middleware - permission check

@@ -9,10 +9,10 @@ import { useCallback, useMemo } from 'react';
 import PropTypes from 'prop-types';
 import { useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../shared/renderer/components/History';
-import { getUserId } from '../../../../../shared/renderer/redux';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
+import { useHistory } from '@shared/renderer/components/History';
+import { getUserId } from '@shared/renderer/redux';
+import Icon from '@shared/renderer/components/Icon';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 
 /**
  * UserActionsDropdown - Dropdown menu for user actions

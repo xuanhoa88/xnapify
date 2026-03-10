@@ -10,11 +10,11 @@ import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import formatDistanceToNow from 'date-fns/formatDistanceToNow';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Loader from '../../../../../shared/renderer/components/Loader';
-import Table from '../../../../../shared/renderer/components/Table';
-import Tag from '../../../../../shared/renderer/components/Tag';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import Table from '@shared/renderer/components/Table';
+import Tag from '@shared/renderer/components/Tag';
 import {
   fetchActivities,
   getActivities,

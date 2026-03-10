@@ -14,19 +14,14 @@ import {
   isEmailVerificationLoading,
   getEmailVerificationError,
   clearEmailVerificationError,
-} from '../../../../shared/renderer/redux';
-import { useWebSocket } from '../../../../shared/ws/client';
-import {
-  Link,
-  useHistory,
-} from '../../../../shared/renderer/components/History';
-import Button from '../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../shared/renderer/components/Form';
+} from '@shared/renderer/redux';
+import { useWebSocket } from '@shared/ws/client';
+import { Link, useHistory } from '@shared/renderer/components/History';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { emailVerificationFormSchema } from '../../../users/validator/auth';
 import s from './EmailVerification.css';
-import Icon from '../../../../shared/renderer/components/Icon';
+import Icon from '@shared/renderer/components/Icon';
 
 /**
  * Email Verification Page Component

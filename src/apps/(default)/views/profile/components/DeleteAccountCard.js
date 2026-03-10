@@ -14,13 +14,11 @@ import {
   isDeleteLoading,
   getDeleteError,
   clearDeleteError,
-} from '../../../../../shared/renderer/redux';
-import { useHistory } from '../../../../../shared/renderer/components/History';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import Button from '../../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../../shared/renderer/components/Form';
+} from '@shared/renderer/redux';
+import { useHistory } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { deleteAccountFormSchema } from '../../../../users/validator/auth';
 import s from './DeleteAccountCard.css';
 

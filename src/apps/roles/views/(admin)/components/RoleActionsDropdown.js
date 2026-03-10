@@ -8,8 +8,8 @@
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import ContextMenu from '../../../../../shared/renderer/components/ContextMenu';
+import Icon from '@shared/renderer/components/Icon';
+import ContextMenu from '@shared/renderer/components/ContextMenu';
 
 /**
  * RoleActionsDropdown - Dropdown menu for role actions

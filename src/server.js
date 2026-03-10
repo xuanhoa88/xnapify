@@ -21,25 +21,25 @@ import { LRUCache } from 'lru-cache';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
 import toString from 'lodash/toString';
-import { configureJwt } from './shared/jwt';
-import { createFetch } from './shared/fetch';
+import { configureJwt } from '@shared/jwt';
+import { createFetch } from '@shared/fetch';
 import i18n, {
   DEFAULT_LOCALE,
   LOCALE_COOKIE_MAX_AGE,
   LOCALE_COOKIE_NAME,
   AVAILABLE_LOCALES,
-} from './shared/i18n';
-import { NodeRedManager } from './shared/node-red';
+} from '@shared/i18n';
+import { NodeRedManager } from '@shared/node-red';
 import {
   configureStore,
   setRuntimeVariable,
   setLocale,
   me,
-} from './shared/renderer/redux';
-import pluginManager from './shared/plugin/manager/server';
-import { createWebSocketServer } from './shared/ws/server';
-import { Container } from './shared/container';
-import queue from './shared/api/engines/queue';
+} from '@shared/renderer/redux';
+import pluginManager from '@shared/plugin/manager/server';
+import { createWebSocketServer } from '@shared/ws/server';
+import { Container } from '@shared/container';
+import queue from '@shared/api/engines/queue';
 
 // ---------------------------------------------------------------------------
 // Constants & Configuration
@@ -395,8 +395,8 @@ async function loadSsrResources$() {
   }
 
   const [{ default: App }, { default: Html }] = await Promise.all([
-    import('./shared/renderer/App'),
-    import('./shared/renderer/Html'),
+    import('@shared/renderer/App'),
+    import('@shared/renderer/Html'),
   ]);
 
   return {
@@ -421,7 +421,7 @@ function getSsrResources() {
 // SSR Rendering
 // ---------------------------------------------------------------------------
 
-async function renderToHtml({ context, component, metadata = {} }) {
+async function renderToHtml({ context, component, metadata = {}, nonce }) {
   const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
 
   const children = ReactDOM.renderToString(
@@ -434,6 +434,7 @@ async function renderToHtml({ context, component, metadata = {} }) {
     styleLinks,
     scriptLinks,
     appState: { redux: context.store.getState() },
+    nonce,
   };
 
   const html = ReactDOM.renderToStaticMarkup(<Html {...htmlData} />);
@@ -580,6 +581,7 @@ function makeSsrMiddleware(guardControl, baseUrl) {
           context,
           component: page.component,
           metadata: extractPageMetadata(page, req),
+          nonce: req.cspNonce,
         }),
         SERVER_TIMEOUTS.RENDER,
         'SSR render',

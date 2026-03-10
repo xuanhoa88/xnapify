@@ -6,8 +6,8 @@
  */
 
 import CreatePermission from './CreatePermission';
-import { addBreadcrumb } from '../../../../../shared/renderer/redux';
-import { requirePermission } from '../../../../../shared/renderer/components/Rbac';
+import { addBreadcrumb } from '@shared/renderer/redux';
+import { requirePermission } from '@shared/renderer/components/Rbac';
 
 export const middleware = requirePermission('permissions:create');
 

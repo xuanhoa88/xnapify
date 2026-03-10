@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Router from '../shared/renderer/router';
-import { getAppName, getAppDescription } from '../shared/renderer/redux';
-import { discoverModules } from '../shared/renderer/autoloader';
+import Router from '@shared/renderer/router';
+import { getAppName, getAppDescription } from '@shared/renderer/redux';
+import { discoverModules } from '@shared/renderer/autoloader';
 
 // Discover view lifecycle modules from apps directory
 const viewsLifecycleContext = require.context(

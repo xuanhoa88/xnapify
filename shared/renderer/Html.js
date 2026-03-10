@@ -109,6 +109,7 @@ export default function Html({
   scriptLinks = [],
   appState,
   children,
+  nonce,
 }) {
   return (
     <html className='no-js' lang={locale || 'en-US'}>
@@ -152,6 +153,7 @@ export default function Html({
 
         {/* Application state for client hydration */}
         <script
+          nonce={nonce}
           dangerouslySetInnerHTML={{
             __html: `window.__PRELOADED_STATE__=${serialize(appState)}`,
           }}
@@ -232,6 +234,8 @@ Html.propTypes = {
   appState: PropTypes.shape({
     redux: PropTypes.object.isRequired,
   }).isRequired,
+  /** CSP nonce for inline scripts */
+  nonce: PropTypes.string,
   /** Rendered React app HTML string */
   children: PropTypes.string.isRequired,
 };

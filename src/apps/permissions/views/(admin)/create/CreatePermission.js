@@ -9,15 +9,13 @@ import { useState, useCallback, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
-import { useHistory } from '../../../../../shared/renderer/components/History';
+import { useHistory } from '@shared/renderer/components/History';
 import { createPermission, isPermissionCreateLoading } from '../redux';
-import * as Box from '../../../../../shared/renderer/components/Box';
-import Icon from '../../../../../shared/renderer/components/Icon';
-import ConfirmModal from '../../../../../shared/renderer/components/ConfirmModal';
-import Button from '../../../../../shared/renderer/components/Button';
-import Form, {
-  useFormContext,
-} from '../../../../../shared/renderer/components/Form';
+import * as Box from '@shared/renderer/components/Box';
+import Icon from '@shared/renderer/components/Icon';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { createPermissionFormSchema } from '../../../validator/admin';
 import s from './CreatePermission.css';
 

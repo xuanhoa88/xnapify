@@ -9,9 +9,9 @@ import { useState, useCallback, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import Card from '../../../../../../shared/renderer/components/Card';
-import Tag from '../../../../../../shared/renderer/components/Tag';
-import Icon from '../../../../../../shared/renderer/components/Icon';
+import Card from '@shared/renderer/components/Card';
+import Tag from '@shared/renderer/components/Tag';
+import Icon from '@shared/renderer/components/Icon';
 import PluginActionsDropdown from './PluginActionsDropdown';
 import s from './PluginCard.css';
 

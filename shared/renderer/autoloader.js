@@ -14,7 +14,7 @@
  *   - providers()    — share client-side services/state across modules (DI bindings)
  *   - views()        — returns a webpack require.context for view routes
  *
- * Mirrors the API autoloader pattern (src/shared/api/autoloader.js).
+ * Mirrors the API autoloader pattern (shared/api/autoloader.js).
  */
 
 import { createWebpackContextAdapter } from '../utils/webpackContextAdapter';

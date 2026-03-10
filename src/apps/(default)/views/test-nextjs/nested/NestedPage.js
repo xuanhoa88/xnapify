@@ -6,7 +6,7 @@
  */
 
 import s from './NestedPage.css';
-import Icon from '../../../../../shared/renderer/components/Icon';
+import Icon from '@shared/renderer/components/Icon';
 
 export default function NestedTestPage() {
   return (

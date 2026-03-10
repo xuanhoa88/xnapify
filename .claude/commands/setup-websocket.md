@@ -46,7 +46,7 @@ Register a handler for a specific message type. The handler receives the WebSock
 
 ```javascript
 // @apps/chat/websocket.js
-import { MessageType } from '@/shared/ws/server'; // or defined locally
+import { MessageType } from '@shared/ws/server'; // or defined locally
 
 export function initChatWebSocket(ws) {
   // Register handler for 'chat:send'
@@ -55,7 +55,7 @@ export function initChatWebSocket(ws) {
     const { text, recipientId } = message.data;
 
     // Access DB models if needed (via require or dependency injection)
-    // const { connection: dbData } = require('@/shared/api/db');
+    // const { connection: dbData } = require('@shared/api/db');
 
     console.log(`Received chat from ${user?.id}: ${text}`);
 
@@ -143,7 +143,7 @@ Use the `useWebSocket` utility to access the client instance.
 
 ```javascript
 import React, { useEffect, useState } from 'react';
-import { useWebSocket } from '@/shared/ws/client';
+import { useWebSocket } from '@shared/ws/client';
 
 export default function ChatComponent() {
   const ws = useWebSocket();
@@ -212,7 +212,7 @@ Authentication is handled automatically via cookies if `RSK_JWT_COOKIE_NAME` is 
 Import constants to ensure consistency.
 
 ```javascript
-import { EventType, MessageType } from '@/shared/ws/client'; // or @/shared/ws/server
+import { EventType, MessageType } from '@shared/ws/client'; // or @shared/ws/server
 ```
 
 ## Testing
@@ -221,6 +221,6 @@ Use the browser console to test the client instance:
 
 ```javascript
 // In browser console
-const ws = require('@/shared/ws/utils').useWebSocket(); // If exposed or accessible
+const ws = require('@shared/ws/utils').useWebSocket(); // If exposed or accessible
 // Since it's not global, you might need to trigger it via UI or temporary global exposure.
 ```

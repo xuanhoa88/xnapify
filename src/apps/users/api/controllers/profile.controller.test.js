@@ -1,9 +1,9 @@
-import { validateForm } from '../../../../shared/validator';
+import { validateForm } from '@shared/validator';
 import * as profileService from '../services/profile.service';
 import { formatUserResponse } from '../utils/formatter';
 import * as profileController from './profile.controller';
 
-jest.mock('../../../../shared/validator', () => ({
+jest.mock('@shared/validator', () => ({
   validateForm: jest.fn(),
   z: { object: jest.fn() },
 }));

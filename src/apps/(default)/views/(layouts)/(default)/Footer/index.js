@@ -7,7 +7,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link } from '../../../../../../shared/renderer/components/History';
+import { Link } from '@shared/renderer/components/History';
 import ScrollToTop from './ScrollToTop';
 import s from './Footer.css';
 

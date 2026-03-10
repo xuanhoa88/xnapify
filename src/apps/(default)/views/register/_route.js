@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { isAuthenticated } from '../../../../shared/renderer/redux';
+import { isAuthenticated } from '@shared/renderer/redux';
 import Register from './Register';
 
 /**
