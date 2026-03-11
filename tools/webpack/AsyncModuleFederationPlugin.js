@@ -24,6 +24,7 @@
  */
 
 const path = require('path');
+const config = require('../config');
 
 // Plugin name
 const PLUGIN_NAME = 'AsyncModuleFederationPlugin';
@@ -66,7 +67,7 @@ class AsyncModuleFederationPlugin {
       // Only entries under the project source root are wrapped. Tool entries
       // (BrowserSync, HMR client, etc.) are skipped because they do not
       // consume Module Federation shared modules.
-      const sourceRoot = path.resolve(context).replace(/\\/g, '/');
+      const sourceRoot = path.resolve(config.APP_DIR).replace(/\\/g, '/');
 
       /**
        * Recursively collect file paths from any valid webpack entry shape:
