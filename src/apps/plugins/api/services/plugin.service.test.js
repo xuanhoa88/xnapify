@@ -158,13 +158,13 @@ describe('Plugin Service', () => {
         return Promise.reject('File not found');
       });
 
-      const mockDbDestroy = jest.fn();
+      const mockDbUpdate = jest.fn();
       mockModels.Plugin.findAll.mockResolvedValue([
         {
           id: 'db-1',
           key: 'db-plugin',
           is_active: true,
-          destroy: mockDbDestroy,
+          update: mockDbUpdate,
           toJSON: () => ({
             name: 'DB Plugin',
             key: 'db-plugin',
@@ -191,18 +191,18 @@ describe('Plugin Service', () => {
 
       const dbPlugin = result.find(p => p.key === 'db-plugin');
       expect(dbPlugin).toBeUndefined();
-      expect(mockDbDestroy).toHaveBeenCalled();
+      expect(mockDbUpdate).toHaveBeenCalledWith({ is_active: false });
     });
 
-    it('should delete DB plugins if not found on FS', async () => {
+    it('should deactivate DB plugins if not found on FS', async () => {
       fs.promises.readdir.mockResolvedValue([]); // No files
-      const mockDestroy = jest.fn();
+      const mockUpdate = jest.fn();
       mockModels.Plugin.findAll.mockResolvedValue([
         {
           id: 'db-1',
           key: 'missing-plugin',
           is_active: true,
-          destroy: mockDestroy,
+          update: mockUpdate,
           toJSON: () => ({
             name: 'Missing Plugin',
             key: 'missing-plugin',
@@ -214,7 +214,7 @@ describe('Plugin Service', () => {
       const result = await managePlugins(mockContext);
       const missingPlugin = result.find(p => p.key === 'missing-plugin');
       expect(missingPlugin).toBeUndefined();
-      expect(mockDestroy).toHaveBeenCalled();
+      expect(mockUpdate).toHaveBeenCalledWith({ is_active: false });
     });
 
     it('should list FS-only plugins when DB is empty', async () => {

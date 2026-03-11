@@ -190,7 +190,7 @@ export function validateManifest(manifest) {
  * @param {string} baseDir - Base directory plugins are stored in
  * @throws {PluginError} If the name escapes the base directory
  */
-export function sanitizePluginName(pluginName, baseDir) {
+export function validatePluginNameSafe(pluginName, baseDir) {
   const resolved = path.join(baseDir, pluginName);
   const relative = path.relative(baseDir, resolved);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {

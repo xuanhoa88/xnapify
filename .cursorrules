@@ -1,0 +1,28 @@
+# rapid-rsk Global Coding Rules
+
+You are editing the rapid-rsk monorepo. This codebase uses a strictly enforced architecture (Express Backend, React SSR Frontend).
+
+## 1. Project Architecture Rules
+- DO NOT invent new folder structures. Use `@apps/<module>/api` for backend logic and `@apps/<module>/views` for React pages.
+- ALWAYS use the `@shared` alias for shared API integrations (e.g. `@shared/api/db`, `@shared/validator`).
+- DO NOT write tightly coupled domain logic. Rely on the shared Dependency Injection Container and Plugin Hooks where appropriate.
+
+## 2. Frontend Standards
+- ALWAYS use **React Functional Components** with hooks. Never use Class Components.
+- USE `react-redux` and `@reduxjs/toolkit` with the established Module-Level Slice injection pattern. Do not set up global Redux directly.
+- DO NOT use TailwindCSS or utility libraries unless explicitly instructed. ALWAYS use **CSS Modules** (`[Component].module.css`) and plain semantic HTML class names.
+- ALWAYS extract hardcoded strings to `i18n.t()` via `react-i18next`.
+- Data fetching for initial SSR load MUST happen within the view's `_route.js` `getInitialProps` hook.
+
+## 3. Backend Standards
+- USE Express 4.x patterns.
+- DB Access: MUST use the configured **Sequelize** ORM. Do not write raw SQL queries unless absolutely necessary for optimization.
+- Payload Validation: ALWAYS use the customized `z` wrapper exported from `@shared/validator` (Zod). Do not introduce Yup or Joi.
+- Controller logic must remain thin: Route -> Controller -> Service.
+
+## 4. Linting and Testing
+- All environment variables MUST have an `RSK_` prefix.
+- All testing MUST use Jest and React Testing Library. 
+- Run tests regularly on new logic (`npm run test:watch`).
+
+When generating code, confirm alignment with `AGENT.md` guidelines silently.

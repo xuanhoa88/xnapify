@@ -16,7 +16,7 @@ import {
   resolvePluginDir,
   readPluginManifest,
   validateManifest,
-  sanitizePluginName,
+  validatePluginNameSafe,
   invalidateCache,
   encryptPluginId,
 } from './plugin.helpers';
@@ -118,15 +118,15 @@ export async function managePlugins({ pluginManager, models, cwd, queue }) {
       });
     } else {
       // Plugin in DB but not on disk (Missing)
-      // Auto-delete from DB as per missing source logic
+      // Deactivate from DB as per missing source logic instead of hard deletion to preserve configuration
       try {
-        await dbPlugin.destroy();
+        await dbPlugin.update({ is_active: false });
         console.info(
-          `[managePlugins] Auto-deleted missing plugin from DB: ${dbPlugin.key}`,
+          `[managePlugins] Auto-deactivated missing plugin from DB: ${dbPlugin.key}`,
         );
       } catch (err) {
         console.error(
-          `[managePlugins] Failed to auto-delete missing plugin: ${dbPlugin.key}`,
+          `[managePlugins] Failed to auto-deactivate missing plugin: ${dbPlugin.key}`,
           err,
         );
       }
@@ -156,7 +156,7 @@ export async function managePlugins({ pluginManager, models, cwd, queue }) {
       queueChannel.queue &&
       typeof queueChannel.queue.getJobs === 'function'
     ) {
-      const allJobs = queueChannel.queue.getJobs();
+      const allJobs = await queueChannel.queue.getJobs();
       const busyJobs = allJobs.filter(j =>
         ['pending', 'active', 'delayed'].includes(j.status),
       );
@@ -362,27 +362,24 @@ export async function getPluginById({ pluginManager, cwd, models, cache }, id) {
     const dbPlugin =
       dbPluginRecord ||
       (await models.Plugin.findOne({ where: { key: pluginKey } }));
-    if (
-      dbPlugin &&
-      dbPlugin.checksum &&
-      manifest.rsk &&
-      manifest.rsk.checksum &&
-      dbPlugin.checksum !== manifest.rsk.checksum
-    ) {
-      console.error(
-        `[pluginService] ⛔ Checksum mismatch for plugin "${pluginKey}": ` +
-          `DB=${dbPlugin.checksum}, manifest=${manifest.rsk.checksum}. ` +
-          `Auto-deactivating plugin — possible code tampering detected.`,
-      );
+    if (dbPlugin && dbPlugin.checksum) {
+      const manifestChecksum = (manifest.rsk && manifest.rsk.checksum) || null;
+      if (dbPlugin.checksum !== manifestChecksum) {
+        console.error(
+          `[pluginService] ⛔ Checksum mismatch for plugin "${pluginKey}": ` +
+            `DB=${dbPlugin.checksum}, manifest=${manifest.rsk.checksum}. ` +
+            `Auto-deactivating plugin — possible code tampering detected.`,
+        );
 
-      // Auto-deactivate the tampered plugin
-      await dbPlugin.update({ is_active: false });
+        // Auto-deactivate the tampered plugin
+        await dbPlugin.update({ is_active: false });
 
-      // Invalidate cache so stale data isn't served
-      if (cache) await invalidateCache(cache, dbPlugin.id);
+        // Invalidate cache so stale data isn't served
+        if (cache) await invalidateCache(cache, dbPlugin.id);
 
-      // Flag it so the frontend can display a warning
-      manifest.isTampered = true;
+        // Flag it so the frontend can display a warning
+        manifest.isTampered = true;
+      }
     }
   }
 
@@ -445,7 +442,7 @@ export async function installPluginFromPackage(
   const tempExtractDir = path.join(
     os.tmpdir(),
     process.env.RSK_PLUGIN_PATH || 'plugins',
-    path.parse(file.originalName).name,
+    path.parse(file.originalname || '').name,
   );
 
   try {
@@ -506,7 +503,7 @@ export async function installPluginFromPackage(
       validateManifest(manifest);
 
     // 4a. Security: prevent path traversal via crafted plugin names
-    sanitizePluginName(pluginName, pluginsDir);
+    validatePluginNameSafe(pluginName, pluginsDir);
 
     // 5. Move to final destination
     const finalPluginDir = path.join(pluginsDir, pluginName);
@@ -569,8 +566,8 @@ export async function installPluginFromPackage(
         await fs.promises.rm(tempExtractDir, { recursive: true, force: true });
       }
 
-      if (file.fileName && fsEngine && typeof fsEngine.remove === 'function') {
-        await fsEngine.remove(file.fileName);
+      if (file.filename && fsEngine && typeof fsEngine.remove === 'function') {
+        await fsEngine.remove(file.filename);
       }
 
       if (fs.existsSync(tempPath)) {
