@@ -449,3 +449,54 @@ export async function generateRandomPassword(req, res) {
     return http.sendServerError(res, 'Failed to generate password', error);
   }
 }
+
+/**
+ * Handle OAuth callback after user authenticates with provider
+ *
+ * @access  Public
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export async function oauthCallback(req, res) {
+  const http = req.app.get('http');
+  const appUrl = process.env.RSK_APP_URL;
+
+  try {
+    const { provider } = req.params;
+
+    // req.user will contain the passport profile
+    const profile = req.user;
+    if (!profile) {
+      return http.sendUnauthorized(res, 'OAuth authentication failed');
+    }
+
+    // Authenticate or register user using the profile
+    const auth = req.app.get('auth');
+
+    const userData = await authService.oauthLogin(provider, profile, {
+      models: req.app.get('models'),
+      webhook: req.app.get('webhook'),
+      searchWorker: req.app.get('container').resolve('search:worker'),
+      hook: req.app.get('hook').withContext(req.app),
+      defaultRoleName: auth.DEFAULT_ROLE,
+    });
+
+    // Generate token pair
+    const jwt = req.app.get('jwt');
+    const tokens = jwt.generateTokenPair({
+      id: userData.id,
+      email: userData.email,
+      picture: userData.picture || null,
+    });
+
+    // Set token cookies
+    auth.setTokenCookie(res, tokens.accessToken);
+    auth.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // Redirect to frontend.
+    // Cookies are set, so the frontend will automatically be authenticated.
+    return res.redirect(`${appUrl}/?oauth=success`);
+  } catch (error) {
+    return res.redirect(`${appUrl}/?oauth=error`);
+  }
+}

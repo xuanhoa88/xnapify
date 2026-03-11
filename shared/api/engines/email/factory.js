@@ -20,7 +20,8 @@ import { send } from './services';
 export class EmailManager {
   constructor(config = {}) {
     this.providers = new Map();
-    this.defaultProvider = config.provider || 'smtp';
+    this.defaultProvider =
+      config.provider || process.env.RSK_MAIL_PROVIDER || 'smtp';
     this.config = config;
 
     // Worker thresholds (can be overridden globally)
@@ -48,34 +49,35 @@ export class EmailManager {
     // SMTP provider (if configured)
     if (
       this.config.smtp ||
-      process.env.RSK_EMAIL_SMTP_HOST ||
+      process.env.RSK_SMTP_HOST ||
       this.defaultProvider === 'smtp'
     ) {
       this.providers.set(
         'smtp',
         new SmtpEmailProvider(
           this.config.smtp || {
-            host: process.env.RSK_EMAIL_SMTP_HOST,
-            port: parseInt(process.env.RSK_EMAIL_SMTP_PORT, 10) || 587,
-            secure: process.env.RSK_EMAIL_SMTP_SECURE === 'true',
-            user: process.env.RSK_EMAIL_SMTP_USER,
-            pass: process.env.RSK_EMAIL_SMTP_PASS,
-            defaultFrom: process.env.RSK_EMAIL_DEFAULT_FROM,
-            defaultFromName: process.env.RSK_EMAIL_DEFAULT_FROM_NAME,
+            host: process.env.RSK_SMTP_HOST,
+            port: parseInt(process.env.RSK_SMTP_PORT, 10) || 587,
+            secure: process.env.RSK_SMTP_SECURE === 'true',
+            user: process.env.RSK_SMTP_USER,
+            pass: process.env.RSK_SMTP_PASS,
+            defaultFrom: process.env.RSK_MAIL_FROM,
+            defaultFromName:
+              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
           },
         ),
       );
     }
 
     // SendGrid provider (if configured)
-    if (this.config.sendgrid || process.env.RSK_EMAIL_SENDGRID_API_KEY) {
+    if (this.config.sendgrid || process.env.RSK_SENDGRID_KEY) {
       this.providers.set(
         'sendgrid',
         new SendGridEmailProvider(
           this.config.sendgrid || {
-            apiKey: process.env.RSK_EMAIL_SENDGRID_API_KEY,
-            defaultFrom: process.env.RSK_EMAIL_DEFAULT_FROM,
-            defaultFromName: process.env.RSK_EMAIL_DEFAULT_FROM_NAME,
+            apiKey: process.env.RSK_SENDGRID_KEY,
+            defaultFrom: process.env.RSK_MAIL_FROM,
+            defaultFromName: process.env.RSK_MAIL_FROM_NAME,
           },
         ),
       );
@@ -84,18 +86,17 @@ export class EmailManager {
     // Mailgun provider (if configured)
     if (
       this.config.mailgun ||
-      (process.env.RSK_EMAIL_MAILGUN_API_KEY &&
-        process.env.RSK_EMAIL_MAILGUN_DOMAIN)
+      (process.env.RSK_MAILGUN_KEY && process.env.RSK_MAILGUN_DOMAIN)
     ) {
       this.providers.set(
         'mailgun',
         new MailgunEmailProvider(
           this.config.mailgun || {
-            apiKey: process.env.RSK_EMAIL_MAILGUN_API_KEY,
-            domain: process.env.RSK_EMAIL_MAILGUN_DOMAIN,
-            region: process.env.RSK_EMAIL_MAILGUN_REGION || 'us',
-            defaultFrom: process.env.RSK_EMAIL_DEFAULT_FROM,
-            defaultFromName: process.env.RSK_EMAIL_DEFAULT_FROM_NAME,
+            apiKey: process.env.RSK_MAILGUN_KEY,
+            domain: process.env.RSK_MAILGUN_DOMAIN,
+            region: process.env.RSK_MAILGUN_REGION || 'us',
+            defaultFrom: process.env.RSK_MAIL_FROM,
+            defaultFromName: process.env.RSK_MAIL_FROM_NAME,
           },
         ),
       );

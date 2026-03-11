@@ -179,7 +179,7 @@ export function withNamespace(namespace, baseSearch) {
  */
 export function createFactory(options = {}) {
   // Determine default type from environment or fallback to memory
-  const defaultType = process.env.RSK_SEARCH_ENGINE_TYPE || 'memory';
+  const defaultType = process.env.RSK_SEARCH_TYPE || 'memory';
   const { type = defaultType, ...configOptions } = options;
 
   const AdapterClass = adapterRegistry.get(type);
@@ -194,28 +194,17 @@ export function createFactory(options = {}) {
     throw err;
   }
 
-  // Auto-inject Sequelize connection for database adapter
-  let adapterOptions = configOptions;
+  // Validate database adapter configuration
   if (type === 'database' && !configOptions.connection) {
-    try {
-      // Lazy-require to avoid circular dependency and allow memory adapter
-      // to work without a database connection
-      // eslint-disable-next-line global-require, import/extensions
-      const db = require('../../db');
-      adapterOptions = {
-        connection: db.connection,
-        DataTypes: db.DataTypes,
-        ...configOptions,
-      };
-    } catch (err) {
-      console.warn(
-        '⚠️  Database connection not available for search adapter. Ensure DB engine is initialized.',
-      );
-      throw err;
-    }
+    const err = new Error(
+      'Database connection not available for search adapter. Ensure DB engine is initialized.',
+    );
+    err.name = 'InvalidSearchDatabaseAdapterError';
+    err.status = 400;
+    throw err;
   }
 
-  const adapter = new AdapterClass(adapterOptions);
+  const adapter = new AdapterClass(configOptions);
 
   // Attach withNamespace method to the adapter instance
   adapter.withNamespace = function (namespace) {

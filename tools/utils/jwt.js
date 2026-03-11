@@ -102,7 +102,7 @@ function updateEnvContent(lines, existingKeys, jwtConfig) {
  * 3. If .env doesn't exist (first-time setup):
  *    - Creates .env from .env.rsk template (or minimal config)
  *    - Generates a new secure random JWT secret automatically
- * 4. Updates RSK_JWT_SECRET and RSK_JWT_EXPIRES_IN
+ * 4. Updates RSK_JWT_SECRET and RSK_JWT_EXPIRY
  * 5. Writes back to .env file
  * 6. For production builds (when buildDir is provided):
  *    - Copies the .env file to the build directory
@@ -180,8 +180,8 @@ async function generateJWT(cwd, buildDir) {
     // JWT configuration to add/update (using RSK_ prefix)
     const jwtConfig = {
       RSK_JWT_SECRET: jwtSecret,
-      RSK_JWT_EXPIRES_IN: keys.has('RSK_JWT_EXPIRES_IN')
-        ? keys.get('RSK_JWT_EXPIRES_IN').value
+      RSK_JWT_EXPIRY: keys.has('RSK_JWT_EXPIRY')
+        ? keys.get('RSK_JWT_EXPIRY').value
         : '7d',
     };
 
@@ -202,14 +202,14 @@ async function generateJWT(cwd, buildDir) {
     }
 
     if (jwtSecret) {
-      logInfo(`   ⏰ Token expires: ${jwtConfig.RSK_JWT_EXPIRES_IN}`);
+      logInfo(`   ⏰ Token expires: ${jwtConfig.RSK_JWT_EXPIRY}`);
     }
 
     // Update process.env directly since we know the values
     // This allows the current process to use the new secret immediately
     // without relying on dotenv-flow to reload (which doesn't overwrite existing vars)
     process.env.RSK_JWT_SECRET = jwtConfig.RSK_JWT_SECRET;
-    process.env.RSK_JWT_EXPIRES_IN = jwtConfig.RSK_JWT_EXPIRES_IN;
+    process.env.RSK_JWT_EXPIRY = jwtConfig.RSK_JWT_EXPIRY;
   } catch (error) {
     throw new Error(`Failed to generate JWT configuration: ${error.message}`);
   }

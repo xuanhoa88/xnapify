@@ -130,12 +130,12 @@ function buildApiRouter(app, apiRoutes) {
 
   // Body parsing scoped to API routes only
   router.use(
-    express.json({ limit: process.env.RSK_API_JSON_REQUEST_LIMIT || '10mb' }),
+    express.json({ limit: process.env.RSK_JSON_BODY_LIMIT || '10mb' }),
   );
   router.use(
     express.urlencoded({
       extended: true,
-      limit: process.env.RSK_API_URL_ENCODED_REQUEST_LIMIT || '1mb',
+      limit: process.env.RSK_URLENCODED_BODY_LIMIT || '1mb',
     }),
   );
 

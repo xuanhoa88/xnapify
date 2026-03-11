@@ -27,7 +27,9 @@ const pkg = JSON.parse(
 // Base webpack configuration
 const nodeEnv = config.env('NODE_ENV', 'development');
 const isDev = nodeEnv !== 'production';
-const isProfile = process.argv.includes('--profile');
+const isProfile =
+  process.argv.includes('--profile') ||
+  config.env('WEBPACK_PROFILE') === 'true';
 const verbose = isVerbose();
 
 // =============================================================================

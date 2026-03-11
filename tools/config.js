@@ -14,16 +14,16 @@ const env = (key, defaultValue) => {
 };
 
 // Project root directory (overridable via CWD env var)
-const CWD = (() => {
+const getCwd = () => {
   const rootEnv = env('CWD');
   if (!rootEnv) return process.cwd();
   return path.isAbsolute(rootEnv)
     ? rootEnv
     : path.resolve(process.cwd(), rootEnv);
-})();
+};
 
 // Resolve path from project root
-const resolvePath = (...args) => path.resolve(CWD, ...args);
+const resolvePath = (...args) => path.resolve(getCwd(), ...args);
 
 // Resolve directory with env var override support
 const getDirFromEnv = (envVar, defaultPath) => {
@@ -35,13 +35,26 @@ const getDirFromEnv = (envVar, defaultPath) => {
 module.exports = {
   // Helpers
   env,
-  CWD,
 
-  // Directories
-  BUILD_DIR: getDirFromEnv('BUILD_DIR', 'build'),
-  APP_DIR: getDirFromEnv('APP_DIR', 'src'),
-  PUBLIC_DIR: getDirFromEnv('PUBLIC_DIR', 'public'),
+  // Dynamic getters so process.env changes are reflected
+  // after dotenv-flow initializes
+  get CWD() {
+    return getCwd();
+  },
 
-  // Shared bundle config
-  bundleMaxAssetSize: env('BUNDLE_MAX_ASSET_SIZE', 250_000), // 250KB
+  get BUILD_DIR() {
+    return getDirFromEnv('BUILD_DIR', 'build');
+  },
+
+  get APP_DIR() {
+    return getDirFromEnv('APP_DIR', 'src');
+  },
+
+  get PUBLIC_DIR() {
+    return getDirFromEnv('PUBLIC_DIR', 'public');
+  },
+
+  get bundleMaxAssetSize() {
+    return env('WEBPACK_MAX_ASSET_SIZE', 250_000); // 250KB
+  },
 };

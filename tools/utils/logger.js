@@ -37,29 +37,34 @@ function determineLogLevel() {
     }
 
     // Legacy environment variables
-    if (process.env.SILENT === 'true') return 'silent';
-    if (process.env.VERBOSE === 'true') return 'verbose';
+    if (process.env.LOG_SILENT === 'true') return 'silent';
+    if (process.env.LOG_VERBOSE === 'true') return 'verbose';
   }
 
   return 'info';
 }
 
-// Cache the log level at startup (it doesn't change during execution)
-const CURRENT_LOG_LEVEL = determineLogLevel();
+/**
+ * Determine the current logging level
+ */
+function getCurrentLogLevel() {
+  return determineLogLevel();
+}
 
 /**
  * Check if a log level should be shown
  */
 function shouldLog(level) {
-  return LOG_LEVELS[level] <= LOG_LEVELS[CURRENT_LOG_LEVEL];
+  return LOG_LEVELS[level] <= LOG_LEVELS[getCurrentLogLevel()];
 }
 
 function isSilent() {
-  return CURRENT_LOG_LEVEL === 'silent';
+  return getCurrentLogLevel() === 'silent';
 }
 
 function isVerbose() {
-  return CURRENT_LOG_LEVEL === 'verbose' || CURRENT_LOG_LEVEL === 'debug';
+  const level = getCurrentLogLevel();
+  return level === 'verbose' || level === 'debug';
 }
 
 /**

@@ -136,10 +136,10 @@ export function createJwtFromEnv() {
 
   return createJwt({
     secret,
-    expiresIn: process.env.RSK_JWT_EXPIRES_IN || DEFAULT_JWT_CONFIG.expiresIn,
-    algorithm: process.env.RSK_JWT_ALGORITHM || DEFAULT_JWT_CONFIG.algorithm,
-    issuer: process.env.RSK_JWT_ISSUER || DEFAULT_JWT_CONFIG.issuer,
-    audience: process.env.RSK_JWT_AUDIENCE || DEFAULT_JWT_CONFIG.audience,
+    expiresIn: process.env.RSK_JWT_EXPIRY || DEFAULT_JWT_CONFIG.expiresIn,
+    algorithm: process.env.RSK_JWT_ALG || DEFAULT_JWT_CONFIG.algorithm,
+    issuer: process.env.RSK_JWT_ISS || DEFAULT_JWT_CONFIG.issuer,
+    audience: process.env.RSK_JWT_AUD || DEFAULT_JWT_CONFIG.audience,
   });
 }
 

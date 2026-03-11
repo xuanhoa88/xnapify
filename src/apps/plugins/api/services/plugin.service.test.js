@@ -164,7 +164,7 @@ describe('Plugin Service', () => {
       ]);
 
       // Set local plugin path to differ from installed path
-      process.env.RSK_LOCAL_PLUGIN_PATH = 'local-plugins';
+      process.env.RSK_PLUGIN_LOCAL_PATH = 'local-plugins';
 
       const result = await managePlugins(mockContext);
 

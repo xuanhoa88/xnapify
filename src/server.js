@@ -21,6 +21,7 @@ import { LRUCache } from 'lru-cache';
 import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
 import toString from 'lodash/toString';
+import set from 'lodash/set';
 import { configureJwt } from '@shared/jwt';
 import { createFetch } from '@shared/fetch';
 import i18n, {
@@ -67,30 +68,29 @@ const SERVER_TIMEOUTS = Object.freeze({
 const SERVER_CONFIG = Object.freeze({
   cwd: __dirname,
   nodeEnv: process.env.NODE_ENV || 'development',
-  protocol: process.env.RSK_HTTPS === 'true' ? 'https' : 'http',
   port: validatePort(process.env.RSK_PORT, 1337),
   host: sanitizeHost(process.env.RSK_HOST || '127.0.0.1'),
   wsPath: formatUrlPath(process.env.RSK_WS_PATH || 'ws'),
   apiPrefix: formatUrlPath(process.env.RSK_API_PREFIX || 'api'),
 
-  enableCompression: process.env.RSK_ENABLE_COMPRESSION !== 'false',
+  enableCompression: process.env.RSK_COMPRESSION !== 'false',
   compressionLevel: parseInt(
     process.env.RSK_COMPRESSION_LEVEL || (__DEV__ ? 1 : 6),
     10,
   ),
 
-  enableRateLimit: process.env.RSK_ENABLE_RATE_LIMIT !== 'false',
+  enableRateLimit: process.env.RSK_RATE_LIMIT !== 'false',
   rateLimitWindow:
-    parseInt(process.env.RSK_API_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
-  rateLimitMax: parseInt(process.env.RSK_API_RATE_LIMIT_MAX, 10) || 50,
+    parseInt(process.env.RSK_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
+  rateLimitMax: parseInt(process.env.RSK_RATE_LIMIT_MAX, 10) || 50,
 
-  enableSSRCache: process.env.RSK_ENABLE_SSR_CACHE === 'true',
+  enableSSRCache: process.env.RSK_SSR_CACHE === 'true',
   ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
 
-  localeCacheTTL: parseInt(process.env.RSK_LOCALE_CACHE_TTL, 10) || 60_000,
-  localeCacheMax: parseInt(process.env.RSK_LOCALE_CACHE_MAX, 10) || 500,
+  localeCacheTTL: parseInt(process.env.RSK_I18N_CACHE_TTL, 10) || 60_000,
+  localeCacheMax: parseInt(process.env.RSK_I18N_CACHE_MAX, 10) || 500,
 
-  maxCookieSize: parseInt(process.env.RSK_MAX_COOKIE_SIZE, 10) || 4096,
+  maxCookieSize: parseInt(process.env.RSK_COOKIE_MAX_SIZE, 10) || 4096,
 });
 
 // Static security headers (CSP is generated per-request with a nonce)
@@ -98,6 +98,12 @@ const STATIC_SECURITY_HEADERS = Object.entries({
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+});
+
+const APP_METADATA = Object.freeze({
+  title: process.env.RSK_APP_NAME || 'React Starter Kit',
+  description:
+    process.env.RSK_APP_DESC || 'Boilerplate for React.js web applications',
 });
 
 // ---------------------------------------------------------------------------
@@ -146,7 +152,7 @@ function formatUrlPath(urlPath) {
 }
 
 function buildBaseUrl(port, host) {
-  return `${SERVER_CONFIG.protocol}://${sanitizeHost(host)}:${port}`;
+  return `http://${sanitizeHost(host)}:${port}`;
 }
 
 function promiseWithDeadline(promise, timeoutMs, operationName) {
@@ -167,18 +173,43 @@ function promiseWithDeadline(promise, timeoutMs, operationName) {
 }
 
 function extractPageMetadata(page, req) {
-  const rawHost = req.get('host') || SERVER_CONFIG.host;
-  const host = rawHost.split(':')[0];
-
   const metadata = {
-    title: (page && page.title) || null,
-    description: (page && page.description) || null,
-    image: (page && page.image) || null,
-    type: (page && page.type) || null,
+    title: (page && page.title) || APP_METADATA.title,
+    description: (page && page.description) || APP_METADATA.description,
+    image: (page && page.image) || process.env.RSK_APP_IMAGE,
+    type: (page && page.type) || 'website',
   };
 
-  if (!LOCALHOST_IPS.has(host)) {
-    metadata.url = `${SERVER_CONFIG.protocol}://${rawHost}${req.originalUrl || req.path}`;
+  try {
+    const rawHost = req.get('host');
+    const normalizedHost = rawHost.split(':')[0];
+
+    if (!LOCALHOST_IPS.has(normalizedHost)) {
+      const baseUrl = req.protocol + '://' + rawHost;
+      const fullUrl = new URL(req.originalUrl || req.path, baseUrl);
+
+      // Strip tracking params
+      fullUrl.searchParams.delete('utm_source');
+      fullUrl.searchParams.delete('utm_medium');
+      fullUrl.searchParams.delete('utm_campaign');
+      fullUrl.searchParams.delete('utm_term');
+      fullUrl.searchParams.delete('utm_content');
+      fullUrl.searchParams.delete('ref');
+      fullUrl.searchParams.delete('fbclid');
+      fullUrl.searchParams.delete('gclid');
+
+      metadata.url = fullUrl.toString();
+
+      // Enforce absolute image URL
+      if (metadata.image && !/^https?:\/\//.test(metadata.image)) {
+        metadata.image = baseUrl + metadata.image;
+      }
+    } else {
+      // Explicit null for localhost so downstream code handles it predictably
+      metadata.url = null;
+    }
+  } catch (err) {
+    console.error('Failed to extract page metadata:', err);
   }
 
   return metadata;
@@ -333,10 +364,8 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
   await store.dispatch(
     setRuntimeVariable({
       initialNow: Date.now(),
-      appName: process.env.RSK_APP_NAME || 'React Starter Kit',
-      appDescription:
-        process.env.RSK_APP_DESCRIPTION ||
-        'Boilerplate for React.js web applications',
+      appName: APP_METADATA.title,
+      appDescription: APP_METADATA.description,
     }),
   );
 
@@ -995,8 +1024,16 @@ export async function initializeServer(app, server, options = {}) {
 
   // Sanitize host so server.listen() and SSR self-fetch use the same address.
   // e.g. 'localhost' → '127.0.0.1' prevents IPv4/IPv6 mismatch with node-fetch.
+  // We compute baseUrl here for SSR fetch calls, but global OAuth and Passport.js links
+  // rely on RSK_APP_URL which is evaluated globally at build time by Webpack.
   const resolvedHost = sanitizeHost(host);
   const baseUrl = buildBaseUrl(port, resolvedHost);
+
+  // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
+  // If undefined or invalid, default to the local port/host used by the server
+  if (!/^(http|https):\/\/.+$/.test(process.env.RSK_APP_URL || '')) {
+    set(process.env, 'RSK_APP_URL', baseUrl);
+  }
 
   // WebSocket
   appState.wsServer = createWebSocketServer(

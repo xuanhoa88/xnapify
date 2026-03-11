@@ -30,16 +30,16 @@ export const DEFAULT_FILE_SIZES = Object.freeze({
 
 // Configuration from environment variables
 export const MAX_FILE_SIZE =
-  parseInt(process.env.RSK_FS_MAX_FILE_SIZE, 10) || DEFAULT_FILE_SIZES.LARGE;
+  parseInt(process.env.RSK_UPLOAD_MAX_SIZE, 10) || DEFAULT_FILE_SIZES.LARGE;
 
 export const MAX_FILENAME_LENGTH =
-  parseInt(process.env.RSK_FS_MAX_FILENAME_LENGTH, 10) || 255;
+  parseInt(process.env.RSK_UPLOAD_MAX_NAME_LEN, 10) || 255;
 
 export const UPLOAD_DIR =
-  process.env.RSK_FS_UPLOAD_DIR || path.join(os.homedir(), '.rsk', 'uploads');
+  process.env.RSK_UPLOAD_DIR || path.join(os.homedir(), '.rsk', 'uploads');
 
-export const ALLOWED_EXTENSIONS = process.env.RSK_FS_ALLOWED_EXTENSIONS
-  ? process.env.RSK_FS_ALLOWED_EXTENSIONS.split(',').map(ext => ext.trim())
+export const ALLOWED_EXTENSIONS = process.env.RSK_UPLOAD_ALLOWED_EXT
+  ? process.env.RSK_UPLOAD_ALLOWED_EXT.split(',').map(ext => ext.trim())
   : null;
 
 // Error codes

@@ -114,7 +114,7 @@
  *
  *   await webhook.send(summary, {
  *     url: 'https://api.example.com/daily-summary',
- *     secret: process.env.WEBHOOK_SECRET,
+ *     secret: process.env.RSK_WEBHOOK_SECRET,
  *     retries: 3
  *   });
  * });

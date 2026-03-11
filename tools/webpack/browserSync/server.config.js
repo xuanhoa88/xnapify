@@ -7,6 +7,7 @@
 
 const open = require('open');
 const { logInfo, logWarn, logError } = require('../../utils/logger');
+const config = require('../../config');
 
 // Configuration
 const CONFIG = Object.freeze({
@@ -293,6 +294,10 @@ const onClientConnected = () => {
  * @returns {Promise<boolean>}
  */
 const start = async (server, middleware) => {
+  if (config.env('OPEN_BROWSER') !== 'true') {
+    return false;
+  }
+
   if (isShuttingDown) {
     logError('[BrowserSync] Cannot start: server is shutting down');
     return false;

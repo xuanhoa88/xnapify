@@ -509,3 +509,228 @@ export async function resetPasswordConfirmation(
 
   return user;
 }
+
+/**
+ * Authenticate or register a user via OAuth
+ *
+ * @param {string} provider - OAuth provider name (e.g., 'google')
+ * @param {Object} profile - Passport profile object
+ * @param {Object} options - Options object
+ * @returns {Promise<Object>} Formatted user object with RBAC data
+ */
+export async function oauthLogin(
+  provider,
+  profile,
+  {
+    models,
+    webhook,
+    searchWorker,
+    hook,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = {},
+) {
+  const { User, UserLogin, UserProfile, Role, Permission, Group } = models;
+
+  // Find UserLogin by provider and profile.id
+  const userLogin = await UserLogin.findOne({
+    where: { name: provider, key: profile.id },
+  });
+
+  let user;
+
+  if (userLogin) {
+    // Re-fetch user to get RBAC
+    user = await User.findByPk(userLogin.user_id);
+    if (!user) {
+      throw new Error('User associated with OAuth login not found');
+    }
+  } else {
+    // Registration or linking existing email
+    const email =
+      profile.emails && profile.emails.length > 0
+        ? profile.emails[0].value
+        : null;
+
+    if (!email) {
+      const error = new Error('OAuth profile did not provide an email address');
+      error.status = 400;
+      throw error;
+    }
+
+    user = await User.findOne({ where: { email } });
+
+    if (!user) {
+      // Create new user
+      const displayName =
+        profile.displayName ||
+        (profile.name && profile.name.givenName) ||
+        email.split('@')[0];
+      const picture =
+        profile.photos && profile.photos.length > 0
+          ? profile.photos[0].value
+          : null;
+
+      user = await User.create(
+        {
+          email,
+          email_confirmed: true, // We trust OAuth providers to verify email
+          password: null, // No password for OAuth users
+          is_active: true,
+          is_locked: false,
+          failed_login_attempts: 0,
+          profile: {
+            display_name: displayName,
+            picture,
+          },
+        },
+        {
+          include: [
+            {
+              model: UserProfile,
+              as: 'profile',
+              required: false,
+            },
+          ],
+        },
+      );
+
+      // Assign default role
+      const defaultRole = await Role.findOne({
+        where: { name: defaultRoleName },
+      });
+      if (defaultRole) {
+        await user.addRole(defaultRole);
+      }
+
+      await logUserActivity(
+        webhook,
+        'registered',
+        user.id,
+        { email, provider },
+        null,
+        {
+          useWorker: true,
+        },
+      );
+
+      await hook('auth').emit('registered', { user_id: user.id, email });
+
+      if (searchWorker) {
+        await searchWorker.indexUser(user);
+      }
+    }
+
+    // Link the oauth account mapping
+    await UserLogin.create({
+      user_id: user.id,
+      name: provider,
+      key: profile.id,
+    });
+  }
+
+  // Refetch user with full RBAC scope like authenticateUser does
+  const completeUser = await User.findOne({
+    where: { id: user.id },
+    include: [
+      {
+        model: UserProfile,
+        as: 'profile',
+      },
+      {
+        model: Role,
+        as: 'roles',
+        attributes: ['name'],
+        through: { attributes: [] },
+        include: [
+          {
+            model: Permission,
+            as: 'permissions',
+            attributes: ['resource', 'action'],
+            where: { is_active: true },
+            required: false,
+            through: { attributes: [] },
+          },
+        ],
+      },
+      {
+        model: Group,
+        as: 'groups',
+        attributes: ['name'],
+        required: false,
+        through: { attributes: [] },
+        include: [
+          {
+            model: Role,
+            as: 'roles',
+            attributes: ['name'],
+            through: { attributes: [] },
+            include: [
+              {
+                model: Permission,
+                as: 'permissions',
+                attributes: ['resource', 'action'],
+                where: { is_active: true },
+                required: false,
+                through: { attributes: [] },
+              },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  if (!completeUser.is_active) {
+    const error = new Error('User inactive');
+    error.name = 'UserInactiveError';
+    error.status = 403;
+    throw error;
+  }
+
+  if (completeUser.is_locked) {
+    const error = new Error('User locked');
+    error.name = 'UserLockedError';
+    error.status = 403;
+    throw error;
+  }
+
+  // Reset failed login attempts on successful login
+  if (completeUser.failed_login_attempts > 0) {
+    await completeUser.update({ failed_login_attempts: 0 });
+  }
+
+  // Update user's last login
+  await User.update(
+    { last_login_at: new Date() },
+    { where: { id: completeUser.id } },
+  );
+
+  // Log login activity
+  await logUserActivity(
+    webhook,
+    'login',
+    completeUser.id,
+    { success: true, provider },
+    null,
+    { useWorker: true },
+  );
+
+  // Format user response
+  const normalizedUser = await formatUserResponse(completeUser, {
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  });
+
+  await hook('auth').emit('logged_in', {
+    user_id: completeUser.id,
+    activityData: { provider },
+    user: normalizedUser,
+  });
+
+  return normalizedUser;
+}

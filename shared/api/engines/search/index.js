@@ -15,7 +15,7 @@ import { createFactory, registerAdapter, withNamespace } from './factory';
  * - **database**: Native FTS using SQLite FTS5, PostgreSQL tsvector, or MySQL FULLTEXT
  *
  * Adapters can be dynamically registered via `registerAdapter()`.
- * Set `RSK_SEARCH_ENGINE_TYPE` env var to change the default adapter.
+ * Set `RSK_SEARCH_TYPE` env var to change the default adapter.
  *
  * @example
  * // Use default singleton instance directly

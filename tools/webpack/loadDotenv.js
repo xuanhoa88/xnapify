@@ -16,21 +16,12 @@ const { logInfo, logWarn } = require('../utils/logger');
  * 2. Creates DefinePlugin definitions for each variable
  * 3. Makes them available as process.env.RSK_* in the bundle
  *
- * Example:
- *   RSK_API_URL=https://api.example.com
- *   RSK_FEATURE_FLAG=true
- *
- * Usage in code:
- *   const apiUrl = process.env.RSK_API_URL;
- *   const featureFlag = process.env.RSK_FEATURE_FLAG === 'true';
- *
  * @param {Object} options - Plugin options
- * @param {string} options.prefix - Environment variable prefix (default: 'RSK_')
  * @param {boolean} options.verbose - Enable verbose logging (default: false)
  * @returns {Object} Webpack DefinePlugin definitions
  */
 function loadDotenv(options = {}) {
-  const { prefix = 'RSK_', verbose = false } = options;
+  const { verbose = false } = options;
 
   // Load environment variables using dotenv-flow
   // This supports .env, .env.local, .env.[node_env], etc.
@@ -38,7 +29,7 @@ function loadDotenv(options = {}) {
 
   // Find all environment variables with the specified prefix
   const envVars = Object.keys(process.env)
-    .filter(key => key.startsWith(prefix))
+    .filter(key => key.startsWith('RSK_'))
     .reduce((acc, key) => {
       // Create DefinePlugin definition: process.env.RSK_* = 'value'
       acc[`process.env.${key}`] = JSON.stringify(process.env[key]);
@@ -59,7 +50,7 @@ function loadDotenv(options = {}) {
     });
   } else if (verbose) {
     logWarn(
-      `⚠️ Dotenv Plugin: No environment variables found with prefix "${prefix}"`,
+      `⚠️ Dotenv Plugin: No environment variables found with prefix "RSK_"`,
     );
   }
 

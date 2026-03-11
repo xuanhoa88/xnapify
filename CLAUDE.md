@@ -530,31 +530,25 @@ All environment variables use the `RSK_` prefix for consistency. Key variables (
 # Server Configuration
 RSK_PORT=1337
 RSK_HOST=127.0.0.1
-RSK_HTTPS=false
 
 # Application Metadata
 RSK_APP_NAME="React Starter Kit"
-RSK_APP_DESCRIPTION="Boilerplate for React.js web applications"
-
-# API Gateway
-RSK_API_BASE_URL=              # Leave empty for relative URLs
-RSK_API_PROXY_URL=             # Optional external API proxy
+RSK_APP_DESC="Boilerplate for React.js web applications"
 
 # Database
-RSK_DATABASE_URL=sqlite:database.sqlite
+RSK_DB_URL=sqlite:database.sqlite
 # PostgreSQL: postgresql://user:password@localhost:5432/dbname
 
 # Authentication
 RSK_JWT_SECRET=                # Auto-generated on first run
-RSK_JWT_EXPIRES_IN=7d
+RSK_JWT_EXPIRY=7d
 
 # Node-RED (Optional)
-RSK_NODE_RED_URL=http://localhost:1880
+RSK_NODERED_URL=http://localhost:1880
 
 # Build Configuration (Optional)
-BUNDLE_ANALYZE=false
-BUNDLE_PROFILE=false
-LOG_LEVEL=info
+WEBPACK_ANALYZE=false
+WEBPACK_PROFILE=false
 ```
 
 **Important:** Environment variables are baked into the bundle at build time. Changing them requires rebuilding.
@@ -584,7 +578,7 @@ npm install --production
 # Set environment variables
 export NODE_ENV=production
 export RSK_JWT_SECRET=$(openssl rand -base64 32)
-export RSK_DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+export RSK_DB_URL=postgresql://user:pass@localhost:5432/dbname
 
 # Start server
 npm start
@@ -594,7 +588,7 @@ docker build -t rapid-rsk .
 docker run -p 1337:1337 \
   -e NODE_ENV=production \
   -e RSK_JWT_SECRET=your-secret \
-  -e RSK_DATABASE_URL=postgresql://user:pass@host:5432/db \
+  -e RSK_DB_URL=postgresql://user:pass@host:5432/db \
   rapid-rsk
 ```
 

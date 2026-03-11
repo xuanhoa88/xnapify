@@ -20,7 +20,7 @@ import { DEFAULT_JWT_CONFIG } from './constants';
  * @example
  * const token = generateToken(
  *   { userId: 123, email: 'user@example.com' },
- *   process.env.JWT_SECRET
+ *   process.env.RSK_JWT_SECRET
  * );
  */
 export function generateToken(payload, secret, options = {}) {
@@ -68,7 +68,7 @@ export function generateToken(payload, secret, options = {}) {
  *
  * @example
  * try {
- *   const decoded = verifyToken(token, process.env.JWT_SECRET);
+ *   const decoded = verifyToken(token, process.env.RSK_JWT_SECRET);
  *   console.log('User ID:', decoded.userId);
  * } catch (error) {
  *   console.error('Invalid token:', error.message);

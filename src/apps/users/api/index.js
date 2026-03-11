@@ -10,6 +10,7 @@ import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { getUserRBACData } from './utils/rbac/fetcher';
 import * as profileController from './controllers/profile.controller';
 import * as authController from './controllers/auth.controller';
+import { configurePassport } from './utils/passport';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
@@ -108,6 +109,8 @@ export async function seeds(app) {
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
+  const passport = configurePassport();
+  app.use(passport.initialize());
   await registerAuthHooks(app);
 }
 

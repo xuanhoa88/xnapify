@@ -21,10 +21,10 @@ import { EmailWorkerError } from '../utils/errors';
 
 // Worker configuration
 const WORKER_CONFIG = Object.freeze({
-  maxWorkers: parseInt(process.env.RSK_EMAIL_MAX_WORKERS, 10) || 4,
-  workerTimeout: parseInt(process.env.RSK_EMAIL_WORKER_TIMEOUT, 10) || 60000,
+  maxWorkers: parseInt(process.env.RSK_MAIL_WORKERS, 10) || 4,
+  workerTimeout: parseInt(process.env.RSK_MAIL_WORKER_TIMEOUT, 10) || 60000,
   maxRequestsPerWorker:
-    parseInt(process.env.RSK_EMAIL_MAX_REQUESTS_PER_WORKER, 10) || 100,
+    parseInt(process.env.RSK_MAIL_WORKER_MAX_REQ, 10) || 100,
 });
 
 // Auto-load workers via require.context (*.worker.js or *.worker.ts)

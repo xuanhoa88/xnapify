@@ -75,7 +75,7 @@ export const getPluginPath = () =>
  * @returns {string} Dev plugin path
  */
 export const getDevPluginPath = () =>
-  process.env.RSK_LOCAL_PLUGIN_PATH || 'plugins';
+  process.env.RSK_PLUGIN_LOCAL_PATH || 'plugins';
 
 /**
  * Resolve a plugins directory relative to cwd

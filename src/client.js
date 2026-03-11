@@ -45,7 +45,7 @@ const container = new Container();
 
 // Create browser history with configurable basename
 const history = createBrowserHistory({
-  basename: process.env.PUBLIC_URL || '',
+  basename: process.env.RSK_APP_URL || '',
 });
 
 // Monkey-patch history to support silent reload on navigation

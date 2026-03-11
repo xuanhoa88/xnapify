@@ -10,7 +10,7 @@ const config = require('../config');
 
 // Environment-based configuration
 const isCI = config.env('CI') === 'true';
-const isCoverage = config.env('COVERAGE') === 'true';
+const isCoverage = config.env('JEST_COVERAGE') === 'true';
 const isWatch = config.env('JEST_WATCH') === 'true';
 const isVerbose = config.env('JEST_VERBOSE') !== 'false';
 // support benchmark mode (only run *.benchmark.js files)

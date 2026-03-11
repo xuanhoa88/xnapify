@@ -12,8 +12,8 @@ const snakeCase = require('lodash/snakeCase');
 const pick = require('lodash/pick');
 const semver = require('semver');
 const util = require('util');
-const config = require('../config');
 const { execFile } = require('child_process');
+const config = require('../config');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { toContainerName } = require('../utils/plugin');
 const { computeChecksum } = require('../utils/checksum');
@@ -24,7 +24,7 @@ const { isDev } = require('../webpack/base.config');
 const execFileAsync = util.promisify(execFile);
 
 // Configuration
-const PLUGIN_PATH = process.env.RSK_PLUGIN_PATH || 'plugins';
+const PLUGIN_PATH = config.env('RSK_PLUGIN_PATH', 'plugins');
 const PLUGINS_DIR = path.resolve(config.APP_DIR, PLUGIN_PATH);
 const PLUGINS_BUILD_DIR = path.resolve(config.BUILD_DIR, PLUGIN_PATH);
 
@@ -160,7 +160,7 @@ function handleBuildResult(err, stats, isWatch) {
  */
 async function buildPlugins(options = {}) {
   const isWatch =
-    process.env.NODE_ENV === 'development' &&
+    config.env('NODE_ENV') === 'development' &&
     (options.watch || process.argv.includes('--watch'));
   const plugins = discoverPlugins();
 
@@ -275,7 +275,7 @@ async function buildPlugins(options = {}) {
             ],
             { cwd: plugin.path },
           );
-          if (process.env.NODE_ENV === 'development') {
+          if (config.env('NODE_ENV') === 'development') {
             console.log(
               `[PluginBuild] npm install completed for ${plugin.name}`,
             );

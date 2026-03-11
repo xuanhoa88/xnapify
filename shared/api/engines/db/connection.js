@@ -17,6 +17,27 @@ import {
 } from './migrator';
 
 /**
+ * Default Sequelize connection options
+ */
+const DEFAULT_SEQUELIZE_OPTIONS = Object.freeze({
+  // Timezone configuration (defaults to UTC)
+  timezone: process.env.RSK_DB_TZ || '+00:00',
+  // Connection pooling for better performance
+  pool: {
+    max: 5,
+    min: 0,
+    acquire: 30_000,
+    idle: 10_000,
+  },
+  // Logging configuration
+  logging: process.env.RSK_DB_LOG === 'true' ? console.log : false,
+  define: {
+    freezeTableName: true,
+    timestamps: true,
+  },
+});
+
+/**
  * Attach migration convenience methods to a Sequelize connection instance
  *
  * @param {Sequelize} sequelize - Sequelize connection instance
@@ -88,7 +109,7 @@ function attachMigrationMethods(sequelize) {
  * @returns {Sequelize} Sequelize connection instance with migration methods
  */
 export function createConnection(...args) {
-  let databaseUrl = process.env.RSK_DATABASE_URL || 'sqlite:database.sqlite';
+  let databaseUrl = process.env.RSK_DB_URL || 'sqlite:database.sqlite';
   let options = {};
 
   // Handle variable arguments
@@ -102,26 +123,13 @@ export function createConnection(...args) {
     [databaseUrl, options] = args;
   }
 
-  const defaultOptions = {
-    // Timezone configuration (defaults to UTC)
-    timezone: process.env.RSK_DATABASE_TIMEZONE || '+00:00',
-    // Connection pooling for better performance
-    pool: {
-      max: 5,
-      min: 0,
-      acquire: 30000,
-      idle: 10000,
-    },
-    // Logging configuration
-    logging: process.env.RSK_DATABASE_LOGGING === 'true' ? console.log : false,
-    define: {
-      freezeTableName: true,
-      timestamps: true,
-    },
-  };
-
   // Deep merge options
-  const config = merge({}, defaultOptions, options);
+  const config = merge({}, DEFAULT_SEQUELIZE_OPTIONS, options);
+
+  // SQLite does not support custom connection timezones in Sequelize
+  if (databaseUrl.startsWith('sqlite:')) {
+    delete config.timezone;
+  }
 
   // Create connection and attach migration methods
   const sequelize = new Sequelize(databaseUrl, config);

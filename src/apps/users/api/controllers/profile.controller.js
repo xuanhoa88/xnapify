@@ -208,7 +208,7 @@ export async function previewAvatar(req, res) {
 
   // Default avatar URL (can be configured via env)
   const defaultAvatar =
-    process.env.RSK_DEFAULT_AVATAR_URL ||
+    process.env.RSK_AVATAR_DEFAULT_URL ||
     'https://ui-avatars.com/api/?background=random&name=User';
 
   // Safe redirect helper - never throws
