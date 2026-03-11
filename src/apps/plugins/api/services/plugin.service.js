@@ -12,9 +12,6 @@ import { logPluginActivity } from '../utils/activity';
 import {
   CACHE_TTL,
   PluginError,
-  getPluginPath,
-  getDevPluginPath,
-  resolvePluginsDir,
   resolvePlugin,
   resolvePluginDir,
   readPluginManifest,
@@ -36,7 +33,7 @@ import {
  */
 async function scanDirectory(dirPath, source, fsPluginsMap) {
   try {
-    if (!fs.existsSync(dirPath)) {
+    if (!dirPath || !fs.existsSync(dirPath)) {
       console.debug(`[managePlugins] ${source} dir not found: ${dirPath}`);
       return;
     }
@@ -81,9 +78,9 @@ async function scanDirectory(dirPath, source, fsPluginsMap) {
  * @param {string} options.cwd - Current working directory
  * @returns {Promise<Array>} Array of plugin objects
  */
-export async function managePlugins({ models, cwd, queue }) {
-  const installedPluginsDir = resolvePluginsDir(cwd, getPluginPath());
-  const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
+export async function managePlugins({ pluginManager, models, cwd, queue }) {
+  const installedPluginsDir = pluginManager.getPluginPath();
+  const localPluginsDir = pluginManager.getDevPluginPath(cwd);
 
   const { Plugin } = models;
 
@@ -117,16 +114,22 @@ export async function managePlugins({ models, cwd, queue }) {
         id: dbPlugin.id,
         isActive: dbPlugin.is_active,
         isInstalled: true,
-        source: 'db+remote',
+        source: fsPlugin.source === 'local' ? 'db+local' : 'db+remote',
       });
     } else {
       // Plugin in DB but not on disk (Missing)
-      plugins.push({
-        ...dbPlugin.toJSON(),
-        id: dbPlugin.id,
-        source: 'db',
-        isActive: false,
-      });
+      // Auto-delete from DB as per missing source logic
+      try {
+        await dbPlugin.destroy();
+        console.info(
+          `[managePlugins] Auto-deleted missing plugin from DB: ${dbPlugin.key}`,
+        );
+      } catch (err) {
+        console.error(
+          `[managePlugins] Failed to auto-delete missing plugin: ${dbPlugin.key}`,
+          err,
+        );
+      }
     }
   }
 
@@ -195,7 +198,7 @@ export async function managePlugins({ models, cwd, queue }) {
  * @param {string} options.cwd - Current working directory
  * @returns {Promise<Array>} Array of active plugin objects
  */
-export async function getActivePlugins({ models, cache, cwd }) {
+export async function getActivePlugins({ pluginManager, models, cache, cwd }) {
   const ACTIVE_PLUGINS_CACHE_KEY = 'plugins:list:active';
 
   // Return cached result if valid
@@ -205,8 +208,8 @@ export async function getActivePlugins({ models, cache, cwd }) {
   }
 
   const { Plugin } = models;
-  const installedPluginsDir = resolvePluginsDir(cwd, getPluginPath());
-  const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
+  const installedPluginsDir = pluginManager.getPluginPath();
+  const localPluginsDir = pluginManager.getDevPluginPath(cwd);
 
   // 1. Fetch only active plugins from DB
   const dbPlugins = await Plugin.findAll({
@@ -222,9 +225,13 @@ export async function getActivePlugins({ models, cache, cwd }) {
     let isLocal = false;
 
     // Check Local first (dev override)
-    if ((manifest = await readPluginManifest(localPluginsDir, key))) {
+    if (
+      localPluginsDir &&
+      (manifest = await readPluginManifest(localPluginsDir, key))
+    ) {
       isLocal = true;
     } else if (
+      installedPluginsDir &&
       (manifest = await readPluginManifest(installedPluginsDir, key))
     ) {
       isLocal = false;
@@ -295,7 +302,7 @@ export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
  * @returns {Promise<Object>} Plugin data with containerName and manifest
  * @throws {PluginError} If plugin ID is invalid or plugin not found
  */
-export async function getPluginById({ cwd, models, cache }, id) {
+export async function getPluginById({ pluginManager, cwd, models, cache }, id) {
   const cacheKey = `plugins:detail:${id}`;
 
   // Return cached result if available
@@ -316,7 +323,11 @@ export async function getPluginById({ cwd, models, cache }, id) {
   }
 
   // Resolve directory and manifest
-  const { dir: resolvedDir, isDevPlugin } = resolvePluginDir(cwd, pluginKey);
+  const { dir: resolvedDir, isDevPlugin } = resolvePluginDir(
+    pluginManager,
+    cwd,
+    pluginKey,
+  );
 
   let manifest = null;
   if (resolvedDir) {
@@ -394,11 +405,11 @@ export async function getPluginById({ cwd, models, cache }, id) {
  * @param {string} id - Plugin ID (DB UUID or encrypted key)
  * @returns {Promise<string|null>} Plugin static files directory path or null if invalid
  */
-export async function getPluginStaticDir({ cwd, models }, id) {
+export async function getPluginStaticDir({ pluginManager, cwd, models }, id) {
   const { pluginKey } = await resolvePlugin(models, id, { required: false });
   if (!pluginKey) return null;
 
-  const { dir } = resolvePluginDir(cwd, pluginKey);
+  const { dir } = resolvePluginDir(pluginManager, cwd, pluginKey);
   return dir;
 }
 
@@ -418,7 +429,7 @@ export async function getPluginStaticDir({ cwd, models }, id) {
  */
 export async function installPluginFromPackage(
   file,
-  { models, cache, cwd, fs: fsEngine, actorId, queue },
+  { pluginManager, models, cache, fs: fsEngine, actorId, queue },
 ) {
   if (!file || !file.path) {
     throw PluginError.invalidPackage('No file provided');
@@ -430,15 +441,21 @@ export async function installPluginFromPackage(
 
   const { Plugin } = models;
   const tempPath = file.path;
-  const pluginsDir = resolvePluginsDir(cwd, getPluginPath());
+  const pluginsDir = pluginManager.getPluginPath();
   const tempExtractDir = path.join(
     os.tmpdir(),
-    getPluginPath(),
+    process.env.RSK_PLUGIN_PATH || 'plugins',
     path.parse(file.originalName).name,
   );
 
   try {
     // 1. Prepare directories
+    if (!pluginsDir) {
+      throw PluginError.invalidPackage(
+        'System plugins directory not configured',
+      );
+    }
+
     if (!fs.existsSync(pluginsDir)) {
       await fs.promises.mkdir(pluginsDir, { recursive: true });
     }
@@ -578,7 +595,7 @@ export async function installPluginFromPackage(
 export async function togglePluginStatus(
   id,
   isActive,
-  { models, cache, cwd, actorId, queue },
+  { pluginManager, models, cache, cwd, actorId, queue },
 ) {
   const { Plugin } = models;
 
@@ -589,12 +606,15 @@ export async function togglePluginStatus(
 
   // FS-only plugin with no DB record yet — create one
   if (!plugin && pluginKey && cwd) {
-    const localPluginsDir = resolvePluginsDir(cwd, getDevPluginPath());
-    const installedPluginsDir = resolvePluginsDir(cwd, getPluginPath());
+    const localPluginsDir = pluginManager.getDevPluginPath(cwd);
+    const installedPluginsDir = pluginManager.getPluginPath();
 
     // Check local/dev first (dev override), then installed
-    let manifest = await readPluginManifest(localPluginsDir, pluginKey);
-    if (!manifest) {
+    let manifest = null;
+    if (localPluginsDir) {
+      manifest = await readPluginManifest(localPluginsDir, pluginKey);
+    }
+    if (!manifest && installedPluginsDir) {
       manifest = await readPluginManifest(installedPluginsDir, pluginKey);
     }
 
@@ -622,7 +642,11 @@ export async function togglePluginStatus(
   }
 
   // Resolve plugin physical directory on disk
-  const { dir: pluginDir, isDevPlugin } = resolvePluginDir(cwd, plugin.key);
+  const { dir: pluginDir, isDevPlugin } = resolvePluginDir(
+    pluginManager,
+    cwd,
+    plugin.key,
+  );
 
   // Update plugin status
   await plugin.update({ is_active: isActive });

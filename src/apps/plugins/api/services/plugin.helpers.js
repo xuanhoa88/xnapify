@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import os from 'os';
 import fs from 'fs';
 import path from 'path';
 import { execFile } from 'child_process';
@@ -60,31 +59,8 @@ export class PluginError extends Error {
 }
 
 // ========================================================================
-// Plugin Path Getters
+// Plugin Error
 // ========================================================================
-
-/**
- * Get the remote/installed plugin path
- * @returns {string} Plugin path
- */
-export const getPluginPath = () =>
-  process.env.RSK_PLUGIN_PATH || path.join(os.homedir(), '.rsk', 'plugins');
-
-/**
- * Get the local/dev plugin path
- * @returns {string} Dev plugin path
- */
-export const getDevPluginPath = () =>
-  process.env.RSK_PLUGIN_LOCAL_PATH || 'plugins';
-
-/**
- * Resolve a plugins directory relative to cwd
- * @param {string} cwd - Current working directory
- * @param {string} pluginPath - Plugin path (relative or absolute)
- * @returns {string} Resolved absolute path
- */
-export const resolvePluginsDir = (cwd, pluginPath) =>
-  path.resolve(cwd || process.cwd(), pluginPath);
 
 // ========================================================================
 // Plugin Resolution (DRY — used by 4 service functions)
@@ -133,27 +109,30 @@ export async function resolvePlugin(models, id, { required = true } = {}) {
  * Resolve the physical directory of a plugin on disk.
  * Checks local/dev path first (dev override), then installed/remote path.
  *
+ * @param {Object} pluginManager - ServerPluginManager instance
  * @param {string} cwd - Current working directory
  * @param {string} pluginKey - Plugin directory name / key
  * @returns {{ dir: string|null, isDevPlugin: boolean }}
  */
-export function resolvePluginDir(cwd, pluginKey) {
-  if (!cwd || !pluginKey) return { dir: null, isDevPlugin: false };
+export function resolvePluginDir(pluginManager, cwd, pluginKey) {
+  if (!pluginManager || !cwd || !pluginKey)
+    return { dir: null, isDevPlugin: false };
 
-  const devPath = path.join(
-    resolvePluginsDir(cwd, getDevPluginPath()),
-    pluginKey,
-  );
-  const prodPath = path.join(
-    resolvePluginsDir(cwd, getPluginPath()),
-    pluginKey,
-  );
+  const devBase = pluginManager.getDevPluginPath(cwd);
+  const prodBase = pluginManager.getPluginPath();
 
-  if (fs.existsSync(devPath)) {
-    return { dir: devPath, isDevPlugin: true };
+  if (devBase) {
+    const devPath = path.join(devBase, pluginKey);
+    if (fs.existsSync(devPath)) {
+      return { dir: devPath, isDevPlugin: true };
+    }
   }
-  if (fs.existsSync(prodPath)) {
-    return { dir: prodPath, isDevPlugin: false };
+
+  if (prodBase) {
+    const prodPath = path.join(prodBase, pluginKey);
+    if (fs.existsSync(prodPath)) {
+      return { dir: prodPath, isDevPlugin: false };
+    }
   }
 
   return { dir: null, isDevPlugin: false };

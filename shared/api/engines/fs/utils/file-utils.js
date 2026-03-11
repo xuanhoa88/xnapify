@@ -12,7 +12,7 @@
 import path from 'path';
 import crypto from 'crypto';
 import {
-  MAX_FILENAME_LENGTH,
+  MAX_FILE_LENGTH,
   ALLOWED_EXTENSIONS,
   SIZE_LIMITS,
   MAX_FILE_SIZE,
@@ -32,7 +32,7 @@ function sanitizeFileName(fileName) {
       .replace(/[^a-zA-Z0-9._-]/g, '_') // Replace dangerous chars
       .replace(/_{2,}/g, '_') // Replace multiple underscores
       .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
-      .substring(0, MAX_FILENAME_LENGTH) || 'file'
+      .substring(0, MAX_FILE_LENGTH) || 'file'
   ); // Fallback name
 }
 

@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import os from 'os';
 import path from 'path';
+import fs from 'fs';
 import {
   BasePluginManager,
   PLUGIN_CONTEXT,
@@ -110,17 +112,64 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
+   * Get the remote/installed plugin path
+   * @returns {string} Absolute plugin path
+   */
+  getPluginPath() {
+    try {
+      return path.resolve(
+        ...(process.env.RSK_PLUGIN_PATH
+          ? [process.env.RSK_PLUGIN_PATH]
+          : [os.homedir(), '.rsk', 'plugins']
+        ).filter(Boolean),
+      );
+    } catch (err) {
+      console.error(`Failed to get plugin path:`, err);
+      return null;
+    }
+  }
+
+  /**
+   * Get the local/dev plugin path
+   * @param {string} cwd - Current working directory
+   * @returns {string} Absolute dev plugin path
+   */
+  getDevPluginPath(cwd = process.cwd()) {
+    try {
+      return path.resolve(cwd, process.env.RSK_PLUGIN_LOCAL_PATH || 'plugins');
+    } catch (err) {
+      console.error(`Failed to get dev plugin path for ${cwd}:`, err);
+      return null;
+    }
+  }
+
+  /**
    * Get the path to a plugin's bundle file
    * @param {string} pluginDir - Plugin directory name
    * @param {string} filename - Bundle filename
    * @returns {string} Absolute path to the bundle file
    */
   _getPluginBundlePath(pluginDir, filename) {
-    const baseDir = path.resolve(
-      this[PLUGIN_CONTEXT].cwd,
-      process.env.RSK_PLUGIN_PATH || 'plugins',
-    );
-    return path.join(baseDir, pluginDir, filename);
+    try {
+      const basePluginDir = pluginDir.split(path.sep)[0] || pluginDir;
+
+      if (this[PLUGIN_CONTEXT] && this[PLUGIN_CONTEXT].cwd) {
+        const devBaseDir = this.getDevPluginPath(this[PLUGIN_CONTEXT].cwd);
+        if (devBaseDir && fs.existsSync(path.join(devBaseDir, basePluginDir))) {
+          return path.join(devBaseDir, pluginDir, filename);
+        }
+      }
+
+      const baseDir = this.getPluginPath();
+      if (baseDir) {
+        return path.join(baseDir, pluginDir, filename);
+      }
+
+      return null;
+    } catch (err) {
+      console.error(`Failed to get plugin bundle path for ${pluginDir}:`, err);
+      return null;
+    }
   }
 
   /**

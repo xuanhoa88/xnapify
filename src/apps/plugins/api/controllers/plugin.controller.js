@@ -27,11 +27,12 @@ export const listPlugins = async (req, res) => {
   const http = req.app.get('http');
   try {
     const plugins = await pluginService.getActivePlugins({
+      pluginManager: req.app.get('plugin'),
       models: req.app.get('models'),
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
       webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
+      actorId: req.user && req.user.id,
     });
     return http.sendSuccess(res, { plugins });
   } catch (err) {
@@ -49,6 +50,7 @@ export const getPlugin = async (req, res) => {
   try {
     const pluginData = await pluginService.getPluginById(
       {
+        pluginManager: req.app.get('plugin'),
         cwd: req.app.get('cwd'),
         models: req.app.get('models'),
         cache: req.app.get('cache'),
@@ -78,7 +80,11 @@ export const getPlugin = async (req, res) => {
  */
 export const servePluginStatic = async (req, res, next) => {
   const staticDir = await pluginService.getPluginStaticDir(
-    { cwd: req.app.get('cwd'), models: req.app.get('models') },
+    {
+      pluginManager: req.app.get('plugin'),
+      cwd: req.app.get('cwd'),
+      models: req.app.get('models'),
+    },
     req.params.id,
   );
   if (!staticDir) {
@@ -106,10 +112,11 @@ export const managePlugins = async (req, res) => {
   const http = req.app.get('http');
   try {
     const plugins = await pluginService.managePlugins({
+      pluginManager: req.app.get('plugin'),
       models: req.app.get('models'),
       cwd: req.app.get('cwd'),
       webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
+      actorId: req.user && req.user.id,
       queue: req.app.get('queue'),
     });
     return http.sendSuccess(res, { plugins });
@@ -135,7 +142,7 @@ export const deletePlugin = async (req, res) => {
       models,
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
-      actorId: req.user ? req.user.id : null,
+      actorId: req.user && req.user.id,
       queue: req.app.get('queue'),
     });
 
@@ -178,11 +185,12 @@ export const uploadPlugin = async (req, res) => {
 
     const models = req.app.get('models');
     const plugin = await pluginService.installPluginFromPackage(file, {
+      pluginManager: req.app.get('plugin'),
       models,
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
       fs,
-      actorId: req.user ? req.user.id : null,
+      actorId: req.user && req.user.id,
       queue: req.app.get('queue'),
     });
 
@@ -227,10 +235,11 @@ export const updatePluginStatus = async (req, res) => {
       id,
       result.is_active,
       {
+        pluginManager: req.app.get('plugin'),
         models,
         cache: req.app.get('cache'),
         cwd: req.app.get('cwd'),
-        actorId: req.user ? req.user.id : null,
+        actorId: req.user && req.user.id,
         queue: req.app.get('queue'),
       },
     );
@@ -272,7 +281,7 @@ export const upgradePlugin = async (req, res) => {
       models,
       cache: req.app.get('cache'),
       webhook: req.app.get('webhook'),
-      actorId: req.user ? req.user.id : null,
+      actorId: req.user && req.user.id,
     });
 
     const ws = req.app.get('ws');

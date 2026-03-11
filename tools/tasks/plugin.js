@@ -24,7 +24,7 @@ const { isDev } = require('../webpack/base.config');
 const execFileAsync = util.promisify(execFile);
 
 // Configuration
-const PLUGIN_PATH = config.env('RSK_PLUGIN_PATH', 'plugins');
+const PLUGIN_PATH = config.env('RSK_PLUGIN_LOCAL_PATH', 'plugins');
 const PLUGINS_DIR = path.resolve(config.APP_DIR, PLUGIN_PATH);
 const PLUGINS_BUILD_DIR = path.resolve(config.BUILD_DIR, PLUGIN_PATH);
 

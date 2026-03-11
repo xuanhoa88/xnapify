@@ -8,9 +8,6 @@
 import path from 'path';
 import fs from 'fs';
 import {
-  getPluginPath,
-  getDevPluginPath,
-  resolvePluginsDir,
   installPluginDependencies,
   uninstallPluginDependencies,
   notifyPluginChange,
@@ -97,11 +94,11 @@ async function handleDeleteJob(app, job) {
     }
 
     // Remove files from both directories (with path traversal guard)
-    if (cwd) {
+    if (cwd && pluginManager) {
       const dirs = [
-        resolvePluginsDir(cwd, getPluginPath()),
-        resolvePluginsDir(cwd, getDevPluginPath()),
-      ];
+        pluginManager.getPluginPath(),
+        pluginManager.getDevPluginPath(cwd),
+      ].filter(Boolean);
       for (const baseDir of dirs) {
         const pDir = path.join(baseDir, pluginKey);
         const relative = path.relative(baseDir, pDir);
