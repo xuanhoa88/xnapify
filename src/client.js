@@ -43,10 +43,24 @@ const REACT_DOM_UNAVAILABLE = false;
 // Create dependency injection container
 const container = new Container();
 
+// eslint-disable-next-line no-underscore-dangle
+const preloadedState = window.__PRELOADED_STATE__ || {};
+
 // Create browser history with configurable basename
-const history = createBrowserHistory({
-  basename: process.env.RSK_APP_URL || '',
-});
+let parsedBasename = '';
+try {
+  const appUrlStr =
+    process.env.RSK_APP_URL || window.appUrl || preloadedState.appUrl || '';
+  if (appUrlStr.startsWith('http')) {
+    parsedBasename = new URL(appUrlStr).pathname;
+    if (parsedBasename === '/') parsedBasename = '';
+  } else {
+    parsedBasename = appUrlStr;
+  }
+} catch {
+  parsedBasename = '';
+}
+const history = createBrowserHistory({ basename: parsedBasename });
 
 // Monkey-patch history to support silent reload on navigation
 const originalPush = history.push;
@@ -84,8 +98,7 @@ const fetch = createFetch(window.fetch, {
   signal: fetchAbortController.signal,
 });
 
-// eslint-disable-next-line no-underscore-dangle
-const { redux: preloadedReduxState = {} } = window.__PRELOADED_STATE__ || {};
+const { redux: preloadedReduxState = {} } = preloadedState;
 // eslint-disable-next-line no-underscore-dangle
 delete window.__PRELOADED_STATE__; // avoid memory leaks / exposure
 

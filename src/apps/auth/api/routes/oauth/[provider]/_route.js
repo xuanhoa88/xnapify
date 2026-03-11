@@ -12,10 +12,16 @@ export const get = [
     const { provider } = req.params;
 
     try {
-      // Different providers might need specific scopes.
-      // We already configured default scopes in passport.js.
-      // E.g., github has ['user:email']
-      return passport.authenticate(provider, { session: false })(
+      const scopes = {
+        google: ['profile', 'email'],
+        facebook: ['public_profile', 'email'],
+        github: ['user:email'],
+        microsoft: ['user.read'],
+      };
+
+      const scope = scopes[provider] || [];
+
+      return passport.authenticate(provider, { session: false, scope })(
         req,
         res,
         next,

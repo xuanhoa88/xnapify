@@ -12,17 +12,19 @@ export const get = [
     const { provider } = req.params;
 
     // Get app URL from environment variable
-    const appUrl = process.env.RSK_APP_URL;
+    const appUrl = process.env['RSK_APP_URL'];
 
     try {
       passport.authenticate(
         provider,
         { session: false, failureRedirect: `${appUrl}/?oauth=error` },
-        (err, user) => {
+        (err, user, info) => {
           if (err) {
+            console.error('Passport Auth Error:', err);
             return next(err);
           }
           if (!user) {
+            console.error('Passport Auth Failed - No User. Info:', info);
             return res.redirect(`${appUrl}/?oauth=error`);
           }
           // Attach user to req

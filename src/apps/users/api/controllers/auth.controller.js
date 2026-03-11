@@ -459,7 +459,7 @@ export async function generateRandomPassword(req, res) {
  */
 export async function oauthCallback(req, res) {
   const http = req.app.get('http');
-  const appUrl = process.env.RSK_APP_URL;
+  const appUrl = process.env['RSK_APP_URL'];
 
   try {
     const { provider } = req.params;
@@ -497,6 +497,7 @@ export async function oauthCallback(req, res) {
     // Cookies are set, so the frontend will automatically be authenticated.
     return res.redirect(`${appUrl}/?oauth=success`);
   } catch (error) {
+    console.error('OAuth Callback Error:', error);
     return res.redirect(`${appUrl}/?oauth=error`);
   }
 }

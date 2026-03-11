@@ -24,7 +24,7 @@ export function configurePassport() {
   };
 
   // Get app URL from environment variable
-  const appUrl = process.env.RSK_APP_URL;
+  const appUrl = process.env['RSK_APP_URL'] || 'http://localhost:1337';
 
   // Google Strategy
   if (

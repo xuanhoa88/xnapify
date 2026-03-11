@@ -462,7 +462,10 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     children,
     styleLinks,
     scriptLinks,
-    appState: { redux: context.store.getState() },
+    appState: {
+      redux: context.store.getState(),
+      appUrl: process.env['RSK_APP_URL'],
+    },
     nonce,
   };
 
@@ -1031,7 +1034,8 @@ export async function initializeServer(app, server, options = {}) {
 
   // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
-  if (!/^(http|https):\/\/.+$/.test(process.env.RSK_APP_URL || '')) {
+  // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
+  if (!/^(http|https):\/\/.+$/.test(process.env['RSK_APP_URL'] || '')) {
     set(process.env, 'RSK_APP_URL', baseUrl);
   }
 
