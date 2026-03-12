@@ -54,6 +54,14 @@ export default function PluginField({ register, context }) {
         </div>
       </Form.Field>
 
+      <Form.Field name='profile.mobile' label={t('mobile', 'Mobile')}>
+        <Form.InputMask
+          {...register('profile.mobile')}
+          mask='+999 (999) 999-9999'
+          maskPlaceholder=''
+        />
+      </Form.Field>
+
       <Form.Field name='profile.birthdate' label={t('birthdate', 'Birthdate')}>
         <Form.Date {...register('profile.birthdate')} />
       </Form.Field>

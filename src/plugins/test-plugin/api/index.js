@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import pick from 'lodash/pick';
+import snakeCase from 'lodash/snakeCase';
 import { profileSchema } from '../validator';
 
 // Private symbol for handlers storage
@@ -103,12 +105,10 @@ export default {
     // formData.nickname and formData.birthdate are automatically persisted
     // as native EAV rows by the core profile service.
     this[HANDLERS].updating = function (profileData) {
-      if (profileData && profileData.nickname) {
-        console.log(
-          '[Test Plugin] Persisting nickname as native EAV row:',
-          profileData.nickname,
-        );
-      }
+      console.log(
+        '[Test Plugin] Persisting nickname as native EAV row:',
+        pick(profileData, ['nickname', 'mobile', 'birthdate']),
+      );
     };
     hook('profile').on('updating', this[HANDLERS].updating);
 
@@ -120,12 +120,16 @@ export default {
       // Read nickname from native profile EAV row
       let nickname = user.profile.nickname || null;
       if (!nickname && user.email) {
-        nickname = user.email.split('@')[0];
+        nickname = snakeCase(user.email.split('@')[0]);
+        console.log('[Test Plugin] Generated nickname from email: ' + nickname);
       }
       user.profile.nickname = nickname || null;
 
       // Read birthdate from native profile EAV row
       user.profile.birthdate = user.profile.birthdate || null;
+
+      // Read mobile from native profile EAV row
+      user.profile.mobile = user.profile.mobile || null;
 
       console.log(
         '[Test Plugin] Added nickname to response: ' + user.profile.nickname,
@@ -218,6 +222,26 @@ export default {
     );
   },
 
+  // Lifecycle: destroy (called when plugin is disabled)
+  async destroy(registry, context) {
+    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
+
+    // Unsubscribe from hooks
+    const hook = context.app.get('hook');
+    if (this[HANDLERS].updateValidation) {
+      hook('profile').off('validation:update', this[HANDLERS].updateValidation);
+    }
+    if (this[HANDLERS].updating) {
+      hook('profile').off('updating', this[HANDLERS].updating);
+    }
+    if (this[HANDLERS].formatResponse) {
+      hook('profile').off('retrieved', this[HANDLERS].formatResponse);
+    }
+
+    // Clear handlers
+    this[HANDLERS] = {};
+  },
+
   // Lifecycle: uninstall (called once when the user deletes the plugin)
   async uninstall(registry, context) {
     console.log('[Test Plugin] Uninstalling...', __PLUGIN_NAME__);
@@ -245,25 +269,5 @@ export default {
         );
       }
     }
-  },
-
-  // Lifecycle: destroy (called when plugin is disabled)
-  async destroy(registry, context) {
-    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
-
-    // Unsubscribe from hooks
-    const hook = context.app.get('hook');
-    if (this[HANDLERS].updateValidation) {
-      hook('profile').off('validation:update', this[HANDLERS].updateValidation);
-    }
-    if (this[HANDLERS].updating) {
-      hook('profile').off('updating', this[HANDLERS].updating);
-    }
-    if (this[HANDLERS].formatResponse) {
-      hook('profile').off('retrieved', this[HANDLERS].formatResponse);
-    }
-
-    // Clear handlers
-    this[HANDLERS] = {};
   },
 };

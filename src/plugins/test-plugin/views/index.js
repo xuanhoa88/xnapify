@@ -37,7 +37,8 @@ const extendProfileValidator = (schema, validator) => {
 const handleProfileDefaults = async user => {
   return {
     profile: {
-      nickname: (user && user.profile.nickname) || 'Anonymous User',
+      nickname: (user && user.profile.nickname) || 'anonymous-user',
+      mobile: (user && user.profile.mobile) || '',
       birthdate: (user && user.profile.birthdate) || '',
     },
   };

@@ -25,6 +25,15 @@ export const profileSchema = zod => {
         .regex(/^[a-zA-Z0-9_]+$/, {
           params: { i18n: 'zod:validations.alphanum' },
         }),
+      mobile: zod
+        .string()
+        .regex(/^\+\d{2} \(\d{3}\) \d{3}-\d{4}$/, {
+          params: {
+            i18n: `plugin:${__PLUGIN_NAME__}:validations.mobile_format`,
+          },
+        })
+        .optional()
+        .or(zod.literal('')),
       birthdate: zod
         .string()
         .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
