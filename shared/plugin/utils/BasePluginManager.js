@@ -372,18 +372,30 @@ export class BasePluginManager {
         await this.loadDependencies(id, manifest.rsk.require);
       }
 
-      // Fetch plugin bundle from API
-      const response = await this[PLUGIN_CONTEXT].fetch(`/api/plugins/${id}`);
-      if (!response || !response.success) {
-        const error = new Error(
-          (response && response.message) || 'Failed to fetch plugin bundle',
-        );
-        error.name = 'PluginManagerError';
-        throw error;
-      }
+      // Fetch plugin bundle details from API — skip if the caller
+      // explicitly marked the manifest as read from disk (server-side
+      // refresh sets fromDisk = true after reading the built manifest).
+      let containerName = null;
 
-      const { containerName, manifest: serverManifest } = response.data;
-      if (serverManifest) manifest = serverManifest;
+      if (manifest && manifest.fromDisk) {
+        // Server-side refresh: manifest was read directly from disk
+        containerName = manifest.rsk && manifest.rsk.containerName;
+        // Clean up the internal flag
+        delete manifest.fromDisk;
+      } else {
+        const response = await this[PLUGIN_CONTEXT].fetch(`/api/plugins/${id}`);
+        if (!response || !response.success) {
+          const error = new Error(
+            (response && response.message) || 'Failed to fetch plugin bundle',
+          );
+          error.name = 'PluginManagerError';
+          throw error;
+        }
+
+        const { containerName: cn, manifest: serverManifest } = response.data;
+        containerName = cn;
+        if (serverManifest) manifest = serverManifest;
+      }
 
       // Resolve entry point (main vs browser)
       const entryPoint = this.resolveEntryPoint(manifest);
@@ -587,7 +599,14 @@ export class BasePluginManager {
   }
 
   /**
-   * Install a plugin (one-time setup, calls install() lifecycle hook)
+   * Install a plugin (one-time setup, calls install() lifecycle hook).
+   *
+   * Client: delegates to `registry.installPlugin()` which finds the plugin
+   * definition by ID and calls its `install()` hook.
+   *
+   * Server: `ServerPluginManager` overrides this method to load the API module
+   * directly from disk (the plugin may not yet be registered in the Registry).
+   *
    * @param {string} id - Plugin ID
    * @returns {Promise<boolean>} True if installed successfully
    */
@@ -619,7 +638,14 @@ export class BasePluginManager {
   }
 
   /**
-   * Uninstall a plugin (one-time teardown, calls uninstall() lifecycle hook)
+   * Uninstall a plugin (one-time teardown, calls uninstall() lifecycle hook).
+   *
+   * Client: delegates to `registry.uninstallPlugin()` which finds the plugin
+   * definition by ID and calls its `uninstall()` hook.
+   *
+   * Server: `ServerPluginManager` overrides this method to load the API module
+   * directly from disk (the plugin may already be unloaded from the Registry).
+   *
    * @param {string} id - Plugin ID
    * @returns {Promise<boolean>} True if uninstalled successfully
    */

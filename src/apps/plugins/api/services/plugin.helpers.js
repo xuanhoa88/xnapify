@@ -101,23 +101,27 @@ export async function resolvePlugin(models, id, { required = true } = {}) {
   return { plugin, pluginKey };
 }
 
-// ========================================================================
-// Plugin Directory Resolution (DRY — used by 3 service functions)
-// ========================================================================
-
 /**
  * Resolve the physical directory of a plugin on disk.
- * Checks local/dev path first (dev override), then installed/remote path.
+ *
+ * Delegates to `pluginManager.resolvePluginDir()` as the single source
+ * of truth for dev/prod path resolution. Falls back to manual resolution
+ * when the method is unavailable (backward compatibility).
  *
  * @param {Object} pluginManager - ServerPluginManager instance
- * @param {string} cwd - Current working directory
+ * @param {string} cwd - Current working directory (unused when delegating)
  * @param {string} pluginKey - Plugin directory name / key
  * @returns {{ dir: string|null, isDevPlugin: boolean }}
  */
 export function resolvePluginDir(pluginManager, cwd, pluginKey) {
-  if (!pluginManager || !cwd || !pluginKey)
-    return { dir: null, isDevPlugin: false };
+  if (!pluginManager || !pluginKey) return { dir: null, isDevPlugin: false };
 
+  // Delegate to pluginManager's canonical implementation
+  if (typeof pluginManager.resolvePluginDir === 'function') {
+    return pluginManager.resolvePluginDir(pluginKey);
+  }
+
+  // Fallback for backward compatibility
   const devBase = pluginManager.getDevPluginPath(cwd);
   const prodBase = pluginManager.getPluginPath();
 

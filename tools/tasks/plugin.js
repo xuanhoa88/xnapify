@@ -106,12 +106,15 @@ async function generateManifests(plugins) {
     outputManifest.name = name;
     outputManifest.version = version;
 
-    // Set rsk metadata with original name, containerName, and checksum
+    // Set rsk metadata with original name, containerName, checksum, and
+    // build timestamp so dev-mode HMR can detect code changes even when the
+    // package.json version stays the same.
     outputManifest.rsk = {
       ...outputManifest.rsk,
       name: manifest.name,
       containerName: toContainerName(name),
       checksum,
+      buildTimestamp: Date.now(),
     };
 
     fs.writeFileSync(

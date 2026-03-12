@@ -10,6 +10,7 @@ import path from 'path';
 import fs from 'fs';
 import {
   BasePluginManager,
+  ACTIVE_PLUGINS,
   PLUGIN_CONTEXT,
   LOADED_VERSIONS,
   PLUGIN_MANAGER_INIT,
@@ -144,32 +145,69 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
-   * Get the path to a plugin's bundle file
-   * @param {string} pluginDir - Plugin directory name
-   * @param {string} filename - Bundle filename
-   * @returns {string} Absolute path to the bundle file
+   * Resolve the physical directory of a plugin on disk.
+   * Checks local/dev path first (dev override), then installed/remote path.
+   *
+   * This is the single source of truth for plugin path resolution — used
+   * internally by `_getPluginBundlePath` and externally by the service layer
+   * (via `plugin.helpers.resolvePluginDir`).
+   *
+   * @param {string} pluginKey - Plugin directory name / key
+   * @returns {{ dir: string|null, isDevPlugin: boolean }}
    */
-  _getPluginBundlePath(pluginDir, filename) {
-    try {
-      const basePluginDir = pluginDir.split(path.sep)[0] || pluginDir;
+  resolvePluginDir(pluginKey) {
+    if (!pluginKey) return { dir: null, isDevPlugin: false };
 
+    const basePluginDir = pluginKey.split(path.sep)[0] || pluginKey;
+
+    try {
       if (this[PLUGIN_CONTEXT] && this[PLUGIN_CONTEXT].cwd) {
         const devBaseDir = this.getDevPluginPath(this[PLUGIN_CONTEXT].cwd);
         if (devBaseDir && fs.existsSync(path.join(devBaseDir, basePluginDir))) {
-          return path.join(devBaseDir, pluginDir, filename);
+          return { dir: path.join(devBaseDir, pluginKey), isDevPlugin: true };
         }
       }
 
       const baseDir = this.getPluginPath();
-      if (baseDir) {
-        return path.join(baseDir, pluginDir, filename);
+      if (baseDir && fs.existsSync(path.join(baseDir, basePluginDir))) {
+        return { dir: path.join(baseDir, pluginKey), isDevPlugin: false };
       }
-
-      return null;
     } catch (err) {
-      console.error(`Failed to get plugin bundle path for ${pluginDir}:`, err);
+      console.error(
+        `[ServerPluginManager] Failed to resolve plugin dir for ${pluginKey}:`,
+        err,
+      );
+    }
+
+    return { dir: null, isDevPlugin: false };
+  }
+
+  /**
+   * Read a plugin's package.json manifest from its directory on disk.
+   * @param {string} pluginDir - Absolute path to the plugin directory
+   * @returns {Object|null} Parsed manifest or null on failure
+   */
+  // eslint-disable-next-line class-methods-use-this
+  readManifest(pluginDir) {
+    try {
+      const manifestPath = path.join(pluginDir, 'package.json');
+      return JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+    } catch {
       return null;
     }
+  }
+
+  /**
+   * Get the path to a plugin's bundle file.
+   * Delegates to `resolvePluginDir` for dev/prod path resolution.
+   *
+   * @param {string} pluginDir - Plugin directory name
+   * @param {string} filename - Bundle filename
+   * @returns {string|null} Absolute path to the bundle file
+   */
+  _getPluginBundlePath(pluginDir, filename) {
+    const { dir } = this.resolvePluginDir(pluginDir);
+    return dir ? path.join(dir, filename) : null;
   }
 
   /**
@@ -178,9 +216,6 @@ class ServerPluginManager extends BasePluginManager {
    * @returns {Object} Module exports
    */
   loadModule(bundlePath) {
-    // Delete require cache to ensure we get the latest version
-    delete require.cache[bundlePath];
-
     // Use non-webpack require to load plugins from filesystem
     // eslint-disable-next-line no-undef
     const requireFunc =
@@ -188,6 +223,14 @@ class ServerPluginManager extends BasePluginManager {
         ? // eslint-disable-next-line no-undef
           __non_webpack_require__
         : require;
+
+    // Delete require cache to ensure we get the latest version
+    try {
+      const resolvedPath = requireFunc.resolve(bundlePath);
+      delete requireFunc.cache[resolvedPath];
+    } catch {
+      delete requireFunc.cache[bundlePath];
+    }
 
     return requireFunc(bundlePath);
   }
@@ -298,9 +341,12 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
-   * Install a plugin — calls the plugin's install() lifecycle hook.
-   * Overrides BasePluginManager to load the API module from disk
-   * (the plugin may not yet be registered in the Registry).
+   * Server-specific install: loads the API module from disk and runs
+   * the install() lifecycle hook directly.
+   *
+   * Overrides `BasePluginManager.installPlugin()` which delegates to the
+   * registry. On the server the plugin may not yet be registered in the
+   * Registry, so we load the module from disk via `_runLifecycleHook`.
    *
    * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
    * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
@@ -333,9 +379,12 @@ class ServerPluginManager extends BasePluginManager {
   }
 
   /**
-   * Uninstall a plugin — calls the plugin's uninstall() lifecycle hook.
-   * Overrides BasePluginManager to load the API module from disk
-   * (the plugin may already be unloaded from the Registry).
+   * Server-specific uninstall: loads the API module from disk and runs
+   * the uninstall() lifecycle hook directly.
+   *
+   * Overrides `BasePluginManager.uninstallPlugin()` which delegates to the
+   * registry. On the server the plugin may already be unloaded from the
+   * Registry, so we load the module from disk via `_runLifecycleHook`.
    *
    * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
    * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
@@ -514,6 +563,115 @@ class ServerPluginManager extends BasePluginManager {
       });
 
       throw error;
+    }
+  }
+
+  /**
+   * Server-side refresh override.
+   *
+   * For targeted refreshes (specific plugin IDs), reads fresh manifests
+   * directly from disk rather than going through the HTTP self-fetch cycle.
+   * This ensures that newly rebuilt plugin bundles are picked up immediately
+   * during dev-mode HMR.
+   *
+   * For full refreshes (no specific IDs), delegates to the base class which
+   * does a complete fetchAll().
+   *
+   * @param  {...string} pluginIds - Plugin names/IDs to refresh (empty = all)
+   * @returns {Promise<void>}
+   */
+  async refresh(...pluginIds) {
+    if (!this[PLUGIN_CONTEXT]) {
+      if (__DEV__) {
+        console.log('[ServerPluginManager] Skipping refresh (no context)');
+      }
+      return;
+    }
+
+    // Full refresh: delegate to base class (re-fetches everything)
+    if (pluginIds.length === 0) {
+      return super.refresh();
+    }
+
+    // Targeted refresh: resolve names → IDs, read manifests from disk
+    const resolvedEntries = []; // Array of { id, manifest }
+
+    for (const name of pluginIds) {
+      // Resolve the plugin ID from metadata (build names → internal IDs)
+      for (const [id, metadata] of this[PLUGIN_METADATA].entries()) {
+        const manifestName = metadata.manifest && metadata.manifest.name;
+        if (id === name || (manifestName && manifestName === name)) {
+          // Read fresh manifest from disk
+          const pluginKey = manifestName || name;
+          const { dir } = this.resolvePluginDir(pluginKey);
+
+          let freshManifest = dir ? this.readManifest(dir) : null;
+          if (!freshManifest) {
+            // Fall back to the last-known manifest
+            freshManifest = metadata.manifest;
+          } else {
+            // Enrich manifest with client asset flags (like the service does)
+            try {
+              if (fs.existsSync(path.join(dir, 'plugin.css'))) {
+                freshManifest.hasClientCss = true;
+              }
+              if (fs.existsSync(path.join(dir, 'remote.js'))) {
+                freshManifest.hasClientScript = true;
+              }
+            } catch {
+              // Non-critical: asset detection failure
+            }
+          }
+
+          resolvedEntries.push({
+            id,
+            manifest: { ...freshManifest, fromDisk: true },
+          });
+          break;
+        }
+      }
+    }
+
+    if (resolvedEntries.length === 0) {
+      if (__DEV__) {
+        console.log(
+          `[ServerPluginManager] refresh: no matching plugins found for ${pluginIds.join(', ')}`,
+        );
+      }
+      return;
+    }
+
+    if (__DEV__) {
+      console.log(
+        `[ServerPluginManager] Refreshing: ${resolvedEntries.map(e => e.id).join(', ')}`,
+      );
+    }
+
+    await this.emit('plugins:refreshing', {
+      pluginIds: resolvedEntries.map(e => e.id),
+    });
+
+    // Unload each plugin (triggers destroy lifecycle)
+    for (const { id } of resolvedEntries) {
+      if (this[ACTIVE_PLUGINS].has(id)) {
+        await this.unloadPlugin(id);
+      }
+      this[PLUGIN_METADATA].delete(id);
+      this[LOADED_VERSIONS].delete(id);
+    }
+
+    // Reload each plugin with the fresh disk manifest
+    // (loadPlugin will skip the HTTP fetch because containerName is populated)
+    await Promise.all(
+      resolvedEntries.map(({ id, manifest }) => this.loadPlugin(id, manifest)),
+    );
+
+    await this.emit('plugins:refreshed', {
+      pluginIds: resolvedEntries.map(e => e.id),
+    });
+
+    if (__DEV__) {
+      console.log('[ServerPluginManager] Refreshed ✅');
     }
   }
 

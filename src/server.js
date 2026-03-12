@@ -1373,6 +1373,8 @@ if (module.hot) {
       const start = Date.now();
 
       try {
+        // ServerPluginManager.refresh() reads fresh manifests from disk
+        // for targeted reloads, bypassing the HTTP self-fetch cycle.
         if (typeof pluginManager.refresh === 'function') {
           await pluginManager.refresh(...pluginIds);
         }
