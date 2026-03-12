@@ -81,10 +81,10 @@ export async function formatUserResponse(user, options = {}) {
     profile,
 
     // RBAC fields
-    roles:
-      Array.isArray(rbac.roles) && rbac.roles.length > 0
-        ? rbac.roles
-        : [defaultRoleName],
+    roles: (Array.isArray(rbac.roles) && rbac.roles.length > 0
+      ? rbac.roles
+      : [defaultRoleName]
+    ).filter(Boolean),
     groups: Array.isArray(rbac.groups) ? rbac.groups : [],
   };
 

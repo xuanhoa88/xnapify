@@ -15,6 +15,7 @@ import { MemoryEmailProvider } from '../providers/memory';
 import { SmtpEmailProvider } from '../providers/smtp';
 import { SendGridEmailProvider } from '../providers/sendgrid';
 import { MailgunEmailProvider } from '../providers/mailgun';
+import { ResendEmailProvider } from '../providers/resend';
 import { EmailError } from '../utils/errors';
 import { validateEmails } from '../utils/validation';
 import { processEmails } from '../utils/processing';
@@ -93,6 +94,8 @@ function createProvider(options = {}) {
       return new SendGridEmailProvider(config);
     case 'mailgun':
       return new MailgunEmailProvider(config);
+    case 'resend':
+      return new ResendEmailProvider(config);
     default:
       throw new EmailError(
         `Unknown provider type: ${providerType}`,

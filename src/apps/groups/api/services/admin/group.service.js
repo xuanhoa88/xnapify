@@ -103,12 +103,12 @@ export async function createGroup(
 
   return {
     ...group.toJSON(),
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : defaultRoleName
-          ? [defaultRoleName]
-          : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : defaultRoleName
+        ? [defaultRoleName]
+        : []
+    ).filter(Boolean),
   };
 }
 
@@ -209,12 +209,12 @@ export async function getGroups(groupQuery, options = {}) {
   // Add user count to each group
   const groupsWithCount = groups.map(group => ({
     ...group.toJSON(),
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : defaultRoleName
-          ? [defaultRoleName]
-          : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : defaultRoleName
+        ? [defaultRoleName]
+        : []
+    ).filter(Boolean),
     userCount: userCountsMap.get(group.id) || 0,
     roleCount: group.roles ? group.roles.length : 0,
   }));
@@ -275,12 +275,12 @@ export async function getGroupById(group_id, options = {}) {
 
   return {
     ...group.toJSON(),
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : defaultRoleName
-          ? [defaultRoleName]
-          : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : defaultRoleName
+        ? [defaultRoleName]
+        : []
+    ).filter(Boolean),
   };
 }
 
@@ -383,12 +383,12 @@ export async function updateGroupById(
 
   return {
     ...group.toJSON(),
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : defaultRoleName
-          ? [defaultRoleName]
-          : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : defaultRoleName
+        ? [defaultRoleName]
+        : []
+    ).filter(Boolean),
   };
 }
 

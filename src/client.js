@@ -49,8 +49,7 @@ const preloadedState = window.__PRELOADED_STATE__ || {};
 // Create browser history with configurable basename
 let parsedBasename = '';
 try {
-  const appUrlStr =
-    process.env.RSK_APP_URL || window.appUrl || preloadedState.appUrl || '';
+  const appUrlStr = process.env.RSK_APP_URL || preloadedState.appUrl || '';
   if (appUrlStr.startsWith('http')) {
     parsedBasename = new URL(appUrlStr).pathname;
     if (parsedBasename === '/') parsedBasename = '';

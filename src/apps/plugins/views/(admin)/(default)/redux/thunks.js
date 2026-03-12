@@ -23,7 +23,7 @@ export const fetchPlugins = createAsyncThunk(
       const { data } = await fetch('/api/admin/plugins');
       return data.plugins || [];
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -44,7 +44,7 @@ export const uploadPlugin = createAsyncThunk(
       });
       return data.plugin;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -62,7 +62,7 @@ export const upgradePlugin = createAsyncThunk(
       });
       return responseData.plugin;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -80,7 +80,7 @@ export const togglePluginStatus = createAsyncThunk(
       });
       return data.plugin;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -97,7 +97,7 @@ export const uninstallPlugin = createAsyncThunk(
       });
       return id;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );

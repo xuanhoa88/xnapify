@@ -53,14 +53,27 @@ function CreateRole({ context }) {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
         await dispatch(createRole(data)).unwrap();
         history.push('/admin/roles');
       } catch (err) {
-        setError(err || t('admin:errors.createRole', 'Failed to create role'));
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(
+            err || t('admin:errors.createRole', 'Failed to create role'),
+          );
+        }
       }
     },
     [dispatch, history, t],

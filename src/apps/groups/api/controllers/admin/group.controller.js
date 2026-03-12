@@ -66,7 +66,7 @@ export async function createGroup(req, res) {
     );
   } catch (error) {
     if (error.name === 'GroupAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { name: error.message });
     }
 
     return http.sendServerError(res, 'Failed to create group', error);
@@ -190,7 +190,7 @@ export async function updateGroupById(req, res) {
     });
   } catch (error) {
     if (error.name === 'GroupAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { name: error.message });
     }
 
     return http.sendServerError(res, 'Failed to update group', error);

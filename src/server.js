@@ -101,9 +101,9 @@ const STATIC_SECURITY_HEADERS = Object.entries({
 });
 
 const APP_METADATA = Object.freeze({
-  title: process.env.RSK_APP_NAME || 'React Starter Kit',
+  title: process.env['RSK_APP_NAME'] || 'React Starter Kit',
   description:
-    process.env.RSK_APP_DESC || 'Boilerplate for React.js web applications',
+    process.env['RSK_APP_DESC'] || 'Boilerplate for React.js web applications',
 });
 
 // ---------------------------------------------------------------------------
@@ -176,7 +176,7 @@ function extractPageMetadata(page, req) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
-    image: (page && page.image) || process.env.RSK_APP_IMAGE,
+    image: (page && page.image) || process.env['RSK_APP_IMAGE'],
     type: (page && page.type) || 'website',
   };
 
@@ -1038,6 +1038,10 @@ export async function initializeServer(app, server, options = {}) {
   if (!/^(http|https):\/\/.+$/.test(process.env['RSK_APP_URL'] || '')) {
     set(process.env, 'RSK_APP_URL', baseUrl);
   }
+
+  // Set app name and description
+  set(process.env, 'RSK_APP_NAME', APP_METADATA.title);
+  set(process.env, 'RSK_APP_DESC', APP_METADATA.description);
 
   // WebSocket
   appState.wsServer = createWebSocketServer(

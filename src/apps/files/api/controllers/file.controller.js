@@ -299,6 +299,7 @@ export async function updateSharing(req, res) {
       { shareType, shares },
       {
         models: req.app.get('models'),
+        emailManager: req.app.get('email'),
       },
     );
 

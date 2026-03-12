@@ -13,6 +13,7 @@ import {
 } from '../utils/password';
 import { logUserActivity } from '../utils/activity';
 import { formatUserResponse } from '../utils/formatter';
+import { userFullIncludes } from '../utils/includes';
 
 // ========================================================================
 // AUTHENTICATION SERVICES
@@ -44,6 +45,7 @@ export async function registerUser(
     adminRoleName,
     defaultResources,
     defaultActions,
+    emailManager,
   } = {},
 ) {
   const { email, password } = userData;
@@ -67,9 +69,12 @@ export async function registerUser(
       is_active: true,
       is_locked: false,
       failed_login_attempts: 0,
-      profile: {
-        display_name: userData.display_name || email.split('@')[0],
-      },
+      profile: [
+        {
+          attribute_key: 'display_name',
+          attribute_value: userData.display_name || email.split('@')[0],
+        },
+      ],
     },
     {
       include: [
@@ -94,6 +99,25 @@ export async function registerUser(
   await logUserActivity(webhook, 'registered', user.id, { email }, null, {
     useWorker: true,
   });
+
+  // Send welcome email using worker and retry mechanism
+  if (emailManager) {
+    try {
+      await emailManager.send(
+        {
+          to: email,
+          subject: `Welcome to ${process.env['RSK_APP_NAME']}`,
+          html: `<p>Hi ${user.profile.display_name || 'there'},</p><p>Welcome to ${process.env['RSK_APP_NAME']}! Your account has been successfully created.</p>`,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(`Failed to send welcome email to ${email}:`, err);
+    }
+  }
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('registered', { user_id: user.id, email });
@@ -162,58 +186,16 @@ export async function authenticateUser(
     defaultActions,
   } = {},
 ) {
-  const { User, UserProfile, Role, Permission, Group } = models;
+  const { User } = models;
 
   // Find user with password and full RBAC data in ONE query
   const user = await User.scope('withPassword').findOne({
     where: { email },
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      roleAttributes: ['name'],
+      groupAttributes: ['name'],
+    }),
   });
 
   if (!user) {
@@ -367,7 +349,7 @@ export async function verifyEmail(token, { models, webhook, hook } = {}) {
  */
 export async function resetPasswordRequest(
   email,
-  { models, webhook, hook } = {},
+  { models, webhook, hook, emailManager } = {},
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -408,6 +390,26 @@ export async function resetPasswordRequest(
     null,
     { useWorker: true },
   );
+
+  // Send password reset email using worker and retry mechanism
+  if (emailManager) {
+    const resetLink = `${process.env['RSK_APP_URL']}/reset-password?token=${tokenData.token}`;
+    try {
+      await emailManager.send(
+        {
+          to: email,
+          subject: 'Password Reset Request',
+          html: `<p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetLink}">Reset Password</a></p><p>This link will expire in 1 hour.</p>`,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(`Failed to send password reset email to ${email}:`, err);
+    }
+  }
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('password_reset_requested', {
@@ -532,7 +534,7 @@ export async function oauthLogin(
     defaultActions,
   } = {},
 ) {
-  const { User, UserLogin, UserProfile, Role, Permission, Group } = models;
+  const { User, UserLogin, UserProfile, Role } = models;
 
   // Find UserLogin by provider and profile.id
   const userLogin = await UserLogin.findOne({
@@ -581,10 +583,15 @@ export async function oauthLogin(
           is_active: true,
           is_locked: false,
           failed_login_attempts: 0,
-          profile: {
-            display_name: displayName,
-            picture,
-          },
+          profile: [
+            {
+              attribute_key: 'display_name',
+              attribute_value: displayName,
+            },
+            ...(picture
+              ? [{ attribute_key: 'picture', attribute_value: picture }]
+              : []),
+          ],
         },
         {
           include: [
@@ -634,53 +641,11 @@ export async function oauthLogin(
   // Refetch user with full RBAC scope like authenticateUser does
   const completeUser = await User.findOne({
     where: { id: user.id },
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['name'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['name'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['name'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      roleAttributes: ['name'],
+      groupAttributes: ['name'],
+    }),
   });
 
   if (!completeUser.is_active) {

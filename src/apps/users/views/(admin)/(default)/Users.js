@@ -474,7 +474,9 @@ function Users({ context }) {
               >
                 {user.roles &&
                   user.roles.length > 0 &&
-                  user.roles.map(role => <RoleTag key={role} name={role} />)}
+                  user.roles.map((role, idx) => (
+                    <RoleTag key={`user-${user.id}-role-${idx}`} name={role} />
+                  ))}
               </Tag.List>
             ),
           },

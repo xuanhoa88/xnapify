@@ -53,16 +53,27 @@ function CreateGroup({ context }) {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
         await dispatch(createGroup(data)).unwrap();
         history.push('/admin/groups');
       } catch (err) {
-        setError(
-          err || t('admin:errors.createGroup', 'Failed to create group'),
-        );
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(
+            err || t('admin:errors.createGroup', 'Failed to create group'),
+          );
+        }
       }
     },
     [dispatch, history, t],

@@ -10,6 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 import * as rbacCache from '../../utils/rbac/cache';
 import { fetchUserRBACData } from '../../utils/rbac/fetcher';
 import { logUserActivity } from '../../utils/activity';
+import {
+  userFullIncludes,
+  formatAdminUserResponse,
+} from '../../utils/includes';
 
 /**
  * Create a new user
@@ -24,7 +28,7 @@ import { logUserActivity } from '../../utils/activity';
  */
 export async function createUser(
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName },
+  { models, webhook, searchWorker, actorId, defaultRoleName, emailManager },
 ) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
@@ -46,11 +50,18 @@ export async function createUser(
       password,
       is_active,
       email_confirmed: true, // Admin created users are auto-confirmed
-      profile: {
-        display_name: display_name || email.split('@')[0],
-        ...(first_name && { first_name }),
-        ...(last_name && { last_name }),
-      },
+      profile: [
+        {
+          attribute_key: 'display_name',
+          attribute_value: display_name || email.split('@')[0],
+        },
+        ...(first_name
+          ? [{ attribute_key: 'first_name', attribute_value: first_name }]
+          : []),
+        ...(last_name
+          ? [{ attribute_key: 'last_name', attribute_value: last_name }]
+          : []),
+      ],
     },
     {
       include: [
@@ -93,33 +104,7 @@ export async function createUser(
 
   // Reload with associations
   await user.reload({
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-        required: false,
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models),
   });
 
   // Log activity
@@ -130,19 +115,36 @@ export async function createUser(
     await searchWorker.indexUser(user);
   }
 
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    profile: user.profile || {},
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(r => r.name)
-        : [defaultRoleName],
-    groups: user.groups || [],
-  };
+  // Send welcome email with password if email manager is available
+  if (emailManager) {
+    try {
+      await emailManager.send(
+        {
+          to: email,
+          subject: `Your ${process.env['RSK_APP_NAME']} Account Has Been Created`,
+          html: `
+            <p>Hi ${user.profile.display_name || 'there'},</p>
+            <p>An administrator has created an account for you on ${process.env['RSK_APP_NAME']}.</p>
+            <p>Your login details are:</p>
+            <ul>
+              <li><strong>Email:</strong> ${email}</li>
+              <li><strong>Password:</strong> ${password}</li>
+            </ul>
+            <p>You can log in <a href="${process.env['RSK_APP_URL']}/login">here</a>.</p>
+            <p>Please change your password after logging in for the first time.</p>
+          `,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(`Failed to send admin welcome email to ${email}:`, err);
+    }
+  }
+
+  return formatAdminUserResponse(user, { defaultRoleName });
 }
 
 /**
@@ -289,17 +291,9 @@ export async function getUserList(options, ctx) {
     }),
   ]);
 
-  const formattedUsers = users.map(user => {
-    const plain = user.toJSON();
-    return {
-      ...plain,
-      roles:
-        Array.isArray(plain.roles) && plain.roles.length > 0
-          ? plain.roles.map(r => r.name)
-          : [options.defaultRoleName],
-      groups: plain.groups || [],
-    };
-  });
+  const formattedUsers = users.map(user =>
+    formatAdminUserResponse(user, { defaultRoleName: options.defaultRoleName }),
+  );
 
   // Emit event for plugins to modify formatted users
   await ctx.hook('admin:users').emit('list:after', formattedUsers);
@@ -324,36 +318,12 @@ export async function getUserList(options, ctx) {
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserById(user_id, { models, defaultRoleName }) {
-  const { User, UserProfile, Group, Role } = models;
+  const { User } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-        required: false,
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description', 'category', 'type'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models, {
+      groupAttributes: ['id', 'name', 'description', 'category', 'type'],
+    }),
   });
 
   if (!user) {
@@ -363,22 +333,10 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
     throw error;
   }
 
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    is_locked: user.is_locked,
-    failed_login_attempts: user.failed_login_attempts,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    profile: user.profile || {},
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(r => r.name)
-        : [defaultRoleName],
-    groups: user.groups || [],
-  };
+  return formatAdminUserResponse(user, {
+    defaultRoleName,
+    extraFields: ['is_locked', 'failed_login_attempts'],
+  });
 }
 
 /**
@@ -396,7 +354,7 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName },
+  { models, webhook, searchWorker, actorId, defaultRoleName, emailManager },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -441,7 +399,11 @@ export async function updateUserById(
   // Update user fields
   const userUpdates = {};
   if (email) userUpdates.email = email;
-  if (password) userUpdates.password = password; // Password hashed by model hook
+  if (password) {
+    userUpdates.password = password; // Password hashed by model hook
+    userUpdates.failed_login_attempts = 0; // Reset failed attempts
+    userUpdates.is_locked = false; // Unlock if locked
+  }
   if (typeof is_active === 'boolean') userUpdates.is_active = is_active;
 
   if (Object.keys(userUpdates).length > 0) {
@@ -458,16 +420,14 @@ export async function updateUserById(
   if (website != null) profileUpdates.website = website;
 
   if (Object.keys(profileUpdates).length > 0) {
-    const upsertPromises = Object.entries(profileUpdates).map(
-      ([key, value]) => {
-        return UserProfile.upsert({
-          user_id,
-          attribute_key: key,
-          attribute_value: value,
-        });
-      },
-    );
-    await Promise.all(upsertPromises);
+    const updates = Object.entries(profileUpdates).map(([key, value]) => ({
+      user_id,
+      attribute_key: key,
+      attribute_value: value,
+    }));
+    await UserProfile.bulkCreate(updates, {
+      updateOnDuplicate: ['attribute_value'],
+    });
   }
 
   // Update roles if provided
@@ -507,33 +467,7 @@ export async function updateUserById(
 
   // Reload user with updated data
   await user.reload({
-    include: [
-      {
-        model: UserProfile,
-        as: 'profile',
-        required: false,
-      },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models),
   });
 
   // Log activity
@@ -550,20 +484,34 @@ export async function updateUserById(
     await searchWorker.indexUser(user);
   }
 
-  return {
-    id: user.id,
-    email: user.email,
-    email_confirmed: user.email_confirmed,
-    is_active: user.is_active,
-    created_at: user.created_at,
-    updated_at: user.updated_at,
-    profile: user.profile || {},
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(r => r.name)
-        : [defaultRoleName],
-    groups: user.groups || [],
-  };
+  // Send email notification for password reset by admin
+  if (emailManager && password) {
+    try {
+      await emailManager.send(
+        {
+          to: user.email,
+          subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Was Reset`,
+          html: `
+            <p>Hi,</p>
+            <p>An administrator has reset the password for your ${process.env['RSK_APP_NAME']} account.</p>
+            <p>Your new temporary password is: <strong>${password}</strong></p>
+            <p>Please log in and <a href="${process.env['RSK_APP_URL']}/login">change your password</a> immediately.</p>
+          `,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(
+        `Failed to send password reset notification email to ${user.email}:`,
+        err,
+      );
+    }
+  }
+
+  return formatAdminUserResponse(user, { defaultRoleName });
 }
 
 /**
@@ -687,7 +635,7 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
 export async function bulkUpdateStatus(
   ids,
   is_active,
-  { models, webhook, actorId },
+  { models, webhook, actorId, emailManager },
 ) {
   const { User } = models;
   const { sequelize } = User;
@@ -704,9 +652,37 @@ export async function bulkUpdateStatus(
   // Log activity and invalidate cache for each user concurrently
   const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
-    users.map(user => {
+    users.map(async user => {
       // Invalidate RBAC cache
       rbacCache.invalidateUser(user.id);
+
+      // Send email notification
+      if (emailManager) {
+        try {
+          await emailManager.send(
+            {
+              to: user.email,
+              subject: `Account Status Update: Your ${process.env['RSK_APP_NAME']} Account is Now ${is_active ? 'Active' : 'Inactive'}`,
+              html: `
+                <p>Hi,</p>
+                <p>An administrator has updated the status of your ${process.env['RSK_APP_NAME']} account.</p>
+                <p>Your account is now: <strong>${is_active ? 'Active' : 'Inactive'}</strong>.</p>
+                ${!is_active ? '<p>If you believe this is an error, please contact support.</p>' : ''}
+              `,
+            },
+            {
+              useWorker: true,
+              maxRetries: 3,
+            },
+          );
+        } catch (err) {
+          console.error(
+            `Failed to send account status notification email to ${user.email}:`,
+            err,
+          );
+        }
+      }
+
       return logUserActivity(
         webhook,
         action,
@@ -735,7 +711,7 @@ export async function bulkUpdateStatus(
  */
 export async function bulkDelete(
   ids,
-  { models, webhook, searchWorker, actorId },
+  { models, webhook, searchWorker, actorId, emailManager },
 ) {
   const { User } = models;
   const { sequelize } = User;
@@ -757,14 +733,43 @@ export async function bulkDelete(
 
     // Log activity and invalidate cache for each deleted user concurrently
     await Promise.all(
-      deletedIds.map((id, i) => {
+      deletedIds.map(async (id, i) => {
         // Invalidate RBAC cache
         rbacCache.invalidateUser(id);
+
+        const deletedEmail = deletedEmails[i];
+
+        // Send email notification
+        if (emailManager) {
+          try {
+            await emailManager.send(
+              {
+                to: deletedEmail,
+                subject: `Account Notice: Your ${process.env['RSK_APP_NAME']} Account Has Been Deleted`,
+                html: `
+                  <p>Hi,</p>
+                  <p>An administrator has removed your account from ${process.env['RSK_APP_NAME']}.</p>
+                  <p>If you have any questions or believe this was done in error, please contact support.</p>
+                `,
+              },
+              {
+                useWorker: true,
+                maxRetries: 3,
+              },
+            );
+          } catch (err) {
+            console.error(
+              `Failed to send account deletion notification email to ${deletedEmail}:`,
+              err,
+            );
+          }
+        }
+
         return logUserActivity(
           webhook,
           'deleted',
           id,
-          { email: deletedEmails[i] },
+          { email: deletedEmail },
           actorId,
         );
       }),

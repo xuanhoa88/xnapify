@@ -44,14 +44,25 @@ export default function CreatePermission() {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
         await dispatch(createPermission(data)).unwrap();
         history.push('/admin/permissions');
       } catch (err) {
-        setError(err);
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(err);
+        }
       }
     },
     [dispatch, history],

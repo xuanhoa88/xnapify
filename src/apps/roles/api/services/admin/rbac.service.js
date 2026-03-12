@@ -412,11 +412,11 @@ export async function assignGroupsToUser(user_id, group_ids, options = {}) {
   return {
     id: user.id,
     email: user.email,
-    roles:
-      Array.isArray(user.roles) && user.roles.length > 0
-        ? user.roles.map(r => r.name)
-        : [options.defaultRoleName || 'user'],
-    groups: user.groups || [],
+    roles: (Array.isArray(user.roles) && user.roles.length > 0
+      ? user.roles.map(r => r.name)
+      : [options.defaultRoleName || 'user']
+    ).filter(Boolean),
+    groups: Array.isArray(user.groups) ? user.groups : [],
   };
 }
 
@@ -1085,10 +1085,10 @@ export async function assignRolesToGroup(
     id: group.id,
     name: group.name,
     description: group.description,
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : []
+    ).filter(Boolean),
   };
 }
 
@@ -1163,10 +1163,10 @@ export async function addRoleToGroup(
     id: group.id,
     name: group.name,
     description: group.description,
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : []
+    ).filter(Boolean),
   };
 }
 
@@ -1241,10 +1241,10 @@ export async function removeRoleFromGroup(
     id: group.id,
     name: group.name,
     description: group.description,
-    roles:
-      Array.isArray(group.roles) && group.roles.length > 0
-        ? group.roles.map(r => r.name)
-        : [],
+    roles: (Array.isArray(group.roles) && group.roles.length > 0
+      ? group.roles.map(r => r.name)
+      : []
+    ).filter(Boolean),
   };
 }
 

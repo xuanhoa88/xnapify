@@ -7,6 +7,7 @@
 
 import { verifyPassword } from '../utils/password';
 import { logUserActivity } from '../utils/activity';
+import { userFullIncludes } from '../utils/includes';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES
@@ -25,53 +26,13 @@ import { logUserActivity } from '../utils/activity';
  * @throws {Error} If UserNotFoundError
  */
 export async function getUserWithProfile(user_id, { models }) {
-  const { User, UserProfile, Role, Permission, Group } = models;
+  const { User } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [
-      { model: UserProfile, as: 'profile' },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Permission,
-            as: 'permissions',
-            attributes: ['resource', 'action'],
-            where: { is_active: true },
-            required: false,
-            through: { attributes: [] },
-          },
-        ],
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description', 'category', 'type'],
-        required: false,
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-            include: [
-              {
-                model: Permission,
-                as: 'permissions',
-                attributes: ['resource', 'action'],
-                where: { is_active: true },
-                required: false,
-                through: { attributes: [] },
-              },
-            ],
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      groupAttributes: ['id', 'name', 'description', 'category', 'type'],
+    }),
   });
 
   if (!user) {
@@ -101,32 +62,12 @@ export async function updateUserProfile(
   formData,
   { models, webhook, searchWorker, hook },
 ) {
-  const { User, UserProfile, Role, Group } = models;
+  const { User, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
-    include: [
-      { model: UserProfile, as: 'profile' },
-      {
-        model: Role,
-        as: 'roles',
-        attributes: ['id', 'name', 'description'],
-        through: { attributes: [] },
-      },
-      {
-        model: Group,
-        as: 'groups',
-        attributes: ['id', 'name', 'description', 'category', 'type'],
-        through: { attributes: [] },
-        include: [
-          {
-            model: Role,
-            as: 'roles',
-            attributes: ['id', 'name', 'description'],
-            through: { attributes: [] },
-          },
-        ],
-      },
-    ],
+    include: userFullIncludes(models, {
+      groupAttributes: ['id', 'name', 'description', 'category', 'type'],
+    }),
   });
 
   if (!user) {
@@ -192,7 +133,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, webhook, hook },
+  { models, webhook, hook, emailManager },
 ) {
   const { User } = models;
 
@@ -221,6 +162,32 @@ export async function changeUserPassword(
 
   // Log activity
   await logUserActivity(webhook, 'password_changed', user_id);
+
+  if (emailManager) {
+    try {
+      await emailManager.send(
+        {
+          to: user.email,
+          subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Changed`,
+          html: `
+            <p>Hi,</p>
+            <p>This is a confirmation that the password for your ${process.env['RSK_APP_NAME']} account was recently changed.</p>
+            <p>If you made this change, you don't need to do anything else.</p>
+            <p><strong>If you didn't change your password, please contact support immediately or reset your password using the "Forgot Password" link.</strong></p>
+          `,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(
+        `Failed to send password change notification email to ${user.email}:`,
+        err,
+      );
+    }
+  }
 
   return true;
 }
@@ -320,7 +287,7 @@ export async function getUserPreferences(user_id, { models, hook }) {
 export async function deleteUserAccount(
   user_id,
   password,
-  { models, webhook, searchWorker, hook },
+  { models, webhook, searchWorker, hook, emailManager },
 ) {
   const { User, UserProfile } = models;
 
@@ -363,6 +330,31 @@ export async function deleteUserAccount(
   // Remove from search index
   if (searchWorker) {
     await searchWorker.removeUser(user_id);
+  }
+
+  if (emailManager) {
+    try {
+      await emailManager.send(
+        {
+          to: userEmail,
+          subject: `Confirmation: Your ${process.env['RSK_APP_NAME']} Account Was Deleted`,
+          html: `
+            <p>Hi,</p>
+            <p>This is to confirm that your ${process.env['RSK_APP_NAME']} account has been successfully deleted.</p>
+            <p>We're sorry to see you go! If you ever decide to return, you can always create a new account.</p>
+          `,
+        },
+        {
+          useWorker: true,
+          maxRetries: 3,
+        },
+      );
+    } catch (err) {
+      console.error(
+        `Failed to send account deletion notification email to ${userEmail}:`,
+        err,
+      );
+    }
   }
 
   return true;

@@ -42,7 +42,7 @@ export const fetchGroups = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -57,7 +57,7 @@ export const fetchGroupById = createAsyncThunk(
       const { data } = await fetch(`/api/admin/groups/${groupId}`);
       return data.group;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -75,7 +75,7 @@ export const createGroup = createAsyncThunk(
       });
       return data.group;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -93,7 +93,7 @@ export const updateGroup = createAsyncThunk(
       });
       return data.group;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -110,7 +110,7 @@ export const deleteGroup = createAsyncThunk(
       });
       return groupId;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -135,7 +135,7 @@ export const fetchGroupUsers = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -153,7 +153,7 @@ export const assignRolesToGroup = createAsyncThunk(
       });
       return data.group;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -171,7 +171,7 @@ export const fetchGroupPermissions = createAsyncThunk(
         roleDetails: data.roleDetails || [],
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -189,7 +189,7 @@ export const fetchGroupRoles = createAsyncThunk(
         roles: data.roles || [],
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );

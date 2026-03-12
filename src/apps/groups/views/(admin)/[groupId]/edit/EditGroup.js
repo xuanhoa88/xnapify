@@ -66,7 +66,7 @@ function EditGroup({ groupId, context }) {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
@@ -75,9 +75,20 @@ function EditGroup({ groupId, context }) {
         ).unwrap();
         history.push('/admin/groups');
       } catch (err) {
-        setError(
-          err || t('admin:errors.updateGroup', 'Failed to update group'),
-        );
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(
+            err || t('admin:errors.updateGroup', 'Failed to update group'),
+          );
+        }
       }
     },
     [dispatch, group, history, t],

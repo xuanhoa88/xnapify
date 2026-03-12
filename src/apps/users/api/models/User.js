@@ -23,30 +23,6 @@ function flattenProfileEAV(instance) {
   instance.profile = flat;
 }
 
-// =========================================================================
-// beforeValidate hook: auto-expand a flat profile object into an EAV array
-// so that User.create(..., { include: [{ model: UserProfile, as: 'profile' }] })
-// works with flat `{ display_name: 'foo' }` structures.
-// =========================================================================
-function expandProfileEAV(instance) {
-  if (
-    instance.profile &&
-    typeof instance.profile === 'object' &&
-    !Array.isArray(instance.profile)
-  ) {
-    const eavArray = [];
-    for (const [key, value] of Object.entries(instance.profile)) {
-      if (value !== undefined && value !== null) {
-        eavArray.push({
-          attribute_key: key,
-          attribute_value: value,
-        });
-      }
-    }
-    instance.profile = eavArray;
-  }
-}
-
 /**
  * User Model Factory
  *
@@ -244,9 +220,6 @@ export default function createUserModel({ connection, DataTypes }) {
       flattenProfileEAV(results);
     }
   });
-
-  // Expand plain object → EAV rows before validation
-  User.addHook('beforeValidate', 'expandProfileEAV', expandProfileEAV);
 
   return User;
 }

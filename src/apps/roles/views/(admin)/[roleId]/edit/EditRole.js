@@ -66,7 +66,7 @@ function EditRole({ roleId, context }) {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
@@ -75,7 +75,20 @@ function EditRole({ roleId, context }) {
         ).unwrap();
         history.push('/admin/roles');
       } catch (err) {
-        setError(err || t('admin:errors.updateRole', 'Failed to update role'));
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(
+            err || t('admin:errors.updateRole', 'Failed to update role'),
+          );
+        }
       }
     },
     [dispatch, role, history, t],

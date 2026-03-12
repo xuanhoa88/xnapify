@@ -380,8 +380,12 @@ function Groups({ context }) {
                         'No roles assigned',
                       )}
                     >
-                      {visibleRoles.map(role => (
-                        <RoleTag key={role} name={role} className={s.roleTag} />
+                      {visibleRoles.map((role, idx) => (
+                        <RoleTag
+                          key={`group-${group.id}-role-${idx}`}
+                          name={role}
+                          className={s.roleTag}
+                        />
                       ))}
                       {remainingRoleCount > 0 && (
                         <Tag variant='neutral' className={s.roleTag}>

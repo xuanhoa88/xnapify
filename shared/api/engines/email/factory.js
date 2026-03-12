@@ -9,6 +9,7 @@ import { SmtpEmailProvider } from './providers/smtp';
 import { SendGridEmailProvider } from './providers/sendgrid';
 import { MailgunEmailProvider } from './providers/mailgun';
 import { MemoryEmailProvider } from './providers/memory';
+import { ResendEmailProvider } from './providers/resend';
 import { send } from './services';
 
 /**
@@ -21,7 +22,7 @@ export class EmailManager {
   constructor(config = {}) {
     this.providers = new Map();
     this.defaultProvider =
-      config.provider || process.env.RSK_MAIL_PROVIDER || 'smtp';
+      config.provider || process.env.RSK_MAIL_PROVIDER || 'resend';
     this.config = config;
 
     // Worker thresholds (can be overridden globally)
@@ -63,7 +64,7 @@ export class EmailManager {
             pass: process.env.RSK_SMTP_PASS,
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
+              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
           },
         ),
       );
@@ -77,7 +78,8 @@ export class EmailManager {
           this.config.sendgrid || {
             apiKey: process.env.RSK_SENDGRID_KEY,
             defaultFrom: process.env.RSK_MAIL_FROM,
-            defaultFromName: process.env.RSK_MAIL_FROM_NAME,
+            defaultFromName:
+              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
           },
         ),
       );
@@ -96,7 +98,23 @@ export class EmailManager {
             domain: process.env.RSK_MAILGUN_DOMAIN,
             region: process.env.RSK_MAILGUN_REGION || 'us',
             defaultFrom: process.env.RSK_MAIL_FROM,
-            defaultFromName: process.env.RSK_MAIL_FROM_NAME,
+            defaultFromName:
+              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          },
+        ),
+      );
+    }
+
+    // Resend provider (if configured)
+    if (this.config.resend || process.env.RSK_RESEND_KEY) {
+      this.providers.set(
+        'resend',
+        new ResendEmailProvider(
+          this.config.resend || {
+            apiKey: process.env.RSK_RESEND_KEY,
+            defaultFrom: process.env.RSK_MAIL_FROM,
+            defaultFromName:
+              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
           },
         ),
       );
@@ -247,6 +265,7 @@ export class EmailManager {
  * @param {Object} [config.smtp] - SMTP configuration
  * @param {Object} [config.sendgrid] - SendGrid configuration
  * @param {Object} [config.mailgun] - Mailgun configuration
+ * @param {Object} [config.resend] - Resend configuration
  * @param {Object} [config.memory] - Memory provider configuration
  * @returns {EmailManager} New manager instance
  */

@@ -56,7 +56,7 @@ export async function createPermission(req, res) {
     return http.sendSuccess(res, { permission }, 201);
   } catch (error) {
     if (error.name === 'PermissionAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { resource: error.message });
     }
 
     return http.sendServerError(res, 'Failed to create permission', error);
@@ -191,7 +191,7 @@ export async function updatePermission(req, res) {
     return http.sendSuccess(res, { permission: updatedPermission });
   } catch (error) {
     if (error.name === 'PermissionAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { resource: error.message });
     }
 
     return http.sendServerError(res, 'Failed to update permission', error);

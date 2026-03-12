@@ -71,10 +71,9 @@ workerPool.indexUser = async function indexUser(user) {
     ]
       .filter(Boolean)
       .join(' '),
-    tags: (Array.isArray(user.roles)
-      ? user.roles.map(r => r.name || r)
-      : []
-    ).join(', '),
+    tags: (Array.isArray(user.roles) ? user.roles.map(r => r.name || r) : [])
+      .filter(Boolean)
+      .join(', '),
   });
 };
 

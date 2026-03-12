@@ -37,7 +37,7 @@ export const login = createAsyncThunk(
       });
       return { user: data.user, accessToken: data.accessToken };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -58,7 +58,7 @@ export const register = createAsyncThunk(
       });
       return { user: data.user, accessToken: data.accessToken };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -88,7 +88,7 @@ export const me = createAsyncThunk(
       const { data } = await fetch('/api/auth/profile');
       return { user: data.user };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -105,7 +105,7 @@ export const refreshToken = createAsyncThunk(
       });
       return { user: (data && data.user) || null };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -127,7 +127,7 @@ export const resetPasswordRequest = createAsyncThunk(
       });
       return { message: data.message };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -145,7 +145,7 @@ export const resetPasswordConfirmation = createAsyncThunk(
       });
       return { message: data.message };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -165,7 +165,7 @@ export const generatePassword = createAsyncThunk(
 
       return data.password;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -187,7 +187,7 @@ export const emailVerification = createAsyncThunk(
         message: data.message,
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -209,7 +209,7 @@ export const updateUserProfile = createAsyncThunk(
       });
       return { profile: data.profile };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -236,7 +236,7 @@ export const uploadUserAvatar = createAsyncThunk(
 
       return rejectWithValue('Upload failed');
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -257,7 +257,7 @@ export const changeUserPassword = createAsyncThunk(
       });
       return { message: data.message };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -278,7 +278,7 @@ export const deleteUser = createAsyncThunk(
       });
       return null;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -299,7 +299,7 @@ export const getUserPreferences = createAsyncThunk(
       });
       return { preferences: data.preferences };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -320,7 +320,7 @@ export const updateUserPreferences = createAsyncThunk(
       });
       return { preferences: data.preferences };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );

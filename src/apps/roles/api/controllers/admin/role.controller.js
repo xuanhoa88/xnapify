@@ -55,7 +55,7 @@ export async function createRole(req, res) {
     return http.sendSuccess(res, { role }, 201);
   } catch (error) {
     if (error.name === 'RoleAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { name: error.message });
     }
 
     if (error.name === 'PermissionNotFoundError') {
@@ -193,7 +193,7 @@ export async function updateRole(req, res) {
     return http.sendSuccess(res, { role });
   } catch (error) {
     if (error.name === 'RoleAlreadyExistsError') {
-      return http.sendError(res, error.message, 409);
+      return http.sendValidationError(res, { name: error.message });
     }
 
     if (error.name === 'PermissionNotFoundError') {

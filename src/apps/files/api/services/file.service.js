@@ -533,7 +533,7 @@ export async function updateSharing(
   userId,
   fileId,
   { shareType, shares = [] },
-  { models },
+  { models, emailManager },
 ) {
   const { File, FileShare, User, Group } = models;
   const file = await findAccessibleFile(fileId, userId, models, 'editor');
@@ -547,7 +547,30 @@ export async function updateSharing(
   }
 
   const { sequelize } = File;
-  return sequelize.transaction(async t => {
+
+  // Determine which new users are getting access
+  let newUsersToNotify = [];
+  if (emailManager && shareType === 'shared_users' && shares.length > 0) {
+    const existingShares = await FileShare.findAll({
+      where: { file_id: fileId, entity_type: 'user' },
+    });
+    const existingUserIds = existingShares.map(s => s.entity_id);
+
+    const newlyAddedUserIds = shares
+      .filter(
+        s => s.entityType === 'user' && !existingUserIds.includes(s.entityId),
+      )
+      .map(s => s.entityId);
+
+    if (newlyAddedUserIds.length > 0) {
+      newUsersToNotify = await User.findAll({
+        where: { id: newlyAddedUserIds },
+        attributes: ['id', 'email'],
+      });
+    }
+  }
+
+  const result = await sequelize.transaction(async t => {
     file.share_type = shareType;
     await file.save({ transaction: t });
 
@@ -585,6 +608,35 @@ export async function updateSharing(
       transaction: t,
     });
   });
+
+  // Send notifications outside transaction
+  if (newUsersToNotify.length > 0) {
+    const sharer = await User.findByPk(userId);
+    const sharerEmail = sharer ? sharer.email : 'A user';
+
+    await Promise.all(
+      newUsersToNotify.map(async u => {
+        try {
+          await emailManager.send(
+            {
+              to: u.email,
+              subject: `New File Shared With You on ${process.env['RSK_APP_NAME']}`,
+              html: `
+                <p>Hi,</p>
+                <p>${sharerEmail} has shared a file with you.</p>
+                <p><a href="${process.env['RSK_APP_URL']}/drive">Open your Drive</a> to view it.</p>
+              `,
+            },
+            { useWorker: true, maxRetries: 3 },
+          );
+        } catch (err) {
+          console.error('Failed to send file share notification email:', err);
+        }
+      }),
+    );
+  }
+
+  return result;
 }
 
 /**

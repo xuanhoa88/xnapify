@@ -49,7 +49,11 @@ function FormError({ message, className }) {
 
     // --- Explicit message prop (form-level) ---
     if (message) {
-      return { text: message, css: s.formError, role: 'alert' };
+      const msgText =
+        typeof message === 'string'
+          ? message
+          : message.message || findMessage(message);
+      return { text: msgText, css: s.formError, role: 'alert' };
     }
 
     // --- Field-level error (sync or async) ---
@@ -101,7 +105,7 @@ function FormError({ message, className }) {
 
 FormError.propTypes = {
   /** Error message (optional - auto-detected from Form.Field context) */
-  message: PropTypes.string,
+  message: PropTypes.oneOfType([PropTypes.string, PropTypes.object]),
   /** Additional CSS class names */
   className: PropTypes.string,
 };

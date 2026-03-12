@@ -30,11 +30,11 @@ function RoleTag({ name, className = '' }) {
   const displayName = typeof name === 'string' ? name : String(name);
   const classes = [roleClass, className].filter(Boolean).join(' ');
 
-  return <Tag className={classes}>{displayName}</Tag>;
+  return roleLower ? <Tag className={classes}>{displayName}</Tag> : null;
 }
 
 RoleTag.propTypes = {
-  name: PropTypes.string.isRequired,
+  name: PropTypes.string,
   className: PropTypes.string,
 };
 

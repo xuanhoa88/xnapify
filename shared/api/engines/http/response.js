@@ -44,7 +44,34 @@ function sanitizeError(error) {
 
   const sanitized = {};
 
-  for (const [key, value] of Object.entries(error)) {
+  // Check if this looks like a generic field-mapped validation object (e.g. { email: "Invalid", password: "Too short" })
+  // We consider it a "dictionary" if it has keys and ALL values are strings or arrays of strings.
+  let isDictionary = true;
+  const entries = Object.entries(error);
+
+  if (entries.length === 0) return { message: 'Invalid request' };
+
+  for (const [key, value] of entries) {
+    if (BLOCKED_KEYS.has(key)) {
+      isDictionary = false; // Never treat objects with blocked keys as simple dictionaries
+      break;
+    }
+    const isString = typeof value === 'string';
+    const isStringArray =
+      Array.isArray(value) && value.every(v => typeof v === 'string');
+    if (!isString && !isStringArray) {
+      isDictionary = false;
+      break;
+    }
+  }
+
+  if (isDictionary) {
+    // It's a validation error dictionary; return it as-is without filtering keys
+    return error;
+  }
+
+  // Otherwise, it's a structural error object, so we filter by SAFE_ERROR_KEYS
+  for (const [key, value] of entries) {
     // Skip blocked keys
     if (BLOCKED_KEYS.has(key)) continue;
 

@@ -83,7 +83,7 @@ function EditUser({ userId, context }) {
   }, [history]);
 
   const handleSubmit = useCallback(
-    async data => {
+    async (data, methods) => {
       setError(null);
 
       try {
@@ -92,9 +92,22 @@ function EditUser({ userId, context }) {
         ).unwrap();
         history.push('/admin/users');
       } catch (err) {
-        setError(
-          err || t('admin:users.errors.updateUser', 'Failed to update user'),
-        );
+        if (err && typeof err === 'object' && err.errors) {
+          // It's a validation error object with field-specific errors
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          // General string error or object without errors dictionary
+          setError(
+            err || t('admin:users.errors.updateUser', 'Failed to update user'),
+          );
+        }
       }
     },
     [dispatch, user, history, t],

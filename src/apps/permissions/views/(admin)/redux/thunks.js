@@ -33,7 +33,7 @@ export const fetchPermissions = createAsyncThunk(
 
       return data;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -48,7 +48,7 @@ export const fetchPermissionById = createAsyncThunk(
       const { data } = await fetch(`/api/admin/permissions/${permissionId}`);
       return data.permission;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -66,7 +66,7 @@ export const createPermission = createAsyncThunk(
       });
       return data.permission;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -87,7 +87,7 @@ export const updatePermission = createAsyncThunk(
       });
       return data.permission;
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -105,7 +105,7 @@ export const bulkUpdatePermissionStatus = createAsyncThunk(
       });
       return { permissions: data.permissions, updated: data.updated };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
@@ -127,7 +127,7 @@ export const bulkDeletePermissions = createAsyncThunk(
         protectedIds: data.protectedIds,
       };
     } catch (error) {
-      return rejectWithValue(error.message);
+      return rejectWithValue(error.data || error.message);
     }
   },
 );
