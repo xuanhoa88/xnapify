@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import MemorySearch from './adapters/memory';
 import DatabaseSearch from './adapters/database';
+import MemorySearch from './adapters/memory';
 
 /**
  * Adapter Registry

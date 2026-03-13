@@ -1,5 +1,5 @@
-import { Router } from '.';
 import { runUnmount } from './lifecycle';
+import { createMatcher } from './matcher';
 import {
   normalizePath,
   decodeUrl,
@@ -8,7 +8,8 @@ import {
   isDescendant,
   RouterError,
 } from './utils';
-import { createMatcher } from './matcher';
+
+import { Router } from '.';
 
 // =============================================================================
 // Test Fixtures

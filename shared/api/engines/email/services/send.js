@@ -14,10 +14,10 @@
  * - Presence of attachments
  */
 
-import { EmailError, createOperationResult } from '../utils/errors';
-import { validateEmails } from '../utils/validation';
-import { processEmails } from '../utils/processing';
 import { EMAIL_VALIDATED } from '../utils/constants';
+import { EmailError, createOperationResult } from '../utils/errors';
+import { processEmails } from '../utils/processing';
+import { validateEmails } from '../utils/validation';
 import workerPool from '../workers';
 
 /**

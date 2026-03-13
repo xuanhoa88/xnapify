@@ -5,15 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { logUserActivity } from '../utils/activity';
+import { formatUserResponse } from '../utils/formatter';
+import { userFullIncludes } from '../utils/includes';
 import {
   hashToken,
   verifyPassword,
   createTimedResetToken,
   validateResetToken,
 } from '../utils/password';
-import { logUserActivity } from '../utils/activity';
-import { formatUserResponse } from '../utils/formatter';
-import { userFullIncludes } from '../utils/includes';
 
 // ========================================================================
 // AUTHENTICATION SERVICES

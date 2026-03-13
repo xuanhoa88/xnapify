@@ -7,8 +7,9 @@
 
 const fs = require('fs/promises');
 const path = require('path');
-const { withRetryFileSystem } = require('./retry');
+
 const { logDebug } = require('./logger');
+const { withRetryFileSystem } = require('./retry');
 
 /**
  * Validate path for safety

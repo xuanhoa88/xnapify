@@ -5,10 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const { v4: uuidv4 } = require('uuid');
-const SequelizeModule = require('sequelize');
-const glob = require('glob');
 const path = require('path');
+
+const glob = require('glob');
+const SequelizeModule = require('sequelize');
+const { v4: uuidv4 } = require('uuid');
+
 const config = require('../config');
 
 // -----------------------------------------------------------------------------

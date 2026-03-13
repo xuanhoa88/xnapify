@@ -5,9 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { verifyPassword } from '../utils/password';
 import { logUserActivity } from '../utils/activity';
 import { userFullIncludes } from '../utils/includes';
+import { verifyPassword } from '../utils/password';
 
 // ========================================================================
 // PROFILE MANAGEMENT SERVICES

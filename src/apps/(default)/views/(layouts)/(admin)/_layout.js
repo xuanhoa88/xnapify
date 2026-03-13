@@ -6,11 +6,12 @@
  */
 
 import PropTypes from 'prop-types';
-import Footer from './Footer';
-import Drawer from './Drawer';
-import Header from './Header';
-import FlashMessage from './FlashMessage';
+
 import s from './Admin.css';
+import Drawer from './Drawer';
+import FlashMessage from './FlashMessage';
+import Footer from './Footer';
+import Header from './Header';
 
 /**
  * AdminLayout Component

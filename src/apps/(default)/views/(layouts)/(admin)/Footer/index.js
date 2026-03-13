@@ -6,10 +6,13 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+
 import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
-import Icon from '@shared/renderer/components/Icon';
+
 import Button from '@shared/renderer/components/Button';
+import Icon from '@shared/renderer/components/Icon';
+
 import s from './Footer.css';
 
 /**

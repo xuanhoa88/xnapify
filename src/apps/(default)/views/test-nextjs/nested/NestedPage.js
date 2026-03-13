@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import s from './NestedPage.css';
 import Icon from '@shared/renderer/components/Icon';
+
+import s from './NestedPage.css';
 
 export default function NestedTestPage() {
   return (

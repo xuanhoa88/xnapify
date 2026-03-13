@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { execFile } from 'child_process';
 import fs from 'fs';
 import path from 'path';
-import { execFile } from 'child_process';
 import { promisify } from 'util';
+
 import { decryptPluginId, encryptPluginId } from '../utils/crypto';
 
 // Promisify execFile

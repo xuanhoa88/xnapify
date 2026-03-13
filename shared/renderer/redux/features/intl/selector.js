@@ -6,6 +6,7 @@
  */
 
 import { createSelector } from '@reduxjs/toolkit';
+
 import { normalizeState } from './utils';
 
 // =============================================================================

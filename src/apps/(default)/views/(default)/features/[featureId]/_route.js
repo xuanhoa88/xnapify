@@ -6,8 +6,9 @@
  */
 
 import PropTypes from 'prop-types';
-import { featuresData } from '../../data';
+
 import FeatureDetails from '../../components/FeatureDetails';
+import { featuresData } from '../../data';
 
 /**
  * Page metadata

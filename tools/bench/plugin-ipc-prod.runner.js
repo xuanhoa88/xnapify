@@ -6,12 +6,14 @@
 //   BENCH_HANDLERS, BENCH_REQUESTS, BENCH_CONCURRENCY, BENCH_PAYLOAD_BYTES
 //   BENCH_PLUGIN_ID, BENCH_IO_MS (avg simulated I/O in ms), BENCH_RECORD (path)
 
+const fs = require('fs');
+const http = require('http');
+const path = require('path');
+const { performance } = require('perf_hooks');
+
 const express = require('express');
 const fetch = require('node-fetch');
-const http = require('http');
-const { performance } = require('perf_hooks');
-const fs = require('fs');
-const path = require('path');
+
 // Use an internal lightweight registry to avoid requiring ES modules
 class SimpleRegistry {
   constructor() {

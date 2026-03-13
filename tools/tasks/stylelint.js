@@ -8,7 +8,9 @@
  */
 
 const path = require('path');
+
 const stylelint = require('stylelint');
+
 const stylelintConfig = require('../../.stylelintrc');
 const config = require('../config');
 const { BuildError } = require('../utils/error');

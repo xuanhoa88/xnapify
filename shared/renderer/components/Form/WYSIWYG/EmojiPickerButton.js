@@ -6,11 +6,13 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
+
 import { COMMON_EMOJIS } from './constants';
+import s from './EmojiPickerButton.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
-import s from './EmojiPickerButton.css';
 
 export default function EmojiPickerButton({ onSelect, title, disabled }) {
   const [isOpen, setIsOpen] = useState(false);

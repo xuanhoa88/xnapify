@@ -6,10 +6,13 @@
  */
 
 import { forwardRef } from 'react';
-import { useFormContext } from 'react-hook-form';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useFormContext } from 'react-hook-form';
+
 import { useFormField, useMergeRefs } from '../FormContext';
+
 import s from './FormSelect.css';
 
 /**

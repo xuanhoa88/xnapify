@@ -6,9 +6,16 @@
  */
 
 import { useCallback, useState, useEffect, useRef } from 'react';
+
 import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
+import { Link } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import Toast from '@shared/renderer/components/Toast';
 import {
   resetPasswordConfirmation,
   isResetPasswordLoading,
@@ -19,12 +26,9 @@ import {
   getFlashMessage,
   clearFlashMessage,
 } from '@shared/renderer/redux';
-import Toast from '@shared/renderer/components/Toast';
-import Icon from '@shared/renderer/components/Icon';
-import { Link } from '@shared/renderer/components/History';
-import Button from '@shared/renderer/components/Button';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
+
 import { passwordResetConfirmFormSchema } from '../../../users/validator/auth';
+
 import s from './ResetPasswordConfirmation.css';
 
 /**

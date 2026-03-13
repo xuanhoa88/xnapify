@@ -6,22 +6,27 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
-import format from 'date-fns/format';
+
 import cn from 'clsx';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import { useHistory } from '@shared/renderer/components/History';
+import format from 'date-fns/format';
+import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+
 import * as Box from '@shared/renderer/components/Box';
+import Button from '@shared/renderer/components/Button';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Form from '@shared/renderer/components/Form';
+import { useHistory } from '@shared/renderer/components/History';
 import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Modal from '@shared/renderer/components/Modal';
+import { useRbac } from '@shared/renderer/components/Rbac';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
-import Button from '@shared/renderer/components/Button';
-import Form from '@shared/renderer/components/Form';
-import Modal from '@shared/renderer/components/Modal';
+import { showSuccessMessage } from '@shared/renderer/redux';
+
+import { createApiKeyFormSchema } from '../../../../validator/admin';
 import {
   fetchUserById,
   getFetchedUser,
@@ -42,8 +47,7 @@ import {
   getUserPermissions,
   isUserPermissionsOperationLoading,
 } from '../../redux';
-import { showSuccessMessage } from '@shared/renderer/redux';
-import { createApiKeyFormSchema } from '../../../../validator/admin';
+
 import s from './UserApiKeys.css';
 
 const DEFAULT_FORM_VALUES = { name: '', expiresIn: 365, scopes: [] };

@@ -6,10 +6,17 @@
  */
 
 import { useEffect, useRef } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+
 import * as Box from '@shared/renderer/components/Box';
 import Icon from '@shared/renderer/components/Icon';
+
+import FileGrid from '../components/FileGrid';
+import FileSidebar from '../components/FileSidebar';
+import FileToolbar from '../components/FileToolbar';
+import ShareModal from '../components/ShareModal';
 import {
   fetchFiles,
   selectCurrentView,
@@ -18,10 +25,7 @@ import {
   selectPage,
   selectPageSize,
 } from '../redux';
-import FileSidebar from '../components/FileSidebar';
-import FileToolbar from '../components/FileToolbar';
-import FileGrid from '../components/FileGrid';
-import ShareModal from '../components/ShareModal';
+
 import s from './Files.css';
 
 /**

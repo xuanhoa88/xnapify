@@ -6,15 +6,17 @@
  */
 
 import { useCallback, useState, useEffect, useRef } from 'react';
+
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import EmojiPickerButton from './EmojiPickerButton';
+
 import ColorPickerPopup from './ColorPickerPopup';
-import TableActionsPopup from './TableActionsPopup';
+import EmojiPickerButton from './EmojiPickerButton';
 import MediaActionsPopup from './MediaActionsPopup';
+import TableActionsPopup from './TableActionsPopup';
+import s from './Toolbar.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
-import s from './Toolbar.css';
 
 /**
  * Toolbar — Formatting toolbar for the Tiptap WYSIWYG editor.

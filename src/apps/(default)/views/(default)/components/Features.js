@@ -6,8 +6,11 @@
  */
 
 import { useTranslation } from 'react-i18next';
+
 import { Link } from '@shared/renderer/components/History';
+
 import { featuresData } from '../data';
+
 import s from './Features.css';
 
 function Features() {

@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import MemoryCache from './adapters/memory';
 import FileCache from './adapters/file';
+import MemoryCache from './adapters/memory';
 import NoOpCache from './adapters/noop';
 
 /**

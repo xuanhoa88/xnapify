@@ -6,6 +6,7 @@
  */
 
 import { Extension, textInputRule } from '@tiptap/core';
+
 import { EMOJI_DICTIONARY } from './constants';
 
 function escapeRegExp(string) {

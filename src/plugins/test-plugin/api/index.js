@@ -7,6 +7,7 @@
 
 import pick from 'lodash/pick';
 import snakeCase from 'lodash/snakeCase';
+
 import { profileSchema } from '../validator';
 
 // Private symbol for handlers storage

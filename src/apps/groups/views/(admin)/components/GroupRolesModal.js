@@ -12,17 +12,21 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
+
 import Modal from '@shared/renderer/components/Modal';
 import Table from '@shared/renderer/components/Table';
+
 import {
   assignRolesToGroup,
   fetchGroups,
   isGroupAssignRolesLoading,
 } from '../redux';
+
 import s from './GroupRolesModal.css';
 
 /**

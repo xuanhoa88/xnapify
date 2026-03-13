@@ -12,10 +12,12 @@
 
 import fs from 'fs';
 import path from 'path';
+
 import archiver from 'archiver';
 import unzipper from 'unzipper';
-import { FilesystemError } from './errors';
+
 import { ERROR_CODES, UPLOAD_DIR } from './constants';
+import { FilesystemError } from './errors';
 
 /**
  * Create ZIP archive from file information (streaming)

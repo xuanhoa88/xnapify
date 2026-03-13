@@ -6,15 +6,18 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
+
+import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import * as Box from '@shared/renderer/components/Box';
 import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
+
+import s from './Dashboard.css';
 import {
   fetchActivities,
   getActivities,
@@ -24,7 +27,6 @@ import {
   isActivitiesInitialized,
   getActivitiesError,
 } from './redux';
-import s from './Dashboard.css';
 
 const getStatusTagVariant = status => {
   switch (status) {

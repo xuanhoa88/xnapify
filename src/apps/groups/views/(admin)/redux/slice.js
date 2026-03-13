@@ -6,6 +6,7 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
+
 import {
   fetchGroups,
   fetchGroupById,

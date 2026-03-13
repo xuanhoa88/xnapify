@@ -6,9 +6,11 @@
  */
 
 import merge from 'lodash/merge';
-import { composeMiddleware } from '@shared/utils/composer';
-import { addNamespace } from '@shared/i18n/utils';
+
 import { getTranslations } from '@shared/i18n/loader';
+import { addNamespace } from '@shared/i18n/utils';
+import { composeMiddleware } from '@shared/utils/composer';
+
 import {
   ROUTE_INIT_KEY,
   ROUTE_MOUNT_KEY,

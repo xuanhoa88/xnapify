@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { extract } from './extract';
 import * as zipUtils from '../utils/zip-utils';
+
+import { extract } from './extract';
 
 jest.mock('../utils/zip-utils', () => ({
   extractZip: jest.fn(),

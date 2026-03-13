@@ -5,11 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
 const fs = require('fs');
-const webpack = require('webpack');
+const path = require('path');
+
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
+const webpack = require('webpack');
+
 const config = require('../config');
+
+const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 const {
   createCacheGroups,
   createWebpackConfig,
@@ -20,7 +24,6 @@ const {
   isDev,
   pkg,
 } = require('./base.config');
-const AsyncModuleFederationPlugin = require('./AsyncModuleFederationPlugin');
 
 /**
  * Get the compiled server entry path from webpack output configuration

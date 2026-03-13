@@ -6,10 +6,13 @@
  */
 
 import { useMemo, useCallback } from 'react';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
 import Button from '../../Button';
+
 import s from './Pagination.css';
 
 /**

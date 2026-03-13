@@ -5,10 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import os from 'os';
 import fs from 'fs';
+import os from 'os';
 import path from 'path';
+
 import { logPluginActivity } from '../utils/activity';
+
 import {
   CACHE_TTL,
   PluginError,

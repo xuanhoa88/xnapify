@@ -7,8 +7,9 @@
 
 /* eslint-env jest */
 
-import clientManager from './manager';
 import { INITIALIZED, PLUGIN_MANAGER_INIT } from '../utils/BasePluginManager';
+
+import clientManager from './manager';
 
 describe('ClientPluginManager', () => {
   let mockContext;

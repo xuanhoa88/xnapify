@@ -1,4 +1,5 @@
 import { performance } from 'perf_hooks';
+
 import { fetchUserRBACData } from './fetcher';
 
 // Mock collector to produce deterministic RBAC data

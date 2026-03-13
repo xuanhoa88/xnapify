@@ -3,7 +3,6 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
@@ -29,14 +28,6 @@ async function processDelete(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorkerHandler(processDelete, 'DELETE_FILES');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processDelete, 'DELETE_FILES', 'Delete');
+export { processDelete as DELETE_FILES };
+export default processDelete;

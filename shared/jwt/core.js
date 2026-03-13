@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+
+import jwt from 'jsonwebtoken';
+
 import { DEFAULT_JWT_CONFIG } from './constants';
 
 /**

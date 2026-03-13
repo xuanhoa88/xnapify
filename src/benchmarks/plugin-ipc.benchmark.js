@@ -2,6 +2,7 @@
 // Registers many handlers and issues many concurrent executeHook calls
 
 const { performance } = require('perf_hooks');
+
 const PluginRegistry = require('@shared/plugin/utils/Registry').default;
 
 describe('plugin IPC stress', () => {

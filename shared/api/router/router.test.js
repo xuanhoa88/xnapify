@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Router from '.';
 import {
   RouterError,
   normalizeError,
@@ -15,6 +14,8 @@ import {
   createError,
   isDescendant,
 } from './utils';
+
+import Router from '.';
 
 const mockModuleLoader = {
   files: () => [

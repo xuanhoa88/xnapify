@@ -6,16 +6,20 @@
  */
 
 import { useState, useRef, useCallback } from 'react';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import Loader from '@shared/renderer/components/Loader';
+
 import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import Pagination from '@shared/renderer/components/Table/Pagination';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import Pagination from '@shared/renderer/components/Table/Pagination';
+import { getUserId } from '@shared/renderer/redux/features/user/selector';
 import { validateForm } from '@shared/validator';
+
 import { renameFileFormSchema } from '../../../validator/admin/file';
 import {
   toggleSelection,
@@ -36,7 +40,7 @@ import {
   selectTotalItems,
   setPage,
 } from '../redux';
-import { getUserId } from '@shared/renderer/redux/features/user/selector';
+
 import s from './FileGrid.css';
 
 export default function FileGrid({ onShare }) {

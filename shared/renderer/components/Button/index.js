@@ -6,8 +6,10 @@
  */
 
 import { forwardRef } from 'react';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+
 // eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[variant] and s[size]
 import s from './Button.css';
 

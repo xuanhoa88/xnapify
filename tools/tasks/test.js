@@ -8,6 +8,7 @@
  */
 
 const { spawn } = require('child_process');
+
 const config = require('../config');
 const { BuildError } = require('../utils/error');
 const { isSilent, isVerbose, logDebug, logInfo } = require('../utils/logger');

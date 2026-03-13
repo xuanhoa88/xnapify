@@ -6,8 +6,11 @@
  */
 
 import { useRef, useCallback, useMemo, useEffect } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
+
+import Icon from '@shared/renderer/components/Icon';
 import {
   getUserProfile,
   getUserAvatarUrl,
@@ -16,7 +19,7 @@ import {
   getAvatarError,
   clearAvatarError,
 } from '@shared/renderer/redux';
-import Icon from '@shared/renderer/components/Icon';
+
 import s from './ProfileHeader.css';
 
 function ProfileHeader() {

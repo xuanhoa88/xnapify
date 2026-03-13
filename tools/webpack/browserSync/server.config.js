@@ -6,8 +6,9 @@
  */
 
 const open = require('open');
-const { logInfo, logWarn, logError } = require('../../utils/logger');
+
 const config = require('../../config');
+const { logInfo, logWarn, logError } = require('../../utils/logger');
 
 // Configuration
 const CONFIG = Object.freeze({

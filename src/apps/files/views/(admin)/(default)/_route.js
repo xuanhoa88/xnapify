@@ -5,13 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { requirePermission } from '@shared/renderer/components/Rbac';
 import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
 } from '@shared/renderer/redux';
-import { requirePermission } from '@shared/renderer/components/Rbac';
+
 import reducer, { SLICE_NAME } from '../redux';
+
 import Files from './Files';
 
 // Load translations

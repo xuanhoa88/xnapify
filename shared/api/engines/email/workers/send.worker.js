@@ -10,16 +10,15 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
-import { MemoryEmailProvider } from '../providers/memory';
-import { SmtpEmailProvider } from '../providers/smtp';
-import { SendGridEmailProvider } from '../providers/sendgrid';
 import { MailgunEmailProvider } from '../providers/mailgun';
+import { MemoryEmailProvider } from '../providers/memory';
 import { ResendEmailProvider } from '../providers/resend';
-import { EmailError } from '../utils/errors';
-import { validateEmails } from '../utils/validation';
-import { processEmails } from '../utils/processing';
+import { SendGridEmailProvider } from '../providers/sendgrid';
+import { SmtpEmailProvider } from '../providers/smtp';
 import { EMAIL_VALIDATED } from '../utils/constants';
+import { EmailError } from '../utils/errors';
+import { processEmails } from '../utils/processing';
+import { validateEmails } from '../utils/validation';
 
 /**
  * Provider cache for same-process workers
@@ -179,14 +178,6 @@ async function processSend(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorkerHandler(processSend, 'SEND_EMAIL');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processSend, 'SEND_EMAIL', 'Email');
+export { processSend as SEND_EMAIL };
+export default processSend;

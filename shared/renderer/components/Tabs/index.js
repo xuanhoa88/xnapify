@@ -12,7 +12,9 @@ import {
   useContext,
   useMemo,
 } from 'react';
+
 import PropTypes from 'prop-types';
+
 import s from './Tabs.css';
 
 // Context for sharing tab state

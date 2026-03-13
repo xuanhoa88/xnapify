@@ -7,13 +7,14 @@
 
 /* eslint-env jest */
 
-import serverManager from '.';
 import {
   ACTIVE_PLUGINS,
   PLUGIN_METADATA,
   INITIALIZED,
 } from '../utils/BasePluginManager';
 import { registry } from '../utils/Registry';
+
+import serverManager from '.';
 
 // Mock Registry
 jest.mock('../utils/Registry', () => ({

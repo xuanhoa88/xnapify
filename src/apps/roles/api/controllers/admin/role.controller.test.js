@@ -78,10 +78,9 @@ describe('Admin Role Controller (SQLite E2E)', () => {
 
       await roleController.createRole(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
         res,
-        expect.any(String),
-        409,
+        expect.any(Object),
       );
     });
 

@@ -10,6 +10,7 @@
  */
 
 import { WorkerError } from '../../worker';
+
 import { ERROR_CODES } from './constants';
 
 /**

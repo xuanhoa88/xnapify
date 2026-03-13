@@ -6,15 +6,18 @@
  */
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+
 import clsx from 'clsx';
 import { useDispatch, useSelector } from 'react-redux';
+
+import Button from '@shared/renderer/components/Button';
+import Icon from '@shared/renderer/components/Icon';
 import {
   getLocale,
   setLocale,
   getAvailableLocales,
 } from '@shared/renderer/redux';
-import Icon from '@shared/renderer/components/Icon';
-import Button from '@shared/renderer/components/Button';
+
 import s from './LanguageSwitcher.css';
 
 /**

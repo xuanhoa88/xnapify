@@ -14,11 +14,14 @@ import {
   useRef,
   forwardRef,
 } from 'react';
-import { createPortal } from 'react-dom';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
+import { createPortal } from 'react-dom';
+
 import Button from '../Button';
 import { useRbac } from '../Rbac/useRbac';
+
 // eslint-disable-next-line css-modules/no-unused-class -- dynamic classes
 import s from './ContextMenu.css';
 

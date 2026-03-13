@@ -6,11 +6,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
+
 import Button from '../Button';
+
 import s from './Modal.css';
 
 /**

@@ -8,8 +8,8 @@
  */
 
 const path = require('path');
+
 const config = require('../config');
-const { withRetryFileSystem } = require('../utils/retry');
 const { BuildError, logDetailedError } = require('../utils/error');
 const { cleanDir, getFileInfo, readDir } = require('../utils/fs');
 const {
@@ -20,6 +20,7 @@ const {
   logVerbose,
   logWarn,
 } = require('../utils/logger');
+const { withRetryFileSystem } = require('../utils/retry');
 
 // Enhanced state management
 const state = {

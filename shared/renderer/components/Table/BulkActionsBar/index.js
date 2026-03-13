@@ -6,11 +6,14 @@
  */
 
 import { useState, useCallback } from 'react';
+
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
 import Button from '../../Button';
-import Icon from '../../Icon';
 import ContextMenu from '../../ContextMenu';
+import Icon from '../../Icon';
+
 import s from './BulkActionsBar.css';
 
 /**

@@ -5,12 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Table from './Table';
-import Error from './Error';
-import Empty from './Empty';
-import Pagination from './Pagination';
 import BulkActionsBar from './BulkActionsBar';
+import Empty from './Empty';
+import Error from './Error';
+import Pagination from './Pagination';
 import SearchBar from './SearchBar';
+import Table from './Table';
 
 Table.Error = Error;
 Table.Empty = Empty;

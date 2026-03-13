@@ -6,17 +6,21 @@
  */
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
+
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import clsx from 'clsx';
-import { getUserId } from '@shared/renderer/redux/features/user/selector';
+
+import Button from '@shared/renderer/components/Button';
 import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
-import Button from '@shared/renderer/components/Button';
 import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
+import { getUserId } from '@shared/renderer/redux/features/user/selector';
 import { validateForm } from '@shared/validator';
+
 import { shareFileFormSchema } from '../../../validator/admin/file';
 import { updateSharing, fetchFileShares, searchUsersAndGroups } from '../redux';
+
 import s from './ShareModal.css';
 
 const ShareModal = forwardRef((props, ref) => {

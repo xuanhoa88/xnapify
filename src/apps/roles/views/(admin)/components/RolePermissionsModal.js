@@ -12,10 +12,14 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+
 import Modal from '@shared/renderer/components/Modal';
+
 import { fetchRolePermissions, isRoleFetchPermissionsLoading } from '../redux';
+
 import s from './RolePermissionsModal.css';
 
 /**

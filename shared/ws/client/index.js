@@ -6,6 +6,7 @@
  */
 
 import { EventEmitter } from 'events';
+
 import {
   DefaultConfig,
   MessageType,

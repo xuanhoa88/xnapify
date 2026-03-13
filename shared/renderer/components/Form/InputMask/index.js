@@ -6,12 +6,15 @@
  */
 
 import { forwardRef, useCallback } from 'react';
-import { useFormContext } from 'react-hook-form';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useFormContext } from 'react-hook-form';
+
 import { useFormField, useMergeRefs } from '../FormContext';
-import useMask from './useMask';
 import s from '../Input/FormInput.css';
+
+import useMask from './useMask';
 
 /**
  * FormInputMask - Masked input element to be used inside Form.Field

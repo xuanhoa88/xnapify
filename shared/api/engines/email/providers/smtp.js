@@ -6,6 +6,7 @@
  */
 
 import nodemailer from 'nodemailer';
+
 import { EmailError } from '../utils/errors';
 
 /**

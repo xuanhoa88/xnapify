@@ -6,14 +6,17 @@
  */
 
 import { useMemo } from 'react';
-import { useTranslation } from 'react-i18next';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
+
 import {
   useFormField,
   useFormValidation,
   isFieldRequired,
 } from '../FormContext';
+
 import s from './FormLabel.css';
 
 /**

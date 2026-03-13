@@ -5,8 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
 import { useCallback, useMemo } from 'react';
+
+import PropTypes from 'prop-types';
+
 import { useHistory, buildUrl } from './hooks';
 
 /**

@@ -6,6 +6,7 @@
  */
 
 import { composeMiddleware } from '@shared/utils/composer';
+
 import Hook from './Hook';
 
 // Private property symbols

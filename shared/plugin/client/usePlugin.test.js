@@ -8,13 +8,16 @@
 /* eslint-env jest */
 
 import { useMemo } from 'react';
+
 import renderer, { act } from 'react-test-renderer';
+
+import { registry } from '../utils/Registry';
+
 import {
   usePluginHooks,
   usePluginValidator,
   usePluginFormData,
 } from './usePlugin';
-import { registry } from '../utils/Registry';
 
 // Mock Registry
 jest.mock('../utils/Registry', () => ({

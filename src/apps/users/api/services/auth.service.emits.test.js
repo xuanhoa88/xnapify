@@ -1,5 +1,12 @@
-import * as authService from './auth.service';
 import { createFactory } from '@shared/api/engines/hook/factory';
+
+import {
+  createTimedResetToken,
+  validateResetToken,
+  verifyPassword,
+} from '../utils/password';
+
+import * as authService from './auth.service';
 
 // Mock password utilities where needed
 jest.mock('../utils/password', () => ({
@@ -12,14 +19,6 @@ jest.mock('../utils/password', () => ({
   validateResetToken: jest.fn(() => ({ valid: true, errors: [] })),
   verifyPassword: jest.fn(() => true),
 }));
-
-import {
-  createTimedResetToken,
-  // eslint-disable-next-line no-unused-vars
-  hashToken,
-  validateResetToken,
-  verifyPassword,
-} from '../utils/password';
 
 describe('auth.service emits (additional)', () => {
   test('registerUser emits registered', async () => {

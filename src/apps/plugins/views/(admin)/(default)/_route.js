@@ -5,14 +5,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { requirePermission } from '@shared/renderer/components/Rbac';
 import {
   addBreadcrumb,
   registerMenu,
   unregisterMenu,
 } from '@shared/renderer/redux';
-import { requirePermission } from '@shared/renderer/components/Rbac';
-import reducer, { SLICE_NAME } from './redux';
+
 import Plugins from './Plugins';
+import reducer, { SLICE_NAME } from './redux';
 
 // Protect route with 'plugins:read' permission
 export const middleware = requirePermission('plugins:read');

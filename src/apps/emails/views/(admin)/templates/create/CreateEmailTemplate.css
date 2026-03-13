@@ -1,0 +1,19 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-lg, 16px);
+}
+
+.headerActions {
+  display: flex;
+  gap: var(--spacing-sm, 8px);
+  align-items: center;
+}
+
+.errorBanner {
+  padding: 12px 16px;
+  background: var(--color-danger-bg, #fef2f2);
+  color: var(--color-danger, #ef4444);
+  border-radius: 8px;
+  font-size: var(--font-size-sm, 13px);
+}

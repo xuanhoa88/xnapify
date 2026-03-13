@@ -5,11 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import fs from 'fs';
+
 import merge from 'lodash/merge';
+
 import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
 
 // Auto-discover all custom Node-RED node modules in ./nodes/

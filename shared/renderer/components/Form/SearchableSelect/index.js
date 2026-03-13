@@ -6,11 +6,14 @@
  */
 
 import { forwardRef, useCallback } from 'react';
-import { useFormContext, useController } from 'react-hook-form';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
-import { useFormField, useMergeRefs } from '../FormContext';
+import { useFormContext, useController } from 'react-hook-form';
+
 import SearchableSelect from '../../SearchableSelect/SearchableSelect';
+import { useFormField, useMergeRefs } from '../FormContext';
+
 import s from './FormSearchableSelect.css';
 
 /**

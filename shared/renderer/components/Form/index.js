@@ -6,28 +6,29 @@
  */
 
 import { useFormContext, Controller } from 'react-hook-form';
+
 import '../../../validator';
-import Form from './Form';
-import FormField from './Field';
-import FormLabel from './Label';
-import FormInput from './Input';
-import FormInputMask from './InputMask';
+import FormCheckbox from './Checkbox';
+import FormCheckboxList from './CheckboxList';
 import FormDate from './Date';
 import FormDateRange from './DateRange';
-import FormPasswordInput from './Password';
-import FormNumberInput from './Number';
-import FormTextarea from './Textarea';
-import FormSelect from './Select';
-import FormCheckbox from './Checkbox';
-import FormSwitch from './Switch';
-import FormRadio from './Radio';
-import FormFileUpload from './FileUpload';
 import FormError from './Error';
-import FormSearchableSelect from './SearchableSelect';
-import FormCheckboxList from './CheckboxList';
-import FormWYSIWYG from './WYSIWYG';
+import FormField from './Field';
+import FormFileUpload from './FileUpload';
+import Form from './Form';
 import { useFormValidation, useFormField } from './FormContext';
+import FormInput from './Input';
+import FormInputMask from './InputMask';
+import FormLabel from './Label';
+import FormNumberInput from './Number';
+import FormPasswordInput from './Password';
+import FormRadio from './Radio';
+import FormSearchableSelect from './SearchableSelect';
+import FormSelect from './Select';
+import FormSwitch from './Switch';
+import FormTextarea from './Textarea';
 import useAsyncValidator from './useAsyncValidator';
+import FormWYSIWYG from './WYSIWYG';
 
 // Attach sub-components
 Form.Field = FormField;

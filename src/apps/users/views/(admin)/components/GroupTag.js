@@ -6,7 +6,9 @@
  */
 
 import PropTypes from 'prop-types';
+
 import Tag from '@shared/renderer/components/Tag';
+
 import s from './GroupTag.css';
 
 /**

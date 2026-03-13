@@ -13,16 +13,20 @@ import {
   useEffect,
   useMemo,
 } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
+
 import Modal from '@shared/renderer/components/Modal';
-import s from './UserPermissionsModal.css';
+
 import {
   fetchUserPermissions,
   clearUserPermissions,
   getUserPermissions,
   isUserPermissionsOperationLoading,
 } from '../redux';
+
+import s from './UserPermissionsModal.css';
 
 /**
  * UserPermissionsModal - Self-contained modal for viewing user permissions

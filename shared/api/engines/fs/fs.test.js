@@ -12,9 +12,9 @@ jest.mock('./utils/zip-utils', () => ({
 }));
 
 import { Readable } from 'stream';
-import fs, { createFactory } from '.';
-import { MemoryFilesystemProvider } from './providers/memory';
+
 import { MIDDLEWARES } from './middlewares';
+import { MemoryFilesystemProvider } from './providers/memory';
 import {
   formatFileSize,
   parseFileSize,
@@ -24,6 +24,8 @@ import {
   getFileCategory,
   generateSecureFileName,
 } from './utils/file-utils';
+
+import fs, { createFactory } from '.';
 
 describe('Filesystem Engine', () => {
   describe('Default Instance', () => {

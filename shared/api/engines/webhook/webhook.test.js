@@ -60,7 +60,10 @@ jest.mock('./workers', () => ({
   setPersistConnectionFactory: jest.fn(),
 }));
 
-import webhook, { createFactory } from '.';
+import fetch from 'node-fetch';
+
+import { HttpWebhookAdapter } from './adapters/http';
+import { MemoryWebhookAdapter } from './adapters/memory';
 import {
   WebhookError,
   WebhookDeliveryError,
@@ -68,19 +71,18 @@ import {
   WebhookTimeoutError,
   WebhookWorkerError,
 } from './errors';
-import { MemoryWebhookAdapter } from './adapters/memory';
-import { HttpWebhookAdapter } from './adapters/http';
-import {
-  generateSignature,
-  verifySignature,
-  createSignatureHeader,
-} from './utils/signature';
 import {
   WEBHOOK_STATUS,
   DEFAULTS,
   SIGNATURE_ALGORITHMS,
 } from './utils/constants';
-import fetch from 'node-fetch';
+import {
+  generateSignature,
+  verifySignature,
+  createSignatureHeader,
+} from './utils/signature';
+
+import webhook, { createFactory } from '.';
 
 describe('Webhook Engine', () => {
   describe('Default Instance', () => {

@@ -6,11 +6,13 @@
  */
 
 import { useState, useCallback, useRef, useEffect } from 'react';
+
+import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import formatDistanceToNow from 'date-fns/formatDistanceToNow';
-import Icons from './ToolbarIcon';
+
 import s from './CommentActionsPopup.css';
+import Icons from './ToolbarIcon';
 
 const CommentActionsPopup = ({
   comments = [],

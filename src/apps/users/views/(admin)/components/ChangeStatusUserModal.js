@@ -6,12 +6,15 @@
  */
 
 import { useState, useCallback, useImperativeHandle, forwardRef } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { useTranslation } from 'react-i18next';
+
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+
 import Modal from '@shared/renderer/components/Modal';
-import { bulkUpdateUserStatus } from '../redux';
 import { getUserProfile } from '@shared/renderer/redux';
+
+import { bulkUpdateUserStatus } from '../redux';
 
 /**
  * ChangeStatusUserModal - Self-contained modal for changing user status

@@ -8,8 +8,8 @@
 // Mock uuid to avoid Jest compatibility issues
 jest.mock('uuid');
 
-import { createFactory } from './factory';
 import { Channel } from './channel';
+import { createFactory } from './factory';
 
 describe('Queue Engine', () => {
   let queue;

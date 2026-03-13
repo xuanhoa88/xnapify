@@ -1,6 +1,8 @@
 import { validateForm } from '@shared/validator';
+
 import * as authService from '../services/auth.service';
 import * as profileService from '../services/profile.service';
+
 import * as authController from './auth.controller';
 
 // Mock dependencies

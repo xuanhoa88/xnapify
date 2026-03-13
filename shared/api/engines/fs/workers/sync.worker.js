@@ -3,7 +3,6 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
@@ -35,14 +34,6 @@ async function processSync(data) {
 }
 
 // Create standardized worker function using helper
-const workerFunction = createWorkerHandler(processSync, 'SYNC_FILES');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processSync, 'SYNC_FILES', 'Sync');
+export { processSync as SYNC_FILES };
+export default processSync;

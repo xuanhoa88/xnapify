@@ -6,24 +6,35 @@
  */
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
+
+import format from 'date-fns/format';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import format from 'date-fns/format';
-import { getUserProfile } from '@shared/renderer/redux';
+
+import Avatar from '@shared/renderer/components/Avatar';
+import * as Box from '@shared/renderer/components/Box';
+import Button from '@shared/renderer/components/Button';
 import { useHistory } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+import { useRbac } from '@shared/renderer/components/Rbac';
 import {
   SearchableSelect,
   useSearchableSelect,
 } from '@shared/renderer/components/SearchableSelect';
-import { useRbac } from '@shared/renderer/components/Rbac';
-import * as Box from '@shared/renderer/components/Box';
-import Icon from '@shared/renderer/components/Icon';
-import Loader from '@shared/renderer/components/Loader';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
-import Button from '@shared/renderer/components/Button';
-import Avatar from '@shared/renderer/components/Avatar';
+import { getUserProfile } from '@shared/renderer/redux';
+
+import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
+import DeleteUserModal from '../components/DeleteUserModal';
+import GroupTag from '../components/GroupTag';
+import RoleTag from '../components/RoleTag';
+import UserActionsDropdown from '../components/UserActionsDropdown';
+import UserGroupsModal from '../components/UserGroupsModal';
+import UserPermissionsModal from '../components/UserPermissionsModal';
+import UserRolesModal from '../components/UserRolesModal';
 import {
   fetchUsers,
   getUsers,
@@ -32,14 +43,7 @@ import {
   isUsersListInitialized,
   getUsersListError,
 } from '../redux';
-import UserActionsDropdown from '../components/UserActionsDropdown';
-import UserRolesModal from '../components/UserRolesModal';
-import UserGroupsModal from '../components/UserGroupsModal';
-import UserPermissionsModal from '../components/UserPermissionsModal';
-import DeleteUserModal from '../components/DeleteUserModal';
-import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
-import RoleTag from '../components/RoleTag';
-import GroupTag from '../components/GroupTag';
+
 import s from './Users.css';
 
 function Users({ context }) {

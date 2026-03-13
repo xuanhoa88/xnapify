@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { v4 as uuidv4 } from 'uuid';
 import fetch from 'node-fetch';
+import { v4 as uuidv4 } from 'uuid';
+
 import { z } from '@shared/validator';
-import { DEFAULTS } from '../utils/constants';
-import { createSignatureHeader } from '../utils/signature';
+
 import {
   createValidationErrorResponse,
   createSuccessResponse,
@@ -23,6 +23,8 @@ import {
   timeoutSchema,
   headersSchema,
 } from '../utils/adapter-schemas';
+import { DEFAULTS } from '../utils/constants';
+import { createSignatureHeader } from '../utils/signature';
 
 /**
  * HTTP Adapter Options Schema

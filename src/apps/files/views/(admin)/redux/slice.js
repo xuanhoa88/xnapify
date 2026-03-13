@@ -6,6 +6,7 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
+
 import * as thunks from './thunks';
 
 export const SLICE_NAME = 'files';

@@ -6,13 +6,13 @@
  */
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
-import { getRootSegment } from './utils';
 import {
   createInit,
   createMount,
   buildTranslationsLoader,
   createAction,
 } from './lifecycle';
+import { getRootSegment } from './utils';
 
 /**
  * Finds config modules for a given route based on root segment.

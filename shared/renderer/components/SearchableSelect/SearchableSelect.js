@@ -6,12 +6,15 @@
  */
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { createPortal } from 'react-dom';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import Icon from '../Icon';
+
 import Button from '../Button';
+import Icon from '../Icon';
+
 import s from './SearchableSelect.css';
 
 /**

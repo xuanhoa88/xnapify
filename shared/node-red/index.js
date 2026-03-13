@@ -7,11 +7,12 @@
  */
 
 import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+
+import initFlowSplitter from './flow-splitter';
 import {
   createProductionSettings,
   createDevelopmentSettings,
 } from './settings';
-import initFlowSplitter from './flow-splitter';
 
 // Bundle all migration JSON files at build time
 const migrationsContext = require.context('./migrations', true, /\.json$/i);

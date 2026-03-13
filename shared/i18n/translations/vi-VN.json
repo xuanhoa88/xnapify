@@ -103,16 +103,7 @@
     "privacy": "Bảo mật",
     "notFound": "Không tìm thấy",
     "error": "Lỗi",
-    "backToSite": "Quay lại trang web",
-    "main": "Chính",
-    "dashboard": "Bảng điều khiển",
-    "management": "Quản lý",
-    "system": "Hệ thống",
-    "modules": "Mô-đun",
-    "users": "Người dùng",
-    "roles": "Vai trò",
-    "groups": "Nhóm",
-    "permissions": "Quyền"
+    "backToSite": "Quay lại trang web"
   },
   "header": {
     "brand": "React Starter Kit"
@@ -156,5 +147,21 @@
     "itemSelected_one": "Đã chọn {{count}} mục",
     "itemSelected_other": "Đã chọn {{count}} mục"
   },
-  "admin": {}
+  "admin": {
+    "navigation": {
+      "dashboard": "Bảng điều khiển",
+      "main": "Chính",
+      "management": "Quản lý",
+      "system": "Hệ thống",
+      "plugins": "Plugin",
+      "users": "Người dùng",
+      "roles": "Vai trò",
+      "groups": "Nhóm",
+      "permissions": "Quyền",
+      "emails": "Email"
+    },
+    "emails": {
+      "templates": "Mẫu Email"
+    }
+  }
 }

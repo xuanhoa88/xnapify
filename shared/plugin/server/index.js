@@ -5,9 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import fs from 'fs';
+
 import {
   BasePluginManager,
   ACTIVE_PLUGINS,

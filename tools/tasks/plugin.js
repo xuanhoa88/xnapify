@@ -5,20 +5,22 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const webpack = require('webpack');
-const path = require('path');
-const fs = require('fs');
-const snakeCase = require('lodash/snakeCase');
-const pick = require('lodash/pick');
-const semver = require('semver');
-const util = require('util');
 const { execFile } = require('child_process');
+const fs = require('fs');
+const path = require('path');
+const util = require('util');
+
+const pick = require('lodash/pick');
+const snakeCase = require('lodash/snakeCase');
+const semver = require('semver');
+const webpack = require('webpack');
+
 const config = require('../config');
+const { computeChecksum } = require('../utils/checksum');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { toContainerName } = require('../utils/plugin');
-const { computeChecksum } = require('../utils/checksum');
-const createPluginConfig = require('../webpack/plugin.config');
 const { isDev } = require('../webpack/base.config');
+const createPluginConfig = require('../webpack/plugin.config');
 
 // Promisify execFile
 const execFileAsync = util.promisify(execFile);

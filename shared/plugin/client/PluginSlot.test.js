@@ -8,8 +8,10 @@
 /* eslint-env jest */
 
 import renderer, { act } from 'react-test-renderer';
-import PluginSlot from './PluginSlot';
+
 import { registry } from '../utils/Registry';
+
+import PluginSlot from './PluginSlot';
 
 // Mock AppContext
 jest.mock('@shared/renderer/AppContext', () => ({

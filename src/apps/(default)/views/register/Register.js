@@ -6,24 +6,28 @@
  */
 
 import { useCallback, useEffect } from 'react';
+
+import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import PropTypes from 'prop-types';
+
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
+import {
+  Link,
+  useHistory,
+  useQuery,
+} from '@shared/renderer/components/History';
 import {
   register,
   isAuthLoading,
   getAuthError,
   clearAuthError,
 } from '@shared/renderer/redux';
-import {
-  Link,
-  useHistory,
-  useQuery,
-} from '@shared/renderer/components/History';
 import { useWebSocket } from '@shared/ws/client';
-import Button from '@shared/renderer/components/Button';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
+
 import { registerFormSchema } from '../../../users/validator/auth';
+
 import s from './Register.css';
 
 /**

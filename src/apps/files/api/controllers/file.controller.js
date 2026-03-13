@@ -5,13 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import * as fileService from '../services/file.service';
 import { validateForm } from '@shared/validator';
+
 import {
   createFolderFormSchema,
   renameFileFormSchema,
   shareFileFormSchema,
 } from '../../validator/admin/file';
+import * as fileService from '../services/file.service';
 
 // ========================================================================
 // FILE CONTROLLERS

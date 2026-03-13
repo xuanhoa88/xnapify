@@ -5,9 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import CreateRole from './CreateRole';
-import { addBreadcrumb } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
+import { addBreadcrumb } from '@shared/renderer/redux';
+
+import CreateRole from './CreateRole';
 
 export const middleware = requirePermission('roles:create');
 

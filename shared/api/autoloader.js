@@ -20,9 +20,9 @@
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
+import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
 // =============================================================================
 // CONSTANTS

@@ -6,12 +6,15 @@
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
 import Card from '@shared/renderer/components/Card';
-import Tag from '@shared/renderer/components/Tag';
 import Icon from '@shared/renderer/components/Icon';
+import Tag from '@shared/renderer/components/Tag';
+
 import PluginActionsDropdown from './PluginActionsDropdown';
 import s from './PluginCard.css';
 

@@ -1,18 +1,22 @@
 import { useEffect, useCallback } from 'react';
-import { useTranslation } from 'react-i18next';
+
 import clsx from 'clsx';
+import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import Icon from '@shared/renderer/components/Icon';
+
 import Button from '@shared/renderer/components/Button';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
+import Icon from '@shared/renderer/components/Icon';
+
 import {
   setView,
   setUploadModalOpen,
   selectCurrentView,
   fetchStorageUsage,
 } from '../redux';
-import FileUploader from './FileUploader';
+
 import s from './FileSidebar.css';
+import FileUploader from './FileUploader';
 
 const NAV_ITEMS = [
   { id: 'my_drive', label: 'sidebar.my_drive', icon: 'hard-drive' },

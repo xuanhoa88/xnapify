@@ -6,20 +6,24 @@
  */
 
 import { useCallback, useEffect } from 'react';
+
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import PropTypes from 'prop-types';
+
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
+import { useHistory } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
 import {
   deleteUser,
   isDeleteLoading,
   getDeleteError,
   clearDeleteError,
 } from '@shared/renderer/redux';
-import { useHistory } from '@shared/renderer/components/History';
-import Icon from '@shared/renderer/components/Icon';
-import Button from '@shared/renderer/components/Button';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
+
 import { deleteAccountFormSchema } from '../../../../users/validator/auth';
+
 import s from './DeleteAccountCard.css';
 
 function DeleteAccountCard() {

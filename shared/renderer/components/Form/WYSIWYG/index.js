@@ -14,40 +14,43 @@ import {
   useCallback,
   useMemo,
 } from 'react';
-import { useTranslation } from 'react-i18next';
-import { useController } from 'react-hook-form';
-import clsx from 'clsx';
-import PropTypes from 'prop-types';
-import { useEditor, EditorContent } from '@tiptap/react';
-import { BubbleMenu } from '@tiptap/react/menus'; // eslint-disable-line import/no-unresolved
+
+import { Color } from '@tiptap/extension-color';
 import DragHandle from '@tiptap/extension-drag-handle-react';
-import StarterKit from '@tiptap/starter-kit';
+import Highlight from '@tiptap/extension-highlight';
+import { Image as TiptapImage } from '@tiptap/extension-image';
+import { Link } from '@tiptap/extension-link';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
-import Underline from '@tiptap/extension-underline';
-import TaskList from '@tiptap/extension-task-list';
-import TaskItem from '@tiptap/extension-task-item';
 import { TableKit } from '@tiptap/extension-table';
-import { Link } from '@tiptap/extension-link';
-import { Youtube } from '@tiptap/extension-youtube';
-import { Image as TiptapImage } from '@tiptap/extension-image';
-import { Color } from '@tiptap/extension-color';
+import TaskItem from '@tiptap/extension-task-item';
+import TaskList from '@tiptap/extension-task-list';
 import { TextStyle } from '@tiptap/extension-text-style';
-import Highlight from '@tiptap/extension-highlight';
+import Underline from '@tiptap/extension-underline';
+import { Youtube } from '@tiptap/extension-youtube';
 import { Selection } from '@tiptap/extensions';
+import { useEditor, EditorContent } from '@tiptap/react';
+import { BubbleMenu } from '@tiptap/react/menus'; // eslint-disable-line import/no-unresolved
+import StarterKit from '@tiptap/starter-kit';
+import clsx from 'clsx';
+import PropTypes from 'prop-types';
+import { useController } from 'react-hook-form';
+import { useTranslation } from 'react-i18next';
+
 import { useFormField, useMergeRefs } from '../FormContext';
-import createSuggestion from './suggestion';
+
+import CommentActionsPopup from './CommentActionsPopup';
+import { CommentExtension } from './CommentExtension';
 import { DetailsExtension } from './DetailsExtension';
-import { Video, Audio } from './MediaExtensions';
 import { Emoji } from './EmojiExtension';
 import { FontSize } from './FontSizeExtension';
-import { CommentExtension } from './CommentExtension';
-import CommentActionsPopup from './CommentActionsPopup';
+import s from './FormWYSIWYG.css';
+import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
+import { Video, Audio } from './MediaExtensions';
+import createSuggestion from './suggestion';
 import Toolbar from './Toolbar';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
-import { htmlToMarkdown, markdownToHtml } from './markdownUtils';
-import s from './FormWYSIWYG.css';
 
 // Lightweight check: does the string contain common markdown syntax?
 const MD_PATTERNS =

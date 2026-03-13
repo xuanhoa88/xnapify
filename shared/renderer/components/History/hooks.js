@@ -13,6 +13,7 @@ import {
   useState,
   useRef,
 } from 'react';
+
 import { HistoryContext } from '../../Providers/History';
 
 /** @type {{ matched: false, params: {} }} Reusable no-match sentinel */

@@ -6,6 +6,7 @@
  */
 
 import fetch from 'node-fetch';
+
 import { EmailError } from '../utils/errors';
 
 /**

@@ -3,6 +3,7 @@
 // small middleware functions to ensure it stays performant as stacks grow.
 
 const { performance } = require('perf_hooks');
+
 const { composeMiddleware } = require('@shared/utils/composer');
 
 // Create a bunch of dummy middleware that just calls next()

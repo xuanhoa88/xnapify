@@ -2,12 +2,14 @@
 // simple server-side rendering. These help ensure the bootstrap cost of the
 // client/server entrypoints stays reasonable.
 
-const React = require('react');
-const ReactDOMServer = require('react-dom/server');
 const { performance } = require('perf_hooks');
 
-const configureStore = require('@shared/renderer/redux/configureStore').default;
+const React = require('react');
+
+const ReactDOMServer = require('react-dom/server');
+
 const App = require('@shared/renderer/App').default;
+const configureStore = require('@shared/renderer/redux/configureStore').default;
 
 // simple dummy context that mimics what the real application provides
 function createDummyContext() {

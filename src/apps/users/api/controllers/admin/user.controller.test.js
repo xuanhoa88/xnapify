@@ -1,5 +1,7 @@
 import { validateForm } from '@shared/validator';
+
 import * as userAdminService from '../../services/admin/user.service';
+
 import * as userController from './user.controller';
 
 jest.mock('@shared/validator', () => ({

@@ -6,6 +6,7 @@
  */
 
 const path = require('path');
+
 const config = require('../config');
 
 // Environment-based configuration

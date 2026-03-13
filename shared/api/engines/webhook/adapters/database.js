@@ -7,8 +7,9 @@
 
 import { fn, col, DataTypes, Op } from 'sequelize';
 import { v4 as uuidv4 } from 'uuid';
+
 import { z } from '@shared/validator';
-import { WEBHOOK_STATUS } from '../utils/constants';
+
 import {
   createValidationErrorResponse,
   createSuccessResponse,
@@ -20,6 +21,7 @@ import {
   retriesSchema,
   statusSchema,
 } from '../utils/adapter-schemas';
+import { WEBHOOK_STATUS } from '../utils/constants';
 
 /**
  * Database Adapter Options Schema

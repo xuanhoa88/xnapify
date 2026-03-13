@@ -6,16 +6,17 @@
  */
 
 import { z } from '@shared/validator';
+
+import { DatabaseWebhookAdapter } from './adapters/database';
 import { HttpWebhookAdapter } from './adapters/http';
 import { MemoryWebhookAdapter } from './adapters/memory';
-import { DatabaseWebhookAdapter } from './adapters/database';
 import { WebhookError, WebhookValidationError } from './errors';
+import * as services from './services';
 import { DEFAULTS, WEBHOOK_STATUS } from './utils/constants';
 import workerPool, {
   setPersistDbConnection,
   setPersistConnectionFactory,
 } from './workers';
-import * as services from './services';
 
 // Webhook validation schema (accepts any data - validation at adapter level)
 const sendWebhookSchema = z.any();

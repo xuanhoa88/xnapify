@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import PropTypes from 'prop-types';
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
+
 // eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via props
 import s from './Card.css';
 

@@ -1,6 +1,7 @@
-import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle';
 import { addNamespace } from '@shared/i18n/utils';
+
 import { ROUTE_TRANSLATIONS_KEY } from './constants';
+import { buildTranslationsLoader, loadRouteTranslations } from './lifecycle';
 
 jest.mock('@shared/i18n/utils', () => ({
   addNamespace: jest.fn(),

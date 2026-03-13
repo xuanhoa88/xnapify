@@ -8,7 +8,9 @@
  */
 
 const fs = require('fs');
+
 const { format: prettierFormatter } = require('prettier');
+
 const prettierConfig = require('../../.prettierrc');
 const config = require('../config');
 const { readDir, writeFile } = require('../utils/fs');

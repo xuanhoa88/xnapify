@@ -5,14 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-const path = require('path');
 const fs = require('fs');
-const webpack = require('webpack');
+const path = require('path');
+
 const TerserPlugin = require('terser-webpack-plugin');
+const webpack = require('webpack');
 const { default: merge } = require('webpack-merge');
 const nodeExternals = require('webpack-node-externals');
+
 const config = require('../config');
 const { isVerbose } = require('../utils/logger');
+
 const loadDotenv = require('./loadDotenv');
 
 // =============================================================================

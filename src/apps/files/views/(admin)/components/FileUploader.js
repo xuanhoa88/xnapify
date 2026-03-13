@@ -6,13 +6,16 @@
  */
 
 import { useRef, useEffect, useCallback } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 import { v4 as uuidv4 } from 'uuid';
-import Icon from '@shared/renderer/components/Icon';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+
 import Button from '@shared/renderer/components/Button';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Icon from '@shared/renderer/components/Icon';
 import { validateForm } from '@shared/validator';
+
 import { createFolderFormSchema } from '../../../validator/admin/file';
 import {
   setUploadModalOpen,
@@ -27,6 +30,7 @@ import {
   selectCurrentView,
   selectActiveUploads,
 } from '../redux';
+
 import s from './FileUploader.css';
 
 function FileUploader() {

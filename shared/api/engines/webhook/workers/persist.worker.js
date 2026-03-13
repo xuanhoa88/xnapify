@@ -10,9 +10,8 @@
  * Focuses only on database operations: store, update status, cleanup.
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
-import { WebhookError } from '../errors';
 import { DatabaseWebhookAdapter } from '../adapters/database';
+import { WebhookError } from '../errors';
 
 // Database adapter instance
 let dbAdapter = null;
@@ -186,10 +185,6 @@ async function processPersist(data) {
 }
 
 // Create worker function
-const workerFunction = createWorkerHandler(processPersist, 'PERSIST_WEBHOOK');
 
-// Export for same-process execution
-export default workerFunction;
-
-// Setup fork mode execution
-setupWorkerProcess(processPersist, 'PERSIST_WEBHOOK', 'Webhook Database');
+export { processPersist as PERSIST_WEBHOOK };
+export default processPersist;

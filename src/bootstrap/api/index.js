@@ -6,8 +6,10 @@
  */
 
 import express from 'express';
+
 import { discoverModules, engines } from '@shared/api';
 import { Router as DynamicRouter } from '@shared/api/router';
+
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
 
@@ -76,11 +78,25 @@ function registerEngines(app) {
  * @returns {Promise<void>}
  */
 async function runCoreMigrations() {
-  await engines.db.connection.runMigrations();
-  await engines.db.connection.runSeeds();
+  if (engines.db && engines.db.connection) {
+    await engines.db.connection.runMigrations();
+    await engines.db.connection.runSeeds();
+  }
 
-  // Configure webhook database connection
-  engines.webhook.setDbConnection(engines.db.connection);
+  // Configure webhook database connection (elective engine)
+  if (
+    engines.webhook &&
+    typeof engines.webhook.setDbConnection === 'function' &&
+    engines.db &&
+    engines.db.connection
+  ) {
+    engines.webhook.setDbConnection(engines.db.connection);
+  } else if (process.env.NODE_ENV !== 'production') {
+    log(
+      'Webhook engine is unavailable, skipping database configuration.',
+      'warn',
+    );
+  }
 }
 
 /**

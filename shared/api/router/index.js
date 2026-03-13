@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { ROUTE_MOUNT_KEY } from './constants';
+import { buildRoutes, validateConfig, linkParents } from './builder';
 import { collect } from './collector';
+import { ROUTE_MOUNT_KEY } from './constants';
 import { loadRouteTranslations, runInit, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
-import { buildRoutes, validateConfig, linkParents } from './builder';
 
 /** @type {symbol} Tag for tracking which adapter a route came from */
 const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');

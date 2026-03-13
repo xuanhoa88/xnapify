@@ -9,6 +9,7 @@ import {
   configureStore as createStore,
   combineReducers,
 } from '@reduxjs/toolkit';
+
 import rootReducer from './rootReducer';
 
 /**

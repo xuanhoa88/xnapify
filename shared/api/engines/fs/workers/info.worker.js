@@ -3,7 +3,6 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
@@ -29,14 +28,6 @@ async function processInfo(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorkerHandler(processInfo, 'FILE_INFO');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processInfo, 'FILE_INFO', 'Info');
+export { processInfo as FILE_INFO };
+export default processInfo;

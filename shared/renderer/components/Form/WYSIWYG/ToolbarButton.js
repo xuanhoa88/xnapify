@@ -8,6 +8,7 @@
 /* eslint-disable css-modules/no-unused-class */
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+
 import s from './ToolbarButton.css';
 
 /**

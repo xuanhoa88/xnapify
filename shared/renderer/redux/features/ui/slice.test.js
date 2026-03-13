@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { normalizeState } from './utils';
 import reducer, {
   toggleDrawer,
   setFlashMessage,
@@ -19,6 +18,7 @@ import reducer, {
   clearBreadcrumbs,
   resetUiState,
 } from './slice';
+import { normalizeState } from './utils';
 
 describe('[ui] slice.js', () => {
   describe('normalizeState', () => {

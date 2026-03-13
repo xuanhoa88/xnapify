@@ -5,7 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import searchWorkerPool from './workers';
+import getSearchWorkerPool from './workers';
+
+let searchWorkerPool = null;
 
 // Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
@@ -21,6 +23,7 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
  */
 export async function providers(app) {
   const container = app.get('container');
+  searchWorkerPool = getSearchWorkerPool(app);
 
   // Expose search worker pool so other modules can trigger indexAll
   container.bind('search:worker', () => searchWorkerPool, true);

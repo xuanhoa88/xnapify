@@ -6,6 +6,7 @@
  */
 
 import { Readable } from 'stream';
+
 import { FilesystemError } from '../utils';
 
 /**

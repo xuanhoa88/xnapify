@@ -6,12 +6,15 @@
  */
 
 import { useMemo } from 'react';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
-import s from './Table.css';
-import Pagination from './Pagination';
-import Empty from './Empty';
+import PropTypes from 'prop-types';
+
 import Loader from '../Loader';
+
+import Empty from './Empty';
+import Pagination from './Pagination';
+import s from './Table.css';
 
 function Table({
   columns,

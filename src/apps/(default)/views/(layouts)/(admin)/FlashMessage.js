@@ -6,9 +6,11 @@
  */
 
 import { useEffect, useRef } from 'react';
+
 import { useDispatch, useSelector } from 'react-redux';
-import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
+
 import Toast from '@shared/renderer/components/Toast';
+import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
 
 function FlashMessage() {
   const dispatch = useDispatch();

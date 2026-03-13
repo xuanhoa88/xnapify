@@ -6,8 +6,11 @@
  */
 
 import { useState, useEffect, useCallback, Fragment, memo } from 'react';
+
 import PropTypes from 'prop-types';
+
 import { useAppContext } from '@shared/renderer/AppContext';
+
 import { registry } from '../utils/Registry';
 
 /**

@@ -82,10 +82,9 @@ describe('Admin Permission Controller (SQLite E2E)', () => {
 
       await permissionController.createPermission(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
         res,
-        expect.any(String),
-        409,
+        expect.any(Object),
       );
     });
   });

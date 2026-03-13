@@ -7,22 +7,24 @@
 
 import 'url-polyfill';
 import 'dotenv-flow/config';
-import path from 'path';
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import http from 'http';
-import crypto from 'crypto';
-import cookieParser from 'cookie-parser';
+import path from 'path';
+
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import expressRequestLanguage from 'express-request-language';
-import nodeFetch from 'node-fetch';
-import { LRUCache } from 'lru-cache';
-import ReactDOM from 'react-dom/server';
 import { createMemoryHistory } from 'history';
-import toString from 'lodash/toString';
 import set from 'lodash/set';
-import { configureJwt } from '@shared/jwt';
+import toString from 'lodash/toString';
+import { LRUCache } from 'lru-cache';
+import nodeFetch from 'node-fetch';
+import ReactDOM from 'react-dom/server';
+
+import { Container } from '@shared/container';
 import { createFetch } from '@shared/fetch';
 import i18n, {
   DEFAULT_LOCALE,
@@ -30,17 +32,16 @@ import i18n, {
   LOCALE_COOKIE_NAME,
   AVAILABLE_LOCALES,
 } from '@shared/i18n';
+import { configureJwt } from '@shared/jwt';
 import { NodeRedManager } from '@shared/node-red';
+import pluginManager from '@shared/plugin/server';
 import {
   configureStore,
   setRuntimeVariable,
   setLocale,
   me,
 } from '@shared/renderer/redux';
-import pluginManager from '@shared/plugin/server';
 import { createWebSocketServer } from '@shared/ws/server';
-import { Container } from '@shared/container';
-import queue from '@shared/api/engines/queue';
 
 // ---------------------------------------------------------------------------
 // Constants & Configuration
@@ -1062,7 +1063,6 @@ export async function initializeServer(app, server, options = {}) {
   app.set('nodeRED', appState.nodeRED);
   app.set('ws', appState.wsServer);
   app.set('plugin', pluginManager);
-  app.set('queue', queue);
 
   // Trust proxy
   app.set(

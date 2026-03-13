@@ -7,6 +7,7 @@
 
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
 import s from './Tag.css';
 
 /**

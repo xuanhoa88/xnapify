@@ -7,8 +7,10 @@
 
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
-import { Link } from '@shared/renderer/components/History';
+
 import Button from '@shared/renderer/components/Button';
+import { Link } from '@shared/renderer/components/History';
+
 import s from './ErrorPage.css';
 
 /**

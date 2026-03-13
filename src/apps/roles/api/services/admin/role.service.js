@@ -7,6 +7,7 @@
 
 import * as rbacCache from '../../../../users/api/utils/rbac/cache';
 import { logRoleActivity } from '../../utils/activity';
+
 import { manageRolePermissions } from './rbac.service';
 
 // ========================================================================

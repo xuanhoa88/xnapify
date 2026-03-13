@@ -14,11 +14,11 @@ const { performance } = require('perf_hooks');
 jest.setTimeout(30000);
 const { setupTestDb, closeTestDb } = require('../../tools/jest/dbTest.setup');
 const {
-  getUserWithProfile,
-} = require('../apps/users/api/services/profile.service');
-const {
   getUserList,
 } = require('../apps/users/api/services/admin/user.service');
+const {
+  getUserWithProfile,
+} = require('../apps/users/api/services/profile.service');
 
 // helper to create a dummy user with profile/roles/groups
 async function createUserWithRelations(models, idx) {

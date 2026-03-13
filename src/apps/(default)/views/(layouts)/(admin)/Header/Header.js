@@ -6,17 +6,20 @@
  */
 
 import { useCallback } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
-import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
-import Icon from '@shared/renderer/components/Icon';
+
 import Button from '@shared/renderer/components/Button';
-import LanguageSwitcher from './LanguageSwitcher';
+import Icon from '@shared/renderer/components/Icon';
+import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
+
 import Breadcrumbs from './Breadcrumbs';
+import s from './Header.css';
+import LanguageSwitcher from './LanguageSwitcher';
 import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
-import s from './Header.css';
 
 /**
  * AdminHeader Component

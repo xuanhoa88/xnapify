@@ -6,11 +6,13 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
+
+import s from './TableActionsPopup.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
-import s from './TableActionsPopup.css';
 
 /**
  * TableActionsPopup — A toolbar button that opens a popover with table

@@ -5,11 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { SmtpEmailProvider } from './providers/smtp';
-import { SendGridEmailProvider } from './providers/sendgrid';
 import { MailgunEmailProvider } from './providers/mailgun';
 import { MemoryEmailProvider } from './providers/memory';
 import { ResendEmailProvider } from './providers/resend';
+import { SendGridEmailProvider } from './providers/sendgrid';
+import { SmtpEmailProvider } from './providers/smtp';
 import { send } from './services';
 
 /**

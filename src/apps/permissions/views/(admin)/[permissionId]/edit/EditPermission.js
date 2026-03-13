@@ -6,10 +6,20 @@
  */
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+
 import PropTypes from 'prop-types';
-import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+
+import * as Box from '@shared/renderer/components/Box';
+import Button from '@shared/renderer/components/Button';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import Loader from '@shared/renderer/components/Loader';
+
+import { updatePermissionFormSchema } from '../../../../validator/admin';
 import {
   fetchPermissionById,
   updatePermission,
@@ -19,13 +29,7 @@ import {
   getFetchedPermission,
   getPermissionFetchError,
 } from '../../redux';
-import * as Box from '@shared/renderer/components/Box';
-import Icon from '@shared/renderer/components/Icon';
-import ConfirmModal from '@shared/renderer/components/ConfirmModal';
-import Loader from '@shared/renderer/components/Loader';
-import Button from '@shared/renderer/components/Button';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
-import { updatePermissionFormSchema } from '../../../../validator/admin';
+
 import s from './EditPermission.css';
 
 export default function EditPermission({ permissionId }) {

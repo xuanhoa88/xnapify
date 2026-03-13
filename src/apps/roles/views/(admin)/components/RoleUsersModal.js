@@ -12,13 +12,17 @@ import {
   forwardRef,
   useEffect,
 } from 'react';
+
 import { useTranslation } from 'react-i18next';
 import { useDispatch } from 'react-redux';
+
+import Avatar from '@shared/renderer/components/Avatar';
 import Modal from '@shared/renderer/components/Modal';
 import Table from '@shared/renderer/components/Table';
-import Avatar from '@shared/renderer/components/Avatar';
 import Tag from '@shared/renderer/components/Tag';
+
 import { fetchRoleUsers } from '../redux';
+
 import s from './RoleUsersModal.css';
 
 /**

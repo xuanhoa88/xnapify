@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { normalizeState } from './utils';
 import reducer, {
   clearAuthError,
   clearEmailVerificationError,
@@ -17,7 +16,6 @@ import reducer, {
   clearPreferencesError,
   resetUserState,
 } from './slice';
-
 import {
   login,
   register,
@@ -34,6 +32,7 @@ import {
   getUserPreferences,
   updateUserPreferences,
 } from './thunks';
+import { normalizeState } from './utils';
 
 describe('[user] slice.js', () => {
   describe('normalizeState', () => {

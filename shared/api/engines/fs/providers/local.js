@@ -5,10 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createReadStream, createWriteStream } from 'fs';
 import fs from 'fs/promises';
 import path from 'path';
-import { createReadStream, createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
+
 import { FilesystemError, UPLOAD_DIR } from '../utils';
 
 /**

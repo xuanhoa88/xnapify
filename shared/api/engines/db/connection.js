@@ -5,8 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import Sequelize from 'sequelize';
 import merge from 'lodash/merge';
+import Sequelize from 'sequelize';
+
 import {
   runMigrations,
   runSeeds,

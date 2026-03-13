@@ -6,9 +6,10 @@
  */
 
 const path = require('path');
+
 const webpack = require('webpack');
+
 const config = require('../config');
-const { withBuildRetry } = require('../utils/retry');
 const {
   BuildError,
   logDetailedError,
@@ -21,6 +22,7 @@ const {
   readFile,
   writeFile,
 } = require('../utils/fs');
+const { generateJWT } = require('../utils/jwt');
 const {
   formatBytes,
   formatDuration,
@@ -30,11 +32,12 @@ const {
   logInfo,
   logWarn,
 } = require('../utils/logger');
-const { generateJWT } = require('../utils/jwt');
+const { withBuildRetry } = require('../utils/retry');
 const {
   clientConfig: webpackClientConfig,
   serverConfig: webpackServerConfig,
 } = require('../webpack/app.config');
+
 const clean = require('./clean');
 const buildPlugins = require('./plugin');
 

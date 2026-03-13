@@ -6,10 +6,13 @@
  */
 
 import { useMemo } from 'react';
+
 import { useTranslation } from 'react-i18next';
+
 import { Link } from '@shared/renderer/components/History';
-import ScrollToTop from './ScrollToTop';
+
 import s from './Footer.css';
+import ScrollToTop from './ScrollToTop';
 
 /**
  * Navigation links configuration

@@ -7,14 +7,15 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
-const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+
 const config = require('../config');
 const { BuildError, setupGracefulShutdown } = require('../utils/error');
-const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
 const { generateJWT } = require('../utils/jwt');
+const { isSilent, isVerbose, logError, logInfo } = require('../utils/logger');
 const {
   SERVER_BUNDLE_PATH: WEBPACK_SERVER_BUNDLE_PATH,
   clientConfig: webpackClientConfig,
@@ -27,6 +28,7 @@ const {
   notifyReady: notifyBrowserSyncReady,
   onClientConnected: onBrowserSyncClientConnected,
 } = require('../webpack/browserSync/server.config');
+
 const clean = require('./clean');
 const buildPlugins = require('./plugin');
 

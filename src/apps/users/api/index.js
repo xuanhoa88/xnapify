@@ -6,11 +6,11 @@
  */
 
 import { SEED_USERS } from './constants';
-import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
-import { getUserRBACData } from './utils/rbac/fetcher';
-import * as profileController from './controllers/profile.controller';
 import * as authController from './controllers/auth.controller';
+import * as profileController from './controllers/profile.controller';
+import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { configurePassport } from './utils/passport';
+import { getUserRBACData } from './utils/rbac/fetcher';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(

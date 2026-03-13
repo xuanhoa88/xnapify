@@ -3,7 +3,6 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
@@ -32,14 +31,6 @@ async function processUpload(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorkerHandler(processUpload, 'UPLOAD_FILES');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processUpload, 'UPLOAD_FILES', 'Upload');
+export { processUpload as UPLOAD_FILES };
+export default processUpload;

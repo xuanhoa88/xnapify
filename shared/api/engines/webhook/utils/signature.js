@@ -6,6 +6,7 @@
  */
 
 import crypto from 'crypto';
+
 import { SIGNATURE_ALGORITHMS } from './constants';
 
 /**

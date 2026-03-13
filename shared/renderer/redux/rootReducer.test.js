@@ -6,6 +6,7 @@
  */
 
 import { combineReducers } from '@reduxjs/toolkit';
+
 import rootReducer from './rootReducer';
 
 describe('[rootReducer] rootReducer.js', () => {

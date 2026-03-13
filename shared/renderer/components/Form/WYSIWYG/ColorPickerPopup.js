@@ -6,9 +6,11 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+
 import PropTypes from 'prop-types';
-import ToolbarButton from './ToolbarButton';
+
 import s from './ColorPickerPopup.css';
+import ToolbarButton from './ToolbarButton';
 
 /**
  * ColorPickerPopup — A toolbar button that opens a popover with a color

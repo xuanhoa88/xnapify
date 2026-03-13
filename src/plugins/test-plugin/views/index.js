@@ -6,6 +6,7 @@
  */
 
 import { profileSchema } from '../validator';
+
 import PluginField from './PluginField';
 
 // Private symbol for storing composed handlers (needed for cleanup)

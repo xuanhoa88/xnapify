@@ -8,8 +8,9 @@
 /* eslint-env jest */
 /* eslint-disable react/prop-types */
 
-import renderer from 'react-test-renderer';
 import { useSelector } from 'react-redux';
+import renderer from 'react-test-renderer';
+
 import Rbac from '.';
 
 // Mock react-redux

@@ -6,9 +6,15 @@
  */
 
 import { useCallback, useState, useEffect, useMemo } from 'react';
+
 import clsx from 'clsx';
-import { useDispatch, useSelector } from 'react-redux';
 import { useTranslation } from 'react-i18next';
+import { useDispatch, useSelector } from 'react-redux';
+
+import Button from '@shared/renderer/components/Button';
+import { useHistory, Link } from '@shared/renderer/components/History';
+import Icon from '@shared/renderer/components/Icon';
+import { checkPermission } from '@shared/renderer/components/Rbac';
 import {
   isAuthenticated,
   logout,
@@ -16,11 +22,8 @@ import {
   toggleDrawer,
   isDrawerOpen,
 } from '@shared/renderer/redux';
-import { useHistory, Link } from '@shared/renderer/components/History';
 import { useWebSocket } from '@shared/ws/client';
-import Icon from '@shared/renderer/components/Icon';
-import Button from '@shared/renderer/components/Button';
-import { checkPermission } from '@shared/renderer/components/Rbac';
+
 import s from './Drawer.css';
 
 function Drawer() {
@@ -122,7 +125,10 @@ function Drawer() {
           return cleanSection;
         })
         .filter(Boolean)
-        .sort((a, b) => a.order - b.order);
+        .sort(
+          (a, b) =>
+            (a.order || 99) - (b.order || 99) || a.ns.localeCompare(b.ns),
+        );
     };
 
     return [
@@ -163,28 +169,39 @@ function Drawer() {
         const existingSection = acc.find(sec => sec.ns === section.ns);
         if (existingSection) {
           existingSection.items.push(...validItems);
-          // Sort items within the section by order
-          existingSection.items.sort(
-            (a, b) => (a.order || 99) - (b.order || 99),
-          );
+          // Sort items within the section by order, then label, then path
+          existingSection.items.sort((a, b) => {
+            const orderDiff = (a.order || 99) - (b.order || 99);
+            if (orderDiff !== 0) return orderDiff;
+            const labelDiff = (a.label || '').localeCompare(b.label || '');
+            if (labelDiff !== 0) return labelDiff;
+            return (a.path || '').localeCompare(b.path || '');
+          });
           // Keep the lower order (higher priority)
           existingSection.order = Math.min(
             existingSection.order,
-            section.order,
+            section.order || 99,
           );
         } else {
           // Sort items for the new section
-          const sortedItems = [...validItems].sort(
-            (a, b) => (a.order || 99) - (b.order || 99),
-          );
+          const sortedItems = [...validItems].sort((a, b) => {
+            const orderDiff = (a.order || 99) - (b.order || 99);
+            if (orderDiff !== 0) return orderDiff;
+            const labelDiff = (a.label || '').localeCompare(b.label || '');
+            if (labelDiff !== 0) return labelDiff;
+            return (a.path || '').localeCompare(b.path || '');
+          });
           acc.push({
             ...section,
+            order: section.order || 99,
             items: sortedItems,
           });
         }
         return acc;
       }, [])
-      .sort((a, b) => a.order - b.order);
+      .sort(
+        (a, b) => (a.order || 99) - (b.order || 99) || a.ns.localeCompare(b.ns),
+      );
   }, [t, user, dynamicMenus]);
 
   const userDisplayName = useMemo(() => {

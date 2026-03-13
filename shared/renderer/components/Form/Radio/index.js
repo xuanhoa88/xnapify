@@ -5,10 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useFormContext } from 'react-hook-form';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useFormContext } from 'react-hook-form';
+
 import { useFormField } from '../FormContext';
+
 import s from './FormRadio.css';
 
 /**

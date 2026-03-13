@@ -3,10 +3,12 @@
 // - Registers many handlers on the registry (simulating plugins)
 // - Fires many concurrent HTTP requests to measure routing, serialization, and registry execution costs
 
+const { performance } = require('perf_hooks');
+
+const bodyParser = require('body-parser');
 const express = require('express');
 const fetch = require('node-fetch');
-const bodyParser = require('body-parser');
-const { performance } = require('perf_hooks');
+
 const PluginRegistryClass = require('@shared/plugin/utils/Registry').default;
 
 // Configurable via environment variables (with sensible defaults)

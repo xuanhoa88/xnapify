@@ -14,14 +14,17 @@ import {
   useEffect,
   memo,
 } from 'react';
-import { useFormContext } from 'react-hook-form';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+import { useFormContext } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
-import { useInfiniteScroll } from '../../InfiniteScroll';
-import Icon from '../../Icon';
+
 import Button from '../../Button';
+import Icon from '../../Icon';
+import { useInfiniteScroll } from '../../InfiniteScroll';
 import { useFormField, useMergeRefs } from '../FormContext';
+
 import s from './FormCheckboxList.css';
 
 /**

@@ -3,7 +3,6 @@
  * Supports both same-process and child process execution
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
 import { createFactory } from '../factory';
 import { FilesystemWorkerError } from '../utils';
 
@@ -38,14 +37,6 @@ async function processCopy(data) {
 }
 
 // Create worker function using helper
-const workerFunction = createWorkerHandler(processCopy, 'COPY_FILES');
 
-// Export for same-process execution
-export default workerFunction;
-
-// =============================================================================
-// CHILD PROCESS EXECUTION (Fork Mode)
-// =============================================================================
-
-// Setup fork mode execution using helper
-setupWorkerProcess(processCopy, 'COPY_FILES', 'Copy');
+export { processCopy as COPY_FILES };
+export default processCopy;

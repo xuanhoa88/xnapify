@@ -6,14 +6,17 @@
  */
 
 import { useMemo } from 'react';
-import { useFormContext } from 'react-hook-form';
+
 import clsx from 'clsx';
-import PropTypes from 'prop-types';
 import get from 'lodash/get';
-import { FormFieldContext } from '../FormContext';
-import useAsyncValidator from '../useAsyncValidator';
-import FormLabel from '../Label';
+import PropTypes from 'prop-types';
+import { useFormContext } from 'react-hook-form';
+
 import FormError from '../Error';
+import { FormFieldContext } from '../FormContext';
+import FormLabel from '../Label';
+import useAsyncValidator from '../useAsyncValidator';
+
 import s from './FormField.css';
 
 /**

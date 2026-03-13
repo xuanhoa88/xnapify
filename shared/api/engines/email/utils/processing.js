@@ -10,14 +10,12 @@
  * Used by both send.js (main process) and send.worker.js (worker process)
  */
 
-import { Liquid } from 'liquidjs';
+import template from '../../template';
+
 import { createOperationResult, EmailError } from './errors';
 
-// Create a reusable Liquid engine instance
-const liquid = new Liquid();
-
 /**
- * Render template using LiquidJS
+ * Render template using the shared template engine (LiquidJS).
  * Supports {{ variable }}, {% loops %}, {% if %}, filters, etc.
  * Safely handles template rendering errors without breaking email sending.
  * @param {string} content - Template string
@@ -26,17 +24,7 @@ const liquid = new Liquid();
  */
 async function renderTemplate(content, data) {
   if (!content || !data) return content;
-
-  try {
-    return await liquid.parseAndRender(content, data);
-  } catch (error) {
-    // Log the error but don't break email sending
-    console.warn(
-      `⚠️ Template rendering failed: ${error.message}. Using original content.`,
-    );
-    // Return original content as fallback
-    return content;
-  }
+  return template.render(content, data);
 }
 
 /**

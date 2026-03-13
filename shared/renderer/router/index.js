@@ -5,14 +5,14 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { buildRoutes, validateConfig, linkParents } from './builder';
+import { collect } from './collector';
 import {
   ROUTE_MOUNT_KEY,
   ROUTE_UNMOUNT_KEY,
   ROUTE_PREV_KEY,
   ROUTE_PREV_CTX,
 } from './constants';
-import { createError, decodeUrl, isDescendant, log } from './utils';
-import { collect } from './collector';
 import {
   loadRouteTranslations,
   runInit,
@@ -20,7 +20,7 @@ import {
   runUnmount,
 } from './lifecycle';
 import { createMatcher } from './matcher';
-import { buildRoutes, validateConfig, linkParents } from './builder';
+import { createError, decodeUrl, isDescendant, log } from './utils';
 
 // Tag routes with their source adapter for dynamic add/remove tracking
 const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');

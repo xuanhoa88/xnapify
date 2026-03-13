@@ -9,8 +9,9 @@
  * File Utility Functions
  */
 
-import path from 'path';
 import crypto from 'crypto';
+import path from 'path';
+
 import {
   MAX_FILE_LENGTH,
   ALLOWED_EXTENSIONS,

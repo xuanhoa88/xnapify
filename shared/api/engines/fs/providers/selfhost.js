@@ -6,7 +6,9 @@
  */
 
 import { Readable } from 'stream';
+
 import fetch from 'node-fetch';
+
 import { FilesystemError } from '../utils';
 
 /**

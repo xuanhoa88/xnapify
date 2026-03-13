@@ -55,13 +55,14 @@ jest.mock('../utils/crypto', () => ({
   decryptPluginId: jest.fn(id => id.replace('enc_', '')),
 }));
 
+import fs from 'fs';
+import path from 'path';
+
 import {
   managePlugins,
   getActivePlugins,
   togglePluginStatus,
 } from './plugin.service';
-import fs from 'fs';
-import path from 'path';
 
 const mockCache = {
   get: jest.fn(),

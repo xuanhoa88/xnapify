@@ -6,13 +6,15 @@
  */
 
 import { useTranslation } from 'react-i18next';
-import Tabs from '@shared/renderer/components/Tabs';
+
 import Icon from '@shared/renderer/components/Icon';
-import ProfileHeader from './components/ProfileHeader';
+import Tabs from '@shared/renderer/components/Tabs';
+
+import DeleteAccountCard from './components/DeleteAccountCard';
 import PersonalInfoCard from './components/PersonalInfoCard';
 import PreferencesCard from './components/PreferencesCard';
+import ProfileHeader from './components/ProfileHeader';
 import SecurityCard from './components/SecurityCard';
-import DeleteAccountCard from './components/DeleteAccountCard';
 import s from './Profile.css';
 
 function Profile() {

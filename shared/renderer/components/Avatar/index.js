@@ -7,7 +7,9 @@
 
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+
 import Icon from '../Icon';
+
 // eslint-disable-next-line css-modules/no-unused-class -- classes accessed dynamically via s[size] and s[variant]
 import s from './Avatar.css';
 

@@ -12,8 +12,10 @@ import {
   useImperativeHandle,
   useState,
 } from 'react';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
+
 import s from './MentionList.css';
 
 /**

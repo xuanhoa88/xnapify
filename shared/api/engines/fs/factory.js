@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
 import { LocalFilesystemProvider } from './providers/local';
 import { MemoryFilesystemProvider } from './providers/memory';
 import { SelfHostFilesystemProvider } from './providers/selfhost';
-import { FilesystemError } from './utils';
 import {
   upload as uploadService,
   download as downloadService,
@@ -20,7 +20,7 @@ import {
   sync as syncService,
   extract as extractService,
 } from './services';
-import { createUploadMiddleware, MIDDLEWARES } from './middlewares';
+import { FilesystemError } from './utils';
 
 /**
  * Filesystem Manager

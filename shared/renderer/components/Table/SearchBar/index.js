@@ -6,10 +6,13 @@
  */
 
 import { useCallback, useRef, useEffect } from 'react';
-import PropTypes from 'prop-types';
+
 import clsx from 'clsx';
-import Icon from '../../Icon';
+import PropTypes from 'prop-types';
+
 import Button from '../../Button';
+import Icon from '../../Icon';
+
 import s from './SearchBar.css';
 
 /**

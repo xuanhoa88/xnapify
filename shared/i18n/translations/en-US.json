@@ -108,16 +108,7 @@
     "privacy": "Privacy",
     "notFound": "Not Found",
     "error": "Error",
-    "backToSite": "Back to Site",
-    "main": "Main",
-    "dashboard": "Dashboard",
-    "management": "Management",
-    "system": "System",
-    "modules": "Modules",
-    "users": "Users",
-    "roles": "Roles",
-    "groups": "Groups",
-    "permissions": "Permissions"
+    "backToSite": "Back to Site"
   },
   "header": {
     "brand": "React Starter Kit"
@@ -161,5 +152,21 @@
     "itemSelected_one": "{{count}} item selected",
     "itemSelected_other": "{{count}} items selected"
   },
-  "admin": {}
+  "admin": {
+    "navigation": {
+      "dashboard": "Dashboard",
+      "main": "Main",
+      "management": "Management",
+      "system": "System",
+      "plugins": "Plugins",
+      "users": "Users",
+      "roles": "Roles",
+      "groups": "Groups",
+      "permissions": "Permissions",
+      "emails": "Emails"
+    },
+    "emails": {
+      "templates": "Templates"
+    }
+  }
 }

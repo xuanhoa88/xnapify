@@ -5,10 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import user from './features/user';
-import runtime from './features/runtime';
 import intl from './features/intl';
+import runtime from './features/runtime';
 import ui from './features/ui';
+import user from './features/user';
 
 // Note: admin reducers are now dynamically injected by page modules
 // via store.injectReducer() in their route init hooks

@@ -5,93 +5,81 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// File patterns to lint
 const patterns = {
-  all: 'src/**/*.{js,jsx}',
-  js: 'src/**/*.js',
-  jsx: 'src/**/*.jsx',
+  all: '{shared,src}/**/*.{js,jsx}',
+  js: '{shared,src}/**/*.js',
+  jsx: '{shared,src}/**/*.jsx',
 };
 
 const config = {
-  // Use @babel/eslint-parser for modern JavaScript/JSX
+  root: true,
+
   parser: '@babel/eslint-parser',
 
-  // Extend recommended configurations
-  extends: [
-    'eslint:recommended',
-    'plugin:react/recommended',
-    'plugin:react/jsx-runtime',
-    'plugin:react-hooks/recommended',
-    'plugin:jsx-a11y/recommended',
-    'plugin:import/recommended',
-    'plugin:css-modules/recommended',
-    'prettier',
-  ],
-
-  // Plugins for additional linting capabilities
-  plugins: [
-    'import',
-    'jsx-a11y',
-    'react',
-    'react-hooks',
-    'css-modules',
-    'prettier',
-  ],
-
-  // Global variables available in the code
-  globals: {
-    NODE_ENV: true,
-    __DEV__: true,
-    __TEST__: true,
-    // Plugin build globals (injected via webpack DefinePlugin)
-    __PLUGIN_NAME__: 'readonly',
-    __PLUGIN_DESCRIPTION__: 'readonly',
-  },
-
-  // Environment settings
   env: {
     browser: true,
     node: true,
-    es2021: true,
+    es2022: true,
     jest: true,
   },
 
-  // Parser options for modern JavaScript
   parserOptions: {
-    ecmaVersion: 2021,
+    ecmaVersion: 'latest',
     sourceType: 'module',
+
     ecmaFeatures: {
       jsx: true,
     },
+
     requireConfigFile: false,
+
     babelOptions: {
       presets: ['@babel/preset-react'],
     },
   },
 
+  extends: [
+    'eslint:recommended',
+
+    'plugin:react/recommended',
+    'plugin:react/jsx-runtime',
+    'plugin:react-hooks/recommended',
+
+    'plugin:jsx-a11y/recommended',
+
+    'plugin:import/recommended',
+
+    'plugin:css-modules/recommended',
+
+    'plugin:prettier/recommended',
+  ],
+
+  plugins: ['react', 'react-hooks', 'jsx-a11y', 'import', 'css-modules'],
+
+  globals: {
+    NODE_ENV: 'readonly',
+    __DEV__: 'readonly',
+    __TEST__: 'readonly',
+
+    __PLUGIN_NAME__: 'readonly',
+    __PLUGIN_DESCRIPTION__: 'readonly',
+  },
+
   rules: {
-    // Allow console statements (useful for debugging and build tools)
+    /*
+     * Core
+     */
+
     'no-console': 'off',
 
-    // Allow unused vars for React (new JSX runtime doesn't require React import)
-    // https://eslint.org/docs/rules/no-unused-vars
     'no-unused-vars': [
       'error',
-      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+      {
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_',
+      },
     ],
 
-    // Allow importing devDependencies (common in starter kits)
-    'import/no-extraneous-dependencies': 'off',
-
-    // Allow unresolved imports for build-generated files
-    'import/no-unresolved': ['error'],
-
-    // Allow named imports as default (common pattern)
-    'import/no-named-as-default': 'off',
-    'import/no-named-as-default-member': 'off',
-
-    // Allow only special identifiers
-    // https://eslint.org/docs/rules/no-underscore-dangle
     'no-underscore-dangle': [
       'error',
       {
@@ -99,42 +87,17 @@ const config = {
       },
     ],
 
-    // Prefer destructuring from arrays and objects
-    // http://eslint.org/docs/rules/prefer-destructuring
-    'prefer-destructuring': [
-      'error',
-      {
-        VariableDeclarator: {
-          array: false,
-          object: true,
-        },
-        AssignmentExpression: {
-          array: false,
-          object: false,
-        },
-      },
-      {
-        enforceForRenamedProperties: false,
-      },
-    ],
+    /*
+     * Imports
+     */
 
-    // Ensure <a> tags are valid
-    // https://github.com/evcohen/eslint-plugin-jsx-a11y/blob/master/docs/rules/anchor-is-valid.md
-    'jsx-a11y/anchor-is-valid': ['error'],
+    'import/no-extraneous-dependencies': 'off',
 
-    // Allow .js files to use JSX syntax
-    // https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/jsx-filename-extension.md
-    'react/jsx-filename-extension': ['error', { extensions: ['.js', '.jsx'] }],
+    'import/no-unresolved': 'error',
 
-    // Functional and class components are equivalent from React’s point of view
-    // https://github.com/yannickcr/eslint-plugin-react/blob/master/docs/rules/prefer-stateless-function.md
-    'react/prefer-stateless-function': 'off',
+    'import/no-named-as-default': 'off',
+    'import/no-named-as-default-member': 'off',
 
-    // ESLint plugin for prettier formatting
-    // https://github.com/prettier/eslint-plugin-prettier
-    'prettier/prettier': 'error',
-
-    // Allow file extensions for certain imports
     'import/extensions': [
       'error',
       'ignorePackages',
@@ -144,13 +107,101 @@ const config = {
       },
     ],
 
-    // Disable nullish coalescing (??) and optional chaining (?.)
+    'import/order': [
+      'error',
+      {
+        groups: [
+          'builtin',
+          'external',
+          'internal',
+          'parent',
+          'sibling',
+          'index',
+        ],
+
+        pathGroups: [
+          {
+            pattern: 'react',
+            group: 'external',
+            position: 'before',
+          },
+          {
+            pattern: '@shared/**',
+            group: 'internal',
+            position: 'after',
+          },
+          {
+            pattern: '*.css',
+            group: 'index',
+            position: 'after',
+          },
+        ],
+
+        pathGroupsExcludedImportTypes: ['builtin'],
+
+        alphabetize: {
+          order: 'asc',
+          caseInsensitive: true,
+        },
+
+        'newlines-between': 'always',
+      },
+    ],
+
+    /*
+     * React
+     */
+
+    'react/jsx-filename-extension': [
+      'error',
+      {
+        extensions: ['.js', '.jsx'],
+      },
+    ],
+
+    'react/jsx-key': 'error',
+
+    'react/prefer-stateless-function': 'off',
+
+    /*
+     * Accessibility
+     */
+
+    'jsx-a11y/anchor-is-valid': 'error',
+
+    /*
+     * Destructuring
+     */
+
+    'prefer-destructuring': [
+      'error',
+      {
+        VariableDeclarator: {
+          object: true,
+          array: false,
+        },
+        AssignmentExpression: {
+          object: false,
+          array: false,
+        },
+      },
+      {
+        enforceForRenamedProperties: false,
+      },
+    ],
+
+    /*
+     * Syntax restrictions
+     */
+
     'no-restricted-syntax': [
       'error',
+
       {
         selector: 'LogicalExpression[operator="??"]',
         message: 'Nullish coalescing (??) is not allowed.',
       },
+
       {
         selector: 'ChainExpression',
         message: 'Optional chaining (?.) is not allowed.',
@@ -159,34 +210,33 @@ const config = {
   },
 
   settings: {
-    // React version detection
     react: {
       version: 'detect',
     },
 
-    // Allow absolute paths in imports, e.g. import Button from 'components/Button'
-    // https://github.com/benmosher/eslint-plugin-import/tree/master/resolvers
+    'import/parsers': {
+      '@babel/eslint-parser': ['.js', '.jsx'],
+    },
+
     'import/resolver': {
-      alias: {
-        map: [['@shared', './shared']],
-        extensions: ['.js', '.jsx', '.json'],
-      },
       node: {
         extensions: ['.js', '.jsx', '.json'],
         moduleDirectory: ['node_modules', 'src'],
+      },
+
+      alias: {
+        map: [['@shared', './shared']],
+        extensions: ['.js', '.jsx', '.json'],
       },
     },
   },
 };
 
-// Export config and attach patterns as non-enumerable property
-// This prevents patterns from being spread into ESLint config
 module.exports = config;
 
-// Make patterns available but non-enumerable
 Object.defineProperty(module.exports, 'patterns', {
   value: patterns,
-  enumerable: false, // Prevents it from being spread into ESLint config
+  enumerable: false,
   writable: false,
   configurable: false,
 });

@@ -10,9 +10,8 @@
  * Focuses only on HTTP delivery with retries and exponential backoff.
  */
 
-import { createWorkerHandler, setupWorkerProcess } from '../../worker';
-import { WebhookError } from '../errors';
 import { HttpWebhookAdapter } from '../adapters/http';
+import { WebhookError } from '../errors';
 import { DEFAULTS, WEBHOOK_STATUS } from '../utils/constants';
 
 // Create HTTP adapter for worker
@@ -141,10 +140,6 @@ async function processSend(data) {
 }
 
 // Create worker function
-const workerFunction = createWorkerHandler(processSend, 'SEND_WEBHOOK');
 
-// Export for same-process execution
-export default workerFunction;
-
-// Setup fork mode execution
-setupWorkerProcess(processSend, 'SEND_WEBHOOK', 'Webhook HTTP');
+export { processSend as SEND_WEBHOOK };
+export default processSend;

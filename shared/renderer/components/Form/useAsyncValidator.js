@@ -6,8 +6,9 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useFormContext, useWatch } from 'react-hook-form';
+
 import get from 'lodash/get';
+import { useFormContext, useWatch } from 'react-hook-form';
 
 /**
  * useAsyncValidator

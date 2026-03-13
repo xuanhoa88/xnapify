@@ -7,10 +7,10 @@
 
 /* eslint-disable no-underscore-dangle */
 
-import fs from 'fs/promises';
 import fss from 'fs';
-import path from 'path';
+import fs from 'fs/promises';
 import os from 'os';
+import path from 'path';
 
 /**
  * Memory Search Adapter (File-backed)

@@ -6,7 +6,7 @@
  */
 
 import { createSlice } from '@reduxjs/toolkit';
-import { initialState, normalizeState, createOperationState } from './utils';
+
 import {
   login,
   register,
@@ -23,6 +23,7 @@ import {
   getUserPreferences,
   updateUserPreferences,
 } from './thunks';
+import { initialState, normalizeState, createOperationState } from './utils';
 
 /**
  * User Slice

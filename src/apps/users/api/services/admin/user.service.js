@@ -7,13 +7,14 @@
 
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
-import * as rbacCache from '../../utils/rbac/cache';
-import { fetchUserRBACData } from '../../utils/rbac/fetcher';
+
 import { logUserActivity } from '../../utils/activity';
 import {
   userFullIncludes,
   formatAdminUserResponse,
 } from '../../utils/includes';
+import * as rbacCache from '../../utils/rbac/cache';
+import { fetchUserRBACData } from '../../utils/rbac/fetcher';
 
 /**
  * Create a new user

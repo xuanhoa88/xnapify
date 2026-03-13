@@ -5,8 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, { SLICE_NAME } from './redux';
 import Dashboard from './Dashboard';
+import reducer, { SLICE_NAME } from './redux';
 
 /**
  * Init function - inject Redux slice

@@ -70,10 +70,9 @@ describe('Admin Group Controller (SQLite E2E)', () => {
 
       await groupController.createGroup(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
         res,
-        expect.any(String),
-        409,
+        expect.any(Object),
       );
     });
 
@@ -172,10 +171,9 @@ describe('Admin Group Controller (SQLite E2E)', () => {
 
       await groupController.updateGroupById(req, res);
 
-      expect(mockHttp.sendError).toHaveBeenCalledWith(
+      expect(mockHttp.sendValidationError).toHaveBeenCalledWith(
         res,
-        expect.any(String),
-        409,
+        expect.any(Object),
       );
     });
   });

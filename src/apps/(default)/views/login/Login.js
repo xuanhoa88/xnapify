@@ -6,9 +6,18 @@
  */
 
 import { useCallback, useEffect } from 'react';
+
+import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
-import PropTypes from 'prop-types';
+
+import Button from '@shared/renderer/components/Button';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
+import {
+  Link,
+  useHistory,
+  useQuery,
+} from '@shared/renderer/components/History';
 import {
   login,
   getUserPreferences,
@@ -18,15 +27,10 @@ import {
   getAuthError,
   clearAuthError,
 } from '@shared/renderer/redux';
-import {
-  Link,
-  useHistory,
-  useQuery,
-} from '@shared/renderer/components/History';
 import { useWebSocket } from '@shared/ws/client';
-import Button from '@shared/renderer/components/Button';
-import Form, { useFormContext } from '@shared/renderer/components/Form';
+
 import { loginFormSchema } from '../../../users/validator/auth';
+
 import s from './Login.css';
 
 // Demo users for quick access

@@ -5,15 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import path from 'path';
 import fs from 'fs';
+import path from 'path';
+
+import { logPluginActivity } from '../utils/activity';
+import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
+
 import {
   installPluginDependencies,
   uninstallPluginDependencies,
   notifyPluginChange,
 } from './plugin.helpers';
-import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
-import { logPluginActivity } from '../utils/activity';
 
 // ========================================================================
 // Individual Worker Handlers

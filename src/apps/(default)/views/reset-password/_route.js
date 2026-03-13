@@ -6,6 +6,7 @@
  */
 
 import { isAuthenticated } from '@shared/renderer/redux';
+
 import ResetPasswordRequest from './ResetPasswordRequest';
 
 /**
