@@ -131,7 +131,10 @@ function EditEmailTemplate({ params }) {
         <div className={s.errorBanner}>
           {detailError || t('admin:emails.edit.notFound', 'Template not found')}
         </div>
-        <Button variant='ghost' onClick={() => history.push('/admin/emails')}>
+        <Button
+          variant='ghost'
+          onClick={() => history.push('/admin/emails/templates')}
+        >
           {t('admin:emails.edit.backToList', 'Back to Templates')}
         </Button>
       </div>
@@ -146,7 +149,10 @@ function EditEmailTemplate({ params }) {
         subtitle={template.name}
       >
         <div className={s.headerActions}>
-          <Button variant='ghost' onClick={() => history.push('/admin/emails')}>
+          <Button
+            variant='ghost'
+            onClick={() => history.push('/admin/emails/templates')}
+          >
             {t('common:cancel', 'Cancel')}
           </Button>
           <Button

@@ -68,7 +68,7 @@ function CreateEmailTemplate() {
         }),
       ).unwrap();
 
-      history.push(`/admin/emails/${result.id}/edit`);
+      history.push(`/admin/emails/templates/${result.id}/edit`);
     } catch {
       // Error handled by Redux
     }
@@ -85,7 +85,10 @@ function CreateEmailTemplate() {
         )}
       >
         <div className={s.headerActions}>
-          <Button variant='ghost' onClick={() => history.push('/admin/emails')}>
+          <Button
+            variant='ghost'
+            onClick={() => history.push('/admin/emails/templates')}
+          >
             {t('common:cancel', 'Cancel')}
           </Button>
           <Button variant='primary' onClick={handleSave} disabled={loading}>

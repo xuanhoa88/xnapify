@@ -1,38 +1,53 @@
-# Core Module AI Specification
+# Files Module AI Specification
 
 > **Instructions for the AI:** 
-> Read this document to understand WHAT features to build inside `src/apps/files`. 
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely against the core architecture.
+> Read this document to understand the file and storage management logic inside `src/apps/files`.
+> This module provides a cloud-drive experience for users and administrators.
 
 ---
 
 ## Objective
-[Describe the high-level business goal of the feature here. Example: "Add an endpoint allowing users to reset their two-factor authentication."]
+Provide a centralized file management system capable of handling uploads, downloads, folder hierarchies, and collaborative sharing.
 
 ## 1. Database Modifications (`api/models`)
-*Define any core schema alterations needed for this module.*
-- **Model:** [e.g., `User`]
-- **New Columns:** [e.g., Add `two_factor_secret` as `DataTypes.STRING`.]
-- **Relations:** [e.g., Make sure it creates a `hasMany` relationship with the `AuditLog` model.]
+- **Model:** `File`
+  - **Properties:** `id` (UUID), `name`, `parent_id` (Recursive self-relation for folders), `type` (file/folder), `size`, `mime_type`, `storage_path`, `is_trash` (Soft delete flag).
+- **Model:** `FileStar`
+  - **Properties:** Links `User` to `File` for personal bookmarks.
+- **Model:** `FileShare`
+  - **Properties:** Links `File` to `User` or `Group` with specific access levels.
 
 ## 2. API Routes & Controllers (`api/`)
-*Define the native expressive routes this module will support.*
-- **Method & Path:** [e.g., `POST /api/users/2fa/reset`]
-- **Expected Payload:** [e.g., `{ userId: z.string().uuid() }`]
-- **Security Check:** [e.g., Wrap route in `requireAuth` and `requirePermission('users:manage')`.]
-- **Controller Logic:** [Describe what the service layer should output to the client.]
+- **Method & Path:** `GET /api/files`
+  - **Logic:** Returns files in the current folder (or root) based on `parent_id`.
+- **Method & Path:** `POST /api/files/upload`
+  - **Security:** Requires `files:write` permission.
+  - **Logic:** Buffers upload to configured storage provider (Local/S3) and creates DB record.
+- **Method & Path:** `GET /api/files/[id]/download`
+  - **Logic:** Streams file content securely to the client.
+- **Method & Path:** `PATCH /api/files/[id]/rename`
+  - **Logic:** Updates the file or folder display name.
+- **Method & Path:** `POST /api/files/[id]/move`
+  - **Logic:** Changes `parent_id` to relocate files/folders.
+- **Method & Path:** `POST /api/files/[id]/star`
+  - **Logic:** Toggles bookmark status for the current user.
+- **Trash Management:**
+  - `DELETE /api/files/[id]`: Moves file to trash (`is_trash: true`).
+  - `POST /api/files/[id]/restore`: Recover from trash.
+  - `DELETE /api/files/trash/empty`: Permanently removes all items in trash.
 
 ## 3. Frontend SSR Rendering (`views/`)
-*Define the React views and data fetching lifecycle.*
-- **Component Details:** [e.g., "Create `TwoFactorSettings.js`".]
-- **Route Injection:** [e.g., "Add `_route.js` which exports the middleware and the mount function".]
-- **SSR Hook:** [e.g., "Inside `getInitialProps`, dispatch a fetch to `/api/users/2fa/status` to pre-load the 2FA status before the page renders."]
-- **State Management:** [e.g., "Add the Thunks and `createSlice` to `views/(admin)/users/redux/`".]
+- **Drive View:** `/admin/files`
+  - **Component:** `Drive.js` or `FileManager.js`.
+  - **Logic:** Interactive UI with breadcrumb navigation, drag-and-drop uploads, and context menus for file actions.
+- **Special Folders:**
+  - `/admin/files/starred`: Filtered view of `FileStar` items.
+  - `/admin/files/trash`: View of items where `is_trash: true`.
+- **State Management:** Uses dynamic Redux slice to track current directory, selection, and upload progress.
 
-## 4. Localization (`translations/` or shared i18n)
-*Define required user-facing terminology.*
-- **Keys Required:** [e.g., `users.2fa.reset_success`, `users.2fa.btn_reset`]
-- **Rule:** Do not hardcode these strings. Pre-load them into the dashboard and wrap output in `i18n.t()`.
+## 4. Localization (`translations/`)
+- **Keys:** `files.ui.upload_limit`, `files.actions.delete_confirm`, `files.empty_state.no_files`.
+- **Rule:** Storage size units (KB, MB, GB) should be formatted using the shared i18n utility.
 
 ---
-*Note: Once this file is filled out, ask the AI to **"Execute SPEC.md"**.*
+*Note: This spec reflects the CURRENT implementation of the file storage system.*

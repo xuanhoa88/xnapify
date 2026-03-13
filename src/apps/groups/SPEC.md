@@ -1,38 +1,46 @@
-# Core Module AI Specification
+# Groups Module AI Specification
 
 > **Instructions for the AI:** 
-> Read this document to understand WHAT features to build inside `src/apps/groups`. 
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely against the core architecture.
+> Read this document to understand the group management logic inside `src/apps/groups`.
+> Groups are used to organize users into logical units (e.g., Engineering, Marketing) and assign collective roles.
 
 ---
 
 ## Objective
-[Describe the high-level business goal of the feature here. Example: "Add an endpoint allowing users to reset their two-factor authentication."]
+Provide a system for organizing users into groups, allowing for hierarchical roles and consolidated permission management.
 
 ## 1. Database Modifications (`api/models`)
-*Define any core schema alterations needed for this module.*
-- **Model:** [e.g., `User`]
-- **New Columns:** [e.g., Add `two_factor_secret` as `DataTypes.STRING`.]
-- **Relations:** [e.g., Make sure it creates a `hasMany` relationship with the `AuditLog` model.]
+- **Model:** `Group`
+  - **Properties:** `id` (UUID), `name` (Unique), `description`.
+- **Model:** `GroupRole`
+  - **Properties:** Junction table linking `Group` to `Role`.
 
 ## 2. API Routes & Controllers (`api/`)
-*Define the native expressive routes this module will support.*
-- **Method & Path:** [e.g., `POST /api/users/2fa/reset`]
-- **Expected Payload:** [e.g., `{ userId: z.string().uuid() }`]
-- **Security Check:** [e.g., Wrap route in `requireAuth` and `requirePermission('users:manage')`.]
-- **Controller Logic:** [Describe what the service layer should output to the client.]
+- **Method & Path:** `GET /api/groups`
+  - **Security:** Requires `groups:read` permission.
+  - **Logic:** Returns list of all groups with user counts and role summaries.
+- **Method & Path:** `POST /api/groups`
+  - **Security:** Requires `groups:manage` permission.
+  - **Logic:** Creates a new group.
+- **Method & Path:** `GET /api/groups/[id]`
+  - **Logic:** Fetches group details including members and assigned roles.
+- **Method & Path:** `PATCH /api/groups/[id]`
+  - **Logic:** Updates group metadata.
+- **Membership & Roles:**
+  - `GET /api/groups/[id]/users`: List users in this group.
+  - `GET /api/groups/[id]/roles`: List roles assigned to this group.
+  - `POST /api/groups/[id]/roles/[role_id]`: Assign a role to the group.
+  - `DELETE /api/groups/[id]/roles/[role_id]`: Remove a role from the group.
 
 ## 3. Frontend SSR Rendering (`views/`)
-*Define the React views and data fetching lifecycle.*
-- **Component Details:** [e.g., "Create `TwoFactorSettings.js`".]
-- **Route Injection:** [e.g., "Add `_route.js` which exports the middleware and the mount function".]
-- **SSR Hook:** [e.g., "Inside `getInitialProps`, dispatch a fetch to `/api/users/2fa/status` to pre-load the 2FA status before the page renders."]
-- **State Management:** [e.g., "Add the Thunks and `createSlice` to `views/(admin)/users/redux/`".]
+- **Admin View:** `/admin/groups`
+  - **Component:** `GroupList.js` or `Groups.js`.
+- **Admin View:** `/admin/groups/[id]`
+  - **Component:** `GroupDetail.js`.
+  - **Logic:** Manage group members, roles, and view effective permissions.
 
-## 4. Localization (`translations/` or shared i18n)
-*Define required user-facing terminology.*
-- **Keys Required:** [e.g., `users.2fa.reset_success`, `users.2fa.btn_reset`]
-- **Rule:** Do not hardcode these strings. Pre-load them into the dashboard and wrap output in `i18n.t()`.
+## 4. Localization (`translations/`)
+- **Keys:** `groups.list.no_members`, `groups.actions.add_user`, `groups.validation.duplicate_name`.
 
 ---
-*Note: Once this file is filled out, ask the AI to **"Execute SPEC.md"**.*
+*Note: This spec reflects the CURRENT implementation of the group management system.*

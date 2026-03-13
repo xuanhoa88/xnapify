@@ -1,38 +1,42 @@
-# Core Module AI Specification
+# Auth Module AI Specification
 
 > **Instructions for the AI:** 
-> Read this document to understand WHAT features to build inside `src/apps/auth`. 
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely against the core architecture.
+> Read this document to understand the authentication and identity management logic inside `src/apps/auth`.
+> This module manages the lifecycle of user sessions, registration, and profile security.
 
 ---
 
 ## Objective
-[Describe the high-level business goal of the feature here. Example: "Add an endpoint allowing users to reset their two-factor authentication."]
+Provide secure, multi-tenant authentication support including JWT-based sessions, OAuth2 integration, and comprehensive user profile management.
 
 ## 1. Database Modifications (`api/models`)
-*Define any core schema alterations needed for this module.*
-- **Model:** [e.g., `User`]
-- **New Columns:** [e.g., Add `two_factor_secret` as `DataTypes.STRING`.]
-- **Relations:** [e.g., Make sure it creates a `hasMany` relationship with the `AuditLog` model.]
+*The Auth module consumes user-related models owned by the `users` module:*
+- **Models:** `User`, `UserLogin`, `UserProfile`, `PasswordResetToken`.
+- **Logic:** Manages password hashing (bcrypt), token expiration, and email-to-user links.
 
 ## 2. API Routes & Controllers (`api/`)
-*Define the native expressive routes this module will support.*
-- **Method & Path:** [e.g., `POST /api/users/2fa/reset`]
-- **Expected Payload:** [e.g., `{ userId: z.string().uuid() }`]
-- **Security Check:** [e.g., Wrap route in `requireAuth` and `requirePermission('users:manage')`.]
-- **Controller Logic:** [Describe what the service layer should output to the client.]
+- **Method & Path:** `POST /api/auth/login`
+  - **Logic:** Validates credentials, sets HTTP-only JWT cookies, and returns user data.
+- **Method & Path:** `POST /api/auth/register`
+  - **Logic:** Creates new user account, profile, and triggers email verification.
+- **Method & Path:** `POST /api/auth/logout`
+  - **Logic:** Clears authentication cookies and terminates session.
+- **Method & Path:** `GET /api/auth/oauth/[provider]` & `/callback`
+  - **Logic:** Handles Google/GitHub/etc. authentication flow.
+- **Method & Path:** `POST /api/auth/refresh-token`
+  - **Logic:** Rotates short-lived access tokens.
+- **Profile Management:**
+  - `GET /api/auth/profile`: Returns current authenticated user profile.
+  - `PATCH /api/auth/profile/password`: Handles secure password updates.
+  - `PATCH /api/auth/profile/preferences`: Updates user UI and locale settings.
+  - `POST /api/auth/profile/avatar`: Processes user image uploads to storage.
 
 ## 3. Frontend SSR Rendering (`views/`)
-*Define the React views and data fetching lifecycle.*
-- **Component Details:** [e.g., "Create `TwoFactorSettings.js`".]
-- **Route Injection:** [e.g., "Add `_route.js` which exports the middleware and the mount function".]
-- **SSR Hook:** [e.g., "Inside `getInitialProps`, dispatch a fetch to `/api/users/2fa/status` to pre-load the 2FA status before the page renders."]
-- **State Management:** [e.g., "Add the Thunks and `createSlice` to `views/(admin)/users/redux/`".]
+*The Auth module does not contain its own view directory. Login and Register pages are handled by the system renderer or layout components using the shared client-side auth state.*
 
-## 4. Localization (`translations/` or shared i18n)
-*Define required user-facing terminology.*
-- **Keys Required:** [e.g., `users.2fa.reset_success`, `users.2fa.btn_reset`]
-- **Rule:** Do not hardcode these strings. Pre-load them into the dashboard and wrap output in `i18n.t()`.
+## 4. Localization (`translations/`)
+- **Keys:** `auth.login.failed`, `auth.password.reset_email_sent`, `auth.profile.update_success`.
+- **Note:** All error messages returned by auth controllers must be localized.
 
 ---
-*Note: Once this file is filled out, ask the AI to **"Execute SPEC.md"**.*
+*Note: This spec reflects the CURRENT implementation of the authentication system.*

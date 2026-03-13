@@ -175,8 +175,9 @@ const emailTemplatesSlice = createSlice({
       .addCase(fetchTemplates.pending, createPendingHandler('list'))
       .addCase(fetchTemplates.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
-        normalized.data.templates = action.payload.templates || [];
-        normalized.data.pagination = action.payload.pagination || null;
+        const payload = action.payload || {};
+        normalized.data.templates = payload.templates || [];
+        normalized.data.pagination = payload.pagination || null;
         normalized.data.initialized.list = true;
         normalized.operations.list = createOperationState();
         Object.assign(state, normalized);
@@ -222,7 +223,9 @@ const emailTemplatesSlice = createSlice({
       .addCase(createTemplate.pending, createPendingHandler('create'))
       .addCase(createTemplate.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
-        normalized.data.templates.unshift(action.payload);
+        if (action.payload) {
+          normalized.data.templates.unshift(action.payload);
+        }
         normalized.operations.create = createOperationState();
         Object.assign(state, normalized);
       })
@@ -313,7 +316,9 @@ const emailTemplatesSlice = createSlice({
       .addCase(duplicateTemplate.pending, createPendingHandler('duplicate'))
       .addCase(duplicateTemplate.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
-        normalized.data.templates.unshift(action.payload);
+        if (action.payload) {
+          normalized.data.templates.unshift(action.payload);
+        }
         normalized.operations.duplicate = createOperationState();
         Object.assign(state, normalized);
       })

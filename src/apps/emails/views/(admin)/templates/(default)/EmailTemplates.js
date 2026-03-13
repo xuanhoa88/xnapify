@@ -202,7 +202,7 @@ function EmailTemplates() {
       >
         <Button
           variant='primary'
-          onClick={() => history.push('/admin/emails/create')}
+          onClick={() => history.push('/admin/emails/templates/create')}
         >
           {t('admin:emails.list.addTemplate', 'New Template')}
         </Button>
@@ -309,7 +309,7 @@ function EmailTemplates() {
                   iconOnly
                   title={t('admin:emails.list.edit', 'Edit')}
                   onClick={() =>
-                    history.push(`/admin/emails/${record.id}/edit`)
+                    history.push(`/admin/emails/templates/${record.id}/edit`)
                   }
                 >
                   <Icon name='edit' size={16} />
@@ -364,7 +364,7 @@ function EmailTemplates() {
             >
               <Button
                 variant='primary'
-                onClick={() => history.push('/admin/emails/create')}
+                onClick={() => history.push('/admin/emails/templates/create')}
               >
                 {t('admin:emails.list.addTemplate', 'New Template')}
               </Button>

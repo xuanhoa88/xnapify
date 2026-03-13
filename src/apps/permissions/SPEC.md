@@ -1,38 +1,45 @@
-# Core Module AI Specification
+# Permissions Module AI Specification
 
 > **Instructions for the AI:** 
-> Read this document to understand WHAT features to build inside `src/apps/permissions`. 
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely against the core architecture.
+> Read this document to understand the granular capability management inside `src/apps/permissions`.
+> Permissions are the atomic units of authorization in the RBAC system, following the `resource:action` format.
 
 ---
 
 ## Objective
-[Describe the high-level business goal of the feature here. Example: "Add an endpoint allowing users to reset their two-factor authentication."]
+Provide a unified registry for defining and managing all granular permissions across the entire platform.
 
 ## 1. Database Modifications (`api/models`)
-*Define any core schema alterations needed for this module.*
-- **Model:** [e.g., `User`]
-- **New Columns:** [e.g., Add `two_factor_secret` as `DataTypes.STRING`.]
-- **Relations:** [e.g., Make sure it creates a `hasMany` relationship with the `AuditLog` model.]
+- **Model:** `Permission`
+  - **Properties:**
+    - `id`: UUID (Primary Key)
+    - `resource`: String (e.g., `users`, `emails`, `files`)
+    - `action`: String (e.g., `read`, `write`, `manage`)
+    - `description`: String (Helpful context for administrators)
+    - `status`: Enum (`active`, `disabled`)
 
 ## 2. API Routes & Controllers (`api/`)
-*Define the native expressive routes this module will support.*
-- **Method & Path:** [e.g., `POST /api/users/2fa/reset`]
-- **Expected Payload:** [e.g., `{ userId: z.string().uuid() }`]
-- **Security Check:** [e.g., Wrap route in `requireAuth` and `requirePermission('users:manage')`.]
-- **Controller Logic:** [Describe what the service layer should output to the client.]
+- **Method & Path:** `GET /api/permissions`
+  - **Security:** Requires `permissions:read` permission.
+  - **Logic:** Returns all registered permissions. Supports filtering by `resource`.
+- **Method & Path:** `POST /api/permissions`
+  - **Security:** Requires `permissions:manage` permission.
+  - **Logic:** Registers a new application permission.
+- **Method & Path:** `GET /api/permissions/[id]`
+  - **Logic:** Fetches permission metadata.
+- **Method & Path:** `PATCH /api/permissions/[id]`
+  - **Logic:** Updates description or status.
+- **Method & Path:** `GET /api/permissions/resources/[resource]`
+  - **Logic:** Helper route to list all actions available for a specific resource.
 
 ## 3. Frontend SSR Rendering (`views/`)
-*Define the React views and data fetching lifecycle.*
-- **Component Details:** [e.g., "Create `TwoFactorSettings.js`".]
-- **Route Injection:** [e.g., "Add `_route.js` which exports the middleware and the mount function".]
-- **SSR Hook:** [e.g., "Inside `getInitialProps`, dispatch a fetch to `/api/users/2fa/status` to pre-load the 2FA status before the page renders."]
-- **State Management:** [e.g., "Add the Thunks and `createSlice` to `views/(admin)/users/redux/`".]
+- **Admin View:** `/admin/permissions`
+  - **Component:** `Permissions.js`.
+  - **Logic:** Interactive table for managing the permission registry, with modals for creating new entries (`CreatePermissionModal.js`) or changing status.
 
-## 4. Localization (`translations/` or shared i18n)
-*Define required user-facing terminology.*
-- **Keys Required:** [e.g., `users.2fa.reset_success`, `users.2fa.btn_reset`]
-- **Rule:** Do not hardcode these strings. Pre-load them into the dashboard and wrap output in `i18n.t()`.
+## 4. Localization (`translations/`)
+- **Keys:** `permissions.resources.users`, `permissions.actions.read`, `permissions.tooltips.manage`.
+- **Rule:** Permission names should be rendered as `t('permissions.resources.' + resource) + ' > ' + t('permissions.actions.' + action)`.
 
 ---
-*Note: Once this file is filled out, ask the AI to **"Execute SPEC.md"**.*
+*Note: This spec reflects the CURRENT implementation of the permission registry.*

@@ -23,6 +23,7 @@ import Icon from '@shared/renderer/components/Icon';
 import {
   previewRawTemplate,
   getPreviewHtml,
+  getPreviewSubject,
   getPreviewError,
   isPreviewLoading,
   clearPreview,
@@ -53,6 +54,7 @@ const TemplateEditor = forwardRef(function TemplateEditor(
   const [activeTab, setActiveTab] = useState('html');
 
   const previewHtml = useSelector(getPreviewHtml);
+  const previewSubject = useSelector(getPreviewSubject);
   const previewError = useSelector(getPreviewError);
   const previewLoading = useSelector(isPreviewLoading);
   const iframeRef = useRef(null);
@@ -178,17 +180,6 @@ const TemplateEditor = forwardRef(function TemplateEditor(
     };
   }, [dispatch]);
 
-  // Write preview HTML into iframe
-  useEffect(() => {
-    if (iframeRef.current && previewHtml) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) {
-        doc.open();
-        doc.write(previewHtml);
-        doc.close();
-      }
-    }
-  }, [previewHtml]);
 
   return (
     <div className={s.root}>
@@ -269,14 +260,24 @@ const TemplateEditor = forwardRef(function TemplateEditor(
       {/* Right pane — Preview */}
       <div className={s.previewPane}>
         <div className={s.previewHeader}>
-          <span className={s.previewTitle}>
-            <Icon name='eye' size={16} />
-            {t('admin:emails.editor.preview', 'Live Preview')}
-          </span>
-          {previewLoading && (
-            <span className={s.previewLoading}>
-              {t('admin:emails.editor.rendering', 'Rendering...')}
+          <div className={s.previewTitleGroup}>
+            <span className={s.previewTitle}>
+              <Icon name='eye' size={16} />
+              {t('admin:emails.editor.preview', 'Live Preview')}
             </span>
+            {previewLoading && (
+              <span className={s.previewLoading}>
+                {t('admin:emails.editor.rendering', 'Rendering...')}
+              </span>
+            )}
+          </div>
+          {previewSubject && (
+            <div className={s.renderedSubject}>
+              <strong>
+                {t('admin:emails.editor.subjectLabel', 'Subject')}:
+              </strong>{' '}
+              {previewSubject}
+            </div>
           )}
         </div>
 
@@ -294,7 +295,8 @@ const TemplateEditor = forwardRef(function TemplateEditor(
             ref={iframeRef}
             className={s.previewIframe}
             title='Email Preview'
-            sandbox='allow-same-origin'
+            sandbox='allow-same-origin allow-scripts allow-popups'
+            srcDoc={previewHtml || ''}
           />
         )}
       </div>

@@ -12,13 +12,14 @@ import * as templateService from '../services/template.service';
  * GET /api/admin/emails/templates
  */
 export async function listTemplates(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const result = await templateService.list(models, req.query);
-    res.json(result);
+    return http.sendSuccess(res, result);
   } catch (error) {
     console.error('❌ Failed to list email templates:', error.message);
-    res.status(500).json({ error: 'Failed to list email templates' });
+    return http.sendServerError(res, 'Failed to list email templates', error);
   }
 }
 
@@ -27,16 +28,17 @@ export async function listTemplates(req, res) {
  * GET /api/admin/emails/templates/:id
  */
 export async function getTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const record = await templateService.getById(models, req.params.id);
     if (!record) {
-      return res.status(404).json({ error: 'Template not found' });
+      return http.sendNotFound(res, 'Template not found');
     }
-    res.json(record);
+    return http.sendSuccess(res, record);
   } catch (error) {
     console.error('❌ Failed to get email template:', error.message);
-    res.status(500).json({ error: 'Failed to get email template' });
+    return http.sendServerError(res, 'Failed to get email template', error);
   }
 }
 
@@ -45,24 +47,23 @@ export async function getTemplate(req, res) {
  * POST /api/admin/emails/templates
  */
 export async function createTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const record = await templateService.create(models, req.body);
-    res.status(201).json(record);
+    return http.sendCreated(res, record);
   } catch (error) {
     if (
       error.name === 'SequelizeUniqueConstraintError' ||
       error.name === 'SequelizeValidationError'
     ) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: error.errors
-          ? error.errors.map(e => e.message)
-          : [error.message],
-      });
+      return http.sendValidationError(
+        res,
+        error.errors ? error.errors.map(e => e.message) : [error.message],
+      );
     }
     console.error('❌ Failed to create email template:', error.message);
-    res.status(500).json({ error: 'Failed to create email template' });
+    return http.sendServerError(res, 'Failed to create email template', error);
   }
 }
 
@@ -71,6 +72,7 @@ export async function createTemplate(req, res) {
  * PUT /api/admin/emails/templates/:id
  */
 export async function updateTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const record = await templateService.update(
@@ -79,23 +81,21 @@ export async function updateTemplate(req, res) {
       req.body,
     );
     if (!record) {
-      return res.status(404).json({ error: 'Template not found' });
+      return http.sendNotFound(res, 'Template not found');
     }
-    res.json(record);
+    return http.sendSuccess(res, record);
   } catch (error) {
     if (
       error.name === 'SequelizeUniqueConstraintError' ||
       error.name === 'SequelizeValidationError'
     ) {
-      return res.status(400).json({
-        error: 'Validation failed',
-        details: error.errors
-          ? error.errors.map(e => e.message)
-          : [error.message],
-      });
+      return http.sendValidationError(
+        res,
+        error.errors ? error.errors.map(e => e.message) : [error.message],
+      );
     }
     console.error('❌ Failed to update email template:', error.message);
-    res.status(500).json({ error: 'Failed to update email template' });
+    return http.sendServerError(res, 'Failed to update email template', error);
   }
 }
 
@@ -104,16 +104,17 @@ export async function updateTemplate(req, res) {
  * DELETE /api/admin/emails/templates/:id
  */
 export async function deleteTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const deleted = await templateService.remove(models, req.params.id);
     if (!deleted) {
-      return res.status(404).json({ error: 'Template not found' });
+      return http.sendNotFound(res, 'Template not found');
     }
-    res.json({ success: true });
+    return http.sendSuccess(res, { success: true });
   } catch (error) {
     console.error('❌ Failed to delete email template:', error.message);
-    res.status(500).json({ error: 'Failed to delete email template' });
+    return http.sendServerError(res, 'Failed to delete email template', error);
   }
 }
 
@@ -122,17 +123,22 @@ export async function deleteTemplate(req, res) {
  * DELETE /api/admin/emails/templates
  */
 export async function bulkDeleteTemplates(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
-      return res.status(400).json({ error: 'ids array is required' });
+      return http.sendBadRequest(res, 'ids array is required');
     }
     const count = await templateService.bulkRemove(models, ids);
-    res.json({ success: true, deleted: count });
+    return http.sendSuccess(res, { success: true, deleted: count });
   } catch (error) {
     console.error('❌ Failed to bulk-delete email templates:', error.message);
-    res.status(500).json({ error: 'Failed to bulk-delete email templates' });
+    return http.sendServerError(
+      res,
+      'Failed to bulk-delete email templates',
+      error,
+    );
   }
 }
 
@@ -141,6 +147,7 @@ export async function bulkDeleteTemplates(req, res) {
  * POST /api/admin/emails/templates/:id/preview
  */
 export async function previewTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const templateEngine = req.app.get('template');
@@ -151,15 +158,16 @@ export async function previewTemplate(req, res) {
       templateEngine,
     );
     if (!result) {
-      return res.status(404).json({ error: 'Template not found' });
+      return http.sendNotFound(res, 'Template not found');
     }
-    res.json(result);
+    return http.sendSuccess(res, result);
   } catch (error) {
     // Rendering errors are useful feedback for the user
-    res.status(422).json({
-      error: 'Template rendering failed',
-      details: error.message,
-    });
+    return http.sendValidationError(
+      res,
+      error.message,
+      'Template rendering failed',
+    );
   }
 }
 
@@ -168,6 +176,7 @@ export async function previewTemplate(req, res) {
  * POST /api/admin/emails/templates/preview
  */
 export async function previewRawTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const { subject, html_body, text_body, sample_data } = req.body;
     const templateEngine = req.app.get('template');
@@ -176,12 +185,13 @@ export async function previewRawTemplate(req, res) {
       sample_data || {},
       templateEngine,
     );
-    res.json(result);
+    return http.sendSuccess(res, result);
   } catch (error) {
-    res.status(422).json({
-      error: 'Template rendering failed',
-      details: error.message,
-    });
+    return http.sendValidationError(
+      res,
+      error.message,
+      'Template rendering failed',
+    );
   }
 }
 
@@ -190,15 +200,20 @@ export async function previewRawTemplate(req, res) {
  * POST /api/admin/emails/templates/:id/duplicate
  */
 export async function duplicateTemplate(req, res) {
+  const http = req.app.get('http');
   try {
     const models = req.app.get('models');
     const record = await templateService.duplicate(models, req.params.id);
     if (!record) {
-      return res.status(404).json({ error: 'Template not found' });
+      return http.sendNotFound(res, 'Template not found');
     }
-    res.status(201).json(record);
+    return http.sendCreated(res, record);
   } catch (error) {
     console.error('❌ Failed to duplicate email template:', error.message);
-    res.status(500).json({ error: 'Failed to duplicate email template' });
+    return http.sendServerError(
+      res,
+      'Failed to duplicate email template',
+      error,
+    );
   }
 }
