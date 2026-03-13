@@ -29,14 +29,18 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      item: {
-        ns: i18n.t('admin:navigation.system', 'System'),
-        path: '/admin/plugins',
-        label: i18n.t('admin:navigation.plugins', 'Plugins'),
-        icon: 'extension', // or 'puzzle-piece' if available, checking lucide icons
-        permission: 'plugins:read',
-        order: 20,
-      },
+      id: 'system',
+      label: i18n.t('admin:navigation.system', 'System'),
+      order: 90,
+      items: [
+        {
+          path: '/admin/plugins',
+          label: i18n.t('admin:navigation.plugins', 'Plugins'),
+          icon: 'extension',
+          permission: 'plugins:read',
+          order: 20,
+        },
+      ],
     }),
   );
 }

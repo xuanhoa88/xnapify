@@ -25,14 +25,18 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      item: {
-        ns: i18n.t('admin:navigation.management', 'Management'),
-        path: '/admin/users',
-        label: i18n.t('admin:navigation.users', 'Users'),
-        icon: 'users',
-        permission: 'users:read',
-        order: 10,
-      },
+      id: 'management',
+      label: i18n.t('admin:navigation.management', 'Management'),
+      order: 10,
+      items: [
+        {
+          path: '/admin/users',
+          label: i18n.t('admin:navigation.users', 'Users'),
+          icon: 'users',
+          permission: 'users:read',
+          order: 10,
+        },
+      ],
     }),
   );
 }

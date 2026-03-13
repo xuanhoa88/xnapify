@@ -38,11 +38,8 @@ const ensureNamespace = (state, collection, namespace = 'default') => {
 };
 
 // Helper to normalize breadcrumb items to array
-const normalizeBreadcrumbs = items => (Array.isArray(items) ? items : [items]);
-
-// Helper to find menu item by path
-const findMenuItemIndex = (items, path) =>
-  items.findIndex(i => i.path === path);
+const normalizeBreadcrumbs = items =>
+  (Array.isArray(items) ? items : [items]).filter(Boolean);
 
 /**
  * Reducer Helpers
@@ -83,23 +80,90 @@ const handleAddBreadcrumb = (state, item, namespace = 'default') => {
 };
 
 // Shared menu registration logic
-const handleRegisterMenu = (state, ns = 'default', item) => {
+const handleRegisterMenu = (state, payload) => {
+  const ns = payload.ns || 'default';
   ensureNamespace(state, 'menus', ns);
 
-  const existingIndex = findMenuItemIndex(state.menus[ns], item.path);
-  if (existingIndex >= 0) {
-    // Update existing
-    state.menus[ns][existingIndex] = item;
-  } else {
-    // Add new
-    state.menus[ns].push(item);
+  // Fallback for legacy format (e.g. { ns, path } or { item: { path } })
+  if (
+    !payload.id &&
+    !payload.items &&
+    (payload.path || (payload.item && payload.item.path))
+  ) {
+    const itemConfig = payload.item || payload;
+    const legacyNs = itemConfig.ns || 'default';
+    let section = state.menus[ns].find(s => s.id === legacyNs);
+
+    if (!section) {
+      section = {
+        id: legacyNs,
+        label: legacyNs,
+        order: itemConfig.order != null ? itemConfig.order : 99,
+        items: [],
+      };
+      state.menus[ns].push(section);
+    }
+
+    const idx = section.items.findIndex(i => i.path === itemConfig.path);
+    if (idx >= 0) section.items[idx] = itemConfig;
+    else section.items.push(itemConfig);
+
+    return;
   }
+
+  // New nested section format
+  const sectionId = payload.id || ns;
+  let section = state.menus[ns].find(s => s.id === sectionId);
+
+  if (!section) {
+    section = {
+      id: sectionId,
+      label: payload.label || sectionId,
+      order: payload.order != null ? payload.order : 99,
+      items: [],
+    };
+    state.menus[ns].push(section);
+  } else {
+    // Update section priority if explicitly provided and lower
+    if (payload.order != null && payload.order < section.order) {
+      section.order = payload.order;
+    }
+    if (payload.label) {
+      section.label = payload.label;
+    }
+  }
+
+  // Add the items
+  const itemsToAdd = Array.isArray(payload.items)
+    ? payload.items
+    : payload.item
+      ? [payload.item]
+      : [];
+
+  itemsToAdd.forEach(newItem => {
+    if (!newItem || !newItem.path) return;
+    const existingIndex = section.items.findIndex(i => i.path === newItem.path);
+    if (existingIndex >= 0) {
+      section.items[existingIndex] = {
+        ...section.items[existingIndex],
+        ...newItem,
+      };
+    } else {
+      section.items.push(newItem);
+    }
+  });
 };
 
 // Shared menu unregistration logic
 const handleUnregisterMenu = (state, ns = 'default', path) => {
   if (state.menus && state.menus[ns]) {
-    state.menus[ns] = state.menus[ns].filter(i => i.path !== path);
+    state.menus[ns].forEach(section => {
+      section.items = section.items.filter(i => i.path !== path);
+    });
+    // Remove empty sections
+    state.menus[ns] = state.menus[ns].filter(
+      section => section.items.length > 0,
+    );
   }
 };
 
@@ -199,12 +263,18 @@ const uiSlice = createSlice({
     },
 
     /**
-     * Register a menu item
-     * Payload: { ns, item }
+     * Register one or multiple menu sections
+     * Payload: rest parameter array of menu objects
      */
-    registerMenu: (state, action) => {
-      const { ns, item } = action.payload;
-      handleRegisterMenu(state, ns, item);
+    registerMenu: {
+      reducer: (state, action) => {
+        action.payload.forEach(menu => {
+          handleRegisterMenu(state, menu);
+        });
+      },
+      prepare: (...menus) => ({
+        payload: menus,
+      }),
     },
 
     /**
@@ -259,8 +329,11 @@ const uiSlice = createSlice({
         }
       })
       .addCase('REGISTER_MENU', (state, action) => {
-        const { ns, item } = action.payload;
-        handleRegisterMenu(state, ns, item);
+        // Legacy fallback
+        const payload = action.payload.item
+          ? { ns: action.payload.ns, ...action.payload.item }
+          : action.payload;
+        handleRegisterMenu(state, payload);
       })
       .addCase('UNREGISTER_MENU', (state, action) => {
         const { ns, path } = action.payload;

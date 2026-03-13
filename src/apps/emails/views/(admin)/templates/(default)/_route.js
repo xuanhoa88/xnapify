@@ -23,13 +23,17 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      item: {
-        ns: i18n.t('admin:navigation.emails', 'Emails'),
-        path: '/admin/emails',
-        label: i18n.t('admin:emails.templates', 'Templates'),
-        icon: 'mail',
-        order: 50,
-      },
+      id: 'emails',
+      label: i18n.t('admin:navigation.emails', 'Emails'),
+      order: 50,
+      items: [
+        {
+          path: '/admin/emails',
+          label: i18n.t('admin:emails.templates', 'Templates'),
+          icon: 'mail-open',
+          order: 50,
+        },
+      ],
     }),
   );
 }

@@ -46,13 +46,17 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      item: {
-        ns: i18n.t('admin:navigation.management', 'Management'),
-        path: '/admin/files',
-        label: i18n.t('files:page.title', 'Files'),
-        icon: 'folder', // Assuming a folder or drive icon is available in the UI icon set
-        order: 50,
-      },
+      id: 'management',
+      label: i18n.t('admin:navigation.management', 'Management'),
+      order: 10,
+      items: [
+        {
+          path: '/admin/files',
+          label: i18n.t('files:page.title', 'Files'),
+          icon: 'folder', // Assuming a folder or drive icon is available in the UI icon set
+          order: 50,
+        },
+      ],
     }),
   );
 }

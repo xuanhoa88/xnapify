@@ -89,119 +89,52 @@ function Drawer() {
       return checkPermission(user, permission);
     };
 
-    const formatMenus = (items, user) => {
-      // Process the menus to ensure they have the correct structure
-      const sections = {};
-
-      items.forEach(item => {
-        if (!item || !item.ns) return;
-
-        // Permission check
-        if (!hasPermission(user, item.permission)) return;
-
-        const key = item.ns;
-        if (!sections[key]) {
-          sections[key] = {
-            ns: item.ns,
-            items: [],
-            order: item.order || 99,
-            seenPaths: new Set(),
-          };
-        }
-
-        // Deduplication check
-        if (item.path && !sections[key].seenPaths.has(item.path)) {
-          sections[key].seenPaths.add(item.path);
-          sections[key].items.push(item);
-        }
-      });
-
-      return Object.values(sections)
-        .map(groupBy => {
-          // Only return sections that have items
-          if (groupBy.items.length === 0) return null;
-
-          const { seenPaths: _, ...cleanSection } = groupBy;
-          return cleanSection;
-        })
-        .filter(Boolean)
-        .sort(
-          (a, b) =>
-            (a.order || 99) - (b.order || 99) || a.ns.localeCompare(b.ns),
-        );
-    };
-
-    return [
+    // 1. Start with the hardcoded Main section
+    const mainKey = t('admin:navigation.main', 'Main');
+    const sections = [
       {
-        ns: t('admin:navigation.main', 'Main'),
+        ns: mainKey,
+        order: 0,
         items: [
           {
             path: '/admin',
             label: t('admin:navigation.dashboard', 'Dashboard'),
             icon: 'dashboard',
             exact: true,
+            order: 0,
           },
         ],
-        order: 0,
       },
-      {
-        ns: t('admin:navigation.system', 'System'),
-        items: [
-          hasPermission(user, 'nodered:admin') && {
-            path: '/~/red/admin',
-            label: t('admin:navigation.nodeRed', 'Node-RED'),
-            icon: 'node-red',
-            external: true,
-            order: 10,
-          },
-        ],
-        order: 100,
-      },
-      ...formatMenus(dynamicMenus, user),
-    ]
-      .reduce((acc, section) => {
-        if (!section) return acc;
+    ];
 
-        // Filter out falsy items (e.g. permission check failures)
-        const validItems = section.items.filter(Boolean);
-        if (validItems.length === 0) return acc;
+    // 2. Process dynamic menus (which are now already grouped by section in Redux)
+    dynamicMenus.forEach(section => {
+      if (!section || !section.items) return;
 
-        const existingSection = acc.find(sec => sec.ns === section.ns);
-        if (existingSection) {
-          existingSection.items.push(...validItems);
-          // Sort items within the section by order, then label, then path
-          existingSection.items.sort((a, b) => {
-            const orderDiff = (a.order || 99) - (b.order || 99);
-            if (orderDiff !== 0) return orderDiff;
-            const labelDiff = (a.label || '').localeCompare(b.label || '');
-            if (labelDiff !== 0) return labelDiff;
-            return (a.path || '').localeCompare(b.path || '');
-          });
-          // Keep the lower order (higher priority)
-          existingSection.order = Math.min(
-            existingSection.order,
-            section.order || 99,
-          );
-        } else {
-          // Sort items for the new section
-          const sortedItems = [...validItems].sort((a, b) => {
-            const orderDiff = (a.order || 99) - (b.order || 99);
-            if (orderDiff !== 0) return orderDiff;
-            const labelDiff = (a.label || '').localeCompare(b.label || '');
-            if (labelDiff !== 0) return labelDiff;
-            return (a.path || '').localeCompare(b.path || '');
-          });
-          acc.push({
-            ...section,
-            order: section.order || 99,
-            items: sortedItems,
-          });
-        }
-        return acc;
-      }, [])
-      .sort(
-        (a, b) => (a.order || 99) - (b.order || 99) || a.ns.localeCompare(b.ns),
+      // Filter items by permission
+      const validItems = section.items.filter(item =>
+        hasPermission(user, item.permission),
       );
+
+      // Skip section if no valid items
+      if (validItems.length === 0) return;
+
+      sections.push({
+        ns: section.label || section.id,
+        order: section.order != null ? section.order : 99,
+        items: [...validItems].sort((a, b) => {
+          const orderDiff =
+            (a.order != null ? a.order : 99) - (b.order != null ? b.order : 99);
+          if (orderDiff !== 0) return orderDiff;
+          return (a.label || '').localeCompare(b.label || '');
+        }),
+      });
+    });
+
+    // 3. Sort sections deterministically
+    return sections.sort(
+      (a, b) => a.order - b.order || a.ns.localeCompare(b.ns),
+    );
   }, [t, user, dynamicMenus]);
 
   const userDisplayName = useMemo(() => {
