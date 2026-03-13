@@ -31,9 +31,8 @@ const WORKER_CONFIG = Object.freeze({
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
 // Create worker pool with email-specific configuration
-const workerPool = createWorkerPool(workersContext, {
+const workerPool = createWorkerPool('📧 Email', workersContext, {
   ErrorHandler: EmailWorkerError,
-  engineName: '📧 Email',
   maxWorkers: WORKER_CONFIG.maxWorkers,
   workerTimeout: WORKER_CONFIG.workerTimeout,
   maxRequestsPerWorker: WORKER_CONFIG.maxRequestsPerWorker,

@@ -13,10 +13,9 @@ The Worker Engine manages concurrency, error handling, and thread assignment for
 ## Procedure: Defining a Worker Handler
 1. **File Location:** Create a file named `[taskName].worker.js` inside the relevant module's `api/` directory.
 2. **Implementation:**
-   - Import `createWorkerHandler` from `@shared/api/engines/worker`.
-   - Define an `async` function that takes `payload` and `context`.
-   - The function should return `{ success: true, ...results }` on success or throw an error on failure.
-   - Export the initialized handler: `export default createWorkerHandler(taskHandler, 'TASK_TYPE_IDENTIFIER');`.
+   - Define an `async` function that takes `payload` and `context` (if any).
+   - The function should return `{ success: true, ...results }` on success. Uncaught errors are properly passed to the caller natively.
+   - Export the initialized handler as a named export matching the intended task type identifier: `export { taskHandler as TASK_TYPE_IDENTIFIER };`.
 
 ## Procedure: Defining a Worker Pool
 Worker pools manage a specific group of workers.
@@ -27,8 +26,7 @@ Worker pools manage a specific group of workers.
    - Load the worker context dynamically: `const workersContext = require.context('.', false, /\.worker\.js$/);`
    - Initialize the pool:
      ```javascript
-     export const workerPool = createWorkerPool(workersContext, {
-       engineName: 'MyModuleEngine',
+     export const workerPool = createWorkerPool('MyModuleEngine', workersContext, {
        maxWorkers: 2, // Concurrency limits
      });
      ```
@@ -37,8 +35,9 @@ Worker pools manage a specific group of workers.
 Any service or route controller can dispatch a payload to the worker pool.
 
 1. Import the defined `workerPool`.
-2. Dispatch using an async method: `await workerPool.sendRequest('unique-task-batch-1', 'TASK_TYPE_IDENTIFIER', payload);`.
-3. The identifier must precisely match the `'TASK_TYPE_IDENTIFIER'` from the handler.
+2. Dispatch using an async method: `await workerPool.sendRequest('unique-task-batch-1', 'TASK_TYPE_IDENTIFIER', payload, { throwOnError: true });`.
+3. The identifier must precisely match the `'TASK_TYPE_IDENTIFIER'` exported from the handler.
+4. With `{ throwOnError: true }`, wrap your dispatch in a try/catch block for robust error handling.
 
 ## Scheduling considerations
 If you need a cron job, integrate your worker with the `Schedule Engine`:

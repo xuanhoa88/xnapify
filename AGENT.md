@@ -242,29 +242,33 @@ Controlled via `shared/node-red/settings.js` and environment variables.
 For heavy processing, use the Worker Engine:
 
 ```javascript
-// 1. Define worker
-import { createWorkerHandler } from '@shared/api/worker';
-// ... (omitting lines for brevity in tool call, standardizing on contiguous blocks is better but small edits are fine) with context:
-// wait, I need exact match.
-
+// 1. Define worker handler
 const myTaskLogic = async payload => {
   // Heavy processing
   return { success: true };
 };
 
-export default createWorkerHandler(myTaskLogic, 'MY_TASK_TYPE');
+// Export as a named function matching the messageType
+export { myTaskLogic as MY_TASK_TYPE };
 
 // 2. Create worker pool
 import { createWorkerPool } from '@shared/api/worker';
 
 const workersContext = require.context('.', false, /\.worker\.js$/);
-const workerPool = createWorkerPool(workersContext, {
-  engineName: 'MyDomain',
-  maxWorkers: 2,
+const workerPool = createWorkerPool('MyDomain', workersContext, {
+  maxWorkers: 2, // Concurrency limit
+  // Optional: forceFork: true (to skip same-process execution)
 });
 
 // 3. Dispatch jobs
-await workerPool.sendRequest('task-name', 'MY_TASK_TYPE', payload);
+try {
+  const result = await workerPool.sendRequest('task-name', 'MY_TASK_TYPE', payload, {
+    throwOnError: true, // Native robust error propagation
+  });
+  console.log('Worker result:', result);
+} catch (error) {
+  console.error('Worker failed natively:', error);
+}
 ```
 
 ## Code Conventions

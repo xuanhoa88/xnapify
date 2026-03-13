@@ -78,16 +78,22 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 /**
  * Create a WorkerPool instance for a specific engine using Piscina
  *
+ * @param {string} engineName - Name of the engine (e.g. Email, Filesystem)
  * @param {Object} workersContext - webpack require.context for worker files
  * @param {Object} options - Configuration options
  * @returns {WorkerPool} Worker service instance
  */
-export function createWorkerPool(workersContext, options = {}) {
+export function createWorkerPool(engineName, workersContext, options = {}) {
+  if (!engineName || typeof engineName !== 'string') {
+    throw new Error(
+      'createWorkerPool requires an engineName string as its first argument',
+    );
+  }
+
   const adapter = createWebpackContextAdapter(workersContext);
 
   const {
     ErrorHandler = WorkerError,
-    engineName = 'Worker',
     maxWorkers = DEFAULT_WORKER_CONFIG.maxWorkers,
     workerTimeout = DEFAULT_WORKER_CONFIG.workerTimeout,
   } = options;

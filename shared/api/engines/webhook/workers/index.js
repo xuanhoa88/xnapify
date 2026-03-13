@@ -23,9 +23,8 @@ const DEFAULT_CONFIG = {
 };
 
 // Create worker pool with webhook-specific configuration
-const workerPool = createWorkerPool(workersContext, {
+const workerPool = createWorkerPool('Webhook', workersContext, {
   ErrorHandler: WebhookError,
-  engineName: 'Webhook',
   maxWorkers: DEFAULT_CONFIG.maxWorkers,
 });
 

@@ -23,9 +23,8 @@ import { FilesystemWorkerError } from '../utils';
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
 // Create worker pool with filesystem-specific configuration
-const workerPool = createWorkerPool(workersContext, {
+const workerPool = createWorkerPool('📁 Filesystem', workersContext, {
   ErrorHandler: FilesystemWorkerError,
-  engineName: '📁 Filesystem',
 });
 
 // ==========================================================================

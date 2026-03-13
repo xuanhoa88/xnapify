@@ -21,8 +21,7 @@ export default function getSearchWorkerPool(app) {
   const { createWorkerPool } = app.get('worker');
 
   // Create worker pool with search-specific configuration
-  const workerPool = createWorkerPool(workersContext, {
-    engineName: 'Search',
+  const workerPool = createWorkerPool('Search', workersContext, {
     maxWorkers: 1,
   });
 
