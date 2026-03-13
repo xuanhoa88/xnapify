@@ -62,6 +62,9 @@
   max-height: 100vh;
   border-radius: 0;
   margin: 0;
+  margin-left: auto;
+  max-width: 700px;
+  width: 100%;
   animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 

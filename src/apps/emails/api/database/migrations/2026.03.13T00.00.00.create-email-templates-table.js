@@ -51,11 +51,7 @@ export async function up({ context, Sequelize }) {
       allowNull: true,
       comment: 'Example data for live preview',
     },
-    description: {
-      type: DataTypes.TEXT,
-      allowNull: true,
-      comment: 'Optional template description',
-    },
+
     is_active: {
       type: DataTypes.BOOLEAN,
       defaultValue: true,

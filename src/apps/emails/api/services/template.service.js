@@ -98,7 +98,6 @@ export async function create(models, data) {
     html_body: data.html_body || '',
     text_body: data.text_body || '',
     sample_data: data.sample_data || {},
-    description: data.description || '',
     is_active: data.is_active !== undefined ? data.is_active : true,
   });
 }
@@ -122,8 +121,6 @@ export async function update(models, id, data) {
   if (data.text_body !== undefined) updateFields.text_body = data.text_body;
   if (data.sample_data !== undefined)
     updateFields.sample_data = data.sample_data;
-  if (data.description !== undefined)
-    updateFields.description = data.description;
   if (data.is_active !== undefined) updateFields.is_active = data.is_active;
 
   await record.update(updateFields);
@@ -233,7 +230,6 @@ export async function duplicate(models, id) {
     html_body: source.html_body,
     text_body: source.text_body,
     sample_data: source.sample_data,
-    description: source.description,
     is_active: false,
   });
 }

@@ -1,19 +1,124 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
 .root {
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-lg, 16px);
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
 }
 
-.headerActions {
+.formContainer {
+  background: var(--color-background);
+  padding: var(--spacing-8);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  max-width: 1000px;
+}
+
+.form {
+  width: 100%;
+}
+
+.formSection {
+  margin-bottom: var(--spacing-8);
+  padding-bottom: var(--spacing-6);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.formSection:last-of-type {
+  margin-bottom: var(--spacing-6);
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.sectionHeader {
   display: flex;
-  gap: var(--spacing-sm, 8px);
+  justify-content: space-between;
   align-items: center;
+  margin-bottom: var(--spacing-5);
 }
 
-.errorBanner {
-  padding: 12px 16px;
-  background: var(--color-danger-bg, #fef2f2);
-  color: var(--color-danger, #ef4444);
-  border-radius: 8px;
-  font-size: var(--font-size-sm, 13px);
+.sectionTitle {
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-primary);
+  margin: 0 0 var(--spacing-5);
+}
+
+.formRow {
+  display: flex;
+  gap: var(--spacing-4);
+}
+
+.formRow > * {
+  flex: 1;
+  min-width: 0;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-4);
+  margin-top: var(--spacing-6);
+  padding-top: var(--spacing-4);
+}
+
+.previewBody {
+  padding: 0;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  .formContainer {
+    padding: var(--spacing-4);
+  }
+
+  .formRow {
+    flex-direction: column;
+    gap: var(--spacing-3);
+  }
+
+  .formSection {
+    margin-bottom: var(--spacing-5);
+    padding-bottom: var(--spacing-4);
+  }
+
+  .sectionTitle {
+    font-size: var(--font-size-base);
+    margin-bottom: var(--spacing-3);
+  }
+
+  .formActions {
+    flex-direction: column-reverse;
+    gap: var(--spacing-3);
+    margin-top: var(--spacing-5);
+    padding-top: var(--spacing-4);
+    border-top: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .formContainer {
+    padding: var(--spacing-3);
+  }
+
+  .sectionTitle {
+    font-size: var(--font-size-sm);
+  }
 }

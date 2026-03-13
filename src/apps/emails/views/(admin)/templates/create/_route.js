@@ -28,7 +28,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:emails.create.title', 'Create Email Template'),
+        label: i18n.t('admin:emails.form.createTemplate', 'Create'),
         url: path,
       },
       'admin',

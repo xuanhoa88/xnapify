@@ -261,12 +261,9 @@ function EmailTemplates() {
           {
             title: t('admin:emails.list.name', 'Name'),
             dataIndex: 'name',
-            render: (name, record) => (
+            render: name => (
               <div className={s.nameCell}>
                 <strong>{name}</strong>
-                {record.description && (
-                  <span className={s.description}>{record.description}</span>
-                )}
               </div>
             ),
           },

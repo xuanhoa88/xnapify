@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
@@ -13,12 +13,15 @@ import { useDispatch, useSelector } from 'react-redux';
 
 import * as Box from '@shared/renderer/components/Box';
 import Button from '@shared/renderer/components/Button';
+import ConfirmModal from '@shared/renderer/components/ConfirmModal';
+import Form, { useFormContext } from '@shared/renderer/components/Form';
 import { useHistory } from '@shared/renderer/components/History';
 import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
+import Modal from '@shared/renderer/components/Modal';
 
+import { updateEmailTemplateFormSchema } from '../../../../../validator/admin';
 import TemplateEditor from '../../../components/TemplateEditor';
-import TemplateForm from '../../../components/TemplateForm';
 import {
   fetchTemplateById,
   updateTemplate,
@@ -27,7 +30,7 @@ import {
   isDetailInitialized,
   getDetailError,
   isUpdateLoading,
-  getUpdateError,
+  previewRawTemplate,
 } from '../../../redux';
 
 import s from './EditEmailTemplate.css';
@@ -43,11 +46,10 @@ function EditEmailTemplate({ params }) {
   const detailInitialized = useSelector(isDetailInitialized);
   const detailError = useSelector(getDetailError);
   const updateLoading = useSelector(isUpdateLoading);
-  const updateError = useSelector(getUpdateError);
 
-  const editorRef = useRef(null);
-  const [formData, setFormData] = useState({});
-  const [formErrors, setFormErrors] = useState({});
+  const [error, setError] = useState(null);
+  const confirmBackModalRef = useRef(null);
+  const isDirtyRef = useRef(false);
 
   useEffect(() => {
     if (templateId) {
@@ -55,55 +57,64 @@ function EditEmailTemplate({ params }) {
     }
   }, [dispatch, templateId]);
 
-  // Sync form data when template loads
-  useEffect(() => {
-    if (template) {
-      setFormData({
-        name: template.name || '',
-        slug: template.slug || '',
-        description: template.description || '',
-        is_active: template.is_active !== undefined ? template.is_active : true,
-      });
-    }
+  const handleCancel = useCallback(
+    isDirty => {
+      if (isDirty) {
+        confirmBackModalRef.current && confirmBackModalRef.current.open();
+      } else {
+        history.push('/admin/emails/templates');
+      }
+    },
+    [history],
+  );
+
+  const handleConfirmBack = useCallback(() => {
+    history.push('/admin/emails/templates');
+  }, [history]);
+
+  const handleSubmit = useCallback(
+    async (data, methods) => {
+      setError(null);
+
+      try {
+        await dispatch(
+          updateTemplate({ id: templateId, templateData: data }),
+        ).unwrap();
+      } catch (err) {
+        if (err && typeof err === 'object' && err.errors) {
+          Object.keys(err.errors).forEach(key => {
+            if (methods && typeof methods.setError === 'function') {
+              methods.setError(key, {
+                type: 'server',
+                message: err.errors[key],
+              });
+            }
+          });
+        } else {
+          setError(
+            err ||
+              t(
+                'admin:errors.updateTemplate',
+                'Failed to update email template',
+              ),
+          );
+        }
+      }
+    },
+    [dispatch, templateId, t],
+  );
+
+  // Memoize defaultValues so Form doesn't reset on every render
+  const defaultValues = useMemo(() => {
+    if (!template) return {};
+    return {
+      name: template.name || '',
+      slug: template.slug || '',
+      subject: template.subject || '',
+      html_body: template.html_body || '',
+      is_active: template.is_active !== undefined ? template.is_active : true,
+    };
   }, [template]);
-
-  const handleFormChange = useCallback(changes => {
-    setFormData(prev => ({ ...prev, ...changes }));
-    setFormErrors(prev => {
-      const next = { ...prev };
-      Object.keys(changes).forEach(key => delete next[key]);
-      return next;
-    });
-  }, []);
-
-  const handleSave = useCallback(async () => {
-    const errors = {};
-    if (!formData.name || !formData.name.trim())
-      errors.name = 'Name is required';
-    if (!formData.slug || !formData.slug.trim())
-      errors.slug = 'Slug is required';
-
-    if (Object.keys(errors).length > 0) {
-      setFormErrors(errors);
-      return;
-    }
-
-    const editorValues = editorRef.current ? editorRef.current.getValues() : {};
-
-    try {
-      await dispatch(
-        updateTemplate({
-          id: templateId,
-          templateData: {
-            ...formData,
-            ...editorValues,
-          },
-        }),
-      ).unwrap();
-    } catch {
-      // Error handled by Redux
-    }
-  }, [dispatch, templateId, formData]);
 
   // Loading state
   if (!detailInitialized || detailLoading) {
@@ -148,49 +159,197 @@ function EditEmailTemplate({ params }) {
         title={t('admin:emails.edit.title', 'Edit Email Template')}
         subtitle={template.name}
       >
-        <div className={s.headerActions}>
-          <Button
-            variant='ghost'
-            onClick={() => history.push('/admin/emails/templates')}
-          >
-            {t('common:cancel', 'Cancel')}
-          </Button>
-          <Button
-            variant='primary'
-            onClick={handleSave}
-            disabled={updateLoading}
-          >
-            {updateLoading
-              ? t('common:saving', 'Saving...')
-              : t('admin:emails.edit.save', 'Save Changes')}
-          </Button>
-        </div>
+        <Button
+          variant='secondary'
+          onClick={() => handleCancel(isDirtyRef.current)}
+        >
+          <Icon name='arrowLeft' />
+          {t('admin:buttons.backToTemplates', 'Back to Templates')}
+        </Button>
       </Box.Header>
 
-      {updateError && (
-        <div className={s.errorBanner}>
-          {typeof updateError === 'string'
-            ? updateError
-            : updateError.error || 'Failed to update template'}
-        </div>
-      )}
+      <div className={s.formContainer}>
+        <Form.Error message={error} />
 
-      <TemplateForm
-        initialValues={formData}
-        onChange={handleFormChange}
-        errors={formErrors}
-      />
+        <Form
+          schema={updateEmailTemplateFormSchema}
+          defaultValues={defaultValues}
+          onSubmit={handleSubmit}
+          className={s.form}
+        >
+          <EditFormFields
+            onCancel={handleCancel}
+            loading={updateLoading}
+            isDirtyRef={isDirtyRef}
+          />
+        </Form>
+      </div>
 
-      <TemplateEditor
-        ref={editorRef}
-        htmlBody={template.html_body || ''}
-        textBody={template.text_body || ''}
-        subject={template.subject || ''}
-        sampleData={template.sample_data || {}}
+      <ConfirmModal.Back
+        ref={confirmBackModalRef}
+        onConfirm={handleConfirmBack}
       />
     </div>
   );
 }
+
+/**
+ * EditFormFields — Form fields component that uses react-hook-form context
+ */
+function EditFormFields({ onCancel, loading, isDirtyRef }) {
+  const { t } = useTranslation();
+  const {
+    getValues,
+    formState: { isDirty },
+  } = useFormContext();
+  const dispatch = useDispatch();
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
+  // Keep isDirtyRef in sync
+  isDirtyRef.current = isDirty;
+
+  const handleCancel = useCallback(() => {
+    onCancel(isDirty);
+  }, [onCancel, isDirty]);
+
+  const handlePreviewEmail = useCallback(
+    e => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const { subject, html_body } = getValues();
+      dispatch(
+        previewRawTemplate({
+          subject: subject || '',
+          html_body: html_body || '',
+          text_body: '',
+          sample_data: {},
+        }),
+      );
+      setIsPreviewOpen(true);
+    },
+    [dispatch, getValues],
+  );
+
+  return (
+    <>
+      {/* Template Information */}
+      <div className={s.formSection}>
+        <h3 className={s.sectionTitle}>
+          {t('admin:emails.form.templateInfo', 'Template Information')}
+        </h3>
+
+        <div className={s.formRow}>
+          <Form.Field
+            name='name'
+            label={t('admin:emails.form.name', 'Template Name')}
+            required
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:emails.form.namePlaceholder',
+                'e.g. Welcome Email',
+              )}
+            />
+          </Form.Field>
+
+          <Form.Field
+            name='slug'
+            label={t('admin:emails.form.slug', 'Slug')}
+            required
+          >
+            <Form.Input
+              placeholder={t(
+                'admin:emails.form.slugPlaceholder',
+                'e.g. welcome-email',
+              )}
+            />
+          </Form.Field>
+        </div>
+
+        <Form.Field name='is_active'>
+          <Form.Switch label={t('admin:emails.form.isActive', 'Active')} />
+        </Form.Field>
+      </div>
+
+      {/* Email Content */}
+      <div className={s.formSection}>
+        <div className={s.sectionHeader}>
+          <h3 className={s.sectionTitle} style={{ margin: 0 }}>
+            {t('admin:emails.form.emailContent', 'Email Content')}
+          </h3>
+          <Button
+            type='button'
+            variant='secondary'
+            size='small'
+            onClick={handlePreviewEmail}
+          >
+            <Icon name='eye' size={16} />
+            {t('admin:emails.form.previewBtn', 'Preview')}
+          </Button>
+        </div>
+
+        <Form.Field
+          name='subject'
+          label={t('admin:emails.form.emailSubject', 'Email Subject')}
+          required
+        >
+          <Form.Input
+            placeholder={t(
+              'admin:emails.form.emailSubjectPlaceholder',
+              'e.g. Welcome {{ name }}!',
+            )}
+          />
+        </Form.Field>
+
+        <Form.Field
+          name='html_body'
+          label={t('admin:emails.form.emailBody', 'Email Body')}
+        >
+          <Form.WYSIWYG
+            markdown={false}
+            placeholder={t(
+              'admin:emails.form.emailBodyPlaceholder',
+              'Compose your email body here...',
+            )}
+          />
+        </Form.Field>
+      </div>
+
+      {/* sliding modal for Live Preview */}
+      <Modal
+        isOpen={isPreviewOpen}
+        onClose={() => setIsPreviewOpen(false)}
+        placement='right'
+      >
+        <Modal.Header onClose={() => setIsPreviewOpen(false)}>
+          {t('admin:emails.form.preview', 'Preview')}
+        </Modal.Header>
+        <Modal.Body className={s.previewBody}>
+          <TemplateEditor />
+        </Modal.Body>
+      </Modal>
+
+      {/* Actions */}
+      <div className={s.formActions}>
+        <Button variant='secondary' onClick={handleCancel} disabled={loading}>
+          {t('admin:buttons.cancel', 'Cancel')}
+        </Button>
+        <Button variant='primary' type='submit' loading={loading}>
+          {loading
+            ? t('admin:buttons.saving', 'Saving...')
+            : t('admin:emails.form.save', 'Save Changes')}
+        </Button>
+      </div>
+    </>
+  );
+}
+
+EditFormFields.propTypes = {
+  onCancel: PropTypes.func.isRequired,
+  loading: PropTypes.bool.isRequired,
+  isDirtyRef: PropTypes.shape({ current: PropTypes.bool }).isRequired,
+};
 
 EditEmailTemplate.propTypes = {
   params: PropTypes.shape({

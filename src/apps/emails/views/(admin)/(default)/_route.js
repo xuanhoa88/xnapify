@@ -30,8 +30,8 @@ export function mount({ store, i18n }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:navigation.emails', 'Emails'),
-        url: '/admin/emails',
+        label: i18n.t('admin:navigation.notifications', 'Notifications'),
+        url: '/admin/notifications',
       },
       'admin',
     ),

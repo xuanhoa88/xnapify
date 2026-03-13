@@ -23,13 +23,13 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'emails',
-      label: i18n.t('admin:navigation.emails', 'Emails'),
+      id: 'notifications',
+      label: i18n.t('admin:navigation.notifications', 'Notifications'),
       order: 50,
       items: [
         {
-          path: '/admin/emails',
-          label: i18n.t('admin:emails.templates', 'Templates'),
+          path: '/admin/emails/templates',
+          label: i18n.t('admin:emails.templates', 'Email Templates'),
           icon: 'mail-open',
           order: 50,
         },
@@ -55,7 +55,7 @@ export function unregister({ store }) {
  */
 export async function getInitialProps({ i18n }) {
   return {
-    title: i18n.t('admin:emails.templates', 'Templates'),
+    title: i18n.t('admin:emails.templates', 'Email Templates'),
   };
 }
 
@@ -66,7 +66,7 @@ export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
       {
-        label: i18n.t('admin:emails.templates', 'Templates'),
+        label: i18n.t('admin:emails.templates', 'Email Templates'),
         url: path,
       },
       'admin',

@@ -278,6 +278,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
     extensions,
     content: markdown ? markdownToHtml(value || '') : value || '',
     editable: !disabled,
+    immediatelyRender: false,
     editorProps: {
       ...restUserEditorProps,
       handlePaste: (view, event, slice) => {

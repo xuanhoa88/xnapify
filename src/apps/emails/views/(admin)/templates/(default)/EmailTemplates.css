@@ -27,15 +27,6 @@
   font-weight: 600;
 }
 
-.description {
-  font-size: var(--font-size-sm, 12px);
-  color: var(--text-secondary, #6b7280);
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .slug {
   font-size: var(--font-size-sm, 12px);
   color: var(--text-secondary, #6b7280);

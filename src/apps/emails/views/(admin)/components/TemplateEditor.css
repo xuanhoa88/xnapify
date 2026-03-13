@@ -1,169 +1,28 @@
+/* TemplateEditor — Preview-only layout */
+
 .root {
   display: flex;
-  gap: var(--spacing-md, 12px);
-  min-height: 500px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--bg-primary, #fff);
-}
-
-/* Left pane — Editor */
-.editorPane {
-  flex: 1;
-  display: flex;
   flex-direction: column;
-  gap: var(--spacing-sm, 8px);
-  padding: var(--spacing-md, 12px);
-  border-right: 1px solid var(--border-color, #e5e7eb);
-  min-width: 0;
+  height: 100%;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.label {
-  font-size: var(--font-size-sm, 12px);
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 6px;
-  font-size: var(--font-size-base, 14px);
-  font-family: var(--font-mono, monospace);
-  background: var(--bg-subtle, #f9fafb);
-  color: var(--text-primary, #111827);
-  transition: border-color 0.15s;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px rgb(59 130 246 / 15%);
-}
-
-/* Tabs */
-.tabs {
-  display: flex;
-  gap: 0;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-}
-
-.tab {
-  padding: 6px 16px;
-  background: none;
-  border: none;
-  border-bottom: 2px solid transparent;
-  font-size: var(--font-size-sm, 12px);
-  font-weight: 500;
-  color: var(--text-secondary, #6b7280);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.tab:hover {
-  color: var(--text-primary, #111827);
-}
-
-.tabActive {
-  color: var(--color-primary, #3b82f6);
-  border-bottom-color: var(--color-primary, #3b82f6);
-}
-
-/* Code area */
-.codeArea {
-  flex: 1;
-  min-height: 200px;
-  padding: 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 6px;
-  font-family: var(--font-mono, 'Fira Code', 'Cascadia Code', monospace);
-  font-size: 13px;
-  line-height: 1.6;
-  resize: none;
-  background: var(--bg-subtle, #f9fafb);
-  color: var(--text-primary, #111827);
-  tab-size: 2;
-  white-space: pre;
-  overflow: auto;
-}
-
-.codeArea:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-  box-shadow: 0 0 0 2px rgb(59 130 246 / 15%);
-}
-
-.sampleDataArea {
-  min-height: 80px;
-  max-height: 150px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  line-height: 1.5;
-  resize: vertical;
-  background: var(--bg-subtle, #f9fafb);
-  color: var(--text-primary, #111827);
-}
-
-.sampleDataArea:focus {
-  outline: none;
-  border-color: var(--color-primary, #3b82f6);
-}
-
-.error {
-  color: var(--color-danger, #ef4444);
-  font-size: 11px;
-  font-weight: 400;
-}
-
-/* Right pane — Preview */
+/* Preview Pane */
 .previewPane {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  min-width: 0;
-}
-
-.previewHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border-color, #e5e7eb);
-  background: var(--bg-subtle, #f9fafb);
-}
-
-.previewTitle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-size-sm, 12px);
-  font-weight: 600;
-  color: var(--text-primary, #111827);
-}
-
-.previewLoading {
-  font-size: 11px;
-  color: var(--text-secondary, #6b7280);
-  animation: pulse 1.5s infinite;
+  flex: 1;
+  background: var(--color-background, #fff);
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .previewIframe {
@@ -184,20 +43,4 @@
   border-radius: 6px;
   font-size: var(--font-size-sm, 12px);
   line-height: 1.5;
-}
-
-.previewTitleGroup {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.renderedSubject {
-  margin-top: 4px;
-  font-size: 13px;
-  color: var(--text-primary, #111827);
-  padding: 4px 8px;
-  background: #fff;
-  border: 1px solid var(--border-color, #e5e7eb);
-  border-radius: 4px;
 }

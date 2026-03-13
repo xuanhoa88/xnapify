@@ -36,8 +36,8 @@ import s from './Modal.css';
  * @param {React.ReactNode} children - Modal title text
  * @param {function} onClose - Close button click handler
  */
-const ModalHeader = ({ children, onClose }) => (
-  <div className={s.modalHeader}>
+const ModalHeader = ({ children, onClose, className }) => (
+  <div className={clsx(s.modalHeader, className)}>
     <h3 className={s.modalTitle}>{children}</h3>
     {onClose && (
       <Button
@@ -55,6 +55,7 @@ const ModalHeader = ({ children, onClose }) => (
 ModalHeader.propTypes = {
   children: PropTypes.node.isRequired,
   onClose: PropTypes.func,
+  className: PropTypes.string,
 };
 
 /**
@@ -62,8 +63,8 @@ ModalHeader.propTypes = {
  * @param {React.ReactNode} children - Body content
  * @param {string} error - Optional error message to display
  */
-const ModalBody = ({ children, error }) => (
-  <div className={s.modalBody}>
+const ModalBody = ({ children, error, className }) => (
+  <div className={clsx(s.modalBody, className)}>
     {error && <div className={s.modalError}>{error}</div>}
     {children}
   </div>
@@ -72,42 +73,46 @@ const ModalBody = ({ children, error }) => (
 ModalBody.propTypes = {
   children: PropTypes.node.isRequired,
   error: PropTypes.string,
+  className: PropTypes.string,
 };
 
 /**
  * Modal.Footer - Modal footer container
  * @param {React.ReactNode} children - Footer content
  */
-const ModalFooter = ({ children }) => (
-  <div className={s.modalFooter}>{children}</div>
+const ModalFooter = ({ children, className }) => (
+  <div className={clsx(s.modalFooter, className)}>{children}</div>
 );
 
 ModalFooter.propTypes = {
   children: PropTypes.node.isRequired,
+  className: PropTypes.string,
 };
 
 /**
  * Modal.Description - Optional description text
  * @param {React.ReactNode} children - Description content
  */
-const ModalDescription = ({ children }) => (
-  <p className={s.modalDescription}>{children}</p>
+const ModalDescription = ({ children, className }) => (
+  <p className={clsx(s.modalDescription, className)}>{children}</p>
 );
 
 ModalDescription.propTypes = {
   children: PropTypes.node.isRequired,
+  className: PropTypes.string,
 };
 
 /**
  * Modal.Actions - Footer actions container
  * @param {React.ReactNode} children - Action buttons
  */
-const ModalActions = ({ children }) => (
-  <div className={s.modalActions}>{children}</div>
+const ModalActions = ({ children, className }) => (
+  <div className={clsx(s.modalActions, className)}>{children}</div>
 );
 
 ModalActions.propTypes = {
   children: PropTypes.node.isRequired,
+  className: PropTypes.string,
 };
 
 /**
@@ -115,11 +120,11 @@ ModalActions.propTypes = {
  * @param {number} count - Number of selected items
  * @param {string} countLabel - i18n key for the selection message (e.g., "users.selected")
  */
-const ModalSelectionCount = ({ count, countLabel }) => {
+const ModalSelectionCount = ({ count, countLabel, className }) => {
   const { t } = useTranslation();
 
   return (
-    <span className={s.selectionCount}>
+    <span className={clsx(s.selectionCount, className)}>
       {t(countLabel || 'modal.itemSelected', {
         count,
         defaultValue_one: '{{count}} item selected',
@@ -132,6 +137,7 @@ const ModalSelectionCount = ({ count, countLabel }) => {
 ModalSelectionCount.propTypes = {
   count: PropTypes.number.isRequired,
   countLabel: PropTypes.string,
+  className: PropTypes.string,
 };
 
 /**
@@ -178,7 +184,13 @@ ModalButton.propTypes = {
  * @param {string} placement - Modal placement ('center' | 'right')
  * @param {React.ReactNode} children - Modal content (Header, Body, Footer)
  */
-const Modal = ({ isOpen, onClose, placement = 'center', children }) => {
+const Modal = ({
+  isOpen,
+  onClose,
+  placement = 'center',
+  children,
+  className,
+}) => {
   const [shouldRender, setShouldRender] = useState(isOpen);
   const [isClosing, setIsClosing] = useState(false);
 
@@ -201,10 +213,14 @@ const Modal = ({ isOpen, onClose, placement = 'center', children }) => {
 
   return createPortal(
     <div
-      className={clsx(s.modalOverlay, {
-        [s.modalOverlayRight]: placement === 'right',
-        [s.modalOverlayClosing]: isClosing,
-      })}
+      className={clsx(
+        s.modalOverlay,
+        {
+          [s.modalOverlayRight]: placement === 'right',
+          [s.modalOverlayClosing]: isClosing,
+        },
+        className,
+      )}
       onClick={onClose}
       role='presentation'
     >
@@ -232,6 +248,7 @@ Modal.propTypes = {
   onClose: PropTypes.func.isRequired,
   placement: PropTypes.oneOf(['center', 'right']),
   children: PropTypes.node.isRequired,
+  className: PropTypes.string,
 };
 
 // Attach sub-components

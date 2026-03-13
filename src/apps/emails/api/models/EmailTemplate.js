@@ -71,12 +71,6 @@ export default function createEmailTemplateModel({ connection, DataTypes }) {
         comment: 'Example data for live preview',
       },
 
-      description: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-        comment: 'Optional template description',
-      },
-
       is_active: {
         type: DataTypes.BOOLEAN,
         defaultValue: true,
