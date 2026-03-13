@@ -108,8 +108,11 @@ function makeSendDecision(emails, options = {}) {
  * ]);
  */
 export async function send(manager, emails, options = {}) {
+  // Normalize to array for validation and processing
+  const emailList = Array.isArray(emails) ? emails : [emails];
+
   // Validate using Zod schema
-  const validationResult = validateEmails(emails);
+  const validationResult = validateEmails(emailList);
   if (!validationResult.success) {
     return createOperationResult(
       false,
@@ -124,21 +127,41 @@ export async function send(manager, emails, options = {}) {
   }
 
   // Determine worker usage
-  const decision = makeSendDecision(
-    Array.isArray(emails) ? emails : [emails],
-    options,
-  );
+  const decision = makeSendDecision(emailList, options);
   const shouldUseWorker =
     options.useWorker === true ||
     (options.useWorker !== false && decision.useWorker);
 
   if (shouldUseWorker) {
-    return workerPool.processSend(emails, {
+    const workerResult = await workerPool.processSend(emailList, {
       ...options,
+      // If no provider specified, use the manager's default
+      provider: options.provider || manager.defaultProvider,
       // Mark as validated to avoid double validation in worker
       [EMAIL_VALIDATED]: true,
-      forceFork: options.useWorker === true,
     });
+
+    // Map worker result to standard OperationResult format
+    // Note: throwOnError is handled by the core worker engine natively
+    if (workerResult && !workerResult.success) {
+      const errorMsg =
+        (workerResult.error && workerResult.error.message) ||
+        'Worker processing failed';
+      const errorCode =
+        (workerResult.error && workerResult.error.code) || 'WORKER_ERROR';
+
+      return createOperationResult(false, null, errorMsg, {
+        message: errorMsg,
+        code: errorCode,
+        statusCode: 500,
+      });
+    }
+
+    return createOperationResult(
+      true,
+      workerResult && workerResult.result,
+      'Email processed by worker successfully',
+    );
   }
 
   // Get provider from manager
@@ -146,18 +169,24 @@ export async function send(manager, emails, options = {}) {
   const provider = manager.getProvider(providerName);
 
   if (!provider) {
-    return createOperationResult(
-      false,
-      null,
-      `Provider "${providerName}" not found`,
-      new EmailError(
-        `Provider "${providerName}" not found`,
-        'PROVIDER_NOT_FOUND',
-        404,
-      ),
-    );
+    const errorMsg = `Provider "${providerName}" not found`;
+    const err = new EmailError(errorMsg, 'PROVIDER_NOT_FOUND', 404);
+    if (options.throwOnError) throw err;
+    return createOperationResult(false, null, errorMsg, err);
   }
 
   // Process directly with provider
-  return processEmails(provider, emails, options);
+  const result = await processEmails(provider, emailList, options);
+
+  if (!result.success && options.throwOnError) {
+    throw new EmailError(
+      (result.error && result.error.message) ||
+        result.message ||
+        'Email sending failed',
+      (result.error && result.error.code) || 'SEND_FAILED',
+      (result.error && result.error.statusCode) || 500,
+    );
+  }
+
+  return result;
 }

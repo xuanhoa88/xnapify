@@ -627,10 +627,17 @@ export async function updateSharing(
                 <p><a href="${process.env['RSK_APP_URL']}/drive">Open your Drive</a> to view it.</p>
               `,
             },
-            { useWorker: true, maxRetries: 3 },
+            {
+              useWorker: true,
+              maxRetries: 3,
+              throwOnError: true,
+            },
           );
         } catch (err) {
-          console.error('Failed to send file share notification email:', err);
+          console.warn(
+            `⚠️ Failed to send file share notification email:`,
+            err.message,
+          );
         }
       }),
     );

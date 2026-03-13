@@ -188,12 +188,16 @@ export class MailgunEmailProvider {
         message: result.message,
         provider: 'mailgun',
       };
-    } catch (error) {
+    } catch (err) {
       this.stats.failed++;
-      throw new EmailError(
-        `Mailgun send failed: ${error.message}`,
-        'SEND_FAILED',
-      );
+      const error =
+        err instanceof EmailError
+          ? err
+          : new EmailError(
+              `Mailgun send failed: ${err.message}`,
+              'SEND_FAILED',
+            );
+      throw error;
     }
   }
 

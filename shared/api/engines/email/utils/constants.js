@@ -9,4 +9,4 @@
  * Internal symbol to mark emails as already validated
  * Prevents double validation when using workers
  */
-export const EMAIL_VALIDATED = Symbol('__rsk.emailValidated__');
+export const EMAIL_VALIDATED = '__rsk.emailValidated__';

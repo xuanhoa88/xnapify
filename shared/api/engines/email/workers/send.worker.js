@@ -62,7 +62,17 @@ function getCachedProvider(options = {}) {
     cacheTimestamps.delete(cacheKey);
   }
 
-  // Evict oldest entry if cache is full
+  // Proactively sweep expired entries to prevent memory accumulation
+  if (providerCache.size >= MAX_CACHE_SIZE) {
+    for (const [key, ts] of cacheTimestamps) {
+      if (now - ts >= CACHE_TTL) {
+        providerCache.delete(key);
+        cacheTimestamps.delete(key);
+      }
+    }
+  }
+
+  // Evict oldest entry if cache is still full after sweep
   if (providerCache.size >= MAX_CACHE_SIZE) {
     const oldestKey = cacheTimestamps.keys().next().value;
     providerCache.delete(oldestKey);
@@ -78,24 +88,60 @@ function getCachedProvider(options = {}) {
 
 /**
  * Create email provider based on configuration
+ * Falls back to process.env for provider config (same as factory.js)
  * @param {Object} options - Provider options
  * @returns {Object} Provider instance
  */
 function createProvider(options = {}) {
   const providerType = options.provider || 'memory';
-  const config = options[providerType] || {};
+  const explicitConfig = options[providerType] || {};
 
   switch (providerType) {
     case 'memory':
-      return new MemoryEmailProvider(config);
+      return new MemoryEmailProvider(explicitConfig);
+
     case 'smtp':
-      return new SmtpEmailProvider(config);
+      return new SmtpEmailProvider({
+        host: process.env.RSK_SMTP_HOST,
+        port: parseInt(process.env.RSK_SMTP_PORT, 10) || 587,
+        secure: process.env.RSK_SMTP_SECURE === 'true',
+        user: process.env.RSK_SMTP_USER,
+        pass: process.env.RSK_SMTP_PASS,
+        defaultFrom: process.env.RSK_MAIL_FROM,
+        defaultFromName:
+          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+        ...explicitConfig,
+      });
+
     case 'sendgrid':
-      return new SendGridEmailProvider(config);
+      return new SendGridEmailProvider({
+        apiKey: process.env.RSK_SENDGRID_KEY,
+        defaultFrom: process.env.RSK_MAIL_FROM,
+        defaultFromName:
+          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+        ...explicitConfig,
+      });
+
     case 'mailgun':
-      return new MailgunEmailProvider(config);
+      return new MailgunEmailProvider({
+        apiKey: process.env.RSK_MAILGUN_KEY,
+        domain: process.env.RSK_MAILGUN_DOMAIN,
+        region: process.env.RSK_MAILGUN_REGION,
+        defaultFrom: process.env.RSK_MAIL_FROM,
+        defaultFromName:
+          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+        ...explicitConfig,
+      });
+
     case 'resend':
-      return new ResendEmailProvider(config);
+      return new ResendEmailProvider({
+        apiKey: process.env.RSK_RESEND_KEY,
+        defaultFrom: process.env.RSK_MAIL_FROM,
+        defaultFromName:
+          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+        ...explicitConfig,
+      });
+
     default:
       throw new EmailError(
         `Unknown provider type: ${providerType}`,

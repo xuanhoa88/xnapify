@@ -51,7 +51,7 @@ const workerPool = createWorkerPool(workersContext, {
  * @returns {Promise<Object>} Send result
  */
 workerPool.processSend = async function processSend(emails, options = {}) {
-  const { forceFork, ...sendOptions } = options;
+  const { forceFork, throwOnError, ...sendOptions } = options;
   return await this.sendRequest(
     'send',
     'SEND_EMAIL',
@@ -60,7 +60,7 @@ workerPool.processSend = async function processSend(emails, options = {}) {
       emails,
       options: sendOptions,
     },
-    { forceFork },
+    { forceFork, throwOnError },
   );
 };
 

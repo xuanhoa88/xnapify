@@ -44,12 +44,18 @@ workerPool.createZipFile = async function createZipFile(
   outputPath,
   options = {},
 ) {
-  return await this.sendRequest('zip', 'ZIP_FILES', {
-    type: 'CREATE_ZIP',
-    fileInfos,
-    outputPath,
-    options,
-  });
+  const { throwOnError, ...zipOptions } = options;
+  return await this.sendRequest(
+    'zip',
+    'ZIP_FILES',
+    {
+      type: 'CREATE_ZIP',
+      fileInfos,
+      outputPath,
+      options: zipOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -64,12 +70,18 @@ workerPool.extractZip = async function extractZip(
   extractPath,
   options = {},
 ) {
-  return await this.sendRequest('zip', 'ZIP_FILES', {
-    type: 'EXTRACT_ZIP',
-    zipSource,
-    extractPath,
-    options,
-  });
+  const { throwOnError, ...extractOptions } = options;
+  return await this.sendRequest(
+    'zip',
+    'ZIP_FILES',
+    {
+      type: 'EXTRACT_ZIP',
+      zipSource,
+      extractPath,
+      options: extractOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -83,7 +95,7 @@ workerPool.processUpload = async function processUpload(
   filesData,
   options = {},
 ) {
-  const { forceFork, ...uploadOptions } = options;
+  const { forceFork, throwOnError, ...uploadOptions } = options;
   const type =
     Array.isArray(filesData) && filesData.length > 1
       ? 'UPLOAD_BATCH'
@@ -96,7 +108,7 @@ workerPool.processUpload = async function processUpload(
       filesData,
       options: uploadOptions,
     },
-    { forceFork },
+    { forceFork, throwOnError },
   );
 };
 
@@ -110,15 +122,21 @@ workerPool.processDownload = async function processDownload(
   fileNames,
   options = {},
 ) {
+  const { throwOnError, ...downloadOptions } = options;
   const type =
     Array.isArray(fileNames) && fileNames.length > 1
       ? 'DOWNLOAD_BATCH'
       : 'DOWNLOAD_SINGLE';
-  return await this.sendRequest('download', 'DOWNLOAD_FILES', {
-    type,
-    fileNames,
-    options,
-  });
+  return await this.sendRequest(
+    'download',
+    'DOWNLOAD_FILES',
+    {
+      type,
+      fileNames,
+      options: downloadOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -132,7 +150,7 @@ workerPool.processDelete = async function processDelete(
   fileNames,
   options = {},
 ) {
-  const { forceFork, ...deleteOptions } = options;
+  const { forceFork, throwOnError, ...deleteOptions } = options;
   const type =
     Array.isArray(fileNames) && fileNames.length > 1
       ? 'DELETE_BATCH'
@@ -145,7 +163,7 @@ workerPool.processDelete = async function processDelete(
       fileNames,
       options: deleteOptions,
     },
-    { forceFork },
+    { forceFork, throwOnError },
   );
 };
 
@@ -160,7 +178,7 @@ workerPool.processRename = async function processRename(
   operations,
   options = {},
 ) {
-  const { forceFork, ...renameOptions } = options;
+  const { forceFork, throwOnError, ...renameOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'RENAME_BATCH'
@@ -173,7 +191,7 @@ workerPool.processRename = async function processRename(
       operations,
       options: renameOptions,
     },
-    { forceFork },
+    { forceFork, throwOnError },
   );
 };
 
@@ -185,7 +203,7 @@ workerPool.processRename = async function processRename(
  * @returns {Promise<Object>} Copy result
  */
 workerPool.processCopy = async function processCopy(operations, options = {}) {
-  const { forceFork, ...copyOptions } = options;
+  const { forceFork, throwOnError, ...copyOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'COPY_BATCH'
@@ -198,7 +216,7 @@ workerPool.processCopy = async function processCopy(operations, options = {}) {
       operations,
       options: copyOptions,
     },
-    { forceFork },
+    { forceFork, throwOnError },
   );
 };
 
@@ -209,15 +227,21 @@ workerPool.processCopy = async function processCopy(operations, options = {}) {
  * @returns {Promise<Object>} Sync result
  */
 workerPool.processSync = async function processSync(operations, options = {}) {
+  const { throwOnError, ...syncOptions } = options;
   const type =
     Array.isArray(operations) && operations.length > 1
       ? 'SYNC_BATCH'
       : 'SYNC_SINGLE';
-  return await this.sendRequest('sync', 'SYNC_FILES', {
-    type,
-    operations,
-    options,
-  });
+  return await this.sendRequest(
+    'sync',
+    'SYNC_FILES',
+    {
+      type,
+      operations,
+      options: syncOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -227,11 +251,17 @@ workerPool.processSync = async function processSync(operations, options = {}) {
  * @returns {Promise<Object>} Info result
  */
 workerPool.processInfo = async function processInfo(fileName, options = {}) {
-  return await this.sendRequest('info', 'FILE_INFO', {
-    type: 'GET_FILE_INFO',
-    fileName,
-    options,
-  });
+  const { throwOnError, ...infoOptions } = options;
+  return await this.sendRequest(
+    'info',
+    'FILE_INFO',
+    {
+      type: 'GET_FILE_INFO',
+      fileName,
+      options: infoOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -244,11 +274,17 @@ workerPool.processPreview = async function processPreview(
   fileName,
   options = {},
 ) {
-  return await this.sendRequest('info', 'FILE_INFO', {
-    type: 'PREVIEW_FILE',
-    fileName,
-    options,
-  });
+  const { throwOnError, ...previewOptions } = options;
+  return await this.sendRequest(
+    'info',
+    'FILE_INFO',
+    {
+      type: 'PREVIEW_FILE',
+      fileName,
+      options: previewOptions,
+    },
+    { throwOnError },
+  );
 };
 
 // ==========================================================================

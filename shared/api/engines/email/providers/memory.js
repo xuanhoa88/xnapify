@@ -16,6 +16,7 @@ import { EmailError } from '../utils/errors';
  */
 export class MemoryEmailProvider {
   constructor(config = {}) {
+    this.name = 'memory';
     this.defaultFrom = config.defaultFrom || 'test@example.com';
     this.defaultFromName = config.defaultFromName || 'Test Sender';
     this.maxStoredEmails = config.maxStoredEmails || 1000;

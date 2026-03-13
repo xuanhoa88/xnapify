@@ -176,28 +176,34 @@ export async function processEmails(provider, emails, options = {}) {
   };
 
   const maxRetries = options.maxRetries || 3;
+  const concurrency = options.concurrency || 10;
 
-  const promises = emailList.map(async emailData => {
-    try {
-      // Use retry logic for bulk sends
-      const result = await sendWithRetry(
-        () => processSingleEmail(emailData, provider, options),
-        maxRetries,
-      );
-      results.successful.push({
-        to: emailData.to,
-        messageId: result.messageId,
-      });
-    } catch (error) {
-      results.failed.push({
-        to: emailData.to,
-        error: error.message,
-        retries: maxRetries - 1,
-      });
-    }
-  });
+  // Process in chunks to limit concurrent connections
+  for (let i = 0; i < emailList.length; i += concurrency) {
+    const chunk = emailList.slice(i, i + concurrency);
 
-  await Promise.all(promises);
+    const promises = chunk.map(async emailData => {
+      try {
+        // Use retry logic for bulk sends
+        const result = await sendWithRetry(
+          () => processSingleEmail(emailData, provider, options),
+          maxRetries,
+        );
+        results.successful.push({
+          to: emailData.to,
+          messageId: result.messageId,
+        });
+      } catch (error) {
+        results.failed.push({
+          to: emailData.to,
+          error: error.message,
+          retries: maxRetries - 1,
+        });
+      }
+    });
+
+    await Promise.all(promises);
+  }
 
   return createOperationResult(
     true,

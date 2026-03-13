@@ -179,12 +179,13 @@ export async function changeUserPassword(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(
-        `Failed to send password change notification email to ${user.email}:`,
-        err,
+      console.warn(
+        `⚠️ Failed to send password change notification email to ${user.email}:`,
+        err.message,
       );
     }
   }
@@ -347,12 +348,13 @@ export async function deleteUserAccount(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(
-        `Failed to send account deletion notification email to ${userEmail}:`,
-        err,
+      console.warn(
+        `⚠️ Failed to send account deletion notification email to ${userEmail}:`,
+        err.message,
       );
     }
   }

@@ -40,10 +40,16 @@ const workerPool = createWorkerPool(workersContext, {
  * @returns {Promise<Object>} Send result
  */
 workerPool.processSend = async function processSend(webhooks, options = {}) {
-  return await this.sendRequest('send', 'SEND_WEBHOOK', {
-    webhooks,
-    options,
-  });
+  const { throwOnError, ...sendOptions } = options;
+  return await this.sendRequest(
+    'send',
+    'SEND_WEBHOOK',
+    {
+      webhooks,
+      options: sendOptions,
+    },
+    { throwOnError },
+  );
 };
 
 /**
@@ -51,8 +57,11 @@ workerPool.processSend = async function processSend(webhooks, options = {}) {
  * @param {Object} data - Persist data
  * @returns {Promise<Object>} Persist result
  */
-workerPool.processPersist = async function processPersist(data) {
-  return await this.sendRequest('persist', 'PERSIST_WEBHOOK', data);
+workerPool.processPersist = async function processPersist(data, options = {}) {
+  const { throwOnError } = options;
+  return await this.sendRequest('persist', 'PERSIST_WEBHOOK', data, {
+    throwOnError,
+  });
 };
 
 /**

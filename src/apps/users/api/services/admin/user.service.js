@@ -137,10 +137,14 @@ export async function createUser(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(`Failed to send admin welcome email to ${email}:`, err);
+      console.warn(
+        `⚠️ Failed to send admin welcome email to ${email}:`,
+        err.message,
+      );
     }
   }
 
@@ -501,12 +505,13 @@ export async function updateUserById(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(
-        `Failed to send password reset notification email to ${user.email}:`,
-        err,
+      console.warn(
+        `⚠️ Failed to send password reset notification email to ${user.email}:`,
+        err.message,
       );
     }
   }
@@ -673,12 +678,13 @@ export async function bulkUpdateStatus(
             {
               useWorker: true,
               maxRetries: 3,
+              throwOnError: true,
             },
           );
         } catch (err) {
-          console.error(
-            `Failed to send account status notification email to ${user.email}:`,
-            err,
+          console.warn(
+            `⚠️ Failed to send account status notification email to ${user.email}:`,
+            err.message,
           );
         }
       }
@@ -755,12 +761,13 @@ export async function bulkDelete(
               {
                 useWorker: true,
                 maxRetries: 3,
+                throwOnError: true,
               },
             );
           } catch (err) {
-            console.error(
-              `Failed to send account deletion notification email to ${deletedEmail}:`,
-              err,
+            console.warn(
+              `⚠️ Failed to send account deletion notification email to ${deletedEmail}:`,
+              err.message,
             );
           }
         }

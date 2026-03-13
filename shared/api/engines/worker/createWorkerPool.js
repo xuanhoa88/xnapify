@@ -57,7 +57,6 @@ export function createWorkerPool(workersContext, options = {}) {
     workerTimeout = DEFAULT_WORKER_CONFIG.workerTimeout,
     maxRequestsPerWorker = DEFAULT_WORKER_CONFIG.maxRequestsPerWorker,
     workerCreationTimeout = DEFAULT_WORKER_CONFIG.workerCreationTimeout,
-    forceFork = DEFAULT_WORKER_CONFIG.forceFork,
   } = options;
 
   // Cache for imported worker modules
@@ -272,17 +271,28 @@ export function createWorkerPool(workersContext, options = {}) {
 
     /**
      * Send request to worker using hybrid execution strategy
+     *
+     * Always tries same-process execution first (instant, no overhead).
+     * Falls back to forked worker only if same-process fails.
+     * This prevents fork timeouts from blocking requests.
+     *
      * @param {string} workerType - Type of worker
      * @param {string} messageType - Message type for the worker
      * @param {Object} data - Request data to process
      * @param {Object} requestOptions - Request-specific options
-     * @param {boolean} requestOptions.forceFork - Force fork for this request
+     * @param {boolean} requestOptions.forceFork - If true, skip same-process and use fork directly
      * @returns {Promise<Object>} Worker response
      */
     async sendRequest(workerType, messageType, data, requestOptions = {}) {
-      // Check if we should force fork (from config or per-request)
-      const shouldForceFork = requestOptions.forceFork || forceFork;
+      let { throwOnError } = requestOptions;
+      if (throwOnError === undefined && data && data.options) {
+        throwOnError = data.options.throwOnError;
+      }
 
+      const forceForkOption = requestOptions.forceFork;
+      const shouldForceFork = forceForkOption || options.forceFork || false;
+
+      // Try same-process execution first (fast, no fork overhead)
       if (!shouldForceFork) {
         const workerModule = tryImportWorkerModule(workerType);
 
@@ -295,6 +305,21 @@ export function createWorkerPool(workersContext, options = {}) {
             });
 
             if (result && result.success != null) {
+              if (throwOnError && !result.success) {
+                const message =
+                  (result.error && result.error.message) ||
+                  result.message ||
+                  'Worker processing failed';
+                const code =
+                  (result.error && result.error.code) || 'WORKER_ERROR';
+                const statusCode =
+                  (result.error && result.error.statusCode) || 500;
+
+                const err = new Error(message);
+                err.code = code;
+                err.statusCode = statusCode;
+                throw err;
+              }
               return result;
             }
           } catch (error) {
@@ -306,7 +331,86 @@ export function createWorkerPool(workersContext, options = {}) {
         }
       }
 
-      return this.sendRequestToForkedWorker(workerType, messageType, data);
+      // Fork fallback (or forced fork) — with graceful degradation
+      try {
+        const result = await this.sendRequestToForkedWorker(
+          workerType,
+          messageType,
+          data,
+        );
+
+        if (throwOnError && !result.success) {
+          let message = 'Worker processing failed';
+          if (result.error && result.error.message) {
+            message = result.error.message;
+          } else if (result.message) {
+            message = result.message;
+          }
+          const code = (result.error && result.error.code) || 'WORKER_ERROR';
+          const statusCode = (result.error && result.error.statusCode) || 500;
+
+          const err = new Error(message);
+          err.code = code;
+          err.statusCode = statusCode;
+          throw err;
+        }
+
+        return result;
+      } catch (forkError) {
+        // If fork was forced and failed, try same-process as last resort
+        // UNLESS the error is explicitly that the worker is unknown/unregistered
+        const isUnknownWorker =
+          forkError.code === 'UNKNOWN_WORKER' ||
+          (forkError.message &&
+            forkError.message.includes('Unknown worker type'));
+
+        if (shouldForceFork && !isUnknownWorker) {
+          console.warn(
+            `⚠️ Fork worker '${workerType}' failed (${forkError.code || forkError.message}), falling back to same-process`,
+          );
+          const workerModule = tryImportWorkerModule(workerType);
+
+          if (workerModule && typeof workerModule.default === 'function') {
+            const result = await workerModule.default({
+              id: ++this.requestId,
+              type: messageType,
+              data,
+            });
+
+            if (result && result.success != null) {
+              if (throwOnError && !result.success) {
+                const message =
+                  (result.error && result.error.message) ||
+                  result.message ||
+                  'Worker processing failed';
+                const code =
+                  (result.error && result.error.code) || 'WORKER_ERROR';
+                const statusCode =
+                  (result.error && result.error.statusCode) || 500;
+
+                const err = new Error(message);
+                err.code = code;
+                err.statusCode = statusCode;
+                throw err;
+              }
+              return result;
+            }
+          }
+        }
+
+        if (throwOnError) {
+          throw forkError;
+        }
+
+        // Return standard failure format if it threw a hard error but throwOnError is false
+        return {
+          success: false,
+          error: {
+            message: forkError.message,
+            code: forkError.code || 'WORKER_ERROR',
+          },
+        };
+      }
     }
 
     /**
@@ -366,16 +470,20 @@ export function createWorkerPool(workersContext, options = {}) {
       this.pendingRequests.delete(id);
       this.releaseWorker(pendingRequest.worker);
 
+      // Always resolve with standard shape so sendRequest can apply throwOnError uniformly
       if (success) {
-        pendingRequest.resolve(result);
+        pendingRequest.resolve({ success: true, id, result });
       } else {
-        const workerError = new WorkerError(
-          error.message,
-          error.code,
-          error.status,
-        );
-        workerError.stack = error.stack;
-        pendingRequest.reject(workerError);
+        pendingRequest.resolve({
+          success: false,
+          id,
+          error: {
+            message: error.message,
+            code: error.code,
+            statusCode: error.status || error.statusCode || 500,
+            stack: error.stack,
+          },
+        });
       }
     }
 
@@ -517,6 +625,7 @@ export function createWorkerPool(workersContext, options = {}) {
 
   // Create singleton instance
   const workerPool = new WorkerPool();
+  workerPool.sendRequest = workerPool.sendRequest.bind(workerPool);
 
   // Register cleanup with global coordinator
 

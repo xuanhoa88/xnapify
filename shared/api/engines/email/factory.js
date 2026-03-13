@@ -21,8 +21,6 @@ import { send } from './services';
 export class EmailManager {
   constructor(config = {}) {
     this.providers = new Map();
-    this.defaultProvider =
-      config.provider || process.env.RSK_MAIL_PROVIDER || 'resend';
     this.config = config;
 
     // Worker thresholds (can be overridden globally)
@@ -32,27 +30,40 @@ export class EmailManager {
       ...config.workerThresholds,
     };
 
-    // Initialize default providers
-    this.initializeDefaultProviders();
-  }
-
-  /**
-   * Initialize default email providers based on configuration
-   * @private
-   */
-  initializeDefaultProviders() {
     // Always add memory provider (for testing)
     this.providers.set(
       'memory',
       new MemoryEmailProvider(this.config.memory || {}),
     );
+  }
 
-    // SMTP provider (if configured)
+  /**
+   * Get default provider name dynamically (lazy evaluated)
+   */
+  get defaultProvider() {
+    return this.config.provider || process.env.RSK_MAIL_PROVIDER || 'resend';
+  }
+
+  /**
+   * Lazily initialize providers when requested, catching late-loaded dotenv configs
+   */
+  lazyInitProvider(name) {
+    if (this.providers.has(name)) return;
+
     if (
-      this.config.smtp ||
-      process.env.RSK_SMTP_HOST ||
-      this.defaultProvider === 'smtp'
+      name === 'smtp' &&
+      (this.config.smtp ||
+        process.env.RSK_SMTP_HOST ||
+        this.defaultProvider === 'smtp')
     ) {
+      const smtpHost =
+        (this.config.smtp && this.config.smtp.host) ||
+        process.env.RSK_SMTP_HOST;
+      if (!smtpHost && this.defaultProvider === 'smtp') {
+        console.warn(
+          '⚠️ SMTP is the default email provider but RSK_SMTP_HOST is not set. Emails will fail.',
+        );
+      }
       this.providers.set(
         'smtp',
         new SmtpEmailProvider(
@@ -68,10 +79,25 @@ export class EmailManager {
           },
         ),
       );
-    }
-
-    // SendGrid provider (if configured)
-    if (this.config.sendgrid || process.env.RSK_SENDGRID_KEY) {
+    } else if (
+      name === 'resend' &&
+      (this.config.resend || process.env.RSK_RESEND_KEY)
+    ) {
+      this.providers.set(
+        'resend',
+        new ResendEmailProvider(
+          this.config.resend || {
+            apiKey: process.env.RSK_RESEND_KEY,
+            defaultFrom: process.env.RSK_MAIL_FROM,
+            defaultFromName:
+              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          },
+        ),
+      );
+    } else if (
+      name === 'sendgrid' &&
+      (this.config.sendgrid || process.env.RSK_SENDGRID_KEY)
+    ) {
       this.providers.set(
         'sendgrid',
         new SendGridEmailProvider(
@@ -83,12 +109,9 @@ export class EmailManager {
           },
         ),
       );
-    }
-
-    // Mailgun provider (if configured)
-    if (
-      this.config.mailgun ||
-      (process.env.RSK_MAILGUN_KEY && process.env.RSK_MAILGUN_DOMAIN)
+    } else if (
+      name === 'mailgun' &&
+      (this.config.mailgun || process.env.RSK_MAILGUN_KEY)
     ) {
       this.providers.set(
         'mailgun',
@@ -97,21 +120,6 @@ export class EmailManager {
             apiKey: process.env.RSK_MAILGUN_KEY,
             domain: process.env.RSK_MAILGUN_DOMAIN,
             region: process.env.RSK_MAILGUN_REGION || 'us',
-            defaultFrom: process.env.RSK_MAIL_FROM,
-            defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
-          },
-        ),
-      );
-    }
-
-    // Resend provider (if configured)
-    if (this.config.resend || process.env.RSK_RESEND_KEY) {
-      this.providers.set(
-        'resend',
-        new ResendEmailProvider(
-          this.config.resend || {
-            apiKey: process.env.RSK_RESEND_KEY,
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
               process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
@@ -145,6 +153,7 @@ export class EmailManager {
    * @returns {Object|null} Provider instance or null
    */
   getProvider(name) {
+    this.lazyInitProvider(name);
     return this.providers.get(name) || null;
   }
 
@@ -153,6 +162,10 @@ export class EmailManager {
    * @returns {Array<string>} Array of provider names
    */
   getProviderNames() {
+    // Attempt to init standard providers to reflect availability
+    ['smtp', 'resend', 'sendgrid', 'mailgun'].forEach(p =>
+      this.lazyInitProvider(p),
+    );
     return Array.from(this.providers.keys());
   }
 
@@ -162,6 +175,7 @@ export class EmailManager {
    * @returns {boolean} True if provider exists
    */
   hasProvider(name) {
+    this.lazyInitProvider(name);
     return this.providers.has(name);
   }
 
@@ -170,6 +184,7 @@ export class EmailManager {
    * @returns {Object} Stats object keyed by provider name
    */
   getAllStats() {
+    this.getProviderNames(); // Ensure all available are initialized
     const stats = {};
     for (const [name, provider] of this.providers) {
       try {
@@ -222,34 +237,6 @@ export class EmailManager {
    * @param {number} [options.batchThreshold=5] - Number of emails to trigger worker
    * @param {number} [options.largeBodyThreshold=102400] - Body size (bytes) to trigger worker
    * @returns {Promise<Object>} Send result
-   *
-   * @example
-   * // Single email (auto-decides, usually direct)
-   * await email.send({ to: 'user@example.com', subject: 'Hi', html: '<p>Hello</p>' });
-   *
-   * @example
-   * // Force worker processing
-   * await email.send({ to: 'user@example.com', subject: 'Hi', html: '<p>Hello</p>' }, {
-   *   useWorker: true
-   * });
-   *
-   * @example
-   * // Force direct processing (bypass worker even for batch)
-   * await email.send(largeEmailList, { useWorker: false });
-   *
-   * @example
-   * // Bulk emails (auto-offloads to worker for 5+ emails)
-   * await email.send([
-   *   { to: 'user1@example.com', subject: 'Hi', html: '<p>Hello 1</p>' },
-   *   { to: 'user2@example.com', subject: 'Hi', html: '<p>Hello 2</p>' }
-   * ]);
-   *
-   * @example
-   * // Custom thresholds
-   * await email.send(emailList, {
-   *   batchThreshold: 3,        // Use worker for 3+ emails
-   *   largeBodyThreshold: 50000 // Use worker for 50KB+ bodies
-   * });
    */
   async send(emails, options = {}) {
     return send(this, emails, options);

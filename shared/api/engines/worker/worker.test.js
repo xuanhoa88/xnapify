@@ -399,14 +399,20 @@ describe('Worker Engine', () => {
       expect(result2.result).toEqual({ result: 10 });
     });
 
-    it('should throw error for unknown worker type', async () => {
+    it('should return error for unknown worker type', async () => {
       workerPool = createWorkerPool(mockContext, {
         engineName: 'Test',
       });
 
-      await expect(
-        workerPool.sendRequest('unknown', 'UNKNOWN_TYPE', {}),
-      ).rejects.toThrow('Unknown worker type: unknown');
+      const result = await workerPool.sendRequest(
+        'unknown',
+        'UNKNOWN_TYPE',
+        {},
+        { throwOnError: false },
+      );
+
+      expect(result.success).toBe(false);
+      expect(result.error).toBeDefined();
     });
 
     it('should get statistics', () => {
@@ -455,7 +461,12 @@ describe('Worker Engine', () => {
 
       // After unregistering, requests should fail in fork mode
       await expect(
-        workerPool.sendRequest('test', 'TEST_WORKER', { value: 5 }),
+        workerPool.sendRequest(
+          'test',
+          'TEST_WORKER',
+          { value: 5 },
+          { throwOnError: true },
+        ),
       ).rejects.toThrow('Unknown worker type: test');
     });
 
@@ -535,7 +546,12 @@ describe('Worker Engine', () => {
         engineName: 'Test',
       });
 
-      const result = await workerPool.sendRequest('error', 'ERROR_WORKER', {});
+      const result = await workerPool.sendRequest(
+        'error',
+        'ERROR_WORKER',
+        {},
+        { throwOnError: false },
+      );
 
       expect(result.success).toBe(false);
       expect(result.error.message).toBe('Worker processing error');

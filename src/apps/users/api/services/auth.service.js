@@ -112,10 +112,11 @@ export async function registerUser(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(`Failed to send welcome email to ${email}:`, err);
+      console.warn(`⚠️ Failed to send welcome email to ${email}:`, err.message);
     }
   }
 
@@ -404,10 +405,14 @@ export async function resetPasswordRequest(
         {
           useWorker: true,
           maxRetries: 3,
+          throwOnError: true,
         },
       );
     } catch (err) {
-      console.error(`Failed to send password reset email to ${email}:`, err);
+      console.warn(
+        `⚠️ Failed to send password reset email to ${email}:`,
+        err.message,
+      );
     }
   }
 

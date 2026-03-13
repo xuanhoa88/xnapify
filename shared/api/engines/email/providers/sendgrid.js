@@ -172,10 +172,13 @@ export class SendGridEmailProvider {
       };
     } catch (err) {
       this.stats.failed++;
-      const error = new EmailError(
-        `SendGrid send failed: ${err.message}`,
-        'SEND_FAILED',
-      );
+      const error =
+        err instanceof EmailError
+          ? err
+          : new EmailError(
+              `SendGrid send failed: ${err.message}`,
+              'SEND_FAILED',
+            );
       throw error;
     }
   }
