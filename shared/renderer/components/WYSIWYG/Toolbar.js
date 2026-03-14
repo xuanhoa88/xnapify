@@ -10,6 +10,8 @@ import { useCallback, useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import PluginSlot from '@shared/plugin/client/PluginSlot';
+
 import ColorPickerPopup from './ColorPickerPopup';
 import EmojiPickerButton from './EmojiPickerButton';
 import MediaActionsPopup from './MediaActionsPopup';
@@ -344,6 +346,9 @@ export default function Toolbar({
           <div className={s.toolbarGroup}>{toolbarAppend(editor)}</div>
         </>
       )}
+
+      {/* Plugins */}
+      <PluginSlot name='wysiwyg.toolbar' editor={editor} />
 
       {/* View Options */}
       <div className={s.toolbarGroup}>

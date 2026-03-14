@@ -36,6 +36,8 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import PluginSlot from '@shared/plugin/client/PluginSlot';
+
 import CommentActionsPopup from './CommentActionsPopup';
 import { CommentExtension } from './CommentExtension';
 import { DetailsExtension } from './DetailsExtension';
@@ -560,6 +562,8 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
                 return true;
               }}
             >
+              <PluginSlot name='wysiwyg.bubbleMenu' editor={editor} />
+
               {isCommentPopupOpen ? (
                 <CommentActionsPopup
                   comments={

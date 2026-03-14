@@ -8,6 +8,7 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import PluginSlot from '@shared/plugin/client/PluginSlot';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton';
 import Icons from '@shared/renderer/components/WYSIWYG/ToolbarIcon';
@@ -68,6 +69,12 @@ export default function EmailTemplateSelector({ editor }) {
             {t('admin:emails.templates.blocks.' + tmpl.id, tmpl.label)}
           </ContextMenu.Item>
         ))}
+        {/* Allow users/plugins to easily add more templates dynamically */}
+        <PluginSlot
+          name='emails.templates.selector'
+          editor={editor}
+          onInsert={insertTemplate}
+        />
       </ContextMenu.Menu>
     </ContextMenu>
   );
