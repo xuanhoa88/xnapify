@@ -62,7 +62,6 @@ export async function register(req, res) {
         searchWorker: req.app.get('container').resolve('search:worker'),
         hook: req.app.get('hook').withContext(req.app),
         defaultRoleName: auth.DEFAULT_ROLE,
-        emailManager: req.app.get('email'),
       },
     );
 
@@ -355,7 +354,6 @@ export async function resetPasswordRequest(req, res) {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
-      emailManager: req.app.get('email'),
     });
 
     // Always return success for security (don't reveal if email exists)

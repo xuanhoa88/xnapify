@@ -350,7 +350,6 @@ export async function changePassword(req, res) {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
         hook: req.app.get('hook').withContext(req.app),
-        emailManager: req.app.get('email'),
       },
     );
 
@@ -463,7 +462,6 @@ export async function deleteAccount(req, res) {
       webhook: req.app.get('webhook'),
       searchWorker: req.app.get('container').resolve('search:worker'),
       hook: req.app.get('hook').withContext(req.app),
-      emailManager: req.app.get('email'),
     });
 
     req.app.get('auth').clearAllAuthCookies(res);

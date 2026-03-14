@@ -45,7 +45,6 @@ export async function registerUser(
     adminRoleName,
     defaultResources,
     defaultActions,
-    emailManager,
   } = {},
 ) {
   const { email, password } = userData;
@@ -100,28 +99,8 @@ export async function registerUser(
     useWorker: true,
   });
 
-  // Send welcome email using worker and retry mechanism
-  if (emailManager) {
-    try {
-      await emailManager.send(
-        {
-          to: email,
-          subject: `Welcome to ${process.env['RSK_APP_NAME']}`,
-          html: `<p>Hi ${user.profile.display_name || 'there'},</p><p>Welcome to ${process.env['RSK_APP_NAME']}! Your account has been successfully created.</p>`,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(`⚠️ Failed to send welcome email to ${email}:`, err.message);
-    }
-  }
-
   // Emit hook event if hook factory provided
-  await hook('auth').emit('registered', { user_id: user.id, email });
+  await hook('auth').emit('registered', { user_id: user.id, email, user });
 
   // Index user in search
   if (searchWorker) {
@@ -350,7 +329,7 @@ export async function verifyEmail(token, { models, webhook, hook } = {}) {
  */
 export async function resetPasswordRequest(
   email,
-  { models, webhook, hook, emailManager } = {},
+  { models, webhook, hook } = {},
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -392,34 +371,13 @@ export async function resetPasswordRequest(
     { useWorker: true },
   );
 
-  // Send password reset email using worker and retry mechanism
-  if (emailManager) {
-    const resetLink = `${process.env['RSK_APP_URL']}/reset-password?token=${tokenData.token}`;
-    try {
-      await emailManager.send(
-        {
-          to: email,
-          subject: 'Password Reset Request',
-          html: `<p>You requested a password reset. Click the link below to reset your password:</p><p><a href="${resetLink}">Reset Password</a></p><p>This link will expire in 1 hour.</p>`,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(
-        `⚠️ Failed to send password reset email to ${email}:`,
-        err.message,
-      );
-    }
-  }
+  const resetLink = `${process.env['RSK_APP_URL']}/reset-password?token=${tokenData.token}`;
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('password_reset_requested', {
     user_id: user.id,
     email,
+    resetLink,
   });
 
   // Return the raw token (to be sent via email)

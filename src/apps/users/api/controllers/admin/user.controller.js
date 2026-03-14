@@ -72,7 +72,6 @@ export async function createUser(req, res) {
         searchWorker: req.app.get('container').resolve('search:worker'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
-        emailManager: req.app.get('email'),
       },
     );
 
@@ -211,7 +210,6 @@ export async function updateUserById(req, res) {
       searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
       defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
-      emailManager: req.app.get('email'),
     });
 
     return http.sendSuccess(res, {
@@ -275,7 +273,6 @@ export async function bulkUpdateStatus(req, res) {
         models,
         webhook,
         actorId: req.user.id,
-        emailManager: req.app.get('email'),
       },
     );
 
@@ -334,7 +331,6 @@ export async function bulkDelete(req, res) {
       webhook,
       searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
-      emailManager: req.app.get('email'),
     });
 
     return http.sendSuccess(res, {
@@ -365,7 +361,6 @@ export async function deleteUser(req, res) {
       webhook,
       searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
-      emailManager: req.app.get('email'),
     });
 
     return http.sendSuccess(res, {

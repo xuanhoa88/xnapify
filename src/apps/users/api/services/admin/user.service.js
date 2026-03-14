@@ -29,7 +29,7 @@ import { fetchUserRBACData } from '../../utils/rbac/fetcher';
  */
 export async function createUser(
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName, emailManager },
+  { models, webhook, searchWorker, actorId, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
@@ -116,38 +116,8 @@ export async function createUser(
     await searchWorker.indexUser(user);
   }
 
-  // Send welcome email with password if email manager is available
-  if (emailManager) {
-    try {
-      await emailManager.send(
-        {
-          to: email,
-          subject: `Your ${process.env['RSK_APP_NAME']} Account Has Been Created`,
-          html: `
-            <p>Hi ${user.profile.display_name || 'there'},</p>
-            <p>An administrator has created an account for you on ${process.env['RSK_APP_NAME']}.</p>
-            <p>Your login details are:</p>
-            <ul>
-              <li><strong>Email:</strong> ${email}</li>
-              <li><strong>Password:</strong> ${password}</li>
-            </ul>
-            <p>You can log in <a href="${process.env['RSK_APP_URL']}/login">here</a>.</p>
-            <p>Please change your password after logging in for the first time.</p>
-          `,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(
-        `⚠️ Failed to send admin welcome email to ${email}:`,
-        err.message,
-      );
-    }
-  }
+  // Emit hook event
+  await hook('admin:users').emit('created', { email, password, user });
 
   return formatAdminUserResponse(user, { defaultRoleName });
 }
@@ -359,7 +329,7 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName, emailManager },
+  { models, webhook, searchWorker, actorId, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -489,32 +459,12 @@ export async function updateUserById(
     await searchWorker.indexUser(user);
   }
 
-  // Send email notification for password reset by admin
-  if (emailManager && password) {
-    try {
-      await emailManager.send(
-        {
-          to: user.email,
-          subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Was Reset`,
-          html: `
-            <p>Hi,</p>
-            <p>An administrator has reset the password for your ${process.env['RSK_APP_NAME']} account.</p>
-            <p>Your new temporary password is: <strong>${password}</strong></p>
-            <p>Please log in and <a href="${process.env['RSK_APP_URL']}/login">change your password</a> immediately.</p>
-          `,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(
-        `⚠️ Failed to send password reset notification email to ${user.email}:`,
-        err.message,
-      );
-    }
+  // Emit hook event for password reset by admin
+  if (password) {
+    await hook('admin:users').emit('password_reset', {
+      email: user.email,
+      password,
+    });
   }
 
   return formatAdminUserResponse(user, { defaultRoleName });
@@ -641,7 +591,7 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
 export async function bulkUpdateStatus(
   ids,
   is_active,
-  { models, webhook, actorId, emailManager },
+  { models, webhook, actorId, hook },
 ) {
   const { User } = models;
   const { sequelize } = User;
@@ -662,33 +612,11 @@ export async function bulkUpdateStatus(
       // Invalidate RBAC cache
       rbacCache.invalidateUser(user.id);
 
-      // Send email notification
-      if (emailManager) {
-        try {
-          await emailManager.send(
-            {
-              to: user.email,
-              subject: `Account Status Update: Your ${process.env['RSK_APP_NAME']} Account is Now ${is_active ? 'Active' : 'Inactive'}`,
-              html: `
-                <p>Hi,</p>
-                <p>An administrator has updated the status of your ${process.env['RSK_APP_NAME']} account.</p>
-                <p>Your account is now: <strong>${is_active ? 'Active' : 'Inactive'}</strong>.</p>
-                ${!is_active ? '<p>If you believe this is an error, please contact support.</p>' : ''}
-              `,
-            },
-            {
-              useWorker: true,
-              maxRetries: 3,
-              throwOnError: true,
-            },
-          );
-        } catch (err) {
-          console.warn(
-            `⚠️ Failed to send account status notification email to ${user.email}:`,
-            err.message,
-          );
-        }
-      }
+      // Emit hook event
+      await hook('admin:users').emit('status_updated', {
+        email: user.email,
+        is_active,
+      });
 
       return logUserActivity(
         webhook,
@@ -718,7 +646,7 @@ export async function bulkUpdateStatus(
  */
 export async function bulkDelete(
   ids,
-  { models, webhook, searchWorker, actorId, emailManager },
+  { models, webhook, searchWorker, actorId, hook },
 ) {
   const { User } = models;
   const { sequelize } = User;
@@ -746,32 +674,8 @@ export async function bulkDelete(
 
         const deletedEmail = deletedEmails[i];
 
-        // Send email notification
-        if (emailManager) {
-          try {
-            await emailManager.send(
-              {
-                to: deletedEmail,
-                subject: `Account Notice: Your ${process.env['RSK_APP_NAME']} Account Has Been Deleted`,
-                html: `
-                  <p>Hi,</p>
-                  <p>An administrator has removed your account from ${process.env['RSK_APP_NAME']}.</p>
-                  <p>If you have any questions or believe this was done in error, please contact support.</p>
-                `,
-              },
-              {
-                useWorker: true,
-                maxRetries: 3,
-                throwOnError: true,
-              },
-            );
-          } catch (err) {
-            console.warn(
-              `⚠️ Failed to send account deletion notification email to ${deletedEmail}:`,
-              err.message,
-            );
-          }
-        }
+        // Emit hook event
+        await hook('admin:users').emit('deleted', { email: deletedEmail });
 
         return logUserActivity(
           webhook,

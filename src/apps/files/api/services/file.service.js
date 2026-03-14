@@ -533,7 +533,7 @@ export async function updateSharing(
   userId,
   fileId,
   { shareType, shares = [] },
-  { models, emailManager },
+  { models, hook },
 ) {
   const { File, FileShare, User, Group } = models;
   const file = await findAccessibleFile(fileId, userId, models, 'editor');
@@ -550,7 +550,7 @@ export async function updateSharing(
 
   // Determine which new users are getting access
   let newUsersToNotify = [];
-  if (emailManager && shareType === 'shared_users' && shares.length > 0) {
+  if (hook && shareType === 'shared_users' && shares.length > 0) {
     const existingShares = await FileShare.findAll({
       where: { file_id: fileId, entity_type: 'user' },
     });
@@ -610,32 +610,20 @@ export async function updateSharing(
   });
 
   // Send notifications outside transaction
-  if (newUsersToNotify.length > 0) {
+  if (newUsersToNotify.length > 0 && hook) {
     const sharer = await User.findByPk(userId);
     const sharerEmail = sharer ? sharer.email : 'A user';
 
     await Promise.all(
       newUsersToNotify.map(async u => {
         try {
-          await emailManager.send(
-            {
-              to: u.email,
-              subject: `New File Shared With You on ${process.env['RSK_APP_NAME']}`,
-              html: `
-                <p>Hi,</p>
-                <p>${sharerEmail} has shared a file with you.</p>
-                <p><a href="${process.env['RSK_APP_URL']}/drive">Open your Drive</a> to view it.</p>
-              `,
-            },
-            {
-              useWorker: true,
-              maxRetries: 3,
-              throwOnError: true,
-            },
-          );
+          await hook('files').emit('shared', {
+            email: u.email,
+            sharerEmail,
+          });
         } catch (err) {
           console.warn(
-            `⚠️ Failed to send file share notification email:`,
+            `⚠️ Failed to emit file share hook for ${u.email}:`,
             err.message,
           );
         }

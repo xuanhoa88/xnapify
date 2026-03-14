@@ -30,24 +30,6 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 /**
- * Providers hook — called by the autoloader to share services with other modules.
- *
- * @param {Object} app - Express app instance
- */
-export async function providers(app) {
-  const container = app.get('container');
-
-  // Bind template engine to container for cross-module access
-  container.bind(
-    'emails:template_engine',
-    () => {
-      return app.get('template');
-    },
-    true,
-  );
-}
-
-/**
  * Migrations hook — run database migrations.
  *
  * @param {Object} app - Express app instance
@@ -83,6 +65,8 @@ export function models() {
   return modelsContext;
 }
 
+import { registerEmailHooks } from './hooks';
+
 /**
  * Routes hook — returns the webpack require.context for this module's routes.
  *
@@ -90,4 +74,13 @@ export function models() {
  */
 export function routes() {
   return routesContext;
+}
+
+/**
+ * Init hook — called after components are registered.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function init(app) {
+  registerEmailHooks(app);
 }

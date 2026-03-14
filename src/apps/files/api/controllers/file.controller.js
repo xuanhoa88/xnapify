@@ -300,7 +300,7 @@ export async function updateSharing(req, res) {
       { shareType, shares },
       {
         models: req.app.get('models'),
-        emailManager: req.app.get('email'),
+        hook: req.app.get('hook').withContext(req.app),
       },
     );
 

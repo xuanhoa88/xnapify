@@ -133,7 +133,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, webhook, hook, emailManager },
+  { models, webhook, hook },
 ) {
   const { User } = models;
 
@@ -158,37 +158,14 @@ export async function changeUserPassword(
   await user.update({ password: newPassword });
 
   // Run hooks
-  await hook('profile').emit('password_changed', { user, user_id });
+  await hook('profile').emit('password_changed', {
+    user,
+    user_id,
+    email: user.email,
+  });
 
   // Log activity
   await logUserActivity(webhook, 'password_changed', user_id);
-
-  if (emailManager) {
-    try {
-      await emailManager.send(
-        {
-          to: user.email,
-          subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Changed`,
-          html: `
-            <p>Hi,</p>
-            <p>This is a confirmation that the password for your ${process.env['RSK_APP_NAME']} account was recently changed.</p>
-            <p>If you made this change, you don't need to do anything else.</p>
-            <p><strong>If you didn't change your password, please contact support immediately or reset your password using the "Forgot Password" link.</strong></p>
-          `,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(
-        `⚠️ Failed to send password change notification email to ${user.email}:`,
-        err.message,
-      );
-    }
-  }
 
   return true;
 }
@@ -288,7 +265,7 @@ export async function getUserPreferences(user_id, { models, hook }) {
 export async function deleteUserAccount(
   user_id,
   password,
-  { models, webhook, searchWorker, hook, emailManager },
+  { models, webhook, searchWorker, hook },
 ) {
   const { User, UserProfile } = models;
 
@@ -331,32 +308,6 @@ export async function deleteUserAccount(
   // Remove from search index
   if (searchWorker) {
     await searchWorker.removeUser(user_id);
-  }
-
-  if (emailManager) {
-    try {
-      await emailManager.send(
-        {
-          to: userEmail,
-          subject: `Confirmation: Your ${process.env['RSK_APP_NAME']} Account Was Deleted`,
-          html: `
-            <p>Hi,</p>
-            <p>This is to confirm that your ${process.env['RSK_APP_NAME']} account has been successfully deleted.</p>
-            <p>We're sorry to see you go! If you ever decide to return, you can always create a new account.</p>
-          `,
-        },
-        {
-          useWorker: true,
-          maxRetries: 3,
-          throwOnError: true,
-        },
-      );
-    } catch (err) {
-      console.warn(
-        `⚠️ Failed to send account deletion notification email to ${userEmail}:`,
-        err.message,
-      );
-    }
   }
 
   return true;
