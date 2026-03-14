@@ -260,7 +260,9 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
             label={t('admin:emails.form.slug', 'Slug')}
             required
           >
-            <Form.Input
+            <Form.InputMask
+              mask={'s'.repeat(100)}
+              maskPlaceholder=''
               placeholder={t(
                 'admin:emails.form.slugPlaceholder',
                 'e.g. welcome-email',

@@ -23,6 +23,7 @@ import useMask from './useMask';
  *   9 — digit (0-9)
  *   a — letter (A-Z, a-z)
  *   * — alphanumeric (A-Z, a-z, 0-9)
+ *   s — lowercase alphanumeric and hyphen (a-z, 0-9, -)
  *   \ — escape the next character
  *
  * Usage:
