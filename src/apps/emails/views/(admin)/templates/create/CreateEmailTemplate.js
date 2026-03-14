@@ -20,6 +20,7 @@ import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 
 import { createEmailTemplateFormSchema } from '../../../../validator/admin';
+import EmailTemplateSelector from '../../components/EmailTemplateSelector';
 import TemplateEditor from '../../components/TemplateEditor';
 import {
   createTemplate,
@@ -108,7 +109,7 @@ function CreateEmailTemplate() {
           onClick={() => handleCancel(isDirtyRef.current)}
         >
           <Icon name='arrowLeft' />
-          {t('admin:buttons.backToTemplates', 'Back to Templates')}
+          {t('admin:buttons.backToTemplates', 'Back to Email Templates')}
         </Button>
       </Box.Header>
 
@@ -274,6 +275,7 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
         >
           <Form.WYSIWYG
             markdown={false}
+            toolbarAppend={editor => <EmailTemplateSelector editor={editor} />}
             placeholder={t(
               'admin:emails.form.emailBodyPlaceholder',
               'Compose your email body here...',

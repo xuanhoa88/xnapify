@@ -5,11 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useEffect } from 'react';
-
 import PropTypes from 'prop-types';
 
-import s from './ColorPickerPopup.css';
+import ContextMenu from '../ContextMenu';
+
 import ToolbarButton from './ToolbarButton';
 
 /**
@@ -38,59 +37,53 @@ export default function ColorPickerPopup({
   resetLabel = 'Reset',
   disabled,
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
   return (
-    <div className={s.container} ref={containerRef}>
-      <ToolbarButton
+    <ContextMenu align='left'>
+      <ContextMenu.Trigger
+        as={ToolbarButton}
         icon={icon}
         title={title}
-        isActive={isOpen || isActive}
-        onClick={() => setIsOpen(prev => !prev)}
+        isActive={isActive}
         disabled={disabled}
-      />
+      >
+        {null}
+      </ContextMenu.Trigger>
 
-      {isOpen && (
-        <div className={s.popover}>
+      <ContextMenu.Menu>
+        <div style={{ padding: '4px', display: 'flex', gap: '8px' }}>
           <input
             type='color'
-            className={s.colorInput}
+            style={{
+              width: '32px',
+              height: '32px',
+              padding: 0,
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+            }}
             value={value || defaultValue}
             onInput={e => onChange(e.target.value)}
           />
           {onReset && (
             <button
               type='button'
-              className={s.resetBtn}
-              onClick={() => {
-                onReset();
-                setIsOpen(false);
+              style={{
+                padding: '4px 8px',
+                fontSize: '12px',
+                color: 'var(--color-text-secondary)',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: '4px',
+                cursor: 'pointer',
               }}
+              onClick={onReset}
             >
               {resetLabel}
             </button>
           )}
         </div>
-      )}
-    </div>
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

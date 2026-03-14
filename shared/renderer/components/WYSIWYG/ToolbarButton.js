@@ -6,6 +6,8 @@
  */
 
 /* eslint-disable css-modules/no-unused-class */
+import { forwardRef } from 'react';
+
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
@@ -14,32 +16,40 @@ import s from './ToolbarButton.css';
 /**
  * ToolbarButton — A single toolbar action button.
  */
-export default function ToolbarButton({
-  icon,
-  title,
-  isActive,
-  onClick,
-  disabled,
-}) {
+const ToolbarButton = forwardRef(function ToolbarButton(
+  { icon, title, isActive, onClick, disabled, className, children, ...props },
+  ref,
+) {
   return (
     <button
+      ref={ref}
       type='button'
-      className={clsx(s.toolbarBtn, { [s.toolbarBtnActive]: isActive })}
+      className={clsx(
+        s.toolbarBtn,
+        { [s.toolbarBtnActive]: isActive },
+        className,
+      )}
       onClick={onClick}
       disabled={disabled}
       title={title}
       aria-label={title}
       aria-pressed={isActive}
+      {...props}
     >
       {icon}
+      {children}
     </button>
   );
-}
+});
 
 ToolbarButton.propTypes = {
-  icon: PropTypes.node.isRequired,
+  icon: PropTypes.node,
   title: PropTypes.string.isRequired,
   isActive: PropTypes.bool,
-  onClick: PropTypes.func.isRequired,
+  onClick: PropTypes.func,
   disabled: PropTypes.bool,
+  className: PropTypes.string,
+  children: PropTypes.node,
 };
+
+export default ToolbarButton;

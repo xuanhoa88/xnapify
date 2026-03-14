@@ -5,12 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useEffect } from 'react';
-
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import s from './MediaActionsPopup.css';
+import ContextMenu from '../ContextMenu';
+
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 
@@ -33,87 +32,55 @@ export default function MediaActionsPopup({
   hasYoutube,
 }) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const run = command => {
-    command();
-    setIsOpen(false);
-  };
-
-  const actionItem = (icon, label, command, opts = {}) => (
-    <button
-      key={label}
-      type='button'
-      className={s.actionItem}
-      onClick={() => run(command)}
-      disabled={opts.disabled}
-    >
-      <span className={s.actionIcon}>{icon}</span>
-      {label}
-    </button>
-  );
 
   return (
-    <div className={s.container} ref={containerRef}>
-      <ToolbarButton
+    <ContextMenu align='left'>
+      <ContextMenu.Trigger
+        as={ToolbarButton}
         icon={Icons.video}
         title={t('shared:form.wysiwyg.mediaActions', 'Media')}
-        isActive={isOpen}
-        onClick={() => setIsOpen(prev => !prev)}
         disabled={disabled}
-      />
+      >
+        {null}
+      </ContextMenu.Trigger>
 
-      {isOpen && (
-        <div className={s.popover}>
-          {hasVideo &&
-            actionItem(
-              Icons.video,
-              t('shared:form.wysiwyg.video', 'Video'),
-              () => {
-                const url = window.prompt('Video URL (MP4, WebM, etc.)');
-                if (url) editor.chain().focus().setVideo({ src: url }).run();
-              },
-            )}
-          {hasAudio &&
-            actionItem(
-              Icons.audio,
-              t('shared:form.wysiwyg.audio', 'Audio'),
-              () => {
-                const url = window.prompt('Audio URL (MP3, WAV, etc.)');
-                if (url) editor.chain().focus().setAudio({ src: url }).run();
-              },
-            )}
-          {hasYoutube &&
-            actionItem(
-              Icons.youtube,
-              t('shared:form.wysiwyg.youtube', 'YouTube'),
-              () => {
-                const url = window.prompt('YouTube Video URL');
-                if (url)
-                  editor.chain().focus().setYoutubeVideo({ src: url }).run();
-              },
-            )}
-        </div>
-      )}
-    </div>
+      <ContextMenu.Menu>
+        {hasVideo && (
+          <ContextMenu.Item
+            icon={Icons.video}
+            onClick={() => {
+              const url = window.prompt('Video URL (MP4, WebM, etc.)');
+              if (url) editor.chain().focus().setVideo({ src: url }).run();
+            }}
+          >
+            {t('shared:form.wysiwyg.video', 'Video')}
+          </ContextMenu.Item>
+        )}
+        {hasAudio && (
+          <ContextMenu.Item
+            icon={Icons.audio}
+            onClick={() => {
+              const url = window.prompt('Audio URL (MP3, WAV, etc.)');
+              if (url) editor.chain().focus().setAudio({ src: url }).run();
+            }}
+          >
+            {t('shared:form.wysiwyg.audio', 'Audio')}
+          </ContextMenu.Item>
+        )}
+        {hasYoutube && (
+          <ContextMenu.Item
+            icon={Icons.youtube}
+            onClick={() => {
+              const url = window.prompt('YouTube Video URL');
+              if (url)
+                editor.chain().focus().setYoutubeVideo({ src: url }).run();
+            }}
+          >
+            {t('shared:form.wysiwyg.youtube', 'YouTube')}
+          </ContextMenu.Item>
+        )}
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 

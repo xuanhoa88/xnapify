@@ -21,6 +21,7 @@ import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 
 import { updateEmailTemplateFormSchema } from '../../../../../validator/admin';
+import EmailTemplateSelector from '../../../components/EmailTemplateSelector';
 import TemplateEditor from '../../../components/TemplateEditor';
 import {
   fetchTemplateById,
@@ -146,7 +147,7 @@ function EditEmailTemplate({ params }) {
           variant='ghost'
           onClick={() => history.push('/admin/emails/templates')}
         >
-          {t('admin:emails.edit.backToList', 'Back to Templates')}
+          {t('admin:emails.edit.backToList', 'Back to Email Templates')}
         </Button>
       </div>
     );
@@ -308,6 +309,7 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
         >
           <Form.WYSIWYG
             markdown={false}
+            toolbarAppend={editor => <EmailTemplateSelector editor={editor} />}
             placeholder={t(
               'admin:emails.form.emailBodyPlaceholder',
               'Compose your email body here...',

@@ -29,12 +29,14 @@ import Icons from './ToolbarIcon';
  * @param {boolean} [props.isFullScreen]
  * @param {Function} [props.onToggleFullScreen]
  * @param {string[]} [props.excludeExtensions]
+ * @param {Function} [props.toolbarAppend]
  */
 export default function Toolbar({
   editor,
   isFullScreen,
   onToggleFullScreen,
   excludeExtensions = [],
+  toolbarAppend,
 }) {
   // Quick lookup: is a given extension enabled?
   const has = useCallback(
@@ -336,6 +338,13 @@ export default function Toolbar({
         />
       </div>
 
+      {toolbarAppend && (
+        <>
+          <div className={s.toolbarDivider} />
+          <div className={s.toolbarGroup}>{toolbarAppend(editor)}</div>
+        </>
+      )}
+
       {/* View Options */}
       <div className={s.toolbarGroup}>
         <ToolbarButton
@@ -358,4 +367,5 @@ Toolbar.propTypes = {
   isFullScreen: PropTypes.bool,
   onToggleFullScreen: PropTypes.func,
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
+  toolbarAppend: PropTypes.func,
 };

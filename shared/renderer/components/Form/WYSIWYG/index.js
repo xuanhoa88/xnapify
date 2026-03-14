@@ -43,6 +43,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
     addExtensions,
     excludeExtensions,
     editorProps,
+    toolbarAppend,
   },
   forwardedRef,
 ) {
@@ -76,6 +77,7 @@ const FormWYSIWYG = forwardRef(function FormWYSIWYG$(
       addExtensions={addExtensions}
       excludeExtensions={excludeExtensions}
       editorProps={editorProps}
+      toolbarAppend={toolbarAppend}
     />
   );
 });
@@ -90,6 +92,7 @@ FormWYSIWYG.propTypes = {
   addExtensions: PropTypes.array,
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
   editorProps: PropTypes.object,
+  toolbarAppend: PropTypes.func,
 };
 
 export default FormWYSIWYG;

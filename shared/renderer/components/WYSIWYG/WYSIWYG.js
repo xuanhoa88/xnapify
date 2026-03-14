@@ -127,6 +127,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
     addExtensions = [],
     excludeExtensions = [],
     editorProps: userEditorProps,
+    toolbarAppend,
   },
   forwardedRef,
 ) {
@@ -533,6 +534,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
         isFullScreen={isFullScreen}
         onToggleFullScreen={toggleFullScreen}
         excludeExtensions={excludeExtensions}
+        toolbarAppend={toolbarAppend}
       />
       <div className={s.editorContent}>
         {editor && (
@@ -636,6 +638,7 @@ WYSIWYG.propTypes = {
   addExtensions: PropTypes.array,
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
   editorProps: PropTypes.object,
+  toolbarAppend: PropTypes.func,
 };
 
 export default WYSIWYG;

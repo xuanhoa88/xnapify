@@ -5,12 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useRef, useEffect } from 'react';
-
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import s from './TableActionsPopup.css';
+import ContextMenu from '../ContextMenu';
+
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 
@@ -25,149 +24,124 @@ import Icons from './ToolbarIcon';
  */
 export default function TableActionsPopup({ editor, disabled }) {
   const { t } = useTranslation();
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(event.target)
-      ) {
-        setIsOpen(false);
-      }
-    }
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  const run = command => {
-    command();
-    setIsOpen(false);
-  };
-
-  const actionItem = (icon, label, command, opts = {}) => (
-    <button
-      key={label}
-      type='button'
-      className={`${s.actionItem}${opts.danger ? ` ${s.danger}` : ''}`}
-      onClick={() => run(command)}
-      disabled={opts.disabled}
-    >
-      <span className={s.actionIcon}>{icon}</span>
-      {label}
-    </button>
-  );
 
   return (
-    <div className={s.container} ref={containerRef}>
-      <ToolbarButton
+    <ContextMenu align='left'>
+      <ContextMenu.Trigger
+        as={ToolbarButton}
         icon={Icons.table}
         title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
-        isActive={isOpen || editor.isActive('table')}
-        onClick={() => setIsOpen(prev => !prev)}
+        isActive={editor.isActive('table')}
         disabled={disabled}
-      />
+      >
+        {null}
+      </ContextMenu.Trigger>
 
-      {isOpen && (
-        <div className={s.popover}>
-          {/* Insert */}
-          {actionItem(
-            Icons.table,
-            t('shared:form.wysiwyg.tableInsert', 'Insert Table'),
-            () =>
-              editor
-                .chain()
-                .focus()
-                .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-                .run(),
-          )}
+      <ContextMenu.Menu>
+        {/* Insert */}
+        <ContextMenu.Item
+          icon={Icons.table}
+          onClick={() =>
+            editor
+              .chain()
+              .focus()
+              .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
+              .run()
+          }
+        >
+          {t('shared:form.wysiwyg.tableInsert', 'Insert Table')}
+        </ContextMenu.Item>
 
-          {editor.isActive('table') && (
-            <>
-              <div className={s.divider} />
+        {editor.isActive('table') && (
+          <>
+            <ContextMenu.Divider />
 
-              {/* Row actions */}
-              {actionItem(
-                Icons.tableAddRowBefore,
-                t('shared:form.wysiwyg.tableRowBefore', 'Add Row Before'),
-                () => editor.chain().focus().addRowBefore().run(),
-              )}
-              {actionItem(
-                Icons.tableRow,
-                t('shared:form.wysiwyg.tableRowAfter', 'Add Row After'),
-                () => editor.chain().focus().addRowAfter().run(),
-              )}
-              {actionItem(
-                Icons.tableDeleteRow,
-                t('shared:form.wysiwyg.tableDeleteRow', 'Delete Row'),
-                () => editor.chain().focus().deleteRow().run(),
-                { danger: true },
-              )}
+            {/* Row actions */}
+            <ContextMenu.Item
+              icon={Icons.tableAddRowBefore}
+              onClick={() => editor.chain().focus().addRowBefore().run()}
+            >
+              {t('shared:form.wysiwyg.tableRowBefore', 'Add Row Before')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableRow}
+              onClick={() => editor.chain().focus().addRowAfter().run()}
+            >
+              {t('shared:form.wysiwyg.tableRowAfter', 'Add Row After')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableDeleteRow}
+              onClick={() => editor.chain().focus().deleteRow().run()}
+              variant='danger'
+            >
+              {t('shared:form.wysiwyg.tableDeleteRow', 'Delete Row')}
+            </ContextMenu.Item>
 
-              <div className={s.divider} />
+            <ContextMenu.Divider />
 
-              {/* Column actions */}
-              {actionItem(
-                Icons.tableAddColBefore,
-                t('shared:form.wysiwyg.tableColBefore', 'Add Column Before'),
-                () => editor.chain().focus().addColumnBefore().run(),
-              )}
-              {actionItem(
-                Icons.tableCol,
-                t('shared:form.wysiwyg.tableColAfter', 'Add Column After'),
-                () => editor.chain().focus().addColumnAfter().run(),
-              )}
-              {actionItem(
-                Icons.tableDeleteCol,
-                t('shared:form.wysiwyg.tableDeleteCol', 'Delete Column'),
-                () => editor.chain().focus().deleteColumn().run(),
-                { danger: true },
-              )}
+            {/* Column actions */}
+            <ContextMenu.Item
+              icon={Icons.tableAddColBefore}
+              onClick={() => editor.chain().focus().addColumnBefore().run()}
+            >
+              {t('shared:form.wysiwyg.tableColBefore', 'Add Column Before')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableCol}
+              onClick={() => editor.chain().focus().addColumnAfter().run()}
+            >
+              {t('shared:form.wysiwyg.tableColAfter', 'Add Column After')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableDeleteCol}
+              onClick={() => editor.chain().focus().deleteColumn().run()}
+              variant='danger'
+            >
+              {t('shared:form.wysiwyg.tableDeleteCol', 'Delete Column')}
+            </ContextMenu.Item>
 
-              <div className={s.divider} />
+            <ContextMenu.Divider />
 
-              {/* Cell & header actions */}
-              {actionItem(
-                Icons.tableMergeOrSplit,
-                t('shared:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells'),
-                () => editor.chain().focus().mergeOrSplit().run(),
+            {/* Cell & header actions */}
+            <ContextMenu.Item
+              icon={Icons.tableMergeOrSplit}
+              onClick={() => editor.chain().focus().mergeOrSplit().run()}
+            >
+              {t('shared:form.wysiwyg.tableMergeOrSplit', 'Merge/Split Cells')}
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableToggleHeader}
+              onClick={() => editor.chain().focus().toggleHeaderRow().run()}
+            >
+              {t(
+                'shared:form.wysiwyg.tableToggleHeaderRow',
+                'Toggle Header Row',
               )}
-              {actionItem(
-                Icons.tableToggleHeader,
-                t(
-                  'shared:form.wysiwyg.tableToggleHeaderRow',
-                  'Toggle Header Row',
-                ),
-                () => editor.chain().focus().toggleHeaderRow().run(),
+            </ContextMenu.Item>
+            <ContextMenu.Item
+              icon={Icons.tableToggleHeader}
+              onClick={() => editor.chain().focus().toggleHeaderColumn().run()}
+            >
+              {t(
+                'shared:form.wysiwyg.tableToggleHeaderCol',
+                'Toggle Header Column',
               )}
-              {actionItem(
-                Icons.tableToggleHeader,
-                t(
-                  'shared:form.wysiwyg.tableToggleHeaderCol',
-                  'Toggle Header Column',
-                ),
-                () => editor.chain().focus().toggleHeaderColumn().run(),
-              )}
+            </ContextMenu.Item>
 
-              <div className={s.divider} />
+            <ContextMenu.Divider />
 
-              {/* Delete table */}
-              {actionItem(
-                Icons.tableDelete,
-                t('shared:form.wysiwyg.tableDelete', 'Delete Table'),
-                () => editor.chain().focus().deleteTable().run(),
-                { danger: true },
-              )}
-            </>
-          )}
-        </div>
-      )}
-    </div>
+            {/* Delete table */}
+            <ContextMenu.Item
+              icon={Icons.tableDelete}
+              onClick={() => editor.chain().focus().deleteTable().run()}
+              variant='danger'
+            >
+              {t('shared:form.wysiwyg.tableDelete', 'Delete Table')}
+            </ContextMenu.Item>
+          </>
+        )}
+      </ContextMenu.Menu>
+    </ContextMenu>
   );
 }
 
