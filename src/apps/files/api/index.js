@@ -5,9 +5,18 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { SEED_PERMISSIONS } from './constants';
+
 // Auto-load migrations
 const migrationsContext = require.context(
   './database/migrations',
+  false,
+  /\.[cm]?[jt]s$/i,
+);
+
+// Auto-load seeds
+const seedsContext = require.context(
+  './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
@@ -23,6 +32,18 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 /**
+ * Providers hook — called by the autoloader to share services with other modules.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function providers(app) {
+  const container = app.get('container');
+
+  // Bind seed permissions to container as singleton
+  container.bind('files:seed_constants', () => SEED_PERMISSIONS, true);
+}
+
+/**
  * Migrations hook — run database migrations.
  *
  * @param {Object} app - Express app instance
@@ -34,6 +55,19 @@ export async function migrations(app) {
     [{ context: migrationsContext, prefix: 'files' }],
     { app },
   );
+}
+
+/**
+ * Seeds hook — run database seeds.
+ *
+ * @param {Object} app - Express app instance
+ */
+export async function seeds(app) {
+  const db = app.get('db');
+
+  await db.connection.runSeeds([{ context: seedsContext, prefix: 'files' }], {
+    app,
+  });
 }
 
 /**

@@ -183,35 +183,6 @@ export async function up(_, { app }) {
       description: 'Delete API keys',
       is_active: true,
     },
-    // Files CRUD
-    {
-      id: SEED_PERMISSIONS.filesCreate,
-      resource: DEFAULT_RESOURCES.FILES,
-      action: DEFAULT_ACTIONS.CREATE,
-      description: 'Create/Upload files',
-      is_active: true,
-    },
-    {
-      id: SEED_PERMISSIONS.filesRead,
-      resource: DEFAULT_RESOURCES.FILES,
-      action: DEFAULT_ACTIONS.READ,
-      description: 'View files',
-      is_active: true,
-    },
-    {
-      id: SEED_PERMISSIONS.filesUpdate,
-      resource: DEFAULT_RESOURCES.FILES,
-      action: DEFAULT_ACTIONS.UPDATE,
-      description: 'Update/Rename/Move files',
-      is_active: true,
-    },
-    {
-      id: SEED_PERMISSIONS.filesDelete,
-      resource: DEFAULT_RESOURCES.FILES,
-      action: DEFAULT_ACTIONS.DELETE,
-      description: 'Delete files',
-      is_active: true,
-    },
   ];
 
   await Permission.bulkCreate(permissions);
