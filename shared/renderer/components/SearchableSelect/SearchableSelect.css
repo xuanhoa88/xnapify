@@ -1,65 +1,101 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* =============================================================================
+   CONTAINER
+   ============================================================================= */
+
 .container {
   position: relative;
   min-width: 180px;
   font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
 }
+
+/* =============================================================================
+   CONTROL (trigger button)
+   ============================================================================= */
 
 .control {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--spacing-2);
   padding: 0 var(--spacing-3);
   height: 40px;
   background: var(--color-background);
-  border: 1px solid var(--color-border);
+  border: 1.5px solid var(--color-border);
   border-radius: var(--radius-md);
   cursor: pointer;
-  transition: var(--transition-base);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.15s ease;
   user-select: none;
 }
 
 .control:hover {
   border-color: var(--color-border-hover);
+  background-color: var(--color-background-secondary);
 }
 
-.control:focus {
+.control:focus-visible {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
+.control:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Disabled state */
 .disabled .control {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
   background: var(--color-background-secondary);
 }
 
 .disabled .control:hover {
   border-color: var(--color-border);
+  background-color: var(--color-background-secondary);
   box-shadow: none;
 }
+
+/* =============================================================================
+   VALUE & PLACEHOLDER
+   ============================================================================= */
 
 .value {
   color: var(--color-text-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  margin-right: var(--spacing-2);
   flex: 1;
+  line-height: 1.4;
 }
 
 .placeholder {
-  color: var(--color-text-secondary);
+  color: var(--color-text-tertiary);
 }
 
-/* Control right side (clear button + arrow) */
+/* =============================================================================
+   CONTROL RIGHT (clear + chevron)
+   ============================================================================= */
+
 .controlRight {
   display: flex;
   align-items: center;
-  gap: var(--spacing-2);
+  gap: var(--spacing-1);
   flex-shrink: 0;
+  margin-left: var(--spacing-1);
 }
 
+/* Clear button */
 .clearBtn {
   display: flex;
   align-items: center;
@@ -68,20 +104,25 @@
   height: 18px;
   padding: 0;
   border: none;
-  background: var(--color-background-secondary);
+  background: var(--color-background-tertiary);
   color: var(--color-text-secondary);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   cursor: pointer;
   font-size: 14px;
   line-height: 1;
-  transition: var(--transition-base);
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    transform 0.15s ease;
 }
 
 .clearBtn:hover {
   background: var(--color-error);
   color: white;
+  transform: scale(1.1);
 }
 
+/* Chevron arrow */
 .arrow {
   display: flex;
   align-items: center;
@@ -89,44 +130,38 @@
   width: 16px;
   height: 16px;
   pointer-events: none;
+  color: var(--color-text-tertiary);
+  transition: color 0.2s ease;
 }
 
-/* CSS chevron arrow - matches native select */
-.arrow::before {
-  content: '';
-  display: block;
-  width: 7px;
-  height: 7px;
-  border-right: 1.5px solid #666;
-  border-bottom: 1.5px solid #666;
-  transform: rotate(45deg);
-  margin-top: -3px;
+.control:hover .arrow {
+  color: var(--color-text-primary);
 }
 
-.open .arrow::before {
-  transform: rotate(-135deg);
-  margin-top: 3px;
-}
+/* =============================================================================
+   DROPDOWN MENU (Portal)
+   ============================================================================= */
 
-.control:hover .arrow::before {
-  border-color: #444;
-}
-
-/* Dropdown Menu (Positioned via Portals and JS) */
 .menu {
   background: var(--color-background);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-lg);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 4px 6px -1px rgb(0 0 0 / 10%),
+    0 10px 15px -3px rgb(0 0 0 / 7%),
+    0 0 0 1px rgb(0 0 0 / 3%);
   z-index: 100;
-  animation: fadeIn 0.15s ease-out;
+  animation: searchableSelectFadeIn 0.15s ease-out;
   overflow: hidden;
 }
 
-/* Search Container */
+/* =============================================================================
+   SEARCH CONTAINER (inside menu)
+   ============================================================================= */
+
 .searchContainer {
   position: relative;
-  padding: var(--spacing-3);
+  padding: var(--spacing-2);
   border-bottom: 1px solid var(--color-border);
   background: var(--color-background-secondary);
 }
@@ -138,8 +173,12 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   font-size: var(--font-size-sm);
+  font-family: var(--font-family-base);
+  color: var(--color-text-primary);
   background: var(--color-background);
-  transition: var(--transition-base);
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .searchInput:focus {
@@ -152,27 +191,23 @@
   color: var(--color-text-tertiary);
 }
 
-/* Loading Indicator */
+/* =============================================================================
+   LOADING INDICATOR
+   ============================================================================= */
+
 .loadingIndicator {
   position: absolute;
   right: var(--spacing-5);
   top: 50%;
   transform: translateY(-50%);
   color: var(--color-primary);
-  animation: spin 1s linear infinite;
+  animation: searchableSelectSpin 1s linear infinite;
 }
 
-@keyframes spin {
-  from {
-    transform: translateY(-50%) rotate(0deg);
-  }
+/* =============================================================================
+   OPTIONS LIST
+   ============================================================================= */
 
-  to {
-    transform: translateY(-50%) rotate(360deg);
-  }
-}
-
-/* Options List */
 .optionsList {
   max-height: 240px;
   overflow-y: auto;
@@ -181,9 +216,9 @@
   list-style: none;
 }
 
-/* Custom scrollbar for options */
+/* Scrollbar */
 .optionsList::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .optionsList::-webkit-scrollbar-track {
@@ -192,34 +227,45 @@
 
 .optionsList::-webkit-scrollbar-thumb {
   background: var(--color-border);
-  border-radius: 3px;
+  border-radius: var(--radius-full);
 }
 
 .optionsList::-webkit-scrollbar-thumb:hover {
   background: var(--color-text-tertiary);
 }
 
-/* Option Item */
+/* =============================================================================
+   OPTION ITEM
+   ============================================================================= */
+
 .option {
-  padding: var(--spacing-3) var(--spacing-4);
-  cursor: pointer;
-  transition: all 0.1s ease;
-  color: var(--color-text-primary);
   display: flex;
   align-items: center;
   gap: var(--spacing-2);
+  padding: var(--spacing-2) var(--spacing-3);
+  cursor: pointer;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-sm);
+  transition:
+    background-color 0.1s ease,
+    color 0.1s ease;
+  border-left: 2px solid transparent;
 }
 
 .option:hover {
   background-color: var(--color-background-secondary);
 }
 
+.option:focus-visible {
+  outline: none;
+  background-color: var(--color-background-secondary);
+}
+
 /* Checkbox for multi-select */
 .checkbox {
   flex-shrink: 0;
-  font-size: 1.1em;
-  color: var(--color-text-secondary);
-  transition: color 0.1s ease;
+  color: var(--color-text-tertiary);
+  transition: color 0.15s ease;
 }
 
 .selected .checkbox {
@@ -234,28 +280,34 @@
   white-space: nowrap;
 }
 
-/* Selected Option */
+/* =============================================================================
+   SELECTED OPTION
+   ============================================================================= */
+
 .selected {
-  background: linear-gradient(135deg, #dbeafe 0%, #e0e7ff 100%);
+  background-color: var(--color-primary-50, rgb(59 130 246 / 8%));
   color: var(--color-primary);
   font-weight: var(--font-weight-medium);
+  border-left-color: var(--color-primary);
 }
 
 .selected:hover {
-  background: linear-gradient(135deg, #bfdbfe 0%, #c7d2fe 100%);
+  background-color: var(--color-primary-100, rgb(59 130 246 / 14%));
 }
 
-/* Loading More (infinite scroll) */
+/* =============================================================================
+   LOADING MORE / EMPTY STATE
+   ============================================================================= */
+
 .loadingMore {
   padding: var(--spacing-3) var(--spacing-4);
   text-align: center;
   color: var(--color-text-secondary);
-  font-size: var(--font-size-sm);
+  font-size: var(--font-size-xs);
   background: var(--color-background-secondary);
-  animation: pulse 1s ease-in-out infinite;
+  animation: searchableSelectPulse 1.5s ease-in-out infinite;
 }
 
-/* Load More Hint */
 .loadMoreHint {
   padding: var(--spacing-2) var(--spacing-4);
   text-align: center;
@@ -263,19 +315,21 @@
   font-size: var(--font-size-xs);
 }
 
-/* No Options State */
 .noOptions {
-  padding: var(--spacing-4);
-  color: var(--color-text-secondary);
+  padding: var(--spacing-6) var(--spacing-4);
+  color: var(--color-text-tertiary);
   text-align: center;
   font-size: var(--font-size-sm);
 }
 
-/* Animations */
-@keyframes fadeIn {
+/* =============================================================================
+   ANIMATIONS
+   ============================================================================= */
+
+@keyframes searchableSelectFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-8px);
+    transform: translateY(-4px);
   }
 
   to {
@@ -284,7 +338,17 @@
   }
 }
 
-@keyframes pulse {
+@keyframes searchableSelectSpin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+@keyframes searchableSelectPulse {
   0%,
   100% {
     opacity: 1;
@@ -296,7 +360,7 @@
 }
 
 /* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
+   RESPONSIVE DESIGN — TABLET
    ============================================================================= */
 
 @media (max-width: 768px) {
@@ -325,12 +389,6 @@
     height: 14px;
   }
 
-  .arrow::before {
-    width: 5px;
-    height: 5px;
-  }
-
-  /* Dropdown menu - constrain width */
   .menu {
     max-height: 50vh;
   }
@@ -365,7 +423,10 @@
   }
 }
 
-/* Extra small mobile */
+/* =============================================================================
+   RESPONSIVE DESIGN — SMALL MOBILE
+   ============================================================================= */
+
 @media (max-width: 375px) {
   .control {
     height: 34px;

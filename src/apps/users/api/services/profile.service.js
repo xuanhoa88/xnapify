@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { logUserActivity } from '../utils/activity';
 import { userFullIncludes } from '../utils/includes';
 import { verifyPassword } from '../utils/password';
 
@@ -52,15 +51,14 @@ export async function getUserWithProfile(user_id, { models }) {
  * @param {Object} formData - Form data to update
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook factory for activity logging
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} options.hook - Hook factory for activities logging
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError
  */
 export async function updateUserProfile(
   user_id,
   formData,
-  { models, webhook, hook },
+  { models, hook },
 ) {
   const { User, UserProfile } = models;
 
@@ -99,9 +97,6 @@ export async function updateUserProfile(
     });
   }
 
-  // Log activity
-  await logUserActivity(webhook, 'profile_updated', user_id);
-
   // Re-fetch user with full profile (not reload, as reload skips afterFind hooks)
   const updatedUser = await getUserWithProfile(user_id, { models });
 
@@ -119,8 +114,7 @@ export async function updateUserProfile(
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook factory for activity logging
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} options.hook - Hook factory for activities logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
@@ -128,7 +122,7 @@ export async function changeUserPassword(
   user_id,
   currentPassword,
   newPassword,
-  { models, webhook, hook },
+  { models, hook },
 ) {
   const { User } = models;
 
@@ -159,9 +153,6 @@ export async function changeUserPassword(
     email: user.email,
   });
 
-  // Log activity
-  await logUserActivity(webhook, 'password_changed', user_id);
-
   return true;
 }
 
@@ -172,14 +163,13 @@ export async function changeUserPassword(
  * @param {Object} preferences - User preferences
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook factory for activity logging
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} options.hook - Hook factory for activities logging
  * @returns {Promise<Object>} Updated preferences
  */
 export async function updateUserPreferences(
   user_id,
   preferences,
-  { models, webhook, hook },
+  { models, hook },
 ) {
   const { UserProfile } = models;
 
@@ -202,9 +192,6 @@ export async function updateUserPreferences(
     preferences,
   });
 
-  // Log activity
-  await logUserActivity(webhook, 'preferences_updated', user_id);
-
   return preferences;
 }
 
@@ -214,7 +201,7 @@ export async function updateUserPreferences(
  * @param {string} user_id - User ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook factory for activity logging
+ * @param {Object} options.hook - Hook factory for activities logging
  * @returns {Promise<Object>} User preferences
  */
 export async function getUserPreferences(user_id, { models, hook }) {
@@ -252,15 +239,14 @@ export async function getUserPreferences(user_id, { models, hook }) {
  * @param {string} password - User password for confirmation
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.hook - Hook engine for activity logging
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} options.hook - Hook engine for activities logging
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
 export async function deleteUserAccount(
   user_id,
   password,
-  { models, webhook, hook },
+  { models, hook },
 ) {
   const { User, UserProfile } = models;
 
@@ -292,11 +278,6 @@ export async function deleteUserAccount(
   // Run hooks
   await hook('profile').emit('account_deleted', {
     user_id,
-    email: userEmail,
-  });
-
-  // Log activity
-  await logUserActivity(webhook, 'account_deleted', user_id, {
     email: userEmail,
   });
 

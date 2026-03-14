@@ -118,7 +118,7 @@ export async function login(req, res) {
 
     // Authenticate user - returns complete user data with RBAC in one query
     const userData = await authService.authenticateUser(email, password, {
-      activityData: {
+      activitiesData: {
         ip_address: http.getClientIP(req),
         user_agent: http.getUserAgent(req),
       },
@@ -179,7 +179,7 @@ export async function login(req, res) {
 export async function logout(req, res) {
   const http = req.app.get('http');
   try {
-    // Log logout activity via service (if user is authenticated)
+    // Log logout activities via service (if user is authenticated)
     if (req.user) {
       await authService.logoutUser(req.user.id, {
         webhook: req.app.get('webhook'),
@@ -275,7 +275,7 @@ export async function emailVerification(req, res) {
     // Get models and webhook from app context
     const models = req.app.get('models');
 
-    // Verify email with token (activity logged in service)
+    // Verify email with token (activities logged in service)
     const user = await authService.verifyEmail(token, {
       models,
       webhook: req.app.get('webhook'),
@@ -348,7 +348,7 @@ export async function resetPasswordRequest(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Request password reset (activity logged in service)
+    // Request password reset (activities logged in service)
     await authService.resetPasswordRequest(email, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
@@ -394,7 +394,7 @@ export async function resetPasswordConfirmation(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Confirm reset password with token (activity logged in service)
+    // Confirm reset password with token (activities logged in service)
     await authService.resetPasswordConfirmation(token, password, {
       models: req.app.get('models'),
       auth: req.app.get('auth'),

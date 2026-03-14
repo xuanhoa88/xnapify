@@ -5,7 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { logUserActivity } from '../utils/activity';
 import { formatUserResponse } from '../utils/formatter';
 import { userFullIncludes } from '../utils/includes';
 import {
@@ -30,21 +29,13 @@ import {
  * @param {string} userData.display_name - User display name (optional)
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If user already exists or creation fails
  */
 export async function registerUser(
   userData,
-  {
-    models,
-    webhook,
-    hook,
-    defaultRoleName,
-    adminRoleName,
-    defaultResources,
-    defaultActions,
-  } = {},
+  { models, hook, defaultRoleName, adminRoleName, defaultResources, defaultActions,  } = {},
 ) {
   const { email, password } = userData;
   const { User, UserProfile, Role } = models;
@@ -93,11 +84,6 @@ export async function registerUser(
     await user.addRole(defaultRole);
   }
 
-  // Log registration activity
-  await logUserActivity(webhook, 'registered', user.id, { email }, null, {
-    useWorker: true,
-  });
-
   // Emit hook event if hook factory provided
   await hook('auth').emit('registered', { user_id: user.id, email, user });
 
@@ -116,18 +102,14 @@ export async function registerUser(
 }
 
 /**
- * Log user logout activity
+ * Log user logout activities
  *
  * @param {string} user_id - User ID
  * @param {Object} options - Options object
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} [options.hook] - Hook factory for event emission
  * @returns {Promise<void>}
  */
-export async function logoutUser(user_id, { webhook, hook } = {}) {
-  await logUserActivity(webhook, 'logout', user_id, {}, null, {
-    useWorker: true,
-  });
-
+export async function logoutUser(user_id, { hook } = {}) {
   // Emit hook event if hook factory provided
   await hook('auth').emit('logout', { user_id });
 }
@@ -141,8 +123,12 @@ export async function logoutUser(user_id, { webhook, hook } = {}) {
  * @param {string} password - User password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} options.webhook - Webhook engine instance (optional)
- * @param {Object} options.activityData - Activity data (optional)
+ * @param {Object} options.activitiesData - Activity data (optional)
+ * @param {Object} options.hook - Hook factory for event emission
+ * @param {string} options.defaultRoleName - Name of the default role for new users
+ * @param {string} options.adminRoleName - Name of the admin role
+ * @param {Array<string>} options.defaultResources - Default resources for RBAC
+ * @param {Array<string>} options.defaultActions - Default actions for RBAC
  * @returns {Promise<Object>} Formatted user object with RBAC data
  * @throws {Error} If credentials are invalid
  */
@@ -151,8 +137,7 @@ export async function authenticateUser(
   password,
   {
     models,
-    webhook,
-    activityData,
+    activitiesData,
     hook,
     defaultRoleName,
     adminRoleName,
@@ -220,16 +205,6 @@ export async function authenticateUser(
   // Update user's last login
   await User.update({ last_login_at: new Date() }, { where: { id: user.id } });
 
-  // Log login activity
-  await logUserActivity(
-    webhook,
-    'login',
-    user.id,
-    { ...activityData, success: true },
-    null,
-    { useWorker: true },
-  );
-
   // Format user response
   const normalizedUser = await formatUserResponse(user, {
     defaultRoleName,
@@ -241,7 +216,7 @@ export async function authenticateUser(
   // Emit hook event if hook factory provided
   await hook('auth').emit('logged_in', {
     user_id: user.id,
-    activityData,
+    activitiesData,
     user: normalizedUser,
   });
 
@@ -254,11 +229,11 @@ export async function authenticateUser(
  * @param {string} token - Email verification token
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+ * @param {Object} options.hook - Hook factory for event emission
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid or expired
  */
-export async function verifyEmail(token, { models, webhook, hook } = {}) {
+export async function verifyEmail(token, { models, hook } = {}) {
   const { User } = models;
 
   // In a real implementation, you would decode and verify the JWT token
@@ -285,16 +260,6 @@ export async function verifyEmail(token, { models, webhook, hook } = {}) {
     // Update email confirmation status
     await user.update({ email_confirmed: true });
 
-    // Log email verified activity
-    await logUserActivity(
-      webhook,
-      'email_verified',
-      user.id,
-      { email: user.email },
-      null,
-      { useWorker: true },
-    );
-
     // Emit hook event if hook factory provided
     await hook('auth').emit('email_verified', {
       user_id: user.id,
@@ -318,12 +283,12 @@ export async function verifyEmail(token, { models, webhook, hook } = {}) {
  * @param {string} email - User email
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+
  * @returns {Promise<Object>} Reset token info (token for email, message)
  */
 export async function resetPasswordRequest(
   email,
-  { models, webhook, hook } = {},
+  { models, hook } = {},
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -355,16 +320,6 @@ export async function resetPasswordRequest(
     used_at: null,
   });
 
-  // Log password reset request activity
-  await logUserActivity(
-    webhook,
-    'password_reset_requested',
-    user.id,
-    { email },
-    null,
-    { useWorker: true },
-  );
-
   const resetLink = `${process.env['RSK_APP_URL']}/reset-password?token=${tokenData.token}`;
 
   // Emit hook event if hook factory provided
@@ -394,14 +349,14 @@ export async function resetPasswordRequest(
  * @param {string} newPassword - New password
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
+
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If token is invalid, expired, or already used
  */
 export async function resetPasswordConfirmation(
   token,
   newPassword,
-  { models, webhook, hook } = {},
+  { models, hook } = {},
 ) {
   const { User, PasswordResetToken } = models;
 
@@ -453,16 +408,6 @@ export async function resetPasswordConfirmation(
   // Mark token as used (single-use enforcement)
   await tokenRecord.update({ used_at: new Date() });
 
-  // Log password reset completed activity
-  await logUserActivity(
-    webhook,
-    'password_reset_completed',
-    user.id,
-    {},
-    null,
-    { useWorker: true },
-  );
-
   // Emit hook event if hook factory provided
   await hook('auth').emit('password_reset_completed', { user_id: user.id });
 
@@ -480,15 +425,7 @@ export async function resetPasswordConfirmation(
 export async function oauthLogin(
   provider,
   profile,
-  {
-    models,
-    webhook,
-    hook,
-    defaultRoleName,
-    adminRoleName,
-    defaultResources,
-    defaultActions,
-  } = {},
+  { models, hook, defaultRoleName, adminRoleName, defaultResources, defaultActions,  } = {},
 ) {
   const { User, UserLogin, UserProfile, Role } = models;
 
@@ -568,17 +505,6 @@ export async function oauthLogin(
         await user.addRole(defaultRole);
       }
 
-      await logUserActivity(
-        webhook,
-        'registered',
-        user.id,
-        { email, provider },
-        null,
-        {
-          useWorker: true,
-        },
-      );
-
       await hook('auth').emit('registered', { user_id: user.id, email, user });
     }
 
@@ -625,16 +551,6 @@ export async function oauthLogin(
     { where: { id: completeUser.id } },
   );
 
-  // Log login activity
-  await logUserActivity(
-    webhook,
-    'login',
-    completeUser.id,
-    { success: true, provider },
-    null,
-    { useWorker: true },
-  );
-
   // Format user response
   const normalizedUser = await formatUserResponse(completeUser, {
     defaultRoleName,
@@ -645,7 +561,7 @@ export async function oauthLogin(
 
   await hook('auth').emit('logged_in', {
     user_id: completeUser.id,
-    activityData: { provider },
+    activitiesData: { provider },
     user: normalizedUser,
   });
 

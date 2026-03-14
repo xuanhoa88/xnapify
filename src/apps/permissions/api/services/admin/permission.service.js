@@ -9,8 +9,6 @@
 // PERMISSION MANAGEMENT SERVICES
 // ========================================================================
 
-import { logPermissionActivity } from '../../utils/activity';
-
 /**
  * Create a new permission
  *
@@ -20,13 +18,13 @@ import { logPermissionActivity } from '../../utils/activity';
  * @param {string} permissionData.description - Permission description
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Created permission
  */
 export async function createPermission(
   permissionData,
-  { models, webhook, actorId },
+  { models, hook },
 ) {
   const { Permission } = models;
   const { resource, action, description, is_active } = permissionData;
@@ -51,14 +49,11 @@ export async function createPermission(
     is_active: !!is_active,
   });
 
-  // Log activity
-  await logPermissionActivity(
-    webhook,
-    'created',
-    permission.id,
-    { name: `${resource}:${action}` },
-    actorId,
-  );
+  // Emit hook event
+
+  // Emit hook event
+  if (hook) { await hook('admin:permissions').emit('created', { permission });
+  }
 
   return permission;
 }
@@ -360,14 +355,14 @@ export async function getPermissionById(permission_id, options = {}) {
  * @param {Object} updateData - Data to update
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Updated permission
  */
 export async function updatePermission(
   permission_id,
   updateData,
-  { models, webhook, actorId },
+  { models, hook },
 ) {
   const { Permission } = models;
 
@@ -415,14 +410,11 @@ export async function updatePermission(
 
   await permission.update(updateFields);
 
-  // Log activity
-  await logPermissionActivity(
-    webhook,
-    'updated',
-    permission_id,
-    { name: `${permission.resource}:${permission.action}` },
-    actorId,
-  );
+  // Emit hook event
+
+  // Emit hook event
+  if (hook) { await hook('admin:permissions').emit('updated', { permission });
+  }
 
   return permission;
 }
@@ -433,13 +425,13 @@ export async function updatePermission(
  * @param {string} permission_id - Permission ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Deleted permission
  */
 export async function deletePermission(
   permission_id,
-  { models, webhook, actorId, systemPermissions = [] },
+  { models, hook, systemPermissions = [] },
 ) {
   const { Permission } = models;
 
@@ -468,14 +460,12 @@ export async function deletePermission(
   const permName = `${permission.resource}:${permission.action}`;
   await permission.destroy();
 
-  // Log activity
-  await logPermissionActivity(
-    webhook,
-    'deleted',
-    permission_id,
-    { name: permName },
-    actorId,
-  );
+  // Emit hook event
+
+  // Emit hook event
+  if (hook) { await hook('admin:permissions').emit('deleted', {
+      permission_id, resource: permission.resource, action: permission.action,  });
+  }
 
   return permission;
 }
@@ -487,14 +477,14 @@ export async function deletePermission(
  * @param {boolean} is_active - New status value
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object[]>} Updated permissions
  */
 export async function bulkUpdateStatus(
   ids,
   is_active,
-  { models, webhook, actorId },
+  { models, hook },
 ) {
   const { Permission } = models;
   const { sequelize } = Permission;
@@ -508,18 +498,15 @@ export async function bulkUpdateStatus(
     where: { id: { [Op.in]: ids } },
   });
 
-  // Log activity for each permission concurrently
+  // Log activities for each permission concurrently
   const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
-    updatedPermissions.map(perm =>
-      logPermissionActivity(
-        webhook,
-        action,
-        perm.id,
-        { name: `${perm.resource}:${perm.action}` },
-        actorId,
-      ),
-    ),
+    updatedPermissions.map(async perm => { // Emit hook event
+      if (hook) {
+        await hook('admin:permissions').emit('updated', {
+          permission: perm,  });
+      }
+    }),
   );
 
   return updatedPermissions;
@@ -531,13 +518,13 @@ export async function bulkUpdateStatus(
  * @param {string[]} ids - Array of permission IDs to delete
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Result with deleted count and any protected IDs
  */
 export async function bulkDelete(
   ids,
-  { models, webhook, actorId, systemPermissions = [] },
+  { models, hook, systemPermissions = [] },
 ) {
   const { Permission } = models;
   const { sequelize } = Permission;
@@ -574,17 +561,14 @@ export async function bulkDelete(
       where: { id: { [Op.in]: deletableIds } },
     });
 
-    // Log activity for each deleted permission concurrently
+    // Log activities for each deleted permission concurrently
     await Promise.all(
-      deletableIds.map((id, i) =>
-        logPermissionActivity(
-          webhook,
-          'deleted',
-          id,
-          { name: deletedNames[i] },
-          actorId,
-        ),
-      ),
+      deletablePermissions.map(async (perm, i) => { // Emit hook event
+        if (hook) {
+          await hook('admin:permissions').emit('deleted', {
+            permission_id: perm.id, resource: perm.resource, action: perm.action,  });
+        }
+      }),
     );
   }
 

@@ -135,10 +135,10 @@ function Dashboard() {
               {
                 title: t('admin:dashboard.event', 'Event'),
                 key: 'event',
-                render: (_, activity) => (
+                render: (_, activities) => (
                   <code className={s.eventCode}>
-                    {(activity.metadata && activity.metadata.event) ||
-                      activity.event ||
+                    {(activities.metadata && activities.metadata.event) ||
+                      activities.event ||
                       'N/A'}
                   </code>
                 ),
@@ -146,16 +146,16 @@ function Dashboard() {
               {
                 title: t('admin:dashboard.entity', 'Entity'),
                 key: 'entity',
-                render: (_, activity) =>
-                  activity.metadata &&
-                  activity.metadata.entity_type &&
-                  activity.metadata.entity_id ? (
+                render: (_, activities) =>
+                  activities.metadata &&
+                  activities.metadata.entity_type &&
+                  activities.metadata.entity_id ? (
                     <span className={s.entityCell}>
                       <span className={s.entityType}>
-                        {activity.metadata.entity_type}
+                        {activities.metadata.entity_type}
                       </span>
                       <span className={s.entityId}>
-                        {activity.metadata.entity_id}
+                        {activities.metadata.entity_id}
                       </span>
                     </span>
                   ) : (
@@ -165,19 +165,19 @@ function Dashboard() {
               {
                 title: t('admin:dashboard.action', 'Action'),
                 key: 'action',
-                render: (_, activity) =>
-                  (activity.metadata && activity.metadata.action) || (
+                render: (_, activities) =>
+                  (activities.metadata && activities.metadata.action) || (
                     <span className={s.emptyValue}>N/A</span>
                   ),
               },
               {
                 title: t('admin:dashboard.status', 'Status'),
                 key: 'status',
-                render: (_, activity) => (
-                  <Tag variant={getStatusTagVariant(activity.status)}>
-                    {activity.status === 'delivered'
+                render: (_, activities) => (
+                  <Tag variant={getStatusTagVariant(activities.status)}>
+                    {activities.status === 'delivered'
                       ? t('admin:dashboard.statusDelivered', 'Delivered')
-                      : activity.status === 'failed'
+                      : activities.status === 'failed'
                         ? t('admin:dashboard.statusFailed', 'Failed')
                         : t('admin:dashboard.statusPending', 'Pending')}
                   </Tag>
@@ -186,9 +186,9 @@ function Dashboard() {
               {
                 title: t('admin:dashboard.time', 'Time'),
                 key: 'time',
-                render: (_, activity) =>
-                  activity.created_at ? (
-                    formatDistanceToNow(new Date(activity.created_at), {
+                render: (_, activities) =>
+                  activities.created_at ? (
+                    formatDistanceToNow(new Date(activities.created_at), {
                       addSuffix: true,
                     })
                   ) : (
@@ -199,10 +199,10 @@ function Dashboard() {
             locale={{
               emptyText: (
                 <Table.Empty
-                  icon='activity'
+                  icon='activities'
                   title={t(
                     'admin:dashboard.noRecentActivity',
-                    'No recent activity',
+                    'No recent activities',
                   )}
                   description={t(
                     'admin:dashboard.noRecentActivityDescription',
@@ -224,7 +224,7 @@ function Dashboard() {
         title={t('admin:dashboard.title', 'Dashboard')}
         subtitle={t(
           'admin:dashboard.subtitle',
-          'Overview of your system activity',
+          'Overview of your system activities',
         )}
       />
       {renderContent()}

@@ -1,6 +1,6 @@
 # Core Module AI Instructions
 
-This folder (`src/apps/users/`) is a **Core Module**. 
+This folder (`src/apps/(default)/`) is a **Core Module**. 
 
 **INHERITANCE NOTICE**: All global AI rules from `.agent/rules.md` and the architecture from `AGENT.md` strictly apply here. 
 

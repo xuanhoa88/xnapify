@@ -46,10 +46,6 @@ jest.mock('fs/promises', () => ({
   readFile: jest.fn(),
 }));
 
-jest.mock('../utils/activity', () => ({
-  logPluginActivity: jest.fn(),
-}));
-
 jest.mock('../utils/crypto', () => ({
   encryptPluginId: jest.fn(id => `enc_${id}`),
   decryptPluginId: jest.fn(id => id.replace('enc_', '')),

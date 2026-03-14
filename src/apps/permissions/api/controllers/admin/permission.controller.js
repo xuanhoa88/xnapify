@@ -50,6 +50,7 @@ export async function createPermission(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
       },
     );
@@ -185,6 +186,7 @@ export async function updatePermission(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
       },
     );
@@ -225,13 +227,14 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Bulk update permissions (activity logged in service)
+    // Bulk update permissions (activities logged in service)
     const permissions = await permissionService.bulkUpdateStatus(
       ids,
       state === 'active',
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
       },
     );
@@ -271,10 +274,11 @@ export async function deletePermissions(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Delete permissions (activity logged in service)
+    // Delete permissions (activities logged in service)
     const result = await permissionService.bulkDelete(ids, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
+      hook: req.app.get('hook'),
       actorId: req.user.id,
       systemPermissions: req.app.get('auth').SYSTEM_PERMISSIONS,
     });

@@ -217,7 +217,7 @@ export async function deleteGroup(req, res) {
       return http.sendError(res, 'Cannot delete a group you belong to', 400);
     }
 
-    // Delete group (activity logged in service)
+    // Delete group (activities logged in service)
     await groupService.deleteGroup(id, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),

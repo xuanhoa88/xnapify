@@ -6,8 +6,8 @@
  */
 
 /**
- * Admin index route - redirects to dashboard
+ * Admin index route - redirects to activities
  */
 export function middleware() {
-  return { redirect: '/admin/dashboard' };
+  return { redirect: '/admin/activities' };
 }

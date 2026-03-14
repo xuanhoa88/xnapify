@@ -2,7 +2,7 @@
 
 > **Instructions for the AI:** 
 > Read this document to understand the core features of the `(default)` module.
-> This module handles the landing page experience, feature showcasing, and administrative activity logging.
+> This module handles the landing page experience, feature showcasing, and administrative activities logging.
 
 ---
 
@@ -22,7 +22,7 @@ Provide a professional landing page for the application while serving as the pri
   - **Logic:** Paginated list of system activities with filtering by entity type and ID.
 - **Method & Path:** `POST /api/activities/cleanup`
   - **Security:** Requires `admin` role.
-  - **Logic:** Triggers background cleanup of old activity logs.
+  - **Logic:** Triggers background cleanup of old activities logs.
 - **Method & Path:** `GET /api/activities/stats`
   - **Logic:** Returns aggregation of activities for dashboard charts.
 

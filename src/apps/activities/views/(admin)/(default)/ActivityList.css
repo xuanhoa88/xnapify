@@ -1,0 +1,73 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+.filters {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: var(--spacing-3);
+  margin-bottom: var(--spacing-6);
+  background: var(--color-background);
+  padding: var(--spacing-4);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--color-border);
+  align-items: center;
+}
+
+.filterSearchableSelect {
+  min-width: 140px;
+}
+
+.filterActions {
+  display: flex;
+  gap: var(--spacing-2);
+  align-items: center;
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: var(--spacing-3);
+    gap: var(--spacing-2);
+    margin-bottom: var(--spacing-4);
+  }
+
+  .filterSearchableSelect {
+    min-width: unset;
+    width: 100%;
+  }
+
+  .filterActions {
+    grid-column: 1 / -1;
+    display: flex;
+  }
+}
+
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+
+  .filters {
+    padding: var(--spacing-2);
+    gap: var(--spacing-2);
+  }
+}

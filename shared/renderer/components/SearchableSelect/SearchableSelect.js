@@ -102,11 +102,10 @@ function SearchableSelect({
     if (multiple) {
       return Array.isArray(value) ? value : [];
     }
-    return value != null && value !== '' ? [value] : [];
+    return value != null ? [value] : [];
   }, [value, multiple]);
 
-  // Check if there's a value to clear
-  const hasValue = selectedValues.length > 0;
+  const hasValue = selectedValues.length > 0 && selectedValues[0] !== '';
 
   // Get display text
   const displayText = useMemo(() => {
@@ -126,7 +125,8 @@ function SearchableSelect({
       );
     }
     const selectedOption = options.find(opt => opt && opt.value === value);
-    return (selectedOption && selectedOption.label) || null;
+    if (!selectedOption) return null;
+    return selectedOption.label;
   }, [hasValue, multiple, selectedValues, options, value, t]);
 
   // Check if an option is selected
@@ -253,7 +253,6 @@ function SearchableSelect({
     <div
       className={clsx(s.container, className, {
         [s.disabled]: disabled,
-        [s.open]: isOpen,
         'searchable-select-is-open': isOpen,
       })}
       ref={containerRef}
@@ -287,7 +286,9 @@ function SearchableSelect({
               <Icon name='close' size={12} />
             </Button>
           )}
-          <span className={s.arrow} />
+          <div className={s.arrow}>
+            <Icon name={isOpen ? 'chevronUp' : 'chevronDown'} size={16} />
+          </div>
         </div>
       </div>
 

@@ -9,8 +9,6 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { logPluginActivity } from '../utils/activity';
-
 import {
   CACHE_TTL,
   PluginError,
@@ -421,7 +419,7 @@ export async function getPluginStaticDir({ pluginManager, cwd, models }, id) {
  *  3. Move files to the final plugins directory.
  *  4. Create or update the DB record.
  *  5. Enqueue the heavy dependencies install and module reload.
- *  6. Log activity and invalidate cache.
+ *  6. Log activities and invalidate cache.
  *
  * @param {Object}  file    - Uploaded file object ({ path, originalname })
  * @param {Object}  context - App context
@@ -677,14 +675,20 @@ export async function togglePluginStatus(
 export async function upgradePlugin(
   id,
   data,
-  { models, cache, webhook, actorId },
+  { models, cache, hook, actorId },
 ) {
   const { plugin } = await resolvePlugin(models, id);
 
   await plugin.update(data);
   if (cache) await invalidateCache(cache, id);
 
-  await logPluginActivity(webhook, 'upgraded', plugin.id, data, actorId);
+  if (hook) {
+    hook('admin:plugins').emit('upgraded', {
+      plugin_id: plugin.id,
+      options: data,
+      actor_id: actorId,
+    });
+  }
 
   return plugin;
 }

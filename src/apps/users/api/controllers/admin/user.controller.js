@@ -264,7 +264,7 @@ export async function bulkUpdateStatus(req, res) {
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
 
-    // Bulk update status (activity logged in service)
+    // Bulk update status (activities logged in service)
     const result = await userAdminService.bulkUpdateStatus(
       filteredIds,
       state === 'active',
@@ -324,7 +324,7 @@ export async function bulkDelete(req, res) {
     const models = req.app.get('models');
     const webhook = req.app.get('webhook');
 
-    // Bulk delete users (activity logged in service)
+    // Bulk delete users (activities logged in service)
     const result = await userAdminService.bulkDelete(ids, {
       models,
       webhook,

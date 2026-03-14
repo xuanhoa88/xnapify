@@ -8,7 +8,6 @@
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 
-import { logUserActivity } from '../../utils/activity';
 import {
   userFullIncludes,
   formatAdminUserResponse,
@@ -22,14 +21,14 @@ import { fetchUserRBACData } from '../../utils/rbac/fetcher';
  * @param {Object} userData - User data
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Created user
  * @throws {Error} If UserAlreadyExistsError
  */
 export async function createUser(
   userData,
-  { models, webhook, actorId, defaultRoleName, hook },
+  { models, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
@@ -108,9 +107,6 @@ export async function createUser(
     include: userFullIncludes(models),
   });
 
-  // Log activity
-  await logUserActivity(webhook, 'created', user.id, { email }, actorId);
-
   // Emit hook event
   await hook('admin:users').emit('created', { email, password, user });
 
@@ -129,7 +125,7 @@ export async function createUser(
  * @param {string} options.group - Filter by group (default: '')
  * @param {Object} ctx - Context
  * @param {Object} ctx.models - Database models
- * @param {Object} ctx.hook - Webhook engine for activity logging
+ * @param {Object} ctx.hook - Webhook engine for activities logging
  * @returns {Promise<Object>} Users with pagination info
  */
 export async function getUserList(options, ctx) {
@@ -316,15 +312,15 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
  * @param {Object} userData - User data to update
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError or UserAlreadyExistsError
  */
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, actorId, defaultRoleName, hook },
+  { models, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -440,14 +436,10 @@ export async function updateUserById(
     include: userFullIncludes(models),
   });
 
-  // Log activity
-  await logUserActivity(
-    webhook,
-    'updated',
-    user_id,
-    { email: user.email },
-    actorId,
-  );
+  // Reload user with updated data
+  await user.reload({
+    include: userFullIncludes(models),
+  });
 
   // Emit hook events
   if (hook) {
@@ -578,14 +570,14 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
  * @param {boolean} is_active - New status
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Updated users
  */
 export async function bulkUpdateStatus(
   ids,
   is_active,
-  { models, webhook, actorId, hook },
+  { models, hook },
 ) {
   const { User } = models;
   const { sequelize } = User;
@@ -599,7 +591,7 @@ export async function bulkUpdateStatus(
     where: { id: { [Op.in]: ids } },
   });
 
-  // Log activity and invalidate cache for each user concurrently
+  // Log activities and invalidate cache for each user concurrently
   const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
     users.map(async user => {
@@ -613,13 +605,12 @@ export async function bulkUpdateStatus(
         user,
       });
 
-      return logUserActivity(
-        webhook,
-        action,
-        user.id,
-        { email: user.email },
-        actorId,
-      );
+      // Emit hook event
+      await hook('admin:users').emit('status_updated', {
+        email: user.email,
+        is_active,
+        user,
+      });
     }),
   );
 
@@ -635,11 +626,11 @@ export async function bulkUpdateStatus(
  * @param {string[]} ids - Array of user IDs to delete
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Result with deleted count
  */
-export async function bulkDelete(ids, { models, webhook, actorId, hook }) {
+export async function bulkDelete(ids, { models, hook }) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -658,7 +649,7 @@ export async function bulkDelete(ids, { models, webhook, actorId, hook }) {
       where: { id: { [Op.in]: deletedIds } },
     });
 
-    // Log activity and invalidate cache for each deleted user concurrently
+    // Log activities and invalidate cache for each deleted user concurrently
     await Promise.all(
       deletedIds.map(async (id, i) => {
         // Invalidate RBAC cache
@@ -672,13 +663,11 @@ export async function bulkDelete(ids, { models, webhook, actorId, hook }) {
           email: deletedEmail,
         });
 
-        return logUserActivity(
-          webhook,
-          'deleted',
-          id,
-          { email: deletedEmail },
-          actorId,
-        );
+        // Emit hook event
+        await hook('admin:users').emit('deleted', {
+          user_id: id,
+          email: deletedEmail,
+        });
       }),
     );
   }

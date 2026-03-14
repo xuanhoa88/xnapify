@@ -128,7 +128,7 @@ export const SLICE_NAME = '@admin/dashboard';
 /**
  * Dashboard Slice
  *
- * Manages dashboard state including statistics and recent activity.
+ * Manages dashboard state including statistics and recent activities.
  */
 const dashboardSlice = createSlice({
   name: SLICE_NAME,

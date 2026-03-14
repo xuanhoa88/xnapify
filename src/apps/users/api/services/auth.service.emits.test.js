@@ -46,7 +46,9 @@ describe('auth.service emits (additional)', () => {
     const authChannel = hook('auth');
     authChannel.on('registered', function (payload) {
       expect(this).toBe(ctx);
-      expect(payload).toEqual({ user_id: user.id, email: user.email });
+      expect(payload.user_id).toEqual(user.id);
+      expect(payload.email).toEqual(user.email);
+      expect(payload.user).toBeDefined();
       called = true;
     });
 
@@ -89,13 +91,13 @@ describe('auth.service emits (additional)', () => {
       Group: {},
     };
 
-    const activityData = { ip_address: '1.2.3.4' };
+    const activitiesData = { ip_address: '1.2.3.4' };
 
     const authChannel = hook('auth');
     authChannel.on('logged_in', function (payload) {
       expect(this).toBe(ctx);
       expect(payload.user_id).toBe(dbUser.id);
-      expect(payload.activityData).toEqual(activityData);
+      expect(payload.activitiesData).toEqual(activitiesData);
       expect(payload.user).toBeDefined();
       called = true;
     });
@@ -103,7 +105,7 @@ describe('auth.service emits (additional)', () => {
     const result = await authService.authenticateUser('email', 'pass', {
       models,
       webhook: null,
-      activityData,
+      activitiesData,
       hook,
     });
 
@@ -169,7 +171,9 @@ describe('auth.service emits (additional)', () => {
     const authChannel = hook('auth');
     authChannel.on('password_reset_requested', function (payload) {
       expect(this).toBe(ctx);
-      expect(payload).toEqual({ user_id: user.id, email: user.email });
+      expect(payload.user_id).toEqual(user.id);
+      expect(payload.email).toEqual(user.email);
+      expect(payload.resetLink).toBeDefined();
       called = true;
     });
 

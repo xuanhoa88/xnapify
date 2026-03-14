@@ -5,8 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { logGroupActivity } from '../../utils/activity';
-
 // ========================================================================
 // GROUP MANAGEMENT SERVICES
 // ========================================================================
@@ -21,13 +19,13 @@ import { logGroupActivity } from '../../utils/activity';
  * @param {string} groupData.type - Group type (optional)
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Created group
  */
 export async function createGroup(
   groupData,
-  { models, webhook, actorId, defaultRoleName, hook },
+  { models, defaultRoleName, hook },
 ) {
   const { Group, Role, User, UserProfile } = models;
   const { name, description, category, type, roles } = groupData;
@@ -92,9 +90,6 @@ export async function createGroup(
       },
     ],
   });
-
-  // Log activity
-  await logGroupActivity(webhook, 'created', group.id, { name }, actorId);
 
   // Emit hook event
   if (hook) {
@@ -291,14 +286,14 @@ export async function getGroupById(group_id, options = {}) {
  * @param {Object} updateData - Data to update
  * @param {Object} options - Options
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<Object>} Updated group
  */
 export async function updateGroupById(
   group_id,
   groupData,
-  { models, webhook, actorId, defaultRoleName, hook },
+  { models, defaultRoleName, hook },
 ) {
   const { Group, Role, User, UserProfile } = models;
 
@@ -367,15 +362,6 @@ export async function updateGroupById(
     ],
   });
 
-  // Log activity
-  await logGroupActivity(
-    webhook,
-    'updated',
-    group_id,
-    { name: group.name },
-    actorId,
-  );
-
   // Emit hook event
   if (hook) {
     await hook('admin:groups').emit('updated', { group });
@@ -398,13 +384,13 @@ export async function updateGroupById(
  * @param {string} group_id - Group ID
  * @param {Object} options - Options object
  * @param {Object} options.models - Database models
- * @param {Object} [options.webhook] - Webhook engine for activity logging
- * @param {string} [options.actorId] - ID of admin performing action
+
+
  * @returns {Promise<boolean>} Success status
  */
 export async function deleteGroup(
   group_id,
-  { models, webhook, actorId, systemGroups = [], hook },
+  { models, systemGroups = [], hook },
 ) {
   const { Group } = models;
 
@@ -426,15 +412,6 @@ export async function deleteGroup(
 
   const groupName = group.name;
   await group.destroy();
-
-  // Log activity
-  await logGroupActivity(
-    webhook,
-    'deleted',
-    group_id,
-    { name: groupName },
-    actorId,
-  );
 
   // Emit hook event
   if (hook) {

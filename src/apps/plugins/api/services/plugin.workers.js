@@ -8,7 +8,6 @@
 import fs from 'fs';
 import path from 'path';
 
-import { logPluginActivity } from '../utils/activity';
 import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
 
 import {
@@ -30,7 +29,7 @@ import {
 async function handleInstallJob(app, job) {
   const { pluginDir, pluginId, pluginKey, actorId } = job.data;
   const pluginManager = app.get('plugin');
-  const webhook = app.get('webhook');
+  const hook = app.get('hook');
 
   try {
     job.updateProgress(10);
@@ -56,13 +55,13 @@ async function handleInstallJob(app, job) {
     }
     job.updateProgress(90);
 
-    await logPluginActivity(
-      webhook,
-      'installed',
-      pluginId,
-      { path: pluginDir, checksum },
-      actorId,
-    );
+    if (hook) {
+      hook('admin:plugins').emit('installed', {
+        plugin_id: pluginId,
+        actor_id: actorId,
+        data: { path: pluginDir, checksum },
+      });
+    }
 
     notifyPluginChange(app, 'PLUGIN_INSTALLED', pluginId);
     job.updateProgress(100);
@@ -83,7 +82,7 @@ async function handleDeleteJob(app, job) {
   const { pluginId, pluginKey, actorId } = job.data;
   const cwd = app.get('cwd');
   const pluginManager = app.get('plugin');
-  const webhook = app.get('webhook');
+  const hook = app.get('hook');
   const { Plugin } = app.get('models');
 
   try {
@@ -118,13 +117,13 @@ async function handleDeleteJob(app, job) {
     }
 
     await Plugin.destroy({ where: { id: pluginId } });
-    await logPluginActivity(
-      webhook,
-      'deleted',
-      pluginId,
-      { key: pluginKey },
-      actorId,
-    );
+    if (hook) {
+      hook('admin:plugins').emit('deleted', {
+        plugin_id: pluginId,
+        actor_id: actorId,
+        data: { key: pluginKey },
+      });
+    }
 
     notifyPluginChange(app, 'PLUGIN_UNINSTALLED', pluginId);
     return { success: true };
@@ -144,7 +143,7 @@ async function handleToggleJob(app, job) {
   const { pluginId, pluginKey, isActive, actorId, pluginDir, isDevPlugin } =
     job.data;
   const pluginManager = app.get('plugin');
-  const webhook = app.get('webhook');
+  const hook = app.get('hook');
 
   try {
     // Security: verify checksum before activating (skip for dev plugins)
@@ -202,13 +201,13 @@ async function handleToggleJob(app, job) {
       }
     }
 
-    await logPluginActivity(
-      webhook,
-      'status_changed',
-      pluginId,
-      { isActive },
-      actorId,
-    );
+    if (hook) {
+      hook('admin:plugins').emit('status_changed', {
+        plugin_id: pluginId,
+        actor_id: actorId,
+        data: { isActive },
+      });
+    }
 
     notifyPluginChange(
       app,

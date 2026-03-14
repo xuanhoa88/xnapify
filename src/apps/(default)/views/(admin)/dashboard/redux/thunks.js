@@ -12,9 +12,9 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
  */
 
 /**
- * Fetch dashboard statistics and recent activity
+ * Fetch dashboard statistics and recent activities
  *
- * Retrieves webhook activity logs with pagination support.
+ * Retrieves webhook activities logs with pagination support.
  *
  * @param {Object} options - Fetch options
  * @param {number} options.page - Page number (1-indexed)

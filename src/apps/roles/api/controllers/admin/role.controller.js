@@ -47,6 +47,7 @@ export async function createRole(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
         defaultActions: req.app.get('auth').DEFAULT_ACTIONS,
@@ -179,6 +180,7 @@ export async function updateRole(req, res) {
       {
         models,
         webhook,
+        hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
@@ -238,10 +240,11 @@ export async function deleteRole(req, res) {
       return http.sendError(res, 'Cannot delete a role you have', 400);
     }
 
-    // Delete role (activity logged in service)
+    // Delete role (activities logged in service)
     await roleService.deleteRole(id, {
       models,
       webhook,
+      hook: req.app.get('hook'),
       actorId: req.user.id,
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,

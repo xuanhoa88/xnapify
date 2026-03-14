@@ -1,0 +1,7 @@
+{
+  "name": "@apps/activities",
+  "version": "1.0.0",
+  "description": "System activities logging and auditing module",
+  "private": true,
+  "main": "api/index.js"
+}
