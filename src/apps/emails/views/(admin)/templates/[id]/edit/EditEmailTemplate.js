@@ -20,6 +20,10 @@ import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 
+import {
+  extractVariables,
+  createPlaceholderData,
+} from '../../../../../utils/template';
 import { updateEmailTemplateFormSchema } from '../../../../../validator/admin';
 import EmailTemplateSelector from '../../../components/EmailTemplateSelector';
 import TemplateEditor from '../../../components/TemplateEditor';
@@ -223,12 +227,15 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
       e.stopPropagation();
 
       const { subject, html_body } = getValues();
+      const variables = extractVariables(`${subject || ''} ${html_body || ''}`);
+      const placeholderData = createPlaceholderData(variables);
+
       dispatch(
         previewRawTemplate({
           subject: subject || '',
           html_body: html_body || '',
           text_body: '',
-          sample_data: {},
+          sample_data: placeholderData,
         }),
       );
       setIsPreviewOpen(true);

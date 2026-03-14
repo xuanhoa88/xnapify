@@ -13,22 +13,12 @@ import { useTranslation } from 'react-i18next';
 import { useFormContext } from '@shared/renderer/components/Form';
 import Icon from '@shared/renderer/components/Icon';
 
+import { extractVariables } from '../../../utils/template';
+
 import s from './TemplateVariables.css';
 
-// Regex to capture anything inside {{ }} - specifically the variable name inside it
-const LIQUID_VAR_REGEX = /{{\s*([a-zA-Z0-9_.-]+)\s*}}/g;
-
 /**
- * Parses a string to extract all unique liquid template variables.
- */
-function extractVariables(text) {
-  if (!text) return [];
-  const matches = [...text.matchAll(LIQUID_VAR_REGEX)];
-  const vars = matches.map(match => match[1]);
-  return [...new Set(vars)].sort();
-}
 
-/**
  * TemplateVariables component
  * Uses react-hook-form context to watch `subject` and `html_body` inputs,
  * extracts LiquidJS variables (`{{ variable }}`), and displays them as chips.

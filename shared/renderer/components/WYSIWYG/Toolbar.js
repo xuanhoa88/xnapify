@@ -212,23 +212,27 @@ export default function Toolbar({
           />
         )}
         {has('fontSize') && (
-          <input
-            ref={fontSizeRef}
-            type='number'
-            className={s.fontSizeInput}
-            title={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
-            value={fontSizeValue}
-            onChange={e => setFontSizeValue(e.target.value)}
-            onBlur={e => applyFontSize(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                applyFontSize(e.target.value);
-              }
-            }}
-            min='8'
-            max='100'
-          />
+          <div
+            className={s.fontSizeWrapper}
+            data-tooltip={t('shared:form.wysiwyg.fontSize', 'Font Size (px)')}
+          >
+            <input
+              ref={fontSizeRef}
+              type='number'
+              className={s.fontSizeInput}
+              value={fontSizeValue}
+              onChange={e => setFontSizeValue(e.target.value)}
+              onBlur={e => applyFontSize(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  applyFontSize(e.target.value);
+                }
+              }}
+              min='8'
+              max='100'
+            />
+          </div>
         )}
       </div>
 

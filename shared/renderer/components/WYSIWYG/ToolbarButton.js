@@ -31,7 +31,7 @@ const ToolbarButton = forwardRef(function ToolbarButton(
       )}
       onClick={onClick}
       disabled={disabled}
-      title={title}
+      data-tooltip={title}
       aria-label={title}
       aria-pressed={isActive}
       {...props}

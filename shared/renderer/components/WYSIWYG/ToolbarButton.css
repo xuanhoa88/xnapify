@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 .toolbarBtn {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -28,7 +29,53 @@
   color: var(--color-text-primary);
 }
 
-.toolbarBtn.toolbarBtnActive {
+.toolbarBtnActive {
   background-color: var(--color-primary-light);
   color: var(--color-white, #fff);
+}
+
+/* --- CSS Tooltip --- */
+.toolbarBtn[data-tooltip]::before,
+.toolbarBtn[data-tooltip]::after {
+  position: absolute;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.2s ease;
+  z-index: var(--z-tooltip, 1070);
+}
+
+/* Tooltip Body */
+.toolbarBtn[data-tooltip]::before {
+  content: attr(data-tooltip);
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 4px 8px;
+  background-color: var(--color-gray-800, #1f2937);
+  color: var(--color-white, #fff);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Tooltip Arrow */
+.toolbarBtn[data-tooltip]::after {
+  content: '';
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  border-width: 4px 4px 0;
+  border-style: solid;
+  border-color: var(--color-gray-800, #1f2937) transparent transparent transparent;
+}
+
+/* Show Tooltip on Hover */
+.toolbarBtn[data-tooltip]:hover:not(:disabled)::before,
+.toolbarBtn[data-tooltip]:hover:not(:disabled)::after {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }

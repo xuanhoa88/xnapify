@@ -19,6 +19,10 @@ import { useHistory } from '@shared/renderer/components/History';
 import Icon from '@shared/renderer/components/Icon';
 import Modal from '@shared/renderer/components/Modal';
 
+import {
+  extractVariables,
+  createPlaceholderData,
+} from '../../../../utils/template';
 import { createEmailTemplateFormSchema } from '../../../../validator/admin';
 import EmailTemplateSelector from '../../components/EmailTemplateSelector';
 import TemplateEditor from '../../components/TemplateEditor';
@@ -185,12 +189,15 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
       e.stopPropagation();
 
       const { subject, html_body } = getValues();
+      const variables = extractVariables(`${subject || ''} ${html_body || ''}`);
+      const placeholderData = createPlaceholderData(variables);
+
       dispatch(
         previewRawTemplate({
           subject: subject || '',
           html_body: html_body || '',
           text_body: '',
-          sample_data: {},
+          sample_data: placeholderData,
         }),
       );
       setIsPreviewOpen(true);
