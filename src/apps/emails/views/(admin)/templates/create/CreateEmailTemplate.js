@@ -22,6 +22,7 @@ import Modal from '@shared/renderer/components/Modal';
 import { createEmailTemplateFormSchema } from '../../../../validator/admin';
 import EmailTemplateSelector from '../../components/EmailTemplateSelector';
 import TemplateEditor from '../../components/TemplateEditor';
+import TemplateVariables from '../../components/TemplateVariables';
 import {
   createTemplate,
   isCreateLoading,
@@ -282,6 +283,8 @@ function CreateFormFields({ onCancel, loading, isDirtyRef }) {
             )}
           />
         </Form.Field>
+
+        <TemplateVariables />
       </div>
 
       {/* sliding modal for Live Preview */}

@@ -23,6 +23,7 @@ import Modal from '@shared/renderer/components/Modal';
 import { updateEmailTemplateFormSchema } from '../../../../../validator/admin';
 import EmailTemplateSelector from '../../../components/EmailTemplateSelector';
 import TemplateEditor from '../../../components/TemplateEditor';
+import TemplateVariables from '../../../components/TemplateVariables';
 import {
   fetchTemplateById,
   updateTemplate,
@@ -316,6 +317,8 @@ function EditFormFields({ onCancel, loading, isDirtyRef }) {
             )}
           />
         </Form.Field>
+
+        <TemplateVariables />
       </div>
 
       {/* sliding modal for Live Preview */}
