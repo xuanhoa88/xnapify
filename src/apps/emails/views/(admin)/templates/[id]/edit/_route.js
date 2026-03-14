@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import PropTypes from 'prop-types';
+
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { addBreadcrumb } from '@shared/renderer/redux';
 
@@ -39,4 +41,15 @@ export function mount({ store, i18n, path }) {
 /**
  * Default export - Page component
  */
-export default EditEmailTemplate;
+export default function EditEmailTemplatePage({ context }) {
+  const { id } = context.params;
+  return <EditEmailTemplate params={{ id }} />;
+}
+
+EditEmailTemplatePage.propTypes = {
+  context: PropTypes.shape({
+    params: PropTypes.shape({
+      id: PropTypes.string.isRequired,
+    }).isRequired,
+  }).isRequired,
+};

@@ -40,6 +40,7 @@ const FormInputMask = forwardRef(function FormInputMask$(
     autoFocus,
     mask,
     maskPlaceholder,
+    onChange: customOnChange,
     ...props
   },
   forwardedRef,
@@ -67,11 +68,14 @@ const FormInputMask = forwardRef(function FormInputMask$(
       if (maskHandlers.onChange) {
         maskHandlers.onChange(event);
       }
+      if (customOnChange) {
+        customOnChange(event);
+      }
       if (rhfOnChange) {
         rhfOnChange(event);
       }
     },
-    [maskHandlers, rhfOnChange],
+    [maskHandlers, customOnChange, rhfOnChange],
   );
 
   return (
@@ -107,6 +111,8 @@ FormInputMask.propTypes = {
   disabled: PropTypes.bool,
   /** Auto focus on mount */
   autoFocus: PropTypes.bool,
+  /** Custom onChange handler */
+  onChange: PropTypes.func,
 };
 
 export default FormInputMask;

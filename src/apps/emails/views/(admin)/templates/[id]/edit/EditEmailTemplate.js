@@ -82,6 +82,7 @@ function EditEmailTemplate({ params }) {
         await dispatch(
           updateTemplate({ id: templateId, templateData: data }),
         ).unwrap();
+        history.push('/admin/emails/templates');
       } catch (err) {
         if (err && typeof err === 'object' && err.errors) {
           Object.keys(err.errors).forEach(key => {
@@ -103,7 +104,7 @@ function EditEmailTemplate({ params }) {
         }
       }
     },
-    [dispatch, templateId, t],
+    [dispatch, templateId, history, t],
   );
 
   // Memoize defaultValues so Form doesn't reset on every render
@@ -126,10 +127,12 @@ function EditEmailTemplate({ params }) {
           icon={<Icon name='edit' size={24} />}
           title={t('admin:emails.edit.title', 'Edit Email Template')}
         />
-        <Loader
-          variant='skeleton'
-          message={t('admin:emails.edit.loading', 'Loading template...')}
-        />
+        <div className={s.formContainer}>
+          <Loader
+            variant='spinner'
+            message={t('admin:emails.edit.loading', 'Loading template...')}
+          />
+        </div>
       </div>
     );
   }

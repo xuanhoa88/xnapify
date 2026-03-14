@@ -257,6 +257,17 @@ export default function useMask({ mask, maskPlaceholder = '_' }) {
       const input = event.target;
       const { selectionStart, selectionEnd } = input;
 
+      let nativeInputValueSetter = null;
+      if (typeof window !== 'undefined' && window.HTMLInputElement) {
+        const descriptor = Object.getOwnPropertyDescriptor(
+          window.HTMLInputElement.prototype,
+          'value',
+        );
+        if (descriptor) {
+          nativeInputValueSetter = descriptor.set;
+        }
+      }
+
       if (event.key === 'Backspace') {
         event.preventDefault();
 
@@ -292,7 +303,11 @@ export default function useMask({ mask, maskPlaceholder = '_' }) {
         }
 
         const nextFormat = formatValue(parsed, chars.join(''), maskPlaceholder);
-        input.value = nextFormat.value;
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, nextFormat.value);
+        } else {
+          input.value = nextFormat.value;
+        }
         setSelection(input, cursorTo);
 
         const nativeEvent = new Event('input', { bubbles: true });
@@ -321,7 +336,11 @@ export default function useMask({ mask, maskPlaceholder = '_' }) {
         }
 
         const nextFormat = formatValue(parsed, chars.join(''), maskPlaceholder);
-        input.value = nextFormat.value;
+        if (nativeInputValueSetter) {
+          nativeInputValueSetter.call(input, nextFormat.value);
+        } else {
+          input.value = nextFormat.value;
+        }
         setSelection(input, cursorTo);
 
         const nativeEvent = new Event('input', { bubbles: true });
