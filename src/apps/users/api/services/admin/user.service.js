@@ -29,7 +29,7 @@ import { fetchUserRBACData } from '../../utils/rbac/fetcher';
  */
 export async function createUser(
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName, hook },
+  { models, webhook, actorId, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
@@ -110,11 +110,6 @@ export async function createUser(
 
   // Log activity
   await logUserActivity(webhook, 'created', user.id, { email }, actorId);
-
-  // Index user in search
-  if (searchWorker) {
-    await searchWorker.indexUser(user);
-  }
 
   // Emit hook event
   await hook('admin:users').emit('created', { email, password, user });
@@ -329,7 +324,7 @@ export async function getUserById(user_id, { models, defaultRoleName }) {
 export async function updateUserById(
   user_id,
   userData,
-  { models, webhook, searchWorker, actorId, defaultRoleName, hook },
+  { models, webhook, actorId, defaultRoleName, hook },
 ) {
   const { User, UserProfile, Role, Group } = models;
 
@@ -454,17 +449,16 @@ export async function updateUserById(
     actorId,
   );
 
-  // Re-index user in search
-  if (searchWorker) {
-    await searchWorker.indexUser(user);
-  }
+  // Emit hook events
+  if (hook) {
+    await hook('admin:users').emit('updated', { user_id, user });
 
-  // Emit hook event for password reset by admin
-  if (password) {
-    await hook('admin:users').emit('password_reset', {
-      email: user.email,
-      password,
-    });
+    if (password) {
+      await hook('admin:users').emit('password_reset', {
+        email: user.email,
+        password,
+      });
+    }
   }
 
   return formatAdminUserResponse(user, { defaultRoleName });
@@ -616,6 +610,7 @@ export async function bulkUpdateStatus(
       await hook('admin:users').emit('status_updated', {
         email: user.email,
         is_active,
+        user,
       });
 
       return logUserActivity(
@@ -644,10 +639,7 @@ export async function bulkUpdateStatus(
  * @param {string} [options.actorId] - ID of admin performing action
  * @returns {Promise<Object>} Result with deleted count
  */
-export async function bulkDelete(
-  ids,
-  { models, webhook, searchWorker, actorId, hook },
-) {
+export async function bulkDelete(ids, { models, webhook, actorId, hook }) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
@@ -675,7 +667,10 @@ export async function bulkDelete(
         const deletedEmail = deletedEmails[i];
 
         // Emit hook event
-        await hook('admin:users').emit('deleted', { email: deletedEmail });
+        await hook('admin:users').emit('deleted', {
+          user_id: id,
+          email: deletedEmail,
+        });
 
         return logUserActivity(
           webhook,
@@ -686,11 +681,6 @@ export async function bulkDelete(
         );
       }),
     );
-
-    // Remove from search index
-    if (searchWorker) {
-      await Promise.all(deletedIds.map(id => searchWorker.removeUser(id)));
-    }
   }
 
   return {

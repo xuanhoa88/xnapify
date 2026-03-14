@@ -69,7 +69,6 @@ export async function createUser(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        searchWorker: req.app.get('container').resolve('search:worker'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
@@ -207,9 +206,9 @@ export async function updateUserById(req, res) {
     const user = await userAdminService.updateUserById(id, updateData, {
       models,
       webhook,
-      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
       defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+      hook: req.app.get('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -329,8 +328,8 @@ export async function bulkDelete(req, res) {
     const result = await userAdminService.bulkDelete(ids, {
       models,
       webhook,
-      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
+      hook: req.app.get('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -359,8 +358,8 @@ export async function deleteUser(req, res) {
     const result = await userAdminService.bulkDelete([id], {
       models,
       webhook,
-      searchWorker: req.app.get('container').resolve('search:worker'),
       actorId: req.user.id,
+      hook: req.app.get('hook'),
     });
 
     return http.sendSuccess(res, {

@@ -59,7 +59,6 @@ export async function register(req, res) {
         auth,
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        searchWorker: req.app.get('container').resolve('search:worker'),
         hook: req.app.get('hook').withContext(req.app),
         defaultRoleName: auth.DEFAULT_ROLE,
       },
@@ -477,7 +476,6 @@ export async function oauthCallback(req, res) {
     const userData = await authService.oauthLogin(provider, profile, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
-      searchWorker: req.app.get('container').resolve('search:worker'),
       hook: req.app.get('hook').withContext(req.app),
       defaultRoleName: auth.DEFAULT_ROLE,
     });

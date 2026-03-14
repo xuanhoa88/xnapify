@@ -39,7 +39,6 @@ export async function registerUser(
   {
     models,
     webhook,
-    searchWorker,
     hook,
     defaultRoleName,
     adminRoleName,
@@ -101,11 +100,6 @@ export async function registerUser(
 
   // Emit hook event if hook factory provided
   await hook('auth').emit('registered', { user_id: user.id, email, user });
-
-  // Index user in search
-  if (searchWorker) {
-    await searchWorker.indexUser(user);
-  }
 
   // Return formatted user data with default RBAC for new user
   return formatUserResponse(user, {
@@ -489,7 +483,6 @@ export async function oauthLogin(
   {
     models,
     webhook,
-    searchWorker,
     hook,
     defaultRoleName,
     adminRoleName,
@@ -586,11 +579,7 @@ export async function oauthLogin(
         },
       );
 
-      await hook('auth').emit('registered', { user_id: user.id, email });
-
-      if (searchWorker) {
-        await searchWorker.indexUser(user);
-      }
+      await hook('auth').emit('registered', { user_id: user.id, email, user });
     }
 
     // Link the oauth account mapping

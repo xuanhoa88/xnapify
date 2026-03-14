@@ -52,7 +52,7 @@ export async function createGroup(req, res) {
       {
         models,
         webhook: req.app.get('webhook'),
-        searchWorker: req.app.get('container').resolve('search:worker'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
@@ -180,7 +180,7 @@ export async function updateGroupById(req, res) {
       {
         models: req.app.get('models'),
         webhook: req.app.get('webhook'),
-        searchWorker: req.app.get('container').resolve('search:worker'),
+        hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
@@ -221,7 +221,7 @@ export async function deleteGroup(req, res) {
     await groupService.deleteGroup(id, {
       models: req.app.get('models'),
       webhook: req.app.get('webhook'),
-      searchWorker: req.app.get('container').resolve('search:worker'),
+      hook: req.app.get('hook'),
       actorId: req.user.id,
       systemGroups: req.app.get('auth').SYSTEM_GROUPS,
     });

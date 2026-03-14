@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { registerSearchHooks } from './hooks';
 import getSearchWorkerPool from './workers';
 
 let searchWorkerPool = null;
@@ -44,6 +45,9 @@ export async function init(app) {
   if (search && models) {
     // Bind search engine so convenience methods work without passing search
     searchWorkerPool.setSearch(search);
+
+    // Register hooks to observe changes and update index
+    registerSearchHooks(app);
 
     // Fire-and-forget — don't await, let it run in the background
     searchWorkerPool

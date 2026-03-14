@@ -27,7 +27,7 @@ import { logGroupActivity } from '../../utils/activity';
  */
 export async function createGroup(
   groupData,
-  { models, webhook, searchWorker, actorId, defaultRoleName },
+  { models, webhook, actorId, defaultRoleName, hook },
 ) {
   const { Group, Role, User, UserProfile } = models;
   const { name, description, category, type, roles } = groupData;
@@ -96,9 +96,9 @@ export async function createGroup(
   // Log activity
   await logGroupActivity(webhook, 'created', group.id, { name }, actorId);
 
-  // Index group in search
-  if (searchWorker) {
-    await searchWorker.indexGroup(group);
+  // Emit hook event
+  if (hook) {
+    await hook('admin:groups').emit('created', { group });
   }
 
   return {
@@ -298,7 +298,7 @@ export async function getGroupById(group_id, options = {}) {
 export async function updateGroupById(
   group_id,
   groupData,
-  { models, webhook, searchWorker, actorId, defaultRoleName },
+  { models, webhook, actorId, defaultRoleName, hook },
 ) {
   const { Group, Role, User, UserProfile } = models;
 
@@ -376,9 +376,9 @@ export async function updateGroupById(
     actorId,
   );
 
-  // Re-index group in search
-  if (searchWorker) {
-    await searchWorker.indexGroup(group);
+  // Emit hook event
+  if (hook) {
+    await hook('admin:groups').emit('updated', { group });
   }
 
   return {
@@ -404,7 +404,7 @@ export async function updateGroupById(
  */
 export async function deleteGroup(
   group_id,
-  { models, webhook, searchWorker, actorId, systemGroups = [] },
+  { models, webhook, actorId, systemGroups = [], hook },
 ) {
   const { Group } = models;
 
@@ -436,9 +436,9 @@ export async function deleteGroup(
     actorId,
   );
 
-  // Remove from search index
-  if (searchWorker) {
-    await searchWorker.removeGroup(group_id);
+  // Emit hook event
+  if (hook) {
+    await hook('admin:groups').emit('deleted', { group_id, name: groupName });
   }
 
   return true;

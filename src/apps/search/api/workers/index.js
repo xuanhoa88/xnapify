@@ -44,7 +44,7 @@ export default function getSearchWorkerPool(app) {
   };
 
   // ==========================================================================
-  // INDIVIDUAL OPERATIONS (inline, uses bound search engine)
+  // INDIVIDUAL OPERATIONS (via worker)
   // ==========================================================================
 
   /**
@@ -63,25 +63,12 @@ export default function getSearchWorkerPool(app) {
    * @param {Object} user - Sequelize user instance (with profile, roles)
    */
   workerPool.indexUser = async function indexUser(user) {
-    if (!this.searchEngine) return;
-    const userSearch = this.searchEngine.withNamespace('users');
-    await userSearch.index({
-      entityType: 'user',
-      entityId: user.id,
-      title: (user.profile && user.profile.display_name) || user.email,
-      email: user.email,
-      content: [
-        user.email,
-        user.profile && user.profile.first_name,
-        user.profile && user.profile.last_name,
-        user.profile && user.profile.bio,
-      ]
-        .filter(Boolean)
-        .join(' '),
-      tags: (Array.isArray(user.roles) ? user.roles.map(r => r.name || r) : [])
-        .filter(Boolean)
-        .join(', '),
-    });
+    return await this.sendRequest(
+      'flexsearch',
+      'INDEX_USER',
+      { search: this.searchEngine, user },
+      { forceFork: true },
+    );
   };
 
   /**
@@ -90,8 +77,12 @@ export default function getSearchWorkerPool(app) {
    * @param {string} userId - User ID to remove
    */
   workerPool.removeUser = async function removeUser(userId) {
-    if (!this.searchEngine) return;
-    await this.searchEngine.withNamespace('users').remove('user', userId);
+    return await this.sendRequest(
+      'flexsearch',
+      'REMOVE_USER',
+      { search: this.searchEngine, userId },
+      { forceFork: true },
+    );
   };
 
   /**
@@ -100,15 +91,12 @@ export default function getSearchWorkerPool(app) {
    * @param {Object} group - Sequelize group instance
    */
   workerPool.indexGroup = async function indexGroup(group) {
-    if (!this.searchEngine) return;
-    const groupSearch = this.searchEngine.withNamespace('groups');
-    await groupSearch.index({
-      entityType: 'group',
-      entityId: group.id,
-      title: group.name,
-      content: group.description || '',
-      tags: [group.category, group.type].filter(Boolean).join(', '),
-    });
+    return await this.sendRequest(
+      'flexsearch',
+      'INDEX_GROUP',
+      { search: this.searchEngine, group },
+      { forceFork: true },
+    );
   };
 
   /**
@@ -117,8 +105,12 @@ export default function getSearchWorkerPool(app) {
    * @param {string} groupId - Group ID to remove
    */
   workerPool.removeGroup = async function removeGroup(groupId) {
-    if (!this.searchEngine) return;
-    await this.searchEngine.withNamespace('groups').remove('group', groupId);
+    return await this.sendRequest(
+      'flexsearch',
+      'REMOVE_GROUP',
+      { search: this.searchEngine, groupId },
+      { forceFork: true },
+    );
   };
 
   instance = workerPool;

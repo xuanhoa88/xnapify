@@ -80,5 +80,57 @@ async function processIndexAll({ search, models }) {
   return { usersCount, groupsCount };
 }
 
+// ============================================================================
+// SINGLE ITEM INDEXING
+// ============================================================================
+
+export async function INDEX_USER({ search, user }) {
+  if (!user) return;
+  const userSearch = search.withNamespace('users');
+  await userSearch.index({
+    entityType: 'user',
+    entityId: user.id,
+    title: (user.profile && user.profile.display_name) || user.email,
+    email: user.email,
+    content: [
+      user.email,
+      user.profile && user.profile.first_name,
+      user.profile && user.profile.last_name,
+      user.profile && user.profile.bio,
+    ]
+      .filter(Boolean)
+      .join(' '),
+    tags: (Array.isArray(user.roles) ? user.roles.map(r => r.name || r) : [])
+      .filter(Boolean)
+      .join(', '),
+  });
+  return true;
+}
+
+export async function REMOVE_USER({ search, userId }) {
+  if (!userId) return;
+  await search.withNamespace('users').remove('user', userId);
+  return true;
+}
+
+export async function INDEX_GROUP({ search, group }) {
+  if (!group) return;
+  const groupSearch = search.withNamespace('groups');
+  await groupSearch.index({
+    entityType: 'group',
+    entityId: group.id,
+    title: group.name,
+    content: group.description || '',
+    tags: [group.category, group.type].filter(Boolean).join(', '),
+  });
+  return true;
+}
+
+export async function REMOVE_GROUP({ search, groupId }) {
+  if (!groupId) return;
+  await search.withNamespace('groups').remove('group', groupId);
+  return true;
+}
+
 export { processIndexAll as INDEX_ALL };
 export default processIndexAll;
