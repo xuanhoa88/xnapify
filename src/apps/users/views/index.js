@@ -9,6 +9,9 @@ import RoleTag from './(admin)/components/RoleTag';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('users:views');
+
 // Auto-load view routes via require.context
 // Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
 const viewsContext = require.context(
@@ -44,10 +47,10 @@ function log(phase) {
  */
 export function providers({ container }) {
   // Bind admin state
-  container.bind('users:admin:state', () => ({ selectors, thunks }), true);
+  container.bind('users:admin:state', () => ({ selectors, thunks }), OWNER_KEY);
 
   // Bind admin components
-  container.bind('users:admin:components', () => ({ RoleTag }), true);
+  container.bind('users:admin:components', () => ({ RoleTag }), OWNER_KEY);
 }
 
 /**

@@ -7,6 +7,9 @@
 
 import { SEED_ROLES } from './constants';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('roles');
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -40,7 +43,7 @@ export async function providers(app) {
   const container = app.get('container');
 
   // Bind seed roles to container as singleton
-  container.bind('roles:seed_constants', () => SEED_ROLES, true);
+  container.bind('roles:seed_constants', () => SEED_ROLES, OWNER_KEY);
 }
 
 /**

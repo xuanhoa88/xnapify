@@ -12,6 +12,9 @@
 import { registerActivityHooks } from './hooks';
 import getActivityWorkerPool from './workers';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('activities');
+
 // Auto-load contexts
 const migrationsContext = require.context(
   './database/migrations',
@@ -39,7 +42,7 @@ export async function providers(app) {
   const workerPool = getActivityWorkerPool(app);
 
   // Expose worker pool so other modules (if any) can call it directly
-  container.bind('activities:worker', () => workerPool, true);
+  container.bind('activities:worker', () => workerPool, OWNER_KEY);
 }
 
 /**

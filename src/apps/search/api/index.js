@@ -8,6 +8,9 @@
 import { registerSearchHooks } from './hooks';
 import getSearchWorkerPool from './workers';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('search');
+
 let searchWorkerPool = null;
 
 // Auto-load routes via require.context
@@ -27,7 +30,7 @@ export async function providers(app) {
   searchWorkerPool = getSearchWorkerPool(app);
 
   // Expose search worker pool so other modules can trigger indexAll
-  container.bind('search:worker', () => searchWorkerPool, true);
+  container.bind('search:worker', () => searchWorkerPool, OWNER_KEY);
 }
 
 /**

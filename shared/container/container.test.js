@@ -322,10 +322,15 @@ describe('Container Engine', () => {
   // Persistent bindings
   // ===========================================================================
 
-  describe('Persistent bindings', () => {
-    it('should prevent overwriting a persistent bind()', () => {
+  describe('Persistent bindings (ownership key)', () => {
+    const KEY_A = Symbol('module-a');
+    const KEY_B = Symbol('module-b');
+
+    // ── Overwrite protection ──────────────────────────────────────────────
+
+    it('should prevent overwriting without a key', () => {
       const container = createFactory();
-      container.bind('core:auth', () => 'auth', true);
+      container.bind('core:auth', () => 'auth', KEY_A);
 
       expect(() => container.bind('core:auth', () => 'evil')).toThrow(
         /persistent/i,
@@ -333,18 +338,49 @@ describe('Container Engine', () => {
       expect(container.resolve('core:auth')).toBe('auth');
     });
 
-    it('should prevent overwriting a persistent singleton()', () => {
+    it('should prevent overwriting with the wrong key', () => {
       const container = createFactory();
-      container.singleton('core:db', () => 'db', true);
+      container.bind('core:auth', () => 'auth', KEY_A);
+
+      expect(() => container.bind('core:auth', () => 'evil', KEY_B)).toThrow(
+        /persistent/i,
+      );
+    });
+
+    it('should allow overwriting with the correct key', () => {
+      const container = createFactory();
+      container.bind('core:auth', () => 'v1', KEY_A);
+      container.bind('core:auth', () => 'v2', KEY_A);
+
+      expect(container.resolve('core:auth')).toBe('v2');
+    });
+
+    it('should prevent cross-type overwrite without key', () => {
+      const container = createFactory();
+      container.bind('core:svc', () => 'svc', KEY_A);
+
+      expect(() => container.instance('core:svc', 'val')).toThrow(
+        /persistent/i,
+      );
+      expect(() => container.singleton('core:svc', () => 'val')).toThrow(
+        /persistent/i,
+      );
+    });
+
+    // ── Works for all registration types ──────────────────────────────────
+
+    it('should protect persistent singleton()', () => {
+      const container = createFactory();
+      container.singleton('core:db', () => 'db', KEY_A);
 
       expect(() => container.singleton('core:db', () => 'evil')).toThrow(
         /persistent/i,
       );
     });
 
-    it('should prevent overwriting a persistent instance()', () => {
+    it('should protect persistent instance()', () => {
       const container = createFactory();
-      container.instance('core:config', { a: 1 }, true);
+      container.instance('core:config', { a: 1 }, KEY_A);
 
       expect(() => container.instance('core:config', { a: 2 })).toThrow(
         /persistent/i,
@@ -352,31 +388,87 @@ describe('Container Engine', () => {
       expect(container.resolve('core:config')).toEqual({ a: 1 });
     });
 
-    it('should prevent cross-type overwrite of persistent binding', () => {
+    it('should support persistent with factory() alias', () => {
       const container = createFactory();
-      container.bind('core:svc', () => 'svc', true);
+      container.factory('core:svc', () => 'svc', KEY_A);
 
-      // Try to overwrite with instance
-      expect(() => container.instance('core:svc', 'val')).toThrow(
-        /persistent/i,
-      );
-      // Try to overwrite with singleton
-      expect(() => container.singleton('core:svc', () => 'val')).toThrow(
+      expect(() => container.factory('core:svc', () => 'evil')).toThrow(
         /persistent/i,
       );
     });
 
-    it('should prevent reset() on persistent binding', () => {
+    // ── reset() ────────────────────────────────────────────────────────────
+
+    it('should prevent reset() without key', () => {
       const container = createFactory();
-      container.bind('core:auth', () => 'auth', true);
+      container.bind('core:auth', () => 'auth', KEY_A);
 
       expect(() => container.reset('core:auth')).toThrow(/persistent/i);
       expect(container.has('core:auth')).toBe(true);
     });
 
+    it('should prevent reset() with wrong key', () => {
+      const container = createFactory();
+      container.bind('core:auth', () => 'auth', KEY_A);
+
+      expect(() => container.reset('core:auth', KEY_B)).toThrow(/persistent/i);
+    });
+
+    it('should allow reset() with correct key', () => {
+      const container = createFactory();
+      container.bind('core:auth', () => 'auth', KEY_A);
+
+      expect(container.reset('core:auth', KEY_A)).toBe(true);
+      expect(container.has('core:auth')).toBe(false);
+    });
+
+    // ── cleanup() ──────────────────────────────────────────────────────────
+
+    it('cleanup() without args should preserve all persistent bindings', () => {
+      const container = createFactory();
+      container.bind('core', () => 'core-val', KEY_A);
+      container.bind('temp', () => 'temp-val');
+
+      container.cleanup();
+
+      expect(container.has('core')).toBe(true);
+      expect(container.has('temp')).toBe(false);
+    });
+
+    it('cleanup(key) should remove matching persistent + non-persistent', () => {
+      const container = createFactory();
+      container.bind('a', () => 'a-val', KEY_A);
+      container.bind('b', () => 'b-val', KEY_B);
+      container.bind('c', () => 'c-val');
+
+      container.cleanup(KEY_A);
+
+      expect(container.has('a')).toBe(false); // removed: matches KEY_A
+      expect(container.has('b')).toBe(true); // preserved: different key
+      expect(container.has('c')).toBe(false); // removed: non-persistent
+    });
+
+    it('cleanup(k1, k2) should remove multiple owners at once', () => {
+      const container = createFactory();
+      const KEY_C = Symbol('module-c');
+      container.bind('a', () => 1, KEY_A);
+      container.bind('b', () => 2, KEY_B);
+      container.bind('c', () => 3, KEY_C);
+      container.bind('d', () => 4);
+
+      container.cleanup(KEY_A, KEY_B);
+
+      expect(container.has('a')).toBe(false);
+      expect(container.has('b')).toBe(false);
+      expect(container.has('c')).toBe(true); // different key, preserved
+      expect(container.has('d')).toBe(false); // non-persistent, removed
+    });
+
+    // ── Error shape ────────────────────────────────────────────────────────
+
     it('should throw PersistentBindingError with correct name and code', () => {
       const container = createFactory();
-      container.instance('locked', 42, true);
+      container.instance('locked', 42, KEY_A);
 
       try {
         container.instance('locked', 99);
@@ -386,20 +478,35 @@ describe('Container Engine', () => {
       }
     });
 
+    // ── Backward compat: `true` as owner key ──────────────────────────────
+
+    it('should work with boolean true as owner key (backward compat)', () => {
+      const container = createFactory();
+      container.bind('legacy', () => 'val', true);
+
+      // Cannot overwrite without key
+      expect(() => container.bind('legacy', () => 'evil')).toThrow(
+        /persistent/i,
+      );
+
+      // Can overwrite with same key (true)
+      container.bind('legacy', () => 'v2', true);
+      expect(container.resolve('legacy')).toBe('v2');
+
+      // cleanup() without args preserves it
+      container.cleanup();
+      expect(container.has('legacy')).toBe(true);
+
+      // cleanup(true) removes it
+      container.cleanup(true);
+      expect(container.has('legacy')).toBe(false);
+    });
+
     it('should allow non-persistent bindings to be overwritten normally', () => {
       const container = createFactory();
       container.bind('temp', () => 'v1');
       container.bind('temp', () => 'v2');
       expect(container.resolve('temp')).toBe('v2');
-    });
-
-    it('should support persistent with factory() alias', () => {
-      const container = createFactory();
-      container.factory('core:svc', () => 'svc', true);
-
-      expect(() => container.factory('core:svc', () => 'evil')).toThrow(
-        /persistent/i,
-      );
     });
   });
 

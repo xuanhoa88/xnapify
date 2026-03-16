@@ -7,6 +7,9 @@
 
 import { SEED_PERMISSIONS } from './constants';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('files');
+
 // Auto-load migrations
 const migrationsContext = require.context(
   './database/migrations',
@@ -40,7 +43,7 @@ export async function providers(app) {
   const container = app.get('container');
 
   // Bind seed permissions to container as singleton
-  container.bind('files:seed_constants', () => SEED_PERMISSIONS, true);
+  container.bind('files:seed_constants', () => SEED_PERMISSIONS, OWNER_KEY);
 }
 
 /**

@@ -7,6 +7,9 @@
 
 import { SEED_GROUPS } from './constants';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('groups');
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -40,7 +43,7 @@ export async function providers(app) {
   const container = app.get('container');
 
   // Bind seed groups to container as singleton
-  container.bind('groups:seed_constants', () => SEED_GROUPS, true);
+  container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
 }
 
 /**

@@ -12,6 +12,9 @@ import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
 import { configurePassport } from './utils/passport';
 import { getUserRBACData } from './utils/rbac/fetcher';
 
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('users');
+
 // Auto-load migrations via require.context
 const migrationsContext = require.context(
   './database/migrations',
@@ -64,7 +67,7 @@ export async function providers(app) {
   const container = app.get('container');
 
   // Bind seed constants to container as singleton
-  container.bind('users:seed_constants', () => SEED_USERS, true);
+  container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
 
   // Bind controllers to container as singleton
   container.bind(
@@ -73,7 +76,7 @@ export async function providers(app) {
       profile: profileController,
       auth: authController,
     }),
-    true,
+    OWNER_KEY,
   );
 }
 

@@ -36,22 +36,25 @@ const BINDINGS = Symbol('__rsk.containerBindings__');
  * | `singleton()`   | Resolved once, then cached      |
  * | `instance()`    | Stores a pre-built value        |
  *
- * ## Persistent Bindings
+ * ## Persistent Bindings (Ownership Key)
  *
- * Any registration method accepts a `persistent` flag.
- * Persistent bindings cannot be overwritten or removed by other modules:
+ * Any registration method accepts an optional `ownerKey` (any truthy value).
+ * Only the holder of the same key can overwrite or remove the binding:
  *
  * ```js
- * container.bind('core:auth', () => authService, true);
+ * const MY_KEY = Symbol('auth-module');
+ * container.bind('core:auth', () => authService, MY_KEY);
  *
- * // Later, another module tries to overwrite — throws PersistentBindingError
+ * // Another module tries to overwrite — throws PersistentBindingError
  * container.bind('core:auth', () => evilService);
  *
- * // reset() also throws
- * container.reset('core:auth'); // throws
+ * // reset() also requires the key
+ * container.reset('core:auth');          // throws
+ * container.reset('core:auth', MY_KEY);  // works
  *
- * // cleanup() skips persistent bindings
- * container.cleanup();           // 'core:auth' survives
+ * // cleanup() can target specific owners
+ * container.cleanup();           // removes non-persistent only
+ * container.cleanup(MY_KEY);     // removes non-persistent + MY_KEY bindings
  * ```
  *
  * ## Usage
@@ -78,7 +81,7 @@ class Container {
   constructor() {
     /**
      * Internal registry of bindings.
-     * @type {Map<string, {type: string, persistent: boolean, factory?: Function, value?: *}>}
+     * @type {Map<string, {type: string, persistent: *, factory?: Function, value?: *}>}
      */
     this[BINDINGS] = new Map();
   }
@@ -93,20 +96,20 @@ class Container {
    *
    * @param {string} name - Binding key (e.g. `'users:services'`)
    * @param {Function} factory - Factory function that returns the value
-   * @param {boolean} [persistent=false] - If `true`, binding cannot be overwritten or removed
+   * @param {*} [ownerKey] - If truthy, marks this binding as persistent under this key
    * @returns {Container} This container (for chaining)
    * @throws {TypeError} If name is not a non-empty string or factory is not a function
-   * @throws {Error} If a persistent binding already exists under this name
+   * @throws {Error} If a persistent binding already exists under this name with a different key
    */
-  bind(name, factory, persistent) {
+  bind(name, factory, ownerKey) {
     validateName(name);
     validateFactory(factory);
-    guardPersistent(this, name);
+    guardPersistent(this, name, ownerKey);
 
     this[BINDINGS].set(name, {
       type: BINDING_TYPE.FACTORY,
       factory,
-      persistent: Boolean(persistent),
+      persistent: ownerKey || false,
     });
 
     return this;
@@ -118,11 +121,11 @@ class Container {
    *
    * @param {string} name - Binding key
    * @param {Function} factory - Factory function
-   * @param {boolean} [persistent=false] - If `true`, binding cannot be overwritten or removed
+   * @param {*} [ownerKey] - If truthy, marks this binding as persistent under this key
    * @returns {Container} This container (for chaining)
    */
-  factory(name, factory, persistent) {
-    return this.bind(name, factory, persistent);
+  factory(name, factory, ownerKey) {
+    return this.bind(name, factory, ownerKey);
   }
 
   /**
@@ -132,22 +135,22 @@ class Container {
    *
    * @param {string} name - Binding key
    * @param {Function} factory - Factory function that returns the value
-   * @param {boolean} [persistent=false] - If `true`, binding cannot be overwritten or removed
+   * @param {*} [ownerKey] - If truthy, marks this binding as persistent under this key
    * @returns {Container} This container (for chaining)
    * @throws {TypeError} If name is not a non-empty string or factory is not a function
-   * @throws {Error} If a persistent binding already exists under this name
+   * @throws {Error} If a persistent binding already exists under this name with a different key
    */
-  singleton(name, factory, persistent) {
+  singleton(name, factory, ownerKey) {
     validateName(name);
     validateFactory(factory);
-    guardPersistent(this, name);
+    guardPersistent(this, name, ownerKey);
 
     this[BINDINGS].set(name, {
       type: BINDING_TYPE.SINGLETON,
       factory,
       resolved: false,
       value: undefined,
-      persistent: Boolean(persistent),
+      persistent: ownerKey || false,
     });
 
     return this;
@@ -159,19 +162,19 @@ class Container {
    *
    * @param {string} name - Binding key
    * @param {*} value - The value to store
-   * @param {boolean} [persistent=false] - If `true`, binding cannot be overwritten or removed
+   * @param {*} [ownerKey] - If truthy, marks this binding as persistent under this key
    * @returns {Container} This container (for chaining)
    * @throws {TypeError} If name is not a non-empty string
-   * @throws {Error} If a persistent binding already exists under this name
+   * @throws {Error} If a persistent binding already exists under this name with a different key
    */
-  instance(name, value, persistent) {
+  instance(name, value, ownerKey) {
     validateName(name);
-    guardPersistent(this, name);
+    guardPersistent(this, name, ownerKey);
 
     this[BINDINGS].set(name, {
       type: BINDING_TYPE.INSTANCE,
       value,
-      persistent: Boolean(persistent),
+      persistent: ownerKey || false,
     });
 
     return this;
@@ -264,21 +267,26 @@ class Container {
    * Remove a single binding.
    *
    * @param {string} name - Binding key to remove
+   * @param {*} [ownerKey] - Required if the binding is persistent
    * @returns {boolean} `true` if the binding existed and was removed
-   * @throws {Error} If the binding is persistent
+   * @throws {Error} If the binding is persistent and key does not match
    */
-  reset(name) {
-    guardPersistent(this, name);
+  reset(name, ownerKey) {
+    guardPersistent(this, name, ownerKey);
     return this[BINDINGS].delete(name);
   }
 
   /**
-   * Remove all bindings.
-   * Persistent bindings are always preserved.
+   * Remove bindings in bulk.
+   *
+   * - Called with no arguments: removes all **non-persistent** bindings.
+   * - Called with owner keys: removes non-persistent **+** bindings owned by any of the given keys.
+   *
+   * @param {...*} ownerKeys - Zero or more owner keys whose bindings should also be removed
    */
-  cleanup() {
+  cleanup(...ownerKeys) {
     for (const [name, binding] of this[BINDINGS]) {
-      if (!binding.persistent) {
+      if (!binding.persistent || ownerKeys.includes(binding.persistent)) {
         this[BINDINGS].delete(name);
       }
     }
@@ -326,11 +334,12 @@ function validateFactory(factory) {
  *
  * @param {Container} container - Container instance to check
  * @param {string} name - Binding key to check
- * @throws {Error} If the binding exists and is persistent
+ * @param {*} [providedKey] - The owner key being presented
+ * @throws {Error} If the binding exists, is persistent, and the key does not match
  */
-function guardPersistent(container, name) {
+function guardPersistent(container, name, providedKey) {
   const existing = container[BINDINGS].get(name);
-  if (existing && existing.persistent) {
+  if (existing && existing.persistent && existing.persistent !== providedKey) {
     const error = new Error(
       `Cannot overwrite or remove persistent binding "${name}"`,
     );
