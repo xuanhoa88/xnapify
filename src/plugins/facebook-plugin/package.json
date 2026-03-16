@@ -2,10 +2,5 @@
   "name": "@rsk-plugin/facebook",
   "version": "1.0.0",
   "main": "api/index.js",
-  "description": "Facebook webhook integration plugin",
-  "rsk": {
-    "subscribe": [
-      "/webhooks"
-    ]
-  }
+  "description": "Facebook webhook integration plugin"
 }

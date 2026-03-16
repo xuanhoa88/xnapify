@@ -69,7 +69,8 @@ export default {
     }
 
     // Store the handler function for proper cleanup in destroy()
-    this[HANDLERS].facebookHandler = async payload => {
+    // ctx is auto-injected by WebhookManager.dispatch() with { headers, query, ip, app }
+    this[HANDLERS].facebookHandler = async (payload, ctx) => {
       const { object, entry } = payload || {};
 
       console.info(`${TAG} Received event: object=${object}`);
@@ -87,7 +88,7 @@ export default {
               );
 
               // Emit to hook engine so other modules can observe
-              const hook = context.app.get('hook');
+              const hook = ctx.app.get('hook');
               if (hook) {
                 hook('facebook').emit('messaging', {
                   pageId: id,
@@ -105,7 +106,7 @@ export default {
                 `${TAG} Change event: field=${change.field} from page ${id}`,
               );
 
-              const hook = context.app.get('hook');
+              const hook = ctx.app.get('hook');
               if (hook) {
                 hook('facebook').emit('change', {
                   pageId: id,

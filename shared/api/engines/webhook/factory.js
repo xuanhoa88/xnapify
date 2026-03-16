@@ -5,14 +5,13 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createFactory as createHook } from '../hook';
-
 import { WebhookValidationError } from './errors';
 import { WEBHOOK_EVENTS } from './utils/constants';
 
 // Private symbols
 const HOOK = Symbol('__rsk.webhookChannel__');
 const PROVIDERS = Symbol('__rsk.webhookProviders__');
+const CONTEXT = Symbol('__rsk.webhookContext__');
 
 /**
  * Inbound Webhook Manager
@@ -26,11 +25,32 @@ const PROVIDERS = Symbol('__rsk.webhookProviders__');
  */
 class WebhookManager {
   constructor() {
-    /** @type {HookChannel} */
-    this[HOOK] = createHook()('webhook');
+    /** @type {HookChannel|null} Injected via withContext() */
+    this[HOOK] = null;
 
-    /** @type {Map<string, { secret: string, signatureHeader: string }>} */
+    /** @type {Object|null} App context (proxy) from bootstrap */
+    this[CONTEXT] = null;
+
+    /** @type {Map<string, { secret: string, signatureHeader: string }> } */
     this[PROVIDERS] = new Map();
+  }
+
+  /**
+   * Bind this manager to an application context.
+   *
+   * Called automatically by `registerEngines()` during bootstrap.
+   * Resolves the shared hook engine from the context and creates
+   * the 'webhook' channel for handler dispatch.
+   *
+   * @param {Object} context - Application context (proxy)
+   * @param {Function} context.get - Provider getter
+   * @returns {WebhookManager} this (for chaining)
+   */
+  withContext(context) {
+    this[CONTEXT] = context;
+    const hook = context.get('hook');
+    this[HOOK] = hook('webhook');
+    return this;
   }
 
   /**
@@ -164,22 +184,25 @@ class WebhookManager {
    * @returns {Promise<void>}
    */
   async dispatch(provider, payload, context) {
+    // Merge app context so handlers get (payload, { headers, query, ip, app })
+    const enrichedContext = { ...context, app: this[CONTEXT] };
+
     // beforeHandle lifecycle hook
     await this[HOOK].emit(WEBHOOK_EVENTS.BEFORE_HANDLE, {
       provider,
       payload,
-      ...context,
+      ...enrichedContext,
     });
 
     // Provider handler(s)
     const hookId = `${WEBHOOK_EVENTS.HANDLER}:${provider}`;
-    await this[HOOK].emit(hookId, payload, context);
+    await this[HOOK].emit(hookId, payload, enrichedContext);
 
     // afterHandle lifecycle hook
     await this[HOOK].emit(WEBHOOK_EVENTS.AFTER_HANDLE, {
       provider,
       payload,
-      ...context,
+      ...enrichedContext,
     });
   }
 
@@ -217,7 +240,9 @@ class WebhookManager {
    * Clear all handlers and provider configs.
    */
   cleanup() {
-    this[HOOK].off();
+    if (this[HOOK]) {
+      this[HOOK].off();
+    }
     this[PROVIDERS].clear();
     console.info('🧹 Webhook engine cleanup complete');
   }

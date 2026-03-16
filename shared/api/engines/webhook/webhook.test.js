@@ -7,11 +7,13 @@
 
 import crypto from 'crypto';
 
+import { createFactory as createHookFactory } from '../hook';
+
 import { WebhookError, WebhookValidationError } from './errors';
 import { WEBHOOK_EVENTS, SIGNATURE_ALGORITHMS } from './utils/constants';
 import { verifySignature, parseSignatureHeader } from './utils/signature';
 
-import { createFactory, createAdapter } from '.';
+import { createFactory } from '.';
 
 // Helper: generate a valid HMAC signature for test payloads
 function sign(payload, secret, algorithm = 'sha256') {
@@ -20,8 +22,9 @@ function sign(payload, secret, algorithm = 'sha256') {
 }
 
 describe('Webhook Engine', () => {
-  // Helper: create a factory with its own hook channel
-  const createWebhook = () => createFactory();
+  // Helper: create a webhook with an injected hook context (mirrors bootstrap)
+  const createWebhook = () =>
+    createFactory().withContext({ get: () => createHookFactory() });
 
   describe('Default Instance', () => {
     it('should be a webhook manager instance', () => {
@@ -195,7 +198,8 @@ describe('Webhook Engine', () => {
 
       expect(received).toHaveLength(1);
       expect(received[0].payload).toEqual(payload);
-      expect(received[0].context).toEqual(context);
+      expect(received[0].context).toEqual(expect.objectContaining(context));
+      expect(received[0].context).toHaveProperty('app');
     });
 
     it('should fire beforeHandle and afterHandle lifecycle hooks', async () => {
@@ -427,170 +431,6 @@ describe('Webhook Engine', () => {
         .on('afterHandle', async () => {});
 
       expect(result).toBe(testWebhook);
-    });
-  });
-
-  describe('Adapter Compatibility', () => {
-    let testWebhook;
-    let adapter;
-
-    beforeEach(() => {
-      testWebhook = createWebhook();
-      adapter = createAdapter(testWebhook);
-    });
-
-    afterEach(() => {
-      testWebhook.cleanup();
-    });
-
-    it('should return an object with files() and load() methods', () => {
-      expect(typeof adapter.files).toBe('function');
-      expect(typeof adapter.load).toBe('function');
-    });
-
-    it('should return virtual file paths from files()', () => {
-      const files = adapter.files();
-      expect(files).toHaveLength(2);
-      expect(files).toContain('./webhooks/api/routes/providers/_route.js');
-      expect(files).toContain('./webhooks/api/routes/[provider]/_route.js');
-    });
-
-    it('should load providers module with get export and middleware: false', () => {
-      const mod = adapter.load('./webhooks/api/routes/providers/_route.js');
-      expect(mod.middleware).toBe(false);
-      expect(typeof mod.get).toBe('function');
-    });
-
-    it('should load provider module with post export and middleware: false', () => {
-      const mod = adapter.load('./webhooks/api/routes/[provider]/_route.js');
-      expect(mod.middleware).toBe(false);
-      expect(typeof mod.post).toBe('function');
-    });
-
-    it('should throw for unknown file paths', () => {
-      expect(() => adapter.load('./unknown/_route.js')).toThrow(
-        'Unknown webhook route file',
-      );
-    });
-
-    describe('GET /providers handler', () => {
-      it('should respond with registered providers', () => {
-        testWebhook.handler('stripe', {
-          secret: 'sec',
-          handler: async () => {},
-        });
-
-        const mod = adapter.load('./webhooks/api/routes/providers/_route.js');
-        const res = {
-          json: jest.fn(),
-        };
-
-        mod.get({}, res);
-
-        expect(res.json).toHaveBeenCalledTimes(1);
-        const body = res.json.mock.calls[0][0];
-        expect(body.success).toBe(true);
-        expect(body.data.providers).toContain('stripe');
-      });
-    });
-
-    describe('POST /:provider handler', () => {
-      it('should return 404 for unknown provider', () => {
-        const mod = adapter.load('./webhooks/api/routes/[provider]/_route.js');
-        const req = {
-          params: { provider: 'unknown' },
-          headers: {},
-          body: {},
-        };
-        const res = {
-          status: jest.fn().mockReturnThis(),
-          json: jest.fn(),
-        };
-
-        mod.post(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(404);
-      });
-
-      it('should return 401 for missing signature', () => {
-        testWebhook.handler('test', {
-          secret: 'secret',
-          handler: async () => {},
-        });
-
-        const mod = adapter.load('./webhooks/api/routes/[provider]/_route.js');
-        const req = {
-          params: { provider: 'test' },
-          headers: {},
-          body: {},
-        };
-        const res = {
-          status: jest.fn().mockReturnThis(),
-          json: jest.fn(),
-        };
-
-        mod.post(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-      });
-
-      it('should return 401 for invalid signature', () => {
-        testWebhook.handler('test', {
-          secret: 'secret',
-          handler: async () => {},
-        });
-
-        const mod = adapter.load('./webhooks/api/routes/[provider]/_route.js');
-        const req = {
-          params: { provider: 'test' },
-          headers: { 'x-webhook-signature': 'sha256=invalid' },
-          body: { event: 'test' },
-        };
-        const res = {
-          status: jest.fn().mockReturnThis(),
-          json: jest.fn(),
-        };
-
-        mod.post(req, res);
-
-        expect(res.status).toHaveBeenCalledWith(401);
-      });
-
-      it('should return 202 and dispatch async on valid signature', async () => {
-        const received = [];
-        testWebhook.handler('test', {
-          secret: 'secret',
-          handler: async payload => {
-            received.push(payload);
-          },
-        });
-
-        const mod = adapter.load('./webhooks/api/routes/[provider]/_route.js');
-        const payload = { event: 'test.created' };
-        const sig = sign(payload, 'secret', 'sha256');
-        const req = {
-          params: { provider: 'test' },
-          headers: { 'x-webhook-signature': `sha256=${sig}` },
-          body: payload,
-          query: {},
-          ip: '127.0.0.1',
-        };
-        const res = {
-          status: jest.fn().mockReturnThis(),
-          json: jest.fn(),
-        };
-
-        mod.post(req, res);
-
-        // Response is immediate (202)
-        expect(res.status).toHaveBeenCalledWith(202);
-
-        // Wait for async dispatch to complete
-        await new Promise(resolve => setTimeout(resolve, 50));
-
-        expect(received).toHaveLength(1);
-        expect(received[0]).toEqual(payload);
-      });
     });
   });
 });
