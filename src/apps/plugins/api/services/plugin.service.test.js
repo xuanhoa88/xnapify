@@ -91,12 +91,10 @@ const mockPluginManager = {
   ),
 };
 
-const mockWebhook = { send: jest.fn() };
 const mockContext = {
   pluginManager: mockPluginManager,
   models: mockModels,
   cache: mockCache,
-  webhook: mockWebhook,
   actorId: 'user-123',
   cwd: '/test/cwd',
   queue: mockQueue,

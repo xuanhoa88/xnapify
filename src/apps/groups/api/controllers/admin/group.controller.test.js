@@ -1,7 +1,7 @@
 import * as groupController from './group.controller';
 
 describe('Admin Group Controller (SQLite E2E)', () => {
-  let req, res, mockHttp, mockModels, mockWebhook, mockAuth;
+  let req, res, mockHttp, mockModels, mockAuth;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -24,7 +24,6 @@ describe('Admin Group Controller (SQLite E2E)', () => {
       getPagination: jest.fn(() => ({ page: 1, limit: 10, offset: 0 })),
     };
 
-    mockWebhook = { send: jest.fn(() => Promise.resolve({ success: true })) };
     mockAuth = { DEFAULT_ROLE: 'user', SYSTEM_GROUPS: ['admin'] };
 
     req = {
@@ -37,7 +36,6 @@ describe('Admin Group Controller (SQLite E2E)', () => {
           const deps = {
             http: mockHttp,
             models: mockModels,
-            webhook: mockWebhook,
             auth: mockAuth,
             container: { resolve: jest.fn() },
           };

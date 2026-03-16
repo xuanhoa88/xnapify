@@ -34,7 +34,6 @@ describe('Auth Controller', () => {
   let mockAuth;
   let mockJwt;
   let mockModels;
-  let mockWebhook;
   let mockHook;
   let mockHookInstance;
 
@@ -74,7 +73,7 @@ describe('Auth Controller', () => {
     };
 
     mockModels = {};
-    mockWebhook = {};
+
     mockHookInstance = { emit: jest.fn() };
     mockHook = {
       withContext: jest
@@ -102,8 +101,6 @@ describe('Auth Controller', () => {
               return mockJwt;
             case 'models':
               return mockModels;
-            case 'webhook':
-              return mockWebhook;
             case 'hook':
               return mockHook;
             case 'container':

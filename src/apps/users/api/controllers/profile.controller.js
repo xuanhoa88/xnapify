@@ -102,7 +102,6 @@ export async function updateProfile(req, res) {
       dataOrErrors,
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         searchWorker: req.app.get('container').resolve('search:worker'),
         hook,
       },
@@ -348,7 +347,6 @@ export async function changePassword(req, res) {
       newPassword,
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook').withContext(req.app),
       },
     );
@@ -399,7 +397,6 @@ export async function updatePreferences(req, res) {
       { language, timezone, notifications, theme },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook').withContext(req.app),
       },
     );
@@ -459,7 +456,6 @@ export async function deleteAccount(req, res) {
 
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       searchWorker: req.app.get('container').resolve('search:worker'),
       hook: req.app.get('hook').withContext(req.app),
     });

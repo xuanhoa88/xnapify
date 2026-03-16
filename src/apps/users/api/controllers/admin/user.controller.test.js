@@ -35,7 +35,6 @@ describe('Admin User Controller', () => {
   let res;
   let mockHttp;
   let mockModels;
-  let mockWebhook;
   let mockHook;
   let mockAuth;
   let mockJwt;
@@ -55,7 +54,6 @@ describe('Admin User Controller', () => {
     };
 
     mockModels = {};
-    mockWebhook = {};
     mockAuth = { DEFAULT_ROLE: 'user' };
     mockJwt = {};
     mockCache = {};
@@ -75,7 +73,6 @@ describe('Admin User Controller', () => {
           const deps = {
             http: mockHttp,
             models: mockModels,
-            webhook: mockWebhook,
             hook: mockHook,
             auth: mockAuth,
             jwt: mockJwt,

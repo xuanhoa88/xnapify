@@ -18,8 +18,7 @@ describe('auth.service hook emits', () => {
       called = true;
     });
 
-    // Call logoutUser without webhook to avoid external calls
-    await logoutUser(userId, { webhook: null, hook });
+    await logoutUser(userId, { hook });
 
     expect(called).toBe(true);
   });

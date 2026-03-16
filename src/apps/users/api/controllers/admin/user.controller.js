@@ -68,7 +68,6 @@ export async function createUser(req, res) {
       },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
@@ -185,9 +184,8 @@ export async function updateUserById(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     // Build update data - only include password if provided
     const updateData = {
@@ -205,7 +203,6 @@ export async function updateUserById(req, res) {
     // Update user
     const user = await userAdminService.updateUserById(id, updateData, {
       models,
-      webhook,
       actorId: req.user.id,
       defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       hook: req.app.get('hook'),
@@ -260,9 +257,8 @@ export async function bulkUpdateStatus(req, res) {
       return http.sendError(res, 'Cannot change your own account status', 400);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     // Bulk update status (activities logged in service)
     const result = await userAdminService.bulkUpdateStatus(
@@ -270,7 +266,6 @@ export async function bulkUpdateStatus(req, res) {
       state === 'active',
       {
         models,
-        webhook,
         actorId: req.user.id,
       },
     );
@@ -320,14 +315,12 @@ export async function bulkDelete(req, res) {
       return http.sendError(res, 'Cannot delete your own account', 400);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     // Bulk delete users (activities logged in service)
     const result = await userAdminService.bulkDelete(ids, {
       models,
-      webhook,
       actorId: req.user.id,
       hook: req.app.get('hook'),
     });
@@ -353,11 +346,9 @@ export async function deleteUser(req, res) {
   try {
     const { id } = req.params;
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
 
     const result = await userAdminService.bulkDelete([id], {
       models,
-      webhook,
       actorId: req.user.id,
       hook: req.app.get('hook'),
     });

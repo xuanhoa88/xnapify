@@ -33,7 +33,6 @@ export const listPlugins = async (req, res) => {
       models: req.app.get('models'),
       cache: req.app.get('cache'),
       cwd: req.app.get('cwd'),
-      webhook: req.app.get('webhook'),
       actorId: req.user && req.user.id,
     });
     return http.sendSuccess(res, { plugins });
@@ -117,7 +116,6 @@ export const managePlugins = async (req, res) => {
       pluginManager: req.app.get('plugin'),
       models: req.app.get('models'),
       cwd: req.app.get('cwd'),
-      webhook: req.app.get('webhook'),
       actorId: req.user && req.user.id,
       queue: req.app.get('queue'),
     });
@@ -282,7 +280,6 @@ export const upgradePlugin = async (req, res) => {
     const plugin = await pluginService.upgradePlugin(id, result, {
       models,
       cache: req.app.get('cache'),
-      webhook: req.app.get('webhook'),
       actorId: req.user && req.user.id,
     });
 

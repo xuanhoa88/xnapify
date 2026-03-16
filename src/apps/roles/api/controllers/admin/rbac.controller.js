@@ -85,7 +85,6 @@ export async function assignRolesToUser(req, res) {
     // Assign roles
     const user = await rbacService.assignRolesToUser(id, role_names, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -137,7 +136,6 @@ export async function assignGroupsToUser(req, res) {
     // Assign groups
     const user = await rbacService.assignGroupsToUser(id, group_ids, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -258,7 +256,6 @@ export async function removeRoleFromUser(req, res) {
 
     await rbacService.removeRoleFromUser(id, role_id, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -291,7 +288,6 @@ export async function removeGroupFromUser(req, res) {
 
     await rbacService.removeGroupFromUser(id, group_id, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -403,7 +399,6 @@ export async function assignRolesToGroup(req, res) {
 
     const updatedGroup = await rbacService.assignRolesToGroup(id, role_names, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -447,7 +442,6 @@ export async function addRoleToGroup(req, res) {
 
     await rbacService.addRoleToGroup(id, role_id, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });
@@ -491,7 +485,6 @@ export async function removeRoleFromGroup(req, res) {
 
     await rbacService.removeRoleFromGroup(id, role_id, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
     });

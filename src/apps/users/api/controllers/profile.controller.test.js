@@ -37,7 +37,6 @@ describe('Profile Controller', () => {
   let mockAuth;
   let mockModels;
   let mockFs;
-  let mockWebhook;
   let mockHook;
   let mockHookInstance;
   let mockI18n;
@@ -74,7 +73,6 @@ describe('Profile Controller', () => {
       preview: jest.fn(),
     };
 
-    mockWebhook = {};
     mockI18n = {};
 
     mockHookInstance = { emit: jest.fn() };
@@ -94,7 +92,6 @@ describe('Profile Controller', () => {
             auth: mockAuth,
             models: mockModels,
             fs: mockFs,
-            webhook: mockWebhook,
             hook: mockHook,
             i18n: mockI18n,
             container: { resolve: jest.fn() },

@@ -43,7 +43,7 @@ export async function createGroup(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
 
     // Create group
@@ -51,7 +51,6 @@ export async function createGroup(req, res) {
       { name, description, category, type, roles },
       {
         models,
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
@@ -179,7 +178,6 @@ export async function updateGroupById(req, res) {
       { name, description, category, type, roles },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
@@ -220,7 +218,6 @@ export async function deleteGroup(req, res) {
     // Delete group (activities logged in service)
     await groupService.deleteGroup(id, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
       systemGroups: req.app.get('auth').SYSTEM_GROUPS,

@@ -49,7 +49,6 @@ export async function createPermission(req, res) {
       { resource, action, description, is_active },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
       },
@@ -185,7 +184,6 @@ export async function updatePermission(req, res) {
       { resource, action, description, is_active },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
       },
@@ -233,7 +231,6 @@ export async function bulkUpdateStatus(req, res) {
       state === 'active',
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
       },
@@ -277,7 +274,6 @@ export async function deletePermissions(req, res) {
     // Delete permissions (activities logged in service)
     const result = await permissionService.bulkDelete(ids, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook'),
       actorId: req.user.id,
       systemPermissions: req.app.get('auth').SYSTEM_PERMISSIONS,

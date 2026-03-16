@@ -1,7 +1,7 @@
 import * as roleController from './role.controller';
 
 describe('Admin Role Controller (SQLite E2E)', () => {
-  let req, res, mockHttp, mockModels, mockWebhook, mockAuth;
+  let req, res, mockHttp, mockModels, mockAuth;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -24,7 +24,6 @@ describe('Admin Role Controller (SQLite E2E)', () => {
       getPagination: jest.fn(() => ({ page: 1, limit: 10 })),
     };
 
-    mockWebhook = { send: jest.fn(() => Promise.resolve({ success: true })) };
     mockAuth = {
       DEFAULT_RESOURCES: { ALL: '*' },
       DEFAULT_ACTIONS: { MANAGE: '*' },
@@ -46,7 +45,6 @@ describe('Admin Role Controller (SQLite E2E)', () => {
           const deps = {
             http: mockHttp,
             models: mockModels,
-            webhook: mockWebhook,
             auth: mockAuth,
           };
           return deps[key];

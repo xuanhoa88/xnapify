@@ -58,7 +58,6 @@ export async function register(req, res) {
       {
         auth,
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook').withContext(req.app),
         defaultRoleName: auth.DEFAULT_ROLE,
       },
@@ -123,7 +122,6 @@ export async function login(req, res) {
         user_agent: http.getUserAgent(req),
       },
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
     });
 
@@ -182,7 +180,6 @@ export async function logout(req, res) {
     // Log logout activities via service (if user is authenticated)
     if (req.user) {
       await authService.logoutUser(req.user.id, {
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook').withContext(req.app),
       });
     }
@@ -272,13 +269,12 @@ export async function emailVerification(req, res) {
       return http.sendValidationError(res, validationErrors);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
 
     // Verify email with token (activities logged in service)
     const user = await authService.verifyEmail(token, {
       models,
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
     });
 
@@ -351,7 +347,6 @@ export async function resetPasswordRequest(req, res) {
     // Request password reset (activities logged in service)
     await authService.resetPasswordRequest(email, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
     });
 
@@ -398,7 +393,6 @@ export async function resetPasswordConfirmation(req, res) {
     await authService.resetPasswordConfirmation(token, password, {
       models: req.app.get('models'),
       auth: req.app.get('auth'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
     });
 
@@ -475,7 +469,6 @@ export async function oauthCallback(req, res) {
 
     const userData = await authService.oauthLogin(provider, profile, {
       models: req.app.get('models'),
-      webhook: req.app.get('webhook'),
       hook: req.app.get('hook').withContext(req.app),
       defaultRoleName: auth.DEFAULT_ROLE,
     });

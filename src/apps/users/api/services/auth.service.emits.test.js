@@ -54,7 +54,7 @@ describe('auth.service emits (additional)', () => {
 
     await authService.registerUser(
       { email: user.email, password: 'p' },
-      { models, webhook: null, hook },
+      { models, hook },
     );
 
     expect(called).toBe(true);
@@ -104,7 +104,6 @@ describe('auth.service emits (additional)', () => {
 
     const result = await authService.authenticateUser('email', 'pass', {
       models,
-      webhook: null,
       activitiesData,
       hook,
     });
@@ -145,7 +144,7 @@ describe('auth.service emits (additional)', () => {
       called = true;
     });
 
-    await authService.verifyEmail(user.id, { models, webhook: null, hook });
+    await authService.verifyEmail(user.id, { models, hook });
 
     expect(called).toBe(true);
   });
@@ -182,7 +181,6 @@ describe('auth.service emits (additional)', () => {
 
     await authService.resetPasswordRequest(user.email, {
       models,
-      webhook: null,
       hook,
     });
 
@@ -223,7 +221,6 @@ describe('auth.service emits (additional)', () => {
 
     await authService.resetPasswordConfirmation('token123', 'newpass', {
       models,
-      webhook: null,
       hook,
     });
 

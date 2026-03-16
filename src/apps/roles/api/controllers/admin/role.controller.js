@@ -46,7 +46,6 @@ export async function createRole(req, res) {
       { name, description, permissions },
       {
         models: req.app.get('models'),
-        webhook: req.app.get('webhook'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
@@ -156,9 +155,8 @@ export async function updateRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
     const auth = req.app.get('auth');
 
     // Fetch role first to check if user has this role
@@ -179,7 +177,6 @@ export async function updateRole(req, res) {
       { name, description, permissions },
       {
         models,
-        webhook,
         hook: req.app.get('hook'),
         actorId: req.user.id,
         defaultResources: auth.DEFAULT_RESOURCES,
@@ -222,9 +219,8 @@ export async function deleteRole(req, res) {
   try {
     const { id } = req.params;
 
-    // Get models and webhook from app context
+    // Get models from app context
     const models = req.app.get('models');
-    const webhook = req.app.get('webhook');
     const auth = req.app.get('auth');
 
     // Fetch role first to check if user has this role
@@ -243,7 +239,6 @@ export async function deleteRole(req, res) {
     // Delete role (activities logged in service)
     await roleService.deleteRole(id, {
       models,
-      webhook,
       hook: req.app.get('hook'),
       actorId: req.user.id,
       defaultResources: auth.DEFAULT_RESOURCES,
