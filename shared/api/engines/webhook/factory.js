@@ -5,452 +5,229 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { z } from '@shared/validator';
+import { createFactory as createHook } from '../hook';
 
-import { DatabaseWebhookAdapter } from './adapters/database';
-import { HttpWebhookAdapter } from './adapters/http';
-import { MemoryWebhookAdapter } from './adapters/memory';
-import { WebhookError, WebhookValidationError } from './errors';
-import * as services from './services';
-import { DEFAULTS, WEBHOOK_STATUS } from './utils/constants';
-import workerPool, {
-  setPersistDbConnection,
-  setPersistConnectionFactory,
-} from './workers';
+import { WebhookValidationError } from './errors';
+import { WEBHOOK_EVENTS } from './utils/constants';
 
-// Webhook validation schema (accepts any data - validation at adapter level)
-const sendWebhookSchema = z.any();
-
-// Symbol for private method
-const DELIVER = Symbol('__rsk.webhookDeliver__');
+// Private symbols
+const HOOK = Symbol('__rsk.webhookChannel__');
+const PROVIDERS = Symbol('__rsk.webhookProviders__');
 
 /**
- * Decision logic for whether to use background worker
- * @private
- * @param {any} data - Data to send
- * @param {Object} options - Decision options
- * @returns {Object} Decision result
- */
-function makeSendDecision(data, options = {}) {
-  const thresholds = {
-    largePayloadThreshold: options.largePayloadThreshold || 100 * 1024, // 100KB
-  };
-
-  let useWorker = false;
-  let reason = 'Simple data, main process sufficient';
-
-  // Check for large payload
-  try {
-    const dataSize = JSON.stringify(data).length;
-    if (dataSize >= thresholds.largePayloadThreshold) {
-      useWorker = true;
-      reason = `Large payload (${Math.round(dataSize / 1024)}KB)`;
-    }
-  } catch (error) {
-    // If data can't be serialized, don't use worker
-    reason = 'Data serialization error, using main process';
-  }
-
-  return { useWorker, reason };
-}
-
-/**
- * Calculate retry delay with exponential backoff
- * @private
- */
-function getRetryDelay(attempt, options = {}) {
-  const baseDelay = options.retryDelay || DEFAULTS.RETRY_DELAY;
-  const multiplier = options.retryMultiplier || DEFAULTS.RETRY_MULTIPLIER;
-  const maxDelay = options.maxRetryDelay || DEFAULTS.MAX_RETRY_DELAY;
-
-  const delay = baseDelay * Math.pow(multiplier, attempt);
-  return Math.min(delay, maxDelay);
-}
-
-/**
- * Sleep helper
- * @private
- */
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-/**
- * Webhook Manager
+ * Inbound Webhook Manager
  *
- * Manages webhook delivery with support for multiple adapters,
- * retry logic, and signature generation.
+ * Manages webhook handler registration and dispatch for incoming
+ * 3rd-party service events (Stripe, GitHub, Facebook, etc.).
+ *
+ * Uses the hook engine's HookChannel for priority-based handler execution
+ * and stores provider configurations (secret, signatureHeader) for
+ * automatic signature verification in the controller.
  */
 class WebhookManager {
-  constructor(config = {}) {
-    this.adapters = new Map();
-    this.defaultAdapter = config.adapter || 'memory';
-    this.config = config;
+  constructor() {
+    /** @type {HookChannel} */
+    this[HOOK] = createHook()('webhook');
 
-    // Initialize default adapters
-    this.initializeDefaultAdapters();
+    /** @type {Map<string, { secret: string, signatureHeader: string }>} */
+    this[PROVIDERS] = new Map();
   }
 
   /**
-   * Initialize default adapters
-   * @private
-   */
-  initializeDefaultAdapters() {
-    // Database adapter (default)
-    this.adapters.set(
-      'database',
-      new DatabaseWebhookAdapter(this.config.database || {}),
-    );
-
-    // Always add memory adapter (for testing)
-    this.adapters.set(
-      'memory',
-      new MemoryWebhookAdapter(this.config.memory || {}),
-    );
-
-    // HTTP adapter
-    this.adapters.set('http', new HttpWebhookAdapter(this.config.http || {}));
-
-    // Workers are initialized automatically by the worker pool
-  }
-
-  /**
-   * Add a custom adapter
-   * @param {string} name - Adapter name
-   * @param {Object} adapter - Adapter instance (must implement send method)
-   * @returns {boolean} True if added, false if already exists
-   */
-  addAdapter(name, adapter) {
-    if (this.adapters.has(name)) {
-      console.warn(
-        `⚠️ Webhook adapter "${name}" already exists. Cannot override.`,
-      );
-      return false;
-    }
-    this.adapters.set(name, adapter);
-    console.info(`✅ Registered webhook adapter: ${name}`);
-    return true;
-  }
-
-  /**
-   * Get an adapter by name
-   * @param {string} name - Adapter name
-   * @returns {Object|null} Adapter or null
-   */
-  getAdapter(name) {
-    return this.adapters.get(name) || null;
-  }
-
-  /**
-   * Set database connection for both adapter and worker
-   * Automatically configures:
-   * - DatabaseWebhookAdapter with the connection
-   * - Worker pool for persist operations
+   * Register a provider handler with secret protection.
    *
-   * @param {Object} connection - Sequelize connection instance
-   * @returns {boolean} True if connection was set
+   * @param {string} provider - Provider name (e.g. 'stripe', 'github')
+   * @param {Object} config - Handler configuration
+   * @param {string} config.secret - Shared secret for HMAC signature verification
+   * @param {string} [config.signatureHeader='x-webhook-signature'] - Request header containing the signature
+   * @param {Function} config.handler - Async handler(payload, context)
+   * @param {number} [config.priority=10] - Execution priority (lower runs first)
+   * @returns {WebhookManager} For chaining
+   * @throws {WebhookValidationError} If config is invalid
    *
    * @example
-   * // Set DB connection once for both adapter and worker
-   * webhook.setDbConnection(db.connection);
-   */
-  setDbConnection(connection) {
-    // Set connection on database adapter
-    const dbAdapter = this.adapters.get('database');
-    if (dbAdapter && dbAdapter.setConnection) {
-      dbAdapter.setConnection(connection);
-    }
-
-    // Set connection on worker
-    setPersistDbConnection(connection);
-
-    return true;
-  }
-
-  /**
-   * Set connection factory for fork mode workers
-   * @param {Function} factory - Function that returns a Sequelize connection
-   */
-  setConnectionFactory(factory) {
-    setPersistConnectionFactory(factory);
-  }
-
-  /**
-   * Validate webhook data using Zod schema
-   * @private
-   * @param {any} data - Data to validate
-   * @throws {WebhookValidationError} If validation fails
-   */
-  validate(data) {
-    const result = sendWebhookSchema.safeParse(data);
-    if (!result.success) {
-      const errors = result.error.flatten();
-      throw new WebhookValidationError(JSON.stringify(errors), 'data');
-    }
-  }
-
-  async [DELIVER](data, options = {}) {
-    try {
-      // Get adapter
-      const adapterName = options.adapter || this.defaultAdapter;
-      const adapter = this.adapters.get(adapterName);
-
-      if (!adapter) {
-        throw new WebhookError(
-          `Unknown adapter: ${adapterName}`,
-          'ADAPTER_NOT_FOUND',
-        );
-      }
-
-      const maxRetries =
-        options.retries != null ? options.retries : DEFAULTS.MAX_RETRIES;
-      let lastError = null;
-
-      // Attempt delivery with retries
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          const result = await adapter.send(data, options);
-          return {
-            ...result,
-            attempts: attempt + 1,
-          };
-        } catch (error) {
-          lastError = error;
-
-          // Don't retry on validation errors
-          if (error instanceof WebhookValidationError) {
-            throw error;
-          }
-
-          // Retry if we have attempts left
-          if (attempt < maxRetries) {
-            const delay = getRetryDelay(attempt, options);
-            await sleep(delay);
-          }
-        }
-      }
-
-      // All retries exhausted
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: lastError.message,
-          code: lastError.code || 'DELIVERY_FAILED',
-        },
-        attempts: maxRetries + 1,
-        timestamp: new Date().toISOString(),
-      };
-    } catch (error) {
-      if (error instanceof WebhookError) {
-        return {
-          success: false,
-          status: WEBHOOK_STATUS.FAILED,
-          error: {
-            message: error.message,
-            code: error.code,
-          },
-          timestamp: new Date().toISOString(),
-        };
-      }
-
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: error.message,
-          code: 'UNKNOWN_ERROR',
-        },
-        timestamp: new Date().toISOString(),
-      };
-    }
-  }
-
-  /**
-   * Send webhook data
-   *
-   * @param {any} data - Data to send (any type)
-   * @param {Object} [options] - Send options
-   * @param {string} [options.adapter] - Adapter to use (default: 'database')
-   * @param {string} [options.url] - URL for HTTP adapter
-   * @param {string} [options.secret] - Secret for signature generation
-   * @param {string} [options.event] - Event type header
-   * @param {number} [options.retries] - Max retry attempts (default: 3)
-   * @param {number} [options.timeout] - Request timeout in ms
-   * @returns {Promise<Object>} Delivery result
-   *
-   * @example
-   * // Send data with HTTP adapter
-   * await webhook.send({ event: 'user.created', data: { id: '123' } }, {
-   *   adapter: 'http',
-   *   url: 'https://api.example.com/hook'
+   * webhook.handler('stripe', {
+   *   secret: process.env.STRIPE_WEBHOOK_SECRET,
+   *   signatureHeader: 'stripe-signature',
+   *   handler: async (payload, context) => {
+   *     await processStripeEvent(payload);
+   *   },
    * });
+   */
+  handler(provider, config) {
+    if (!provider || typeof provider !== 'string') {
+      throw new WebhookValidationError(
+        'Provider must be a non-empty string',
+        'provider',
+      );
+    }
+
+    if (!config || typeof config !== 'object') {
+      throw new WebhookValidationError(
+        'Config must be an object with { secret, handler }',
+        'config',
+      );
+    }
+
+    const {
+      secret,
+      signatureHeader = 'x-webhook-signature',
+      handler: handlerFn,
+      priority = 10,
+    } = config;
+
+    if (!secret || typeof secret !== 'string') {
+      throw new WebhookValidationError(
+        'Secret is required for webhook signature verification',
+        'secret',
+      );
+    }
+
+    if (typeof handlerFn !== 'function') {
+      throw new WebhookValidationError('Handler must be a function', 'handler');
+    }
+
+    // Store provider config for controller verification
+    this[PROVIDERS].set(provider, {
+      secret,
+      signatureHeader: signatureHeader.toLowerCase(),
+    });
+
+    // Register handler on the hook channel
+    const hookId = `${WEBHOOK_EVENTS.HANDLER}:${provider}`;
+    this[HOOK].on(hookId, handlerFn, priority);
+
+    console.info(`✅ Registered webhook handler: ${provider}`);
+    return this;
+  }
+
+  /**
+   * Remove a provider handler (revokes webhook access).
    *
-   * @example
-   * // Send data with database adapter (stores for later delivery)
-   * await webhook.send({ event: 'order.completed', data: {...} });
+   * After removal, the endpoint returns 404 for this provider.
+   *
+   * @param {string} provider - Provider name
+   * @returns {WebhookManager} For chaining
    */
-  async send(data, options = {}) {
-    // Validate input using Zod
-    try {
-      this.validate(data);
-    } catch (error) {
-      return {
-        success: false,
-        status: WEBHOOK_STATUS.FAILED,
-        error: {
-          message: error.message,
-          code: 'VALIDATION_ERROR',
-        },
-        timestamp: new Date().toISOString(),
-      };
-    }
+  removeHandler(provider) {
+    this[PROVIDERS].delete(provider);
 
-    // Use worker decision logic
-    const decision = makeSendDecision(data, options);
+    const hookId = `${WEBHOOK_EVENTS.HANDLER}:${provider}`;
+    this[HOOK].off(hookId);
 
-    // Determine worker usage:
-    // - useWorker === true: Force worker
-    // - useWorker === false: Force direct (bypass worker)
-    // - useWorker === undefined: Auto-decide based on thresholds
-    const shouldUseWorker =
-      options.useWorker === true ||
-      (options.useWorker !== false && decision.useWorker);
-
-    if (shouldUseWorker) {
-      const adapterName = options.adapter || this.defaultAdapter;
-
-      try {
-        if (adapterName === 'http') {
-          return workerPool.processSend([data], options);
-        }
-        if (adapterName === 'database') {
-          return workerPool.processPersist({
-            operation: 'store',
-            webhooks: [data],
-            options,
-          });
-        }
-      } catch (error) {
-        // Fallback to direct delivery if worker fails or not initialized
-        console.warn(
-          `Worker delivery failed for adapter ${adapterName}, falling back to main process:`,
-          error.message,
-        );
-      }
-    }
-
-    // Direct processing - pass data to adapter
-    return this[DELIVER](data, options);
+    console.info(`🗑️ Removed webhook handler: ${provider}`);
+    return this;
   }
 
   /**
-   * Get list of registered adapter names
-   * @returns {Array<string>} Array of adapter names
+   * Check if a provider handler is registered.
+   *
+   * @param {string} provider - Provider name
+   * @returns {boolean}
    */
-  getAdapterNames() {
-    return Array.from(this.adapters.keys());
+  hasHandler(provider) {
+    return this[PROVIDERS].has(provider);
   }
 
   /**
-   * Check if adapter exists
-   * @param {string} name - Adapter name
-   * @returns {boolean} True if adapter exists
+   * Get provider configuration (secret, signatureHeader).
+   *
+   * @param {string} provider - Provider name
+   * @returns {{ secret: string, signatureHeader: string }|null}
    */
-  hasAdapter(name) {
-    return this.adapters.has(name);
+  getProviderConfig(provider) {
+    return this[PROVIDERS].get(provider) || null;
   }
 
   /**
-   * Get statistics from all adapters
-   * @returns {Object} Stats object keyed by adapter name
+   * List all registered provider names.
+   *
+   * @returns {string[]}
    */
-  getAllStats() {
-    const stats = {};
-    for (const [name, adapter] of this.adapters) {
-      try {
-        if (adapter.getStats && typeof adapter.getStats === 'function') {
-          stats[name] = adapter.getStats();
-        } else {
-          stats[name] = { available: false };
-        }
-      } catch (error) {
-        // Handle errors gracefully (e.g., database not configured)
-        stats[name] = {
-          available: false,
-          error: error.message,
-        };
-      }
-    }
-    return stats;
+  getProviders() {
+    return Array.from(this[PROVIDERS].keys());
   }
 
   /**
-   * Get statistics (from memory adapter) - Legacy method
-   * @deprecated Use getAllStats() instead
-   * @returns {Object} Stats
-   */
-  getStats() {
-    const memoryAdapter = this.adapters.get('memory');
-    return memoryAdapter ? memoryAdapter.getStats() : null;
-  }
-
-  /**
-   * Get services from adapter
-   * @returns {Object} Services object keyed by adapter name
-   */
-  get services() {
-    // eslint-disable-next-line no-underscore-dangle
-    if (!this._cachedServices) {
-      // eslint-disable-next-line no-underscore-dangle
-      const _services = {};
-      for (const [serviceName, fn] of Object.entries(services)) {
-        if (typeof fn === 'function') {
-          _services[serviceName] = (...args) => fn(this, ...args);
-        }
-      }
-      // eslint-disable-next-line no-underscore-dangle
-      this._cachedServices = _services;
-    }
-    // eslint-disable-next-line no-underscore-dangle
-    return this._cachedServices;
-  }
-
-  /**
-   * Cleanup - close all adapters
-   * Called automatically on process termination
+   * Dispatch an incoming webhook to registered handlers.
+   *
+   * Called by the controller after signature verification passes.
+   * Executes lifecycle hooks (beforeHandle → handler → afterHandle)
+   * sequentially in priority order.
+   *
+   * @param {string} provider - Provider name
+   * @param {*} payload - Parsed request body
+   * @param {Object} context - Request context
+   * @param {Object} context.headers - Request headers
+   * @param {Object} context.query - Query parameters
+   * @param {string} context.ip - Client IP
    * @returns {Promise<void>}
    */
-  async cleanup() {
-    console.info('🧹 Cleaning up webhook engine...');
+  async dispatch(provider, payload, context) {
+    // beforeHandle lifecycle hook
+    await this[HOOK].emit(WEBHOOK_EVENTS.BEFORE_HANDLE, {
+      provider,
+      payload,
+      ...context,
+    });
 
-    for (const [name, adapter] of this.adapters) {
-      try {
-        if (adapter.close && typeof adapter.close === 'function') {
-          await adapter.close();
-          console.info(`✅ Closed webhook adapter: ${name}`);
-        }
-      } catch (error) {
-        console.error(`❌ Failed to close adapter ${name}:`, error.message);
-      }
-    }
+    // Provider handler(s)
+    const hookId = `${WEBHOOK_EVENTS.HANDLER}:${provider}`;
+    await this[HOOK].emit(hookId, payload, context);
 
-    this.adapters.clear();
-    console.info('✅ Webhook engine cleanup complete');
+    // afterHandle lifecycle hook
+    await this[HOOK].emit(WEBHOOK_EVENTS.AFTER_HANDLE, {
+      provider,
+      payload,
+      ...context,
+    });
+  }
+
+  /**
+   * Register a lifecycle hook (beforeHandle, afterHandle).
+   *
+   * @param {string} event - Event name from WEBHOOK_EVENTS
+   * @param {Function} handlerFn - Async handler
+   * @param {number} [priority=10] - Priority (lower runs first)
+   * @returns {WebhookManager} For chaining
+   *
+   * @example
+   * webhook.on('afterHandle', async ({ provider, payload }) => {
+   *   console.log(`Processed webhook from ${provider}`);
+   * });
+   */
+  on(event, handlerFn, priority = 10) {
+    this[HOOK].on(event, handlerFn, priority);
+    return this;
+  }
+
+  /**
+   * Remove a lifecycle hook.
+   *
+   * @param {string} event - Event name
+   * @param {Function} [handlerFn] - Specific handler, or all if omitted
+   * @returns {WebhookManager} For chaining
+   */
+  off(event, handlerFn) {
+    this[HOOK].off(event, handlerFn);
+    return this;
+  }
+
+  /**
+   * Clear all handlers and provider configs.
+   */
+  cleanup() {
+    this[HOOK].off();
+    this[PROVIDERS].clear();
+    console.info('🧹 Webhook engine cleanup complete');
   }
 }
 
 /**
- * Create a new isolated WebhookManager instance
+ * Create a new isolated WebhookManager instance.
  *
- * @param {Object} config - Configuration
- * @param {string} [config.adapter='memory'] - Default adapter
- * @param {Object} [config.database] - Database adapter config
- * @param {Object} [config.memory] - Memory adapter config
- * @param {Object} [config.http] - HTTP adapter config
- * @returns {WebhookManager} New manager instance
+ * @returns {WebhookManager}
  */
-export function createFactory(config = {}) {
-  const manager = new WebhookManager(config);
-  return manager;
+export function createFactory() {
+  return new WebhookManager();
 }

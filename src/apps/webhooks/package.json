@@ -1,0 +1,7 @@
+{
+  "name": "@apps/webhooks",
+  "version": "1.0.0",
+  "description": "Webhook module",
+  "private": true,
+  "main": "api/index.js"
+}

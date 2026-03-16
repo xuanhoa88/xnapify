@@ -10,30 +10,45 @@ import crypto from 'crypto';
 import { SIGNATURE_ALGORITHMS } from './constants';
 
 /**
- * Generate HMAC signature for webhook payload
+ * Parse a signature header value with algorithm prefix.
  *
- * @param {string|Object} payload - Payload to sign
- * @param {string} secret - Secret key for signing
- * @param {string} algorithm - Hashing algorithm (default: sha256)
- * @returns {string} Hex-encoded signature
+ * @param {string} header - Value like "sha256=abc123..."
+ * @returns {{ algorithm: string, signature: string }}
+ *
+ * @example
+ * parseSignatureHeader('sha256=deadbeef')
+ * // { algorithm: 'sha256', signature: 'deadbeef' }
  */
-export function generateSignature(
-  payload,
-  secret,
-  algorithm = SIGNATURE_ALGORITHMS.SHA256,
-) {
-  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
-  return crypto.createHmac(algorithm, secret).update(data).digest('hex');
+export function parseSignatureHeader(header) {
+  if (!header || typeof header !== 'string') {
+    return { algorithm: SIGNATURE_ALGORITHMS.SHA256, signature: '' };
+  }
+
+  const idx = header.indexOf('=');
+  if (idx === -1) {
+    // No prefix — assume sha256
+    return { algorithm: SIGNATURE_ALGORITHMS.SHA256, signature: header };
+  }
+
+  return {
+    algorithm: header.slice(0, idx),
+    signature: header.slice(idx + 1),
+  };
 }
 
 /**
- * Verify webhook signature
+ * Verify an HMAC signature against a payload.
  *
- * @param {string|Object} payload - Original payload
- * @param {string} signature - Signature to verify
- * @param {string} secret - Secret key used for signing
- * @param {string} algorithm - Hashing algorithm (default: sha256)
- * @returns {boolean} True if signature is valid
+ * Uses timing-safe comparison to prevent timing attacks.
+ *
+ * @param {string|Object} payload - The raw request body
+ * @param {string} signature - The hex-encoded signature to verify
+ * @param {string} secret - Shared secret key
+ * @param {string} [algorithm='sha256'] - HMAC algorithm
+ * @returns {boolean} True if the signature is valid
+ *
+ * @example
+ * const isValid = verifySignature(req.body, sig, process.env.WEBHOOK_SECRET);
  */
 export function verifySignature(
   payload,
@@ -41,26 +56,16 @@ export function verifySignature(
   secret,
   algorithm = SIGNATURE_ALGORITHMS.SHA256,
 ) {
-  const expectedSignature = generateSignature(payload, secret, algorithm);
-  return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature),
-  );
-}
+  if (!signature || !secret) return false;
 
-/**
- * Create signature header value with algorithm prefix
- *
- * @param {string|Object} payload - Payload to sign
- * @param {string} secret - Secret key
- * @param {string} algorithm - Algorithm (default: sha256)
- * @returns {string} Formatted signature (e.g., "sha256=abc123...")
- */
-export function createSignatureHeader(
-  payload,
-  secret,
-  algorithm = SIGNATURE_ALGORITHMS.SHA256,
-) {
-  const signature = generateSignature(payload, secret, algorithm);
-  return `${algorithm}=${signature}`;
+  const data = typeof payload === 'string' ? payload : JSON.stringify(payload);
+  const expected = crypto
+    .createHmac(algorithm, secret)
+    .update(data)
+    .digest('hex');
+
+  // Guard against length mismatch (timingSafeEqual requires equal lengths)
+  if (signature.length !== expected.length) return false;
+
+  return crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
 }

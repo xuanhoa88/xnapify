@@ -30,7 +30,7 @@ import { formatUserResponse } from '../utils/formatter';
  */
 export async function getProfile(req, res) {
   const http = req.app.get('http');
-  const hook = req.app.get('hook').withContext(req.app);
+  const hook = req.app.get('hook');
   try {
     const user = await profileService.getUserWithProfile(req.user.id, {
       models: req.app.get('models'),
@@ -68,7 +68,7 @@ export async function getProfile(req, res) {
  */
 export async function updateProfile(req, res) {
   const http = req.app.get('http');
-  const hook = req.app.get('hook').withContext(req.app);
+  const hook = req.app.get('hook');
   const i18n = req.app.get('i18n');
 
   try {
@@ -347,7 +347,7 @@ export async function changePassword(req, res) {
       newPassword,
       {
         models: req.app.get('models'),
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
       },
     );
 
@@ -397,7 +397,7 @@ export async function updatePreferences(req, res) {
       { language, timezone, notifications, theme },
       {
         models: req.app.get('models'),
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
       },
     );
 
@@ -423,7 +423,7 @@ export async function getPreferences(req, res) {
   try {
     const preferences = await profileService.getUserPreferences(req.user.id, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     return http.sendSuccess(res, { preferences });
@@ -457,7 +457,7 @@ export async function deleteAccount(req, res) {
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
       searchWorker: req.app.get('container').resolve('search:worker'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     req.app.get('auth').clearAllAuthCookies(res);

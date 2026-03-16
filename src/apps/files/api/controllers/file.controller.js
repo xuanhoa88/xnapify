@@ -300,7 +300,7 @@ export async function updateSharing(req, res) {
       { shareType, shares },
       {
         models: req.app.get('models'),
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
       },
     );
 

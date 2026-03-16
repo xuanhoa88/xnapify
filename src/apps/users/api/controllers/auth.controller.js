@@ -58,7 +58,7 @@ export async function register(req, res) {
       {
         auth,
         models: req.app.get('models'),
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
         defaultRoleName: auth.DEFAULT_ROLE,
       },
     );
@@ -122,7 +122,7 @@ export async function login(req, res) {
         user_agent: http.getUserAgent(req),
       },
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     // Generate token pair using configured JWT instance
@@ -180,7 +180,7 @@ export async function logout(req, res) {
     // Log logout activities via service (if user is authenticated)
     if (req.user) {
       await authService.logoutUser(req.user.id, {
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
       });
     }
 
@@ -275,7 +275,7 @@ export async function emailVerification(req, res) {
     // Verify email with token (activities logged in service)
     const user = await authService.verifyEmail(token, {
       models,
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     // Get complete user data with RBAC information
@@ -347,7 +347,7 @@ export async function resetPasswordRequest(req, res) {
     // Request password reset (activities logged in service)
     await authService.resetPasswordRequest(email, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     // Always return success for security (don't reveal if email exists)
@@ -393,7 +393,7 @@ export async function resetPasswordConfirmation(req, res) {
     await authService.resetPasswordConfirmation(token, password, {
       models: req.app.get('models'),
       auth: req.app.get('auth'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -469,7 +469,7 @@ export async function oauthCallback(req, res) {
 
     const userData = await authService.oauthLogin(provider, profile, {
       models: req.app.get('models'),
-      hook: req.app.get('hook').withContext(req.app),
+      hook: req.app.get('hook'),
       defaultRoleName: auth.DEFAULT_ROLE,
     });
 

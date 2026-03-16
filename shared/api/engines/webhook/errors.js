@@ -14,7 +14,6 @@ export class WebhookError extends Error {
     this.name = 'WebhookError';
     this.code = code;
     this.status = status;
-    this.timestamp = new Date().toISOString();
 
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, WebhookError);
@@ -23,20 +22,7 @@ export class WebhookError extends Error {
 }
 
 /**
- * Webhook Delivery Error
- */
-export class WebhookDeliveryError extends WebhookError {
-  constructor(message, url, statusCode = null, originalError = null) {
-    super(`Webhook delivery failed: ${message}`, 'DELIVERY_ERROR', 502);
-    this.name = 'WebhookDeliveryError';
-    this.url = url;
-    this.responseStatus = statusCode;
-    this.originalError = originalError;
-  }
-}
-
-/**
- * Webhook Validation Error
+ * Webhook Validation Error — invalid provider config, missing secret, etc.
  */
 export class WebhookValidationError extends WebhookError {
   constructor(message, field = null) {
@@ -44,64 +30,4 @@ export class WebhookValidationError extends WebhookError {
     this.name = 'WebhookValidationError';
     this.field = field;
   }
-}
-
-/**
- * Webhook Timeout Error
- */
-export class WebhookTimeoutError extends WebhookError {
-  constructor(url, timeout) {
-    super(`Webhook request timed out after ${timeout}ms`, 'TIMEOUT_ERROR', 504);
-    this.name = 'WebhookTimeoutError';
-    this.url = url;
-    this.timeout = timeout;
-  }
-}
-
-/**
- * Webhook Worker Error
- */
-export class WebhookWorkerError extends WebhookError {
-  constructor(message, code = 'WORKER_ERROR', status = 500) {
-    super(message, code, status);
-    this.name = 'WebhookWorkerError';
-  }
-}
-
-/**
- * Create standardized operation result object
- *
- * @param {boolean} success - Success status
- * @param {*} data - Response data
- * @param {string} message - Response message
- * @param {Error} error - Error object (optional)
- * @returns {Object} Standardized operation result
- */
-export function createOperationResult(
-  success,
-  data = null,
-  message = '',
-  error = null,
-) {
-  const response = {
-    success,
-    data,
-    message,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (error) {
-    response.error = {
-      message: error.message,
-      code: error.code || 'WEBHOOK_ERROR',
-      status: error.status || 500,
-    };
-
-    // Include stack trace in development
-    if (process.env.NODE_ENV === 'development') {
-      response.error.stack = error.stack;
-    }
-  }
-
-  return response;
 }

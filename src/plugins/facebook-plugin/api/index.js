@@ -1,0 +1,149 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
+ * Facebook Webhook Plugin
+ *
+ * Registers a Facebook webhook handler so incoming Facebook events
+ * (page updates, messaging, etc.) are automatically verified and dispatched.
+ *
+ * ## How It Works
+ *
+ * 1. Plugin `init()` resolves the webhook engine from the DI container
+ * 2. Calls `webhook.handler('facebook', { secret, signatureHeader, handler })`
+ * 3. Facebook sends POST requests to `/webhooks/facebook`
+ * 4. The webhook engine auto-verifies the HMAC signature using `x-hub-signature-256`
+ * 5. On valid signature, the handler receives the parsed payload
+ *
+ * ## Environment Variables
+ *
+ * - `FACEBOOK_WEBHOOK_SECRET` — Shared secret from Facebook App Dashboard
+ *
+ * @example <caption>Sending a test webhook</caption>
+ * curl -X POST http://localhost:3000/webhooks/facebook \
+ *   -H "Content-Type: application/json" \
+ *   -H "x-hub-signature-256: sha256=<hmac>" \
+ *   -d '{"object":"page","entry":[...]}'
+ */
+
+// Private symbol for handlers storage
+const HANDLERS = Symbol('handlers');
+
+const TAG = '[Facebook Plugin]';
+
+export default {
+  // Store handlers for cleanup
+  [HANDLERS]: {},
+
+  /**
+   * Register — declares namespaces and plugin identity.
+   */
+  register() {
+    return [
+      ['webhooks'],
+      __PLUGIN_NAME__,
+      { description: __PLUGIN_DESCRIPTION__ },
+    ];
+  },
+
+  /**
+   * Init — register the Facebook webhook handler.
+   *
+   * @param {Object} registry - Plugin registry
+   * @param {Object} context - App context
+   */
+  async init(registry, context) {
+    const webhook = context.app.get('webhook');
+
+    const secret = process.env.FACEBOOK_WEBHOOK_SECRET;
+
+    if (!secret) {
+      console.warn(
+        `${TAG} ⚠️ FACEBOOK_WEBHOOK_SECRET not set — skipping handler registration`,
+      );
+      return;
+    }
+
+    // Store the handler function for proper cleanup in destroy()
+    this[HANDLERS].facebookHandler = async payload => {
+      const { object, entry } = payload || {};
+
+      console.info(`${TAG} Received event: object=${object}`);
+
+      if (object === 'page' && Array.isArray(entry)) {
+        for (const event of entry) {
+          const { id, time, messaging, changes } = event;
+
+          // Process messaging events (e.g. messages, postbacks)
+          if (Array.isArray(messaging)) {
+            for (const msg of messaging) {
+              console.info(
+                `${TAG} Messaging event from page ${id}:`,
+                msg.message ? 'message' : 'postback',
+              );
+
+              // Emit to hook engine so other modules can observe
+              const hook = context.app.get('hook');
+              if (hook) {
+                hook('facebook').emit('messaging', {
+                  pageId: id,
+                  timestamp: time,
+                  ...msg,
+                });
+              }
+            }
+          }
+
+          // Process feed/page changes
+          if (Array.isArray(changes)) {
+            for (const change of changes) {
+              console.info(
+                `${TAG} Change event: field=${change.field} from page ${id}`,
+              );
+
+              const hook = context.app.get('hook');
+              if (hook) {
+                hook('facebook').emit('change', {
+                  pageId: id,
+                  timestamp: time,
+                  ...change,
+                });
+              }
+            }
+          }
+        }
+      }
+    };
+
+    // Register with the webhook engine
+    webhook.handler('facebook', {
+      secret,
+      signatureHeader: 'x-hub-signature-256',
+      handler: this[HANDLERS].facebookHandler,
+    });
+
+    console.info(
+      `${TAG} ✅ Initialized — listening on POST /webhooks/facebook`,
+    );
+  },
+
+  /**
+   * Destroy — remove the Facebook webhook handler.
+   *
+   * @param {Object} registry - Plugin registry
+   * @param {Object} context - App context
+   */
+  async destroy(registry, context) {
+    const webhook = context.app.get('webhook');
+    webhook.removeHandler('facebook');
+
+    // Clear handlers
+    this[HANDLERS] = {};
+
+    console.info(`${TAG} 🗑️ Destroyed — Facebook webhook handler removed`);
+  },
+};

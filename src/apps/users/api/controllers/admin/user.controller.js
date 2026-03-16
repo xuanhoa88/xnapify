@@ -109,7 +109,7 @@ export async function getUserList(req, res) {
       { page, limit, search, role, status, group },
       {
         models,
-        hook: req.app.get('hook').withContext(req.app),
+        hook: req.app.get('hook'),
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
       },
     );
@@ -377,7 +377,7 @@ export async function exportUsers(req, res) {
     // For now, reuse getUserList without limit to get all matching users
     const result = await userAdminService.getUserList(
       { page: 1, limit: 1000, search, role, status, group },
-      { models, hook: req.app.get('hook').withContext(req.app) },
+      { models, hook: req.app.get('hook') },
     );
 
     return http.sendSuccess(res, {

@@ -59,9 +59,7 @@ describe('Admin User Controller', () => {
     mockCache = {};
 
     mockHookInstance = { emit: jest.fn() };
-    const hookFactory = jest.fn().mockReturnValue(mockHookInstance);
-    hookFactory.withContext = jest.fn().mockReturnValue(hookFactory);
-    mockHook = hookFactory;
+    mockHook = jest.fn().mockReturnValue(mockHookInstance);
 
     req = {
       user: { id: 1 },

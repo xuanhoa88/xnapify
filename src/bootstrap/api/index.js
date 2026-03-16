@@ -56,9 +56,15 @@ function log(message, level = 'info') {
 /**
  * Register all engines as app providers.
  *
- * @param {object} app - Express app instance
+ * Engines that implement the `withContext(proxy)` convention are automatically
+ * bound to the restricted proxy — their consumers get read-only access
+ * (proxy.get() only) and cannot mutate the app (no app.use/set/enable).
+ *
+ * @param {object} guardControl - Guard control with app and proxy
  */
-function registerEngines(app) {
+function registerEngines(guardControl) {
+  const { app, proxy } = guardControl;
+
   Object.entries(engines).forEach(([name, engine]) => {
     if (!engine) {
       const err = new Error(`Invalid engine definition for "${name}"`);
@@ -66,7 +72,13 @@ function registerEngines(app) {
       err.status = 500;
       throw err;
     }
-    app.set(name, engine);
+
+    // Engines with withContext() get auto-bound to the restricted proxy
+    if (typeof engine.withContext === 'function') {
+      app.set(name, engine.withContext(proxy));
+    } else {
+      app.set(name, engine);
+    }
   });
 
   log('Engines registered');
@@ -81,21 +93,6 @@ async function runCoreMigrations() {
   if (engines.db && engines.db.connection) {
     await engines.db.connection.runMigrations();
     await engines.db.connection.runSeeds();
-  }
-
-  // Configure webhook database connection (elective engine)
-  if (
-    engines.webhook &&
-    typeof engines.webhook.setDbConnection === 'function' &&
-    engines.db &&
-    engines.db.connection
-  ) {
-    engines.webhook.setDbConnection(engines.db.connection);
-  } else if (process.env.NODE_ENV !== 'production') {
-    log(
-      'Webhook engine is unavailable, skipping database configuration.',
-      'warn',
-    );
   }
 }
 
@@ -209,7 +206,7 @@ export default async function bootstrap(guardControl) {
     await guardControl.unlock();
 
     // Register engines
-    registerEngines(guardControl.app);
+    registerEngines(guardControl);
 
     // Run core database migrations
     await runCoreMigrations();

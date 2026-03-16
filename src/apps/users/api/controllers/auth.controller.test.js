@@ -75,15 +75,7 @@ describe('Auth Controller', () => {
     mockModels = {};
 
     mockHookInstance = { emit: jest.fn() };
-    mockHook = {
-      withContext: jest
-        .fn()
-        .mockReturnValue(jest.fn().mockReturnValue(mockHookInstance)),
-    };
-    // Override the mockHook implementation to simulate the factory
-    const hookFactory = jest.fn().mockReturnValue(mockHookInstance);
-    hookFactory.withContext = jest.fn().mockReturnValue(hookFactory);
-    mockHook = hookFactory;
+    mockHook = jest.fn().mockReturnValue(mockHookInstance);
 
     // Setting up global req/res
     req = {

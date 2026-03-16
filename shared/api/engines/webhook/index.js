@@ -6,175 +6,65 @@
  */
 
 /**
- * Webhook Engine - Provides webhook delivery capabilities with support for
- * multiple adapters, automatic retry with exponential backoff, HMAC signatures,
- * and background worker processing for batch operations.
+ * Webhook Engine — Inbound webhook handler registration
+ *
+ * Exposes endpoints for 3rd-party services (Stripe, GitHub, Facebook, etc.)
+ * to send events to your application. Modules register handlers via the
+ * hook-based API, and the controller automatically verifies HMAC signatures
+ * before dispatching.
  *
  * ## Architecture
  *
  * ```
  * WebhookManager (factory.js)
- * ├── Adapters
- * │   ├── http     - Actual HTTP delivery with fetch
- * │   ├── memory   - In-memory storage for testing
- * │   └── database - SQLite persistence for tracking/retry
- * └── Workers
- *     ├── send     - HTTP-only background worker
- *     └── persist  - Database-only background worker
+ * ├── HookChannel        — Priority-based handler dispatch
+ * ├── Provider Registry  — Secret + signature header per provider
+ * └── Controller         — POST /:provider with auto-verify
  * ```
  *
  * ## Features
  *
- * - **Multiple Adapters**: HTTP, Memory, Database for different use cases
- * - **Retry Logic**: Exponential backoff with configurable attempts
- * - **HMAC Signatures**: Secure webhook signing with various algorithms
- * - **Worker Support**: Background processing for large payloads
- * - **Graceful Shutdown**: Automatic cleanup on process termination
- *
- * ## Adapters
- *
- * | Adapter | Purpose | Storage |
- * |---------|---------|---------|
- * | `http` | Real HTTP delivery | None |
- * | `memory` | Testing/development | In-memory |
- * | `database` | Production tracking | SQLite |
- *
- * ## Common API (all adapters)
- *
- * - `send(url, payload, options)` - Send/store webhook
- * - `getById(webhookId)` - Get webhook by ID
- * - `getStats()` - Get adapter statistics
+ * - **Hook-based Registration**: Modules register handlers via `webhook.handler()`
+ * - **Auto Signature Verification**: HMAC verification in the controller
+ * - **Lifecycle Hooks**: `beforeHandle` / `afterHandle` for cross-cutting concerns
+ * - **Priority Support**: Control handler execution order
  *
  * ---
  *
- * @example <caption>Basic Usage - Send a single webhook</caption>
- * await webhook.send({ event: 'user.created', data: { id: '123' } }, {
- *   url: 'https://api.example.com/hook'
+ * @example <caption>Register a Provider Handler</caption>
+ * webhook.handler('stripe', {
+ *   secret: process.env.STRIPE_WEBHOOK_SECRET,
+ *   signatureHeader: 'stripe-signature',
+ *   handler: async (payload, context) => {
+ *     await processStripeEvent(payload);
+ *   },
  * });
  *
- * @example <caption>Advanced Usage - HMAC Signature & Retry Config</caption>
- * await webhook.send({ event: 'order.completed' }, {
- *   url: 'https://api.example.com/hook',
- *   secret: 'my-secret-key',
- *   algorithm: 'sha256',
- *   retries: 5,
- *   timeout: 10000
+ * @example <caption>Register a GitHub Handler</caption>
+ * webhook.handler('github', {
+ *   secret: process.env.GITHUB_WEBHOOK_SECRET,
+ *   signatureHeader: 'x-hub-signature-256',
+ *   handler: async (payload, context) => {
+ *     if (payload.action === 'push') {
+ *       await triggerBuild(payload.repository);
+ *     }
+ *   },
  * });
  *
- * @example <caption>Batch Send (Auto-offloads to worker)</caption>
- * await webhook.send([
- *   { event: 'order.completed' },
- *   { event: 'order.updated' }
- * ], {
- *   url: 'https://api.example.com/hook'
+ * @example <caption>Lifecycle Hooks</caption>
+ * webhook.on('afterHandle', async ({ provider, payload }) => {
+ *   console.log(`Webhook from ${provider} processed`);
  * });
  *
- * @example <caption>Worker Control</caption>
- * // Force background worker
- * await webhook.send({ event: 'test' }, { useWorker: true });
+ * @example <caption>Revoke a Provider</caption>
+ * webhook.removeHandler('github');
  *
- * // Force direct processing
- * await webhook.send({ event: 'test' }, { useWorker: false });
+ * @example <caption>List Providers</caption>
+ * webhook.getProviders(); // ['stripe', 'github']
  *
- * @example <caption>Database Integration</caption>
- * // Setup connection for persistence
- * webhook.setDbConnection(sequelize);
- *
- * // Database adapter usage
- * const db = webhook.getAdapter('database');
- * await db.getWebhooks({ status: 'delivered' });
- * await db.getStats();
- *
- * @example <caption>Lifecycle Management</caption>
- * // Get all registered adapters
- * const adapters = webhook.getAdapterNames();
- * // ['database', 'memory', 'http']
- *
- * // Check if adapter exists
- * if (webhook.hasAdapter('http')) {
- *   console.log('HTTP adapter available');
- * }
- *
- * // Get stats from all adapters
- * const stats = webhook.getAllStats();
- * // {
- * //   database: { total: 100, delivered: 95, failed: 5 },
- * //   memory: { total: 10, delivered: 10, failed: 0 },
- * //   http: { available: false }
- * // }
- *
- * // Cleanup (automatically called on process termination)
- * await webhook.cleanup();
- *
- * @example <caption>Integration with Schedule Engine</caption>
- *
- * // Send daily summary webhooks
- * schedule.register('daily-webhooks', '0 9 * * *', async () => {
- *   const summary = await generateDailySummary();
- *
- *   await webhook.send(summary, {
- *     url: 'https://api.example.com/daily-summary',
- *     secret: process.env.RSK_WEBHOOK_SECRET,
- *     retries: 3
- *   });
- * });
- *
- * @example <caption>Integration with Queue Engine</caption>
- *
- * // Create a webhook delivery channel
- * const webhooks = queue('webhooks', { concurrency: 5 });
- *
- * webhooks.on('deliver', async (job) => {
- *   await webhook.send(job.data.payload, job.data.options);
- * });
- *
- * // Queue webhook for delivery
- * queue.channel('webhooks').emit('deliver', {
- *   payload: { event: 'user.updated' },
- *   options: { url: 'https://api.example.com/hook' }
- * });
- *
- * @example <caption>Worker Pool Operations</caption>
- * // Process send queue
- * await workerPool.processSend([{ event: 'created' }]);
- *
- * // Process persistence
- * await workerPool.processSendWithDb([{ event: 'created' }]);
- *
- * @example <caption>Custom Adapter Implementation</caption>
- * // 1. Define Adapter
- * class SlackAdapter {
- *   async send(data, options) {
- *     const response = await fetch(options.url, {
- *       method: 'POST',
- *       body: JSON.stringify({ text: data.message })
- *     });
- *     return {
- *       success: response.ok,
- *       message: response.statusText,
- *       timestamp: new Date().toISOString()
- *     };
- *   }
- * }
- *
- * // 2. Register
- * webhook.addAdapter('slack', new SlackAdapter());
- *
- * // 3. Use
- * await webhook.send(
- *   { message: 'System online' },
- *   { adapter: 'slack', url: 'https://hooks.slack.com/...' }
- * );
- *
- * @example <caption>Error Handling</caption>
- * try {
- *   await webhook.send({...}, {...});
- * } catch (error) {
- *   if (error instanceof WebhookValidationError) {
- *     // Handle validation error
- *   }
- *   // Log to monitoring service
- * }
+ * @example <caption>Isolated Instance</caption>
+ * const myWebhook = createFactory();
+ * myWebhook.handler('custom', { ... });
  */
 
 import { createFactory } from './factory';
@@ -182,17 +72,8 @@ import { createFactory } from './factory';
 // Export errors
 export * from './errors';
 
-// Export constants
-export * from './utils/constants';
-
-// Export signature utilities
+// Export signature utils
 export * from './utils/signature';
-
-// Export controllers
-export * from './controller';
-
-// Export services
-export * as services from './services';
 
 // Export factory creator
 export { createFactory };

@@ -41,6 +41,8 @@ export async function createRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
+    const auth = req.app.get('auth');
+
     // Create role
     let role = await roleService.createRole(
       { name, description, permissions },
@@ -48,8 +50,8 @@ export async function createRole(req, res) {
         models: req.app.get('models'),
         hook: req.app.get('hook'),
         actorId: req.user.id,
-        defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
-        defaultActions: req.app.get('auth').DEFAULT_ACTIONS,
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
       },
     );
 
