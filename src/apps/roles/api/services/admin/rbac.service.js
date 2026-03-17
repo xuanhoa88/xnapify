@@ -300,8 +300,6 @@ export async function assignRolesToUser(user_id, role_names, { models, hook }) {
   }
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:rbac').emit('roles_assigned', {
       user_id,
@@ -364,8 +362,6 @@ export async function assignGroupsToUser(user_id, group_ids, options = {}) {
   }
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:rbac').emit('groups_assigned', {
       user_id,
@@ -420,8 +416,6 @@ export async function addRoleToUser(user_id, role_id, { models, hook }) {
   await user.addRole(role);
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:rbac').emit('role_assigned', {
       user_id,
@@ -467,8 +461,6 @@ export async function removeRoleFromUser(user_id, role_id, { models, hook }) {
   }
 
   await user.removeRole(role);
-
-  // Emit hook event
 
   // Emit hook event
   if (hook) {
@@ -518,8 +510,6 @@ export async function addGroupToUser(user_id, group_id, { models, hook }) {
   await user.addGroup(group);
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:rbac').emit('group_assigned', {
       user_id,
@@ -565,8 +555,6 @@ export async function removeGroupFromUser(user_id, group_id, { models, hook }) {
   }
 
   await user.removeGroup(group);
-
-  // Emit hook event
 
   // Emit hook event
   if (hook) {
@@ -969,7 +957,11 @@ export async function getGroupRoles(group_id, options = {}) {
 
  * @returns {Promise<Object>} Group with updated roles
  */
-export async function assignRolesToGroup(group_id, role_names, { models }) {
+export async function assignRolesToGroup(
+  group_id,
+  role_names,
+  { models, hook },
+) {
   const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1001,8 +993,6 @@ export async function assignRolesToGroup(group_id, role_names, { models }) {
   }
 
   // Invalidate RBAC cache for all users in this group
-
-  // Invalidate RBAC cache for all users in this group
   const groupUsers = await GroupUser.findAll({
     where: { group_id },
     attributes: ['user_id'],
@@ -1012,7 +1002,15 @@ export async function assignRolesToGroup(group_id, role_names, { models }) {
     rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
   }
 
-  // Return group with roles
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('group_roles_assigned', {
+      group_id,
+      group_name: group.name,
+      role_names,
+    });
+  }
+
   // Reload group with roles
   await group.reload({
     include: [
@@ -1046,7 +1044,7 @@ export async function assignRolesToGroup(group_id, role_names, { models }) {
 
  * @returns {Promise<Object>} Updated group
  */
-export async function addRoleToGroup(group_id, role_id, { models }) {
+export async function addRoleToGroup(group_id, role_id, { models, hook }) {
   const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1068,8 +1066,6 @@ export async function addRoleToGroup(group_id, role_id, { models }) {
   await group.addRole(role);
 
   // Invalidate RBAC cache for all users in this group
-
-  // Invalidate RBAC cache for all users in this group
   const groupUsers = await GroupUser.findAll({
     where: { group_id },
     attributes: ['user_id'],
@@ -1077,6 +1073,16 @@ export async function addRoleToGroup(group_id, role_id, { models }) {
   });
   if (groupUsers.length > 0) {
     rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
+  }
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('group_role_added', {
+      group_id,
+      group_name: group.name,
+      role_id,
+      role_name: role.name,
+    });
   }
 
   // Reload group with roles
@@ -1112,7 +1118,7 @@ export async function addRoleToGroup(group_id, role_id, { models }) {
 
  * @returns {Promise<Object>} Updated group
  */
-export async function removeRoleFromGroup(group_id, role_id, { models }) {
+export async function removeRoleFromGroup(group_id, role_id, { models, hook }) {
   const { Group, Role, GroupUser } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1134,8 +1140,6 @@ export async function removeRoleFromGroup(group_id, role_id, { models }) {
   await group.removeRole(role);
 
   // Invalidate RBAC cache for all users in this group
-
-  // Invalidate RBAC cache for all users in this group
   const groupUsers = await GroupUser.findAll({
     where: { group_id },
     attributes: ['user_id'],
@@ -1143,6 +1147,16 @@ export async function removeRoleFromGroup(group_id, role_id, { models }) {
   });
   if (groupUsers.length > 0) {
     rbacCache.invalidateUsers(groupUsers.map(gu => gu.user_id));
+  }
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('group_role_removed', {
+      group_id,
+      group_name: group.name,
+      role_id,
+      role_name: role.name,
+    });
   }
 
   // Reload group with roles
@@ -1182,7 +1196,7 @@ export async function removeRoleFromGroup(group_id, role_id, { models }) {
 
  * @returns {Promise<Object>} Updated group
  */
-export async function addUserToGroup(group_id, user_id, { models }) {
+export async function addUserToGroup(group_id, user_id, { models, hook }) {
   const { Group, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1204,9 +1218,17 @@ export async function addUserToGroup(group_id, user_id, { models }) {
   await group.addUser(user);
 
   // Invalidate RBAC cache for this user (they now inherit group's roles)
-
-  // Invalidate RBAC cache for this user (they now inherit group's roles)
   rbacCache.invalidateUser(user_id);
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('user_added_to_group', {
+      group_id,
+      group_name: group.name,
+      user_id,
+      email: user.email,
+    });
+  }
 
   return group;
 }
@@ -1222,7 +1244,7 @@ export async function addUserToGroup(group_id, user_id, { models }) {
 
  * @returns {Promise<Object>} Updated group
  */
-export async function removeUserFromGroup(group_id, user_id, { models }) {
+export async function removeUserFromGroup(group_id, user_id, { models, hook }) {
   const { Group, User } = models;
 
   const group = await Group.findByPk(group_id);
@@ -1244,9 +1266,17 @@ export async function removeUserFromGroup(group_id, user_id, { models }) {
   await group.removeUser(user);
 
   // Invalidate RBAC cache for this user (they no longer inherit group's roles)
-
-  // Invalidate RBAC cache for this user (they no longer inherit group's roles)
   rbacCache.invalidateUser(user_id);
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('user_removed_from_group', {
+      group_id,
+      group_name: group.name,
+      user_id,
+      email: user.email,
+    });
+  }
 
   return group;
 }
@@ -1269,7 +1299,7 @@ export async function manageRolePermissions(
   permission_names,
   options = {},
 ) {
-  const { models, action, defaultResources, defaultActions } = options;
+  const { models, action, defaultResources, defaultActions, hook } = options;
   const { Role, Permission, UserRole } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
@@ -1375,6 +1405,15 @@ export async function manageRolePermissions(
   });
   if (userRoles.length > 0) {
     rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
+  }
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:rbac').emit('role_permissions_updated', {
+      role_name,
+      action: normalizedAction,
+      permission_names,
+    });
   }
 
   // Return role with permissions (excluding wildcards)

@@ -70,6 +70,7 @@ export async function createUser(req, res) {
         models: req.app.get('models'),
         actorId: req.user.id,
         defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+        hook: req.app.get('hook'),
       },
     );
 
@@ -267,6 +268,7 @@ export async function bulkUpdateStatus(req, res) {
       {
         models,
         actorId: req.user.id,
+        hook: req.app.get('hook'),
       },
     );
 
@@ -443,7 +445,7 @@ export async function createApiKey(req, res) {
     const result = await userAdminService.createApiKey(
       id,
       { name, scopes, expiresIn, cache },
-      { models, jwt },
+      { models, jwt, hook: req.app.get('hook') },
     );
 
     return http.sendSuccess(res, result);
@@ -464,7 +466,10 @@ export async function revokeApiKey(req, res) {
   const { id, keyId } = req.params;
 
   try {
-    await userAdminService.revokeApiKey(id, keyId, models);
+    await userAdminService.revokeApiKey(id, keyId, {
+      models,
+      hook: req.app.get('hook'),
+    });
 
     return http.sendSuccess(res, { message: 'API Key revoked' });
   } catch (error) {

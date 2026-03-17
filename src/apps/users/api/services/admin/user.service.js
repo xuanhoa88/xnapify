@@ -434,11 +434,6 @@ export async function updateUserById(
     include: userFullIncludes(models),
   });
 
-  // Reload user with updated data
-  await user.reload({
-    include: userFullIncludes(models),
-  });
-
   // Emit hook events
   if (hook) {
     await hook('admin:users').emit('updated', { user_id, user });
@@ -540,7 +535,11 @@ export async function getUserStats(models) {
  * @returns {Promise<Object>} Updated user
  * @throws {Error} If UserNotFoundError
  */
-export async function resetUserPassword(user_id, newPassword, { models }) {
+export async function resetUserPassword(
+  user_id,
+  newPassword,
+  { models, hook },
+) {
   const { User } = models;
 
   const user = await User.findByPk(user_id);
@@ -557,6 +556,14 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
     failed_login_attempts: 0,
     is_locked: false,
   });
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:users').emit('password_reset', {
+      user_id,
+      email: user.email,
+    });
+  }
 
   return user;
 }
@@ -591,13 +598,6 @@ export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
     users.map(async user => {
       // Invalidate RBAC cache
       rbacCache.invalidateUser(user.id);
-
-      // Emit hook event
-      await hook('admin:users').emit('status_updated', {
-        email: user.email,
-        is_active,
-        user,
-      });
 
       // Emit hook event
       await hook('admin:users').emit('status_updated', {
@@ -656,12 +656,6 @@ export async function bulkDelete(ids, { models, hook }) {
           user_id: id,
           email: deletedEmail,
         });
-
-        // Emit hook event
-        await hook('admin:users').emit('deleted', {
-          user_id: id,
-          email: deletedEmail,
-        });
       }),
     );
   }
@@ -700,7 +694,7 @@ export async function listApiKeys(userId, models) {
  * @param {Object} options.jwt - JWT service
  * @returns {Promise<Object>} Created key and raw token
  */
-export async function createApiKey(userId, data, { models, jwt }) {
+export async function createApiKey(userId, data, { models, jwt, hook }) {
   const { name, scopes: requestedScopes = [], expiresIn, cache } = data;
   const { UserApiKey } = models;
 
@@ -744,6 +738,15 @@ export async function createApiKey(userId, data, { models, jwt }) {
     token_prefix: token.substring(0, 10),
   });
 
+  // Emit hook event
+  if (hook) {
+    await hook('admin:users').emit('api_key_created', {
+      user_id: userId,
+      key_id: keyId,
+      name,
+    });
+  }
+
   return { key: newKey, token };
 }
 
@@ -756,7 +759,7 @@ export async function createApiKey(userId, data, { models, jwt }) {
  * @returns {Promise<void>}
  * @throws {Error} If key not found
  */
-export async function revokeApiKey(userId, keyId, models) {
+export async function revokeApiKey(userId, keyId, { models, hook }) {
   const { UserApiKey } = models;
 
   const key = await UserApiKey.findOne({
@@ -771,6 +774,15 @@ export async function revokeApiKey(userId, keyId, models) {
   }
 
   await key.update({ is_active: false });
+
+  // Emit hook event
+  if (hook) {
+    await hook('admin:users').emit('api_key_revoked', {
+      user_id: userId,
+      key_id: keyId,
+      name: key.name,
+    });
+  }
 }
 
 /**

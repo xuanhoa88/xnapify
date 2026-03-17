@@ -49,21 +49,21 @@
   box-shadow: 0 0 0 3px rgb(59 130 246 / 15%);
 }
 
-.control:focus:not(:focus-visible) {
-  outline: none;
-}
-
 /* Disabled state */
 .disabled .control {
   opacity: 0.5;
   cursor: not-allowed;
   background: var(--color-background-secondary);
-}
 
-.disabled .control:hover {
-  border-color: var(--color-border);
-  background-color: var(--color-background-secondary);
-  box-shadow: none;
+  &:hover {
+    border-color: var(--color-border);
+    background-color: var(--color-background-secondary);
+    box-shadow: none;
+  }
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* =============================================================================

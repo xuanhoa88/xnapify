@@ -47,8 +47,6 @@ export async function createPermission(permissionData, { models, hook }) {
   });
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:permissions').emit('created', { permission });
   }
@@ -409,8 +407,6 @@ export async function updatePermission(
   await permission.update(updateFields);
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:permissions').emit('updated', { permission });
   }
@@ -456,17 +452,16 @@ export async function deletePermission(
     throw error;
   }
 
-  const permName = `${permission.resource}:${permission.action}`;
+  const resourceName = permission.resource;
+  const actionName = permission.action;
   await permission.destroy();
-
-  // Emit hook event
 
   // Emit hook event
   if (hook) {
     await hook('admin:permissions').emit('deleted', {
       permission_id,
-      resource: permission.resource,
-      action: permission.action,
+      resource: resourceName,
+      action: actionName,
     });
   }
 
@@ -498,13 +493,13 @@ export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
   });
 
   // Log activities for each permission concurrently
-  const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
     updatedPermissions.map(async perm => {
       // Emit hook event
       if (hook) {
         await hook('admin:permissions').emit('updated', {
           permission: perm,
+          status: is_active ? 'active' : 'inactive',
         });
       }
     }),
@@ -552,9 +547,6 @@ export async function bulkDelete(
   });
 
   const deletableIds = deletablePermissions.map(p => p.id);
-  const deletedNames = deletablePermissions.map(
-    p => `${p.resource}:${p.action}`,
-  );
 
   // Delete the permissions
   if (deletableIds.length > 0) {
@@ -564,7 +556,7 @@ export async function bulkDelete(
 
     // Log activities for each deleted permission concurrently
     await Promise.all(
-      deletablePermissions.map(async (perm, i) => {
+      deletablePermissions.map(async perm => {
         // Emit hook event
         if (hook) {
           await hook('admin:permissions').emit('deleted', {

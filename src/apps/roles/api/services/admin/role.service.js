@@ -64,8 +64,6 @@ export async function createRole(roleData, options = {}) {
   }
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:roles').emit('created', { role });
   }
@@ -337,8 +335,6 @@ export async function updateRole(role_id, updateData, options = {}) {
   }
 
   // Emit hook event
-
-  // Emit hook event
   if (hook) {
     await hook('admin:roles').emit('updated', { role });
   }
@@ -390,8 +386,6 @@ export async function deleteRole(role_id, { models, hook, systemRoles }) {
   if (userRoles.length > 0) {
     rbacCache.invalidateUsers(userRoles.map(ur => ur.user_id));
   }
-
-  // Emit hook event
 
   // Emit hook event
   if (hook) {

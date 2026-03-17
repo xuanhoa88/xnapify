@@ -587,10 +587,12 @@ export async function manageRolePermissions(req, res) {
       permissions,
       {
         models,
+        action,
         hook: req.app.get('hook'),
         actorId: req.user.id,
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
       },
-      action,
     );
 
     return http.sendSuccess(res, { role: updatedRole });
