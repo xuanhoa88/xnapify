@@ -441,6 +441,28 @@ export class NodeRedManager {
       this._runtime = (await import('@node-red/runtime')).default;
       this._editorApi = (await import('@node-red/editor-api')).default;
 
+      // The @node-red/runtime and @node-red/editor-api might persist across
+      // HMR reloads depending on caching strategies. Even if the module cache
+      // is cleared (like in dev.js), any previously-spawned setInterval timers,
+      // network sockets, or event listeners attached by older Node-RED instances
+      // will NOT be garbage collected unless explicitly stopped.
+      // We must gracefully stop the previous runtime to prevent severe memory leaks.
+      if (this._runtime && typeof this._runtime.stop === 'function') {
+        try {
+          await this._runtime.stop();
+        } catch {
+          // Ignore errors from stopping an already-stopped runtime
+        }
+      }
+
+      if (this._editorApi && typeof this._editorApi.stop === 'function') {
+        try {
+          await this._editorApi.stop();
+        } catch {
+          // Ignore errors from stopping an already-stopped editorApi
+        }
+      }
+
       // Initialize with recovery for locked runtime
       // Use proxy to capture upgrade listener for HMR cleanup
       const serverProxy = this._createServerProxy(this._server);
