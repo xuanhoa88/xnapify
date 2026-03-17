@@ -326,7 +326,7 @@ export const handleIPC = async (req, res) => {
 
     // Build the hook ID: ipc:<pluginId>:<action>
     const hookId = `ipc:${id}:${action}`;
-    const pluginRegistry = req.app.get('plugin').registry;
+    const { registry: pluginRegistry } = req.app.get('plugin');
 
     // Check if any handler is registered before executing
     if (!pluginRegistry.hasHook(hookId)) {

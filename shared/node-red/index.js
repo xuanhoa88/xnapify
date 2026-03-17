@@ -441,24 +441,14 @@ export class NodeRedManager {
       this._runtime = (await import('@node-red/runtime')).default;
       this._editorApi = (await import('@node-red/editor-api')).default;
 
-      // The @node-red/runtime is a singleton that persists in node_modules
-      // across HMR reloads. Its flows.init() throws "Cannot init without a
-      // stop" if the internal `started` flag is still true from a previous
-      // lifecycle.  Gracefully stop the runtime first to reset its state.
-      if (this._runtime && typeof this._runtime.stop === 'function') {
-        try {
-          await this._runtime.stop();
-        } catch {
-          // Ignore errors from stopping an already-stopped runtime
-        }
-      }
-
       // Initialize with recovery for locked runtime
       // Use proxy to capture upgrade listener for HMR cleanup
       const serverProxy = this._createServerProxy(this._server);
 
+      // Initialize runtime
       await this._runtime.init(this._settings, serverProxy, this._editorApi);
 
+      // Initialize editor API
       await this._editorApi.init(
         this._settings,
         serverProxy,

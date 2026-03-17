@@ -210,7 +210,7 @@ function extractPageMetadata(page, req) {
       metadata.url = null;
     }
   } catch (err) {
-    console.error('Failed to extract page metadata:', err);
+    console.error('❌ Failed to extract page metadata:', err);
   }
 
   return metadata;
@@ -277,7 +277,6 @@ const appState = {
   wsServer: null,
   nodeRED: new NodeRedManager(),
   onPluginRefreshed: null,
-  isRefreshingPlugins: false,
 };
 
 function invalidateCaches() {
@@ -494,7 +493,7 @@ function makeSsrMiddleware(guardControl, baseUrl) {
 
     const handleClientDisconnect = () => {
       if (!res.headersSent) {
-        if (__DEV__) console.info('Client disconnected:', req.path);
+        if (__DEV__) console.info('❌ Client disconnected:', req.path);
         abortController.abort();
       }
     };
@@ -645,7 +644,7 @@ function makeSsrMiddleware(guardControl, baseUrl) {
       }
     } catch (err) {
       if (err.name === 'AbortError' || abortController.signal.aborted) {
-        if (__DEV__) console.info('Request aborted:', req.path);
+        if (__DEV__) console.info('❌ Request aborted:', req.path);
         return;
       }
 
@@ -887,7 +886,7 @@ function guardAppProviders(app, providers = []) {
 // Server Lifecycle
 // ---------------------------------------------------------------------------
 
-async function startServer(server, baseUrl, port, host) {
+async function listen(server, baseUrl, port, host) {
   if (!server.listening) {
     await new Promise((resolve, reject) => {
       const handleError = err => {
@@ -934,87 +933,13 @@ async function startServer(server, baseUrl, port, host) {
   return server;
 }
 
-function configureShutdown(server) {
-  let shutdownPromise = null;
-
-  const handleShutdown = async signal => {
-    if (shutdownPromise) {
-      console.warn('⚠️  Shutdown already in progress, waiting...');
-      return shutdownPromise;
-    }
-
-    shutdownPromise = (async () => {
-      console.info(`\n🛑 ${signal} received, starting graceful shutdown...`);
-      const shutdownStart = Date.now();
-
-      const forceExitTimer = setTimeout(() => {
-        console.error('❌ Forced shutdown after timeout');
-        process.exit(1);
-      }, SERVER_TIMEOUTS.SHUTDOWN).unref();
-
-      let exitCode = 0;
-
-      try {
-        await shutdownServer(server);
-      } catch (err) {
-        console.error('❌ Shutdown error:', err);
-        exitCode = 1;
-      } finally {
-        clearTimeout(forceExitTimer);
-        const duration = Date.now() - shutdownStart;
-        console.info(`✅ Shutdown completed in ${duration}ms`);
-        process.exit(exitCode);
-      }
-    })();
-
-    return shutdownPromise;
-  };
-
-  process.on('SIGTERM', () => handleShutdown('SIGTERM'));
-  process.on('SIGINT', () => handleShutdown('SIGINT'));
-
-  if (__DEV__) {
-    process.once('SIGUSR2', () =>
-      handleShutdown('SIGUSR2').finally(() =>
-        process.kill(process.pid, 'SIGUSR2'),
-      ),
-    );
-  }
-
-  const handleUncaughtException = err => {
-    console.error('❌ Uncaught Exception:', err);
-    if (err && err.stack) {
-      console.error('Stack:', err.stack);
-    }
-    handleShutdown('uncaughtException').catch(() => process.exit(1));
-  };
-
-  const handleUnhandledRejection = (reason, promise) => {
-    console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-    if (reason && reason.stack) {
-      console.error('Stack:', reason.stack);
-    }
-    handleShutdown('unhandledRejection').catch(() => process.exit(1));
-  };
-
-  const handleWarning = warning => {
-    const msg = `⚠️  Node.js Warning: ${warning.name} ${warning.message}`;
-    console.warn(msg);
-    if (__DEV__ && warning.stack) console.warn(warning.stack);
-  };
-
-  process.on('uncaughtException', handleUncaughtException);
-  process.on('unhandledRejection', handleUnhandledRejection);
-  process.on('warning', handleWarning);
-}
-
-export function createApp() {
+export function createServer() {
   const app = express();
   const server = http.createServer(app);
   return { app, server };
 }
 
-export async function initializeServer(app, server, options = {}) {
+export async function bootstrapApp(app, server, options = {}) {
   // Youch is only available in dev mode
   if (__DEV__) {
     appState.youch = await import('youch').catch(() => null);
@@ -1107,7 +1032,7 @@ export async function initializeServer(app, server, options = {}) {
         res.setHeader('Content-Security-Policy', buildCspHeader(nonce));
       }
     } catch (err) {
-      console.error('Error setting security headers:', err);
+      console.error('❌ Error setting security headers:', err);
     }
     next();
   });
@@ -1219,10 +1144,7 @@ export async function initializeServer(app, server, options = {}) {
         handler(req, res, _next, rateLimitInfo) {
           res.status(rateLimitInfo.statusCode || 429).json({
             success: false,
-            error: i18n.t(
-              'common.tooManyRequests',
-              'Too many requests from this IP, please try again later.',
-            ),
+            error: 'Too many requests from this IP, please try again later.',
             retryAfter: Math.ceil(windowMs / 60_000) + ' minutes',
             limit: max,
             current: (req.rateLimit && req.rateLimit.used) || 0,
@@ -1264,13 +1186,17 @@ export async function initializeServer(app, server, options = {}) {
   return {
     app,
     server,
-    start: () => startServer(server, baseUrl, port, resolvedHost),
-    dispose: () => shutdownServer(server),
+    listen: () => listen(server, baseUrl, port, resolvedHost),
+    dispose: () => disposeApp(),
   };
 }
 
-export async function shutdownServer(server) {
-  console.info('🛑 Stopping background services...');
+/**
+ * Dispose application services (Node-RED, WebSocket, plugins, caches).
+ * Does NOT close the HTTP server — used by dev.js during HMR.
+ */
+export async function disposeApp() {
+  console.info('🛑 Stopping application services...');
 
   if (appState.onPluginRefreshed) {
     process.removeListener('message', appState.onPluginRefreshed);
@@ -1309,26 +1235,6 @@ export async function shutdownServer(server) {
     errors.push(err);
   }
 
-  try {
-    if (server && server.listening) {
-      console.info('   Shutting down HTTP server...');
-      await new Promise((resolve, reject) => {
-        server.close(err => {
-          if (err) {
-            console.error('   ⚠️  HTTP server close error:', err.message);
-            reject(err);
-          } else {
-            console.info('   ✔ HTTP server closed');
-            resolve();
-          }
-        });
-      });
-    }
-  } catch (err) {
-    console.error('   ⚠️  HTTP server shutdown error:', err.message);
-    errors.push(err);
-  }
-
   invalidateCaches();
   console.info('   ✔ Caches cleared');
 
@@ -1342,11 +1248,37 @@ export async function shutdownServer(server) {
   }
 }
 
+/**
+ * Full server teardown: dispose app services + close the HTTP server.
+ * Only used in the production startup path.
+ */
+export async function destroyServer(server) {
+  await disposeApp();
+
+  if (server && server.listening) {
+    console.info('   Shutting down HTTP server...');
+    await new Promise((resolve, reject) => {
+      server.close(err => {
+        if (err) {
+          console.error('   ⚠️  HTTP server close error:', err.message);
+          reject(err);
+        } else {
+          console.info('   ✔ HTTP server closed');
+          resolve();
+        }
+      });
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // HMR & Startup
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
+  // Flag to prevent concurrent plugin refreshes
+  let isRefreshingPlugins = false;
+
   module.hot.accept(err => {
     if (err) {
       console.error('❌ HMR error:', err);
@@ -1359,7 +1291,7 @@ if (module.hot) {
 
   appState.onPluginRefreshed = async msg => {
     if (msg && msg.type === 'plugins-refreshed') {
-      if (appState.isRefreshingPlugins) {
+      if (isRefreshingPlugins) {
         if (__DEV__) {
           console.log('🔌 Plugin refresh already in progress, skipping...');
         }
@@ -1373,7 +1305,8 @@ if (module.hot) {
         `🔌 Refreshing ${specific ? `plugins: ${pluginIds.join(', ')}` : 'all plugins'}...`,
       );
 
-      appState.isRefreshingPlugins = true;
+      isRefreshingPlugins = true;
+
       const start = Date.now();
 
       try {
@@ -1391,7 +1324,7 @@ if (module.hot) {
           err.message,
         );
       } finally {
-        appState.isRefreshingPlugins = false;
+        isRefreshingPlugins = false;
       }
     }
   };
@@ -1402,10 +1335,28 @@ if (module.hot) {
 } else {
   (async () => {
     try {
-      const { app, server } = createApp();
-      const { start } = await initializeServer(app, server);
-      configureShutdown(server);
+      const { app, server } = createServer();
+      const { listen: start } = await bootstrapApp(app, server);
       await start();
+
+      // Production-only signal handlers
+      let shutdownPromise = null;
+      const handleShutdown = signal => {
+        if (shutdownPromise) return shutdownPromise;
+        shutdownPromise = (async () => {
+          console.info(`\n🛑 ${signal} received, shutting down...`);
+          try {
+            await destroyServer(server);
+          } catch (e) {
+            console.error('❌ Shutdown error:', e);
+            process.exit(1);
+          }
+          process.exit(0);
+        })();
+        return shutdownPromise;
+      };
+      process.on('SIGTERM', () => handleShutdown('SIGTERM'));
+      process.on('SIGINT', () => handleShutdown('SIGINT'));
     } catch (err) {
       console.error('❌ Startup failed:', err);
       process.exit(1);

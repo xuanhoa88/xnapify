@@ -13,6 +13,8 @@
  *
  * @param {Object} app - Express app instance
  */
+import { registry } from '@shared/plugin/utils';
+
 export function registerSearchHooks(app) {
   const hook = app.get('hook');
   const searchWorker = app.get('container').resolve('search:worker');
@@ -64,4 +66,16 @@ export function registerSearchHooks(app) {
   hook('admin:groups').on('created', indexGroup);
   hook('admin:groups').on('updated', indexGroup);
   hook('admin:groups').on('deleted', removeGroup);
+
+  // -- plugins hooks ----------------------------------------------------------
+
+  // Allow plugins to auto-register their own search indexers
+  registry
+    .executeHookParallel('search.indexers.register', { hook, searchWorker })
+    .catch(err => {
+      console.error(
+        '[Search] Failed to execute search.indexers.register hook',
+        err,
+      );
+    });
 }

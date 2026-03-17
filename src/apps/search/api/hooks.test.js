@@ -1,6 +1,13 @@
 import { createFactory as createHookFactory } from '@shared/api/engines/hook/factory';
+import { registry } from '@shared/plugin/utils';
 
 import { registerSearchHooks } from './hooks';
+
+jest.mock('@shared/plugin/utils', () => ({
+  registry: {
+    executeHookParallel: jest.fn().mockResolvedValue([]),
+  },
+}));
 
 describe('Search Hooks', () => {
   let hook;
@@ -95,6 +102,20 @@ describe('Search Hooks', () => {
     test('removes on admin:groups:deleted', async () => {
       await hook('admin:groups').emit('deleted', { group_id: 'g1' });
       expect(searchWorker.removeGroup).toHaveBeenCalledWith('g1');
+    });
+  });
+
+  // -- plugin hooks ---------------------------------------------------------
+
+  describe('Plugin Hook', () => {
+    test('executes search.indexers.register hook via plugin registry', () => {
+      expect(registry.executeHookParallel).toHaveBeenCalledWith(
+        'search.indexers.register',
+        expect.objectContaining({
+          hook: expect.any(Function),
+          searchWorker,
+        }),
+      );
     });
   });
 
