@@ -247,12 +247,16 @@ function createSharedDependencies(dependencies, options = {}) {
       .map(dep => {
         const isEager = eager || eagerDeps.includes(dep);
         const isSingleton = singleton || singletonDeps.includes(dep);
+        // Use caret range so compatible patch versions from transitive
+        // dependencies are accepted (no lockfile → patches may float).
+        const version = dependencies[dep];
+        const requiredVersion = /^\d/.test(version) ? `^${version}` : version;
         return [
           dep,
           {
             singleton: isSingleton,
             eager: isEager,
-            requiredVersion: dependencies[dep],
+            requiredVersion,
             strictVersion,
           },
         ];

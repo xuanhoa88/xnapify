@@ -30,7 +30,7 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Underline from '@tiptap/extension-underline';
 import { Youtube } from '@tiptap/extension-youtube';
 import { Selection } from '@tiptap/extensions';
-import { useEditor, EditorContent } from '@tiptap/react';
+import { useEditor, EditorContent, ReactNodeViewRenderer } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus'; // eslint-disable-line import/no-unresolved
 import StarterKit from '@tiptap/starter-kit';
 import clsx from 'clsx';
@@ -39,6 +39,7 @@ import { useTranslation } from 'react-i18next';
 
 import PluginSlot from '@shared/plugin/client/PluginSlot';
 
+import CodeBlockView from './CodeBlockView';
 import CommentActionsPopup from './CommentActionsPopup';
 import { CommentExtension } from './CommentExtension';
 import { DetailsExtension } from './DetailsExtension';
@@ -270,7 +271,11 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
     // Add CodeBlockLowlight only after lowlight is loaded (client-only)
     if (lowlightInstance) {
       exts.push(
-        CodeBlockLowlight.configure({
+        CodeBlockLowlight.extend({
+          addNodeView() {
+            return ReactNodeViewRenderer(CodeBlockView);
+          },
+        }).configure({
           lowlight: lowlightInstance,
         }),
       );

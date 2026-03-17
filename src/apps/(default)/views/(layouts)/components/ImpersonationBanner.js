@@ -59,7 +59,7 @@ function ImpersonationBanner() {
         </span>
       </div>
       <Button
-        variant='inverse'
+        variant='ghost'
         size='small'
         onClick={handleStop}
         className={s.button}
