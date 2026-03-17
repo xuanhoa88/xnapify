@@ -131,7 +131,7 @@ const config = {
             position: 'after',
           },
           {
-            pattern: '*.css',
+            pattern: '*.{css,s[ac]ss,less,styl,sss}',
             group: 'index',
             position: 'after',
           },

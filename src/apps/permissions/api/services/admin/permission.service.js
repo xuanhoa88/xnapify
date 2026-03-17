@@ -22,10 +22,7 @@
 
  * @returns {Promise<Object>} Created permission
  */
-export async function createPermission(
-  permissionData,
-  { models, hook },
-) {
+export async function createPermission(permissionData, { models, hook }) {
   const { Permission } = models;
   const { resource, action, description, is_active } = permissionData;
 
@@ -52,7 +49,8 @@ export async function createPermission(
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:permissions').emit('created', { permission });
+  if (hook) {
+    await hook('admin:permissions').emit('created', { permission });
   }
 
   return permission;
@@ -413,7 +411,8 @@ export async function updatePermission(
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:permissions').emit('updated', { permission });
+  if (hook) {
+    await hook('admin:permissions').emit('updated', { permission });
   }
 
   return permission;
@@ -463,8 +462,12 @@ export async function deletePermission(
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:permissions').emit('deleted', {
-      permission_id, resource: permission.resource, action: permission.action,  });
+  if (hook) {
+    await hook('admin:permissions').emit('deleted', {
+      permission_id,
+      resource: permission.resource,
+      action: permission.action,
+    });
   }
 
   return permission;
@@ -481,11 +484,7 @@ export async function deletePermission(
 
  * @returns {Promise<Object[]>} Updated permissions
  */
-export async function bulkUpdateStatus(
-  ids,
-  is_active,
-  { models, hook },
-) {
+export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
   const { Permission } = models;
   const { sequelize } = Permission;
   const { Op } = sequelize.Sequelize;
@@ -501,10 +500,12 @@ export async function bulkUpdateStatus(
   // Log activities for each permission concurrently
   const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
-    updatedPermissions.map(async perm => { // Emit hook event
+    updatedPermissions.map(async perm => {
+      // Emit hook event
       if (hook) {
         await hook('admin:permissions').emit('updated', {
-          permission: perm,  });
+          permission: perm,
+        });
       }
     }),
   );
@@ -563,10 +564,14 @@ export async function bulkDelete(
 
     // Log activities for each deleted permission concurrently
     await Promise.all(
-      deletablePermissions.map(async (perm, i) => { // Emit hook event
+      deletablePermissions.map(async (perm, i) => {
+        // Emit hook event
         if (hook) {
           await hook('admin:permissions').emit('deleted', {
-            permission_id: perm.id, resource: perm.resource, action: perm.action,  });
+            permission_id: perm.id,
+            resource: perm.resource,
+            action: perm.action,
+          });
         }
       }),
     );

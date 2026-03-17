@@ -26,7 +26,8 @@ import { manageRolePermissions } from './rbac.service';
 
  * @returns {Promise<Object>} Created role
  */
-export async function createRole(roleData, options = {}) { const { models, hook } = options;
+export async function createRole(roleData, options = {}) {
+  const { models, hook } = options;
   const { Role } = models;
   const { name, description, permissions } = roleData;
 
@@ -65,7 +66,8 @@ export async function createRole(roleData, options = {}) { const { models, hook 
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:roles').emit('created', { role });
+  if (hook) {
+    await hook('admin:roles').emit('created', { role });
   }
 
   return role;
@@ -287,7 +289,8 @@ export async function getRoleById(role_id, options = {}) {
 
  * @returns {Promise<Object>} Updated role
  */
-export async function updateRole(role_id, updateData, options = {}) { const { models, hook } = options;
+export async function updateRole(role_id, updateData, options = {}) {
+  const { models, hook } = options;
   const { Role } = models;
 
   const role = await Role.findByPk(role_id);
@@ -336,7 +339,8 @@ export async function updateRole(role_id, updateData, options = {}) { const { mo
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:roles').emit('updated', { role });
+  if (hook) {
+    await hook('admin:roles').emit('updated', { role });
   }
 
   return role;
@@ -352,10 +356,7 @@ export async function updateRole(role_id, updateData, options = {}) { const { mo
 
  * @returns {Promise<boolean>} Success status
  */
-export async function deleteRole(
-  role_id,
-  { models, hook, systemRoles },
-) {
+export async function deleteRole(role_id, { models, hook, systemRoles }) {
   const { Role, UserRole } = models;
 
   const role = await Role.findByPk(role_id);
@@ -393,8 +394,11 @@ export async function deleteRole(
   // Emit hook event
 
   // Emit hook event
-  if (hook) { await hook('admin:roles').emit('deleted', {
-      role_id, name: roleName,  });
+  if (hook) {
+    await hook('admin:roles').emit('deleted', {
+      role_id,
+      name: roleName,
+    });
   }
 
   return true;

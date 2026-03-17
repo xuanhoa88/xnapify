@@ -33,9 +33,7 @@ export default function TableActionsPopup({ editor, disabled }) {
         title={t('shared:form.wysiwyg.tableActions', 'Table Actions')}
         isActive={editor.isActive('table')}
         disabled={disabled}
-      >
-        {null}
-      </ContextMenu.Trigger>
+      />
 
       <ContextMenu.Menu>
         {/* Insert */}

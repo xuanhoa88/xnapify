@@ -21,9 +21,7 @@ export default function EmojiPickerButton({ onSelect, title, disabled }) {
         icon={Icons.emoji}
         title={title}
         disabled={disabled}
-      >
-        {null}
-      </ContextMenu.Trigger>
+      />
 
       <ContextMenu.Menu>
         <div

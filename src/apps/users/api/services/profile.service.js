@@ -55,11 +55,7 @@ export async function getUserWithProfile(user_id, { models }) {
  * @returns {Promise<Object>} Updated user with profile
  * @throws {Error} If UserNotFoundError
  */
-export async function updateUserProfile(
-  user_id,
-  formData,
-  { models, hook },
-) {
+export async function updateUserProfile(user_id, formData, { models, hook }) {
   const { User, UserProfile } = models;
 
   const user = await User.findByPk(user_id, {
@@ -243,11 +239,7 @@ export async function getUserPreferences(user_id, { models, hook }) {
  * @returns {Promise<boolean>} Success status
  * @throws {Error} If UserNotFoundError or password invalid
  */
-export async function deleteUserAccount(
-  user_id,
-  password,
-  { models, hook },
-) {
+export async function deleteUserAccount(user_id, password, { models, hook }) {
   const { User, UserProfile } = models;
 
   const user = await User.scope('withPassword').findByPk(user_id);

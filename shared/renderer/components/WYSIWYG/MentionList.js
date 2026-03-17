@@ -55,23 +55,27 @@ const MentionList = forwardRef(function MentionList$({ items, command }, ref) {
     selectItem(selectedIndex);
   }, [selectItem, selectedIndex]);
 
-  useImperativeHandle(ref, () => ({
-    onKeyDown: ({ event }) => {
-      if (event.key === 'ArrowUp') {
-        upHandler();
-        return true;
-      }
-      if (event.key === 'ArrowDown') {
-        downHandler();
-        return true;
-      }
-      if (event.key === 'Enter') {
-        enterHandler();
-        return true;
-      }
-      return false;
-    },
-  }));
+  useImperativeHandle(
+    ref,
+    () => ({
+      onKeyDown: ({ event }) => {
+        if (event.key === 'ArrowUp') {
+          upHandler();
+          return true;
+        }
+        if (event.key === 'ArrowDown') {
+          downHandler();
+          return true;
+        }
+        if (event.key === 'Enter') {
+          enterHandler();
+          return true;
+        }
+        return false;
+      },
+    }),
+    [upHandler, downHandler, enterHandler],
+  );
 
   // Render ----------------------------------------------------------------
 

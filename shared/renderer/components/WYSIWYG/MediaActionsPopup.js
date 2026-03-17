@@ -40,9 +40,7 @@ export default function MediaActionsPopup({
         icon={Icons.video}
         title={t('shared:form.wysiwyg.mediaActions', 'Media')}
         disabled={disabled}
-      >
-        {null}
-      </ContextMenu.Trigger>
+      />
 
       <ContextMenu.Menu>
         {hasVideo && (

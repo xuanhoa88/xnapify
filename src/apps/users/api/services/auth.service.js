@@ -35,7 +35,14 @@ import {
  */
 export async function registerUser(
   userData,
-  { models, hook, defaultRoleName, adminRoleName, defaultResources, defaultActions,  } = {},
+  {
+    models,
+    hook,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = {},
 ) {
   const { email, password } = userData;
   const { User, UserProfile, Role } = models;
@@ -286,10 +293,7 @@ export async function verifyEmail(token, { models, hook } = {}) {
 
  * @returns {Promise<Object>} Reset token info (token for email, message)
  */
-export async function resetPasswordRequest(
-  email,
-  { models, hook } = {},
-) {
+export async function resetPasswordRequest(email, { models, hook } = {}) {
   const { User, PasswordResetToken } = models;
 
   const user = await User.findOne({ where: { email } });
@@ -425,7 +429,14 @@ export async function resetPasswordConfirmation(
 export async function oauthLogin(
   provider,
   profile,
-  { models, hook, defaultRoleName, adminRoleName, defaultResources, defaultActions,  } = {},
+  {
+    models,
+    hook,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = {},
 ) {
   const { User, UserLogin, UserProfile, Role } = models;
 

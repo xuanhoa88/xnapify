@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 
 import PluginSlot from '@shared/plugin/client/PluginSlot';
 
+import CodeBlockActionsPopup from './CodeBlockActionsPopup';
 import ColorPickerPopup from './ColorPickerPopup';
 import EmojiPickerButton from './EmojiPickerButton';
 import MediaActionsPopup from './MediaActionsPopup';
@@ -39,6 +40,7 @@ export default function Toolbar({
   onToggleFullScreen,
   excludeExtensions = [],
   toolbarAppend,
+  languages = [],
 }) {
   // Quick lookup: is a given extension enabled?
   const has = useCallback(
@@ -311,13 +313,14 @@ export default function Toolbar({
 
       <div className={s.toolbarDivider} />
 
-      {/* Inline code & rule */}
+      {/* Code & rule */}
       <div className={s.toolbarGroup}>
-        {btn(
-          'code',
-          t('shared:form.wysiwyg.code', 'Code'),
-          () => editor.chain().focus().toggleCode().run(),
-          'code',
+        {has('codeBlock') && (
+          <CodeBlockActionsPopup
+            editor={editor}
+            disabled={!editor.can().chain().focus().run()}
+            languages={languages}
+          />
         )}
         {btn(
           'horizontalRule',
@@ -377,4 +380,5 @@ Toolbar.propTypes = {
   onToggleFullScreen: PropTypes.func,
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
   toolbarAppend: PropTypes.func,
+  languages: PropTypes.arrayOf(PropTypes.string),
 };

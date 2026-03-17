@@ -48,9 +48,9 @@
 /* Tooltip Body */
 .toolbarBtn[data-tooltip]::before {
   content: attr(data-tooltip);
-  bottom: calc(100% + 6px);
+  top: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
+  transform: translateX(-50%) translateY(-4px);
   padding: 4px 8px;
   background-color: var(--color-gray-800, #1f2937);
   color: var(--color-white, #fff);
@@ -64,12 +64,12 @@
 /* Tooltip Arrow */
 .toolbarBtn[data-tooltip]::after {
   content: '';
-  bottom: calc(100% + 2px);
+  top: calc(100% + 2px);
   left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  border-width: 4px 4px 0;
+  transform: translateX(-50%) translateY(-4px);
+  border-width: 0 4px 4px;
   border-style: solid;
-  border-color: var(--color-gray-800, #1f2937) transparent transparent transparent;
+  border-color: transparent transparent var(--color-gray-800, #1f2937) transparent;
 }
 
 /* Show Tooltip on Hover */

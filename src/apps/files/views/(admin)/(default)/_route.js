@@ -18,7 +18,7 @@ import Files from './Files';
 
 // Load translations
 const translationsContext = require.context(
-  '../../../locales',
+  '../../../translations',
   false,
   /\.json$/i,
 );

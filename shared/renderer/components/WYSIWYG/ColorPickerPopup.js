@@ -45,9 +45,7 @@ export default function ColorPickerPopup({
         title={title}
         isActive={isActive}
         disabled={disabled}
-      >
-        {null}
-      </ContextMenu.Trigger>
+      />
 
       <ContextMenu.Menu>
         <div style={{ padding: '4px', display: 'flex', gap: '8px' }}>

@@ -26,10 +26,7 @@ import { fetchUserRBACData } from '../../utils/rbac/fetcher';
  * @returns {Promise<Object>} Created user
  * @throws {Error} If UserAlreadyExistsError
  */
-export async function createUser(
-  userData,
-  { models, defaultRoleName, hook },
-) {
+export async function createUser(userData, { models, defaultRoleName, hook }) {
   const { User, UserProfile, Role, Group } = models;
   const { email, password, roles, groups, is_active = true } = userData;
 
@@ -574,11 +571,7 @@ export async function resetUserPassword(user_id, newPassword, { models }) {
 
  * @returns {Promise<Object>} Updated users
  */
-export async function bulkUpdateStatus(
-  ids,
-  is_active,
-  { models, hook },
-) {
+export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
   const { User } = models;
   const { sequelize } = User;
   const { Op } = sequelize.Sequelize;
