@@ -525,8 +525,30 @@ export class NodeRedManager {
         return next();
       });
 
-      // Serve Node-RED admin and runtime
-      app.use(this._settings.httpAdminRoot, this._editorApi.httpAdmin);
+      // Serve Node-RED admin and runtime with error boundaries.
+      // Node-RED's internal registry can throw when nodeList contains
+      // undefined entries (bug in @node-red/registry/lib/loader.js where
+      // loadNodeConfig failures are swallowed). Without this guard the
+      // unhandled rejection terminates the dev server.
+      app.use(this._settings.httpAdminRoot, (req, res, next) => {
+        try {
+          this._editorApi.httpAdmin(req, res, err => {
+            if (err) {
+              Logger.error('httpAdmin error:', err.message || err);
+              if (!res.headersSent) {
+                res.status(500).json({ error: 'Node-RED admin error' });
+              }
+              return;
+            }
+            next();
+          });
+        } catch (err) {
+          Logger.error('httpAdmin sync error:', err.message || err);
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Node-RED admin error' });
+          }
+        }
+      });
       app.use(this._settings.httpNodeRoot, this._runtime.httpNode);
 
       // Link admin APIs
@@ -552,6 +574,14 @@ export class NodeRedManager {
           setTimeout(() => reject(new Error('Start timeout')), startTimeout),
         ),
       ]);
+
+      // Sanitize the Node-RED registry after startup.
+      // @node-red/registry/lib/loader.js silently swallows
+      // loadNodeConfig errors (.catch on line 94), leaving nodes
+      // without an `id` property. registry.addModule then pushes
+      // undefined into nodeList, causing getAllNodeConfigs to crash
+      // with "Cannot read properties of undefined (reading 'split')".
+      await this._sanitizeRegistry();
 
       this._state = LifecycleState.RUNNING;
       Logger.success('Ready');
@@ -655,6 +685,106 @@ export class NodeRedManager {
         Logger.error('Listener cleanup error:', err);
         errors.push(err);
       }
+    }
+  }
+
+  /**
+   * Patch the Node-RED registry to guard against undefined IDs.
+   *
+   * @node-red/registry/lib/loader.js swallows loadNodeConfig errors
+   * (line 94 `.catch(err => console.log(err))`), leaving node sets
+   * without an `id` property. `registry.addModule` pushes `set.id`
+   * (undefined) into `nodeList`. Later, `getAllNodeConfigs` calls
+   * `getModuleFromSetId(id)` which does `id.split("/")` — crashing
+   * with "Cannot read properties of undefined (reading 'split')".
+   *
+   * We wrap `getAllNodeConfigs` and `getNodeConfig` with try-catch.
+   * On crash, `getAllNodeConfigs` falls back to iterating `moduleConfigs`
+   * (via `getModuleList()`) which bypasses the corrupt `nodeList`.
+   * @private
+   */
+  async _sanitizeRegistry() {
+    try {
+      // The call chain for `nodes.configs.get` is:
+      //   editor-api → runtimeAPI.nodes.getNodeConfigs()
+      //     → runtime.nodes.getNodeConfigs(lang)        [snapshot L3]
+      //       → registry/index.getNodeConfigs(lang)      [snapshot L2]
+      //         → registry.getAllNodeConfigs(lang)         [local fn L1]
+      //           → getModuleFromSetId(id).split('/')     [CRASH]
+      // Each layer stores a snapshot reference at load time,
+      // so we must patch ALL THREE.
+      const [registryMod, registryIndex, runtimeNodes, loaderMod] =
+        await Promise.all([
+          import('@node-red/registry/lib/registry').then(m => m.default || m),
+          import('@node-red/registry').then(m => m.default || m),
+          import('@node-red/runtime/lib/nodes').then(m => m.default || m),
+          import('@node-red/registry/lib/loader').then(m => m.default || m),
+        ]);
+
+      // --- Patch getAllNodeConfigs across all 3 snapshot layers ---
+      const origGetAll = registryMod.getAllNodeConfigs;
+      if (typeof origGetAll === 'function' && !origGetAll.__rsk_patched) {
+        const safe = function safeGetAllNodeConfigs(lang) {
+          try {
+            return origGetAll.call(this, lang);
+          } catch (err) {
+            // Fallback: iterate moduleConfigs directly (bypasses nodeList)
+            Logger.warn(
+              'Registry getAllNodeConfigs error, using fallback:',
+              err.message,
+            );
+            const moduleConfigs = registryMod.getModuleList();
+            let result = '';
+            for (const modName in moduleConfigs) {
+              if (!Object.hasOwn(moduleConfigs, modName)) continue;
+              const mod = moduleConfigs[modName];
+              if (mod.usedBy && mod.usedBy.length > 0 && !mod.user) continue;
+              const nodes = mod.nodes || {};
+              for (const nodeName in nodes) {
+                if (!Object.hasOwn(nodes, nodeName)) continue;
+                const config = nodes[nodeName];
+                if (!config || !config.enabled || config.err) continue;
+                const id = config.id || modName + '/' + nodeName;
+                result += '\n<!-- --- [red-module:' + id + '] --- -->\n';
+                result += config.config || '';
+                try {
+                  result +=
+                    loaderMod.getNodeHelp(config, lang || 'en-US') || '';
+                } catch {
+                  // help text unavailable — nodes still render
+                }
+              }
+            }
+            return result;
+          }
+        };
+        safe.__rsk_patched = true;
+        registryMod.getAllNodeConfigs = safe;
+        if (registryIndex) registryIndex.getNodeConfigs = safe;
+        if (runtimeNodes) runtimeNodes.getNodeConfigs = safe;
+      }
+
+      // --- Patch getNodeConfig across all 3 layers ---
+      const origGetOne = registryMod.getNodeConfig;
+      if (typeof origGetOne === 'function' && !origGetOne.__rsk_patched) {
+        const safe = function safeGetNodeConfig(id, lang) {
+          if (!id) return null;
+          try {
+            return origGetOne.call(this, id, lang);
+          } catch (err) {
+            Logger.warn('Registry getNodeConfig error:', err.message);
+            return null;
+          }
+        };
+        safe.__rsk_patched = true;
+        registryMod.getNodeConfig = safe;
+        if (registryIndex) registryIndex.getNodeConfig = safe;
+        if (runtimeNodes) runtimeNodes.getNodeConfig = safe;
+      }
+
+      Logger.debug('Registry sanitized');
+    } catch (err) {
+      Logger.warn('Registry sanitize skipped:', err.message);
     }
   }
 

@@ -165,20 +165,6 @@ function setupGracefulShutdown(cleanupFn) {
   handleSignal = signal => handleShutdown(signal, false);
 
   handleUncaughtException = error => {
-    // In development, log the error but keep the process alive.
-    // Third-party code (e.g. Node-RED registry) can throw non-fatal errors
-    // that should not kill the dev server.
-    // NOTE: __DEV__ is a webpack constant — unavailable in tools/ code.
-    if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.NODE_ENV === undefined
-    ) {
-      logDetailedError(error, {
-        type: 'uncaughtException (non-fatal in dev)',
-      });
-      logError('⚠️  Uncaught exception in dev mode (process kept alive)');
-      return;
-    }
     // Don't double-log here — handleShutdown calls logDetailedError.
     handleShutdown(error, true).catch(() => process.exit(1));
   };
@@ -187,18 +173,6 @@ function setupGracefulShutdown(cleanupFn) {
     const error = reason instanceof Error ? reason : new Error(String(reason));
     // Attach the original reason in case it isn't an Error (aids debugging).
     if (!(reason instanceof Error)) error.originalReason = reason;
-
-    // In development, log the rejection but keep the process alive.
-    if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.NODE_ENV === undefined
-    ) {
-      logDetailedError(error, {
-        type: 'unhandledRejection (non-fatal in dev)',
-      });
-      logError('⚠️  Unhandled rejection in dev mode (process kept alive)');
-      return;
-    }
     handleShutdown(error, true).catch(() => process.exit(1));
   };
 

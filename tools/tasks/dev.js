@@ -182,25 +182,6 @@ function configureWebpackForDev(cfg, isClient = true) {
 }
 
 /**
- * Recursively clears module and its children from require.cache
- * This ensures all dependencies of the server bundle (like Node-RED) are reloaded
- * without clearing unrelated modules (like webpack/build tools).
- */
-function clearModuleCache(modulePath, visited = new Set()) {
-  if (visited.has(modulePath)) return;
-  visited.add(modulePath);
-
-  const module = require.cache[modulePath];
-  if (!module) return;
-
-  if (module.children) {
-    module.children.forEach(child => clearModuleCache(child.id, visited));
-  }
-
-  delete require.cache[modulePath];
-}
-
-/**
  * Loads the server bundle and sets up HMR if available.
  * Clears the require cache to ensure fresh module loading on each call.
  *
@@ -215,7 +196,7 @@ function loadServerBundle() {
     // Clear application code from cache while leaving node_modules intact.
     // This preserves singletons (like React) while giving us a totally fresh
     // application state for the new bundle load.
-    clearModuleCache(serverBundlePath);
+    delete require.cache[serverBundlePath];
 
     // Load the server bundle
     const { hot, ...bundle } = require(serverBundlePath);
