@@ -578,3 +578,43 @@ export async function oauthLogin(
 
   return normalizedUser;
 }
+
+/**
+ * Stop impersonating and return to original identity
+ *
+ * @param {string} impersonator_id - Original admin ID
+ * @param {Object} options - Options object
+ * @returns {Promise<Object>} Formatted user object
+ */
+export async function stopImpersonating(impersonator_id, options = {}) {
+  const {
+    models,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = options;
+  const { User } = models;
+
+  const user = await User.findByPk(impersonator_id, {
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      roleAttributes: ['name'],
+      groupAttributes: ['name'],
+    }),
+  });
+
+  if (!user) {
+    const error = new Error('Original user not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  return formatUserResponse(user, {
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  });
+}

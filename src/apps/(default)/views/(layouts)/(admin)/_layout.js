@@ -7,6 +7,8 @@
 
 import PropTypes from 'prop-types';
 
+import ImpersonationBanner from '../components/ImpersonationBanner';
+
 import s from './Admin.css';
 import Drawer from './Drawer';
 import FlashMessage from './FlashMessage';
@@ -22,6 +24,7 @@ import Header from './Header';
 function AdminLayout({ children }) {
   return (
     <div className={s.root}>
+      <ImpersonationBanner />
       <Header />
       <Drawer />
       <main className={s.content}>{children}</main>

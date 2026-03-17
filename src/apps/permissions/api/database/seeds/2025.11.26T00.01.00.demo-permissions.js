@@ -183,6 +183,109 @@ export async function up(_, { app }) {
       description: 'Delete API keys',
       is_active: true,
     },
+    // Users impersonate
+    {
+      id: SEED_PERMISSIONS.usersImpersonate,
+      resource: DEFAULT_RESOURCES.USERS,
+      action: DEFAULT_ACTIONS.IMPERSONATE,
+      description: 'Impersonate users',
+      is_active: true,
+    },
+    // Files CRUD
+    {
+      id: SEED_PERMISSIONS.filesCreate,
+      resource: DEFAULT_RESOURCES.FILES,
+      action: DEFAULT_ACTIONS.CREATE,
+      description: 'Create/Upload files',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.filesRead,
+      resource: DEFAULT_RESOURCES.FILES,
+      action: DEFAULT_ACTIONS.READ,
+      description: 'View files',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.filesUpdate,
+      resource: DEFAULT_RESOURCES.FILES,
+      action: DEFAULT_ACTIONS.UPDATE,
+      description: 'Update/Rename/Move files',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.filesDelete,
+      resource: DEFAULT_RESOURCES.FILES,
+      action: DEFAULT_ACTIONS.DELETE,
+      description: 'Delete files',
+      is_active: true,
+    },
+    // Activities (read only)
+    {
+      id: SEED_PERMISSIONS.activitiesRead,
+      resource: DEFAULT_RESOURCES.ACTIVITIES,
+      action: DEFAULT_ACTIONS.READ,
+      description: 'View activity logs',
+      is_active: true,
+    },
+    // Plugins CRUD
+    {
+      id: SEED_PERMISSIONS.pluginsCreate,
+      resource: DEFAULT_RESOURCES.PLUGINS,
+      action: DEFAULT_ACTIONS.CREATE,
+      description: 'Upload/Install plugins',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.pluginsRead,
+      resource: DEFAULT_RESOURCES.PLUGINS,
+      action: DEFAULT_ACTIONS.READ,
+      description: 'View plugins',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.pluginsUpdate,
+      resource: DEFAULT_RESOURCES.PLUGINS,
+      action: DEFAULT_ACTIONS.UPDATE,
+      description: 'Enable/Disable plugins',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.pluginsDelete,
+      resource: DEFAULT_RESOURCES.PLUGINS,
+      action: DEFAULT_ACTIONS.DELETE,
+      description: 'Delete plugins',
+      is_active: true,
+    },
+    // Email templates CRUD
+    {
+      id: SEED_PERMISSIONS.emailsTemplatesCreate,
+      resource: 'emails:templates',
+      action: DEFAULT_ACTIONS.CREATE,
+      description: 'Create email templates',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.emailsTemplatesRead,
+      resource: 'emails:templates',
+      action: DEFAULT_ACTIONS.READ,
+      description: 'View email templates',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.emailsTemplatesUpdate,
+      resource: 'emails:templates',
+      action: DEFAULT_ACTIONS.UPDATE,
+      description: 'Update email templates',
+      is_active: true,
+    },
+    {
+      id: SEED_PERMISSIONS.emailsTemplatesDelete,
+      resource: 'emails:templates',
+      action: DEFAULT_ACTIONS.DELETE,
+      description: 'Delete email templates',
+      is_active: true,
+    },
   ];
 
   await Permission.bulkCreate(permissions);

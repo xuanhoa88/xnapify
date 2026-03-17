@@ -53,7 +53,8 @@ export function register({ store, i18n }) {
         {
           path: '/admin/files',
           label: i18n.t('files:page.title', 'Files'),
-          icon: 'folder', // Assuming a folder or drive icon is available in the UI icon set
+          icon: 'folder',
+          permission: 'files:read',
           order: 50,
         },
       ],

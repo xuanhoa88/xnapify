@@ -13,6 +13,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import Toast from '@shared/renderer/components/Toast';
 import { getFlashMessage, clearFlashMessage } from '@shared/renderer/redux';
 
+import ImpersonationBanner from '../components/ImpersonationBanner';
+
 import Footer from './Footer';
 import Header from './Header';
 import s from './Layout.css';
@@ -39,6 +41,7 @@ function DefaultLayout({ children }) {
 
   return (
     <div className={s.root}>
+      <ImpersonationBanner />
       <Header />
       <main className={s.content}>{children}</main>
       <Footer />

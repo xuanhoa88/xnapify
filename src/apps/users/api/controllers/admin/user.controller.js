@@ -474,3 +474,69 @@ export async function revokeApiKey(req, res) {
     return http.sendServerError(res, 'Failed to revoke API key', error);
   }
 }
+
+/**
+ * Impersonate a user
+ *
+ * @route   POST /api/admin/users/:id/impersonate
+ * @access  Admin
+ */
+export async function impersonate(req, res) {
+  const http = req.app.get('http');
+  try {
+    const { id } = req.params;
+
+    // Prevent self-impersonation
+    if (req.user.id === id) {
+      return http.sendError(res, 'Cannot impersonate yourself', 400);
+    }
+
+    const models = req.app.get('models');
+    const authConfig = req.app.get('auth');
+    const jwt = req.app.get('jwt');
+
+    // Get user data via service
+    const user = await userAdminService.impersonateUser(id, {
+      models,
+      defaultRoleName: authConfig.DEFAULT_ROLE,
+      adminRoleName: authConfig.ADMIN_ROLE,
+      defaultResources: authConfig.DEFAULT_RESOURCES,
+      defaultActions: authConfig.DEFAULT_ACTIONS,
+    });
+
+    // Generate token pair with impersonator_id so refresh preserves the claim
+    const tokens = jwt.generateTokenPair({
+      id: user.id,
+      email: user.email,
+      picture: user.picture || null,
+      impersonator_id: req.user.id,
+    });
+
+    // Set both cookies
+    authConfig.setTokenCookie(res, tokens.accessToken);
+    authConfig.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // Log activity for auditing
+    await req.app
+      .get('hook')('auth.activity')
+      .emit('impersonation:start', {
+        admin_id: req.user.id,
+        target_id: id,
+        ip_address: http.getClientIP(req),
+      });
+
+    return http.sendSuccess(res, {
+      message: `Now impersonating ${(user.profile && user.profile.display_name) || user.email}`,
+      user,
+      impersonatorId: req.user.id,
+    });
+  } catch (error) {
+    if (error.name === 'UserNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+    if (error.name === 'UserInactiveError') {
+      return http.sendError(res, error.message, 403);
+    }
+    return http.sendServerError(res, 'Failed to start impersonation', error);
+  }
+}

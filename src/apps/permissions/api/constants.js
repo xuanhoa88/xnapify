@@ -11,11 +11,12 @@ import { v4 as uuidv4 } from 'uuid';
 export const SEED_PERMISSIONS = Object.freeze({
   // Super admin
   superAdmin: uuidv4(),
-  // Users CRUD
+  // Users CRUD + impersonate
   usersCreate: uuidv4(),
   usersRead: uuidv4(),
   usersUpdate: uuidv4(),
   usersDelete: uuidv4(),
+  usersImpersonate: uuidv4(),
   // Roles CRUD
   rolesCreate: uuidv4(),
   rolesRead: uuidv4(),
@@ -38,4 +39,21 @@ export const SEED_PERMISSIONS = Object.freeze({
   apiKeysCreate: uuidv4(),
   apiKeysRead: uuidv4(),
   apiKeysDelete: uuidv4(),
+  // Files CRUD
+  filesCreate: uuidv4(),
+  filesRead: uuidv4(),
+  filesUpdate: uuidv4(),
+  filesDelete: uuidv4(),
+  // Activities (read only)
+  activitiesRead: uuidv4(),
+  // Plugins CRUD
+  pluginsCreate: uuidv4(),
+  pluginsRead: uuidv4(),
+  pluginsUpdate: uuidv4(),
+  pluginsDelete: uuidv4(),
+  // Email templates CRUD
+  emailsTemplatesCreate: uuidv4(),
+  emailsTemplatesRead: uuidv4(),
+  emailsTemplatesUpdate: uuidv4(),
+  emailsTemplatesDelete: uuidv4(),
 });

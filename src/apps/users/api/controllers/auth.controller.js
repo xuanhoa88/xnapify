@@ -493,3 +493,65 @@ export async function oauthCallback(req, res) {
     return res.redirect(`${appUrl}/?oauth=error`);
   }
 }
+
+/**
+ * Stop impersonating and return to original admin identity
+ *
+ * @route   POST /api/auth/stop-impersonating
+ * @access  Private (impersonated users only)
+ */
+export async function stopImpersonating(req, res) {
+  const http = req.app.get('http');
+  try {
+    const impersonatorId = req.user.impersonator_id;
+
+    if (!impersonatorId) {
+      return http.sendError(res, 'Not currently impersonating', 400);
+    }
+
+    const authConfig = req.app.get('auth');
+    const models = req.app.get('models');
+    const jwt = req.app.get('jwt');
+
+    // Get original admin user data via service
+    const userData = await authService.stopImpersonating(impersonatorId, {
+      models,
+      defaultRoleName: authConfig.DEFAULT_ROLE,
+      adminRoleName: authConfig.ADMIN_ROLE,
+      defaultResources: authConfig.DEFAULT_RESOURCES,
+      defaultActions: authConfig.DEFAULT_ACTIONS,
+    });
+
+    // Generate NEW standard token pair (no impersonator_id)
+    const tokens = jwt.generateTokenPair({
+      id: userData.id,
+      email: userData.email,
+      picture: userData.picture || null,
+    });
+
+    // Set new token cookies
+    authConfig.setTokenCookie(res, tokens.accessToken);
+    authConfig.setRefreshTokenCookie(res, tokens.refreshToken);
+
+    // Log activity for auditing
+    await req.app
+      .get('hook')('auth.activity')
+      .emit('impersonation:stop', {
+        admin_id: impersonatorId,
+        target_id: req.user.id,
+        ip_address: http.getClientIP(req),
+      });
+
+    return http.sendSuccess(res, {
+      message: `Returned to original identity: ${(userData.profile && userData.profile.display_name) || userData.email}`,
+      user: userData,
+      accessToken: tokens.accessToken,
+      impersonatorId: null,
+    });
+  } catch (error) {
+    if (error.name === 'UserNotFoundError') {
+      return http.sendNotFound(res, error.message);
+    }
+    return http.sendServerError(res, 'Failed to stop impersonation', error);
+  }
+}

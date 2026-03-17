@@ -52,7 +52,10 @@ export async function getProfile(req, res) {
     // Emit hook event for plugins to modify the response
     await hook('profile').emit('retrieved', normalizedUser);
 
-    return http.sendSuccess(res, { user: normalizedUser });
+    return http.sendSuccess(res, {
+      user: normalizedUser,
+      impersonatorId: req.user.impersonator_id || null,
+    });
   } catch (error) {
     return http.sendServerError(res, 'Failed to get user profile', error);
   }

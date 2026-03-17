@@ -67,6 +67,14 @@ export const getUserId = state => {
 };
 
 /**
+ * Get impersonator ID (if active)
+ */
+export const getImpersonatorId = state => {
+  const normalized = getNormalizedUserState(state);
+  return normalized.impersonatorId || null;
+};
+
+/**
  * Get user email
  */
 export const getUserEmail = state => {

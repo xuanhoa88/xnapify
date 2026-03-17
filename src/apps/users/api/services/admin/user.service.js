@@ -8,6 +8,7 @@
 import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 
+import { formatUserResponse } from '../../utils/formatter';
 import {
   userFullIncludes,
   formatAdminUserResponse,
@@ -585,7 +586,7 @@ export async function bulkUpdateStatus(ids, is_active, { models, hook }) {
   });
 
   // Log activities and invalidate cache for each user concurrently
-  const action = is_active ? 'activated' : 'deactivated';
+  // const action = is_active ? 'activated' : 'deactivated';
   await Promise.all(
     users.map(async user => {
       // Invalidate RBAC cache
@@ -770,4 +771,51 @@ export async function revokeApiKey(userId, keyId, models) {
   }
 
   await key.update({ is_active: false });
+}
+
+/**
+ * Impersonate a user
+ *
+ * @param {string} user_id - Target user ID
+ * @param {Object} options - Options object
+ * @returns {Promise<Object>} Formatted user object
+ */
+export async function impersonateUser(user_id, options = {}) {
+  const {
+    models,
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  } = options;
+  const { User } = models;
+
+  const user = await User.findByPk(user_id, {
+    include: userFullIncludes(models, {
+      includePermissions: true,
+      roleAttributes: ['name'],
+      groupAttributes: ['name'],
+    }),
+  });
+
+  if (!user) {
+    const error = new Error('User not found');
+    error.name = 'UserNotFoundError';
+    error.status = 404;
+    throw error;
+  }
+
+  if (!user.is_active) {
+    const error = new Error('User inactive');
+    error.name = 'UserInactiveError';
+    error.status = 403;
+    throw error;
+  }
+
+  return formatUserResponse(user, {
+    defaultRoleName,
+    adminRoleName,
+    defaultResources,
+    defaultActions,
+  });
 }

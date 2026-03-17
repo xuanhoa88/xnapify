@@ -20,11 +20,13 @@ const createFreshOperations = () => ({
   password: createOperationState(),
   delete: createOperationState(),
   preferences: createOperationState(),
+  impersonate: createOperationState(),
 });
 
 // Initial state with fresh operations
 export const initialState = {
   data: null,
+  impersonatorId: null,
   operations: createFreshOperations(),
 };
 
@@ -48,17 +50,26 @@ export const normalizeState = state => {
   if ('operations' in state) {
     return {
       data: state.data,
+      impersonatorId: state.impersonatorId || null,
       operations: { ...createFreshOperations(), ...state.operations },
     };
   }
 
   // Legacy state with 'data' key (SSR) or with 'loading' at root
   if ('data' in state || 'loading' in state) {
-    return { data: state.data || null, operations: createFreshOperations() };
+    return {
+      data: state.data || null,
+      impersonatorId: null,
+      operations: createFreshOperations(),
+    };
   }
 
   // Very old format: state is user data directly
-  return { data: state, operations: createFreshOperations() };
+  return {
+    data: state,
+    impersonatorId: null,
+    operations: createFreshOperations(),
+  };
 };
 
 export { createOperationState, createFreshOperations };

@@ -32,6 +32,7 @@ function UserActionsDropdown({
   onViewPermissions,
   onActivate,
   onDeactivate,
+  onImpersonate,
 }) {
   const { t } = useTranslation();
   const currentUserId = useSelector(getUserId);
@@ -84,6 +85,15 @@ function UserActionsDropdown({
           {t('admin:users.list.viewPermissions', 'View Permissions')}
         </ContextMenu.Item>
         {!isCurrentUser && (
+          <ContextMenu.Item
+            onClick={() => onImpersonate(user)}
+            icon={<Icon name='user' size={16} />}
+            permission='users:impersonate'
+          >
+            {t('admin:users.list.impersonate', 'Impersonate')}
+          </ContextMenu.Item>
+        )}
+        {!isCurrentUser && (
           <>
             <ContextMenu.Divider />
             {user.is_active ? (
@@ -120,6 +130,7 @@ UserActionsDropdown.propTypes = {
   onViewPermissions: PropTypes.func.isRequired,
   onActivate: PropTypes.func.isRequired,
   onDeactivate: PropTypes.func.isRequired,
+  onImpersonate: PropTypes.func.isRequired,
 };
 
 export default UserActionsDropdown;

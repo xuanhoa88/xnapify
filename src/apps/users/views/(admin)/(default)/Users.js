@@ -25,9 +25,10 @@ import {
 } from '@shared/renderer/components/SearchableSelect';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
-import { getUserProfile } from '@shared/renderer/redux';
+import { getUserProfile, impersonateUser } from '@shared/renderer/redux';
 
 import ChangeStatusUserModal from '../components/ChangeStatusUserModal';
+import ConfirmImpersonateModal from '../components/ConfirmImpersonateModal';
 import DeleteUserModal from '../components/DeleteUserModal';
 import GroupTag from '../components/GroupTag';
 import RoleTag from '../components/RoleTag';
@@ -118,6 +119,7 @@ function Users({ context }) {
   const permissionsModalRef = useRef();
   const deleteModalRef = useRef();
   const changeStatusModalRef = useRef();
+  const impersonateModalRef = useRef();
 
   const clearSelection = useCallback(() => setSelectedUsers([]), []);
 
@@ -192,6 +194,18 @@ function Users({ context }) {
         isActive: false,
       });
   }, []);
+
+  const handleImpersonate = useCallback(user => {
+    impersonateModalRef.current && impersonateModalRef.current.open(user);
+  }, []);
+
+  const handleConfirmImpersonate = useCallback(
+    async user => {
+      await dispatch(impersonateUser(user.id)).unwrap();
+      history.push('/');
+    },
+    [dispatch, history],
+  );
 
   // Filter handlers
   const handleSearchChange = useCallback(value => {
@@ -567,6 +581,7 @@ function Users({ context }) {
                   onViewPermissions={openPermissionsModal}
                   onActivate={handleActivate}
                   onDeactivate={handleDeactivate}
+                  onImpersonate={handleImpersonate}
                 />
               </div>
             ),
@@ -628,6 +643,10 @@ function Users({ context }) {
       <ChangeStatusUserModal
         ref={changeStatusModalRef}
         onSuccess={handleRefreshUsers}
+      />
+      <ConfirmImpersonateModal
+        ref={impersonateModalRef}
+        onConfirm={handleConfirmImpersonate}
       />
     </div>
   );

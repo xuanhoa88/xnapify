@@ -86,7 +86,7 @@ export const me = createAsyncThunk(
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/auth/profile');
-      return { user: data.user };
+      return { user: data.user, impersonatorId: data.impersonatorId || null };
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }
@@ -319,6 +319,51 @@ export const updateUserPreferences = createAsyncThunk(
         body: { language, timezone, notifications, theme },
       });
       return { preferences: data.preferences };
+    } catch (error) {
+      return rejectWithValue(error.data || error.message);
+    }
+  },
+);
+
+// =============================================================================
+// IMPERSONATION THUNKS
+// =============================================================================
+
+/**
+ * Impersonate a user
+ */
+export const impersonateUser = createAsyncThunk(
+  'user/impersonate',
+  async (userId, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch(`/api/admin/users/${userId}/impersonate`, {
+        method: 'POST',
+      });
+      return {
+        user: data.user,
+        impersonatorId: data.impersonatorId,
+      };
+    } catch (error) {
+      return rejectWithValue(error.data || error.message);
+    }
+  },
+);
+
+/**
+ * Stop impersonating
+ */
+export const stopImpersonating = createAsyncThunk(
+  'user/stopImpersonating',
+  async (_, { extra: { fetch }, rejectWithValue }) => {
+    try {
+      const { data } = await fetch('/api/auth/stop-impersonating', {
+        method: 'POST',
+      });
+      return {
+        user: data.user,
+        accessToken: data.accessToken,
+        impersonatorId: data.impersonatorId,
+      };
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }

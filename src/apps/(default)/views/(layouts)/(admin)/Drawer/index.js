@@ -82,9 +82,6 @@ function Drawer() {
       // If user is not logged in, deny
       if (!user) return false;
 
-      // Admin bypass
-      if (user.is_admin) return true;
-
       // Use shared RBAC logic for permission matching (supports wildcards)
       return checkPermission(user, permission);
     };

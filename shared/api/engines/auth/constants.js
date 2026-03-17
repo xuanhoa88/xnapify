@@ -74,6 +74,7 @@ export const DEFAULT_ACTIONS = Object.freeze({
   READ: 'read',
   UPDATE: 'update',
   DELETE: 'delete',
+  IMPERSONATE: 'impersonate',
 });
 
 /**
@@ -88,6 +89,10 @@ export const DEFAULT_RESOURCES = Object.freeze({
   API_KEYS: 'apiKeys',
   NODE_RED: 'nodered',
   FILES: 'files',
+  EMAILS: 'emails',
+  WEBHOOKS: 'webhooks',
+  ACTIVITIES: 'activities',
+  PLUGINS: 'plugins',
 });
 
 /**
@@ -122,6 +127,11 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
     resource: DEFAULT_RESOURCES.USERS,
     action: DEFAULT_ACTIONS.DELETE,
     description: 'Delete users',
+  },
+  {
+    resource: DEFAULT_RESOURCES.USERS,
+    action: DEFAULT_ACTIONS.IMPERSONATE,
+    description: 'Impersonate users',
   },
 
   // Role management (CRUD)
@@ -236,5 +246,34 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
     resource: DEFAULT_RESOURCES.FILES,
     action: DEFAULT_ACTIONS.DELETE,
     description: 'Delete files',
+  },
+
+  // Activity logs (read only)
+  {
+    resource: DEFAULT_RESOURCES.ACTIVITIES,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View activity logs',
+  },
+
+  // Plugin management
+  {
+    resource: DEFAULT_RESOURCES.PLUGINS,
+    action: DEFAULT_ACTIONS.CREATE,
+    description: 'Upload/Install plugins',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PLUGINS,
+    action: DEFAULT_ACTIONS.READ,
+    description: 'View plugins',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PLUGINS,
+    action: DEFAULT_ACTIONS.UPDATE,
+    description: 'Enable/Disable plugins',
+  },
+  {
+    resource: DEFAULT_RESOURCES.PLUGINS,
+    action: DEFAULT_ACTIONS.DELETE,
+    description: 'Delete plugins',
   },
 ]);

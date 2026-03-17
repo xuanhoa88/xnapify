@@ -14,7 +14,7 @@ import {
 
 import EmailTemplates from './EmailTemplates';
 
-export const middleware = requirePermission('emails:templates:update');
+export const middleware = requirePermission('emails:templates:read');
 
 /**
  * Register menu item for this route
@@ -31,6 +31,7 @@ export function register({ store, i18n }) {
           path: '/admin/emails/templates',
           label: i18n.t('admin:emails.templates', 'Email Templates'),
           icon: 'mail-open',
+          permission: 'emails:templates:read',
           order: 50,
         },
       ],
@@ -45,7 +46,7 @@ export function unregister({ store }) {
   store.dispatch(
     unregisterMenu({
       ns: 'admin',
-      path: '/admin/emails',
+      path: '/admin/emails/templates',
     }),
   );
 }

@@ -22,6 +22,8 @@ import {
   deleteUser,
   getUserPreferences,
   updateUserPreferences,
+  impersonateUser,
+  stopImpersonating,
 } from './thunks';
 import { initialState, normalizeState, createOperationState } from './utils';
 
@@ -141,6 +143,7 @@ const userSlice = createSlice({
       .addCase(login.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.data = action.payload.user;
+        normalized.impersonatorId = action.payload.impersonatorId || null;
         normalized.operations.auth = createOperationState();
         Object.assign(state, normalized);
       })
@@ -175,6 +178,7 @@ const userSlice = createSlice({
       .addCase(me.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.data = action.payload.user;
+        normalized.impersonatorId = action.payload.impersonatorId || null;
         normalized.operations.auth = createOperationState();
         Object.assign(state, normalized);
       })
@@ -200,6 +204,7 @@ const userSlice = createSlice({
         const normalized = normalizeState(state);
         if (action.payload.user) {
           normalized.data = action.payload.user;
+          normalized.impersonatorId = action.payload.impersonatorId || null;
         }
         Object.assign(state, normalized);
       })
@@ -355,6 +360,37 @@ const userSlice = createSlice({
       .addCase(
         updateUserPreferences.rejected,
         createRejectedHandler('preferences'),
+      );
+
+    // =========================================================================
+    // IMPERSONATE (impersonate operation)
+    // =========================================================================
+    builder
+      .addCase(impersonateUser.pending, createPendingHandler('impersonate'))
+      .addCase(impersonateUser.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.data = action.payload.user;
+        normalized.impersonatorId = action.payload.impersonatorId;
+        normalized.operations.impersonate = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(impersonateUser.rejected, createRejectedHandler('impersonate'));
+
+    // =========================================================================
+    // STOP IMPERSONATING (impersonate operation)
+    // =========================================================================
+    builder
+      .addCase(stopImpersonating.pending, createPendingHandler('impersonate'))
+      .addCase(stopImpersonating.fulfilled, (state, action) => {
+        const normalized = normalizeState(state);
+        normalized.data = action.payload.user;
+        normalized.impersonatorId = null;
+        normalized.operations.impersonate = createOperationState();
+        Object.assign(state, normalized);
+      })
+      .addCase(
+        stopImpersonating.rejected,
+        createRejectedHandler('impersonate'),
       );
   },
 });
