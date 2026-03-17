@@ -102,7 +102,6 @@ export async function updateProfile(req, res) {
       dataOrErrors,
       {
         models: req.app.get('models'),
-        searchWorker: req.app.get('container').resolve('search:worker'),
         hook,
       },
     );
@@ -456,7 +455,6 @@ export async function deleteAccount(req, res) {
 
     await profileService.deleteUserAccount(req.user.id, password, {
       models: req.app.get('models'),
-      searchWorker: req.app.get('container').resolve('search:worker'),
       hook: req.app.get('hook'),
     });
 

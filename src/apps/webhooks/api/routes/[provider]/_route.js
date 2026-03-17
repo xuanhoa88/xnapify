@@ -23,28 +23,15 @@
 
 export const middleware = false;
 
-function createResponse(success, data = null, message = null) {
-  const response = {
-    success,
-    timestamp: new Date().toISOString(),
-  };
-
-  if (data != null) response.data = data;
-  if (message) response.message = message;
-
-  return response;
-}
-
 // POST /api/webhooks/:provider
 export function post(req, res) {
+  const http = req.app.get('http');
   const webhook = req.app.get('webhook');
   const { provider } = req.params;
 
   // 1. Check provider exists
   if (!webhook.hasHandler(provider)) {
-    return res
-      .status(404)
-      .json(createResponse(false, null, `Unknown provider: ${provider}`));
+    return http.sendNotFound(res, `Unknown provider: ${provider}`);
   }
 
   // 2. Get provider config and read signature header
@@ -52,9 +39,7 @@ export function post(req, res) {
   const signatureRaw = req.headers[config.signatureHeader];
 
   if (!signatureRaw) {
-    return res
-      .status(401)
-      .json(createResponse(false, null, 'Missing webhook signature'));
+    return http.sendUnauthorized(res, 'Missing webhook signature');
   }
 
   // 3. Parse and verify HMAC signature
@@ -67,15 +52,11 @@ export function post(req, res) {
   );
 
   if (!isValid) {
-    return res
-      .status(401)
-      .json(createResponse(false, null, 'Invalid webhook signature'));
+    return http.sendUnauthorized(res, 'Invalid webhook signature');
   }
 
   // 4. Respond 202 Accepted immediately (fire-and-forget)
-  res
-    .status(202)
-    .json(createResponse(true, null, `Webhook accepted: ${provider}`));
+  http.sendSuccess(res, { message: `Webhook accepted: ${provider}` });
 
   // 5. Dispatch asynchronously — do NOT await
   const context = {
