@@ -106,6 +106,7 @@ describe('[user] slice.js', () => {
       const state = reducer(undefined, { type: '@@INIT' });
       expect(state).toEqual({
         data: null,
+        impersonatorId: null,
         operations: expect.objectContaining({
           auth: { loading: false, error: null },
           emailVerification: { loading: false, error: null },
@@ -115,6 +116,7 @@ describe('[user] slice.js', () => {
           password: { loading: false, error: null },
           delete: { loading: false, error: null },
           preferences: { loading: false, error: null },
+          impersonate: { loading: false, error: null },
         }),
       });
     });

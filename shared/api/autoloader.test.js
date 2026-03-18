@@ -23,22 +23,26 @@ describe('shared/api/autoloader', () => {
     it('should not throw if all core modules are present', () => {
       const { validateCoreModules } = require('./autoloader');
       const paths = [
-        './users/api/index.js',
-        './roles/api/index.js',
-        './groups/api/index.js',
-        './permissions/api/index.js',
-        './auth/api/index.js',
-        './files/api/index.js',
-        './plugins/api/index.js',
-        './other/api/index.js',
-      ];
+        'users',
+        'roles',
+        'groups',
+        'permissions',
+        'auth',
+        'files',
+        'plugins',
+        'emails',
+        'webhooks',
+        'search',
+        'activities',
+        'other',
+      ].map(p => `./${p}/api/index.js`);
       // Default core module is 'users'
       expect(() => validateCoreModules(paths)).not.toThrow();
     });
 
     it('should throw if a core module is missing', () => {
       const { validateCoreModules } = require('./autoloader');
-      const paths = ['./other/api/index.js'];
+      const paths = ['other'].map(p => `./${p}/api/index.js`);
       // 'users' is always required
       expect(() => validateCoreModules(paths)).toThrow(
         /Missing required core module/,
@@ -49,21 +53,25 @@ describe('shared/api/autoloader', () => {
       process.env.RSK_MODULE_DEFAULTS = 'custom';
       const { validateCoreModules } = require('./autoloader');
 
-      const paths = ['./other/api/index.js'];
+      const paths = ['other'].map(p => `./${p}/api/index.js`);
       expect(() => validateCoreModules(paths)).toThrow(
         /Missing required core module/,
       );
 
       const validPaths = [
-        './users/api/index.js',
-        './roles/api/index.js',
-        './groups/api/index.js',
-        './permissions/api/index.js',
-        './auth/api/index.js',
-        './files/api/index.js',
-        './plugins/api/index.js',
-        './custom/api/index.js',
-      ];
+        'users',
+        'roles',
+        'groups',
+        'permissions',
+        'auth',
+        'files',
+        'plugins',
+        'emails',
+        'webhooks',
+        'search',
+        'activities',
+        'custom',
+      ].map(p => `./${p}/api/index.js`);
       expect(() => validateCoreModules(validPaths)).not.toThrow();
     });
   });
@@ -71,11 +79,9 @@ describe('shared/api/autoloader', () => {
   describe('sortModules', () => {
     it('should place core modules first', () => {
       const { sortModules } = require('./autoloader');
-      const paths = [
-        './z_module/api/index.js',
-        './users/api/index.js',
-        './a_module/api/index.js',
-      ];
+      const paths = ['z_module', 'users', 'a_module'].map(
+        p => `./${p}/api/index.js`,
+      );
       const sorted = sortModules(paths);
       expect(sorted[0]).toContain('users');
       expect(sorted).toHaveLength(3);
@@ -92,11 +98,9 @@ describe('shared/api/autoloader', () => {
     it('should sort based on custom core modules', () => {
       process.env.RSK_MODULE_DEFAULTS = 'z_module';
       const { sortModules } = require('./autoloader');
-      const paths = [
-        './z_module/api/index.js',
-        './users/api/index.js',
-        './a_module/api/index.js',
-      ];
+      const paths = ['users', 'z_module', 'a_module'].map(
+        p => `./${p}/api/index.js`,
+      );
       const sorted = sortModules(paths);
 
       // Both 'users' and 'z_module' are core.
@@ -107,11 +111,9 @@ describe('shared/api/autoloader', () => {
       expect(sorted[1]).toContain('z_module');
       expect(sorted[2]).toContain('a_module');
 
-      expect(sorted).toEqual([
-        './users/api/index.js',
-        './z_module/api/index.js',
-        './a_module/api/index.js',
-      ]);
+      expect(sorted).toEqual(
+        ['users', 'z_module', 'a_module'].map(p => `./${p}/api/index.js`),
+      );
     });
   });
 
@@ -138,15 +140,21 @@ describe('shared/api/autoloader', () => {
       const mockContext = jest.fn();
       mockContext.keys = jest
         .fn()
-        .mockReturnValue([
-          './users/api/index.js',
-          './roles/api/index.js',
-          './groups/api/index.js',
-          './permissions/api/index.js',
-          './auth/api/index.js',
-          './files/api/index.js',
-          './plugins/api/index.js',
-        ]);
+        .mockReturnValue(
+          [
+            'users',
+            'roles',
+            'groups',
+            'permissions',
+            'auth',
+            'files',
+            'plugins',
+            'emails',
+            'webhooks',
+            'search',
+            'activities',
+          ].map(p => `./${p}/api/index.js`),
+        );
 
       const mockTranslationsContext = jest.fn();
 
@@ -176,15 +184,21 @@ describe('shared/api/autoloader', () => {
       const mockContext = jest.fn();
       mockContext.keys = jest
         .fn()
-        .mockReturnValue([
-          './users/api/index.js',
-          './roles/api/index.js',
-          './groups/api/index.js',
-          './permissions/api/index.js',
-          './auth/api/index.js',
-          './files/api/index.js',
-          './plugins/api/index.js',
-        ]);
+        .mockReturnValue(
+          [
+            'users',
+            'roles',
+            'groups',
+            'permissions',
+            'auth',
+            'files',
+            'plugins',
+            'emails',
+            'webhooks',
+            'search',
+            'activities',
+          ].map(p => `./${p}/api/index.js`),
+        );
 
       // Mock model context returned by hooks.models()
       const userModel = {
@@ -228,12 +242,18 @@ describe('shared/api/autoloader', () => {
         }
         if (
           [
-            './roles/api/index.js',
-            './groups/api/index.js',
-            './permissions/api/index.js',
-            './auth/api/index.js',
-            './files/api/index.js',
-          ].includes(key)
+            'roles',
+            'groups',
+            'permissions',
+            'auth',
+            'files',
+            'emails',
+            'webhooks',
+            'search',
+            'activities',
+          ]
+            .map(p => `./${p}/api/index.js`)
+            .includes(key)
         ) {
           return { init: jest.fn() };
         }
@@ -259,15 +279,21 @@ describe('shared/api/autoloader', () => {
       const mockContext = jest.fn();
       mockContext.keys = jest
         .fn()
-        .mockReturnValue([
-          './users/api/index.js',
-          './roles/api/index.js',
-          './groups/api/index.js',
-          './permissions/api/index.js',
-          './auth/api/index.js',
-          './files/api/index.js',
-          './plugins/api/index.js',
-        ]);
+        .mockReturnValue(
+          [
+            'users',
+            'roles',
+            'groups',
+            'permissions',
+            'auth',
+            'files',
+            'plugins',
+            'emails',
+            'webhooks',
+            'search',
+            'activities',
+          ].map(p => `./${p}/api/index.js`),
+        );
 
       // Only users exports models()
       const userModel = {
@@ -293,12 +319,18 @@ describe('shared/api/autoloader', () => {
         if (key === './plugins/api/index.js') return { init: jest.fn() };
         if (
           [
-            './roles/api/index.js',
-            './groups/api/index.js',
-            './permissions/api/index.js',
-            './auth/api/index.js',
-            './files/api/index.js',
-          ].includes(key)
+            'roles',
+            'groups',
+            'permissions',
+            'auth',
+            'files',
+            'emails',
+            'webhooks',
+            'search',
+            'activities',
+          ]
+            .map(p => `./${p}/api/index.js`)
+            .includes(key)
         ) {
           return { init: jest.fn() };
         }
