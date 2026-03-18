@@ -13,7 +13,7 @@ import { ROUTE_SEPARATOR } from './constants';
  * @param {'log'|'warn'|'error'} [level='log'] - Console log level
  */
 export function log(message, level = 'log') {
-  if (process.env.NODE_ENV !== 'production') {
+  if (__DEV__) {
     console[level](`[Router] ${message}`);
   }
 }

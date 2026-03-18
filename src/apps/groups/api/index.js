@@ -37,8 +37,6 @@ const workersContext = require.context(
   /\.worker\.[cm]?[jt]s$/i,
 );
 
-let searchWorkerPool = null;
-
 // =============================================================================
 // PUBLIC LIFECYCLE HOOKS
 // =============================================================================
@@ -61,7 +59,7 @@ export async function providers(app) {
     const pool = worker.createWorkerPool('GroupsSearch', workersContext, {
       maxWorkers: 1,
     });
-    searchWorkerPool = attachSearchMethods(pool);
+    const searchWorkerPool = attachSearchMethods(pool);
     container.bind('groups:search:worker', () => searchWorkerPool, OWNER_KEY);
   }
 }
@@ -101,6 +99,10 @@ export async function seeds(app) {
 export async function init(app) {
   // Bulk-index groups for search (fire-and-forget)
   const search = app.get('search');
+  const container = app.get('container');
+  const searchWorkerPool = container.has('groups:search:worker')
+    ? container.make('groups:search:worker')
+    : null;
 
   if (searchWorkerPool && search) {
     searchWorkerPool.setSearch(search);

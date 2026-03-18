@@ -42,8 +42,6 @@ const workersContext = require.context(
   /\.worker\.[cm]?[jt]s$/i,
 );
 
-let searchWorkerPool = null;
-
 // =============================================================================
 // LOGGING
 // =============================================================================
@@ -95,7 +93,7 @@ export async function providers(app) {
     const pool = worker.createWorkerPool('UsersSearch', workersContext, {
       maxWorkers: 1,
     });
-    searchWorkerPool = attachSearchMethods(pool);
+    const searchWorkerPool = attachSearchMethods(pool);
     container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
   }
 }
@@ -138,6 +136,10 @@ export async function init(app) {
 
   // Bulk-index users for search (fire-and-forget)
   const search = app.get('search');
+  const container = app.get('container');
+  const searchWorkerPool = container.has('users:search:worker')
+    ? container.make('users:search:worker')
+    : null;
 
   if (searchWorkerPool && search) {
     searchWorkerPool.setSearch(search);

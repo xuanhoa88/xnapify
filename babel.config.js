@@ -17,9 +17,9 @@ module.exports = api => {
   // Always recalc config — Webpack + React Refresh need this
   api.cache.never();
 
-  const NODE_ENV = process.env.NODE_ENV || 'development';
-  const isProd = NODE_ENV === 'production';
-  const isTest = NODE_ENV === 'test';
+  const nodeEnv = process.env.NODE_ENV || 'development';
+  const isProd = nodeEnv === 'production';
+  const isTest = nodeEnv === 'test';
 
   return {
     /**

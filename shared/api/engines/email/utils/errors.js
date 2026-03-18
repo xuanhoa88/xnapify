@@ -69,7 +69,7 @@ export function createOperationResult(
     };
 
     // Include stack trace in development
-    if (process.env.NODE_ENV === 'development') {
+    if (__DEV__) {
       response.error.stack = error.stack;
     }
   }

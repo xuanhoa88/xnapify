@@ -16,7 +16,7 @@ import { createWorkerPool } from '@shared/api/engines/worker';
 // Auto-load workers via require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
-const workerPool = createWorkerPool('🔌 Plugin', workersContext, {
+const workerPool = createWorkerPool('Plugins', workersContext, {
   maxWorkers: 2,
   workerTimeout: 120_000, // large plugin dirs may take time
 });

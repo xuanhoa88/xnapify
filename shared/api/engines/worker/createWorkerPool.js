@@ -76,6 +76,12 @@ const DEFAULT_WORKER_CONFIG = Object.freeze({
 });
 
 /**
+ * Pool registry — keyed by engineName.
+ * Ensures each named pool is created only once (singleton per name).
+ */
+const poolRegistry = new Map();
+
+/**
  * Create a WorkerPool instance for a specific engine using Piscina
  *
  * @param {string} engineName - Name of the engine (e.g. Email, Filesystem)
@@ -88,6 +94,16 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
     throw new Error(
       'createWorkerPool requires an engineName string as its first argument',
     );
+  }
+
+  // Return cached pool if one already exists for this engineName
+  if (poolRegistry.has(engineName)) {
+    if (__DEV__) {
+      console.warn(
+        `createWorkerPool: pool "${engineName}" already exists — returning cached instance.`,
+      );
+    }
+    return poolRegistry.get(engineName);
   }
 
   const adapter = createWebpackContextAdapter(workersContext);
@@ -170,7 +186,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       this.piscinaPoolInstance = null;
 
       // Log discovered workers in development
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.log(
           `${this.engineName} discovered ${this.knownWorkers.length} worker(s): ${this.knownWorkers.join(', ')}`,
         );
@@ -333,7 +349,7 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
       this.knownWorkers.splice(index, 1);
       workerModuleCache.delete(workerType);
 
-      if (process.env.NODE_ENV !== 'production') {
+      if (__DEV__) {
         console.log(
           `${this.engineName} unregistered worker type: ${workerType}`,
         );
@@ -382,8 +398,14 @@ export function createWorkerPool(engineName, workersContext, options = {}) {
   const workerPool = new WorkerPool();
   workerPool.sendRequest = workerPool.sendRequest.bind(workerPool);
 
+  // Register in pool cache
+  poolRegistry.set(engineName, workerPool);
+
   return workerPool;
 }
 
 // Default options
 createWorkerPool.options = DEFAULT_WORKER_CONFIG;
+
+// Expose registry for testing / inspection
+createWorkerPool.registry = poolRegistry;
