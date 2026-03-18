@@ -73,11 +73,28 @@ function discoverPlugins() {
  * @param {Array} plugins - Array of plugin objects
  */
 async function generateManifests(plugins) {
-  for (const { name, version, manifest } of plugins) {
+  for (const {
+    name,
+    version,
+    manifest: initialManifest,
+    path: pluginPath,
+  } of plugins) {
     const outputDir = path.join(PLUGINS_BUILD_DIR, name);
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
+    }
+
+    // Re-read package.json from source on every build so metadata changes
+    // (e.g. rsk.subscribe) are picked up during watch-mode rebuilds.
+    let manifest = initialManifest;
+    const sourceManifest = path.join(pluginPath, 'package.json');
+    if (fs.existsSync(sourceManifest)) {
+      try {
+        manifest = JSON.parse(fs.readFileSync(sourceManifest, 'utf8'));
+      } catch {
+        // Fall back to the initially discovered manifest
+      }
     }
 
     // Compute checksum of all built files

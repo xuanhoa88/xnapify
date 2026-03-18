@@ -471,10 +471,16 @@
    ============================================================================= */
 
 .oauthButtonsContainer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--spacing-3);
   margin-bottom: var(--spacing-6);
+}
+
+/* Each button takes 50% minus gap when 2+, full width when alone */
+.oauthButtonsContainer > * {
+  flex: 1 1 calc(50% - var(--spacing-3) / 2);
+  min-width: 0;
 }
 
 .oauthButton {

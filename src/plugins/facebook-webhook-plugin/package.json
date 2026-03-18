@@ -1,5 +1,5 @@
 {
-  "name": "@rsk-plugin/facebook",
+  "name": "@rsk-plugin/facebook-webhook",
   "version": "1.0.0",
   "main": "api/index.js",
   "description": "Facebook webhook integration plugin"

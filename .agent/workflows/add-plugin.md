@@ -52,9 +52,15 @@ mkdir -p src/plugins/{plugin-name}
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Brief plugin description"
+  "description": "Brief plugin description",
+  "rsk": {
+    "subscribe": ["/route-path"]
+  }
 }
 ```
+
+**`rsk.subscribe`** declares which route namespaces activate the plugin's frontend.
+The `Registry.define()` method reads namespaces from this field — **NOT** from a `register()` method in code.
 
 Example:
 
@@ -64,7 +70,10 @@ Example:
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Notification system plugin"
+  "description": "Notification system plugin",
+  "rsk": {
+    "subscribe": ["/dashboard", "/notifications"]
+  }
 }
 ```
 
@@ -109,15 +118,6 @@ const translationsContext = require.context(
 export default {
   // Store handlers for cleanup
   [HANDLERS]: {},
-
-  // Metadata & registration config
-  register() {
-    return [
-      ['profile', 'dashboard'], // Namespaces that this plugin extends
-      __PLUGIN_NAME__, // Plugin ID
-      { description: __PLUGIN_DESCRIPTION__ }, // Plugin metadata
-    ];
-  },
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
@@ -333,15 +333,6 @@ const nicknameGuard = (data, context, next) => {
 export default {
   // Store composed handlers for cleanup
   [HANDLERS]: {},
-
-  // Metadata & registration config
-  register() {
-    return [
-      ['profile', 'dashboard'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
 
   // Declarative translations — auto-registered by plugin manager before init
   translations() {
@@ -607,7 +598,10 @@ cd src/plugins/comments-plugin
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Add comments functionality to posts"
+  "description": "Add comments functionality to posts",
+  "rsk": {
+    "subscribe": ["/posts"]
+  }
 }
 ```
 
@@ -677,14 +671,6 @@ const extendCommentValidator = (schema, validator) => {
 export default {
   [HANDLERS]: {},
 
-  register() {
-    return [
-      ['posts', 'comments'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
-
   translations() {
     return translationsContext;
   },
@@ -729,14 +715,6 @@ const translationsContext = require.context(
 
 export default {
   [HANDLERS]: {},
-
-  register() {
-    return [
-      ['posts', 'comments'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
 
   translations() {
     return translationsContext;
@@ -907,12 +885,10 @@ registry.registerHook(
 ### Plugin Not Loading
 
 - Check `__PLUGIN_NAME__` and `__PLUGIN_DESCRIPTION__` globals are defined
-- Verify `register()` returns correct format: `[namespaces, id, metadata]` where:
-  - `namespaces` is an array like `['profile', 'dashboard']`
-  - `id` is `__PLUGIN_NAME__`
-  - `metadata` is `{ description: __PLUGIN_DESCRIPTION__ }`
+- Verify `rsk.subscribe` in `package.json` lists the route paths where the plugin should activate (e.g., `["/login", "/profile"]`)
 - Ensure both `api/index.js` and `views/index.js` export default plugin definitions
 - Check browser console for any initialization errors
+- Verify the plugin was built by Webpack (check `.cache/dev/plugins/` for build output)
 
 ### Slots Not Appearing
 

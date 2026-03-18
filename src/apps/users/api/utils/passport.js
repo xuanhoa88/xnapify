@@ -6,99 +6,90 @@
  */
 
 import passport from 'passport';
-import { Strategy as FacebookStrategy } from 'passport-facebook';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
-import { Strategy as MicrosoftStrategy } from 'passport-microsoft';
 
 /**
- * Configure Passport strategies for OAuth.
- * Since this is an API, we do not use session serialization.
- * Only the specific strategies are registered if their credentials are provided.
+ * Dynamic OAuth provider registry.
+ *
+ * Plugins call `registerProvider()` during their `init()` lifecycle
+ * to wire up their Passport strategy and declare their OAuth scopes.
+ *
+ * The `_route.js` files for `/api/auth/oauth/[provider]` use
+ * `getProvider()` to look up scopes at request time.
+ */
+class OAuthRegistry {
+  constructor() {
+    /** @type {Map<string, { scope: string[] }>} */
+    this.providers = new Map();
+  }
+
+  /**
+   * Register an OAuth provider.
+   *
+   * @param {string} name       - Provider name (e.g. 'google')
+   * @param {object} opts
+   * @param {object} opts.strategy  - Instantiated Passport strategy
+   * @param {string[]} opts.scope   - OAuth scopes for the initiate route
+   */
+  registerProvider(name, { strategy, scope = [] }) {
+    passport.use(name, strategy);
+    this.providers.set(name, { scope });
+    console.info(`[OAuth] ✅ Registered provider: ${name}`);
+  }
+
+  /**
+   * Remove a previously registered OAuth provider.
+   *
+   * @param {string} name - Provider name to unregister
+   */
+  unregisterProvider(name) {
+    // Passport has no built-in unuse() — remove from internal strategies map
+    // eslint-disable-next-line no-underscore-dangle
+    if (passport._strategy(name)) {
+      // eslint-disable-next-line no-underscore-dangle
+      delete passport._strategies[name];
+    }
+    this.providers.delete(name);
+    console.info(`[OAuth] 🗑️ Unregistered provider: ${name}`);
+  }
+
+  /**
+   * Look up a registered provider.
+   *
+   * @param {string} name - Provider name
+   * @returns {{ scope: string[] } | undefined}
+   */
+  getProvider(name) {
+    return this.providers.get(name);
+  }
+
+  /**
+   * Check if a provider is registered.
+   *
+   * @param {string} name - Provider name
+   * @returns {boolean}
+   */
+  hasProvider(name) {
+    return this.providers.has(name);
+  }
+
+  /**
+   * Get all registered provider names.
+   *
+   * @returns {string[]}
+   */
+  getProviderNames() {
+    return [...this.providers.keys()];
+  }
+}
+
+/**
+ * Create and initialise the OAuth registry.
+ *
+ * Returns `{ passport, oauth }` — the passport instance and the registry.
  */
 export function configurePassport() {
-  const commonCallback = (accessToken, refreshToken, profile, done) => {
-    // The profile object contains all the needed information.
-    // We pass it to the route handler via the done callback.
-    return done(null, profile);
-  };
-
-  // Get app URL from environment variable
-  const appUrl = process.env['RSK_APP_URL'] || 'http://localhost:1337';
-
-  // Google Strategy
-  if (
-    process.env.RSK_GOOGLE_CLIENT_ID &&
-    process.env.RSK_GOOGLE_CLIENT_SECRET
-  ) {
-    passport.use(
-      new GoogleStrategy(
-        {
-          clientID: process.env.RSK_GOOGLE_CLIENT_ID,
-          clientSecret: process.env.RSK_GOOGLE_CLIENT_SECRET,
-          callbackURL: `${appUrl}/api/auth/oauth/google/callback`,
-          passReqToCallback: false,
-        },
-        commonCallback,
-      ),
-    );
-  }
-
-  // Facebook Strategy
-  if (process.env.RSK_FACEBOOK_APP_ID && process.env.RSK_FACEBOOK_APP_SECRET) {
-    passport.use(
-      new FacebookStrategy(
-        {
-          clientID: process.env.RSK_FACEBOOK_APP_ID,
-          clientSecret: process.env.RSK_FACEBOOK_APP_SECRET,
-          callbackURL: `${appUrl}/api/auth/oauth/facebook/callback`,
-          profileFields: ['id', 'emails', 'name', 'picture.type(large)'],
-          passReqToCallback: false,
-        },
-        commonCallback,
-      ),
-    );
-  }
-
-  // GitHub Strategy
-  if (
-    process.env.RSK_GITHUB_CLIENT_ID &&
-    process.env.RSK_GITHUB_CLIENT_SECRET
-  ) {
-    passport.use(
-      new GitHubStrategy(
-        {
-          clientID: process.env.RSK_GITHUB_CLIENT_ID,
-          clientSecret: process.env.RSK_GITHUB_CLIENT_SECRET,
-          callbackURL: `${appUrl}/api/auth/oauth/github/callback`,
-          scope: ['user:email'],
-          passReqToCallback: false,
-        },
-        commonCallback,
-      ),
-    );
-  }
-
-  // Microsoft Strategy
-  if (
-    process.env.RSK_MICROSOFT_CLIENT_ID &&
-    process.env.RSK_MICROSOFT_CLIENT_SECRET
-  ) {
-    passport.use(
-      new MicrosoftStrategy(
-        {
-          clientID: process.env.RSK_MICROSOFT_CLIENT_ID,
-          clientSecret: process.env.RSK_MICROSOFT_CLIENT_SECRET,
-          callbackURL: `${appUrl}/api/auth/oauth/microsoft/callback`,
-          scope: ['user.read'],
-          passReqToCallback: false,
-        },
-        commonCallback,
-      ),
-    );
-  }
-
-  return passport;
+  const oauth = new OAuthRegistry();
+  return { passport, oauth };
 }
 
 export default passport;

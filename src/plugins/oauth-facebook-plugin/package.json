@@ -1,0 +1,15 @@
+{
+  "name": "@rsk-plugin/oauth-facebook",
+  "version": "1.0.0",
+  "browser": "views/index.js",
+  "main": "api/index.js",
+  "description": "Facebook OAuth login provider",
+  "rsk": {
+    "subscribe": [
+      "/login"
+    ]
+  },
+  "dependencies": {
+    "passport-facebook": "^3.0.0"
+  }
+}

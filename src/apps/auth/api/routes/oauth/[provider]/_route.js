@@ -10,16 +10,20 @@ import passport from 'passport';
 export const get = [
   function oauthInitiate(req, res, next) {
     const { provider } = req.params;
+    const http = req.app.get('http');
 
     try {
-      const scopes = {
-        google: ['profile', 'email'],
-        facebook: ['public_profile', 'email'],
-        github: ['user:email'],
-        microsoft: ['user.read'],
-      };
+      const oauth = req.app.get('oauth');
 
-      const scope = scopes[provider] || [];
+      if (!oauth || !oauth.hasProvider(provider)) {
+        return http.sendError(
+          res,
+          `OAuth provider '${provider}' is not configured or unknown`,
+          404,
+        );
+      }
+
+      const { scope } = oauth.getProvider(provider);
 
       return passport.authenticate(provider, { session: false, scope })(
         req,
@@ -31,7 +35,6 @@ export const get = [
         error.message &&
         error.message.includes('Unknown authentication strategy')
       ) {
-        const http = req.app.get('http');
         return http.sendError(
           res,
           `OAuth provider '${provider}' is not configured or unknown`,

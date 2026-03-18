@@ -40,17 +40,6 @@ export default {
   [HANDLERS]: {},
 
   /**
-   * Register — declares namespaces and plugin identity.
-   */
-  register() {
-    return [
-      ['webhooks'],
-      __PLUGIN_NAME__,
-      { description: __PLUGIN_DESCRIPTION__ },
-    ];
-  },
-
-  /**
    * Init — register the Facebook webhook handler.
    *
    * @param {Object} registry - Plugin registry

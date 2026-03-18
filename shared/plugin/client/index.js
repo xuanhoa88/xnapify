@@ -6,9 +6,5 @@
  */
 
 export { default as PluginSlot } from './PluginSlot';
-export {
-  usePluginHooks,
-  usePluginValidator,
-  usePluginFormData,
-} from './usePlugin';
+export * from './usePlugin';
 export { default } from './manager';

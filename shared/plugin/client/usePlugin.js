@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useMemo, useState, useEffect, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef, useCallback } from 'react';
 
 import { registry } from '../utils/Registry';
 
@@ -133,4 +133,32 @@ export function usePluginFormData(hookId, context) {
   }, [hookId, context]); // Re-run when hookId or context changes
 
   return [formData, loading];
+}
+
+/**
+ * Hook to get components registered for a named slot
+ *
+ * Subscribes to registry updates so the component re-renders
+ * when plugins register or unregister slot entries.
+ *
+ * Usage:
+ *   const slots = usePluginSlots('auth.oauth.buttons');
+ *   if (slots.length > 0) { ... }
+ *
+ * @param {string} name - Slot name
+ * @returns {Array} Array of registered slot entries
+ */
+export function usePluginSlots(name) {
+  const [components, setComponents] = useState(() => registry.getSlot(name));
+
+  const sync = useCallback(() => {
+    setComponents(registry.getSlot(name));
+  }, [name]);
+
+  useEffect(() => {
+    sync();
+    return registry.subscribe(sync);
+  }, [sync]);
+
+  return components;
 }

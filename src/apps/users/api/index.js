@@ -130,8 +130,9 @@ export async function seeds(app) {
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
-  const passport = configurePassport();
+  const { passport, oauth } = configurePassport();
   app.use(passport.initialize());
+  app.set('oauth', oauth);
   await registerAuthHooks(app);
 
   // Bulk-index users for search (fire-and-forget)
