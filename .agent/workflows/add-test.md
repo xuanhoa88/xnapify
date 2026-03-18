@@ -1,5 +1,5 @@
 ---
-description: Add tests
+description: Add Jest unit or integration tests for a module
 ---
 
 Add tests using Jest and React Test Renderer.

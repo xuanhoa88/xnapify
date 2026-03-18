@@ -1,4 +1,4 @@
-<![CDATA[<div align="center">
+<div align="center">
 
 # 🚀 Rapid RSK
 
@@ -75,14 +75,22 @@ rapid-rsk/
 │   └── server.js               # Server entry point
 ├── shared/                     # Shared libraries (@shared alias)
 │   ├── api/                    # Core API infrastructure
-│   │   ├── auth/               # Auth middlewares & cookies
-│   │   ├── db/                 # Database & Sequelize ORM
-│   │   ├── cache/              # Caching layer
-│   │   ├── email/              # Email service
-│   │   ├── queue/              # Job queue
-│   │   ├── schedule/           # Cron scheduling
-│   │   ├── webhook/            # Webhook engine
-│   │   └── worker/             # Worker pool engine
+│   │   ├── engines/            # Auto-loaded engine modules
+│   │   │   ├── auth/           # Auth middlewares & cookies
+│   │   │   ├── cache/          # Caching layer (LRU)
+│   │   │   ├── db/             # Database & Sequelize ORM
+│   │   │   ├── email/          # Email service (Nodemailer)
+│   │   │   ├── fs/             # Filesystem operations
+│   │   │   ├── hook/           # Hook engine (event channels)
+│   │   │   ├── http/           # HTTP client utilities
+│   │   │   ├── queue/          # Job queue
+│   │   │   ├── schedule/       # Cron scheduling
+│   │   │   ├── search/         # Full-text search
+│   │   │   ├── template/       # Template engine (LiquidJS)
+│   │   │   ├── webhook/        # Webhook engine
+│   │   │   └── worker/         # Worker pool engine
+│   │   ├── autoloader.js       # Module auto-discovery
+│   │   └── index.js            # Re-exports all engines
 │   ├── container/              # Dependency injection container
 │   ├── renderer/               # SSR utilities & Redux store
 │   ├── fetch/                  # Universal API client
@@ -168,16 +176,16 @@ npm run format:check           # Check formatting
 Each module lives under `src/apps/<module-name>/` and is automatically discovered:
 
 ```
-src/apps/users/
-├── api/                # Backend (routes, controllers, services, models)
-│   ├── index.js        # Module entry — exports routes(), models(), init()
-│   ├── routes/         # Express route definitions
-│   ├── controller.js   # Request handlers
-│   ├── service.js      # Business logic
-│   └── models/         # Sequelize model definitions
-└── views/              # Frontend (pages, components, Redux slices)
-    └── (admin)/        # Admin panel views
-        └── _route.js   # Page route with lifecycle hooks
+src/apps/<module>/
+├── api/                  # Backend
+│   ├── index.js          # Module entry — exports routes(), models(), init()
+│   ├── routes/           # Express route definitions
+│   ├── controllers/      # Request handlers
+│   ├── services/         # Business logic
+│   └── models/           # Sequelize model definitions
+└── views/                # Frontend (pages, components, Redux slices)
+    └── (admin)/          # Admin panel views
+        └── _route.js     # Page route with lifecycle hooks
 ```
 
 ### Route Lifecycle Hooks
@@ -215,7 +223,7 @@ registry.register('my-plugin', {
 ### Authentication & RBAC
 
 - **JWT** in HTTP-only cookies for stateless auth
-- **Middleware guards**: `requireAuth`, `requirePermission('resource:action')`, `requireRole('admin')`
+- **Middleware guards**: `requireAuth`, `requirePermission`, `requireRole`, `requireGroup`, `requireOwnership`, `optionalAuth`
 - **OAuth**: Google, Facebook, GitHub, Microsoft via Passport.js
 
 ## ⚙️ Configuration
@@ -277,4 +285,3 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute, incl
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE.txt).
-]]>

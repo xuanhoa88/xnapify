@@ -1,5 +1,5 @@
 ---
-description: Add plugin
+description: Add a plugin with slots, hooks, and optional API endpoints
 ---
 
 Add a new plugin with API endpoints, UI components, validation, and database support.

@@ -1,5 +1,5 @@
 ---
-description: Debug build issues
+description: Debug Webpack, Babel, or runtime build failures
 ---
 
 Debug common build and runtime issues.

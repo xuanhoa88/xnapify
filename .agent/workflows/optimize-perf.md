@@ -1,5 +1,5 @@
 ---
-description: Optimize performance
+description: Profile and optimize rendering, queries, or bundle size
 ---
 
 Optimize performance of the application.

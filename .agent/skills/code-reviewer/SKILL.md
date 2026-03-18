@@ -1,6 +1,6 @@
 ---
-name: Code Review Agent
-description: specialized skill for acting as an expert technical reviewer for new Modules and Plugins within rapid-rsk
+name: code-reviewer
+description: Expert technical reviewer for modules and plugins. Validates architecture, conventions, and test coverage before merge.
 ---
 
 # Code Review Agent Skill

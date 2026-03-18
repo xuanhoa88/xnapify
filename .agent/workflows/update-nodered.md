@@ -1,5 +1,5 @@
 ---
-description: Node red migration
+description: Create or update Node-RED flow migrations
 ---
 
 # Node-RED Migration Guide

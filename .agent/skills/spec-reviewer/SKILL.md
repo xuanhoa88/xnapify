@@ -1,6 +1,6 @@
 ---
-name: Spec Reviewer
-description: Technical Architect persona that validates SPEC.md documents before code generation.
+name: spec-reviewer
+description: Validate SPEC.md documents for completeness, feasibility, and architectural consistency before code generation.
 ---
 
 # Spec Reviewer Persona

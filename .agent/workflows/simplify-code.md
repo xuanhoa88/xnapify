@@ -1,5 +1,5 @@
 ---
-description: Simplify code logic for simpler and robust implementation
+description: Simplify and refactor code for clarity and robustness
 ---
 
 # Simplify Code Logic

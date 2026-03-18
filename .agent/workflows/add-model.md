@@ -1,5 +1,5 @@
 ---
-description: Add model
+description: Add a Sequelize model to an existing module
 ---
 
 Add a new Sequelize model to an existing or new module.

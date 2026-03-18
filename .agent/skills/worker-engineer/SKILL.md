@@ -1,6 +1,6 @@
 ---
-name: Worker Engineer
-description: specialized skill for developing Worker Handlers and Pools for background processing tasks
+name: worker-engineer
+description: Build worker handlers and pools with Piscina for background processing, concurrency control, and error propagation.
 ---
 
 # Worker Engineer Skill

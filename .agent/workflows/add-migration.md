@@ -1,5 +1,5 @@
 ---
-description: Add migration
+description: Add a database migration for schema changes
 ---
 
 Add a new database migration for schema changes.

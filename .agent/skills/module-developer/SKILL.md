@@ -1,6 +1,6 @@
 ---
-name: Module Developer
-description: specialized skill for creating API and View modules in rapid-rsk with correct dependencies and lifecycles
+name: module-developer
+description: Build API and View modules with correct auto-discovery, lifecycle hooks, and dependency wiring.
 ---
 
 # Module Developer Skill

@@ -1,5 +1,5 @@
 ---
-description: Add redux feature
+description: Add a Redux Toolkit slice and thunks to a view
 ---
 
 Add a new Redux feature for a module view.

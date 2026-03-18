@@ -1,5 +1,5 @@
 ---
-description: Add view
+description: Add a page route with lifecycle hooks to a module
 ---
 
 Add a new view/route to a module.

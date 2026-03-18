@@ -1,6 +1,6 @@
 ---
-name: Plugin Developer
-description: specialized skill for extending the rapid-rsk plugin and hook systems without modifying core code
+name: plugin-developer
+description: Extend the plugin and hook systems with slots, hooks, and API endpoints without modifying core code.
 ---
 
 # Plugin Developer Skill

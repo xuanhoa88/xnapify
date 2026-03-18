@@ -1,5 +1,5 @@
 ---
-description: Add seed
+description: Add database seed files for initial or demo data
 ---
 
 Add database seed files to populate tables with initial or demo data.

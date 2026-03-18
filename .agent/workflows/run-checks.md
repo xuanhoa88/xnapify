@@ -1,5 +1,5 @@
 ---
-description: Run tests, benchmarks, and code quality checks
+description: Run tests, benchmarks, linting, and formatting checks
 ---
 
 When the user requests to lint, fix, or thoroughly test the application, use these guidelines to properly run the project's quality checks.

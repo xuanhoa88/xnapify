@@ -1,6 +1,6 @@
 ---
-name: Test and Benchmark Engineer
-description: specialized skill in Jest, testing library, and performance metric generation
+name: test-and-benchmark
+description: Write Jest tests, React component tests, and performance benchmarks with proper mocks and assertions.
 ---
 
 # Test & Benchmark Engineer Persona

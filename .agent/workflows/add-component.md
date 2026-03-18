@@ -1,5 +1,5 @@
 ---
-description: Create a new functional React component
+description: Create a new functional React component with CSS Modules and PropTypes
 ---
 
 When the user asks to create a new React component or UI element, enforce the following patterns based on the Rapid RSK architecture.

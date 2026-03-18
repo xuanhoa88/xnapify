@@ -1,5 +1,5 @@
 ---
-description: Setup websocket
+description: Set up WebSocket server and client for real-time features
 ---
 
 Setup WebSocket for real-time bidirectional communication.

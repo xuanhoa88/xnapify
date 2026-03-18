@@ -1,5 +1,5 @@
 ---
-description: Add worker
+description: Add a background worker with pool and concurrency control
 ---
 
 Add a background worker for heavy processing tasks.

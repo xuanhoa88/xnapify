@@ -1,5 +1,5 @@
 ---
-description: Add api
+description: Add API routes, controllers, and services to a module
 ---
 
 Add a new API module with models, controllers, routes, and services.

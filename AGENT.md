@@ -271,6 +271,118 @@ try {
 }
 ```
 
+### 10. Engine Auto-Loader
+
+All shared infrastructure lives in `shared/api/engines/`. Engines are **auto-discovered** from `engines/*/index.js` and re-exported as named exports from `shared/api/index.js`.
+
+```javascript
+// Consuming engines — import by name
+import { db, auth, hook, cache } from '@shared/api';
+
+// Each engine's index.js exports its public API
+// Default export becomes the base, named exports are merged
+```
+
+**Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+
+**Adding a New Engine:**
+
+1. Create `shared/api/engines/{name}/index.js`
+2. Export a default or named exports
+3. It's automatically available as `import { name } from '@shared/api'`
+
+### 11. Hook Engine
+
+Channel-based async event system (`shared/api/engines/hook`) for decoupled inter-module communication.
+
+```javascript
+// Server-side: Get hook from Express app
+const hook = app.get('hook');
+
+// Create/get a channel
+const userHooks = hook('users');
+
+// Register handlers with optional priority (lower = first)
+userHooks.on('create', async (user) => {
+  user.createdAt = new Date();
+}, 10);
+
+// Emit events — handlers run sequentially, can mutate data
+await userHooks.emit('create', userData);
+
+// Management
+hook.has('users');          // Check if channel exists
+hook.getChannelNames();     // List all channels
+hook.remove('users');       // Remove a channel
+hook.cleanup();             // Clear all
+```
+
+### 12. Dependency Injection Container
+
+Lightweight DI container (`shared/container`) for sharing services across modules.
+
+```javascript
+import container from '@shared/container';
+
+// Factory binding (new instance per resolve)
+container.bind('key', () => createInstance());
+
+// Singleton binding (cached after first resolve)
+container.singleton('db:pool', () => createPool());
+
+// Instance binding (store pre-built value)
+container.instance('config', { debug: true });
+
+// Resolve
+const pool = container.resolve('db:pool');
+
+// Inspection & cleanup
+container.has('key');              // Check existence
+container.getBindingNames();       // List all bindings
+container.reset('key');            // Remove one
+container.cleanup();               // Remove all
+```
+
+**Convention:** Use `module:scope` naming (e.g., `users:controllers`, `billing:services`).
+
+### 13. File-Based API Routing
+
+API routes are auto-resolved from the filesystem (`shared/api/router`). Directory names become URL segments.
+
+**Path Mapping Rules:**
+
+| File Path | URL |
+|---|---|
+| `routes/(default)/_route.js` | `/api/{module}` |
+| `routes/(admin)/(default)/_route.js` | `/api/{module}` (admin group) |
+| `routes/(admin)/[id]/_route.js` | `/api/{module}/:id` |
+| `routes/status/_route.js` | `/api/{module}/status` |
+
+**Method Exports:**
+
+```javascript
+// _route.js — export HTTP verbs as named exports
+export function get(req, res) { /* GET */ }
+export function post(req, res) { /* POST */ }
+export const put = [middleware, handler];  // Array = middleware chain
+export const del = [middleware, handler];  // del = DELETE
+export { del as delete };
+```
+
+**Route Middlewares (`_middleware.js`):**
+
+```javascript
+// _middleware.js — applies to directory and all children
+export default [rateLimiter, requireAuth];
+```
+
+**Opting Out of Parent Middleware:**
+
+```javascript
+// In _route.js — bypass inherited middlewares
+export const middleware = false;  // No parent middlewares
+```
+
 ## Code Conventions
 
 ### 1. Component Patterns
@@ -526,6 +638,19 @@ function LoginForm() {
 9. **Documentation:** Add JSDoc comments for complex functions
 10. **Testing:** Write tests for critical functionality
 11. **File Naming:** Use PascalCase for components, camelCase for utilities, kebab-case for CSS modules
+
+## Mandatory Verification After Code Changes
+
+**CRITICAL: After ANY code modification (new features, bug fixes, refactoring, upgrades, or maintenance), you MUST complete these verification steps before considering the task done:**
+
+1. **Identify related tests:** Find all `*.test.js` files related to the changed code (same directory, parent module, or imported by the changed files)
+2. **Run targeted tests first:** `npm run test -- <pattern>` for the specific files you changed
+3. **Fix until green:** If tests fail, fix the code and re-run. Do NOT skip failing tests
+4. **Run full test suite:** `npm test` to catch any cross-module regressions
+5. **Run linting:** `npm run lint` to ensure code style compliance
+6. **Update tests if behavior changed:** If you modified public API, return types, or function signatures, update the corresponding tests to match
+
+> **This applies to ALL code changes, including:** modifying existing modules, upgrading dependencies, refactoring internals, fixing bugs, adding hooks, and plugin modifications. There are NO exceptions.
 
 ## Environment Variables
 

@@ -34,6 +34,31 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ---
 
+## 5. Cross-Module Communication
+- **No direct imports** between `@apps/*` modules. If `@apps/billing` needs data from `@apps/users`, use one of:
+  - **Hook Engine**: `hook('users').on('created', handler)` for event-driven communication
+  - **DI Container**: `container.resolve('users:services')` for service access
+  - **Plugin Slots/Hooks**: `registry.registerHook('user.validate', fn)` for extensibility
+  - **HTTP API**: `fetch('/api/users')` for loose coupling
+- If none of these fit, the feature likely belongs in `@shared/`.
+
+---
+
+## 6. Test Co-Location
+- **Place test files next to source**: `service.js` → `service.test.js` (same directory)
+- **Use `__tests__/` only** for integration tests that span multiple files
+- **Naming**: `*.test.js` for unit tests, `*.stress.test.js` for stress tests, `*.benchmark.js` for benchmarks
+
+---
+
+## 7. Hook Naming Convention
+- **Format**: `{entity}.{action}` — e.g., `user.created`, `order.updated`, `file.deleted`
+- **Channel names**: Use module name — e.g., `hook('users')`, `hook('billing')`
+- **Full path**: Channel + event = `users → create`, `billing → invoice.paid`
+- **Avoid**: Generic names like `data.changed` or `update`. Be specific.
+
+---
+
 ## Instructing the AI
 
 If you are a Developer reading this, you can append these rules to your AI prompts natively using the context commands depending on your IDE (e.g. `@rules.md` in Cursor, adding this file to Claude Projects). 

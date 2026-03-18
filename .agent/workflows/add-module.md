@@ -1,5 +1,5 @@
 ---
-description: Add module
+description: Add a full-stack module with API, views, models, and auto-discovery
 ---
 
 Add a new module with backend API routes, frontend views, database models, and auto-discovery.
