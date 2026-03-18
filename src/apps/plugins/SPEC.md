@@ -44,5 +44,21 @@ Provide a unified framework for installing, managing, and executing system plugi
 - **Keys:** `plugins.status.active`, `plugins.actions.install`, `plugins.errors.invalid_checksum`.
 - **Note:** Plugin descriptions and UI labels may come from the plugin's own translation files, which are merged into the global i18next instance.
 
+## 5. Workers & Background Processing (`api/workers/`, `api/services/plugin.workers.js`)
+
+### Piscina Worker Pool (`api/workers/`)
+CPU-bound operations are offloaded to Piscina worker threads via `createWorkerPool`:
+- **`checksum.worker.js`**: Stateless worker exporting `COMPUTE_CHECKSUM` and `VERIFY_CHECKSUM` for SHA-256 directory hashing.
+- **`index.js`**: Worker pool setup with `computeChecksum(dir)` and `verifyChecksum(dir, expected)` high-level methods.
+
+### Queue-Based Handlers (`api/services/plugin.workers.js`)
+Stateful operations that need `app` access (models, hooks, plugin manager, WebSocket) use the Queue Engine:
+- **`install`**: Runs npm install, computes checksum (via worker pool), reloads plugin, emits hooks.
+- **`delete`**: Unloads plugin, removes files (with path traversal guard), destroys DB record.
+- **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages plugin load state.
+
+Handlers are registered in the `init(app)` lifecycle hook and capture `app` via closure.
+
 ---
 *Note: This spec reflects the CURRENT implementation of the plugin system.*
+

@@ -24,7 +24,7 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
    - `providers(app)`: binds singletons/factories to the dependency injection `container`.
    - `migrations(app)`: executes `db.connection.runMigrations()`.
    - `seeds(app)`: executes `db.connection.runSeeds()`.
-   - `init(app)`: registers hooks, schedules, or plugin workers.
+   - `init(app)`: registers hooks, schedules, queue-based workers, or Piscina worker pools.
    - `routes()`: returns the Webpack context for routes.
 
    *Note: Ensure you include `translations()` hook if this module provides backend i18n JSON.*

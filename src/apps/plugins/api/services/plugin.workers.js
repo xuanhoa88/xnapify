@@ -8,7 +8,7 @@
 import fs from 'fs';
 import path from 'path';
 
-import { computeChecksum, verifyPluginChecksum } from '../utils/checksum';
+import workerPool from '../workers';
 
 import {
   installPluginDependencies,
@@ -36,8 +36,8 @@ async function handleInstallJob(app, job) {
     await installPluginDependencies(pluginDir, { name: pluginKey || pluginId });
     job.updateProgress(50);
 
-    // Compute and store checksum after clean install
-    const checksum = await computeChecksum(pluginDir);
+    // Compute checksum in worker thread (avoids blocking event loop)
+    const checksum = await workerPool.computeChecksum(pluginDir);
     const { Plugin } = app.get('models');
     await Plugin.update({ checksum }, { where: { id: pluginId } });
     job.updateProgress(60);
@@ -151,7 +151,8 @@ async function handleToggleJob(app, job) {
       const { Plugin } = app.get('models');
       const dbPlugin = await Plugin.findByPk(pluginId);
       if (dbPlugin && dbPlugin.checksum) {
-        const { valid, actual } = await verifyPluginChecksum(
+        // Verify checksum in worker thread (avoids blocking event loop)
+        const { valid, actual } = await workerPool.verifyChecksum(
           pluginDir,
           dbPlugin.checksum,
         );
@@ -172,8 +173,8 @@ async function handleToggleJob(app, job) {
       if (isActive) {
         await installPluginDependencies(pluginDir, { name: pluginKey });
 
-        // Recompute and store checksum after fresh npm install
-        const checksum = await computeChecksum(pluginDir);
+        // Recompute checksum in worker thread after fresh npm install
+        const checksum = await workerPool.computeChecksum(pluginDir);
         const { Plugin } = app.get('models');
         await Plugin.update({ checksum }, { where: { id: pluginId } });
       } else {

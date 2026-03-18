@@ -280,3 +280,85 @@ const promises = items.map(item =>
 
 const results = await Promise.all(promises);
 ```
+
+## Queue-Based Workers (Stateful)
+
+When your worker needs `app` access (models, hooks, plugin manager, WebSocket), use the **Queue Engine** instead. Piscina workers run in separate threads and **cannot** access `app` singletons.
+
+### Structure
+
+```
+@apps/{module}/api/services/
+└── {module}.workers.js      # Queue-based handlers (stateful)
+@apps/{module}/api/workers/
+├── index.js                  # Piscina pool for CPU subtasks (optional)
+└── {task}.worker.js          # Stateless Piscina worker (optional)
+```
+
+### When to Use Which Pattern
+
+| Need | Pattern |
+|------|---------|
+| Stateless, CPU-heavy work | Piscina worker (`createWorkerPool`) |
+| Needs `app.get('models')`, hooks, WS | Queue-based handler |
+| Both: stateful orchestration + CPU offload | Hybrid (queue calls Piscina) |
+
+### Queue-Based Handler
+
+```javascript
+// @apps/posts/api/services/post.workers.js
+async function handlePublishJob(app, job) {
+  const { postId, actorId } = job.data;
+  const { Post } = app.get('models');
+  const hook = app.get('hook');
+
+  const post = await Post.findByPk(postId);
+  await post.update({ status: 'published' });
+
+  if (hook) {
+    hook('posts').emit('published', { post_id: postId, actor_id: actorId });
+  }
+
+  return { success: true };
+}
+
+export function registerPostWorkers(app) {
+  const queue = app.get('queue');
+  const channel = queue('posts');
+  channel.on('publish', job => handlePublishJob(app, job));
+}
+```
+
+Register in the module's `init()` lifecycle hook:
+
+```javascript
+// @apps/posts/api/index.js
+import { registerPostWorkers } from './services/post.workers';
+
+export async function init(app) {
+  registerPostWorkers(app);
+}
+```
+
+### Hybrid Pattern (Queue + Piscina)
+
+For workers needing both `app` and CPU offloading, combine both:
+
+```javascript
+// Queue handler delegates CPU work to Piscina
+import workerPool from '../workers';
+
+async function handleProcessJob(app, job) {
+  const { itemId } = job.data;
+
+  // CPU-bound → Piscina thread
+  const hash = await workerPool.computeHash(job.data.filePath);
+
+  // Stateful → main process (app access)
+  const { Item } = app.get('models');
+  await Item.update({ hash }, { where: { id: itemId } });
+}
+```
+
+See `src/apps/plugins/api/` for the canonical reference implementation.
+

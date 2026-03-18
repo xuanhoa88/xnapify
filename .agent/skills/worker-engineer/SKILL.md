@@ -49,3 +49,47 @@ schedule.register('daily-cleanup', '0 0 * * *', async () => {
 ```
 
 *Note: Ensure robust error bounds on worker payloads. Heavy tasks should track progress explicitly.*
+
+## Hybrid Pattern: Queue + Piscina
+
+When a worker needs **both** `app` access (models, hooks, plugin manager) **and** CPU offloading, use the hybrid pattern:
+
+1. **Queue handlers** run on the main thread for stateful operations (DB writes, hook emissions, WebSocket notifications).
+2. **Piscina workers** handle CPU-bound subtasks (hashing, compression, image processing) called from within queue handlers.
+
+### When to Use
+- Worker needs `app.get('models')`, `app.get('hook')`, or other `app` singletons → **Queue pattern**
+- Worker does CPU-intensive computation → **Piscina worker**
+- Worker needs **both** → **Hybrid** (queue orchestrates, Piscina computes)
+
+### Reference Implementation
+See `src/apps/plugins/api/` for the canonical example:
+- `workers/checksum.worker.js` — Stateless Piscina worker for SHA-256 hashing
+- `workers/index.js` — Worker pool with `computeChecksum()` / `verifyChecksum()` methods
+- `services/plugin.workers.js` — Queue handlers that call `workerPool.computeChecksum()` for CPU work while using `app` for DB/hooks
+
+```javascript
+// Queue handler calling Piscina worker for CPU-bound subtask
+import workerPool from '../workers';
+
+async function handleInstallJob(app, job) {
+  const { pluginDir, pluginId } = job.data;
+
+  // I/O-bound: runs in main process (needs app)
+  await installPluginDependencies(pluginDir);
+
+  // CPU-bound: offloaded to Piscina thread
+  const checksum = await workerPool.computeChecksum(pluginDir);
+
+  // Stateful: needs app for DB access
+  const { Plugin } = app.get('models');
+  await Plugin.update({ checksum }, { where: { id: pluginId } });
+}
+
+export function registerWorkers(app) {
+  const queue = app.get('queue');
+  const channel = queue('my-channel');
+  channel.on('install', job => handleInstallJob(app, job));
+}
+```
+
