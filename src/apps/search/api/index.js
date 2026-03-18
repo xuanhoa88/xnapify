@@ -6,12 +6,6 @@
  */
 
 import { registerSearchHooks } from './hooks';
-import getSearchWorkerPool from './workers';
-
-/** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('search');
-
-let searchWorkerPool = null;
 
 // Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
@@ -21,53 +15,15 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // =============================================================================
 
 /**
- * Providers hook — share services with other modules.
- *
- * @param {Object} app - Express app instance
- */
-export async function providers(app) {
-  const container = app.get('container');
-  searchWorkerPool = getSearchWorkerPool(app);
-
-  // Expose search worker pool so other modules can trigger indexAll
-  container.bind('search:worker', () => searchWorkerPool, OWNER_KEY);
-}
-
-/**
  * Init hook — called by the autoloader to initialise this module.
  *
- * Dispatches initial indexing of users and groups to a background worker
- * so that app startup is not blocked.
+ * Sets up hooks for incremental index updates. Bulk indexing and worker
+ * pools are owned by each domain module (users, groups).
  *
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
-  const search = app.get('search');
-  const models = app.get('models');
-
-  if (search && models) {
-    // Bind search engine so convenience methods work without passing search
-    searchWorkerPool.setSearch(search);
-
-    // Register hooks to observe changes and update index
-    registerSearchHooks(app);
-
-    // Fire-and-forget — don't await, let it run in the background
-    searchWorkerPool
-      .indexAll(search, models)
-      .then(result => {
-        if (result && result.result) {
-          const { usersCount, groupsCount } = result.result;
-          console.info(
-            `[Search] Indexed ${usersCount} user(s), ${groupsCount} group(s)`,
-          );
-        }
-      })
-      .catch(error => {
-        console.error('[Search] Initial indexing failed:', error.message);
-      });
-  }
-
+  registerSearchHooks(app);
   console.info('[Search] ✅ Initialized');
 }
 

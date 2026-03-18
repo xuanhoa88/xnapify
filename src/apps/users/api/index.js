@@ -35,6 +35,15 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 // Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
+// Auto-load workers via require.context
+const workersContext = require.context(
+  './workers',
+  false,
+  /\.worker\.[cm]?[jt]s$/i,
+);
+
+let searchWorkerPool = null;
+
 // =============================================================================
 // LOGGING
 // =============================================================================
@@ -78,6 +87,17 @@ export async function providers(app) {
     }),
     OWNER_KEY,
   );
+
+  // Create search worker pool for user indexing
+  const worker = app.get('worker');
+  if (worker) {
+    const { default: attachSearchMethods } = require('./workers');
+    const pool = worker.createWorkerPool('UsersSearch', workersContext, {
+      maxWorkers: 1,
+    });
+    searchWorkerPool = attachSearchMethods(pool);
+    container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
+  }
 }
 
 /**
@@ -115,6 +135,30 @@ export async function init(app) {
   const passport = configurePassport();
   app.use(passport.initialize());
   await registerAuthHooks(app);
+
+  // Bulk-index users for search (fire-and-forget)
+  const search = app.get('search');
+
+  if (searchWorkerPool && search) {
+    searchWorkerPool.setSearch(search);
+    searchWorkerPool.registerSearchHooks(app);
+
+    const usersCount = await search.withNamespace('users').count();
+    if (usersCount === 0) {
+      searchWorkerPool
+        .indexAllUsers(search, app.get('models'))
+        .then(r => {
+          const count = r && r.result ? r.result.usersCount : 0;
+          console.info(`[Users] Indexed ${count} user(s) for search`);
+        })
+        .catch(e =>
+          console.error('[Users] Search indexing failed:', e.message),
+        );
+    } else {
+      // prettier-ignore
+      console.info(`[Users] Using cached search index (${usersCount} user(s))`);
+    }
+  }
 }
 
 /**

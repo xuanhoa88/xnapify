@@ -1,0 +1,73 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/**
+ * Index all existing groups in the search engine.
+ *
+ * @param {Object} data - Worker data
+ * @param {Object} data.search - Search engine instance
+ * @param {Object} data.models - Database models
+ * @param {boolean} [data.force=false] - Clear namespace before indexing
+ * @returns {Promise<Object>} Indexing result with count
+ */
+export async function INDEX_ALL_GROUPS({ search, models, force = false }) {
+  if (!models.Group) return { groupsCount: 0 };
+
+  const { Group } = models;
+  const groupSearch = search.withNamespace('groups');
+
+  if (force) await groupSearch.clear();
+
+  const groups = await Group.findAll();
+
+  await Promise.all(
+    groups.map(group =>
+      groupSearch.index({
+        entityType: 'group',
+        entityId: group.id,
+        title: group.name,
+        content: group.description || '',
+        tags: [group.category, group.type].filter(Boolean).join(', '),
+      }),
+    ),
+  );
+
+  return { groupsCount: groups.length };
+}
+
+/**
+ * Index a single group in the search engine.
+ *
+ * @param {Object} data - Worker data
+ * @param {Object} data.search - Search engine instance
+ * @param {Object} data.group - Sequelize group instance
+ */
+export async function INDEX_GROUP({ search, group }) {
+  if (!group) return;
+  const groupSearch = search.withNamespace('groups');
+  await groupSearch.index({
+    entityType: 'group',
+    entityId: group.id,
+    title: group.name,
+    content: group.description || '',
+    tags: [group.category, group.type].filter(Boolean).join(', '),
+  });
+  return true;
+}
+
+/**
+ * Remove a single group from the search index.
+ *
+ * @param {Object} data - Worker data
+ * @param {Object} data.search - Search engine instance
+ * @param {string} data.groupId - Group ID to remove
+ */
+export async function REMOVE_GROUP({ search, groupId }) {
+  if (!groupId) return;
+  await search.withNamespace('groups').remove('group', groupId);
+  return true;
+}

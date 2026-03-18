@@ -262,4 +262,21 @@ export default class MemorySearch {
       ),
     );
   }
+
+  /**
+   * Count documents in the index.
+   * If a prefix is provided, only documents matching the prefix are counted.
+   *
+   * @param {string} [prefix] - Optional prefix to filter by namespace
+   * @returns {Promise<number>} Number of matching documents
+   */
+  async count(prefix) {
+    await this._waitForInitialization();
+    if (!prefix) return this.memoryIndex.size;
+    let n = 0;
+    for (const key of this.memoryIndex.keys()) {
+      if (key.startsWith(prefix)) n++;
+    }
+    return n;
+  }
 }

@@ -270,6 +270,7 @@ describe('Plugin Workers', () => {
     });
 
     it('should reject activation on checksum mismatch', async () => {
+      const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
       const mockDbPlugin = {
         checksum: 'expected-hash',
         update: jest.fn(),
@@ -296,6 +297,7 @@ describe('Plugin Workers', () => {
         'PLUGIN_TAMPERED',
         'p1',
       );
+      spy.mockRestore();
     });
 
     it('should skip checksum for dev plugins', async () => {

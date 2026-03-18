@@ -6,76 +6,20 @@
  */
 
 /**
- * Register Search Hooks
+ * Register plugin search hooks.
  *
- * Observes lifecycle events from auth, users, groups and profile modules
- * to keep the search index in sync.
+ * Allows plugins to auto-register their own search indexers via
+ * the `search.indexers.register` hook.
  *
  * @param {Object} app - Express app instance
  */
-import { registry } from '@shared/plugin/utils';
-
 export function registerSearchHooks(app) {
-  const hook = app.get('hook');
-  const searchWorker = app.get('container').resolve('search:worker');
+  const { registry } = app.get('plugin');
 
-  if (!hook || !searchWorker) {
-    return;
-  }
-
-  // -- helpers ----------------------------------------------------------------
-
-  const safeExec = (label, fn) => async payload => {
-    try {
-      await fn(payload);
-    } catch (err) {
-      console.warn(`⚠️ Search hook [${label}]: ${err.message}`);
-    }
-  };
-
-  const indexUser = safeExec('indexUser', async ({ user }) => {
-    if (user) await searchWorker.indexUser(user);
+  registry.executeHookParallel('search.indexers.register', app).catch(err => {
+    console.error(
+      '[Search] Failed to execute search.indexers.register hook',
+      err,
+    );
   });
-
-  const removeUser = safeExec('removeUser', async ({ user_id }) => {
-    if (user_id) await searchWorker.removeUser(user_id);
-  });
-
-  const indexGroup = safeExec('indexGroup', async ({ group }) => {
-    if (group) await searchWorker.indexGroup(group);
-  });
-
-  const removeGroup = safeExec('removeGroup', async ({ group_id }) => {
-    if (group_id) await searchWorker.removeGroup(group_id);
-  });
-
-  // -- user hooks -------------------------------------------------------------
-
-  hook('auth').on('registered', indexUser);
-
-  hook('admin:users').on('created', indexUser);
-  hook('admin:users').on('updated', indexUser);
-  hook('admin:users').on('status_updated', indexUser);
-  hook('admin:users').on('deleted', removeUser);
-
-  hook('profile').on('updated', indexUser);
-  hook('profile').on('account_deleted', removeUser);
-
-  // -- group hooks ------------------------------------------------------------
-
-  hook('admin:groups').on('created', indexGroup);
-  hook('admin:groups').on('updated', indexGroup);
-  hook('admin:groups').on('deleted', removeGroup);
-
-  // -- plugins hooks ----------------------------------------------------------
-
-  // Allow plugins to auto-register their own search indexers
-  registry
-    .executeHookParallel('search.indexers.register', { hook, searchWorker })
-    .catch(err => {
-      console.error(
-        '[Search] Failed to execute search.indexers.register hook',
-        err,
-      );
-    });
 }

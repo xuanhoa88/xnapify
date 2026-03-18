@@ -9,10 +9,10 @@ import { v4 as uuidv4 } from 'uuid';
 
 // Stable UUIDs for emails permissions (used as seed constants)
 const EMAILS_PERMISSIONS = {
-  emailsTemplatesCreate: uuidv4(),
-  emailsTemplatesRead: uuidv4(),
-  emailsTemplatesUpdate: uuidv4(),
-  emailsTemplatesDelete: uuidv4(),
+  emailTemplatesCreate: uuidv4(),
+  emailTemplatesRead: uuidv4(),
+  emailTemplatesUpdate: uuidv4(),
+  emailTemplatesDelete: uuidv4(),
 };
 
 /**
@@ -31,36 +31,30 @@ export async function up(_, { app }) {
   // Register the emails:templates resource
   const RESOURCE = 'emails:templates';
 
-  // Only seed if the resource doesn't already exist
-  const existingCount = await Permission.count({
-    where: { resource: RESOURCE },
-  });
-  if (existingCount > 0) return;
-
   const permissions = [
     {
-      id: EMAILS_PERMISSIONS.emailsTemplatesCreate,
+      id: EMAILS_PERMISSIONS.emailTemplatesCreate,
       resource: RESOURCE,
       action: DEFAULT_ACTIONS.CREATE,
       description: 'Create email templates',
       is_active: true,
     },
     {
-      id: EMAILS_PERMISSIONS.emailsTemplatesRead,
+      id: EMAILS_PERMISSIONS.emailTemplatesRead,
       resource: RESOURCE,
       action: DEFAULT_ACTIONS.READ,
       description: 'View email templates',
       is_active: true,
     },
     {
-      id: EMAILS_PERMISSIONS.emailsTemplatesUpdate,
+      id: EMAILS_PERMISSIONS.emailTemplatesUpdate,
       resource: RESOURCE,
       action: DEFAULT_ACTIONS.UPDATE,
       description: 'Update email templates',
       is_active: true,
     },
     {
-      id: EMAILS_PERMISSIONS.emailsTemplatesDelete,
+      id: EMAILS_PERMISSIONS.emailTemplatesDelete,
       resource: RESOURCE,
       action: DEFAULT_ACTIONS.DELETE,
       description: 'Delete email templates',

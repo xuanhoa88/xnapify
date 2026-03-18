@@ -30,6 +30,15 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 // Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
+// Auto-load workers via require.context
+const workersContext = require.context(
+  './workers',
+  false,
+  /\.worker\.[cm]?[jt]s$/i,
+);
+
+let searchWorkerPool = null;
+
 // =============================================================================
 // PUBLIC LIFECYCLE HOOKS
 // =============================================================================
@@ -44,6 +53,17 @@ export async function providers(app) {
 
   // Bind seed groups to container as singleton
   container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
+
+  // Create search worker pool for group indexing
+  const worker = app.get('worker');
+  if (worker) {
+    const { default: attachSearchMethods } = require('./workers');
+    const pool = worker.createWorkerPool('GroupsSearch', workersContext, {
+      maxWorkers: 1,
+    });
+    searchWorkerPool = attachSearchMethods(pool);
+    container.bind('groups:search:worker', () => searchWorkerPool, OWNER_KEY);
+  }
 }
 
 /**
@@ -76,9 +96,34 @@ export async function seeds(app) {
 /**
  * Init hook — called by the autoloader to initialise this module.
  *
- * @param {Object} _app - Express app instance
+ * @param {Object} app - Express app instance
  */
-export async function init(_app) {}
+export async function init(app) {
+  // Bulk-index groups for search (fire-and-forget)
+  const search = app.get('search');
+
+  if (searchWorkerPool && search) {
+    searchWorkerPool.setSearch(search);
+    searchWorkerPool.registerSearchHooks(app);
+
+    const groupsCount = await search.withNamespace('groups').count();
+    if (groupsCount === 0) {
+      searchWorkerPool
+        .indexAllGroups(search, app.get('models'))
+        .then(r => {
+          const count = r && r.result ? r.result.groupsCount : 0;
+          console.info(`[Groups] Indexed ${count} group(s) for search`);
+        })
+        .catch(e =>
+          console.error('[Groups] Search indexing failed:', e.message),
+        );
+    } else {
+      console.info(
+        `[Groups] Using cached search index (${groupsCount} group(s))`,
+      );
+    }
+  }
+}
 
 /**
  * Models hook — returns the webpack require.context for this module's models.

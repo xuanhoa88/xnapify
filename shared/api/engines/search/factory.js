@@ -144,6 +144,10 @@ export function withNamespace(namespace, baseSearch) {
       return baseSearch.clear(prefix);
     },
 
+    count() {
+      return baseSearch.count(prefix);
+    },
+
     // Nested namespacing support
     withNamespace(childNamespace) {
       return withNamespace(`${prefix}${childNamespace}`, baseSearch);

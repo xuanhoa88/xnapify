@@ -29,7 +29,7 @@ export async function up(_, { app }) {
     },
 
     // =========================================================================
-    // MODERATOR — read all + update users/groups + activity logs + files RW
+    // MODERATOR — read all + update users/groups
     // =========================================================================
     // Users: read + update
     {
@@ -65,31 +65,9 @@ export async function up(_, { app }) {
       role_id: SEED_ROLES.mod,
       permission_id: SEED_PERMISSIONS.permissionsRead,
     },
-    // Files: read + create + update
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.mod,
-      permission_id: SEED_PERMISSIONS.filesRead,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.mod,
-      permission_id: SEED_PERMISSIONS.filesCreate,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.mod,
-      permission_id: SEED_PERMISSIONS.filesUpdate,
-    },
-    // Activities: read
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.mod,
-      permission_id: SEED_PERMISSIONS.activitiesRead,
-    },
 
     // =========================================================================
-    // EDITOR — read all + create/update users + files CRUD
+    // EDITOR — read all + create/update users
     // =========================================================================
     // Users: read + create + update
     {
@@ -125,27 +103,6 @@ export async function up(_, { app }) {
       role_id: SEED_ROLES.editor,
       permission_id: SEED_PERMISSIONS.permissionsRead,
     },
-    // Files: CRUD
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.editor,
-      permission_id: SEED_PERMISSIONS.filesCreate,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.editor,
-      permission_id: SEED_PERMISSIONS.filesRead,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.editor,
-      permission_id: SEED_PERMISSIONS.filesUpdate,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.editor,
-      permission_id: SEED_PERMISSIONS.filesDelete,
-    },
 
     // =========================================================================
     // USER — read-only on core resources + files read
@@ -169,11 +126,6 @@ export async function up(_, { app }) {
       id: uuidv4(),
       role_id: SEED_ROLES.user,
       permission_id: SEED_PERMISSIONS.permissionsRead,
-    },
-    {
-      id: uuidv4(),
-      role_id: SEED_ROLES.user,
-      permission_id: SEED_PERMISSIONS.filesRead,
     },
 
     // =========================================================================
