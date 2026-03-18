@@ -5,7 +5,7 @@
 
 const mockTasks = new Map();
 
-const createMockTask = () => {
+const createMockTask = (callback, options) => {
   let status = 'stopped';
 
   return {
@@ -16,12 +16,15 @@ const createMockTask = () => {
       status = 'stopped';
     }),
     getStatus: jest.fn(() => status),
+    // Expose callback so tests can invoke it to exercise handler wrapping
+    _callback: callback,
+    _options: options,
   };
 };
 
 const cron = {
   schedule: jest.fn((expression, callback, options) => {
-    const task = createMockTask();
+    const task = createMockTask(callback, options);
 
     // Auto-start if scheduled option is true
     if (options && options.scheduled) {

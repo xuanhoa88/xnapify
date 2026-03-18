@@ -6,13 +6,6 @@
  */
 
 /**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/**
  * Schedule Engine - Provides cron-based task scheduling capabilities.
  * Wraps `node-cron` to allow modules to register and manage recurring tasks.
  *
@@ -85,6 +78,9 @@ export { createFactory };
 
 // Export Manager class for type referencing and extension if needed
 export { ScheduleManager } from './factory';
+
+// Export error class
+export { ScheduleError } from './errors';
 
 /**
  * Default singleton instance of ScheduleManager

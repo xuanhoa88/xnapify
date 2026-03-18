@@ -41,6 +41,8 @@ Register a cron task.
 | `options.scheduled` | `boolean` | Auto-start on registration (default: `true`) |
 | `options.timezone` | `string` | IANA timezone (default: `'UTC'`) |
 
+Throws `ScheduleError` with codes `INVALID_TASK_NAME`, `INVALID_CRON_EXPRESSION`, or `INVALID_HANDLER` on invalid input.
+
 ### `schedule.unregister(name)`
 
 Stop and remove a task. Returns `true` if found.
@@ -63,11 +65,19 @@ Returns `{ total, running, stopped, tasks: { [name]: { expression, status, timez
 
 ### `schedule.start()` / `schedule.stop()`
 
-Bulk start or stop all registered tasks.
+Bulk start or stop all registered tasks. Note: `stop()` also sets `autoStart = false`, so tasks registered afterward will not auto-start until `start()` is called again.
 
 ### `schedule.cleanup()`
 
-Stop and remove all tasks. Called automatically on process termination.
+Stop and remove all tasks. Called automatically on `SIGTERM` and `SIGINT`.
+
+### `ScheduleError`
+
+Structured error class for schedule-related errors. Properties: `name`, `code`, `statusCode`, `timestamp`.
+
+```javascript
+import { ScheduleError } from '@shared/api/engines/schedule';
+```
 
 ## Common Cron Expressions
 

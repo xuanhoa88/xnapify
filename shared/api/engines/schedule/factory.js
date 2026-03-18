@@ -7,6 +7,8 @@
 
 import cron from 'node-cron';
 
+import { ScheduleError } from './errors';
+
 /**
  * Schedule Manager
  * Handles registration and management of cron tasks.
@@ -29,29 +31,22 @@ class ScheduleManager {
    * @returns {Object} The scheduled task instance
    */
   register(name, cronExpression, handler, options = {}) {
-    // Validate inputs
     if (!name || typeof name !== 'string') {
-      const error = new Error('Task name must be a non-empty string');
-      error.name = 'ScheduleManagerError';
-      error.code = 'INVALID_TASK_NAME';
-      error.status = 400;
-      throw error;
+      throw new ScheduleError(
+        'Task name must be a non-empty string',
+        'INVALID_TASK_NAME',
+      );
     }
 
     if (!cronExpression || typeof cronExpression !== 'string') {
-      const error = new Error('Cron expression must be a non-empty string');
-      error.name = 'ScheduleManagerError';
-      error.code = 'INVALID_CRON_EXPRESSION';
-      error.status = 400;
-      throw error;
+      throw new ScheduleError(
+        'Cron expression must be a non-empty string',
+        'INVALID_CRON_EXPRESSION',
+      );
     }
 
     if (typeof handler !== 'function') {
-      const error = new Error('Handler must be a function');
-      error.name = 'ScheduleManagerError';
-      error.code = 'INVALID_HANDLER';
-      error.status = 400;
-      throw error;
+      throw new ScheduleError('Handler must be a function', 'INVALID_HANDLER');
     }
 
     // Warn if overwriting existing task
@@ -60,49 +55,41 @@ class ScheduleManager {
       this.unregister(name);
     }
 
-    try {
-      if (!cron.validate(cronExpression)) {
-        const error = new Error(
-          `Invalid cron expression for task '${name}': ${cronExpression}`,
-        );
-        error.name = 'ScheduleManagerError';
-        error.code = 'INVALID_CRON_EXPRESSION';
-        error.status = 400;
-        throw error;
-      }
-
-      const task = cron.schedule(
-        cronExpression,
-        async () => {
-          try {
-            console.info(`⏱️ Running schedule task: ${name}`);
-            await handler();
-          } catch (error) {
-            console.error(`❌ Error in schedule task '${name}':`, error);
-          }
-        },
-        {
-          scheduled:
-            options.scheduled !== undefined
-              ? options.scheduled
-              : this.autoStart !== false,
-          timezone: options.timezone || 'UTC',
-        },
+    if (!cron.validate(cronExpression)) {
+      throw new ScheduleError(
+        `Invalid cron expression for task '${name}': ${cronExpression}`,
+        'INVALID_CRON_EXPRESSION',
       );
-
-      this.tasks.set(name, {
-        task,
-        expression: cronExpression,
-        options,
-        registeredAt: new Date().toISOString(),
-      });
-
-      console.info(`✅ Registered schedule task: ${name} (${cronExpression})`);
-      return task;
-    } catch (error) {
-      console.error(`❌ Failed to register schedule task '${name}':`, error);
-      throw error;
     }
+
+    const task = cron.schedule(
+      cronExpression,
+      async () => {
+        try {
+          console.info(`⏱️ Running schedule task: ${name}`);
+          await handler();
+        } catch (error) {
+          console.error(`❌ Error in schedule task '${name}':`, error);
+        }
+      },
+      {
+        scheduled:
+          options.scheduled !== undefined
+            ? options.scheduled
+            : this.autoStart !== false,
+        timezone: options.timezone || 'UTC',
+      },
+    );
+
+    this.tasks.set(name, {
+      task,
+      expression: cronExpression,
+      options,
+      registeredAt: new Date().toISOString(),
+    });
+
+    console.info(`✅ Registered schedule task: ${name} (${cronExpression})`);
+    return task;
   }
 
   /**
@@ -197,6 +184,9 @@ class ScheduleManager {
 
   /**
    * Stop all tasks
+   *
+   * Note: This also sets `autoStart = false`, so tasks registered after
+   * calling `stop()` will NOT auto-start unless `start()` is called again.
    */
   stop() {
     this.autoStart = false;
@@ -234,12 +224,10 @@ export { ScheduleManager };
 export function createFactory(config = {}) {
   const schedule = new ScheduleManager(config);
 
-  // Auto-start if not explicitly disabled
-  if (config.autoStart !== false) {
-    schedule.start();
-  }
-
-  // Register cleanup with global coordinator
+  // Register cleanup on process termination signals
+  const onExit = () => schedule.cleanup();
+  process.once('SIGTERM', onExit);
+  process.once('SIGINT', onExit);
 
   return schedule;
 }

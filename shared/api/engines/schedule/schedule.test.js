@@ -8,7 +8,10 @@
 // Mock node-cron to avoid Jest compatibility issues
 jest.mock('node-cron');
 
-import { ScheduleManager } from './factory';
+import cron from 'node-cron';
+
+import { ScheduleError } from './errors';
+import { ScheduleManager, createFactory } from './factory';
 
 describe('ScheduleManager', () => {
   let manager;
@@ -51,6 +54,16 @@ describe('ScheduleManager', () => {
       }).toThrow('Task name must be a non-empty string');
     });
 
+    it('should throw ScheduleError for invalid task name', () => {
+      try {
+        manager.register('', '* * * * *', jest.fn());
+      } catch (error) {
+        expect(error).toBeInstanceOf(ScheduleError);
+        expect(error.code).toBe('INVALID_TASK_NAME');
+        expect(error.statusCode).toBe(400);
+      }
+    });
+
     it('should validate cron expression', () => {
       const handler = jest.fn();
 
@@ -63,6 +76,15 @@ describe('ScheduleManager', () => {
       }).toThrow('Invalid cron expression');
     });
 
+    it('should throw ScheduleError for invalid cron expression', () => {
+      try {
+        manager.register('test', '', jest.fn());
+      } catch (error) {
+        expect(error).toBeInstanceOf(ScheduleError);
+        expect(error.code).toBe('INVALID_CRON_EXPRESSION');
+      }
+    });
+
     it('should validate handler function', () => {
       expect(() => {
         manager.register('test', '* * * * *', 'not-a-function');
@@ -71,6 +93,15 @@ describe('ScheduleManager', () => {
       expect(() => {
         manager.register('test', '* * * * *', null);
       }).toThrow('Handler must be a function');
+    });
+
+    it('should throw ScheduleError for invalid handler', () => {
+      try {
+        manager.register('test', '* * * * *', null);
+      } catch (error) {
+        expect(error).toBeInstanceOf(ScheduleError);
+        expect(error.code).toBe('INVALID_HANDLER');
+      }
     });
 
     it('should overwrite existing task with warning', () => {
@@ -255,6 +286,13 @@ describe('ScheduleManager', () => {
       expect(manager.isTaskRunning('task1')).toBe(false);
       expect(manager.isTaskRunning('task2')).toBe(false);
     });
+
+    it('should set autoStart to false for future registrations', () => {
+      manager.start();
+      manager.stop();
+
+      expect(manager.autoStart).toBe(false);
+    });
   });
 
   describe('cleanup()', () => {
@@ -291,6 +329,52 @@ describe('ScheduleManager', () => {
       consoleErrorSpy.mockRestore();
     });
 
+    it('should invoke handler on cron tick', async () => {
+      const handler = jest.fn().mockResolvedValue('done');
+      const consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
+
+      manager.register('test-task', '* * * * *', handler);
+
+      // Get the wrapped callback from the mock task and invoke it
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      const wrappedCallback = registeredCall[1];
+
+      await wrappedCallback();
+
+      expect(handler).toHaveBeenCalled();
+      expect(consoleInfoSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Running schedule task: test-task'),
+      );
+
+      consoleInfoSpy.mockRestore();
+    });
+
+    it('should catch and log handler errors without throwing', async () => {
+      const handlerError = new Error('Handler failed');
+      const handler = jest.fn().mockRejectedValue(handlerError);
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation();
+
+      manager.register('test-task', '* * * * *', handler);
+
+      // Invoke the wrapped callback
+      const registeredCall =
+        cron.schedule.mock.calls[cron.schedule.mock.calls.length - 1];
+      const wrappedCallback = registeredCall[1];
+
+      // Should not throw
+      await expect(wrappedCallback()).resolves.not.toThrow();
+
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Error in schedule task 'test-task'"),
+        handlerError,
+      );
+
+      consoleErrorSpy.mockRestore();
+      consoleInfoSpy.mockRestore();
+    });
+
     it('should register task with correct options', () => {
       const handler = jest.fn();
 
@@ -302,5 +386,96 @@ describe('ScheduleManager', () => {
       const task = manager.get('test-task');
       expect(task.options.timezone).toBe('America/New_York');
     });
+  });
+});
+
+describe('ScheduleError', () => {
+  it('should have correct default properties', () => {
+    const error = new ScheduleError('test message');
+
+    expect(error).toBeInstanceOf(Error);
+    expect(error).toBeInstanceOf(ScheduleError);
+    expect(error.name).toBe('ScheduleError');
+    expect(error.message).toBe('test message');
+    expect(error.code).toBe('SCHEDULE_ERROR');
+    expect(error.statusCode).toBe(400);
+    expect(error.timestamp).toBeDefined();
+  });
+
+  it('should accept custom code and statusCode', () => {
+    const error = new ScheduleError('bad cron', 'INVALID_CRON_EXPRESSION', 422);
+
+    expect(error.code).toBe('INVALID_CRON_EXPRESSION');
+    expect(error.statusCode).toBe(422);
+  });
+
+  it('should have a proper stack trace', () => {
+    const error = new ScheduleError('trace test');
+
+    expect(error.stack).toBeDefined();
+    expect(error.stack).toContain('trace test');
+  });
+});
+
+describe('createFactory()', () => {
+  let processOnceSpy;
+
+  beforeEach(() => {
+    processOnceSpy = jest.spyOn(process, 'once').mockImplementation();
+  });
+
+  afterEach(() => {
+    processOnceSpy.mockRestore();
+  });
+
+  it('should return a ScheduleManager instance', () => {
+    const schedule = createFactory({ autoStart: false });
+
+    expect(schedule).toBeInstanceOf(ScheduleManager);
+
+    schedule.cleanup();
+  });
+
+  it('should register SIGTERM and SIGINT cleanup handlers', () => {
+    const schedule = createFactory({ autoStart: false });
+
+    expect(processOnceSpy).toHaveBeenCalledWith(
+      'SIGTERM',
+      expect.any(Function),
+    );
+    expect(processOnceSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+
+    schedule.cleanup();
+  });
+
+  it('should create a manager with autoStart true by default', () => {
+    const schedule = createFactory();
+
+    expect(schedule.autoStart).toBe(true);
+
+    schedule.cleanup();
+  });
+
+  it('should respect autoStart: false config', () => {
+    const schedule = createFactory({ autoStart: false });
+
+    expect(schedule.autoStart).toBe(false);
+
+    schedule.cleanup();
+  });
+
+  it('should call cleanup on SIGTERM', () => {
+    const schedule = createFactory({ autoStart: false });
+
+    const sigTermCall = processOnceSpy.mock.calls.find(
+      ([signal]) => signal === 'SIGTERM',
+    );
+    const cleanupFn = sigTermCall[1];
+
+    schedule.register('test', '* * * * *', jest.fn());
+    expect(schedule.getAllTasks()).toHaveLength(1);
+
+    cleanupFn();
+    expect(schedule.getAllTasks()).toHaveLength(0);
   });
 });
