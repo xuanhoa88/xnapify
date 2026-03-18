@@ -1,0 +1,11 @@
+{
+  "name": "@rsk-plugin/quick-access",
+  "version": "1.0.0",
+  "browser": "views/index.js",
+  "description": "Quick login with demo user accounts",
+  "rsk": {
+    "subscribe": [
+      "/login"
+    ]
+  }
+}
