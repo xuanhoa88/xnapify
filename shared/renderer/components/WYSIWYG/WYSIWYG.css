@@ -542,6 +542,38 @@
 }
 
 /* =============================================================================
+   MATHEMATICS (KaTeX)
+   ============================================================================= */
+
+.contentEditable :global(.tiptap-mathematics-render) {
+  padding: 2px 4px;
+  cursor: pointer;
+  background-color: var(--color-background-tertiary);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+}
+
+.contentEditable :global(.tiptap-mathematics-render--editable) {
+  cursor: text;
+  transition:
+    background var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+.contentEditable :global(.tiptap-mathematics-render--editable:hover) {
+  background-color: var(--color-background-secondary);
+  box-shadow: 0 0 0 1px var(--color-border);
+}
+
+.contentEditable :global(.tiptap-mathematics-render[data-type="block-math"]) {
+  display: block;
+  text-align: center;
+  margin: var(--spacing-4) 0;
+  padding: var(--spacing-3);
+  border-radius: var(--radius-md);
+}
+
+/* =============================================================================
    COMMENT EXTENSION
    ============================================================================= */
 

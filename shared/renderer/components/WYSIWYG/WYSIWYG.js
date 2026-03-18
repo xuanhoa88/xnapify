@@ -21,6 +21,7 @@ import DragHandle from '@tiptap/extension-drag-handle-react';
 import Highlight from '@tiptap/extension-highlight';
 import { Image as TiptapImage } from '@tiptap/extension-image';
 import { Link } from '@tiptap/extension-link';
+import { Mathematics } from '@tiptap/extension-mathematics';
 import Mention from '@tiptap/extension-mention';
 import Placeholder from '@tiptap/extension-placeholder';
 import { TableKit } from '@tiptap/extension-table';
@@ -51,6 +52,7 @@ import createSuggestion from './suggestion';
 import Toolbar from './Toolbar';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
+import { ToolbarPromptProvider } from './ToolbarPromptModal';
 import s from './WYSIWYG.css';
 
 // Lightweight check: does the string contain common markdown syntax?
@@ -115,6 +117,7 @@ const CustomImage = TiptapImage.extend({
  * @param {Array}    [props.addExtensions]     Custom Tiptap extensions to add
  * @param {string[]} [props.excludeExtensions]  Array of extension names to exclude (e.g. `['youtube', 'video']`)
  * @param {Object}   [props.editorProps]        Custom ProseMirror editorProps to merge
+ * @param {'top'|'bottom'} [props.toolbarPlacement='bottom'] Where to render the toolbar
  */
 const WYSIWYG = forwardRef(function WYSIWYG$(
   {
@@ -132,6 +135,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
     excludeExtensions = [],
     editorProps: userEditorProps,
     toolbarAppend,
+    toolbarPlacement = 'bottom',
   },
   forwardedRef,
 ) {
@@ -225,7 +229,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
   const [lowlightInstance, setLowlightInstance] = useState(null);
   const [languages, setLanguages] = useState([]);
   useEffect(() => {
-    Promise.all([import('lowlight')])
+    Promise.all([import('lowlight'), import('katex/dist/katex.min.css')])
       .then(([{ all, createLowlight }]) => {
         const instance = createLowlight(all);
         // instance.register('mermaid', mermaid);
@@ -263,6 +267,9 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       FontSize,
       Highlight.configure({ multicolor: true }),
       Selection,
+      Mathematics.configure({
+        katexOptions: { throwOnError: false },
+      }),
       CommentExtension.configure({
         onCommentActivated: handleCommentActivated,
       }),
@@ -579,14 +586,6 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       )}
       id={id}
     >
-      <Toolbar
-        editor={editor}
-        isFullScreen={isFullScreen}
-        onToggleFullScreen={toggleFullScreen}
-        excludeExtensions={excludeExtensions}
-        toolbarAppend={toolbarAppend}
-        languages={languages}
-      />
       <div className={s.editorContent}>
         {editor && (
           <>
@@ -673,6 +672,17 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
         )}
         <EditorContent editor={editor} className={s.contentEditable} />
       </div>
+      <ToolbarPromptProvider editor={editor}>
+        <Toolbar
+          editor={editor}
+          isFullScreen={isFullScreen}
+          onToggleFullScreen={toggleFullScreen}
+          excludeExtensions={excludeExtensions}
+          toolbarAppend={toolbarAppend}
+          languages={languages}
+          toolbarPlacement={toolbarPlacement}
+        />
+      </ToolbarPromptProvider>
     </div>
   );
 });
@@ -692,6 +702,7 @@ WYSIWYG.propTypes = {
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
   editorProps: PropTypes.object,
   toolbarAppend: PropTypes.func,
+  toolbarPlacement: PropTypes.oneOf(['top', 'bottom']),
 };
 
 export default WYSIWYG;

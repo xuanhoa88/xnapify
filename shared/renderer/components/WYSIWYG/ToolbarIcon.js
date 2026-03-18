@@ -667,6 +667,55 @@ export default {
       <line x1='6' y1='6' x2='18' y2='18'></line>
     </svg>
   ),
+  inlineMath: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <text
+        x='4'
+        y='18'
+        fill='currentColor'
+        stroke='none'
+        fontSize='18'
+        fontFamily='serif'
+        fontStyle='italic'
+      >
+        Σ
+      </text>
+    </svg>
+  ),
+  blockMath: (
+    <svg
+      width='16'
+      height='16'
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+    >
+      <rect x='2' y='2' width='20' height='20' rx='2' ry='2' />
+      <text
+        x='6'
+        y='18'
+        fill='currentColor'
+        stroke='none'
+        fontSize='16'
+        fontFamily='serif'
+        fontStyle='italic'
+      >
+        Σ
+      </text>
+    </svg>
+  ),
   dragHandle: (
     <svg
       width='16'

@@ -23,6 +23,7 @@ import Icons from './ToolbarIcon';
  * @param {boolean}  [props.hasVideo]
  * @param {boolean}  [props.hasAudio]
  * @param {boolean}  [props.hasYoutube]
+ * @param {Function} props.openPrompt                    Prompt modal opener
  */
 export default function MediaActionsPopup({
   editor,
@@ -30,6 +31,7 @@ export default function MediaActionsPopup({
   hasVideo,
   hasAudio,
   hasYoutube,
+  openPrompt,
 }) {
   const { t } = useTranslation();
 
@@ -47,8 +49,17 @@ export default function MediaActionsPopup({
           <ContextMenu.Item
             icon={Icons.video}
             onClick={() => {
-              const url = window.prompt('Video URL (MP4, WebM, etc.)');
-              if (url) editor.chain().focus().setVideo({ src: url }).run();
+              openPrompt({
+                title: t('shared:form.wysiwyg.video', 'Video'),
+                label: t(
+                  'shared:form.wysiwyg.videoUrl',
+                  'Video URL (MP4, WebM, etc.)',
+                ),
+                slotName: 'wysiwyg.prompt.video',
+                onSubmit: url => {
+                  if (url) editor.chain().focus().setVideo({ src: url }).run();
+                },
+              });
             }}
           >
             {t('shared:form.wysiwyg.video', 'Video')}
@@ -58,8 +69,17 @@ export default function MediaActionsPopup({
           <ContextMenu.Item
             icon={Icons.audio}
             onClick={() => {
-              const url = window.prompt('Audio URL (MP3, WAV, etc.)');
-              if (url) editor.chain().focus().setAudio({ src: url }).run();
+              openPrompt({
+                title: t('shared:form.wysiwyg.audio', 'Audio'),
+                label: t(
+                  'shared:form.wysiwyg.audioUrl',
+                  'Audio URL (MP3, WAV, etc.)',
+                ),
+                slotName: 'wysiwyg.prompt.audio',
+                onSubmit: url => {
+                  if (url) editor.chain().focus().setAudio({ src: url }).run();
+                },
+              });
             }}
           >
             {t('shared:form.wysiwyg.audio', 'Audio')}
@@ -69,9 +89,15 @@ export default function MediaActionsPopup({
           <ContextMenu.Item
             icon={Icons.youtube}
             onClick={() => {
-              const url = window.prompt('YouTube Video URL');
-              if (url)
-                editor.chain().focus().setYoutubeVideo({ src: url }).run();
+              openPrompt({
+                title: t('shared:form.wysiwyg.youtube', 'YouTube'),
+                label: t('shared:form.wysiwyg.youtubeUrl', 'YouTube Video URL'),
+                slotName: 'wysiwyg.prompt.youtube',
+                onSubmit: url => {
+                  if (url)
+                    editor.chain().focus().setYoutubeVideo({ src: url }).run();
+                },
+              });
             }}
           >
             {t('shared:form.wysiwyg.youtube', 'YouTube')}
@@ -88,4 +114,5 @@ MediaActionsPopup.propTypes = {
   hasVideo: PropTypes.bool,
   hasAudio: PropTypes.bool,
   hasYoutube: PropTypes.bool,
+  openPrompt: PropTypes.func.isRequired,
 };

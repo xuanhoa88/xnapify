@@ -238,6 +238,34 @@ function createTurndownService() {
     },
   });
 
+  // ── Mathematics (KaTeX) ──────────────────────────────────────────────────
+  // Convert Tiptap math nodes back to LaTeX delimiters: $..$ and $$..$$
+  td.addRule('inlineMathNode', {
+    filter(node) {
+      return (
+        node.nodeName === 'SPAN' &&
+        node.getAttribute('data-type') === 'inline-math'
+      );
+    },
+    replacement(_content, node) {
+      const latex = node.getAttribute('data-latex') || '';
+      return `$${latex}$`;
+    },
+  });
+
+  td.addRule('blockMathNode', {
+    filter(node) {
+      return (
+        node.nodeName === 'DIV' &&
+        node.getAttribute('data-type') === 'block-math'
+      );
+    },
+    replacement(_content, node) {
+      const latex = node.getAttribute('data-latex') || '';
+      return `\n$$\n${latex}\n$$\n`;
+    },
+  });
+
   return td;
 }
 
@@ -375,6 +403,22 @@ export function markdownToHtml(markdown) {
 
       return `<span data-comment-id="${id}"${dataAttr}>${content}</span>`;
     },
+  );
+
+  // Pre-process: Convert block math $$...$$ back into Tiptap's expected node
+  // Must be done BEFORE inline math to avoid $$ being matched as two $
+  processed = processed.replace(
+    /\$\$\n?([\s\S]*?)\n?\$\$/g,
+    (_match, latex) =>
+      `<div data-type="block-math" data-latex="${latex.trim().replace(/"/g, '&quot;')}"></div>`,
+  );
+
+  // Pre-process: Convert inline math $...$ back into Tiptap's expected node
+  // Negative lookbehind/ahead for $ avoids matching $$
+  processed = processed.replace(
+    /(?<!\$)\$(?!\$)([^$\n]+?)\$(?!\$)/g,
+    (_match, latex) =>
+      `<span data-type="inline-math" data-latex="${latex.trim().replace(/"/g, '&quot;')}"></span>`,
   );
 
   let html = marked.parse(processed);

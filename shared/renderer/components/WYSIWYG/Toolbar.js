@@ -7,6 +7,7 @@
 
 import { useCallback, useState, useEffect, useRef } from 'react';
 
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -20,6 +21,7 @@ import TableActionsPopup from './TableActionsPopup';
 import s from './Toolbar.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
+import { useToolbarPrompt } from './ToolbarPromptModal';
 
 /**
  * Toolbar — Formatting toolbar for the Tiptap WYSIWYG editor.
@@ -41,13 +43,16 @@ export default function Toolbar({
   excludeExtensions = [],
   toolbarAppend,
   languages = [],
+  toolbarPlacement = 'bottom',
 }) {
+  const tooltipSide = toolbarPlacement === 'top' ? 'below' : 'above';
   // Quick lookup: is a given extension enabled?
   const has = useCallback(
     name => !excludeExtensions.includes(name),
     [excludeExtensions],
   );
   const { t } = useTranslation();
+  const { openPrompt } = useToolbarPrompt();
   const btn = useCallback(
     (key, title, command, activeCheck) => (
       <ToolbarButton
@@ -96,12 +101,19 @@ export default function Toolbar({
     },
     [editor],
   );
-  // -----------------------------------------------------------------------
 
   if (!editor) return null;
 
   return (
-    <div className={s.toolbar} role='toolbar' aria-label='Formatting'>
+    <div
+      className={clsx(s.toolbar, {
+        [s.toolbarTop]: toolbarPlacement === 'top',
+        [s.toolbarBottom]: toolbarPlacement === 'bottom',
+      })}
+      role='toolbar'
+      aria-label='Formatting'
+      data-tooltip-position={tooltipSide}
+    >
       {/* Text formatting */}
       <div className={s.toolbarGroup}>
         {btn(
@@ -249,31 +261,29 @@ export default function Toolbar({
               t('shared:form.wysiwyg.link', 'Add Link'),
               () => {
                 const previousUrl = editor.getAttributes('link').href;
-                const url = window.prompt('URL', previousUrl || '');
-
-                // cancelled
-                if (url == null) {
-                  return;
-                }
-
-                // empty
-                if (url.trim().length === 0) {
-                  editor
-                    .chain()
-                    .focus()
-                    .extendMarkRange('link')
-                    .unsetLink()
-                    .run();
-                  return;
-                }
-
-                // update link
-                editor
-                  .chain()
-                  .focus()
-                  .extendMarkRange('link')
-                  .setLink({ href: url })
-                  .run();
+                openPrompt({
+                  title: t('shared:form.wysiwyg.link', 'Add Link'),
+                  label: 'URL',
+                  defaultValue: previousUrl || '',
+                  slotName: 'wysiwyg.prompt.link',
+                  onSubmit: url => {
+                    if (!url) {
+                      editor
+                        .chain()
+                        .focus()
+                        .extendMarkRange('link')
+                        .unsetLink()
+                        .run();
+                      return;
+                    }
+                    editor
+                      .chain()
+                      .focus()
+                      .extendMarkRange('link')
+                      .setLink({ href: url })
+                      .run();
+                  },
+                });
               },
               'link',
             )}
@@ -288,8 +298,14 @@ export default function Toolbar({
 
         {has('image') &&
           btn('image', t('shared:form.wysiwyg.image', 'Image'), () => {
-            const url = window.prompt('Image URL');
-            if (url) editor.chain().focus().setImage({ src: url }).run();
+            openPrompt({
+              title: t('shared:form.wysiwyg.image', 'Image'),
+              label: t('shared:form.wysiwyg.imageUrl', 'Image URL'),
+              slotName: 'wysiwyg.prompt.image',
+              onSubmit: url => {
+                if (url) editor.chain().focus().setImage({ src: url }).run();
+              },
+            });
           })}
         {(has('video') || has('audio') || has('youtube')) && (
           <MediaActionsPopup
@@ -298,6 +314,7 @@ export default function Toolbar({
             hasVideo={has('video')}
             hasAudio={has('audio')}
             hasYoutube={has('youtube')}
+            openPrompt={openPrompt}
           />
         )}
         {has('emoji') && (
@@ -313,7 +330,7 @@ export default function Toolbar({
 
       <div className={s.toolbarDivider} />
 
-      {/* Code & rule */}
+      {/* Code, Math & rule */}
       <div className={s.toolbarGroup}>
         {has('codeBlock') && (
           <CodeBlockActionsPopup
@@ -322,6 +339,33 @@ export default function Toolbar({
             languages={languages}
           />
         )}
+        {has('mathematics') &&
+          btn(
+            'inlineMath',
+            t('shared:form.wysiwyg.math', 'Math'),
+            () => {
+              openPrompt({
+                title: t('shared:form.wysiwyg.math', 'Math'),
+                label: t(
+                  'shared:form.wysiwyg.enterLatex',
+                  'Enter LaTeX expression',
+                ),
+                slotName: 'wysiwyg.prompt.math',
+                onSubmit: latex => {
+                  if (!latex) return;
+                  const { $from } = editor.state.selection;
+                  const isEmptyBlock =
+                    $from.parent.isTextblock && $from.parent.content.size === 0;
+                  if (isEmptyBlock) {
+                    editor.chain().focus().insertBlockMath({ latex }).run();
+                  } else {
+                    editor.chain().focus().insertInlineMath({ latex }).run();
+                  }
+                },
+              });
+            },
+            'inlineMath',
+          )}
         {btn(
           'horizontalRule',
           t('shared:form.wysiwyg.horizontalRule', 'Horizontal rule'),
@@ -381,4 +425,5 @@ Toolbar.propTypes = {
   excludeExtensions: PropTypes.arrayOf(PropTypes.string),
   toolbarAppend: PropTypes.func,
   languages: PropTypes.arrayOf(PropTypes.string),
+  toolbarPlacement: PropTypes.oneOf(['top', 'bottom']),
 };

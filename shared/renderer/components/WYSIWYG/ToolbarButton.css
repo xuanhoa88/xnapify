@@ -45,12 +45,12 @@
   z-index: var(--z-tooltip, 1070);
 }
 
-/* Tooltip Body */
+/* Tooltip Body — default: above */
 .toolbarBtn[data-tooltip]::before {
   content: attr(data-tooltip);
-  top: calc(100% + 6px);
+  bottom: calc(100% + 6px);
   left: 50%;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) translateY(4px);
   padding: 4px 8px;
   background-color: var(--color-gray-800, #1f2937);
   color: var(--color-white, #fff);
@@ -61,18 +61,33 @@
   box-shadow: var(--shadow-sm);
 }
 
-/* Tooltip Arrow */
+/* Arrow — points down (above mode) */
 .toolbarBtn[data-tooltip]::after {
   content: '';
-  top: calc(100% + 2px);
+  bottom: calc(100% + 2px);
   left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  border-width: 4px 4px 0;
+  border-style: solid;
+  border-color: var(--color-gray-800, #1f2937) transparent transparent transparent;
+}
+
+/* Below mode (when toolbar is at top) */
+[data-tooltip-position='below'] .toolbarBtn[data-tooltip]::before {
+  bottom: auto;
+  top: calc(100% + 6px);
+  transform: translateX(-50%) translateY(-4px);
+}
+
+[data-tooltip-position='below'] .toolbarBtn[data-tooltip]::after {
+  bottom: auto;
+  top: calc(100% + 2px);
   transform: translateX(-50%) translateY(-4px);
   border-width: 0 4px 4px;
-  border-style: solid;
   border-color: transparent transparent var(--color-gray-800, #1f2937) transparent;
 }
 
-/* Show Tooltip on Hover */
+/* Show on hover — must come after position rules for correct cascade */
 .toolbarBtn[data-tooltip]:hover:not(:disabled)::before,
 .toolbarBtn[data-tooltip]:hover:not(:disabled)::after {
   visibility: visible;

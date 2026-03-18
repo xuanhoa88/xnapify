@@ -5,15 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// File patterns to format
-const patterns = {
-  all: '**/*.{js,jsx,json,css,md}',
-  code: '**/*.{js,jsx}',
-  styles: '**/*.css',
-  config: '**/*.{json,md}',
-};
-
-const config = {
+module.exports = {
   // Line wrapping
   printWidth: 80,
   tabWidth: 2,
@@ -35,5 +27,3 @@ const config = {
   endOfLine: 'lf',
 };
 
-config.patterns = patterns;
-module.exports = config;

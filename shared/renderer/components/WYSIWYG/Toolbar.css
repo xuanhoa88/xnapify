@@ -10,9 +10,21 @@
   flex-wrap: wrap;
   gap: var(--spacing-1);
   padding: var(--spacing-2);
-  border-bottom: 1px solid var(--color-border);
   background-color: var(--color-background-primary);
+  z-index: 10;
 }
+
+/* Position: top — render above editor content */
+.toolbarTop {
+  order: -1;
+  border-bottom: 1px solid var(--color-border);
+}
+
+/* Position: bottom — render below editor content */
+.toolbarBottom {
+  border-top: 1px solid var(--color-border);
+}
+
 
 .toolbarGroup {
   display: flex;

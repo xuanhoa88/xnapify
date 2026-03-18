@@ -322,7 +322,7 @@ function createCacheGroups(
     // prosemirror packages are published both as flat (prosemirror-*) and scoped
     // (@prosemirror/*) — the regex covers both forms
     tiptap: {
-      test: /[\\/]node_modules[\\/](@tiptap[\\/]|@prosemirror[\\/]|prosemirror-[\w-]+|turndown|marked|tippy\.js|@mixmark-io[\\/])/,
+      test: /[\\/]node_modules[\\/](@tiptap[\\/]|@prosemirror[\\/]|prosemirror-[\w-]+|turndown|marked|tippy\.js|@mixmark-io[\\/]|katex)/,
       name: 'vendor.tiptap',
       chunks,
       priority: 30,
