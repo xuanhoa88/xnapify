@@ -121,8 +121,10 @@ function getServerUrl(server) {
   try {
     const { address, port } = server.address();
     let host = address;
-    // Map IPv6 loopback addresses to localhost for browser compatibility
-    if (address === '::' || address === '::1') {
+    // Map loopback addresses to localhost for browser compatibility
+    // and cookie domain consistency (cookies set on 'localhost' won't be
+    // sent to '127.0.0.1' and vice versa)
+    if (address === '::' || address === '::1' || address === '127.0.0.1') {
       host = 'localhost';
     }
     return `http://${host}:${port}`;
