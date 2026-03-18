@@ -1,33 +1,38 @@
 # Cache Engine
 
-Key-value caching with multiple adapter support (memory, file) and automatic namespace isolation. Auto-disabled in development mode via a NoOp adapter.
+Key-value caching with pluggable adapters (memory, file), namespace isolation, LRU eviction, and TTL-based expiration. Automatically disabled in development mode via a NoOp adapter.
 
 ## Quick Start
 
 ```javascript
-import cache from '@shared/api/engines/cache';
+const cache = app.get('cache');
 
 await cache.set('key', 'value', 60000); // 60s TTL
-const value = await cache.get('key');
-await cache.delete('key');
+const value = await cache.get('key');    // 'value' or null
+await cache.delete('key');               // true/false
 ```
+
+> **Note:** In `__DEV__` mode, all cache operations are no-ops to ensure fresh data.
 
 ## API
 
 ### Core Methods
 
-| Method | Signature | Description |
+| Method | Returns | Description |
 |---|---|---|
-| `get` | `(key) → Promise<any>` | Get value by key |
-| `set` | `(key, value, ttl?) → Promise<void>` | Set value with optional TTL (ms) |
-| `delete` | `(key) → Promise<boolean>` | Delete key |
-| `has` | `(key) → Promise<boolean>` | Check if key exists |
-| `clear` | `() → Promise<void>` | Clear all entries |
-| `keys` | `() → string[]` | Get all keys (adapter-dependent) |
-| `stats` | `() → Object` | Cache statistics |
-| `cleanup` | `() → Promise<void>` | Cleanup expired entries |
+| `get(key)` | value or `null` | Get value (null if missing or expired) |
+| `set(key, value, ttl?)` | `void` | Set value with optional TTL in ms (default: 5 min) |
+| `delete(key)` | `boolean` | Delete key |
+| `has(key)` | `boolean` | Check if key exists and not expired |
+| `clear()` | `void` | Clear all entries |
+| `keys()` | `string[]` | Get all cache keys |
+| `stats()` | `object` | Cache statistics |
+| `cleanup()` | `number` | Remove expired entries, returns count |
+| `size` | `number` | Current entry count |
 
 ### Namespacing
+
+Isolate modules with key prefixing:
 
 ```javascript
 const userCache = cache.withNamespace('users');
@@ -36,7 +41,31 @@ await userCache.set('123', userData); // Stored as "users:123"
 // Nested namespaces
 const apiUserCache = cache.withNamespace('api').withNamespace('users');
 await apiUserCache.set('123', data); // Stored as "api:users:123"
+
+// clear() only removes keys within the namespace
+userCache.clear(); // Removes "users:*", leaves "posts:*" etc.
 ```
+
+## Adapters
+
+| Type | Class | Default `maxSize` | Default Dir | Description |
+|---|---|---|---|---|
+| `memory` | `MemoryCache` | `1000` | — | In-memory LRU cache (default) |
+| `file` | `FileCache` | `10000` | `~/.rsk/caches` | File-system backed, persistent across restarts |
+| `noop` | `NoOpCache` | — | — | No-op (auto-selected in `__DEV__` mode) |
+
+### Memory Adapter
+
+- **LRU eviction**: Oldest entries removed when `maxSize` reached.
+- **Lazy expiration**: Expired entries deleted on `get()` / `has()` access.
+- Access (`get`) and update (`set`) refresh LRU position.
+
+### File Adapter
+
+- Each key stored as `<md5-hash>.json` with atomic writes (temp + rename).
+- Spin lock per key prevents race conditions.
+- Eviction removes oldest **10%** of files when `maxSize` reached.
+- `cleanup()` also removes corrupted files and stale locks (>30s).
 
 ### Custom Instances
 
@@ -44,17 +73,9 @@ await apiUserCache.set('123', data); // Stored as "api:users:123"
 import { createFactory } from '@shared/api/engines/cache';
 
 const fileCache = createFactory({ type: 'file', directory: '/tmp/cache' });
-const memCache = createFactory({ type: 'memory', maxSize: 500, ttl: 300000 });
+const memCache = createFactory({ type: 'memory', maxSize: 500, ttl: 10000 });
 ```
-
-## Adapters
-
-| Type | Class | Description |
-|---|---|---|
-| `memory` | `MemoryCache` | In-memory LRU cache (default) |
-| `file` | `FileCache` | File-system backed cache |
-| `noop` | `NoOpCache` | No-op adapter (auto-used in `__DEV__`) |
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Technical specification
+- [SPEC.md](./SPEC.md) — Full internal architecture specification

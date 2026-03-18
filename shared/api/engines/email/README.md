@@ -1,6 +1,6 @@
 # Email Engine
 
-Multi-provider email delivery with LiquidJS template support, smart worker offloading, and Zod validation.
+Multi-provider email delivery with LiquidJS template support, Zod validation, smart worker offloading, and exponential backoff retry.
 
 ## Quick Start
 
@@ -20,10 +20,33 @@ await email.send({
 
 Send one or more emails. Accepts a single email object or an array for bulk.
 
+| Field | Type | Required | Description |
+|---|---|---|---|
+| `to` | `string \| string[]` | ✅ | Recipients (max 50) |
+| `subject` | `string` | — | Subject line (max 998 chars) |
+| `html` | `string` | — | HTML body |
+| `text` | `string` | — | Plain text body |
+| `templateData` | `object` | — | LiquidJS `{{ variable }}` substitution |
+| `templateId` | `string` | — | Provider template ID (SendGrid/Mailgun) |
+| `from` / `fromName` | `string` | — | Sender (defaults from env) |
+| `cc` / `bcc` | `string \| string[]` | — | CC/BCC recipients |
+| `replyTo` | `string` | — | Reply-to address |
+| `attachments` | `Array<{ filename, content }>` | — | Max 10 |
+| `priority` | `'high' \| 'normal' \| 'low'` | — | Email priority |
+
+> Must have at least one of: `html`, `text`, or `templateId`.
+
+### Send Options
+
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `useWorker` | `boolean` | auto | Force or bypass worker offloading |
-| `provider` | `string` | configured default | Provider to use for delivery |
+| `provider` | `string` | configured default | Provider to use |
+| `useWorker` | `boolean` | auto | Force/bypass worker offloading |
+| `throwOnError` | `boolean` | `false` | Throw on send failure |
+| `batchThreshold` | `number` | `5` | Emails count to trigger worker |
+| `largeBodyThreshold` | `number` | `102400` | Body size (bytes) to trigger worker |
+| `maxRetries` | `number` | `3` | Retry attempts for bulk (5xx only) |
+| `concurrency` | `number` | `10` | Concurrent sends for bulk |
 
 ### Templates (LiquidJS)
 
@@ -36,32 +59,53 @@ await email.send({
 });
 ```
 
+Renders `{{ variable }}` in `subject`, `html`, and `text`. Uses `@shared/api/engines/template`.
+
+### Worker Control
+
+Auto-offloads to background workers when: **5+ emails**, **100KB+ body**, or **attachments present**.
+
+```javascript
+await email.send(emails);                       // Auto-decide
+await email.send(emails, { useWorker: true });   // Force worker
+await email.send(emails, { useWorker: false });  // Force direct
+```
+
 ### Provider Management
 
 ```javascript
-email.addProvider('resend', new ResendProvider());
-email.getProviderNames();   // ['memory', 'smtp', 'sendgrid', 'mailgun']
-email.hasProvider('smtp');
-email.getProvider('smtp');
-email.getAllStats();
-```
-
-### Lifecycle
-
-```javascript
-const testEmail = createFactory({ provider: 'memory' }); // Isolated instance
-await email.cleanup();                                     // Graceful shutdown
+email.addProvider('custom', new CustomProvider()); // No overrides
+email.getProviderNames();   // ['memory', 'resend', 'smtp', ...]
+email.hasProvider('smtp');   // true (triggers lazy init)
+email.getProvider('smtp');   // provider instance
+email.getAllStats();          // stats from all providers
+await email.cleanup();       // close all connections
 ```
 
 ## Providers
 
-| Provider | Description |
-|---|---|
-| `memory` | In-memory (dev/testing) |
-| `smtp` | SMTP via Nodemailer |
-| `sendgrid` | SendGrid API |
-| `mailgun` | Mailgun API |
+| Provider | Transport | Config Env Var | Default |
+|---|---|---|---|
+| `memory` | In-memory array | — | Always available |
+| `smtp` | Nodemailer | `RSK_SMTP_HOST` | Lazy init |
+| `resend` | Resend HTTP API | `RSK_RESEND_KEY` | Default provider |
+| `sendgrid` | SendGrid API | `RSK_SENDGRID_KEY` | Lazy init |
+| `mailgun` | Mailgun API | `RSK_MAILGUN_KEY` | Lazy init |
+
+Default provider: `RSK_MAIL_PROVIDER` env var (default: `'resend'`).
+Common: `RSK_MAIL_FROM` (from address), `RSK_MAIL_FROM_NAME` (from name).
+
+### Provider Interface
+
+All providers implement: `send(email)`, `sendBulk(emails)`, `verify()`, `getStats()`. Optional: `close()`, `sendTemplate()`.
+
+## Isolated Instances
+
+```javascript
+import { createFactory } from '@shared/api/engines/email';
+const testEmail = createFactory({ provider: 'memory' });
+```
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Technical specification
+- [SPEC.md](./SPEC.md) — Full internal architecture specification

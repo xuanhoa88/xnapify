@@ -1,21 +1,21 @@
 # Hook Engine
 
-Channel-based async pub/sub hooks with priority support and mutable arguments. Enables decoupled communication between modules via named event channels.
+Channel-based async event hooks with priority ordering and mutable arguments. Enables decoupled inter-module communication — handlers run sequentially and can modify shared data by reference.
 
 ## Quick Start
 
 ```javascript
-import hook from '@shared/api/engines/hook';
+const hook = app.get('hook');
 
 // Get or create a channel
 const userHooks = hook('users');
 
-// Register handlers
+// Register handlers (lower priority runs first)
 userHooks.on('created', async (user) => {
   await sendWelcomeEmail(user);
-});
+}, 10);
 
-// Emit event (handlers run sequentially)
+// Emit event — handlers run sequentially
 await userHooks.emit('created', { id: 1, name: 'John' });
 ```
 
@@ -29,20 +29,21 @@ await userHooks.emit('created', { id: 1, name: 'John' });
 | `hook.channel('name')` | Same as above |
 | `hook.has('name')` | Check if channel exists |
 | `hook.getChannelNames()` | List all channel names |
-| `hook.remove('name')` | Remove a channel and clear its handlers |
+| `hook.remove('name')` | Remove channel and clear its handlers |
 | `hook.cleanup()` | Clear all channels |
 | `hook.withContext(ctx)` | Create bound factory where handlers receive `ctx` as `this` |
 
 ### Channel
 
-| Method | Description |
-|---|---|
-| `on(event, handler, priority?)` | Register handler (lower priority runs first, default `10`) |
-| `emit(event, ...args)` | Execute all handlers sequentially (async) |
-| `off(event?, handler?)` | Remove handlers (all, per-event, or specific) |
-| `withContext(ctx)` | Create bound channel wrapper |
-| `.events` | Get registered event names |
-| `.name` | Get channel name |
+| Method | Returns | Description |
+|---|---|---|
+| `on(event, handler, priority?)` | `this` | Register handler (lower priority runs first, default `10`) |
+| `emit(event, ...args)` | `Promise<void>` | Execute all handlers sequentially |
+| `off()` | — | Remove ALL handlers on ALL events |
+| `off(event)` | — | Remove all handlers for one event |
+| `off(event, handler)` | — | Remove specific handler (by reference) |
+| `.name` | `string` | Channel name |
+| `.events` | `string[]` | Registered event names |
 
 ### Priority Control
 
@@ -52,6 +53,36 @@ userHooks.on('save', normalizeData, 10); // Runs second
 userHooks.on('save', logActivity, 100);  // Runs last
 ```
 
+### Mutable Arguments
+
+Handlers receive arguments by reference — mutations are visible to subsequent handlers:
+
+```javascript
+hook('transform').on('process', async (data) => {
+  data.value *= 2;  // Mutates the original object
+});
+
+const data = { value: 5 };
+await hook('transform').emit('process', data);
+// data.value === 10
+```
+
+### Context Binding
+
+Bind a context object so handlers receive it as `this`:
+
+```javascript
+// Factory-level binding (all channels)
+const boundHook = hook.withContext(app);
+boundHook('users').on('created', function (user) {
+  // `this` === app
+  const models = this.get('models');
+});
+
+// Channel-level binding
+const boundChannel = hook('users').withContext(app);
+```
+
 ### Isolated Instances
 
 ```javascript
@@ -59,6 +90,12 @@ import { createFactory } from '@shared/api/engines/hook';
 const customHook = createFactory();
 ```
 
+## Error Handling
+
+- **Non-function handler:** `on()` throws `TypeError('Handler must be a function')`
+- **Invalid channel name:** `channel()` throws `Error` with `name: 'InvalidChannelNameError'`
+- **Handler errors:** `emit()` does **not** catch errors — they propagate to the caller
+
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Technical specification
+- [SPEC.md](./SPEC.md) — Full internal architecture specification

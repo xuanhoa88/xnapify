@@ -31,37 +31,48 @@ export async function init(app) {
 
 ### `schedule.register(name, cronExpression, handler, options?)`
 
-Register a cron task.
+Register a cron task. Validates inputs, then delegates to `node-cron`. The handler is wrapped in a try/catch that logs errors via `console.error` but never propagates them to `node-cron`.
 
-| Param | Type | Description |
-|---|---|---|
-| `name` | `string` | Unique task identifier (convention: `module:action`) |
-| `cronExpression` | `string` | Standard cron expression (5 or 6 fields) |
-| `handler` | `Function` | Async function to execute on each tick |
-| `options.scheduled` | `boolean` | Auto-start on registration (default: `true`) |
-| `options.timezone` | `string` | IANA timezone (default: `'UTC'`) |
+| Param | Type | Default | Description |
+|---|---|---|---|
+| `name` | `string` | *required* | Unique task identifier (convention: `module:action`) |
+| `cronExpression` | `string` | *required* | Standard cron expression (5 or 6 fields) |
+| `handler` | `Function` | *required* | Async function to execute on each tick |
+| `options.scheduled` | `boolean` | `autoStart` | Whether to start immediately. Falls back to the manager's `autoStart` flag |
+| `options.timezone` | `string` | `'UTC'` | IANA timezone for execution |
 
-Throws `ScheduleError` with codes `INVALID_TASK_NAME`, `INVALID_CRON_EXPRESSION`, or `INVALID_HANDLER` on invalid input.
+**Validation:** Throws `ScheduleError` with codes `INVALID_TASK_NAME`, `INVALID_CRON_EXPRESSION`, or `INVALID_HANDLER`. Expression is validated both as a non-empty string and via `cron.validate()`.
 
-### `schedule.unregister(name)`
+**Overwrite:** If a task with the same name exists, it is stopped and removed with a console warning before the new one is registered.
 
-Stop and remove a task. Returns `true` if found.
+### `schedule.unregister(name) → boolean`
 
-### `schedule.get(name)`
+Stop and remove a task. Returns `true` if found, `false` otherwise.
 
-Get task info object: `{ task, expression, options, registeredAt }`.
+### `schedule.get(name) → TaskEntry | undefined`
 
-### `schedule.getAllTasks()`
+Get task info: `{ task, expression, options, registeredAt }`.
+
+### `schedule.getAllTasks() → string[]`
 
 Returns array of registered task names.
 
-### `schedule.isTaskRunning(name)`
+### `schedule.isTaskRunning(name) → boolean`
 
-Returns `true` if the task exists and is in `'scheduled'` state.
+Returns `true` if the task's status is `'scheduled'`.
 
-### `schedule.getStats()`
+### `schedule.getStats() → StatsObject`
 
-Returns `{ total, running, stopped, tasks: { [name]: { expression, status, timezone, registeredAt } } }`.
+```javascript
+{
+  total: number,
+  running: number,
+  stopped: number,
+  tasks: {
+    [name]: { expression, status, timezone, registeredAt }
+  }
+}
+```
 
 ### `schedule.start()` / `schedule.stop()`
 
@@ -73,7 +84,7 @@ Stop and remove all tasks. Called automatically on `SIGTERM` and `SIGINT`.
 
 ### `ScheduleError`
 
-Structured error class for schedule-related errors. Properties: `name`, `code`, `statusCode`, `timestamp`.
+Structured error class. Properties: `name`, `code`, `statusCode`, `timestamp`.
 
 ```javascript
 import { ScheduleError } from '@shared/api/engines/schedule';
@@ -92,12 +103,14 @@ import { ScheduleError } from '@shared/api/engines/schedule';
 
 ## Worker Integration
 
-For heavy processing, keep cron handlers lightweight and dispatch to a worker pool:
+Keep cron handlers lightweight — dispatch heavy processing to a worker pool:
 
 ```javascript
 schedule.register('reports:weekly', '0 9 * * 1', async () => {
   const workerPool = app.get('reports:workerPool');
-  await workerPool.sendRequest('weekly', 'GENERATE_REPORT', { week: getCurrentWeek() });
+  await workerPool.sendRequest('weekly', 'GENERATE_REPORT', {
+    week: getCurrentWeek(),
+  });
 });
 ```
 
@@ -110,9 +123,11 @@ import { createFactory } from '@shared/api/engines/schedule';
 
 const pluginSchedule = createFactory({ autoStart: false });
 pluginSchedule.register('my-plugin:sync', '*/10 * * * *', syncHandler);
-pluginSchedule.start();
+pluginSchedule.start(); // manually start when ready
 ```
+
+Each instance registers its own `SIGTERM`/`SIGINT` cleanup handlers.
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Technical specification
+- [SPEC.md](./SPEC.md) — Full internal architecture specification

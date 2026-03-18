@@ -259,7 +259,7 @@ export default class FileCache {
         try {
           const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
           return { file, createdAt: data.createdAt || 0, filepath };
-        } catch (e) {
+        } catch {
           return { file, createdAt: 0, filepath };
         }
       });

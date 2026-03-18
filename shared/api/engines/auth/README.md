@@ -19,7 +19,9 @@ router.delete('/posts/:id', middlewares.requireRole('admin'), controller.delete)
 
 ## Middlewares
 
-### `requireAuth(options?)`
+### Authentication
+
+#### `requireAuth(options?)`
 
 Validates JWT token from cookie or `Authorization` header. Populates `req.user`, `req.token`, `req.authenticated`. Supports pluggable strategies via `auth.strategy.{type}` hook.
 
@@ -28,73 +30,134 @@ Validates JWT token from cookie or `Authorization` header. Populates `req.user`,
 | `tokenType` | `string` | `'access'` | Expected token type |
 | `sources` | `string[]` | `['cookie', 'header']` | Token extraction sources |
 | `includeUser` | `boolean` | `true` | Decode and attach user to `req.user` |
+| `onError` | `function` | — | Custom error handler `(error, req, res, next)` |
 
-### `optionalAuth(options?)`
+#### `optionalAuth(options?)`
 
-Same as `requireAuth` but continues without error if no token is present. Sets `req.authenticated = false` on failure.
+Same as `requireAuth` but continues without error if no token or invalid. Sets `req.authenticated = false` on failure.
 
-### `refreshToken(options?)`
+#### `refreshToken(options?)`
 
-Auto-refreshes expired/near-expiry access tokens using the refresh token cookie. Sets `X-Auth-Status` response header.
+Auto-refreshes expired/near-expiry access tokens using the refresh token cookie. **Non-blocking** — never fails the request.
 
 | Option | Type | Default | Description |
 |---|---|---|---|
 | `refreshThreshold` | `number` | `300` (5 min) | Seconds before expiry to trigger refresh |
 | `autoRefresh` | `boolean` | `true` | Auto-refresh expired tokens |
+| `onRefresh` | `function` | — | Callback `(req, res, newTokens)` |
 
-### `requirePermission(...permissions)`
+Sets `X-Auth-Status` header: `valid` | `refreshed` | `expired` | `needs-refresh` | `refresh-failed` | `guest` | `error`.
 
-Checks user has **ALL** listed permissions. Supports wildcard matching (`*:*`, `users:*`, `*:read`). Admin role bypasses by default.
+### Permissions
+
+#### `requirePermission(...permissions)` / `requireAnyPermission(...permissions)`
+
+Checks user has **ALL** or **ANY** listed permissions. Admin role bypasses by default.
 
 ```javascript
-router.get('/users', requirePermission('users:read'), handler);
-router.post('/users', requirePermission('users:read', 'users:create'), handler);
+requirePermission('users:read');                                    // single
+requirePermission('users:read', 'users:create');                    // ALL required
+requireAnyPermission('posts:read', 'posts:moderate');               // ANY sufficient
+requirePermission({ permissions: ['a:b'], adminBypass: false });    // disable bypass
 ```
 
-### `requireAnyPermission(...permissions)`
+Supports wildcards: `*:*` (super admin), `users:*` (resource wildcard), `*:read` (action wildcard).
 
-Checks user has **ANY** of the listed permissions.
+### Roles
 
-### `requireRole(...roles)`
+#### `requireRole(...roles)` / `requireAnyRole(...roles)`
 
-Checks user has **ALL** listed roles. Supports `adminBypass` option.
+Checks user has **ALL** or **ANY** listed roles. Admin bypass disabled by default.
 
-### `requireAnyRole(...roles)` / `requireRoleLevel(minimumRole, hierarchy)` / `requireDynamicRole(options)`
+```javascript
+requireRole('admin');
+requireAnyRole('admin', 'moderator');
+requireRole({ roles: ['mod'], adminBypass: true });
+```
 
-Flexible role checks — any-match, hierarchy-based levels, and runtime-resolved roles.
+#### `requireRoleLevel(minimumRole, hierarchy, options?)`
 
-### `requireOwnership(options?)`
+Hierarchy-based minimum level check.
 
-Checks user owns the resource via param comparison (`req.params.userId === req.user.id`) or hook-based resolution (`auth.ownership`).
+```javascript
+const hierarchy = ['viewer', 'editor', 'moderator', 'admin'];
+requireRoleLevel('moderator', hierarchy); // 'moderator' or 'admin' required
+```
 
-### `requireFlexibleOwnership({ strategies })` / `requireSharedOwnership({ resourceType })` / `requireHierarchicalOwnership({ resourceType })` / `requireTimeBasedOwnership({ resourceType, windowMs })`
+#### `requireDynamicRole({ resolver?, resourceType?, matchAll? })`
 
-Advanced ownership patterns: multi-strategy, collaborative, hierarchy chain, and time-windowed access.
+Runtime-resolved roles via function or `auth.dynamic_roles` hook.
+
+```javascript
+requireDynamicRole({
+  resolver: async (req) => {
+    const project = await Project.findByPk(req.params.id);
+    return project.editRole; // e.g. 'editor'
+  },
+});
+```
+
+### Groups
+
+#### `requireGroup(...groups)` / `requireAnyGroup(...groups)` / `requireGroupLevel(min, hierarchy)`
+
+Same pattern as roles. Admin bypass enabled by default.
+
+### Ownership
+
+#### `requireOwnership(options?)`
+
+Param-based (`req.params.userId === req.user.id`) or hook-based (`auth.ownership` → `req.isOwner`).
+
+```javascript
+requireOwnership();                                    // param: 'userId'
+requireOwnership({ param: 'authorId' });               // custom param
+requireOwnership({ resourceType: 'post' });            // hook-based
+```
+
+#### `requireFlexibleOwnership({ strategies })` / `requireSharedOwnership({ resourceType })` / `requireHierarchicalOwnership({ resourceType })` / `requireTimeBasedOwnership({ resourceType, windowMs })`
+
+Advanced ownership: multi-strategy, collaborative, hierarchy chain, and time-windowed access.
+
+```javascript
+// Allow if user owns post OR is team lead
+requireFlexibleOwnership({
+  strategies: [
+    { param: 'id', resourceType: 'post' },
+    { param: 'id', resourceType: 'team_post' },
+  ],
+});
+
+// Shared ownership — user in collaborators
+requireSharedOwnership({ resourceType: 'document' });
+
+// Time-windowed — edit within 24h of creation
+requireTimeBasedOwnership({ resourceType: 'post', windowMs: 24 * 60 * 60 * 1000 });
+```
 
 ## Cookie Utilities
 
 ```javascript
-import { setTokenCookie, getTokenFromCookie, clearAllAuthCookies } from '@shared/api/engines/auth';
+import { setTokenCookie, getTokenFromCookie, clearAllAuthCookies, extractToken } from '@shared/api/engines/auth';
 
-setTokenCookie(res, jwtToken);
+setTokenCookie(res, jwtToken);           // Set id_token (7 days)
+setRefreshTokenCookie(res, refreshToken); // Set refresh_token (30 days)
 const token = getTokenFromCookie(req);
 clearAllAuthCookies(res);
+const token = extractToken(req, { sources: ['cookie', 'header', 'query'] });
 ```
 
-| Function | Description |
-|---|---|
-| `setTokenCookie(res, token)` | Set JWT `id_token` cookie (7 days) |
-| `getTokenFromCookie(req)` | Read JWT from cookie |
-| `clearTokenCookie(res)` | Clear JWT cookie |
-| `setRefreshTokenCookie(res, token)` | Set `refresh_token` cookie (30 days) |
-| `getRefreshTokenFromCookie(req)` | Read refresh token from cookie |
-| `clearAllAuthCookies(res)` | Clear all auth cookies |
-| `extractToken(req, options?)` | Extract token from cookie, header, or query |
+| Cookie | Name | Max Age |
+|---|---|---|
+| JWT | `id_token` | 7 days |
+| Refresh | `refresh_token` | 30 days |
+
+Config: `httpOnly`, `secure` (production only), `sameSite: 'lax'`, `path: '/'`.
 
 ## RBAC Constants
 
 ```javascript
-import { ADMIN_ROLE, DEFAULT_ROLE, SYSTEM_PERMISSIONS, DEFAULT_RESOURCES } from '@shared/api/engines/auth';
+import { ADMIN_ROLE, DEFAULT_ROLE, SYSTEM_PERMISSIONS, DEFAULT_RESOURCES, DEFAULT_ACTIONS } from '@shared/api/engines/auth';
 ```
 
 | Constant | Value |
@@ -102,12 +165,15 @@ import { ADMIN_ROLE, DEFAULT_ROLE, SYSTEM_PERMISSIONS, DEFAULT_RESOURCES } from 
 | `DEFAULT_ROLE` | `'user'` |
 | `ADMIN_ROLE` | `'admin'` |
 | `MODERATOR_ROLE` | `'mod'` |
-| `SYSTEM_ROLES` | `['user', 'admin', 'mod']` |
 | `DEFAULT_GROUP` | `'users'` |
 | `ADMIN_GROUP` | `'administrators'` |
 
-Permission format: `resource:action` (e.g., `users:read`, `plugins:delete`).
+Permission format: `resource:action` (e.g., `users:read`, `plugins:delete`, `*:*`).
+
+Resources: `users`, `roles`, `groups`, `permissions`, `apiKeys`, `nodered`, `files`, `emails`, `webhooks`, `activities`, `plugins`.
+
+Actions: `create`, `read`, `update`, `delete`, `impersonate`, `*` (manage).
 
 ## See Also
 
-- [SPEC.md](./SPEC.md) — Technical specification
+- [SPEC.md](./SPEC.md) — Full internal architecture specification
