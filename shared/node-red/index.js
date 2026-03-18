@@ -531,6 +531,13 @@ export class NodeRedManager {
       // loadNodeConfig failures are swallowed). Without this guard the
       // unhandled rejection terminates the dev server.
       app.use(this._settings.httpAdminRoot, (req, res, next) => {
+        // During HMR transitions _editorApi is null
+        if (!this._editorApi) {
+          if (!res.headersSent) {
+            res.status(503).json({ error: 'Node-RED restarting' });
+          }
+          return;
+        }
         try {
           this._editorApi.httpAdmin(req, res, err => {
             if (err) {

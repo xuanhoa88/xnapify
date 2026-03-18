@@ -9,12 +9,10 @@ import 'url-polyfill';
 import 'dotenv-flow/config';
 import crypto from 'crypto';
 import fs from 'fs/promises';
-import http from 'http';
 import path from 'path';
 
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import express from 'express';
 import rateLimit from 'express-rate-limit';
 import expressRequestLanguage from 'express-request-language';
 import { createMemoryHistory } from 'history';
@@ -933,9 +931,12 @@ async function listen(server, baseUrl, port, host) {
   return server;
 }
 
-export function createServer() {
-  const app = express();
-  const server = http.createServer(app);
+export function createServer({ express: expressMod, http: httpMod }) {
+  // Dynamic import() wraps CJS modules in { default: ... }
+  const expressLib = expressMod.default || expressMod;
+  const httpLib = httpMod.default || httpMod;
+  const app = expressLib();
+  const server = httpLib.createServer(app);
   return { app, server };
 }
 
@@ -946,7 +947,7 @@ export async function bootstrapApp(app, server, options = {}) {
   }
 
   const {
-    publicDir,
+    static: staticMiddleware,
     port = SERVER_CONFIG.port,
     host = SERVER_CONFIG.host,
   } = options;
@@ -1038,31 +1039,7 @@ export async function bootstrapApp(app, server, options = {}) {
   });
 
   // Static assets (moved UP to avoid unnecessary body parsing, rate limiting, and locale processing)
-  app.use(
-    express.static(
-      path.resolve(typeof publicDir === 'string' ? publicDir.trim() : 'public'),
-      {
-        dotfiles: 'ignore',
-        etag: true,
-        lastModified: true,
-        index: false,
-        redirect: false,
-        fallthrough: true,
-        cacheControl: true,
-        setHeaders(res, filePath) {
-          res.setHeader('X-Content-Type-Options', 'nosniff');
-          if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
-            res.setHeader(
-              'Cache-Control',
-              'public, max-age=31536000, immutable',
-            );
-          } else {
-            res.setHeader('Cache-Control', 'public, max-age=86400');
-          }
-        },
-      },
-    ),
-  );
+  app.use(staticMiddleware());
 
   // Locale detection with caching
   app.use(cookieParser());
@@ -1335,8 +1312,33 @@ if (module.hot) {
 } else {
   (async () => {
     try {
-      const { app, server } = createServer();
-      const { listen: start } = await bootstrapApp(app, server);
+      const http = await import('http');
+      const expressMod = await import('express');
+      const expressLib = expressMod.default || expressMod;
+      const { app, server } = createServer({ http, express: expressMod });
+      const { listen: start } = await bootstrapApp(app, server, {
+        static: () =>
+          expressLib.static(path.resolve('public'), {
+            dotfiles: 'ignore',
+            etag: true,
+            lastModified: true,
+            index: false,
+            redirect: false,
+            fallthrough: true,
+            cacheControl: true,
+            setHeaders(res, filePath) {
+              res.setHeader('X-Content-Type-Options', 'nosniff');
+              if (/\.[a-f0-9]{8,}\./i.test(filePath)) {
+                res.setHeader(
+                  'Cache-Control',
+                  'public, max-age=31536000, immutable',
+                );
+              } else {
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+              }
+            },
+          }),
+      });
       await start();
 
       // Production-only signal handlers

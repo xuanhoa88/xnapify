@@ -7,7 +7,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+const http = require('http');
+
 const ReactRefreshWebpackPlugin = require('@pmmmwh/react-refresh-webpack-plugin');
+const express = require('express');
 const webpack = require('webpack');
 const webpackDevMiddleware = require('webpack-dev-middleware');
 const webpackHotMiddleware = require('webpack-hot-middleware');
@@ -193,9 +196,8 @@ function loadServerBundle() {
     // Get the absolute path to the server bundle
     const serverBundlePath = require.resolve(WEBPACK_SERVER_BUNDLE_PATH);
 
-    // Clear application code from cache while leaving node_modules intact.
-    // This preserves singletons (like React) while giving us a totally fresh
-    // application state for the new bundle load.
+    // Only the server bundle entry needs clearing — framework singletons
+    // (express, http, react) are injected from dev.js and never bundled.
     delete require.cache[serverBundlePath];
 
     // Load the server bundle
@@ -224,7 +226,10 @@ async function prepareDevServer(
   { createServer, bootstrapApp },
   existingServer,
 ) {
-  const { app: newApp, server: createdServer } = createServer();
+  const { app: newApp, server: createdServer } = createServer({
+    express,
+    http,
+  });
 
   // Reuse existing server if available
   const activeServer = existingServer || createdServer;
@@ -236,7 +241,7 @@ async function prepareDevServer(
   const { listen: startServer } = await bootstrapApp(newApp, activeServer, {
     port,
     host,
-    publicDir: config.PUBLIC_DIR,
+    static: () => express.static(config.PUBLIC_DIR),
   });
 
   // Commit mutations only after async work succeeds
