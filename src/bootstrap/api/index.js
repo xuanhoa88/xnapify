@@ -12,6 +12,7 @@ import { Router as DynamicRouter } from '@shared/api/router';
 
 import { createCorsMiddleware } from './middlewares/cors';
 import { createLoggingMiddleware } from './middlewares/logging';
+import { configurePassport } from './passport';
 
 // Discover lifecycle modules from apps directory
 const apisContext = require.context(
@@ -117,6 +118,12 @@ function setupGlobalMiddleware(app) {
 function createApiMiddlewareStack(app) {
   const middlewares = [];
   const jwt = app.get('jwt');
+  const oauth = app.get('oauth');
+
+  // Passport initialization (must precede any passport.authenticate calls)
+  if (oauth && oauth.passport) {
+    middlewares.push(oauth.passport.initialize());
+  }
 
   if (jwt) {
     middlewares.push(
@@ -207,6 +214,10 @@ export default async function bootstrap(guardControl) {
 
     // Register engines
     registerEngines(guardControl);
+
+    // Setup passport & OAuth registry (framework-level, before modules)
+    const { oauth } = configurePassport();
+    guardControl.app.set('oauth', oauth);
 
     // Run core database migrations
     await runCoreMigrations();

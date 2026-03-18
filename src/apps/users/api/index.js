@@ -9,7 +9,6 @@ import { SEED_USERS } from './constants';
 import * as authController from './controllers/auth.controller';
 import * as profileController from './controllers/profile.controller';
 import { authenticate as handleApiKeyStrategy } from './utils/apiKey';
-import { configurePassport } from './utils/passport';
 import { getUserRBACData } from './utils/rbac/fetcher';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
@@ -130,9 +129,6 @@ export async function seeds(app) {
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
-  const { passport, oauth } = configurePassport();
-  app.use(passport.initialize());
-  app.set('oauth', oauth);
   await registerAuthHooks(app);
 
   // Bulk-index users for search (fire-and-forget)

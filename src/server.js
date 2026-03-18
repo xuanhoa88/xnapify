@@ -484,7 +484,15 @@ function makeSsrMiddleware(guardControl, baseUrl) {
     const abortController = new AbortController();
 
     const authHeader = validateCookieHeader(req.headers.cookie || '');
-    const locale = req.language || DEFAULT_LOCALE;
+    const rawLocale = req.language || DEFAULT_LOCALE;
+
+    // Normalize bare language codes (e.g. 'en' → 'en-US')
+    // express-request-language may return a prefix that doesn't exactly
+    // match an available locale key.
+    const availableKeys = Object.keys(AVAILABLE_LOCALES);
+    const locale = availableKeys.includes(rawLocale)
+      ? rawLocale
+      : availableKeys.find(k => k.startsWith(rawLocale)) || DEFAULT_LOCALE;
 
     // Extract auth-specific cookie for cache key and auth detection
     const authCookie = (req.cookies && req.cookies['id_token']) || '';
@@ -770,6 +778,7 @@ function guardAppProviders(app, providers = []) {
     'env',
     'jwt',
     'i18n',
+    'oauth',
     'plugin',
     'ws',
     'models',
@@ -829,11 +838,35 @@ function guardAppProviders(app, providers = []) {
       return original.call(app, key, ...args);
     };
 
+  // Route-mounting methods are unconditionally blocked when locked
+  const ROUTE_METHODS = new Set([
+    'use',
+    'all',
+    'post',
+    'put',
+    'delete',
+    'patch',
+    'route',
+  ]);
+
+  const guardRouteMethod = (original, operation) =>
+    function (...args) {
+      if (!unlocked) {
+        logBlocked(operation, '(route/middleware)');
+        return this;
+      }
+      return original.apply(app, args);
+    };
+
   const guardedApp = new Proxy(app, {
     get(target, prop, receiver) {
       const value = Reflect.get(target, prop, receiver);
       if (prop === 'set' || prop === 'enable' || prop === 'disable') {
         return guardMethod(value, prop);
+      }
+      // Block route-mounting methods — modules must not add middleware/routes
+      if (ROUTE_METHODS.has(prop)) {
+        return guardRouteMethod(value, prop);
       }
       if (prop === 'settings') {
         return getSettingsProxy(value);

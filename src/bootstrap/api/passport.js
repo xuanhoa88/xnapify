@@ -89,6 +89,9 @@ class OAuthRegistry {
  */
 export function configurePassport() {
   const oauth = new OAuthRegistry();
+  // Expose passport instance so the bootstrap layer can call
+  // oauth.passport.initialize() without a direct dependency.
+  oauth.passport = passport;
   return { passport, oauth };
 }
 

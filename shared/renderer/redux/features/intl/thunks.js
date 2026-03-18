@@ -82,6 +82,15 @@ export function setLocale(locale) {
       }
 
       // Check if locale is available
+      // Normalize bare language codes (e.g. 'en' → 'en-US') via prefix match
+      if (!availableLocales.includes(locale)) {
+        const prefixMatch = availableLocales.find(k => k.startsWith(locale));
+        if (prefixMatch) {
+          // eslint-disable-next-line no-param-reassign
+          locale = prefixMatch;
+        }
+      }
+
       if (!availableLocales.includes(locale)) {
         const requestedLocale = locale;
         const fallbackLocale = availableLocales[0] || DEFAULT_LOCALE;
