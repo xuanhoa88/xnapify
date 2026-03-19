@@ -12,9 +12,9 @@
 .adminHeader {
   position: sticky;
   top: 0;
-  z-index: 100;
-  background: var(--color-dark-navy);
-  border-bottom: 1px solid rgb(255 255 255 / 10%);
+  z-index: var(--z-sticky);
+  background: var(--sider-bg);
+  border-bottom: 1px solid var(--sider-border);
   box-shadow: 0 2px 8px rgb(0 0 0 / 15%);
   width: 100%;
 }
@@ -26,7 +26,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--spacing-4);
-  height: 56px;
+  height: var(--admin-header-height);
 }
 
 /* =============================================================================
@@ -77,5 +77,19 @@
   .headerContainer {
     padding: var(--spacing-2) var(--spacing-3);
     gap: var(--spacing-2);
+  }
+}
+
+/* =============================================================================
+   MOBILE TOGGLE — hidden on desktop, Sider has its own trigger
+   ============================================================================= */
+
+.mobileToggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .mobileToggle {
+    display: inline-flex;
   }
 }

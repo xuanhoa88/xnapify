@@ -10,7 +10,7 @@ import PropTypes from 'prop-types';
 import ImpersonationBanner from '../components/ImpersonationBanner';
 
 import s from './Admin.css';
-import Drawer from './Drawer';
+import Drawer, { SIDER_WIDTH, SIDER_MINIMAL_WIDTH } from './Drawer';
 import FlashMessage from './FlashMessage';
 import Footer from './Footer';
 import Header from './Header';
@@ -19,23 +19,31 @@ import Header from './Header';
  * AdminLayout Component
  *
  * A dedicated layout component for admin panel pages.
- * Features Header, Drawer, Footer, and FlashMessage components.
+ * Features a persistent Sider (Drawer), Header, Footer, and FlashMessage.
  */
-function AdminLayout({ children }) {
+function AdminLayout({ children, minimal = true }) {
   return (
-    <div className={s.root}>
-      <ImpersonationBanner />
-      <Header />
-      <Drawer />
-      <main className={s.content}>{children}</main>
-      <FlashMessage />
-      <Footer />
+    <div
+      className={s.root}
+      style={{
+        '--sider-width': `${minimal ? SIDER_MINIMAL_WIDTH : SIDER_WIDTH}px`,
+      }}
+    >
+      <Drawer minimal={minimal} />
+      <div className={s.body}>
+        <ImpersonationBanner />
+        <Header />
+        <main className={s.content}>{children}</main>
+        <FlashMessage />
+        <Footer />
+      </div>
     </div>
   );
 }
 
 AdminLayout.propTypes = {
   children: PropTypes.node,
+  minimal: PropTypes.bool,
 };
 
 export default AdminLayout;

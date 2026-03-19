@@ -10,8 +10,8 @@
    ============================================================================= */
 
 .adminFooter {
-  background: var(--color-dark-navy);
-  border-top: 1px solid rgb(255 255 255 / 10%);
+  background: var(--sider-bg);
+  border-top: 1px solid var(--sider-border);
   margin-top: auto;
 }
 

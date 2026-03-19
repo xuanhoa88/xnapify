@@ -5,12 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-/* Re-export shared variables for Admin components */
+/* =============================================================================
+   ADMIN LAYOUT — Sider + Content
+   ============================================================================= */
+
 .root {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   min-height: 100vh;
   background: var(--color-background-secondary);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--sider-width, var(--sider-width-expanded));
+  transition: margin-left 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .content {
@@ -18,7 +30,15 @@
   padding: var(--spacing-6);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
+  .root {
+    flex-direction: column;
+  }
+
+  .body {
+    margin-left: 0;
+  }
+
   .content {
     padding: var(--spacing-4);
   }

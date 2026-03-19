@@ -5,9 +5,10 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useCallback, useState, useEffect, useMemo } from 'react';
+import { useCallback, useRef, useState, useEffect, useMemo } from 'react';
 
 import clsx from 'clsx';
+import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -26,7 +27,11 @@ import { useWebSocket } from '@shared/ws/client';
 
 import s from './Drawer.css';
 
-function Drawer() {
+export const SIDER_WIDTH = 200;
+export const SIDER_COLLAPSED_WIDTH = 80;
+export const SIDER_MINIMAL_WIDTH = 48;
+
+function Drawer({ minimal = false }) {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const history = useHistory();
@@ -36,29 +41,64 @@ function Drawer() {
   const isAuth = useSelector(isAuthenticated);
   const user = useSelector(getUserProfile);
 
+  const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const siderRef = useRef(null);
+
   const [currentPath, setCurrentPath] = useState(
     () => history.location.pathname,
   );
 
   useEffect(() => {
-    // Subscribe to location changes
     const unsubscribe = history.listen(location => {
       setCurrentPath(location.pathname);
     });
     return unsubscribe;
   }, [history]);
 
-  const handleCloseDrawer = useCallback(() => {
-    dispatch(toggleDrawer('admin'));
-  }, [dispatch]);
+  // Detect mobile breakpoint
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    const handler = e => setIsMobile(e.matches);
+    handler(mq);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // Publish sider width as CSS custom property for layout coordination
+  // Initial value is set inline on .root in _layout.js; this handles dynamic toggling
+  useEffect(() => {
+    const el = siderRef.current;
+    const root = el && el.parentElement;
+    if (!root) return;
+    let width;
+    if (minimal && !collapsed) {
+      width = SIDER_MINIMAL_WIDTH;
+    } else if (!minimal && collapsed) {
+      width = SIDER_COLLAPSED_WIDTH;
+    } else {
+      width = SIDER_WIDTH;
+    }
+    root.style.setProperty('--sider-width', `${isMobile ? 0 : width}px`);
+  }, [collapsed, isMobile, minimal]);
+
+  const handleCloseMobileDrawer = useCallback(() => {
+    if (drawerOpen) {
+      dispatch(toggleDrawer('admin'));
+    }
+  }, [dispatch, drawerOpen]);
+
+  const handleToggleCollapse = useCallback(() => {
+    setCollapsed(prev => !prev);
+  }, []);
 
   const handleLogout = useCallback(async () => {
     await dispatch(logout());
-    handleCloseDrawer();
+    handleCloseMobileDrawer();
     if (ws) {
       ws.logout();
     }
-  }, [dispatch, handleCloseDrawer, ws]);
+  }, [dispatch, handleCloseMobileDrawer, ws]);
 
   const isActive = useCallback(
     (path, exact = false) => {
@@ -69,24 +109,17 @@ function Drawer() {
     [currentPath],
   );
 
-  // Navigation menu items with SVG icon names
   const dynamicMenus = useSelector(state =>
     state.ui.menus && state.ui.menus.admin ? state.ui.menus.admin : [],
   );
 
   const menuItems = useMemo(() => {
-    const hasPermission = (user, permission) => {
-      // If no permission required, allow
+    const hasPermission = (u, permission) => {
       if (!permission) return true;
-
-      // If user is not logged in, deny
-      if (!user) return false;
-
-      // Use shared RBAC logic for permission matching (supports wildcards)
-      return checkPermission(user, permission);
+      if (!u) return false;
+      return checkPermission(u, permission);
     };
 
-    // 1. Start with the hardcoded Main section
     const mainKey = t('admin:navigation.main', 'Main');
     const sections = [
       {
@@ -104,16 +137,13 @@ function Drawer() {
       },
     ];
 
-    // 2. Process dynamic menus (which are now already grouped by section in Redux)
     dynamicMenus.forEach(section => {
       if (!section || !section.items) return;
 
-      // Filter items by permission
       const validItems = section.items.filter(item =>
         hasPermission(user, item.permission),
       );
 
-      // Skip section if no valid items
       if (validItems.length === 0) return;
 
       sections.push({
@@ -128,79 +158,94 @@ function Drawer() {
       });
     });
 
-    // 3. Sort sections deterministically
     return sections.sort(
       (a, b) => a.order - b.order || a.ns.localeCompare(b.ns),
     );
   }, [t, user, dynamicMenus]);
 
   const userDisplayName = useMemo(() => {
-    if (!isAuth) return '';
-    if (!user) return '';
+    if (!isAuth || !user) return '';
     return user.profile && user.profile.display_name
       ? user.profile.display_name
       : user.email;
   }, [isAuth, user]);
 
+  // On desktop the sider is always visible; on mobile it overlays via redux toggle
+  // In minimal mode, collapsed=false means narrow (minimal), collapsed=true means expanded
+  // In normal mode, collapsed=false means expanded, collapsed=true means collapsed
+  const isExpanded = minimal ? collapsed : !collapsed;
+  const siderClass = clsx(s.sider, {
+    [s.collapsed]: !minimal && collapsed && !isMobile,
+    [s.minimal]: minimal && !collapsed && !isMobile,
+    [s.mobileOpen]: isMobile && drawerOpen,
+  });
+
+  let siderWidth;
+  if (minimal && !collapsed) {
+    siderWidth = SIDER_MINIMAL_WIDTH;
+  } else if (!minimal && collapsed) {
+    siderWidth = SIDER_COLLAPSED_WIDTH;
+  } else {
+    siderWidth = SIDER_WIDTH;
+  }
+
+  const isCompact = !isExpanded && !isMobile;
+
+  const renderLink = item => {
+    const linkClass = clsx(s.menuItem, {
+      [s.active]: isActive(item.path, item.exact),
+    });
+
+    const content = (
+      <>
+        <Icon name={item.icon} size={18} className={s.menuItemIcon} />
+        <span className={s.menuItemLabel}>{item.label}</span>
+        {isCompact && <span className={s.tooltip}>{item.label}</span>}
+      </>
+    );
+
+    const linkProps = {
+      className: linkClass,
+      onClick: isMobile ? handleCloseMobileDrawer : undefined,
+    };
+
+    if (item.external) {
+      return (
+        <a href={item.path} {...linkProps}>
+          {content}
+        </a>
+      );
+    }
+
+    return (
+      <Link to={item.path} {...linkProps}>
+        {content}
+      </Link>
+    );
+  };
+
   return (
     <>
-      <aside className={clsx(s.drawer, { [s.open]: drawerOpen })}>
-        {/* Header */}
-        <div className={s.drawerHeader}>
-          <div className={s.brand}>
-            <span className={s.brandLogo}>⚡</span>
-            <span className={s.brandName}>RSK</span>
-          </div>
-          <Button
-            variant='ghost'
-            iconOnly
-            onClick={handleCloseDrawer}
-            title={t('common.closeMenu', 'Close menu')}
-          >
-            <Icon name='close' size={20} />
-          </Button>
+      <aside
+        ref={siderRef}
+        className={siderClass}
+        style={!isMobile ? { width: siderWidth } : undefined}
+        data-sider
+      >
+        {/* Logo */}
+        <div className={s.logo}>
+          <span className={s.logoIcon}>⚡</span>
+          <span className={s.logoText}>RSK</span>
         </div>
 
-        {/* Navigation */}
-        <nav className={s.nav}>
-          {menuItems.map(groupBy => (
-            <div key={groupBy.ns} className={s.section}>
-              <h3 className={s.sectionTitle}>{groupBy.ns}</h3>
+        {/* Menu */}
+        <nav className={s.menu}>
+          {menuItems.map(group => (
+            <div key={group.ns} className={s.menuGroup}>
+              <div className={s.menuGroupLabel}>{group.ns}</div>
               <ul className={s.menuList}>
-                {groupBy.items.map(item => (
-                  <li key={item.path}>
-                    {item.external ? (
-                      <a
-                        href={item.path}
-                        className={clsx(s.menuLink, {
-                          [s.active]: isActive(item.path, item.exact),
-                        })}
-                        onClick={handleCloseDrawer}
-                      >
-                        <Icon
-                          name={item.icon}
-                          size={18}
-                          className={s.menuIcon}
-                        />
-                        <span className={s.menuLabel}>{item.label}</span>
-                      </a>
-                    ) : (
-                      <Link
-                        to={item.path}
-                        className={clsx(s.menuLink, {
-                          [s.active]: isActive(item.path, item.exact),
-                        })}
-                        onClick={handleCloseDrawer}
-                      >
-                        <Icon
-                          name={item.icon}
-                          size={18}
-                          className={s.menuIcon}
-                        />
-                        <span className={s.menuLabel}>{item.label}</span>
-                      </Link>
-                    )}
-                  </li>
+                {group.items.map(item => (
+                  <li key={item.path}>{renderLink(item)}</li>
                 ))}
               </ul>
             </div>
@@ -210,15 +255,19 @@ function Drawer() {
           <div className={s.divider} />
 
           {/* Quick Links */}
-          <div className={s.section}>
-            <h3 className={s.sectionTitle}>
+          <div className={s.menuGroup}>
+            <div className={s.menuGroupLabel}>
               {t('navigation.quick', 'Quick Links')}
-            </h3>
+            </div>
             <ul className={s.menuList}>
               <li>
-                <Link to='/' className={s.menuLink} onClick={handleCloseDrawer}>
-                  <Icon name='arrowUp' size={18} className={s.menuIcon} />
-                  <span className={s.menuLabel}>
+                <Link
+                  to='/'
+                  className={s.menuItem}
+                  onClick={isMobile ? handleCloseMobileDrawer : undefined}
+                >
+                  <Icon name='arrowUp' size={18} className={s.menuItemIcon} />
+                  <span className={s.menuItemLabel}>
                     {t('navigation.backToSite', 'Back to Site')}
                   </span>
                 </Link>
@@ -230,39 +279,70 @@ function Drawer() {
         {/* User Footer */}
         {isAuth && user && (
           <div className={s.footer}>
-            <div className={s.userInfo}>
-              <div className={s.userAvatar}>
-                {userDisplayName.charAt(0).toUpperCase()}
-              </div>
-              <div className={s.userDetails}>
-                <span className={s.userName}>
-                  {userDisplayName || t('common.admin', 'Admin')}
-                </span>
-                <span className={s.userRole}>{user.email}</span>
-              </div>
+            <div className={s.userAvatar}>
+              {userDisplayName.charAt(0).toUpperCase()}
+            </div>
+            <div className={s.userDetails}>
+              <span className={s.userName}>
+                {userDisplayName || t('common.admin', 'Admin')}
+              </span>
+              <span className={s.userRole}>{user.email}</span>
             </div>
             <Button
               variant='ghost'
               iconOnly
               onClick={handleLogout}
               title={t('navigation.logout', 'Logout')}
+              className={s.logoutBtn}
             >
-              <Icon name='logout' size={18} />
+              <Icon name='logout' size={16} />
             </Button>
+          </div>
+        )}
+
+        {/* Collapse trigger — desktop only */}
+        {!isMobile && (
+          <div
+            className={s.trigger}
+            onClick={handleToggleCollapse}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleToggleCollapse();
+              }
+            }}
+            role='button'
+            tabIndex={0}
+            title={
+              isExpanded
+                ? t('common.collapse', 'Collapse')
+                : t('common.expand', 'Expand')
+            }
+          >
+            <span
+              className={s.triggerIcon}
+              style={isExpanded ? { transform: 'rotate(180deg)' } : undefined}
+            >
+              <Icon name='chevronRight' size={16} />
+            </span>
           </div>
         )}
       </aside>
 
-      {/* Overlay */}
-      {drawerOpen && (
+      {/* Mobile overlay */}
+      {isMobile && drawerOpen && (
         <div
           className={s.overlay}
-          onClick={handleCloseDrawer}
+          onClick={handleCloseMobileDrawer}
           role='presentation'
         />
       )}
     </>
   );
 }
+
+Drawer.propTypes = {
+  minimal: PropTypes.bool,
+};
 
 export default Drawer;

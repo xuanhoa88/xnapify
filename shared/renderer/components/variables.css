@@ -54,6 +54,17 @@
   --color-dark-text: #f9fafb; /* Gray 50 */
   --color-dark-navy: #1a1a2e; /* Dark Navy - Header/Footer */
 
+  /* Sider / Admin chrome */
+  --sider-bg: #001529;
+  --sider-width-expanded: 200px;
+  --sider-width-collapsed: 80px;
+  --sider-width-minimal: 48px;
+  --sider-border: rgb(255 255 255 / 8%);
+  --sider-text: rgb(255 255 255 / 65%);
+  --sider-text-hover: #fff;
+  --sider-text-active: var(--color-primary);
+  --admin-header-height: 56px;
+
   /* Gradient Backgrounds */
   --gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --gradient-secondary: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);

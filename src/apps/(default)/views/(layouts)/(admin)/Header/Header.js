@@ -45,14 +45,16 @@ function AdminHeader() {
       <div className={s.headerContainer}>
         {/* Left Section - Toggle & Breadcrumbs */}
         <div className={s.leftSection}>
-          <Button
-            variant='ghost'
-            iconOnly
-            onClick={handleToggleDrawer}
-            title={t('common.toggleDrawer', 'Toggle drawer')}
-          >
-            <Icon name='menu' size={20} />
-          </Button>
+          <span className={s.mobileToggle}>
+            <Button
+              variant='ghost'
+              iconOnly
+              onClick={handleToggleDrawer}
+              title={t('common.toggleDrawer', 'Toggle drawer')}
+            >
+              <Icon name='menu' size={20} />
+            </Button>
+          </span>
           <Breadcrumbs />
         </div>
 
