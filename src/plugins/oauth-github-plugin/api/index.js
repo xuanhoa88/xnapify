@@ -22,7 +22,7 @@ export default {
     }
 
     const appUrl = process.env['RSK_APP_URL'] || 'http://localhost:1337';
-    const oauth = context.app.get('container').resolve('oauth');
+    const oauth = context.container.resolve('oauth');
 
     oauth.registerProvider('github', {
       strategy: new GitHubStrategy(
@@ -42,7 +42,7 @@ export default {
   },
 
   async destroy(registry, context) {
-    const oauth = context.app.get('container').resolve('oauth');
+    const oauth = context.container.resolve('oauth');
     if (oauth && oauth.hasProvider('github')) {
       oauth.unregisterProvider('github');
     }

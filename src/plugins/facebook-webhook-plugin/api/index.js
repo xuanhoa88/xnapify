@@ -46,7 +46,7 @@ export default {
    * @param {Object} context - App context
    */
   async init(registry, context) {
-    const container = context.app.get('container');
+    const { container } = context;
     const webhook = container.resolve('webhook');
 
     const secret = process.env.FACEBOOK_WEBHOOK_SECRET;
@@ -129,7 +129,7 @@ export default {
    * @param {Object} context - App context
    */
   async destroy(registry, context) {
-    const webhook = context.app.get('container').resolve('webhook');
+    const webhook = context.container.resolve('webhook');
     webhook.removeHandler('facebook');
 
     // Clear handlers

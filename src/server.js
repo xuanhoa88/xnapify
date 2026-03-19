@@ -1089,12 +1089,6 @@ export async function disposeApp() {
     errors.push(err);
   }
 
-  // Plugin manager is NOT destroyed during HMR dispose — destroying wipes
-  // PLUGIN_CONTEXT (cwd, container, fetch), making resolvePluginDir() fail
-  // for all API requests until the next SSR request re-initializes it.
-  // The plugin refresh handler (plugins-refreshed IPC message) already
-  // handles re-reading manifests from disk for targeted HMR reloads.
-
   invalidateCaches();
   console.info('   ✔ Caches cleared');
 

@@ -381,15 +381,16 @@ async function checkForUpdate() {
       }
     }
 
+    // Notify browser sync BEFORE reloading the bundle
+    // so clients see "restarting" before the "ready/reload" message
+    await notifyBrowserSyncRestart();
+
     // Load new server bundle
     let createServer, bootstrapApp;
     ({ createServer, bootstrapApp, disposeApp: dispose } = loadServerBundle());
 
     // Recreate dev server with new bundle
     await prepareDevServer({ createServer, bootstrapApp }, server);
-
-    // Notify browser sync to restart
-    await notifyBrowserSyncRestart();
 
     return true;
   } catch (err) {

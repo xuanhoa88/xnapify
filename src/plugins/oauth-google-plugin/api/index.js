@@ -22,7 +22,7 @@ export default {
     }
 
     const appUrl = process.env['RSK_APP_URL'] || 'http://localhost:1337';
-    const oauth = context.app.get('container').resolve('oauth');
+    const oauth = context.container.resolve('oauth');
 
     oauth.registerProvider('google', {
       strategy: new GoogleStrategy(
@@ -41,7 +41,7 @@ export default {
   },
 
   async destroy(registry, context) {
-    const oauth = context.app.get('container').resolve('oauth');
+    const oauth = context.container.resolve('oauth');
     if (oauth && oauth.hasProvider('google')) {
       oauth.unregisterProvider('google');
     }
