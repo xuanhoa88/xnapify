@@ -124,7 +124,7 @@ Use preconfigured launch configurations:
 ```javascript
 // Server-side: Check WebSocket connections using the @shared/ws API
 app.get('/api/ws-debug', (req, res) => {
-  const ws = req.app.get('ws');
+  const ws = req.app.get('container').resolve('ws');
   if (!ws) {
     return res.status(500).json({ error: 'WebSocket server not initialized' });
   }
@@ -165,7 +165,7 @@ console.log('Status:', ws.getStatus());
 GET /api/users/:id/permissions
 
 // Check if user has specific permission
-const auth = req.app.get('auth');
+const auth = req.app.get('container').resolve('auth');
 const hasPermission = await auth.helpers.hasPermission(userId, 'posts:update');
 console.log('Has permission:', hasPermission);
 
@@ -185,7 +185,7 @@ app.use((req, res, next) => {
 
 ```javascript
 // Server-side: Verify token manually
-const jwt = req.app.get('auth').jwt;
+const jwt = req.app.get('container').resolve('auth').jwt;
 try {
   const decoded = jwt.verify(token);
   console.log('Token payload:', decoded);

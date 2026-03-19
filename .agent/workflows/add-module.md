@@ -281,7 +281,7 @@ import * as controller from '../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.app.get('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -323,7 +323,7 @@ import * as controller from '../../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.app.get('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }

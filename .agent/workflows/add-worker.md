@@ -89,7 +89,7 @@ export default workerPool;
 import workerPool from '../workers';
 
 export async function generateReport(req, res) {
-  const http = req.app.get('http');
+  const http = req.app.get('container').resolve('http');
 
   try {
     const { startDate, endDate } = req.body;

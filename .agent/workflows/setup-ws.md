@@ -8,7 +8,7 @@ Setup WebSocket for real-time bidirectional communication.
 
 The application includes a robust, shared WebSocket implementation located in `src/shared/ws`.
 
-- **Server**: Initialized in `src/server.js` and accessible via `app.get('ws')`.
+- **Server**: Initialized in `src/server.js` and accessible via `app.get('container').resolve('ws')`.
 - **Client**: Initialized in `src/client.js` and accessible via the `useWebSocket` utility.
 
 ## Server-Side Usage
@@ -22,7 +22,7 @@ In your API modules or routes, access the WebSocket server instance from the Exp
 ```javascript
 // @apps/chat/index.js
 export default async function chatModule(app) {
-  const ws = app.get('ws'); // Note: key is 'ws', not 'wss'
+  const ws = app.get('container').resolve('ws'); // Note: key is 'ws', not 'wss'
 
   if (ws) {
     // Access active connections

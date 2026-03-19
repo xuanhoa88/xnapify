@@ -107,7 +107,7 @@ Keep cron handlers lightweight — dispatch heavy processing to a worker pool:
 
 ```javascript
 schedule.register('reports:weekly', '0 9 * * 1', async () => {
-  const workerPool = app.get('reports:workerPool');
+  const workerPool = app.get('container').resolve('reports:workerPool');
   await workerPool.sendRequest('weekly', 'GENERATE_REPORT', {
     week: getCurrentWeek(),
   });

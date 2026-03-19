@@ -14,7 +14,7 @@ import webhook from '@shared/api/engines/webhook';
 
 ## Engines
 
-All engines live in `engines/` and are auto-discovered at startup. Each engine is a singleton accessible via `import` or `app.get('name')`.
+All engines live in `engines/` and are auto-discovered at startup. Each engine is a singleton accessible via `import` or `app.get('container').resolve('name')`.
 
 | Engine | Purpose | Example |
 |---|---|---|
