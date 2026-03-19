@@ -334,9 +334,9 @@ const localeMiddleware = expressRequestLanguage({
 // View & Store Initialization
 // ---------------------------------------------------------------------------
 
-async function initializeViews({ container }) {
+async function initializeViews({ container, store }) {
   const m = await import('./bootstrap/views');
-  const views = await m.default({ plugin: pluginManager, container });
+  const views = await m.default({ plugin: pluginManager, container, store });
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
@@ -481,7 +481,11 @@ function makeSsrMiddleware(baseUrl) {
     let store = null;
     let context = null;
 
+    // Abort controller for cancelling the request
     const abortController = new AbortController();
+
+    // Container for dependency injection
+    const ssrContainer = new Container();
 
     const authHeader = validateCookieHeader(req.headers.cookie || '');
     const rawLocale = req.language || DEFAULT_LOCALE;
@@ -541,7 +545,7 @@ function makeSsrMiddleware(baseUrl) {
         i18n,
         locale,
         history,
-        container: new Container(),
+        container: ssrContainer,
         pathname: history.location.pathname,
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
         signal: abortController.signal,
@@ -553,7 +557,7 @@ function makeSsrMiddleware(baseUrl) {
           await pluginManager.init({
             ...context,
             cwd: SERVER_CONFIG.cwd,
-            container: req.app.get('container'),
+            container: ssrContainer,
           });
           pluginsInitialized = true;
         } catch (err) {
@@ -582,7 +586,7 @@ function makeSsrMiddleware(baseUrl) {
       context.store = store;
 
       const views = await promiseWithDeadline(
-        initializeViews({ container: req.app.get('container') }),
+        initializeViews({ container: ssrContainer, store }),
         SERVER_TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
