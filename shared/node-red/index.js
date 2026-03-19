@@ -515,13 +515,18 @@ export class NodeRedManager {
             // Cookie is valid — proceed normally
             return next();
           } catch {
-            // Token invalid/expired — fall through to invalidation
+            // Access token expired — check if refresh token still exists.
+            // If so, the user hasn't logged out; keep Node-RED's own
+            // bearer token alive so deploys don't fail mid-session.
+            if (auth.getRefreshTokenFromCookie(req)) {
+              return next();
+            }
           }
         }
 
-        // Main app session gone: strip Node-RED's bearer token so its
-        // own BearerStrategy fails, triggering the login dialog which
-        // then redirects to /admin via RskAuthStrategy
+        // Main app session truly gone (no cookies): strip Node-RED's
+        // bearer token so its BearerStrategy fails, triggering the
+        // login dialog which redirects to /admin via RskAuthStrategy
         delete req.headers.authorization;
         return next();
       });

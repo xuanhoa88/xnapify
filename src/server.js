@@ -1035,9 +1035,7 @@ export async function bootstrapApp(app, server, options = {}) {
     port,
     host: resolvedHost,
     functionGlobalContext: {
-      container() {
-        return app.get('container');
-      },
+      container: () => app.get('container'),
     },
   });
   await appState.nodeRED.setupApiProxy(app, SERVER_CONFIG.apiPrefix);
