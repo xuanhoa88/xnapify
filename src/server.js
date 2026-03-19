@@ -1089,14 +1089,11 @@ export async function disposeApp() {
     errors.push(err);
   }
 
-  try {
-    if (typeof pluginManager.destroy === 'function') {
-      await pluginManager.destroy();
-    }
-  } catch (err) {
-    console.error('   ⚠️  Plugin manager shutdown error:', err.message);
-    errors.push(err);
-  }
+  // Plugin manager is NOT destroyed during HMR dispose — destroying wipes
+  // PLUGIN_CONTEXT (cwd, container, fetch), making resolvePluginDir() fail
+  // for all API requests until the next SSR request re-initializes it.
+  // The plugin refresh handler (plugins-refreshed IPC message) already
+  // handles re-reading manifests from disk for targeted HMR reloads.
 
   invalidateCaches();
   console.info('   ✔ Caches cleared');
@@ -1117,6 +1114,15 @@ export async function disposeApp() {
  */
 export async function destroyServer(server) {
   await disposeApp();
+
+  // Destroy plugin manager only on full shutdown (not during HMR dispose)
+  try {
+    if (typeof pluginManager.destroy === 'function') {
+      await pluginManager.destroy();
+    }
+  } catch (err) {
+    console.error('   ⚠️  Plugin manager shutdown error:', err.message);
+  }
 
   if (server && server.listening) {
     console.info('   Shutting down HTTP server...');

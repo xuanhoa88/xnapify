@@ -74,6 +74,9 @@ export const getPlugin = async (req, res) => {
 
     return http.sendSuccess(res, pluginData);
   } catch (err) {
+    if (err.status === 404) {
+      return http.sendError(res, err.message, 404);
+    }
     return http.sendServerError(res, 'Failed to get plugin details', err);
   }
 };

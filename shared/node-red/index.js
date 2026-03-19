@@ -499,7 +499,7 @@ export class NodeRedManager {
       // When the main app's JWT cookie is cleared (user logged out
       // from /admin), strip the Node-RED bearer token from the request
       // so Node-RED's own auth fails naturally and shows the login dialog.
-      app.use(this._settings.httpAdminRoot, (req, res, next) => {
+      app.use(this._settings.httpAdminRoot, (req, _res, next) => {
         const container = app.get('container');
         const auth = container.resolve('auth');
         const jwt = container.resolve('jwt');
