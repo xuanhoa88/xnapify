@@ -52,7 +52,11 @@ function Plugins() {
 
   // Modals & Refs
   const deleteModalRef = useRef();
+  const activateModalRef = useRef();
+  const deactivateModalRef = useRef();
+  const installModalRef = useRef();
   const fileInputRef = useRef();
+  const pendingFileRef = useRef(null);
 
   useEffect(() => {
     dispatch(fetchPlugins());
@@ -91,6 +95,7 @@ function Plugins() {
     setActiveDropdownId(prev => (prev === id ? null : id));
   }, []);
 
+  // --- Uninstall (existing ConfirmModal.Delete) ---
   const handleDelete = useCallback(plugin => {
     deleteModalRef.current && deleteModalRef.current.open(plugin);
   }, []);
@@ -102,39 +107,62 @@ function Plugins() {
     [dispatch],
   );
 
+  // --- Activate ---
+  const handleActivate = useCallback(plugin => {
+    activateModalRef.current && activateModalRef.current.open(plugin);
+  }, []);
+
+  const handleActivateAction = useCallback(
+    async item => {
+      await dispatch(
+        togglePluginStatus({ id: item.id, isActive: true }),
+      ).unwrap();
+      dispatch(fetchPlugins());
+    },
+    [dispatch],
+  );
+
+  // --- Deactivate ---
+  const handleDeactivate = useCallback(plugin => {
+    deactivateModalRef.current && deactivateModalRef.current.open(plugin);
+  }, []);
+
+  const handleDeactivateAction = useCallback(
+    async item => {
+      await dispatch(
+        togglePluginStatus({ id: item.id, isActive: false }),
+      ).unwrap();
+      dispatch(fetchPlugins());
+    },
+    [dispatch],
+  );
+
+  // --- Install (Upload) ---
   const handleUploadClick = useCallback(() => {
     fileInputRef.current && fileInputRef.current.click();
   }, []);
 
-  const handleFileChange = useCallback(
-    async event => {
-      const file = event.target.files[0];
-      if (file) {
-        try {
-          await dispatch(uploadPlugin(file)).unwrap();
-          // Reset input
-          event.target.value = null;
-        } catch (error) {
-          console.error('Upload failed', error);
-        }
-      }
-    },
-    [dispatch],
-  );
+  const handleFileChange = useCallback(event => {
+    const file = event.target.files[0];
+    if (file) {
+      pendingFileRef.current = file;
+      installModalRef.current &&
+        installModalRef.current.open({ name: file.name });
+    }
+    // Reset input so the same file can be re-selected
+    event.target.value = null;
+  }, []);
 
-  const handleToggleStatus = useCallback(
-    async (plugin, isActive) => {
-      try {
-        await dispatch(
-          togglePluginStatus({ id: plugin.id, isActive }),
-        ).unwrap();
-        dispatch(fetchPlugins());
-      } catch (error) {
-        console.error('Toggle status failed', error);
-      }
-    },
-    [dispatch],
-  );
+  const handleInstallAction = useCallback(async () => {
+    const file = pendingFileRef.current;
+    if (!file) return;
+    await dispatch(uploadPlugin(file)).unwrap();
+    pendingFileRef.current = null;
+  }, [dispatch]);
+
+  const handleInstallCancel = useCallback(() => {
+    pendingFileRef.current = null;
+  }, []);
 
   const handleUpgrade = useCallback(
     async plugin => {
@@ -214,7 +242,8 @@ function Plugins() {
             plugin={plugin}
             activeDropdownId={activeDropdownId}
             onToggleDropdown={handleToggleDropdown}
-            onToggleStatus={handleToggleStatus}
+            onActivate={handleActivate}
+            onDeactivate={handleDeactivate}
             onUpgrade={handleUpgrade}
             onDelete={handleDelete}
             canUpdate={canUpdate}
@@ -222,6 +251,7 @@ function Plugins() {
         ))}
       </div>
 
+      {/* Uninstall confirmation */}
       <ConfirmModal.Delete
         ref={deleteModalRef}
         title={t('admin:plugins.uninstall', 'Uninstall Plugin')}
@@ -231,6 +261,55 @@ function Plugins() {
         )}
         getItemName={p => p.name}
         onDelete={handleDeleteAction}
+      />
+
+      {/* Activate confirmation */}
+      <ConfirmModal.Action
+        ref={activateModalRef}
+        title={t('admin:plugins.activate', 'Activate Plugin')}
+        getDescription={p =>
+          t(
+            'admin:plugins.activateConfirm',
+            'Are you sure you want to activate "{{name}}"? The plugin will start running immediately.',
+            { name: p.name },
+          )
+        }
+        onConfirm={handleActivateAction}
+        confirmLabel={t('admin:common.activate', 'Activate')}
+        confirmingLabel={t('admin:common.activating', 'Activating...')}
+      />
+
+      {/* Deactivate confirmation */}
+      <ConfirmModal.Action
+        ref={deactivateModalRef}
+        title={t('admin:plugins.deactivate', 'Deactivate Plugin')}
+        getDescription={p =>
+          t(
+            'admin:plugins.deactivateConfirm',
+            'Are you sure you want to deactivate "{{name}}"? The plugin will stop running.',
+            { name: p.name },
+          )
+        }
+        onConfirm={handleDeactivateAction}
+        confirmLabel={t('admin:common.deactivate', 'Deactivate')}
+        confirmingLabel={t('admin:common.deactivating', 'Deactivating...')}
+      />
+
+      {/* Install confirmation */}
+      <ConfirmModal.Action
+        ref={installModalRef}
+        title={t('admin:plugins.install', 'Install Plugin')}
+        getDescription={p =>
+          t(
+            'admin:plugins.installConfirm',
+            'Are you sure you want to install "{{name}}"?',
+            { name: p.name },
+          )
+        }
+        onConfirm={handleInstallAction}
+        onSuccess={handleInstallCancel}
+        confirmLabel={t('admin:plugins.installButton', 'Install')}
+        confirmingLabel={t('admin:plugins.installing', 'Installing...')}
       />
     </div>
   );

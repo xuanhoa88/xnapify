@@ -22,7 +22,8 @@ function PluginCard({
   plugin,
   activeDropdownId,
   onToggleDropdown,
-  onToggleStatus,
+  onActivate,
+  onDeactivate,
   onUpgrade,
   onDelete,
   canUpdate,
@@ -38,16 +39,14 @@ function PluginCard({
     }
   }, [isLocalLoading, plugin.job_status]);
 
-  const handleToggleStatus = useCallback(async () => {
+  const handleToggleStatus = useCallback(() => {
     if (!canUpdate || isLoading) return;
-    setLocalLoading(true);
-    try {
-      await onToggleStatus(plugin, !plugin.is_active);
-    } catch (error) {
-      console.error('Failed to toggle status', error);
-      setLocalLoading(false); // Only reset on error. Success response includes job_status: ACTIVE.
+    if (plugin.is_active) {
+      onDeactivate(plugin);
+    } else {
+      onActivate(plugin);
     }
-  }, [canUpdate, isLoading, onToggleStatus, plugin]);
+  }, [canUpdate, isLoading, plugin, onActivate, onDeactivate]);
 
   return (
     <Card
@@ -179,7 +178,8 @@ PluginCard.propTypes = {
   }).isRequired,
   activeDropdownId: PropTypes.string,
   onToggleDropdown: PropTypes.func.isRequired,
-  onToggleStatus: PropTypes.func.isRequired,
+  onActivate: PropTypes.func.isRequired,
+  onDeactivate: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   canUpdate: PropTypes.bool,
