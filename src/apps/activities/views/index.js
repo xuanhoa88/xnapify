@@ -9,6 +9,7 @@
  * Activity Module Views Entry Point
  */
 
+import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
@@ -22,7 +23,10 @@ const viewsContext = require.context(
 /**
  * Providers hook — share client-side services/state with other view modules.
  */
-export function providers({ container }) {
+export function providers({ container, store }) {
+  // Inject Redux reducer
+  store.injectReducer(SLICE_NAME, reducer);
+
   // Bind activities state
   container.bind('activities:admin:state', () => ({ selectors, thunks }), true);
 }

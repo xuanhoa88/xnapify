@@ -16,8 +16,6 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
-import reducer, { SLICE_NAME } from '../redux';
-
 import ActivityList from './ActivityList';
 
 export const middleware = requirePermission('activities:read');
@@ -55,13 +53,6 @@ export function unregister({ store }) {
       path: '/admin/activities',
     }),
   );
-}
-
-/**
- * Init Redux
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

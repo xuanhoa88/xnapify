@@ -10,8 +10,8 @@ import runtime from './features/runtime';
 import ui from './features/ui';
 import user from './features/user';
 
-// Note: admin reducers are now dynamically injected by page modules
-// via store.injectReducer() in their route init hooks
+// Note: admin reducers are dynamically injected by page modules
+// via store.injectReducer() in their views/index.js providers() hook
 
 // Export as object for dynamic injection in configureStore
 export default {

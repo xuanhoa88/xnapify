@@ -6,14 +6,6 @@
  */
 
 import Dashboard from './Dashboard';
-import reducer, { SLICE_NAME } from './redux';
-
-/**
- * Init function - inject Redux slice
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
 
 /**
  * Page metadata

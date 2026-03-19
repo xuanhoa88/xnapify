@@ -12,8 +12,6 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
-import reducer, { SLICE_NAME } from '../redux';
-
 import Groups from './Groups';
 
 export const middleware = requirePermission('groups:read');
@@ -51,13 +49,6 @@ export function unregister({ store }) {
       path: '/admin/groups',
     }),
   );
-}
-
-/**
- * Init function - inject Redux slice
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

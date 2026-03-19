@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
@@ -36,7 +37,10 @@ function log(phase) {
  * Providers hook — called during view bootstrap to share
  * client-side services/state with other view modules.
  */
-export function providers({ container }) {
+export function providers({ container, store }) {
+  // Inject Redux reducer
+  store.injectReducer(SLICE_NAME, reducer);
+
   container.bind('emails:admin:state', () => ({ selectors, thunks }), true);
 }
 

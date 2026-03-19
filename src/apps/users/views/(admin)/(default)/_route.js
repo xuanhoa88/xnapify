@@ -12,8 +12,6 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
-import reducer, { SLICE_NAME } from '../redux';
-
 import Users from './Users';
 
 export const middleware = requirePermission('users:read');
@@ -51,13 +49,6 @@ export function unregister({ store }) {
       path: '/admin/users',
     }),
   );
-}
-
-/**
- * Init function - inject Redux slice
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

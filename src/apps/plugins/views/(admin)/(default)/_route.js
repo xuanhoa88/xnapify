@@ -13,14 +13,9 @@ import {
 } from '@shared/renderer/redux';
 
 import Plugins from './Plugins';
-import reducer, { SLICE_NAME } from './redux';
 
 // Protect route with 'plugins:read' permission
 export const middleware = requirePermission('plugins:read');
-
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
 
 /**
  * Register menu item for this route

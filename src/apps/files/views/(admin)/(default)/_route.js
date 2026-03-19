@@ -12,8 +12,6 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
-import reducer, { SLICE_NAME } from '../redux';
-
 import Files from './Files';
 
 // Load translations
@@ -72,13 +70,6 @@ export function unregister({ store }) {
       path: '/admin/files',
     }),
   );
-}
-
-/**
- * Init function - inject Redux slice
- */
-export function init({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**

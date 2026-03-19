@@ -95,11 +95,12 @@ class AppRouter extends Router {
  */
 export default async function initializeRouter(options = {}) {
   // ─── Initialize ─────────────────────────────────────────────────────
-  const { plugin, container } = options;
+  const { plugin, container, store } = options;
 
   // Discover modules and run lifecycle phases (translations → providers → views)
   const { mergedAdapter } = await discoverModules(viewsLifecycleContext, {
     container,
+    store,
   });
 
   if (!mergedAdapter) {

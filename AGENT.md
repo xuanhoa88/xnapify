@@ -177,7 +177,7 @@ The application uses an auto-discovery system for both API modules and page comp
 - **Store Configuration:** `shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
-- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in route `boot` hook
+- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `views/index.js` `providers()` hook
 
 ### 5. Authentication & Authorization
 
@@ -507,7 +507,6 @@ function MyComponent() {
 
 ```javascript
 // @apps/blog/views/(admin)/posts/_route.js
-import reducer, { SLICE_NAME } from './redux';
 import PostsList from './PostsList';
 import {
   addBreadcrumb,
@@ -536,12 +535,7 @@ export function register({ store, i18n }) {
   );
 }
 
-// 3. Boot - inject Redux slice
-export function boot({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-}
-
-// 4. Mount - dispatch breadcrumb
+// 3. Mount - dispatch breadcrumb
 export function mount({ store, i18n, path }) {
   store.dispatch(
     addBreadcrumb(
@@ -551,12 +545,12 @@ export function mount({ store, i18n, path }) {
   );
 }
 
-// 5. Page metadata
+// 4. Page metadata
 export async function getInitialProps({ i18n }) {
   return { title: i18n.t('admin.posts.title', 'Posts Management') };
 }
 
-// 6. Component export
+// 5. Component export
 export default PostsList;
 ```
 
@@ -566,10 +560,11 @@ export default PostsList;
 | ----------------- | ---------------------------- | -------------------- |
 | `register`        | Register menus, global state | Route discovered     |
 | `unregister`      | Cleanup menus, global state  | Route unloaded       |
-| `boot`            | Inject Redux reducer         | Before route renders |
 | `mount`           | Dispatch breadcrumbs         | Route mounted        |
 | `middleware`      | Permission checks, redirects | Before rendering     |
 | `getInitialProps` | Data fetching, page metadata | Before rendering     |
+
+> **Note:** Redux reducer injection (`store.injectReducer`) is handled in `views/index.js` `providers()` hook, not in `_route.js`.
 
 ### 5. API Module Structure
 

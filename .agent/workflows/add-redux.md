@@ -518,17 +518,46 @@ export {
 export { default } from './slice';
 ```
 
-## 5. Register Reducer in Route
+## 5. Register Reducer in Module Bootstrap
 
-Use route lifecycle hooks in the view's `_route.js`:
+Inject the Redux reducer in the module's `views/index.js` `providers()` hook, not in `_route.js`:
+
+```javascript
+// @apps/blog/views/index.js
+import reducer, { SLICE_NAME } from './(admin)/posts/redux';
+import * as selectors from './(admin)/posts/redux/selector';
+import * as thunks from './(admin)/posts/redux/thunks';
+
+const viewsContext = require.context(
+  '.',
+  true,
+  /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
+);
+
+/**
+ * Providers hook — inject Redux reducers and share state at bootstrap time.
+ */
+export function providers({ container, store }) {
+  // Inject Redux reducer
+  store.injectReducer(SLICE_NAME, reducer);
+
+  // Bind state/thunks for cross-module access
+  container.bind('blog:admin:state', () => ({ selectors, thunks }), true);
+}
+
+export function views() {
+  return viewsContext;
+}
+```
+
+Then in the route file, only keep navigation and data-fetching hooks:
 
 ```javascript
 // @apps/blog/views/(admin)/posts/_route.js
-import reducer, { SLICE_NAME } from './redux';
-import PostsList from './PostsList';
 import { addBreadcrumb } from '@shared/renderer/redux';
 import { requirePermission } from '@shared/renderer/components/Rbac';
 import { registerMenu, unregisterMenu } from '@shared/renderer/redux';
+import PostsList from './PostsList';
 
 /**
  * Middleware - permission check
@@ -563,13 +592,6 @@ export function unregister({ store }) {
       path: '/admin/posts',
     }),
   );
-}
-
-/**
- * Boot - inject Redux slice (called once per route lifecycle)
- */
-export function boot({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**
@@ -721,16 +743,17 @@ export default PostsList;
 | ----------------- | -------------------------------------- | -------------------- |
 | `register`        | Register menus, global state           | Route discovered     |
 | `unregister`      | Cleanup menus, global state            | Route unloaded       |
-| `boot`            | Inject Redux reducer                   | Before route renders |
 | `mount`           | Dispatch breadcrumbs, track navigation | Route mounted        |
 | `middleware`      | Permission checks, redirects           | Before rendering     |
 | `getInitialProps` | Data fetching, page metadata           | Before rendering     |
+
+> **Note:** Redux reducer injection (`store.injectReducer`) is handled in `views/index.js` `providers()`, not in `_route.js`.
 
 ## Key Patterns
 
 1. **Module-level Redux** - Redux features live in `views/{view-path}/redux/` not shared
 2. **SLICE_NAME constant** - Use namespaced slice name like `@admin/posts` for dynamic injection
-3. **boot() for reducer injection** - Use `store.injectReducer(SLICE_NAME, reducer)` in `boot` hook
+3. **providers() for reducer injection** - Use `store.injectReducer(SLICE_NAME, reducer)` in `views/index.js` `providers()` hook
 4. **register() for menus** - Register admin menu items when route is discovered
 5. **Per-operation loading/error** - Track each operation independently (list, fetch, create, update, delete)
 6. **Initialized tracking** - Track if data has been fetched to avoid duplicate requests

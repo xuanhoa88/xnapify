@@ -38,7 +38,7 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export the following hooks:
-   - `providers({ container })`: bind UI components or Redux states to the container for cross-module usage.
+   - `providers({ container, store })`: bind UI components or Redux states to the container for cross-module usage. Use `store.injectReducer(SLICE_NAME, reducer)` to inject Redux reducers at bootstrap time.
    - `views()`: returns Webpack context for view discovery.
 
 3. **Defining Pages:** 

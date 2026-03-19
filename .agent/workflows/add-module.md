@@ -541,6 +541,7 @@ export async function down(connection, Sequelize) {
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import reducer, { SLICE_NAME } from './(admin)/redux';
 import RoleTag from './(admin)/components/RoleTag';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
@@ -570,9 +571,12 @@ function log(phase) {
  * Providers hook — share client-side services with other modules.
  * Called during view bootstrap before route initialization.
  *
- * @param {Object} context - Shared context (container, plugin, etc.)
+ * @param {Object} context - Shared context (container, store, plugin, etc.)
  */
-export function providers({ container }) {
+export function providers({ container, store }) {
+  // Inject Redux reducer at bootstrap time
+  store.injectReducer(SLICE_NAME, reducer);
+
   // Bind Redux state/actions
   container.bind(
     '{module-name}:admin:state',
@@ -624,7 +628,6 @@ Frontend routes work similarly to backend routes, but use React:
 
 import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
 import ModuleList from './ModuleList';
-import reducer, { SLICE_NAME } from '../redux/slice';
 
 /**
  * Middleware — permission check
@@ -659,13 +662,6 @@ export function register({ store, i18n, plugin }) {
       order: 20,
     },
   });
-}
-
-/**
- * Boot — inject Redux slice
- */
-export function boot({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**
@@ -959,7 +955,7 @@ Routes are discovered from `views/` using special files:
 - Check view pattern in views regex: `_route.js`, `_layout.js`
 - Verify view route exports `default` component
 - Check middleware returns `next()` for route to continue
-- Ensure Redux store is injected in `boot()` hook
+- Ensure Redux store is injected in `views/index.js` `providers()` hook
 
 ### Database Models Missing
 

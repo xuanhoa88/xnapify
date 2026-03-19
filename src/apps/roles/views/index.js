@@ -5,6 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
@@ -41,7 +42,10 @@ function log(phase) {
  *
  * @param {Object} context - Shared context (e.g., container, plugin)
  */
-export function providers({ container }) {
+export function providers({ container, store }) {
+  // Inject Redux reducer
+  store.injectReducer(SLICE_NAME, reducer);
+
   // Bind admin state
   container.bind('roles:admin:state', () => ({ selectors, thunks }), true);
 }

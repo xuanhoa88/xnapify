@@ -203,7 +203,10 @@ export function mergeAdapters(adapters) {
  * @param {object} options       - { container }
  * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
  */
-export async function discoverModules(modulesContext, { container } = {}) {
+export async function discoverModules(
+  modulesContext,
+  { container, store } = {},
+) {
   const startTime = Date.now();
   const adapter = createWebpackContextAdapter(modulesContext);
 
@@ -236,7 +239,7 @@ export async function discoverModules(modulesContext, { container } = {}) {
   errors.push(
     ...(await runPhase('providers', lifecycles, async (name, hook) => {
       try {
-        await hook({ container });
+        await hook({ container, store });
         log(`[${name}] Providers`);
       } catch (error) {
         // PersistentBindingError = idempotent re-registration on same container

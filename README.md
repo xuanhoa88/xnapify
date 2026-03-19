@@ -195,11 +195,12 @@ Each `_route.js` page can export lifecycle hooks:
 | Hook | When Called | Purpose |
 | ------------------ | -------------------- | -------------------------------- |
 | `register` | Route discovered | Register menus, global state |
-| `boot` | Before render | Inject Redux reducers |
 | `middleware` | Before render | Permission checks |
 | `mount` | Route mounted | Set breadcrumbs |
 | `getInitialProps` | Before render | Data fetching, page metadata |
 | `unregister` | Route unloaded | Cleanup |
+
+> **Note:** Redux reducer injection is handled in `views/index.js` `providers()` hook, not in `_route.js`.
 
 ### Plugin System
 
