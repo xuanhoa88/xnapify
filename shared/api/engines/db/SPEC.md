@@ -36,7 +36,7 @@ shared/api/engines/db/
 
 ## 4. Module Integration
 
-Modules call `db.connection.runMigrations()` inside their `migrations(app)` lifecycle hook. The autoloader passes the module's `require.context('./database/migrations', ...)` as the source.
+Modules call `db.connection.runMigrations()` inside their `migrations(container)` lifecycle hook. The autoloader passes the module's `require.context('./database/migrations', ...)` as the source.
 
 ---
 

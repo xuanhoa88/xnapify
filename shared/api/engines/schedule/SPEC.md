@@ -157,7 +157,7 @@ const schedule = createFactory();
 export default schedule;
 ```
 
-The singleton is registered on the DI container as `app.get('container').resolve('schedule')` during engine autoloading.
+The singleton is registered on the DI container as `container.resolve('schedule')` during engine autoloading.
 
 The `index.js` file also contains comprehensive JSDoc with `@example` blocks covering registration, timezone options, worker integration, and task management.
 
@@ -201,7 +201,7 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 
 ## 7. Integration Points
 
-- **Module `init(app)`**: Primary registration point. Access via `app.get('container').resolve('schedule')`.
+- **Module `init(container)`**: Primary registration point. Access via `container.resolve('schedule')`.
 - **Worker Engine**: Cron handlers can dispatch heavy work to worker pools (keep handlers lightweight, offload to `workerPool.sendRequest()`).
 - **Plugin lifecycle**: Plugins can create isolated instances via `createFactory()` and manage their own teardown.
 

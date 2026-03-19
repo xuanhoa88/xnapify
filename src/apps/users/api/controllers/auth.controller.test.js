@@ -85,18 +85,26 @@ describe('Auth Controller', () => {
       app: {
         get: jest.fn(key => {
           switch (key) {
-            case 'http':
-              return mockHttp;
-            case 'auth':
-              return mockAuth;
-            case 'jwt':
-              return mockJwt;
-            case 'models':
-              return mockModels;
-            case 'hook':
-              return mockHook;
             case 'container':
-              return { resolve: jest.fn() };
+              return {
+                resolve: name => {
+                  switch (name) {
+                    case 'http':
+                      return mockHttp;
+                    case 'auth':
+                      return mockAuth;
+                    case 'jwt':
+                      return mockJwt;
+                    case 'models':
+                      return mockModels;
+                    case 'hook':
+                      return mockHook;
+                    default:
+                      return null;
+                  }
+                },
+                has: () => false,
+              };
             default:
               return null;
           }

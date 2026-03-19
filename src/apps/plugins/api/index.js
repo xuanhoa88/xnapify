@@ -33,27 +33,27 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 /**
  * Migrations hook — run database migrations.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'plugins' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'plugins' }], {
-    app,
+    container,
   });
 }
 
@@ -78,8 +78,8 @@ export function routes() {
 /**
  * Init hook — register plugin workers.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function init(app) {
-  registerPluginWorkers(app);
+export async function init(container) {
+  registerPluginWorkers(container);
 }

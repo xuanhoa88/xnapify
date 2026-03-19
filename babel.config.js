@@ -85,7 +85,9 @@ module.exports = api => {
       // =====================
       // 🧪 Test environment
       // =====================
-      ...(isTest ? ['@storybook/babel-plugin-require-context-hook'] : []),
+      ...(isTest
+        ? [require.resolve('./tools/jest/requireContextPolyfill')]
+        : []),
 
       // =====================
       // 🚀 Production Optimizations

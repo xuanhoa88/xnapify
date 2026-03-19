@@ -8,7 +8,7 @@
 function authMiddleware(req, res, next) {
   const {
     middlewares: { requireAuth },
-  } = req.app.get('auth');
+  } = req.app.get('container').resolve('auth');
   return requireAuth()(req, res, next);
 }
 

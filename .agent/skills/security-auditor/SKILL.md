@@ -51,7 +51,7 @@ Every API route **must** have RBAC guards unless explicitly public.
 // _route.js
 function requirePermission(perm) {
   return (req, res, next) => {
-    const auth = req.app.get('container').resolve('auth');
+    const auth = req.container.resolve('auth');
     return auth.middlewares.requirePermission(perm)(req, res, next);
   };
 }

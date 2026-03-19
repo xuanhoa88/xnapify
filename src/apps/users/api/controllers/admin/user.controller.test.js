@@ -75,8 +75,9 @@ describe('Admin User Controller', () => {
             auth: mockAuth,
             jwt: mockJwt,
             cache: mockCache,
-            container: { resolve: jest.fn() },
           };
+          if (key === 'container')
+            return { resolve: name => deps[name], has: () => false };
           return deps[key];
         }),
       },

@@ -19,8 +19,8 @@ export const pluginPermissionIds = {
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Permission } = app.get('models');
+export async function up(_, { container }) {
+  const { Permission } = container.resolve('models');
   const now = new Date();
 
   const permissions = [
@@ -68,8 +68,8 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down({ Sequelize }, { app }) {
-  const { Permission } = app.get('models');
+export async function down({ Sequelize }, { container }) {
+  const { Permission } = container.resolve('models');
   const { Op } = Sequelize;
 
   await Permission.destroy({

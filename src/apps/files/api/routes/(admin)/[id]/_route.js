@@ -7,12 +7,18 @@
 
 import * as fileController from '../../../controllers/file.controller';
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('container').resolve('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
 // DELETE /api/files/:id
 export const del = [
-  (req, res, next) => {
-    const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:delete')(req, res, next);
-  },
+  requirePermission('files:delete'),
   fileController.trashFile,
 ];
 

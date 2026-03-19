@@ -5,7 +5,7 @@ Multi-provider email delivery with LiquidJS template support, Zod validation, sm
 ## Quick Start
 
 ```javascript
-const email = app.get('container').resolve('email');
+const email = container.resolve('email');
 
 await email.send({
   to: 'user@example.com',

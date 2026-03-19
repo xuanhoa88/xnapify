@@ -19,7 +19,7 @@ The `server.js` functions as an Express.js entrypoint that manages HTTP requests
 - **Caching**: Employs an LRU Cache (`RSK_SSR_CACHE`) tied to request path, requested locale, and authentication hashes to bypass expensive React operations whenever possible.
 - **Security & Stability**: Resolves dynamic CSP nonces per request, enforces rate limiting (`RSK_RATE_LIMIT`), blocks oversized cookies, and intercepts potentially malformed request vectors early.
 - **Development Tooling**: Integrates `webpack-hot-middleware` for HMR, leverages `youch` for rich server-bound error logging, and pipes internal timings (`X-Render-Time`) locally.
-- **Dependency Guarding (`guardAppProviders`)**: Protects application `settings` configuration via a Proxy to block endpoints or external layers from prematurely invoking critical providers (`container`, `jwt`, `ws`, `models`) before the bootstrap process completes.
+- **Dependency Injection**: All service providers are registered on a `@shared/container` instance via `container.bind()`/`container.instance()`. Modules and engines resolve dependencies through `container.resolve(key)` — they never access the Express `app` directly.
 
 ## 3. Module Orchestration (`apps/` & `plugins/`)
 

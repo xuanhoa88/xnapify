@@ -19,7 +19,7 @@ Unlike Modules (which contain core domain logic), Plugins (`src/plugins/`) are i
 
    - Export an object containing `translations`, `install`, `init`, `uninstall`, and `destroy`.
    - **`install(registry, context)`**: Runs ONCE when a user installs the plugin. Useful for executing initial migrations/seeds.
-   - **`init(registry, context)`**: Re-runs on every server boot. Register IPC handlers (`registry.registerHook`) and subscribe to core Backend Hooks (`context.app.get('container').resolve('hook')('domain').on('action', handler)`).
+   - **`init(registry, context)`**: Re-runs on every server boot. Register IPC handlers (`registry.registerHook`) and subscribe to core Backend Hooks (`context.container.resolve('hook')('domain').on('action', handler)`).
    - **`uninstall(registry, context)`**: Runs ONCE when deleted. Undo migrations/seeds.
    - **`destroy(registry, context)`**: Re-runs when disabled. MUST unsubscribe from all hooks (`.off()`). Use a `Symbol('handlers')` object to store function references so you can pass the exact reference to `.off()`.
 

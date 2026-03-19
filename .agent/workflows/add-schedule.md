@@ -6,7 +6,7 @@ Add a scheduled task using the schedule engine (`@shared/api`).
 
 ## How Scheduling Works
 
-The schedule engine wraps `node-cron` and is accessible via `app.get('container').resolve('schedule')`. Tasks are registered during module `init()` and run automatically based on cron expressions.
+The schedule engine wraps `node-cron` and is accessible via `container.resolve('schedule')`. Tasks are registered during module `init()` and run automatically based on cron expressions.
 
 ## Step-by-Step
 
@@ -14,8 +14,8 @@ The schedule engine wraps `node-cron` and is accessible via `app.get('container'
 
 ```javascript
 // src/apps/{module-name}/api/index.js — inside init()
-export async function init(app) {
-  const container = app.get('container');
+export async function init(container) {
+  
   const schedule = container.resolve('schedule');
 
   // Lightweight task — runs directly

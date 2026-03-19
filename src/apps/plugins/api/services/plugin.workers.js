@@ -23,13 +23,13 @@ import {
 /**
  * Handle the "install" job for a plugin.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  * @param {Object} job - Queue job
  */
-async function handleInstallJob(app, job) {
+async function handleInstallJob(container, job) {
   const { pluginDir, pluginId, pluginKey, actorId } = job.data;
-  const pluginManager = app.get('plugin');
-  const hook = app.get('hook');
+  const pluginManager = container.resolve('plugin');
+  const hook = container.resolve('hook');
 
   try {
     job.updateProgress(10);
@@ -38,7 +38,7 @@ async function handleInstallJob(app, job) {
 
     // Compute checksum in worker thread (avoids blocking event loop)
     const checksum = await workerPool.computeChecksum(pluginDir);
-    const { Plugin } = app.get('models');
+    const { Plugin } = container.resolve('models');
     await Plugin.update({ checksum }, { where: { id: pluginId } });
     job.updateProgress(60);
 
@@ -63,7 +63,7 @@ async function handleInstallJob(app, job) {
       });
     }
 
-    notifyPluginChange(app, 'PLUGIN_INSTALLED', pluginId);
+    notifyPluginChange(container, 'PLUGIN_INSTALLED', pluginId);
     job.updateProgress(100);
     return { success: true };
   } catch (err) {
@@ -75,15 +75,15 @@ async function handleInstallJob(app, job) {
 /**
  * Handle the "delete" job for a plugin.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  * @param {Object} job - Queue job
  */
-async function handleDeleteJob(app, job) {
+async function handleDeleteJob(container, job) {
   const { pluginId, pluginKey, actorId } = job.data;
-  const cwd = app.get('cwd');
-  const pluginManager = app.get('plugin');
-  const hook = app.get('hook');
-  const { Plugin } = app.get('models');
+  const cwd = container.resolve('cwd');
+  const pluginManager = container.resolve('plugin');
+  const hook = container.resolve('hook');
+  const { Plugin } = container.resolve('models');
 
   try {
     if (pluginManager) {
@@ -125,7 +125,7 @@ async function handleDeleteJob(app, job) {
       });
     }
 
-    notifyPluginChange(app, 'PLUGIN_UNINSTALLED', pluginId);
+    notifyPluginChange(container, 'PLUGIN_UNINSTALLED', pluginId);
     return { success: true };
   } catch (err) {
     console.error(`[PluginWorker] Delete failed for ${pluginId}:`, err);
@@ -136,19 +136,19 @@ async function handleDeleteJob(app, job) {
 /**
  * Handle the "toggle" job for a plugin.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  * @param {Object} job - Queue job
  */
-async function handleToggleJob(app, job) {
+async function handleToggleJob(container, job) {
   const { pluginId, pluginKey, isActive, actorId, pluginDir, isDevPlugin } =
     job.data;
-  const pluginManager = app.get('plugin');
-  const hook = app.get('hook');
+  const pluginManager = container.resolve('plugin');
+  const hook = container.resolve('hook');
 
   try {
     // Security: verify checksum before activating (skip for dev plugins)
     if (isActive && pluginDir && !isDevPlugin) {
-      const { Plugin } = app.get('models');
+      const { Plugin } = container.resolve('models');
       const dbPlugin = await Plugin.findByPk(pluginId);
       if (dbPlugin && dbPlugin.checksum) {
         // Verify checksum in worker thread (avoids blocking event loop)
@@ -163,7 +163,7 @@ async function handleToggleJob(app, job) {
               `Refusing to activate — possible code injection detected.`,
           );
           await dbPlugin.update({ is_active: false });
-          notifyPluginChange(app, 'PLUGIN_TAMPERED', pluginId);
+          notifyPluginChange(container, 'PLUGIN_TAMPERED', pluginId);
           return { success: false, reason: 'checksum_mismatch' };
         }
       }
@@ -175,7 +175,7 @@ async function handleToggleJob(app, job) {
 
         // Recompute checksum in worker thread after fresh npm install
         const checksum = await workerPool.computeChecksum(pluginDir);
-        const { Plugin } = app.get('models');
+        const { Plugin } = container.resolve('models');
         await Plugin.update({ checksum }, { where: { id: pluginId } });
       } else {
         await uninstallPluginDependencies(pluginDir, { name: pluginKey });
@@ -211,7 +211,7 @@ async function handleToggleJob(app, job) {
     }
 
     notifyPluginChange(
-      app,
+      container,
       isActive ? 'PLUGIN_UPDATED' : 'PLUGIN_UNINSTALLED',
       pluginId,
     );
@@ -230,14 +230,14 @@ async function handleToggleJob(app, job) {
  * Register background workers for plugin tasks.
  * Called during server initialization.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export function registerPluginWorkers(app) {
-  const queue = app.get('queue');
+export function registerPluginWorkers(container) {
+  const queue = container.resolve('queue');
   const queueChannel = queue('plugins');
 
   // Register event handlers for plugin tasks
-  queueChannel.on('install', job => handleInstallJob(app, job));
-  queueChannel.on('delete', job => handleDeleteJob(app, job));
-  queueChannel.on('toggle', job => handleToggleJob(app, job));
+  queueChannel.on('install', job => handleInstallJob(container, job));
+  queueChannel.on('delete', job => handleDeleteJob(container, job));
+  queueChannel.on('toggle', job => handleToggleJob(container, job));
 }

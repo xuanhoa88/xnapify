@@ -5,7 +5,7 @@ Channel-based async event hooks with priority ordering and mutable arguments. En
 ## Quick Start
 
 ```javascript
-const hook = app.get('container').resolve('hook');
+const hook = container.resolve('hook');
 
 // Get or create a channel
 const userHooks = hook('users');
@@ -73,14 +73,14 @@ Bind a context object so handlers receive it as `this`:
 
 ```javascript
 // Factory-level binding (all channels)
-const boundHook = hook.withContext(app);
+const boundHook = hook.withContext(container);
 boundHook('users').on('created', function (user) {
   // `this` === app
   const models = this.get('models');
 });
 
 // Channel-level binding
-const boundChannel = hook('users').withContext(app);
+const boundChannel = hook('users').withContext(container);
 ```
 
 ### Isolated Instances

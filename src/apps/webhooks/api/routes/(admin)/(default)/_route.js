@@ -14,7 +14,7 @@
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.app.get('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -23,9 +23,10 @@ function requirePermission(permission) {
  * GET /api/webhooks — List all registered webhook providers
  */
 async function list(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const webhook = req.app.get('webhook');
+    const webhook = container.resolve('webhook');
 
     const providers = webhook.getProviders();
 

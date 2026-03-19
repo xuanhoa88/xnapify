@@ -295,9 +295,8 @@ All shared infrastructure lives in `shared/api/engines/`. Engines are **auto-dis
 // 1. Direct import (shared code, top-level modules)
 import { db, auth, hook, cache } from '@shared/api';
 
-// 2. Via DI container in Express handlers (preferred in modules)
-// In init(app):
-const container = app.get('container');
+// 2. Via DI container in module init (preferred in modules)
+// In init(container):
 const hook = container.resolve('hook');
 const db = container.resolve('db');
 
@@ -306,7 +305,7 @@ const container = req.app.get('container');
 const { models } = container.resolve('db');
 ```
 
-> **Convention:** In module code (`init`, controllers, services), always use `app.get('container').resolve('name')` or `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
+> **Convention:** In module code (`init`, services), use `container.resolve('name')` directly. In route handlers/controllers, use `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
 **Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 
@@ -321,9 +320,8 @@ const { models } = container.resolve('db');
 Channel-based async event system (`shared/api/engines/hook`) for decoupled inter-module communication.
 
 ```javascript
-// In init(app) or controllers:
-const container = app.get('container');  // or req.app.get('container')
-const hook = container.resolve('hook');
+// In init(container) or controllers:
+const hook = container.resolve('hook');  // or req.app.get('container').resolve('hook')
 
 // Create/get a channel
 const userHooks = hook('users');
@@ -582,7 +580,7 @@ export function routes() {
   return routesContext;
 }
 
-export async function init(app) {
+export async function init(container) {
   // Initialize module
 }
 

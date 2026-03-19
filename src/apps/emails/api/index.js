@@ -32,27 +32,27 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 /**
  * Migrations hook — run database migrations.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'emails' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'emails' }], {
-    app,
+    container,
   });
 }
 
@@ -79,8 +79,8 @@ export function routes() {
 /**
  * Init hook — called after components are registered.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function init(app) {
-  registerEmailHooks(app);
+export async function init(container) {
+  registerEmailHooks(container);
 }

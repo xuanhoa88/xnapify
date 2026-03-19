@@ -29,11 +29,12 @@ import { formatUserResponse } from '../utils/formatter';
  * @param {Object} res - Express response object
  */
 export async function getProfile(req, res) {
-  const http = req.app.get('http');
-  const hook = req.app.get('hook');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const hook = container.resolve('hook');
   try {
     const user = await profileService.getUserWithProfile(req.user.id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     if (!user) {
@@ -41,7 +42,7 @@ export async function getProfile(req, res) {
     }
 
     // Format user response
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     const normalizedUser = await formatUserResponse(user, {
       adminRoleName: auth.ADMIN_ROLE,
       defaultRoleName: auth.DEFAULT_ROLE,
@@ -70,9 +71,10 @@ export async function getProfile(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updateProfile(req, res) {
-  const http = req.app.get('http');
-  const hook = req.app.get('hook');
-  const i18n = req.app.get('i18n');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const hook = container.resolve('hook');
+  const i18n = container.resolve('i18n');
 
   try {
     // 1. Initialize base schema
@@ -104,13 +106,13 @@ export async function updateProfile(req, res) {
       req.user.id,
       dataOrErrors,
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
         hook,
       },
     );
 
     // Format user response
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     const normalizedUser = await formatUserResponse(user, {
       adminRoleName: auth.ADMIN_ROLE,
       defaultRoleName: auth.DEFAULT_ROLE,
@@ -135,9 +137,10 @@ export async function updateProfile(req, res) {
  * @param {Object} res - Express response object
  */
 export async function uploadAvatar(req, res) {
-  const http = req.app.get('http');
-  const fs = req.app.get('fs');
-  const models = req.app.get('models');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const fs = container.resolve('fs');
+  const models = container.resolve('models');
   const { UserProfile } = models;
 
   try {
@@ -206,7 +209,7 @@ export async function uploadAvatar(req, res) {
  * @param {Object} res - Express response object
  */
 export async function previewAvatar(req, res) {
-  const fs = req.app.get('fs');
+  const fs = req.app.get('container').resolve('fs');
 
   // Default avatar URL (can be configured via env)
   const defaultAvatar =
@@ -271,15 +274,16 @@ export async function previewAvatar(req, res) {
  * @param {Object} res - Express response object
  */
 export async function removeAvatar(req, res) {
-  const http = req.app.get('http');
-  const fs = req.app.get('fs');
-  const models = req.app.get('models');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const fs = container.resolve('fs');
+  const models = container.resolve('models');
   const { UserProfile } = models;
 
   try {
     // Get user with profile to find current avatar
     const user = await profileService.getUserWithProfile(req.user.id, {
-      models: req.app.get('models'),
+      models,
     });
 
     if (!user) {
@@ -329,7 +333,8 @@ export async function removeAvatar(req, res) {
  * @param {Object} res - Express response object
  */
 export async function changePassword(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { currentPassword, newPassword, confirmNewPassword } = req.body;
 
@@ -348,8 +353,8 @@ export async function changePassword(req, res) {
       currentPassword,
       newPassword,
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
       },
     );
 
@@ -376,7 +381,8 @@ export async function changePassword(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updatePreferences(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { language, timezone, notifications, theme } = req.body;
 
@@ -398,8 +404,8 @@ export async function updatePreferences(req, res) {
       req.user.id,
       { language, timezone, notifications, theme },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
       },
     );
 
@@ -421,11 +427,12 @@ export async function updatePreferences(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getPreferences(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const preferences = await profileService.getUserPreferences(req.user.id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, { preferences });
@@ -443,7 +450,8 @@ export async function getPreferences(req, res) {
  * @param {Object} res - Express response object
  */
 export async function deleteAccount(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { password, confirmPassword } = req.body;
 
@@ -457,11 +465,11 @@ export async function deleteAccount(req, res) {
     }
 
     await profileService.deleteUserAccount(req.user.id, password, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
     });
 
-    req.app.get('auth').clearAllAuthCookies(res);
+    container.resolve('auth').clearAllAuthCookies(res);
 
     return http.sendSuccess(res, {
       message: 'User deleted successfully',

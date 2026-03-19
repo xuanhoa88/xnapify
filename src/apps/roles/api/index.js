@@ -37,11 +37,9 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 /**
  * Providers hook — called by the autoloader to share services with other modules.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function providers(app) {
-  const container = app.get('container');
-
+export async function providers(container) {
   // Bind seed roles to container as singleton
   container.bind('roles:seed_constants', () => SEED_ROLES, OWNER_KEY);
 }
@@ -49,36 +47,36 @@ export async function providers(app) {
 /**
  * Migrations hook — run database migrations.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'roles' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'roles' }], {
-    app,
+    container,
   });
 }
 
 /**
  * Init hook — called by the autoloader to initialise this module.
  *
- * @param {Object} _app - Express app instance
+ * @param {Object} _container - DI container instance (unused)
  */
-export async function init(_app) {}
+export async function init(_container) {}
 
 /**
  * Models hook — returns the webpack require.context for this module's models.

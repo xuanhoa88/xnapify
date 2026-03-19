@@ -36,7 +36,7 @@ index.js
     └── utils/constants.js
 ```
 
-**Cross-engine dependency:** `WebhookManager.withContext()` resolves the hook engine via `context.get('hook')` and creates a `'webhook'` HookChannel for handler dispatch.
+**Cross-engine dependency:** `WebhookManager.withContext()` resolves the hook engine via `container.resolve('hook')` and creates a `'webhook'` HookChannel for handler dispatch.
 
 ## 2. Error Classes (`errors.js`)
 
@@ -89,15 +89,15 @@ Verifies an HMAC signature against a payload using **timing-safe comparison**.
 ### Private State (Symbols)
 
 - `Symbol('__rsk.webhookChannel__')` → `HookChannel|null` — injected via `withContext()`.
-- `Symbol('__rsk.webhookContext__')` → `Object|null` — app context proxy.
+- `Symbol('__rsk.webhookContext__')` → `Object|null` — DI container.
 - `Symbol('__rsk.webhookProviders__')` → `Map<provider, { secret, signatureHeader }>`.
 
-### `withContext(context) → this`
+### `withContext(container) → this`
 
-Binds the manager to an application context. Called automatically by `registerEngines()` during bootstrap.
+Binds the manager to a DI container. Called automatically by `registerEngines()` during bootstrap.
 
-- Stores `context` in `CONTEXT` symbol.
-- Resolves hook engine via `context.get('hook')`.
+- Stores `container` in `CONTEXT` symbol.
+- Resolves hook engine via `container.resolve('hook')`.
 - Creates a `'webhook'` HookChannel via `hook('webhook')`.
 - Returns `this` for chaining.
 
@@ -144,7 +144,7 @@ Returns array of registered provider names.
 
 Called by the controller after signature verification passes. Executes the lifecycle in sequence:
 
-1. **Enrich context:** merges `context` with `{ app: this[CONTEXT] }`.
+1. **Enrich context:** merges `context` with `{ container: this[CONTEXT] }`.
 2. **`beforeHandle`:** emits `WEBHOOK_EVENTS.BEFORE_HANDLE` with `{ provider, payload, ...enrichedContext }`.
 3. **Provider handler:** emits `handler:<provider>` with `(payload, enrichedContext)`.
 4. **`afterHandle`:** emits `WEBHOOK_EVENTS.AFTER_HANDLE` with `{ provider, payload, ...enrichedContext }`.
@@ -155,7 +155,7 @@ Called by the controller after signature verification passes. Executes the lifec
   headers: object,  // Request headers
   query: object,    // Query parameters
   ip: string,       // Client IP
-  app: object,      // Application context (DI container)
+  container: object, // DI container
 }
 ```
 
@@ -194,13 +194,13 @@ const webhook = createFactory();
 export default webhook;
 ```
 
-The singleton is registered on the DI container as `app.get('container').resolve('webhook')` during engine autoloading. `withContext()` is called during bootstrap to bind the hook engine.
+The singleton is registered on the DI container via `container.instance('webhook', webhook)` during engine autoloading. `withContext()` is called during bootstrap to bind the hook engine.
 
 ## 8. Testing
 
 **File:** `webhook.test.js`
 
-Uses a helper `createWebhook()` that creates a factory instance and binds it with `withContext({ get: () => createHookFactory() })` to simulate bootstrap.
+Uses a helper `createWebhook()` that creates a factory instance and binds it with `withContext({ resolve: () => createHookFactory() })` to simulate bootstrap.
 
 ### Test Coverage (8 describe blocks)
 
@@ -223,7 +223,7 @@ Uses a helper `createWebhook()` that creates a factory instance and binds it wit
 - Method chaining.
 
 **Dispatch:**
-- Payload dispatched to handler with enriched context (includes `app`).
+- Payload dispatched to handler with enriched context (includes `container`).
 - `beforeHandle` → handler → `afterHandle` execution order.
 - Provider info passed to lifecycle hooks.
 - Handler errors propagate (rejects).
@@ -250,9 +250,9 @@ Uses a helper `createWebhook()` that creates a factory instance and binds it wit
 
 ## 9. Integration Points
 
-- **Bootstrap**: `registerEngines()` calls `webhook.withContext(app)` to inject the hook engine and DI container.
+- **Bootstrap**: `registerEngines()` calls `webhook.withContext(container)` to inject the hook engine.
 - **Controller layer**: `POST /api/webhooks/:provider` reads raw body, verifies HMAC via `verifySignature`, then calls `webhook.dispatch()`.
-- **Module `init(app)`**: Modules register providers via `app.get('container').resolve('webhook').handler(...)`.
+- **Module `init(container)`**: Modules register providers via `container.resolve('webhook').handler(...)`.
 - **Hook engine**: The webhook engine uses a dedicated `'webhook'` HookChannel for all internal dispatch.
 
 ---

@@ -99,8 +99,8 @@ const routesContext = require.context('./routes', true, /\.js$/);
 /**
  * Migrations hook - called to run module migrations.
  */
-export async function migrations(app) {
-  const db = app.get('container').resolve('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
   await db.connection.runMigrations([
     { context: migrationsContext, prefix: 'posts' },
   ]);
@@ -109,8 +109,8 @@ export async function migrations(app) {
 /**
  * Seeds hook - called to run module seeds.
  */
-export async function seeds(app) {
-  const db = app.get('container').resolve('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'posts' }]);
 }
 
@@ -124,8 +124,8 @@ export function routes() {
 /**
  * Providers hook - share services with other modules.
  */
-export async function providers(app) {
-  const container = app.get('container');
+export async function providers(container) {
+  
   container.bind('posts:controllers', () => ({ post: postController }), true);
 }
 ```
@@ -181,7 +181,7 @@ import { validateForm } from '@shared/validator';
 import { createPostSchema } from '../utils/validation';
 
 export async function create(req, res) {
-  const http = req.app.get('container').resolve('http');
+  const http = req.container.resolve('http');
 
   // Validate input using shared validator
   const [isValid, errors] = validateForm(createPostSchema, req.body);
@@ -197,12 +197,12 @@ export async function create(req, res) {
 
 ## Best Practices
 
-1. **Controllers**: Use `req.app.get('container').resolve('http')` for consistent responses
+1. **Controllers**: Use `req.container.resolve('http')` for consistent responses
 2. **Services**: Accept `{ models, webhook, ...options }` as parameter for consistency
 3. **Models**: Use factory functions with `{ connection, DataTypes }`
 4. **Routes**: Inject `deps`, `middlewares`, and `app` for flexibility
 5. **Migrations**: Use `require.context` for auto-discovery
-6. **Auth**: Use `app.get('container').resolve('auth').requireAuthMiddleware()` for protected routes
+6. **Auth**: Use `container.resolve('auth').requireAuthMiddleware()` for protected routes
 7. **Validation**: Use `validateForm` from `@shared/validator`
 
 ---
@@ -216,7 +216,7 @@ export async function create(req, res) {
 import * as postController from '../controllers/post.controller';
 
 export default function postRoutes(deps, middlewares, app) {
-  const auth = app.get('container').resolve('auth');
+  const auth = container.resolve('auth');
   const requireAuth = auth.requireAuthMiddleware();
   const requirePermission = auth.requirePermissionMiddleware;
   const router = deps.Router();
@@ -259,11 +259,11 @@ export default function postRoutes(deps, middlewares, app) {
 ```javascript
 // @apps/{module}/api/controllers/post.controller.js
 export async function update(req, res) {
-  const http = req.app.get('container').resolve('http');
-  const auth = req.app.get('container').resolve('auth');
+  const http = req.container.resolve('http');
+  const auth = req.container.resolve('auth');
 
   try {
-    const models = req.app.get('container').resolve('models');
+    const models = req.container.resolve('models');
     const post = await models.Post.findByPk(req.params.id);
 
     if (!post) {
@@ -303,7 +303,7 @@ For heavy tasks, dispatch to worker instead of blocking the request:
 import workerPool from '@shared/api/worker';
 
 export async function generateReport(req, res) {
-  const http = req.app.get('container').resolve('http');
+  const http = req.container.resolve('http');
 
   try {
     // Dispatch to worker (non-blocking)

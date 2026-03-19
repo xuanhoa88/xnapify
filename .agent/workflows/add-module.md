@@ -155,8 +155,8 @@ function log(message, level = 'info') {
  *
  * @param {Object} app - Express app instance
  */
-export async function providers(app) {
-  const container = app.get('container');
+export async function providers(container) {
+  
 
   // Example: Bind controllers to container
   container.bind(
@@ -192,8 +192,8 @@ export function translations() {
  *
  * @param {Object} app - Express app instance
  */
-export async function migrations(app) {
-  const db = app.get('container').resolve('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   try {
     await db.connection.runMigrations(
@@ -213,8 +213,8 @@ export async function migrations(app) {
  *
  * @param {Object} app - Express app instance
  */
-export async function seeds(app) {
-  const db = app.get('container').resolve('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   try {
     await db.connection.runSeeds(
@@ -234,8 +234,8 @@ export async function seeds(app) {
  *
  * @param {Object} app - Express app instance
  */
-export async function init(app) {
-  const hook = app.get('container').resolve('hook');
+export async function init(container) {
+  const hook = container.resolve('hook');
 
   // Example: Register webhooks
   hook('{module-name}').on('created', async entity => {
@@ -281,7 +281,7 @@ import * as controller from '../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.app.get('container').resolve('auth');
+    const auth = req.container.resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -323,7 +323,7 @@ import * as controller from '../../../../controllers/module.controller';
 
 function requirePermission(permission) {
   return (req, res, next) => {
-    const auth = req.app.get('container').resolve('auth');
+    const auth = req.container.resolve('auth');
     return auth.middlewares.requirePermission(permission)(req, res, next);
   };
 }
@@ -366,7 +366,7 @@ export { del as delete };
 
 export async function list(req, res, next) {
   try {
-    const { models } = req.app.get('container').resolve('db');
+    const { models } = req.container.resolve('db');
     const items = await models.Module.findAll();
     res.json(items);
   } catch (error) {
@@ -377,7 +377,7 @@ export async function list(req, res, next) {
 export async function getOne(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('container').resolve('db');
+    const { models } = req.container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
@@ -392,7 +392,7 @@ export async function getOne(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const { models } = req.app.get('container').resolve('db');
+    const { models } = req.container.resolve('db');
     const item = await models.Module.create(req.body);
     res.status(201).json(item);
   } catch (error) {
@@ -403,7 +403,7 @@ export async function create(req, res, next) {
 export async function update(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('container').resolve('db');
+    const { models } = req.container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
@@ -420,7 +420,7 @@ export async function update(req, res, next) {
 export async function delete(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('container').resolve('db');
+    const { models } = req.container.resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
@@ -884,10 +884,10 @@ Modules are auto-discovered during application bootstrap:
 
 | Hook              | Purpose                                | Called When              | Async |
 | ----------------- | -------------------------------------- | ------------------------ | ----- |
-| `providers(app)`  | Bind services to container             | Module loaded            | Yes   |
-| `migrations(app)` | Run database migrations                | After core migrations    | Yes   |
-| `seeds(app)`      | Run database seeds                     | After module migrations  | Yes   |
-| `init(app)`       | Initialize module                      | All models loaded        | Yes   |
+| `providers(container)`  | Bind services to container             | Module loaded            | Yes   |
+| `migrations(container)` | Run database migrations                | After core migrations    | Yes   |
+| `seeds(container)`      | Run database seeds                     | After module migrations  | Yes   |
+| `init(container)`       | Initialize module                      | All models loaded        | Yes   |
 | `models()`        | Return models webpack context          | Model discovery phase    | No    |
 | `routes()`        | Return routes webpack context          | Router setup phase       | No    |
 | `translations()`  | Provide webpack context for i18n files | Module loaded (optional) | No    |

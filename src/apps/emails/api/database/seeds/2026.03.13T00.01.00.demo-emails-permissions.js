@@ -18,14 +18,13 @@ const EMAILS_PERMISSIONS = {
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Permission, RolePermission } = app.get('models');
+export async function up(_, { container }) {
+  const { Permission, RolePermission } = container.resolve('models');
 
   // Get default resources and actions from auth
-  const { DEFAULT_ACTIONS } = app.get('auth');
+  const { DEFAULT_ACTIONS } = container.resolve('auth');
 
   // Get seed roles from container
-  const container = app.get('container');
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
   // Register the emails:templates resource
@@ -79,8 +78,8 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { Permission, RolePermission } = app.get('models');
+export async function down(_, { container }) {
+  const { Permission, RolePermission } = container.resolve('models');
 
   const RESOURCE = 'emails:templates';
 

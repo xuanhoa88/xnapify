@@ -203,6 +203,11 @@ const config = {
       },
 
       {
+        selector: 'AssignmentExpression[operator="??="]',
+        message: 'Nullish coalescing assignment (??=) is not allowed.',
+      },
+
+      {
         selector: 'ChainExpression',
         message: 'Optional chaining (?.) is not allowed.',
       },

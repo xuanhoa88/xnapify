@@ -9,11 +9,11 @@ When creating or modifying scheduled tasks, enforce these patterns.
 
 ## Registration Pattern
 
-Scheduled tasks are registered during module `init()` via `app.get('container').resolve('schedule')`.
+Scheduled tasks are registered during module `init()` via `container.resolve('schedule')`.
 
 ```javascript
-export async function init(app) {
-  const container = app.get('container');
+export async function init(container) {
+  
   const schedule = container.resolve('schedule');
 
   schedule.register('module:task-name', '0 0 * * *', async () => {
@@ -47,7 +47,7 @@ schedule.register('reports:weekly', '0 9 * * 1', async () => {
 schedule.register('cleanup:expired', '*/30 * * * *', async () => {
   try {
     console.log('[Schedule] cleanup:expired started');
-    const count = await cleanupExpired(app);
+    const count = await cleanupExpired(container);
     console.log(`[Schedule] cleanup:expired done, removed ${count}`);
   } catch (error) {
     console.error('[Schedule] cleanup:expired failed:', error.message);

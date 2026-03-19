@@ -56,6 +56,6 @@ export async function get(req, res) {
     },
   ];
 
-  const http = req.app.get('http');
+  const http = req.app.get('container').resolve('http');
   return http.sendSuccess(res, { news: mockNews });
 }

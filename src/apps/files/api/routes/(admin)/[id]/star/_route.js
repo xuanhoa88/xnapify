@@ -7,11 +7,17 @@
 
 import * as fileController from '../../../../controllers/file.controller';
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('container').resolve('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
 // PUT /api/files/:id/star
 export const put = [
-  (req, res, next) => {
-    const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:update')(req, res, next);
-  },
+  requirePermission('files:update'),
   fileController.toggleStar,
 ];

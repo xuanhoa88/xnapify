@@ -31,8 +31,14 @@ describe('RBAC Fetcher', () => {
     req = {
       app: {
         get: jest.fn(key => {
-          if (key === 'models') return modelsMock;
-          if (key === 'cache') return cacheMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'models') return modelsMock;
+                if (name === 'cache') return cacheMock;
+                return null;
+              },
+            };
           return null;
         }),
       },

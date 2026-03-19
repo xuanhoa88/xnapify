@@ -21,8 +21,8 @@ const DEFAULT_PLUGINS = [
 /**
  * Run the seed — idempotent via findOrCreate
  */
-export async function up(_, { app }) {
-  const { Plugin } = app.get('models');
+export async function up(_, { container }) {
+  const { Plugin } = container.resolve('models');
   const now = new Date();
 
   for (const plugin of DEFAULT_PLUGINS) {
@@ -43,8 +43,8 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down({ Sequelize }, { app }) {
-  const { Plugin } = app.get('models');
+export async function down({ Sequelize }, { container }) {
+  const { Plugin } = container.resolve('models');
   const { Op } = Sequelize;
 
   await Plugin.destroy({

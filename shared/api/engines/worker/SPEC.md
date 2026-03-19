@@ -170,7 +170,7 @@ Destroys the Piscina pool and sets `piscinaPoolInstance` to `null`. Logs cleanup
 
 ## 7. No Default Singleton
 
-Unlike other engines (`schedule`, `hook`), the worker engine exports only the `createWorkerPool` factory. Each module creates its own pool instance scoped to its own `require.context`. The engine is registered on the DI container as `app.get('container').resolve('worker')` which exposes the `{ createWorkerPool, WorkerError }` exports.
+Unlike other engines (`schedule`, `hook`), the worker engine exports only the `createWorkerPool` factory. Each module creates its own pool instance scoped to its own `require.context`. The engine is registered on the DI container as `container.resolve('worker')` which exposes the `{ createWorkerPool, WorkerError }` exports.
 
 ## 8. Usage Patterns in the Codebase
 
@@ -185,7 +185,7 @@ const workerPool = createWorkerPool('🔌 Plugin', workersContext, { maxWorkers:
 ### DI-based (search, activities modules)
 
 ```javascript
-const { createWorkerPool } = app.get('container').resolve('worker');
+const { createWorkerPool } = container.resolve('worker');
 const workerPool = createWorkerPool('Search', workersContext, { maxWorkers: 1 });
 ```
 
@@ -210,7 +210,7 @@ await workerPool.sendRequest('flexsearch', 'INDEX_USER',
 
 ## 9. Integration Points
 
-- **Module `init(app)`**: Access via `app.get('container').resolve('worker')` to get the factory, then create module-specific pools.
+- **Module `init(container)`**: Access via `container.resolve('worker')` to get the factory, then create module-specific pools.
 - **Schedule Engine**: Cron handlers can dispatch heavy work to worker pools.
 - **Plugin lifecycle**: Plugins can import `createWorkerPool` directly for isolated pools.
 - **Hybrid pattern**: Queue handlers (main thread, `app` access) call `workerPool.sendRequest()` for CPU-bound subtasks.

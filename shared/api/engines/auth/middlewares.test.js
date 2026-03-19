@@ -61,9 +61,15 @@ describe('requireAuth', () => {
     hookMock.has = jest.fn();
 
     req.app.get.mockImplementation(key => {
-      if (key === 'jwt') return jwtMock;
-      if (key === 'models') return modelsMock;
-      if (key === 'hook') return hookMock;
+      if (key === 'container')
+        return {
+          resolve: name => {
+            if (name === 'jwt') return jwtMock;
+            if (name === 'models') return modelsMock;
+            if (name === 'hook') return hookMock;
+            return null;
+          },
+        };
       return null;
     });
   });
@@ -283,8 +289,14 @@ describe('optionalAuth', () => {
     hookMock.has = jest.fn();
 
     req.app.get.mockImplementation(key => {
-      if (key === 'jwt') return jwtMock;
-      if (key === 'hook') return hookMock;
+      if (key === 'container')
+        return {
+          resolve: name => {
+            if (name === 'jwt') return jwtMock;
+            if (name === 'hook') return hookMock;
+            return null;
+          },
+        };
       return null;
     });
   });
@@ -365,7 +377,13 @@ describe('requirePermission', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -498,7 +516,13 @@ describe('requireAnyPermission', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -572,7 +596,13 @@ describe('requireRole', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -657,7 +687,13 @@ describe('requireAnyRole', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -697,7 +733,13 @@ describe('requireRoleLevel', () => {
       user: { id: 'user-1', roles: [] },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return null;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return null;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -787,7 +829,13 @@ describe('requireDynamicRole', () => {
       params: { id: 'p-1' },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -911,7 +959,13 @@ describe('requireOwnership', () => {
       params: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1027,7 +1081,13 @@ describe('requireFlexibleOwnership', () => {
       params: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1150,7 +1210,13 @@ describe('requireSharedOwnership', () => {
       params: { id: 'doc-1' },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1264,7 +1330,13 @@ describe('requireHierarchicalOwnership', () => {
       params: { id: 'report-1' },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1394,7 +1466,13 @@ describe('requireTimeBasedOwnership', () => {
       params: { id: 'post-1' },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1528,7 +1606,13 @@ describe('requireGroup', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1622,7 +1706,13 @@ describe('requireAnyGroup', () => {
       user: {},
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return hookMock;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return hookMock;
+                return null;
+              },
+            };
           return null;
         }),
       },
@@ -1662,7 +1752,13 @@ describe('requireGroupLevel', () => {
       user: { id: 'user-1', groups: [] },
       app: {
         get: jest.fn(key => {
-          if (key === 'hook') return null;
+          if (key === 'container')
+            return {
+              resolve: name => {
+                if (name === 'hook') return null;
+                return null;
+              },
+            };
           return null;
         }),
       },

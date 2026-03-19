@@ -47,7 +47,7 @@ export default {
   // Lifecycle: install (called once when the user clicks 'Install Plugin')
   async install(registry, context) {
     console.log('[Test Plugin] Installing...', __PLUGIN_NAME__);
-    const db = context.app.get('db');
+    const db = context.app.get('container').resolve('db');
     if (db) {
       try {
         console.log('[Test Plugin] Migration keys:', migrationsContext.keys());
@@ -81,7 +81,7 @@ export default {
     );
 
     // Get hook engine
-    const hook = context.app.get('hook');
+    const hook = context.app.get('container').resolve('hook');
 
     // Handler to extend profile schema
     this[HANDLERS].updateValidation = function (context) {
@@ -194,7 +194,7 @@ export default {
         }
 
         try {
-          const models = context.app.get('models');
+          const models = context.app.get('container').resolve('models');
           const { UserProfile } = models;
           const existing = await UserProfile.findOne({
             where: {
@@ -228,7 +228,7 @@ export default {
     console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
 
     // Unsubscribe from hooks
-    const hook = context.app.get('hook');
+    const hook = context.app.get('container').resolve('hook');
     if (this[HANDLERS].updateValidation) {
       hook('profile').off('validation:update', this[HANDLERS].updateValidation);
     }
@@ -246,7 +246,7 @@ export default {
   // Lifecycle: uninstall (called once when the user deletes the plugin)
   async uninstall(registry, context) {
     console.log('[Test Plugin] Uninstalling...', __PLUGIN_NAME__);
-    const db = context.app.get('db');
+    const db = context.app.get('container').resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([

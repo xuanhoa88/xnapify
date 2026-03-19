@@ -5,7 +5,7 @@ Key-value caching with pluggable adapters (memory, file), namespace isolation, L
 ## Quick Start
 
 ```javascript
-const cache = app.get('container').resolve('cache');
+const cache = container.resolve('cache');
 
 await cache.set('key', 'value', 60000); // 60s TTL
 const value = await cache.get('key');    // 'value' or null

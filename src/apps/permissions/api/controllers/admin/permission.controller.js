@@ -28,7 +28,8 @@ import * as permissionService from '../../services/admin/permission.service';
  * @param {Object} res - Express response object
  */
 export async function createPermission(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { resource, action, description, is_active } = req.body;
 
@@ -48,8 +49,8 @@ export async function createPermission(req, res) {
     const permission = await permissionService.createPermission(
       { resource, action, description, is_active },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
       },
     );
@@ -73,12 +74,13 @@ export async function createPermission(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getPermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { page, limit } = http.getPagination(req);
     const { search = '', status = '' } = req.query;
 
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Get permissions
     const result = await permissionService.getPermissions(
@@ -89,7 +91,7 @@ export async function getPermissions(req, res) {
         status,
       },
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
       },
@@ -110,7 +112,8 @@ export async function getPermissions(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getPermissionsByResource(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { resource } = req.params;
     const { page, limit } = http.getPagination(req);
@@ -118,7 +121,7 @@ export async function getPermissionsByResource(req, res) {
     const result = await permissionService.getPermissionsByResource(
       resource,
       { search, page, limit },
-      { models: req.app.get('models') },
+      { models: container.resolve('models') },
     );
 
     return http.sendSuccess(res, result);
@@ -140,11 +143,12 @@ export async function getPermissionsByResource(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getPermissionById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const permission = await permissionService.getPermissionById(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, { permission });
@@ -162,7 +166,8 @@ export async function getPermissionById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updatePermission(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { resource, action, description, is_active } = req.body;
@@ -183,8 +188,8 @@ export async function updatePermission(req, res) {
       id,
       { resource, action, description, is_active },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
       },
     );
@@ -208,7 +213,8 @@ export async function updatePermission(req, res) {
  * @param {Object} res - Express response object
  */
 export async function bulkUpdateStatus(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { ids, state } = req.body;
 
@@ -230,8 +236,8 @@ export async function bulkUpdateStatus(req, res) {
       ids,
       state === 'active',
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
       },
     );
@@ -258,7 +264,8 @@ export async function bulkUpdateStatus(req, res) {
  * @param {Object} res - Express response object
  */
 export async function deletePermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { ids } = req.body;
 
@@ -273,10 +280,10 @@ export async function deletePermissions(req, res) {
 
     // Delete permissions (activities logged in service)
     const result = await permissionService.bulkDelete(ids, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
-      systemPermissions: req.app.get('auth').SYSTEM_PERMISSIONS,
+      systemPermissions: container.resolve('auth').SYSTEM_PERMISSIONS,
     });
 
     return http.sendSuccess(res, {

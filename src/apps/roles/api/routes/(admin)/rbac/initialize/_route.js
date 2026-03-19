@@ -13,7 +13,7 @@ function requirePermission() {
       middlewares: { requirePermission },
       DEFAULT_RESOURCES,
       DEFAULT_ACTIONS,
-    } = req.app.get('auth');
+    } = req.app.get('container').resolve('auth');
 
     return requirePermission(
       `${DEFAULT_RESOURCES.ALL}:${DEFAULT_ACTIONS.MANAGE}`,

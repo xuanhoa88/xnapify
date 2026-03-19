@@ -8,11 +8,11 @@
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Group } = app.get('models');
+export async function up(_, { container }) {
+  const { Group } = container.resolve('models');
 
   // Get seed groups from container
-  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
+  const SEED_GROUPS = container.resolve('groups:seed_constants');
 
   const groups = [
     {
@@ -47,11 +47,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { Group } = app.get('models');
+export async function down(_, { container }) {
+  const { Group } = container.resolve('models');
 
   // Get seed groups from container
-  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
+  const SEED_GROUPS = container.resolve('groups:seed_constants');
 
   // Remove all seeded groups by id
   await Group.destroy({

@@ -11,7 +11,7 @@ function requirePermission(permission) {
   return (req, res, next) => {
     const {
       middlewares: { requirePermission },
-    } = req.app.get('auth');
+    } = req.app.get('container').resolve('auth');
     return requirePermission(permission)(req, res, next);
   };
 }
@@ -19,10 +19,9 @@ function requirePermission(permission) {
 export const post = [
   requirePermission('plugins:create'),
   (req, res, next) =>
-    req.app.get('fs').useUploadMiddleware({ fieldName: 'file' })(
-      req,
-      res,
-      next,
-    ),
+    req.app
+      .get('container')
+      .resolve('fs')
+      .useUploadMiddleware({ fieldName: 'file' })(req, res, next),
   pluginController.uploadPlugin,
 ];

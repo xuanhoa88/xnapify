@@ -10,16 +10,15 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Permission, RolePermission } = app.get('models');
+export async function up(_, { container }) {
+  const { Permission, RolePermission } = container.resolve('models');
 
   // Get seed constants from container
-  const container = app.get('container');
   const SEED_PERMISSIONS = container.resolve('files:seed_constants');
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
   // Get default resources and actions from auth
-  const { DEFAULT_RESOURCES, DEFAULT_ACTIONS } = app.get('auth');
+  const { DEFAULT_RESOURCES, DEFAULT_ACTIONS } = container.resolve('auth');
 
   const permissions = [
     // Files CRUD
@@ -136,11 +135,10 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { Permission, RolePermission } = app.get('models');
+export async function down(_, { container }) {
+  const { Permission, RolePermission } = container.resolve('models');
 
   // Get seed constants from container
-  const container = app.get('container');
   const SEED_PERMISSIONS = container.resolve('files:seed_constants');
 
   // Remove role permissions first

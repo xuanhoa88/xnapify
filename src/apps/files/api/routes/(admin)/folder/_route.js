@@ -7,11 +7,17 @@
 
 import * as fileController from '../../../controllers/file.controller';
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('container').resolve('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
 // POST /api/files/folder
 export const post = [
-  (req, res, next) => {
-    const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:create')(req, res, next);
-  },
+  requirePermission('files:create'),
   fileController.createFolder,
 ];

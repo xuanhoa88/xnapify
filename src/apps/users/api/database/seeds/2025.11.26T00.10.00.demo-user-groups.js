@@ -10,11 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { UserGroup } = app.get('models');
+export async function up(_, { container }) {
+  const { UserGroup } = container.resolve('models');
 
   // Get seed constants from the container
-  const container = app.get('container');
   const SEED_GROUPS = container.resolve('groups:seed_constants');
   const SEED_USERS = container.resolve('users:seed_constants');
 
@@ -64,11 +63,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { UserGroup } = app.get('models');
+export async function down(_, { container }) {
+  const { UserGroup } = container.resolve('models');
 
   // Get seed constants from the container
-  const SEED_USERS = app.get('container').resolve('users:seed_constants');
+  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded user groups by userId
   await UserGroup.destroy({

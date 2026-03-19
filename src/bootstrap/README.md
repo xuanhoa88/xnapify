@@ -15,17 +15,16 @@ The bootstrap layer has two entry points:
 import bootstrap, { APP_PROVIDERS } from '@src/bootstrap/api';
 
 // Returns the assembled Express API router
-const apiRouter = await bootstrap(guardControl);
+const apiRouter = await bootstrap(app);
 ```
 
 ### Startup Sequence
 
-1. **Unlock** — `guardControl.unlock()` allows `app.set()` during init.
-2. **Register engines** — All shared engines registered on DI container. Engines with `withContext()` get a restricted proxy (read-only).
+1. **Register engines** — All shared engines registered on DI container via `container.instance()`. Engines with `withContext()` receive the container for internal resolution.
+2. **Configure passport** — OAuth registry created.
 3. **Run migrations** — `db.connection.runMigrations()` + `runSeeds()`.
 4. **Global middleware** — Morgan logging + CORS applied.
 5. **Discover modules** — Auto-discovers `src/apps/*/api/index.js` → runs lifecycle (models → init → routes) → builds dynamic API router.
-6. **Lock** — `guardControl.lock()` prevents further mutations.
 
 ### API Middleware Stack
 

@@ -11,7 +11,7 @@ export const authenticate = async (req, { token, jwt }) => {
   const verifiedPayload = jwt.verifyToken(token);
 
   // API Key flow
-  const { UserApiKey } = req.app.get('models');
+  const { UserApiKey } = req.app.get('container').resolve('models');
   const apiKey = await UserApiKey.findOne({
     where: {
       id: verifiedPayload.jti,

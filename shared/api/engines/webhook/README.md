@@ -5,7 +5,7 @@ Inbound webhook handler registration with HMAC signature verification, lifecycle
 ## Quick Start
 
 ```javascript
-const webhook = app.get('container').resolve('webhook');
+const webhook = container.resolve('webhook');
 
 webhook.handler('stripe', {
   secret: process.env.STRIPE_WEBHOOK_SECRET,
@@ -103,7 +103,7 @@ import { WebhookError, WebhookValidationError } from '@shared/api/engines/webhoo
 ```javascript
 import { createFactory } from '@shared/api/engines/webhook';
 const myWebhook = createFactory();
-myWebhook.withContext(app); // Must bind hook engine before use
+myWebhook.withContext(container); // Must bind hook engine before use
 ```
 
 ## See Also

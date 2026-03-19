@@ -89,7 +89,7 @@ export default workerPool;
 import workerPool from '../workers';
 
 export async function generateReport(req, res) {
-  const http = req.app.get('container').resolve('http');
+  const http = req.container.resolve('http');
 
   try {
     const { startDate, endDate } = req.body;
@@ -300,7 +300,7 @@ When your worker needs `app` access (models, hooks, plugin manager, WebSocket), 
 | Need | Pattern |
 |------|---------|
 | Stateless, CPU-heavy work | Piscina worker (`createWorkerPool`) |
-| Needs `app.get('container').resolve('models')`, hooks, WS | Queue-based handler |
+| Needs `container.resolve('models')`, hooks, WS | Queue-based handler |
 | Both: stateful orchestration + CPU offload | Hybrid (queue calls Piscina) |
 
 ### Queue-Based Handler
@@ -309,8 +309,8 @@ When your worker needs `app` access (models, hooks, plugin manager, WebSocket), 
 // @apps/posts/api/services/post.workers.js
 async function handlePublishJob(app, job) {
   const { postId, actorId } = job.data;
-  const { Post } = app.get('container').resolve('models');
-  const hook = app.get('container').resolve('hook');
+  const { Post } = container.resolve('models');
+  const hook = container.resolve('hook');
 
   const post = await Post.findByPk(postId);
   await post.update({ status: 'published' });
@@ -322,8 +322,8 @@ async function handlePublishJob(app, job) {
   return { success: true };
 }
 
-export function registerPostWorkers(app) {
-  const queue = app.get('container').resolve('queue');
+export function registerPostWorkers(container) {
+  const queue = container.resolve('queue');
   const channel = queue('posts');
   channel.on('publish', job => handlePublishJob(app, job));
 }
@@ -335,8 +335,8 @@ Register in the module's `init()` lifecycle hook:
 // @apps/posts/api/index.js
 import { registerPostWorkers } from './services/post.workers';
 
-export async function init(app) {
-  registerPostWorkers(app);
+export async function init(container) {
+  registerPostWorkers(container);
 }
 ```
 
@@ -355,7 +355,7 @@ async function handleProcessJob(app, job) {
   const hash = await workerPool.computeHash(job.data.filePath);
 
   // Stateful → main process (app access)
-  const { Item } = app.get('container').resolve('models');
+  const { Item } = container.resolve('models');
   await Item.update({ hash }, { where: { id: itemId } });
 }
 ```

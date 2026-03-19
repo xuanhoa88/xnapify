@@ -8,16 +8,14 @@
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Permission } = app.get('models');
+export async function up(_, { container }) {
+  const { Permission } = container.resolve('models');
 
   // Get seed permissions from container
-  const SEED_PERMISSIONS = app
-    .get('container')
-    .resolve('permissions:seed_constants');
+  const SEED_PERMISSIONS = container.resolve('permissions:seed_constants');
 
   // Get default resources and actions from auth
-  const { DEFAULT_RESOURCES, DEFAULT_ACTIONS } = app.get('auth');
+  const { DEFAULT_RESOURCES, DEFAULT_ACTIONS } = container.resolve('auth');
 
   const permissions = [
     // Super admin - full access
@@ -199,13 +197,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { Permission } = app.get('models');
+export async function down(_, { container }) {
+  const { Permission } = container.resolve('models');
 
   // Get seed permissions from container
-  const SEED_PERMISSIONS = app
-    .get('container')
-    .resolve('permissions:seed_constants');
+  const SEED_PERMISSIONS = container.resolve('permissions:seed_constants');
 
   // Remove all seeded permissions by id
   await Permission.destroy({

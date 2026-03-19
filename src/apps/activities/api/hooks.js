@@ -11,11 +11,11 @@
 
 /**
  * Register activities hooks
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export function registerActivityHooks(app) {
-  const hook = app.get('hook');
-  const activitiesWorker = app.get('container').resolve('activities:worker');
+export function registerActivityHooks(container) {
+  const hook = container.resolve('hook');
+  const activitiesWorker = container.resolve('activities:worker');
 
   if (!hook || !activitiesWorker) {
     console.warn('[Activity] ⚠️ Hook engine or worker pool not available');

@@ -6,7 +6,5 @@
  */
 
 /**
- * Jest setup file that runs BEFORE the test environment is set up.
- * Note: require.context hook is registered in setupAfterEnv.js instead,
- * because it needs to be available in the test environment (jsdom).
+ * Jest setup file (setupFiles phase — runs before test environment).
  */

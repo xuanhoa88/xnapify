@@ -8,7 +8,7 @@
 function authMiddleware(req, res, next) {
   const {
     middlewares: { requireAuth },
-  } = req.app.get('auth');
+  } = req.app.get('container').resolve('auth');
   return requireAuth()(req, res, next);
 }
 
@@ -23,7 +23,7 @@ export const get = [
 export const post = [
   authMiddleware,
   (req, res, next) => {
-    const fs = req.app.get('fs');
+    const fs = req.app.get('container').resolve('fs');
     const avatarUpload = fs.useUploadMiddleware({
       fieldName: 'avatar',
       maxFiles: 1,

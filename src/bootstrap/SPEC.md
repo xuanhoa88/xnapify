@@ -40,24 +40,23 @@ views.js
 
 ## 2. API Bootstrap (`api/index.js`)
 
-### `bootstrap(guardControl) → Promise<Router>`
+### `bootstrap(app) → Promise<Router>`
 
-Orchestrates the full API startup sequence with provider guard locking:
+Orchestrates the full API startup sequence:
 
 ```
-1. guardControl.unlock()         — Allow app.set() during init
-2. registerEngines(guardControl) — Register all engines on DI container
+1. registerEngines(container)    — Register all engines on DI container
+2. configurePassport()           — Setup OAuth registry
 3. runCoreMigrations()           — Run DB migrations + seeds
 4. setupGlobalMiddleware(app)    — Apply morgan + CORS
 5. setupApiRoutes(app)           — Discover modules + build router
-   └── finally: guardControl.lock() — Prevent further app.set() mutations
 ```
 
-### `registerEngines(guardControl)`
+### `registerEngines(container)`
 
-Iterates `engines` from `@shared/api` and registers each on `app.set(name, engine)`.
+Iterates `engines` from `@shared/api` and registers each on the DI container via `container.instance(name, engine)`.
 
-- If engine has `withContext(proxy)` → binds to restricted proxy (read-only DI access via `proxy.get()` only).
+- If engine has `withContext(container)` → binds engine to the DI container (enables `container.resolve()` within engine).
 - Otherwise → registers engine directly.
 - Exports `APP_PROVIDERS` — array of engine names (`Object.keys(engines)`).
 
@@ -79,7 +78,7 @@ Applied to every API route (before each DynamicRouter):
 1. `auth.middlewares.refreshToken()` — auto-refresh tokens.
 2. `auth.middlewares.optionalAuth()` — populate `req.user` if token present.
 
-Only applied if `app.get('jwt')` is available.
+Only applied if `container.resolve('jwt')` is available.
 
 ### `buildApiRouter(app, apiRoutes) → express.Router`
 
@@ -92,7 +91,7 @@ Only applied if `app.get('jwt')` is available.
 ### Module Discovery
 
 ```javascript
-require.context('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i)
+require.context('../../apps', true, /^\.\/[^/]+\/api\/index\.[cm]?[jt]s$/i);
 ```
 
 Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycle: `models → init → routes`.
@@ -101,15 +100,15 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 
 ### `initializeRouter(options?) → Promise<AppRouter>`
 
-| Option | Description |
-|---|---|
-| `plugin` | Plugin manager instance (client or server) |
-| `container` | DI container instance |
+| Option      | Description                                |
+| ----------- | ------------------------------------------ |
+| `plugin`    | Plugin manager instance (client or server) |
+| `container` | DI container instance                      |
 
 ### Module Discovery
 
 ```javascript
-require.context('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i)
+require.context('../apps', true, /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i);
 ```
 
 Discovers `src/apps/*/views/index.js` files. Each module goes through the lifecycle: `translations → providers → views`.
@@ -124,12 +123,12 @@ Overrides `resolve(context)` to handle metadata:
 
 ### Router Configuration
 
-| Feature | Description |
-|---|---|
-| `errorHandler` | In `__DEV__`: throws non-403 errors. In prod: redirects to `/error` route. |
-| `onRouteInit` | Loads plugin namespace for the route (if not already loaded). |
-| `onRouteDestroy` | Unloads plugin namespace for the route. |
-| Catch-all | `/*path` → redirects to `/not-found` route. |
+| Feature          | Description                                                                |
+| ---------------- | -------------------------------------------------------------------------- |
+| `errorHandler`   | In `__DEV__`: throws non-403 errors. In prod: redirects to `/error` route. |
+| `onRouteInit`    | Loads plugin namespace for the route (if not already loaded).              |
+| `onRouteDestroy` | Unloads plugin namespace for the route.                                    |
+| Catch-all        | `/*path` → redirects to `/not-found` route.                                |
 
 Plugin namespace is derived from: `route.workspace` → `route.module.workspace` → `route.path`.
 
@@ -141,14 +140,15 @@ Uses the `cors` package with dynamic origin resolution.
 
 ### `RSK_CORS_ORIGIN` Env Var
 
-| Value | Behavior |
-|---|---|
-| `'true'` | Allow all origins (⚠️ dev only) |
-| `'false'` | Block all origins |
-| comma-separated URLs | Whitelist (exact match + wildcard `*` support) |
-| unset/empty | Same-host fallback (allows only requests from same `Host` header) |
+| Value                | Behavior                                                          |
+| -------------------- | ----------------------------------------------------------------- |
+| `'true'`             | Allow all origins (⚠️ dev only)                                   |
+| `'false'`            | Block all origins                                                 |
+| comma-separated URLs | Whitelist (exact match + wildcard `*` support)                    |
+| unset/empty          | Same-host fallback (allows only requests from same `Host` header) |
 
 **Features:**
+
 - Requests with no origin (mobile apps, curl) always allowed.
 - Wildcard support: `https://*.example.com` matches subdomains.
 - `credentials: true` — allows cookies/auth headers.
@@ -159,28 +159,28 @@ Uses the `cors` package with dynamic origin resolution.
 ### `createLoggingMiddleware() → Express middleware`
 
 Morgan request logging:
+
 - `__DEV__` → `'dev'` format (colored, concise).
 - Production → `'combined'` format (Apache combined log).
 
 ## 6. Environment Variables
 
-| Var | Default | Description |
-|---|---|---|
-| `RSK_CORS_ORIGIN` | same-host | CORS allowed origins |
-| `RSK_JSON_BODY_LIMIT` | `'10mb'` | JSON body parser limit |
-| `RSK_URLENCODED_BODY_LIMIT` | `'1mb'` | URL-encoded body limit |
+| Var                         | Default   | Description            |
+| --------------------------- | --------- | ---------------------- |
+| `RSK_CORS_ORIGIN`           | same-host | CORS allowed origins   |
+| `RSK_JSON_BODY_LIMIT`       | `'10mb'`  | JSON body parser limit |
+| `RSK_URLENCODED_BODY_LIMIT` | `'1mb'`   | URL-encoded body limit |
 
-## 7. Guard Control Pattern
+## 7. Container-Based DI
 
-The `guardControl` parameter provides a safety mechanism during bootstrap:
+The bootstrap layer uses the DI container (`app.get('container')`) as the single service registry:
 
-- `guardControl.unlock()` — temporarily allows `app.set()` mutations.
-- `guardControl.app` — the Express app instance.
-- `guardControl.proxy` — restricted proxy (read-only `get()` only).
-- `guardControl.lock()` — prevents further mutations (in `finally` block).
+- `container.instance(name, value)` — registers a service.
+- `container.resolve(name)` — retrieves a service.
+- Engines with `withContext(container)` receive the container for internal service resolution.
 
-This ensures engines can only be registered during the bootstrap phase.
+Modules and engines never access Express `app` methods (`app.use`, `app.set`) directly.
 
 ---
 
-*Note: This spec reflects the CURRENT implementation of the bootstrap layer.*
+_Note: This spec reflects the CURRENT implementation of the bootstrap layer._

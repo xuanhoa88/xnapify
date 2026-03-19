@@ -29,7 +29,8 @@ import * as userAdminService from '../../services/admin/user.service';
  * @param {Object} res - Express response object
  */
 export async function createUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const {
       email,
@@ -67,10 +68,10 @@ export async function createUser(req, res) {
         is_active,
       },
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
         actorId: req.user.id,
-        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
-        hook: req.app.get('hook'),
+        defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
+        hook: container.resolve('hook'),
       },
     );
 
@@ -97,21 +98,22 @@ export async function createUser(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getUserList(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { page, limit } = http.getPagination(req);
     const { search = '', role = '', status = '', group = '' } = req.query;
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Get user list
     const result = await userAdminService.getUserList(
       { page, limit, search, role, status, group },
       {
         models,
-        hook: req.app.get('hook'),
-        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+        hook: container.resolve('hook'),
+        defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
       },
     );
 
@@ -133,17 +135,18 @@ export async function getUserList(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getUserById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Get user by ID
     const user = await userAdminService.getUserById(id, {
       models,
-      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+      defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
     });
 
     return http.sendSuccess(res, {
@@ -163,7 +166,8 @@ export async function getUserById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updateUserById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { profile, password, roles, groups, is_active } = req.body;
@@ -186,7 +190,7 @@ export async function updateUserById(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Build update data - only include password if provided
     const updateData = {
@@ -205,8 +209,8 @@ export async function updateUserById(req, res) {
     const user = await userAdminService.updateUserById(id, updateData, {
       models,
       actorId: req.user.id,
-      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
-      hook: req.app.get('hook'),
+      defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -237,7 +241,8 @@ export async function updateUserById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function bulkUpdateStatus(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { ids, state } = req.body;
 
@@ -259,7 +264,7 @@ export async function bulkUpdateStatus(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Bulk update status (activities logged in service)
     const result = await userAdminService.bulkUpdateStatus(
@@ -268,7 +273,7 @@ export async function bulkUpdateStatus(req, res) {
       {
         models,
         actorId: req.user.id,
-        hook: req.app.get('hook'),
+        hook: container.resolve('hook'),
       },
     );
 
@@ -299,7 +304,8 @@ export async function bulkUpdateStatus(req, res) {
  * @param {Object} res - Express response object
  */
 export async function bulkDelete(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { ids } = req.body;
 
@@ -318,13 +324,13 @@ export async function bulkDelete(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Bulk delete users (activities logged in service)
     const result = await userAdminService.bulkDelete(ids, {
       models,
       actorId: req.user.id,
-      hook: req.app.get('hook'),
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -344,15 +350,16 @@ export async function bulkDelete(req, res) {
  * @access  Admin
  */
 export async function deleteUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     const result = await userAdminService.bulkDelete([id], {
       models,
       actorId: req.user.id,
-      hook: req.app.get('hook'),
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -371,15 +378,16 @@ export async function deleteUser(req, res) {
  * @access  Admin
  */
 export async function exportUsers(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { search = '', role = '', status = '', group = '' } = req.query;
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // For now, reuse getUserList without limit to get all matching users
     const result = await userAdminService.getUserList(
       { page: 1, limit: 1000, search, role, status, group },
-      { models, hook: req.app.get('hook') },
+      { models, hook: container.resolve('hook') },
     );
 
     return http.sendSuccess(res, {
@@ -402,8 +410,9 @@ export async function exportUsers(req, res) {
  * @access  Admin
  */
 export async function listApiKeys(req, res) {
-  const http = req.app.get('http');
-  const models = req.app.get('models');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const models = container.resolve('models');
   const { id } = req.params;
 
   try {
@@ -422,9 +431,10 @@ export async function listApiKeys(req, res) {
  * @access  Admin
  */
 export async function createApiKey(req, res) {
-  const http = req.app.get('http');
-  const models = req.app.get('models');
-  const jwt = req.app.get('jwt');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const models = container.resolve('models');
+  const jwt = container.resolve('jwt');
   const { id } = req.params;
   const { name, scopes = [], expiresIn } = req.body;
 
@@ -441,11 +451,11 @@ export async function createApiKey(req, res) {
     }
 
     // Create API key via service
-    const cache = req.app.get('cache');
+    const cache = container.resolve('cache');
     const result = await userAdminService.createApiKey(
       id,
       { name, scopes, expiresIn, cache },
-      { models, jwt, hook: req.app.get('hook') },
+      { models, jwt, hook: container.resolve('hook') },
     );
 
     return http.sendSuccess(res, result);
@@ -461,14 +471,15 @@ export async function createApiKey(req, res) {
  * @access  Admin
  */
 export async function revokeApiKey(req, res) {
-  const http = req.app.get('http');
-  const models = req.app.get('models');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const models = container.resolve('models');
   const { id, keyId } = req.params;
 
   try {
     await userAdminService.revokeApiKey(id, keyId, {
       models,
-      hook: req.app.get('hook'),
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, { message: 'API Key revoked' });
@@ -487,7 +498,8 @@ export async function revokeApiKey(req, res) {
  * @access  Admin
  */
 export async function impersonate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
@@ -496,9 +508,9 @@ export async function impersonate(req, res) {
       return http.sendError(res, 'Cannot impersonate yourself', 400);
     }
 
-    const models = req.app.get('models');
-    const authConfig = req.app.get('auth');
-    const jwt = req.app.get('jwt');
+    const models = container.resolve('models');
+    const authConfig = container.resolve('auth');
+    const jwt = container.resolve('jwt');
 
     // Get user data via service
     const user = await userAdminService.impersonateUser(id, {

@@ -142,7 +142,7 @@ const workerPool = createWorkerPool(workersContext, {
 // Throttle frequent channel broadcasts
 import { throttle } from 'lodash';
 
-const ws = app.get('container').resolve('ws');
+const ws = container.resolve('ws');
 
 const throttledBroadcast = throttle((type, data) => {
   ws.sendToPublicChannel(type, data);

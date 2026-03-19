@@ -10,11 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { GroupRole } = app.get('models');
+export async function up(_, { container }) {
+  const { GroupRole } = container.resolve('models');
 
   // Get seed groups from container
-  const container = app.get('container');
   const SEED_GROUPS = container.resolve('groups:seed_constants');
   const SEED_ROLES = container.resolve('roles:seed_constants');
 
@@ -54,11 +53,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { GroupRole } = app.get('models');
+export async function down(_, { container }) {
+  const { GroupRole } = container.resolve('models');
 
   // Get seed groups from container
-  const SEED_GROUPS = app.get('container').resolve('groups:seed_constants');
+  const SEED_GROUPS = container.resolve('groups:seed_constants');
 
   // Remove all seeded group roles by groupId
   await GroupRole.destroy({

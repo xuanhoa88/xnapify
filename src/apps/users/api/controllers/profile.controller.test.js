@@ -92,8 +92,9 @@ describe('Profile Controller', () => {
             fs: mockFs,
             hook: mockHook,
             i18n: mockI18n,
-            container: { resolve: jest.fn() },
           };
+          if (key === 'container')
+            return { resolve: name => deps[name], has: () => false };
           return deps[key];
         }),
       },

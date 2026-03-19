@@ -254,7 +254,7 @@ const queue = createFactory();
 export default queue;
 ```
 
-The singleton is registered on the DI container as `app.get('container').resolve('queue')` during engine autoloading.
+The singleton is registered on the DI container as `container.resolve('queue')` during engine autoloading.
 
 ## 9. Testing
 
@@ -286,7 +286,7 @@ Uses `__mocks__/uuid.js` (sequential `mock-uuid-N`). Creates a fresh `createFact
 
 ## 10. Integration Points
 
-- **Module `init(app)`**: Access via `app.get('container').resolve('queue')`. Create channels for domain-specific job processing.
+- **Module `init(container)`**: Access via `container.resolve('queue')`. Create channels for domain-specific job processing.
 - **Worker Engine**: Queue handlers can dispatch CPU-bound subtasks to worker pools (hybrid pattern).
 - **Schedule Engine**: Cron handlers can emit jobs to queue channels for rate-limited processing.
 - **Plugin lifecycle**: Plugins use queue channels for background install/toggle operations.

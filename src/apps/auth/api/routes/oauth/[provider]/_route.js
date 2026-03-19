@@ -10,10 +10,12 @@ import passport from 'passport';
 export const get = [
   function oauthInitiate(req, res, next) {
     const { provider } = req.params;
-    const http = req.app.get('http');
+
+    const container = req.app.get('container');
+    const http = container.resolve('http');
 
     try {
-      const oauth = req.app.get('oauth');
+      const oauth = container.resolve('oauth');
 
       if (!oauth || !oauth.hasProvider(provider)) {
         return http.sendError(

@@ -35,11 +35,10 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 /**
  * Providers hook — share services with other modules.
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function providers(app) {
-  const container = app.get('container');
-  const workerPool = getActivityWorkerPool(app);
+export async function providers(container) {
+  const workerPool = getActivityWorkerPool(container);
 
   // Expose worker pool so other modules (if any) can call it directly
   container.bind('activities:worker', () => workerPool, OWNER_KEY);
@@ -55,31 +54,31 @@ export function models() {
 /**
  * Migrations hook — run database migrations.
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'activities' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
   await db.connection.runSeeds(
     [{ context: seedsContext, prefix: 'activities' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Init hook — called by the autoloader to initialise this module.
  */
-export async function init(app) {
+export async function init(container) {
   // Register hooks to observe system changes
-  registerActivityHooks(app);
+  registerActivityHooks(container);
 
   console.info('[Activity] ✅ Initialized');
 }

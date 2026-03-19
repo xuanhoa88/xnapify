@@ -129,7 +129,7 @@ export default {
     console.log('[Plugin] Initialized for ' + __PLUGIN_NAME__);
 
     // Run database migrations
-    const db = context.app.get('container').resolve('db');
+    const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
@@ -151,7 +151,7 @@ export default {
     }
 
     // Get hook engine
-    const hook = context.app.get('container').resolve('hook');
+    const hook = context.container.resolve('hook');
 
     // Handler for schema validation
     this[HANDLERS].updateValidation = function (context) {
@@ -209,7 +209,7 @@ export default {
 
   // Lifecycle: Cleanup on plugin disable
   async destroy(registry, context) {
-    const hook = context.app.get('container').resolve('hook');
+    const hook = context.container.resolve('hook');
 
     // Unregister hook
     if (this[HANDLERS].updateValidation) {
@@ -217,7 +217,7 @@ export default {
     }
 
     // Undo seeds and migrations
-    const db = context.app.get('container').resolve('db');
+    const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([
@@ -721,7 +721,7 @@ export default {
   },
 
   async init(registry, context) {
-    const db = context.app.get('container').resolve('db');
+    const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
@@ -733,7 +733,7 @@ export default {
       }
     }
 
-    const hook = context.app.get('container').resolve('hook');
+    const hook = context.container.resolve('hook');
 
     // Example handler for comment creation hook
     this[HANDLERS].onCommentCreated = function (comment) {
@@ -746,13 +746,13 @@ export default {
   },
 
   async destroy(registry, context) {
-    const hook = context.app.get('container').resolve('hook');
+    const hook = context.container.resolve('hook');
 
     if (this[HANDLERS].onCommentCreated) {
       hook('posts').off('comment:created', this[HANDLERS].onCommentCreated);
     }
 
-    const db = context.app.get('container').resolve('db');
+    const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.revertMigrations([
@@ -790,7 +790,7 @@ registry.registerHook('posts.validator', extendValidator);
 registry.unregisterHook('posts.validator', extendValidator);
 
 // Listen to plugin events
-const hook = context.app.get('container').resolve('hook');
+const hook = context.container.resolve('hook');
 hook('posts').on('created', post => {
   console.log('Post created:', post);
 });

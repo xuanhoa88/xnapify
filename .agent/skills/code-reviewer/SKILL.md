@@ -23,10 +23,10 @@ Modules form the core business logic of the application. They are loaded dynamic
 - **Directory Structure:** Ensure the module correctly separates backend logic into `api/` and frontend logic into `views/`.
 - **Backend Hooks (`api/index.js`):** MUST strictly export the following lifecycle functions:
   - `models()` (returns Webpack context)
-  - `providers(app)` (binds DI injection)
-  - `migrations(app)`
-  - `seeds(app)`
-  - `init(app)`
+  - `providers(container)` (binds DI injection)
+  - `migrations(container)`
+  - `seeds(container)`
+  - `init(container)`
   - `routes()`
 - **Frontend Hooks (`views/index.js`):** MUST export:
   - `providers({ container })`

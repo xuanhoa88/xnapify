@@ -118,15 +118,18 @@ describe('shared/api/autoloader', () => {
   });
 
   describe('discoverModules', () => {
-    const mockApp = {
-      get: jest.fn(),
-      set: jest.fn(),
-    };
     const mockDb = {};
+    const mockContainer = {
+      resolve: jest.fn(key => {
+        if (key === 'db') return mockDb;
+        return null;
+      }),
+      instance: jest.fn(),
+    };
 
     beforeEach(() => {
-      mockApp.get.mockReturnValue(mockDb);
-      mockApp.get.mockClear();
+      mockContainer.resolve.mockClear();
+      mockContainer.instance.mockClear();
     });
 
     it('should load translations via hooks.translations()', async () => {
@@ -169,7 +172,7 @@ describe('shared/api/autoloader', () => {
         return { init: jest.fn() };
       });
 
-      await discoverModules(mockContext, mockApp);
+      await discoverModules(mockContext, mockContainer);
 
       expect(getTranslations).toHaveBeenCalledWith(mockTranslationsContext);
       expect(addNamespace).toHaveBeenCalledWith('users', {
@@ -259,7 +262,7 @@ describe('shared/api/autoloader', () => {
         }
       });
 
-      const { apiModels } = await discoverModules(mockContext, mockApp);
+      const { apiModels } = await discoverModules(mockContext, mockContainer);
 
       // Verify models loaded via hooks.models()
       expect(apiModels).toHaveProperty('User', userModel);
@@ -337,7 +340,7 @@ describe('shared/api/autoloader', () => {
         return { default: jest.fn() };
       });
 
-      const { apiModels } = await discoverModules(mockContext, mockApp);
+      const { apiModels } = await discoverModules(mockContext, mockContainer);
 
       expect(apiModels).toHaveProperty('User');
       expect(Object.keys(apiModels)).toHaveLength(1);

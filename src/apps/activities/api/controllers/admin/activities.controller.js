@@ -15,9 +15,10 @@
  * @param {Object} res - Express response
  */
 export async function listActivities(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
 
-  const { Activity } = req.app.get('models');
+  const { Activity } = container.resolve('models');
   const {
     page = 1,
     limit = 20,

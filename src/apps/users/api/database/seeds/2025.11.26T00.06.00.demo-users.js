@@ -8,14 +8,14 @@
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
+export async function up(_, { container }) {
   const now = new Date();
 
   // Get User and UserProfile models from the container
-  const { User, UserProfile } = app.get('models');
+  const { User, UserProfile } = container.resolve('models');
 
   // Get seed constants from the container
-  const SEED_USERS = app.get('container').resolve('users:seed_constants');
+  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Passwords will be automatically hashed by beforeBulkCreate hook
   const users = [
@@ -137,12 +137,12 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
+export async function down(_, { container }) {
   // Get User model from the container
-  const { User } = app.get('models');
+  const { User } = container.resolve('models');
 
   // Get seed constants from the container
-  const SEED_USERS = app.get('container').resolve('users:seed_constants');
+  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded users by email.
   // This will cascade delete their associated user_profiles because User.associate

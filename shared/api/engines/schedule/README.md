@@ -17,11 +17,11 @@ schedule.register('billing:invoice-reminders', '0 0 * * *', async () => {
 Inside a module's `init()` lifecycle hook:
 
 ```javascript
-export async function init(app) {
-  const schedule = app.get('container').resolve('schedule');
+export async function init(container) {
+  const schedule = container.resolve('schedule');
 
   schedule.register('analytics:daily-rollup', '0 2 * * *', async () => {
-    const { models } = app.get('container').resolve('db');
+    const { models } = container.resolve('db');
     await models.AnalyticsRollup.computeDaily();
   });
 }
@@ -107,7 +107,7 @@ Keep cron handlers lightweight — dispatch heavy processing to a worker pool:
 
 ```javascript
 schedule.register('reports:weekly', '0 9 * * 1', async () => {
-  const workerPool = app.get('container').resolve('reports:workerPool');
+  const workerPool = container.resolve('reports:workerPool');
   await workerPool.sendRequest('weekly', 'GENERATE_REPORT', {
     week: getCurrentWeek(),
   });

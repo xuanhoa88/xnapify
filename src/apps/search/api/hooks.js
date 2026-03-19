@@ -11,15 +11,17 @@
  * Allows plugins to auto-register their own search indexers via
  * the `search.indexers.register` hook.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export function registerSearchHooks(app) {
-  const { registry } = app.get('plugin');
+export function registerSearchHooks(container) {
+  const { registry } = container.resolve('plugin');
 
-  registry.executeHookParallel('search.indexers.register', app).catch(err => {
-    console.error(
-      '[Search] Failed to execute search.indexers.register hook',
-      err,
-    );
-  });
+  registry
+    .executeHookParallel('search.indexers.register', container)
+    .catch(err => {
+      console.error(
+        '[Search] Failed to execute search.indexers.register hook',
+        err,
+      );
+    });
 }

@@ -42,7 +42,7 @@ Configures a custom Passport strategy (`RskAuthStrategy`) to replace Node-RED's 
 
 1. **Extraction**: Inspects the main Express request via `req.cookies` extracting the main RSK JWT.
 2. **Decryption**: Interrogates the `@shared/jwt` infrastructure via `jwt.verifyTypedToken(token, 'access')` (or `jwt.cache`).
-3. **Role Binding**: Triggers the `hook` system (`app.get('container').resolve('hook')('auth.permissions')`) fetching the user's explicit permissions. Maps `nodered:admin` to scope `*` and `nodered:read` to scope `read`. Falling out on exceptions pushes users to `/admin`.
+3. **Role Binding**: Triggers the `hook` system (`container.resolve('hook')('auth.permissions')`) fetching the user's explicit permissions. Maps `nodered:admin` to scope `*` and `nodered:read` to scope `read`. Falling out on exceptions pushes users to `/admin`.
 
 ## Flow Splitting (`flow-splitter.js`)
 

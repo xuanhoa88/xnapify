@@ -62,10 +62,10 @@ Discovers and boots API modules in deterministic lifecycle order.
 |---|---|---|---|
 | 1 | `translations` | `translations()` → `require.context` | Register i18n namespaces |
 | 2 | `models` | `models()` → `require.context` | Load Sequelize model factories |
-| 3 | `providers` | `providers(app)` | Bind DI services, `app.set()` |
-| 4 | `migrations` | `migrations(app)` | Create/alter database schema |
-| 5 | `seeds` | `seeds(app)` | Populate initial data |
-| 6 | `init` | `init(app)` | Hook registration, workers, schedulers |
+| 3 | `providers` | `providers(container)` | Bind DI services via `container.instance()` |
+| 4 | `migrations` | `migrations(container)` | Create/alter database schema |
+| 5 | `seeds` | `seeds(container)` | Populate initial data |
+| 6 | `init` | `init(container)` | Hook registration, workers, schedulers |
 | 7 | `routes` | `routes()` → `require.context` | Expose file-based API routes |
 
 #### Module Loading Order
@@ -121,7 +121,7 @@ router.add(adapter);
 
 ## Engines Reference
 
-| Engine | `app.set()` Key | Description |
+| Engine | Container Key | Description |
 |---|---|---|
 | `auth` | `auth` | JWT sessions, OAuth, permission middleware |
 | `cache` | `cache` | Key-value store (memory/file), auto-disabled in dev |

@@ -21,10 +21,10 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 2. **Setup Subdirectories:** Always create `controllers`, `services`, `routes`, `models`, and `database/migrations` + `database/seeds`.
 3. **The Index File (`api/index.js`):** Export the following exact lifecycle hooks:
    - `models()`: returns the Webpack context for models.
-   - `providers(app)`: binds singletons/factories to the dependency injection `container`.
-   - `migrations(app)`: executes `db.connection.runMigrations()`.
-   - `seeds(app)`: executes `db.connection.runSeeds()`.
-   - `init(app)`: registers hooks, schedules, queue-based workers, or Piscina worker pools.
+   - `providers(container)`: binds singletons/factories to the dependency injection `container`.
+   - `migrations(container)`: executes `db.connection.runMigrations()`.
+   - `seeds(container)`: executes `db.connection.runSeeds()`.
+   - `init(container)`: registers hooks, schedules, queue-based workers, or Piscina worker pools.
    - `routes()`: returns the Webpack context for routes.
 
    *Note: Ensure you include `translations()` hook if this module provides backend i18n JSON.*

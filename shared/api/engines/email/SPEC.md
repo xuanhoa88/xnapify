@@ -258,7 +258,7 @@ const email = createFactory();
 
 - Named exports: `createFactory`, `services`.
 - Default export: singleton `EmailManager`.
-- Registered on DI as `app.get('container').resolve('email')`.
+- Registered on DI as `container.resolve('email')`.
 
 ## 10. Environment Variables Summary
 

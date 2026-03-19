@@ -37,8 +37,9 @@ describe('Admin Group Controller (SQLite E2E)', () => {
             http: mockHttp,
             models: mockModels,
             auth: mockAuth,
-            container: { resolve: jest.fn() },
           };
+          if (key === 'container')
+            return { resolve: name => deps[name], has: () => false };
           return deps[key];
         }),
       },

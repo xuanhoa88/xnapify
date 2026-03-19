@@ -48,7 +48,7 @@ import { registerPluginWorkers } from './plugin.workers';
 
 // ── Helpers ──────────────────────────────────────────────
 
-function createMockApp(overrides = {}) {
+function createMockContainer(overrides = {}) {
   const mockPluginUpdate = jest.fn().mockResolvedValue([1]);
   const mockPluginDestroy = jest.fn().mockResolvedValue(1);
   const mockPluginFindByPk = jest.fn().mockResolvedValue(null);
@@ -81,7 +81,7 @@ function createMockApp(overrides = {}) {
   };
 
   return {
-    get: jest.fn(key => services[key]),
+    resolve: jest.fn(key => services[key]),
     _services: services,
   };
 }
@@ -103,12 +103,12 @@ function createMockJob(data = {}) {
 
 describe('Plugin Workers', () => {
   let handlers;
-  let mockApp;
+  let mockContainer;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
-    mockApp = createMockApp();
+    mockContainer = createMockContainer();
 
     // Capture registered handlers from queueChannel.on()
     handlers = {};
@@ -118,11 +118,14 @@ describe('Plugin Workers', () => {
       }),
     };
     // eslint-disable-next-line no-underscore-dangle
-    mockApp._services.queue = jest.fn(() => mockChannel);
+    mockContainer._services.queue = jest.fn(() => mockChannel);
     // eslint-disable-next-line no-underscore-dangle
-    mockApp.get.mockImplementation(key => mockApp._services[key]);
+    mockContainer.resolve.mockImplementation(
+      // eslint-disable-next-line no-underscore-dangle
+      key => mockContainer._services[key],
+    );
 
-    registerPluginWorkers(mockApp);
+    registerPluginWorkers(mockContainer);
   });
 
   describe('registerPluginWorkers', () => {
@@ -147,7 +150,7 @@ describe('Plugin Workers', () => {
         '/plugins/test-plugin',
       );
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.models.Plugin.update).toHaveBeenCalledWith(
+      expect(mockContainer._services.models.Plugin.update).toHaveBeenCalledWith(
         { checksum: 'abc123hash' },
         { where: { id: 'p1' } },
       );
@@ -161,7 +164,7 @@ describe('Plugin Workers', () => {
       await handlers.install(job);
 
       expect(notifyPluginChange).toHaveBeenCalledWith(
-        mockApp,
+        mockContainer,
         'PLUGIN_INSTALLED',
         'p1',
       );
@@ -170,13 +173,15 @@ describe('Plugin Workers', () => {
     it('should emit hook on success', async () => {
       const mockEmit = jest.fn();
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.hook = jest.fn(() => ({ emit: mockEmit }));
+      mockContainer._services.hook = jest.fn(() => ({ emit: mockEmit }));
 
       const job = createMockJob();
       await handlers.install(job);
 
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.hook).toHaveBeenCalledWith('admin:plugins');
+      expect(mockContainer._services.hook).toHaveBeenCalledWith(
+        'admin:plugins',
+      );
       expect(mockEmit).toHaveBeenCalledWith(
         'installed',
         expect.objectContaining({ plugin_id: 'p1' }),
@@ -184,6 +189,7 @@ describe('Plugin Workers', () => {
     });
 
     it('should throw on install failure', async () => {
+      jest.spyOn(console, 'error').mockImplementation(() => {});
       installPluginDependencies.mockRejectedValueOnce(
         new Error('npm install failed'),
       );
@@ -197,16 +203,21 @@ describe('Plugin Workers', () => {
   describe('delete handler', () => {
     it('should unload plugin, remove files, and destroy DB record', async () => {
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.plugin.isPluginLoaded.mockReturnValue(true);
+      mockContainer._services.plugin.isPluginLoaded.mockReturnValue(true);
       fs.existsSync.mockReturnValue(true);
 
       const job = createMockJob();
       const result = await handlers.delete(job);
 
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.plugin.unloadPlugin).toHaveBeenCalledWith('p1');
+      expect(mockContainer._services.plugin.unloadPlugin).toHaveBeenCalledWith(
+        'p1',
+      );
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.models.Plugin.destroy).toHaveBeenCalledWith({
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.models.Plugin.destroy,
+      ).toHaveBeenCalledWith({
         where: { id: 'p1' },
       });
       expect(result).toEqual({ success: true });
@@ -214,13 +225,13 @@ describe('Plugin Workers', () => {
 
     it('should emit plugin:unloaded when plugin is not loaded', async () => {
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.plugin.isPluginLoaded.mockReturnValue(false);
+      mockContainer._services.plugin.isPluginLoaded.mockReturnValue(false);
 
       const job = createMockJob();
       await handlers.delete(job);
 
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.plugin.emit).toHaveBeenCalledWith(
+      expect(mockContainer._services.plugin.emit).toHaveBeenCalledWith(
         'plugin:unloaded',
         { id: 'p1' },
       );
@@ -229,7 +240,7 @@ describe('Plugin Workers', () => {
     it('should emit hook on delete', async () => {
       const mockEmit = jest.fn();
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.hook = jest.fn(() => ({ emit: mockEmit }));
+      mockContainer._services.hook = jest.fn(() => ({ emit: mockEmit }));
 
       const job = createMockJob();
       await handlers.delete(job);
@@ -248,7 +259,9 @@ describe('Plugin Workers', () => {
         update: jest.fn(),
       };
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.models.Plugin.findByPk.mockResolvedValue(mockDbPlugin);
+      mockContainer._services.models.Plugin.findByPk.mockResolvedValue(
+        mockDbPlugin,
+      );
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
         valid: true,
@@ -276,7 +289,9 @@ describe('Plugin Workers', () => {
         update: jest.fn(),
       };
       // eslint-disable-next-line no-underscore-dangle
-      mockApp._services.models.Plugin.findByPk.mockResolvedValue(mockDbPlugin);
+      mockContainer._services.models.Plugin.findByPk.mockResolvedValue(
+        mockDbPlugin,
+      );
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
         valid: false,
@@ -293,7 +308,7 @@ describe('Plugin Workers', () => {
       expect(result).toEqual({ success: false, reason: 'checksum_mismatch' });
       expect(mockDbPlugin.update).toHaveBeenCalledWith({ is_active: false });
       expect(notifyPluginChange).toHaveBeenCalledWith(
-        mockApp,
+        mockContainer,
         'PLUGIN_TAMPERED',
         'p1',
       );
@@ -325,7 +340,7 @@ describe('Plugin Workers', () => {
         '/plugins/test-plugin',
       );
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockApp._services.models.Plugin.update).toHaveBeenCalledWith(
+      expect(mockContainer._services.models.Plugin.update).toHaveBeenCalledWith(
         { checksum: 'new-hash' },
         { where: { id: 'p1' } },
       );

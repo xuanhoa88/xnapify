@@ -7,10 +7,16 @@
 
 import * as fileController from '../../../../controllers/file.controller';
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('container').resolve('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
 export const get = [
-  (req, res, next) => {
-    const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:read')(req, res, next);
-  },
+  requirePermission('files:read'),
   fileController.getFileShares,
 ];

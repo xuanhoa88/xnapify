@@ -48,10 +48,10 @@ const workersContext = require.context(
 /**
  * Register auth strategies and RBAC hook listeners.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-async function registerAuthHooks(app) {
-  const hook = app.get('hook');
+async function registerAuthHooks(container) {
+  const hook = container.resolve('hook');
 
   hook('auth.strategy.api_key').on('authenticate', handleApiKeyStrategy);
   hook('auth.permissions').on('resolve', getUserRBACData);
@@ -67,11 +67,9 @@ async function registerAuthHooks(app) {
 /**
  * Providers hook — called by the autoloader to share services with other modules.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function providers(app) {
-  const container = app.get('container');
-
+export async function providers(container) {
   // Bind seed constants to container as singleton
   container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
 
@@ -86,7 +84,7 @@ export async function providers(app) {
   );
 
   // Create search worker pool for user indexing
-  const worker = app.get('worker');
+  const worker = container.resolve('worker');
   if (worker) {
     const { default: attachSearchMethods } = require('./workers');
     const pool = worker.createWorkerPool('UsersSearch', workersContext, {
@@ -100,52 +98,51 @@ export async function providers(app) {
 /**
  * Migrations hook — run database migrations.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'users' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }], {
-    app,
+    container,
   });
 }
 
 /**
  * Init hook — called by the autoloader to initialise this module.
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function init(app) {
-  await registerAuthHooks(app);
+export async function init(container) {
+  await registerAuthHooks(container);
 
   // Bulk-index users for search (fire-and-forget)
-  const search = app.get('search');
-  const container = app.get('container');
+  const search = container.resolve('search');
   const searchWorkerPool = container.has('users:search:worker')
     ? container.make('users:search:worker')
     : null;
 
   if (searchWorkerPool && search) {
     searchWorkerPool.setSearch(search);
-    searchWorkerPool.registerSearchHooks(app);
+    searchWorkerPool.registerSearchHooks(container);
 
     const usersCount = await search.withNamespace('users').count();
     if (usersCount === 0) {
       searchWorkerPool
-        .indexAllUsers(search, app.get('models'))
+        .indexAllUsers(search, container.resolve('models'))
         .then(r => {
           const count = r && r.result ? r.result.usersCount : 0;
           console.info(`[Users] Indexed ${count} user(s) for search`);

@@ -29,13 +29,14 @@ import * as roleService from '../../services/admin/role.service';
  * @param {Object} res - Express response object
  */
 export async function initializeDefaults(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Initialize RBAC
     const result = await rbacService.initializeDefault({
-      models: req.app.get('models'),
+      models: container.resolve('models'),
       adminRoleName: auth.ADMIN_ROLE,
       defaultRoleName: auth.DEFAULT_ROLE,
       moderatorRoleName: auth.MODERATOR_ROLE,
@@ -63,7 +64,8 @@ export async function initializeDefaults(req, res) {
  * @param {Object} res - Express response object
  */
 export async function assignRolesToUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { role_names } = req.body;
@@ -84,8 +86,8 @@ export async function assignRolesToUser(req, res) {
 
     // Assign roles
     const user = await rbacService.assignRolesToUser(id, role_names, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -114,7 +116,8 @@ export async function assignRolesToUser(req, res) {
  * @param {Object} res - Express response object
  */
 export async function assignGroupsToUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { group_ids } = req.body;
@@ -135,8 +138,8 @@ export async function assignGroupsToUser(req, res) {
 
     // Assign groups
     const user = await rbacService.assignGroupsToUser(id, group_ids, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -165,17 +168,18 @@ export async function assignGroupsToUser(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getUserPermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
     // Get user permissions
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     const permissions = await rbacService.getUserPermissions(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
-      cache: req.app.get('cache'),
+      cache: container.resolve('cache'),
     });
 
     return http.sendSuccess(res, { permissions });
@@ -197,7 +201,8 @@ export async function getUserPermissions(req, res) {
  * @param {Object} res - Express response object
  */
 export async function checkUserPermission(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id, resource, action } = req.params;
 
@@ -208,13 +213,13 @@ export async function checkUserPermission(req, res) {
     }
 
     // Check permission
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     const hasPermission = await rbacService.userHasPermission(
       id,
       permissionName,
       {
-        models: req.app.get('models'),
-        cache: req.app.get('cache'),
+        models: container.resolve('models'),
+        cache: container.resolve('cache'),
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
       },
@@ -245,7 +250,8 @@ export async function checkUserPermission(req, res) {
  * @param {Object} res - Express response object
  */
 export async function removeRoleFromUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id, role_id } = req.params;
 
@@ -255,8 +261,8 @@ export async function removeRoleFromUser(req, res) {
     }
 
     await rbacService.removeRoleFromUser(id, role_id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -277,7 +283,8 @@ export async function removeRoleFromUser(req, res) {
  * @param {Object} res - Express response object
  */
 export async function removeGroupFromUser(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id, group_id } = req.params;
 
@@ -287,8 +294,8 @@ export async function removeGroupFromUser(req, res) {
     }
 
     await rbacService.removeGroupFromUser(id, group_id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -313,15 +320,16 @@ export async function removeGroupFromUser(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getGroupPermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Get group permissions
     const result = await rbacService.getGroupPermissions(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
     });
@@ -345,13 +353,14 @@ export async function getGroupPermissions(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getGroupRoles(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
     // Get group roles
     const result = await rbacService.getGroupRoles(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, result);
@@ -373,7 +382,8 @@ export async function getGroupRoles(req, res) {
  * @param {Object} res - Express response object
  */
 export async function assignRolesToGroup(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { role_names } = req.body;
@@ -398,8 +408,8 @@ export async function assignRolesToGroup(req, res) {
     }
 
     const updatedGroup = await rbacService.assignRolesToGroup(id, role_names, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -426,7 +436,8 @@ export async function assignRolesToGroup(req, res) {
  * @param {Object} res - Express response object
  */
 export async function addRoleToGroup(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id, role_id } = req.params;
 
@@ -441,8 +452,8 @@ export async function addRoleToGroup(req, res) {
     }
 
     await rbacService.addRoleToGroup(id, role_id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -469,7 +480,8 @@ export async function addRoleToGroup(req, res) {
  * @param {Object} res - Express response object
  */
 export async function removeRoleFromGroup(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id, role_id } = req.params;
 
@@ -484,8 +496,8 @@ export async function removeRoleFromGroup(req, res) {
     }
 
     await rbacService.removeRoleFromGroup(id, role_id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
     });
 
@@ -516,15 +528,16 @@ export async function removeRoleFromGroup(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getRolePermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Get role permissions
     const permissions = await rbacService.getRolePermissions(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
       defaultActions: auth.DEFAULT_ACTIONS,
       defaultResources: auth.DEFAULT_RESOURCES,
     });
@@ -549,7 +562,8 @@ export async function getRolePermissions(req, res) {
  * @param {Object} res - Express response object
  */
 export async function manageRolePermissions(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { action, permissions } = req.body;
@@ -564,8 +578,8 @@ export async function manageRolePermissions(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    const models = req.app.get('models');
-    const auth = req.app.get('auth');
+    const models = container.resolve('models');
+    const auth = container.resolve('auth');
 
     const role = await roleService.getRoleById(id, {
       models,
@@ -588,7 +602,7 @@ export async function manageRolePermissions(req, res) {
       {
         models,
         action,
-        hook: req.app.get('hook'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,

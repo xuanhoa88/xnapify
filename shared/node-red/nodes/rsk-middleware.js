@@ -34,13 +34,13 @@ module.exports = function (RED) {
     node.ownerParam = config.ownerParam || 'userId';
 
     // ---------------------------------------------------------------
-    // Retrieve the Express app proxy via functionGlobalContext.
-    // server.js configures:  functionGlobalContext: { app() { return guardControl.proxy; } }
+    // Retrieve the DI container via functionGlobalContext.
+    // server.js configures:  functionGlobalContext: { container() { return app.get('container'); } }
     // ---------------------------------------------------------------
-    var getApp = RED.settings.functionGlobalContext.app;
-    if (typeof getApp !== 'function') {
-      node.error('RSK app instance not found in functionGlobalContext');
-      node.status({ fill: 'red', shape: 'dot', text: 'app missing' });
+    var getContainer = RED.settings.functionGlobalContext.container;
+    if (typeof getContainer !== 'function') {
+      node.error('RSK container not found in functionGlobalContext');
+      node.status({ fill: 'red', shape: 'dot', text: 'container missing' });
       return;
     }
 
@@ -75,12 +75,12 @@ module.exports = function (RED) {
       }
 
       try {
-        var app = getApp();
+        var container = getContainer();
 
         // Single access point for all auth middlewares
-        var auth = app.get('auth');
+        var auth = container.resolve('auth');
         if (!auth || !auth.middlewares) {
-          node.error('app.get("auth").middlewares is not available');
+          node.error('container.resolve("auth").middlewares is not available');
           done(new Error('auth middlewares provider missing'));
           return;
         }

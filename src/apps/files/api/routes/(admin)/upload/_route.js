@@ -7,13 +7,19 @@
 
 import * as fileController from '../../../controllers/file.controller';
 
+function requirePermission(permission) {
+  return (req, res, next) => {
+    const {
+      middlewares: { requirePermission },
+    } = req.app.get('container').resolve('auth');
+    return requirePermission(permission)(req, res, next);
+  };
+}
+
 export const post = [
+  requirePermission('files:create'),
   (req, res, next) => {
-    const { middlewares } = req.app.get('auth');
-    return middlewares.requirePermission('files:create')(req, res, next);
-  },
-  (req, res, next) => {
-    const fs = req.app.get('fs');
+    const fs = req.app.get('container').resolve('fs');
     return fs.useUploadMiddleware({
       fieldName: 'file',
       maxSize: 50 * 1024 * 1024,

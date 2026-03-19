@@ -55,17 +55,15 @@ function log(message, level = 'info') {
 // =============================================================================
 
 /**
- * Register all engines as app providers.
+ * Register all engines on the DI container.
  *
  * Engines that implement the `withContext(proxy)` convention are automatically
  * bound to the restricted proxy — their consumers get read-only access
  * (proxy.get() only) and cannot mutate the app (no app.use/set/enable).
  *
- * @param {object} guardControl - Guard control with app and proxy
+ * @param {object} container - DI container
  */
-function registerEngines(guardControl) {
-  const { app, proxy } = guardControl;
-
+function registerEngines(container) {
   Object.entries(engines).forEach(([name, engine]) => {
     if (!engine) {
       const err = new Error(`Invalid engine definition for "${name}"`);
@@ -76,9 +74,9 @@ function registerEngines(guardControl) {
 
     // Engines with withContext() get auto-bound to the restricted proxy
     if (typeof engine.withContext === 'function') {
-      app.set(name, engine.withContext(proxy));
+      container.instance(name, engine.withContext(container));
     } else {
-      app.set(name, engine);
+      container.instance(name, engine);
     }
   });
 
@@ -100,7 +98,7 @@ async function runCoreMigrations() {
 /**
  * Setup global middleware stack.
  *
- * @param {object} app - Express app instance
+ * @param {object} app - Express application
  */
 function setupGlobalMiddleware(app) {
   app.use(createLoggingMiddleware());
@@ -112,13 +110,15 @@ function setupGlobalMiddleware(app) {
 /**
  * Create API middleware stack with authentication.
  *
- * @param {object} app - Express app instance
+ * @param {object} app - Express application
  * @returns {Array} Array of middleware functions
  */
 function createApiMiddlewareStack(app) {
+  const container = app.get('container');
+
   const middlewares = [];
-  const jwt = app.get('jwt');
-  const oauth = app.get('oauth');
+  const jwt = container.resolve('jwt');
+  const oauth = container.resolve('oauth');
 
   // Passport initialization (must precede any passport.authenticate calls)
   if (oauth && oauth.passport) {
@@ -138,7 +138,7 @@ function createApiMiddlewareStack(app) {
 /**
  * Build the dynamic API router from per-module route adapters.
  *
- * @param {object} app - Express app instance
+ * @param {object} app - Express application
  * @param {Map<string, object>} apiRoutes - Map of module name → route adapter
  * @returns {Router} Assembled Express router
  */
@@ -176,12 +176,15 @@ function buildApiRouter(app, apiRoutes) {
 /**
  * Discover modules and assemble the API middleware stack.
  *
- * @param {object} app - Express app instance
+ * @param {object} app - Express application
  * @returns {Promise<Router>} Assembled Express router
  */
 async function setupApiRoutes(app) {
-  // Discover and run module lifecycles
-  const { apiRoutes } = await discoverModules(apisContext, app);
+  // Discover and run module lifecycles (container-only DI)
+  const { apiRoutes } = await discoverModules(
+    apisContext,
+    app.get('container'),
+  );
 
   // Build the dynamic router from collected route adapters
   const router = buildApiRouter(app, apiRoutes);
@@ -197,36 +200,35 @@ async function setupApiRoutes(app) {
  * Bootstrap the API.
  *
  * Orchestrates the full API startup sequence:
- *   1. Register engines on the app
+ *   1. Register engines on the container
  *   2. Run core database migrations
  *   3. Discover & initialise app modules (models → init → routes)
  *   4. Build the dynamic API router
  *   5. Apply global middleware
  *
- * @param {object} guardControl - Guard control with unlock/lock and app
+ * @param {object} app - Express application
  * @returns {Promise<Router>} The assembled API router
  * @throws {Error} If initialization fails
  */
-export default async function bootstrap(guardControl) {
+export default async function bootstrap(app) {
   try {
-    // Unlock providers for initialization
-    await guardControl.unlock();
+    const container = app.get('container');
 
-    // Register engines
-    registerEngines(guardControl);
+    // Register engines on the DI container
+    registerEngines(container);
 
     // Setup passport & OAuth registry (framework-level, before modules)
     const { oauth } = configurePassport();
-    guardControl.app.set('oauth', oauth);
+    container.instance('oauth', oauth);
 
     // Run core database migrations
     await runCoreMigrations();
 
     // Setup global middleware
-    setupGlobalMiddleware(guardControl.app);
+    setupGlobalMiddleware(app);
 
     // Discover modules and setup API routes
-    const apiRouter = await setupApiRoutes(guardControl.app);
+    const apiRouter = await setupApiRoutes(app);
 
     log('Bootstrap completed');
 
@@ -240,8 +242,5 @@ export default async function bootstrap(guardControl) {
     }
 
     throw error;
-  } finally {
-    // Lock providers after initialization
-    await guardControl.lock();
   }
 }

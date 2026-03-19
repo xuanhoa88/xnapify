@@ -44,16 +44,14 @@ const workersContext = require.context(
 /**
  * Providers hook — called by the autoloader to share services with other modules.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function providers(app) {
-  const container = app.get('container');
-
+export async function providers(container) {
   // Bind seed groups to container as singleton
   container.bind('groups:seed_constants', () => SEED_GROUPS, OWNER_KEY);
 
   // Create search worker pool for group indexing
-  const worker = app.get('worker');
+  const worker = container.resolve('worker');
   if (worker) {
     const { default: attachSearchMethods } = require('./workers');
     const pool = worker.createWorkerPool('GroupsSearch', workersContext, {
@@ -67,51 +65,50 @@ export async function providers(app) {
 /**
  * Migrations hook — run database migrations.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function migrations(app) {
-  const db = app.get('db');
+export async function migrations(container) {
+  const db = container.resolve('db');
 
   await db.connection.runMigrations(
     [{ context: migrationsContext, prefix: 'groups' }],
-    { app },
+    { container },
   );
 }
 
 /**
  * Seeds hook — run database seeds.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function seeds(app) {
-  const db = app.get('db');
+export async function seeds(container) {
+  const db = container.resolve('db');
 
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'groups' }], {
-    app,
+    container,
   });
 }
 
 /**
  * Init hook — called by the autoloader to initialise this module.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function init(app) {
+export async function init(container) {
   // Bulk-index groups for search (fire-and-forget)
-  const search = app.get('search');
-  const container = app.get('container');
+  const search = container.resolve('search');
   const searchWorkerPool = container.has('groups:search:worker')
     ? container.make('groups:search:worker')
     : null;
 
   if (searchWorkerPool && search) {
     searchWorkerPool.setSearch(search);
-    searchWorkerPool.registerSearchHooks(app);
+    searchWorkerPool.registerSearchHooks(container);
 
     const groupsCount = await search.withNamespace('groups').count();
     if (groupsCount === 0) {
       searchWorkerPool
-        .indexAllGroups(search, app.get('models'))
+        .indexAllGroups(search, container.resolve('models'))
         .then(r => {
           const count = r && r.result ? r.result.groupsCount : 0;
           console.info(`[Groups] Indexed ${count} group(s) for search`);

@@ -24,7 +24,7 @@ function sign(payload, secret, algorithm = 'sha256') {
 describe('Webhook Engine', () => {
   // Helper: create a webhook with an injected hook context (mirrors bootstrap)
   const createWebhook = () =>
-    createFactory().withContext({ get: () => createHookFactory() });
+    createFactory().withContext({ resolve: () => createHookFactory() });
 
   describe('Default Instance', () => {
     it('should be a webhook manager instance', () => {
@@ -199,7 +199,7 @@ describe('Webhook Engine', () => {
       expect(received).toHaveLength(1);
       expect(received[0].payload).toEqual(payload);
       expect(received[0].context).toEqual(expect.objectContaining(context));
-      expect(received[0].context).toHaveProperty('app');
+      expect(received[0].context).toHaveProperty('container');
     });
 
     it('should fire beforeHandle and afterHandle lifecycle hooks', async () => {

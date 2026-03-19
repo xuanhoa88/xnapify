@@ -500,8 +500,9 @@ export class NodeRedManager {
       // from /admin), strip the Node-RED bearer token from the request
       // so Node-RED's own auth fails naturally and shows the login dialog.
       app.use(this._settings.httpAdminRoot, (req, res, next) => {
-        const auth = app.get('auth');
-        const jwt = app.get('jwt');
+        const container = app.get('container');
+        const auth = container.resolve('auth');
+        const jwt = container.resolve('jwt');
 
         // Skip guard if auth services aren't available yet
         if (!auth || !jwt) return next();

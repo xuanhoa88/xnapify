@@ -37,7 +37,7 @@ export const get = [
         error.message &&
         error.message.includes('Unknown authentication strategy')
       ) {
-        const http = req.app.get('http');
+        const http = req.app.get('container').resolve('http');
         return http.sendError(
           res,
           `OAuth provider '${provider}' is not configured or unknown`,

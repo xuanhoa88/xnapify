@@ -11,9 +11,9 @@
 
 import { v4 as uuidv4 } from 'uuid';
 
-export async function up(_, { app }) {
-  const { Permission, Role, RolePermission } = app.get('models');
-  const { DEFAULT_ACTIONS } = app.get('auth');
+export async function up(_, { container }) {
+  const { Permission, Role, RolePermission } = container.resolve('models');
+  const { DEFAULT_ACTIONS } = container.resolve('auth');
 
   // Create activities:read permission
   const [permission] = await Permission.findOrCreate({
@@ -44,9 +44,9 @@ export async function up(_, { app }) {
   }
 }
 
-export async function down(_, { app }) {
-  const { Permission } = app.get('models');
-  const { DEFAULT_ACTIONS } = app.get('auth');
+export async function down(_, { container }) {
+  const { Permission } = container.resolve('models');
+  const { DEFAULT_ACTIONS } = container.resolve('auth');
 
   // This will naturally cascade to RolePermissions via DB constraints if configured,
   // but we should be careful about deleting shared permissions if others use them.

@@ -4,7 +4,7 @@
     "type": "function",
     "z": "tab-test-hello",
     "name": "function 1",
-    "func": "return (async () => {\n    try {\n        const os = global.get('os');\n        const app = global.get('app');\n\n        const models = app().get('models');\n\n        const users = await models.User.findAll();\n\n        msg.payload.os_platform = os.platform();\n        msg.payload.models = Object.keys(models);\n        msg.payload.users = users;\n\n        return [msg, null]; // output 1\n    } catch (err) {\n        msg.error = err.message;\n        return [null, msg]; // output 2\n    }\n})();",
+    "func": "return (async () => {\n    try {\n        const os = global.get('os');\n        const container = global.get('container');\n\n        const { models } = container().resolve('db');\n\n        const users = await models.User.findAll();\n\n        msg.payload.os_platform = os.platform();\n        msg.payload.models = Object.keys(models);\n        msg.payload.users = users;\n\n        return [msg, null]; // output 1\n    } catch (err) {\n        msg.error = err.message;\n        return [null, msg]; // output 2\n    }\n})();",
     "outputs": 1,
     "timeout": 0,
     "noerr": 0,

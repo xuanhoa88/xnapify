@@ -26,7 +26,8 @@ import * as groupService from '../../services/admin/group.service';
  * @param {Object} res - Express response object
  */
 export async function createGroup(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { name, description, category, type, roles } = req.body;
 
@@ -44,16 +45,16 @@ export async function createGroup(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Create group
     const group = await groupService.createGroup(
       { name, description, category, type, roles },
       {
         models,
-        hook: req.app.get('hook'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
-        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+        defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
       },
     );
 
@@ -82,13 +83,14 @@ export async function createGroup(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getGroups(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { page, limit } = http.getPagination(req);
     const { search = '', role = '' } = req.query;
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Get groups
     const result = await groupService.getGroups(
@@ -98,7 +100,7 @@ export async function getGroups(req, res) {
         search,
         role,
       },
-      { models, defaultRoleName: req.app.get('auth').DEFAULT_ROLE },
+      { models, defaultRoleName: container.resolve('auth').DEFAULT_ROLE },
     );
 
     return http.sendSuccess(res, result);
@@ -116,13 +118,14 @@ export async function getGroups(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getGroupById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
     const group = await groupService.getGroupById(id, {
-      models: req.app.get('models'),
-      defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+      models: container.resolve('models'),
+      defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
     });
     if (!group) {
       return http.sendNotFound(res, 'Group not found');
@@ -148,7 +151,8 @@ export async function getGroupById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updateGroupById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { name, description, category, type, roles } = req.body;
@@ -177,10 +181,10 @@ export async function updateGroupById(req, res) {
       id,
       { name, description, category, type, roles },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
-        defaultRoleName: req.app.get('auth').DEFAULT_ROLE,
+        defaultRoleName: container.resolve('auth').DEFAULT_ROLE,
       },
     );
 
@@ -205,7 +209,8 @@ export async function updateGroupById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function deleteGroup(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
 
@@ -217,10 +222,10 @@ export async function deleteGroup(req, res) {
 
     // Delete group (activities logged in service)
     await groupService.deleteGroup(id, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
-      systemGroups: req.app.get('auth').SYSTEM_GROUPS,
+      systemGroups: container.resolve('auth').SYSTEM_GROUPS,
     });
 
     return http.sendSuccess(res, {
@@ -240,14 +245,15 @@ export async function deleteGroup(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getGroupUsers(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { page, limit, offset } = http.getPagination(req);
     const { search = '' } = req.query;
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     const data = await groupService.getUsersWithGroup(
       id,

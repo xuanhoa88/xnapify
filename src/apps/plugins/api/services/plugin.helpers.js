@@ -301,19 +301,19 @@ export async function uninstallPluginDependencies(pluginDir, plugin) {
  * Includes manifest data for PLUGIN_INSTALLED / PLUGIN_UPDATED so the
  * client-side PluginManager can inject CSS/JS tags.
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  * @param {string} type - Event type (PLUGIN_INSTALLED, PLUGIN_UPDATED, PLUGIN_UNINSTALLED, PLUGIN_TAMPERED)
  * @param {string} pluginId - Plugin ID
  */
-export function notifyPluginChange(app, type, pluginId) {
-  const ws = app.get('ws');
+export function notifyPluginChange(container, type, pluginId) {
+  const ws = container.resolve('ws');
   if (!ws) return;
 
   const payload = { type, pluginId };
 
   // Include manifest data for install/update events
   if (type === 'PLUGIN_INSTALLED' || type === 'PLUGIN_UPDATED') {
-    const pluginManager = app.get('plugin');
+    const pluginManager = container.resolve('plugin');
     const metadata = pluginManager
       ? pluginManager.getPluginMetadata(pluginId)
       : null;

@@ -12,9 +12,10 @@ import * as templateService from '../services/template.service';
  * GET /api/admin/emails/templates
  */
 export async function listTemplates(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const result = await templateService.list(models, req.query);
     return http.sendSuccess(res, result);
   } catch (error) {
@@ -28,9 +29,10 @@ export async function listTemplates(req, res) {
  * GET /api/admin/emails/templates/:id
  */
 export async function getTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const record = await templateService.getById(models, req.params.id);
     if (!record) {
       return http.sendNotFound(res, 'Template not found');
@@ -47,9 +49,10 @@ export async function getTemplate(req, res) {
  * POST /api/admin/emails/templates
  */
 export async function createTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const record = await templateService.create(models, req.body);
     return http.sendCreated(res, record);
   } catch (error) {
@@ -72,9 +75,10 @@ export async function createTemplate(req, res) {
  * PUT /api/admin/emails/templates/:id
  */
 export async function updateTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const record = await templateService.update(
       models,
       req.params.id,
@@ -104,9 +108,10 @@ export async function updateTemplate(req, res) {
  * DELETE /api/admin/emails/templates/:id
  */
 export async function deleteTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const deleted = await templateService.remove(models, req.params.id);
     if (!deleted) {
       return http.sendNotFound(res, 'Template not found');
@@ -123,9 +128,10 @@ export async function deleteTemplate(req, res) {
  * DELETE /api/admin/emails/templates
  */
 export async function bulkDeleteTemplates(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const { ids } = req.body;
     if (!Array.isArray(ids) || ids.length === 0) {
       return http.sendBadRequest(res, 'ids array is required');
@@ -147,10 +153,11 @@ export async function bulkDeleteTemplates(req, res) {
  * POST /api/admin/emails/templates/:id/preview
  */
 export async function previewTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
-    const templateEngine = req.app.get('template');
+    const models = container.resolve('models');
+    const templateEngine = container.resolve('template');
     const result = await templateService.preview(
       models,
       req.params.id,
@@ -176,10 +183,11 @@ export async function previewTemplate(req, res) {
  * POST /api/admin/emails/templates/preview
  */
 export async function previewRawTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { subject, html_body, text_body, sample_data } = req.body;
-    const templateEngine = req.app.get('template');
+    const templateEngine = container.resolve('template');
     const result = await templateService.previewRaw(
       { subject, html_body, text_body },
       sample_data || {},
@@ -200,9 +208,10 @@ export async function previewRawTemplate(req, res) {
  * POST /api/admin/emails/templates/:id/duplicate
  */
 export async function duplicateTemplate(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
-    const models = req.app.get('models');
+    const models = container.resolve('models');
     const record = await templateService.duplicate(models, req.params.id);
     if (!record) {
       return http.sendNotFound(res, 'Template not found');

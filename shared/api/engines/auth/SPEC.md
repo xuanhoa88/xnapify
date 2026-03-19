@@ -33,12 +33,12 @@ shared/api/engines/auth/
 
 ```
 index.js → cookies.js, middlewares/*, constants.js
-requireAuth/optionalAuth → cookies.js (extractToken), app.get('container').resolve('jwt'), app.get('container').resolve('hook')
-refreshToken → cookies.js (extractToken, set/get/clear cookies), app.get('container').resolve('jwt')
-requirePermission → constants.js (ADMIN_ROLE), app.get('container').resolve('hook')
-requireRole → constants.js (ADMIN_ROLE), app.get('container').resolve('hook')
-requireGroup → constants.js (ADMIN_ROLE), app.get('container').resolve('hook')
-requireOwnership → constants.js (ADMIN_ROLE), app.get('container').resolve('hook')
+requireAuth/optionalAuth → cookies.js (extractToken), container.resolve('jwt'), container.resolve('hook')
+refreshToken → cookies.js (extractToken, set/get/clear cookies), container.resolve('jwt')
+requirePermission → constants.js (ADMIN_ROLE), container.resolve('hook')
+requireRole → constants.js (ADMIN_ROLE), container.resolve('hook')
+requireGroup → constants.js (ADMIN_ROLE), container.resolve('hook')
+requireOwnership → constants.js (ADMIN_ROLE), container.resolve('hook')
 ```
 
 ## 2. Cookie Management (`cookies.js`)

@@ -13,7 +13,7 @@
  * RBAC Cache Module
  *
  * Provides caching for user RBAC data (roles, permissions, groups).
- * Uses lazy initialization with app.get('cache') factory or custom factory.
+ * Uses lazy initialization with app.get('container').resolve('cache') factory or custom factory.
  */
 
 // Singleton cache instance

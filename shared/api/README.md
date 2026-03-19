@@ -14,13 +14,13 @@ import webhook from '@shared/api/engines/webhook';
 
 ## Engines
 
-All engines live in `engines/` and are auto-discovered at startup. Each engine is a singleton accessible via `import` or `app.get('container').resolve('name')`.
+All engines live in `engines/` and are auto-discovered at startup. Each engine is a singleton accessible via `import` or `container.resolve('name')`.
 
 | Engine | Purpose | Example |
 |---|---|---|
 | **auth** | JWT, OAuth, permissions | `auth.middlewares.requirePermission('users:read')` |
 | **cache** | Key-value store | `await cache.set('key', value, 60000)` |
-| **db** | Sequelize ORM | `const { models } = app.get('container').resolve('db')` |
+| **db** | Sequelize ORM | `const { models } = container.resolve('db')` |
 | **email** | Email delivery | `await email.send({ to, subject, html })` |
 | **fs** | File operations | `await fs.upload({ fileName, buffer, mimeType })` |
 | **hook** | Pub/sub hooks | `hook('users').on('created', handler)` |
@@ -44,10 +44,10 @@ Each module exports lifecycle hooks in `api/index.js`:
 
 ```javascript
 export function models() { return require.context('./models', ...); }
-export async function providers(app) { app.set('myService', service); }
-export async function migrations(app) { /* run migrations */ }
-export async function seeds(app) { /* seed data */ }
-export async function init(app) { /* register hooks, workers */ }
+export async function providers(container) { container.instance('myService', service); }
+export async function migrations(container) { /* run migrations */ }
+export async function seeds(container) { /* seed data */ }
+export async function init(container) { /* register hooks, workers */ }
 export function routes() { return require.context('./routes', ...); }
 ```
 

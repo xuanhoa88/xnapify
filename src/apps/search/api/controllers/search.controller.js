@@ -24,7 +24,8 @@
  * @query {number} [offset=0] - Offset for pagination
  */
 export async function search(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
 
   try {
     const { q, entityType, namespace, limit = 20, offset = 0 } = req.query;
@@ -36,7 +37,7 @@ export async function search(req, res) {
       });
     }
 
-    const searchEngine = req.app.get('search');
+    const searchEngine = container.resolve('search');
     if (!searchEngine) {
       return http.sendServerError(res, 'Search engine is not available');
     }

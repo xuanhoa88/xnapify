@@ -12,8 +12,8 @@
 // Auto-load workers via require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
-export default function getActivityWorkerPool(app) {
-  const { createWorkerPool } = app.get('worker');
+export default function getActivityWorkerPool(container) {
+  const { createWorkerPool } = container.resolve('worker');
   const workerPool = createWorkerPool('Activities', workersContext, {
     maxWorkers: 1, // Logging is sequential and low-impact
   });
@@ -23,12 +23,14 @@ export default function getActivityWorkerPool(app) {
    * @param {Object} payload - Activity data
    * @returns {Promise<Object>} Result of the log operation
    */
-  workerPool.log ??= async function log(payload) {
-    return await this.sendRequest('activities', 'LOG_ACTIVITY', {
-      models: app.get('models'),
-      ...payload,
-    });
-  };
+  if (workerPool.log == null) {
+    workerPool.log = async function log(payload) {
+      return await this.sendRequest('activities', 'LOG_ACTIVITY', {
+        models: container.resolve('models'),
+        ...payload,
+      });
+    };
+  }
 
   return workerPool;
 }

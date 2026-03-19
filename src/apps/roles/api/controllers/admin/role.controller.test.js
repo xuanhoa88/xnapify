@@ -47,6 +47,8 @@ describe('Admin Role Controller (SQLite E2E)', () => {
             models: mockModels,
             auth: mockAuth,
           };
+          if (key === 'container')
+            return { resolve: name => deps[name], has: () => false };
           return deps[key];
         }),
       },

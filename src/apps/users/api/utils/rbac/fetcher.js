@@ -149,8 +149,9 @@ export async function getUserRBACData(req) {
   }
 
   const userId = req.user.id;
-  const models = req.app.get('models');
-  const cache = req.app.get('cache');
+  const container = req.app.get('container');
+  const models = container.resolve('models');
+  const cache = container.resolve('cache');
 
   // Use consolidated fetcher
   const rbacData = await fetchUserRBACData(userId, { models, cache });

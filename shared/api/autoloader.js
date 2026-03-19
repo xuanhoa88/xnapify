@@ -174,7 +174,7 @@ export function validateCoreModules(modulePaths, options = {}) {
 // MODEL LOADING
 // =============================================================================
 
-async function loadModelsFromContext(modelContext, moduleName, db, app) {
+async function loadModelsFromContext(modelContext, moduleName, db, container) {
   const adapter = createWebpackContextAdapter(modelContext);
   const models = {};
   const errors = [];
@@ -189,7 +189,7 @@ async function loadModelsFromContext(modelContext, moduleName, db, app) {
 
     try {
       const factory = loadModuleFactory(adapter, filePath);
-      const model = await factory(db, app);
+      const model = await factory(db, container);
 
       if (!model) {
         log(
@@ -312,10 +312,10 @@ async function runPhase(phase, lifecycles, handler) {
  * Discover and boot all API modules in lifecycle order.
  *
  * @param {object} modulesContext - Webpack require.context or compatible
- * @param {object} app            - Express app instance
+ * @param {object} container     - DI container instance
  * @returns {Promise<{apiModels: object, apiRoutes: Map, errors: object[]}>}
  */
-export async function discoverModules(modulesContext, app) {
+export async function discoverModules(modulesContext, container) {
   const startTime = Date.now();
   const adapter = createWebpackContextAdapter(modulesContext);
 
@@ -347,7 +347,7 @@ export async function discoverModules(modulesContext, app) {
   );
 
   // ─── Phase 2: models ──────────────────────────────────────────────────────
-  const db = app.get('container').resolve('db');
+  const db = container.resolve('db');
   const apiModels = {};
 
   if (!db) {
@@ -362,7 +362,7 @@ export async function discoverModules(modulesContext, app) {
           modelContext,
           name,
           db,
-          app,
+          container,
         );
         errors.push(...modelErrors);
 
@@ -396,23 +396,27 @@ export async function discoverModules(modulesContext, app) {
     }
   }
 
-  app.set('models', apiModels);
+  container.instance('models', apiModels);
 
   // ─── Phase 3: providers ───────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('providers', lifecycles, (_, hook) => hook(app))),
+    ...(await runPhase('providers', lifecycles, (_, hook) => hook(container))),
   );
 
   // ─── Phase 4: migrations ──────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('migrations', lifecycles, (_, hook) => hook(app))),
+    ...(await runPhase('migrations', lifecycles, (_, hook) => hook(container))),
   );
 
   // ─── Phase 5: seeds ───────────────────────────────────────────────────────
-  errors.push(...(await runPhase('seeds', lifecycles, (_, hook) => hook(app))));
+  errors.push(
+    ...(await runPhase('seeds', lifecycles, (_, hook) => hook(container))),
+  );
 
   // ─── Phase 6: init ────────────────────────────────────────────────────────
-  errors.push(...(await runPhase('init', lifecycles, (_, hook) => hook(app))));
+  errors.push(
+    ...(await runPhase('init', lifecycles, (_, hook) => hook(container))),
+  );
 
   // ─── Phase 7: routes ──────────────────────────────────────────────────────
   const apiRoutes = new Map();

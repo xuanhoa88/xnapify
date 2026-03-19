@@ -20,11 +20,6 @@
 const { setupTestDb, closeTestDb } = require('./dbTest.setup');
 const { initI18nForTesting } = require('./i18nTest.setup');
 
-// Register require.context hook for Jest
-// This is required by @storybook/babel-plugin-require-context-hook
-// Must run in setupAfterEnv (not setupFiles) to be available in the jsdom environment
-require('@storybook/babel-plugin-require-context-hook/register')();
-
 // -----------------------------------------------------------------------------
 // i18n initialization for tests (delegated)
 // -----------------------------------------------------------------------------

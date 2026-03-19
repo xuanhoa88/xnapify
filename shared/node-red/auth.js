@@ -31,8 +31,9 @@ class RskAuthStrategy extends Strategy {
 
     try {
       // Get auth services from app
-      const jwt = app.get('jwt');
-      const auth = app.get('auth');
+      const container = app.get('container');
+      const jwt = container.resolve('jwt');
+      const auth = container.resolve('auth');
 
       if (!jwt || !auth) {
         console.error('❌ [Node-RED Auth] JWT or auth service not available');
@@ -76,7 +77,7 @@ class RskAuthStrategy extends Strategy {
       // Resolve permissions via hook system
       const {
         middlewares: { hasPermission },
-      } = app.get('auth');
+      } = container.resolve('auth');
 
       if (!hasPermission) {
         console.error('❌ [Node-RED Auth] Auth middlewares not available');
@@ -93,7 +94,7 @@ class RskAuthStrategy extends Strategy {
         req.app = app; // Ensure app is available on request
 
         try {
-          const hook = app.get('hook');
+          const hook = container.resolve('hook');
           if (hook && hook.has('auth.permissions')) {
             await hook('auth.permissions').emit('resolve', req);
           }
@@ -160,9 +161,10 @@ class RskAuthStrategy extends Strategy {
  */
 async function getUserWithPermissions(app, username) {
   try {
+    const container = app.get('container');
     const {
       middlewares: { hasPermission },
-    } = app.get('auth');
+    } = container.resolve('auth');
 
     if (!hasPermission) {
       console.error('❌ [Node-RED Auth] Auth middlewares not available');
@@ -170,7 +172,7 @@ async function getUserWithPermissions(app, username) {
     }
 
     // Find user to get ID
-    const { User } = app.get('models');
+    const { User } = container.resolve('models');
     const user = await User.findOne({
       where: { email: username },
       attributes: ['id', 'email'],
@@ -185,7 +187,7 @@ async function getUserWithPermissions(app, username) {
     };
 
     // Get permissions using hook system
-    const hook = app.get('hook');
+    const hook = container.resolve('hook');
     if (hook && hook.has('auth.permissions')) {
       await hook('auth.permissions').emit('resolve', req);
     }

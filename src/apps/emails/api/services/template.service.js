@@ -9,12 +9,12 @@
  * Email Template Service
  *
  * Provides CRUD, preview, and duplication operations for email templates.
- * All functions receive `models` from `req.app.get('models')`.
+ * All functions receive `models` from `req.app.get('container').resolve('models')`.
  */
 
 /**
  * List email templates with pagination and search
- * @param {Object} models - Sequelize models (from app.get('models'))
+ * @param {Object} models - Sequelize models (from app.get('container').resolve('models'))
  * @param {Object} query - Query params
  * @param {number} [query.page=1] - Current page
  * @param {number} [query.limit=20] - Items per page
@@ -158,7 +158,7 @@ export async function bulkRemove(models, ids) {
  * @param {Object} models - Sequelize models
  * @param {string} id - Template UUID
  * @param {Object} [sampleData] - Override sample data (optional)
- * @param {Object} templateEngine - Template engine (from app.get('template'))
+ * @param {Object} templateEngine - Template engine (from app.get('container').resolve('template'))
  * @returns {Promise<Object|null>} Rendered result or null
  */
 export async function preview(models, id, sampleData, templateEngine) {
@@ -189,7 +189,7 @@ export async function preview(models, id, sampleData, templateEngine) {
  * @param {string} [content.html_body] - HTML body template
  * @param {string} [content.text_body] - Text body template
  * @param {Object} data - Template variables
- * @param {Object} templateEngine - Template engine (from app.get('template'))
+ * @param {Object} templateEngine - Template engine (from app.get('container').resolve('template'))
  * @returns {Promise<Object>} Rendered result
  */
 export async function previewRaw(content, data, templateEngine) {

@@ -201,7 +201,7 @@ const cache = createFactory({
 });
 ```
 
-The singleton is registered on the DI container as `app.get('container').resolve('cache')` during engine autoloading. In `__DEV__` mode, this will be a `NoOpCache` regardless of the options.
+The singleton is registered on the DI container as `container.resolve('cache')` during engine autoloading. In `__DEV__` mode, this will be a `NoOpCache` regardless of the options.
 
 ## 8. Error Handling
 
@@ -250,7 +250,7 @@ The singleton is registered on the DI container as `app.get('container').resolve
 
 ## 10. Integration Points
 
-- **Module `init(app)`**: Access via `app.get('container').resolve('cache')`. Use `withNamespace()` to scope by module.
+- **Module `init(container)`**: Access via `container.resolve('cache')`. Use `withNamespace()` to scope by module.
 - **`__DEV__` global**: When truthy, all `createFactory` calls produce `NoOpCache` — ensures fresh data during development.
 - **Schedule engine**: Can pair with scheduled `cleanup()` calls for periodic expired-entry removal.
 

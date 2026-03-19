@@ -57,7 +57,7 @@ Stateful operations that need `app` access (models, hooks, plugin manager, WebSo
 - **`delete`**: Unloads plugin, removes files (with path traversal guard), destroys DB record.
 - **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages plugin load state.
 
-Handlers are registered in the `init(app)` lifecycle hook and capture `app` via closure.
+Handlers are registered in the `init(container)` lifecycle hook and capture `app` via closure.
 
 ---
 *Note: This spec reflects the CURRENT implementation of the plugin system.*

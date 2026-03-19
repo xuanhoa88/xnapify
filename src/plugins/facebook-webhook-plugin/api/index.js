@@ -46,7 +46,8 @@ export default {
    * @param {Object} context - App context
    */
   async init(registry, context) {
-    const webhook = context.app.get('webhook');
+    const container = context.app.get('container');
+    const webhook = container.resolve('webhook');
 
     const secret = process.env.FACEBOOK_WEBHOOK_SECRET;
 
@@ -59,7 +60,7 @@ export default {
 
     // Store the handler function for proper cleanup in destroy()
     // ctx is auto-injected by WebhookManager.dispatch() with { headers, query, ip, app }
-    this[HANDLERS].facebookHandler = async (payload, ctx) => {
+    this[HANDLERS].facebookHandler = async payload => {
       const { object, entry } = payload || {};
 
       console.info(`${TAG} Received event: object=${object}`);
@@ -77,7 +78,7 @@ export default {
               );
 
               // Emit to hook engine so other modules can observe
-              const hook = ctx.app.get('hook');
+              const hook = container.resolve('hook');
               if (hook) {
                 hook('facebook').emit('messaging', {
                   pageId: id,
@@ -95,7 +96,7 @@ export default {
                 `${TAG} Change event: field=${change.field} from page ${id}`,
               );
 
-              const hook = ctx.app.get('hook');
+              const hook = container.resolve('hook');
               if (hook) {
                 hook('facebook').emit('change', {
                   pageId: id,
@@ -128,7 +129,7 @@ export default {
    * @param {Object} context - App context
    */
   async destroy(registry, context) {
-    const webhook = context.app.get('webhook');
+    const webhook = context.app.get('container').resolve('webhook');
     webhook.removeHandler('facebook');
 
     // Clear handlers

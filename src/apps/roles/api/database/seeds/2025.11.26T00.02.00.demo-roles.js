@@ -8,11 +8,11 @@
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { Role } = app.get('models');
+export async function up(_, { container }) {
+  const { Role } = container.resolve('models');
 
   // Get seed roles from container
-  const SEED_ROLES = app.get('container').resolve('roles:seed_constants');
+  const SEED_ROLES = container.resolve('roles:seed_constants');
 
   const roles = [
     {
@@ -53,11 +53,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { Role } = app.get('models');
+export async function down(_, { container }) {
+  const { Role } = container.resolve('models');
 
   // Get seed roles from container
-  const SEED_ROLES = app.get('container').resolve('roles:seed_constants');
+  const SEED_ROLES = container.resolve('roles:seed_constants');
 
   // Remove all seeded roles by id
   await Role.destroy({

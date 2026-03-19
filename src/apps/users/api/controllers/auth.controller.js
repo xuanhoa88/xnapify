@@ -31,7 +31,8 @@ import { generatePassword } from '../utils/password';
  * @param {Object} res - Express response object
  */
 export async function register(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
 
   try {
     const { email, password, confirmPassword } = req.body;
@@ -47,7 +48,7 @@ export async function register(req, res) {
     }
 
     // Get auth utilities from app context
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Register user - returns complete user data with RBAC
     const userData = await authService.registerUser(
@@ -57,14 +58,14 @@ export async function register(req, res) {
       },
       {
         auth,
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         defaultRoleName: auth.DEFAULT_ROLE,
       },
     );
 
     // Generate token pair using configured JWT instance
-    const jwt = req.app.get('jwt');
+    const jwt = container.resolve('jwt');
     const tokens = jwt.generateTokenPair({
       id: userData.id,
       email: userData.email,
@@ -102,7 +103,8 @@ export async function register(req, res) {
  * @param {Object} res - Express response object
  */
 export async function login(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { email, password, rememberMe = false } = req.body;
 
@@ -121,12 +123,12 @@ export async function login(req, res) {
         ip_address: http.getClientIP(req),
         user_agent: http.getUserAgent(req),
       },
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
     });
 
     // Generate token pair using configured JWT instance
-    const tokens = req.app.get('jwt').generateTokenPair({
+    const tokens = container.resolve('jwt').generateTokenPair({
       id: userData.id,
       email: userData.email,
       picture: userData.picture || null,
@@ -136,7 +138,7 @@ export async function login(req, res) {
     // If rememberMe is false, don't set maxAge (session cookie - expires on browser close)
     // If rememberMe is true, use default maxAge from cookie config
     const cookieOptions = rememberMe ? {} : { maxAge: null };
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     auth.setTokenCookie(res, tokens.accessToken, cookieOptions);
     auth.setRefreshTokenCookie(res, tokens.refreshToken, cookieOptions);
 
@@ -175,21 +177,22 @@ export async function login(req, res) {
  * @param {Object} res - Express response object
  */
 export async function logout(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     // Log logout activities via service (if user is authenticated)
     if (req.user) {
       await authService.logoutUser(req.user.id, {
-        hook: req.app.get('hook'),
+        hook: container.resolve('hook'),
       });
     }
 
     // Clear token cookies
-    req.app.get('auth').clearAllAuthCookies(res);
+    container.resolve('auth').clearAllAuthCookies(res);
 
     // Also clear cache entry for this token (if present)
     if (req.token) {
-      req.app.get('jwt').cache.delete(req.token);
+      container.resolve('jwt').cache.delete(req.token);
     }
 
     return http.sendSuccess(res, { message: 'Logged out successfully' });
@@ -207,10 +210,11 @@ export async function logout(req, res) {
  * @param {Object} res - Express response object
  */
 export async function refreshToken(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     // Get refresh token from cookie
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     const refreshToken = auth.getRefreshTokenFromCookie(req);
 
     if (!refreshToken) {
@@ -218,7 +222,10 @@ export async function refreshToken(req, res) {
     }
 
     // Generate new token pair
-    const newTokens = req.app.get('jwt').refreshTokenPair(refreshToken);
+    const newTokens = req.app
+      .get('container')
+      .resolve('jwt')
+      .refreshTokenPair(refreshToken);
 
     // Set new token cookies
     auth.setTokenCookie(res, newTokens.accessToken);
@@ -256,7 +263,8 @@ export async function refreshToken(req, res) {
  * @param {Object} res - Express response object
  */
 export async function emailVerification(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { token } = req.body;
 
@@ -270,12 +278,12 @@ export async function emailVerification(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
+    const models = container.resolve('models');
 
     // Verify email with token (activities logged in service)
     const user = await authService.verifyEmail(token, {
       models,
-      hook: req.app.get('hook'),
+      hook: container.resolve('hook'),
     });
 
     // Get complete user data with RBAC information
@@ -284,14 +292,17 @@ export async function emailVerification(req, res) {
     });
 
     // Generate token pair using configured JWT instance
-    const tokens = req.app.get('jwt').generateTokenPair({
-      id: user.id,
-      email: user.email,
-      picture: userData.picture || null,
-    });
+    const tokens = req.app
+      .get('container')
+      .resolve('jwt')
+      .generateTokenPair({
+        id: user.id,
+        email: user.email,
+        picture: userData.picture || null,
+      });
 
     // Set token cookies
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
     auth.setTokenCookie(res, tokens.accessToken);
     auth.setRefreshTokenCookie(res, tokens.refreshToken);
 
@@ -329,7 +340,8 @@ export async function emailVerification(req, res) {
  * @param {Object} res - Express response object
  */
 export async function resetPasswordRequest(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { email } = req.body;
 
@@ -346,8 +358,8 @@ export async function resetPasswordRequest(req, res) {
 
     // Request password reset (activities logged in service)
     await authService.resetPasswordRequest(email, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
     });
 
     // Always return success for security (don't reveal if email exists)
@@ -372,7 +384,8 @@ export async function resetPasswordRequest(req, res) {
  * @param {Object} res - Express response object
  */
 export async function resetPasswordConfirmation(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { token, password, confirmPassword } = req.body;
 
@@ -391,9 +404,9 @@ export async function resetPasswordConfirmation(req, res) {
 
     // Confirm reset password with token (activities logged in service)
     await authService.resetPasswordConfirmation(token, password, {
-      models: req.app.get('models'),
-      auth: req.app.get('auth'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      auth: container.resolve('auth'),
+      hook: container.resolve('hook'),
     });
 
     return http.sendSuccess(res, {
@@ -428,7 +441,8 @@ export async function resetPasswordConfirmation(req, res) {
  * @param {Object} res - Express response object
  */
 export async function generateRandomPassword(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { length = 16, includeSymbols = true } = req.query;
 
@@ -452,7 +466,8 @@ export async function generateRandomPassword(req, res) {
  * @param {Object} res - Express response object
  */
 export async function oauthCallback(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   const appUrl = process.env['RSK_APP_URL'];
 
   try {
@@ -465,16 +480,16 @@ export async function oauthCallback(req, res) {
     }
 
     // Authenticate or register user using the profile
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     const userData = await authService.oauthLogin(provider, profile, {
-      models: req.app.get('models'),
-      hook: req.app.get('hook'),
+      models: container.resolve('models'),
+      hook: container.resolve('hook'),
       defaultRoleName: auth.DEFAULT_ROLE,
     });
 
     // Generate token pair
-    const jwt = req.app.get('jwt');
+    const jwt = container.resolve('jwt');
     const tokens = jwt.generateTokenPair({
       id: userData.id,
       email: userData.email,
@@ -501,7 +516,8 @@ export async function oauthCallback(req, res) {
  * @access  Private (impersonated users only)
  */
 export async function stopImpersonating(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const impersonatorId = req.user.impersonator_id;
 
@@ -509,9 +525,9 @@ export async function stopImpersonating(req, res) {
       return http.sendError(res, 'Not currently impersonating', 400);
     }
 
-    const authConfig = req.app.get('auth');
-    const models = req.app.get('models');
-    const jwt = req.app.get('jwt');
+    const authConfig = container.resolve('auth');
+    const models = container.resolve('models');
+    const jwt = container.resolve('jwt');
 
     // Get original admin user data via service
     const userData = await authService.stopImpersonating(impersonatorId, {

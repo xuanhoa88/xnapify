@@ -25,8 +25,9 @@ export const middleware = false;
 
 // POST /api/webhooks/:provider
 export function post(req, res) {
-  const http = req.app.get('http');
-  const webhook = req.app.get('webhook');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const webhook = container.resolve('webhook');
   const { provider } = req.params;
 
   // 1. Check provider exists

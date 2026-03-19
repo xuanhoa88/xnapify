@@ -20,7 +20,14 @@ describe('authenticate', () => {
     req = {
       app: {
         get: jest.fn(key => {
-          if (key === 'models') return modelsMock;
+          if (key === 'container') {
+            return {
+              resolve: name => {
+                if (name === 'models') return modelsMock;
+                return null;
+              },
+            };
+          }
           return null;
         }),
       },

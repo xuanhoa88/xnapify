@@ -10,19 +10,19 @@ describe('Search Hooks', () => {
         executeHookParallel: jest.fn().mockResolvedValue([]),
       };
 
-      const appMock = {
-        get: jest.fn().mockImplementation(key => {
-          if (key === 'hook') return hook;
-          if (key === 'plugin') return { registry: registryMock };
+      const containerMock = {
+        resolve: jest.fn().mockImplementation(name => {
+          if (name === 'hook') return hook;
+          if (name === 'plugin') return { registry: registryMock };
           return null;
         }),
       };
 
-      registerSearchHooks(appMock);
+      registerSearchHooks(containerMock);
 
       expect(registryMock.executeHookParallel).toHaveBeenCalledWith(
         'search.indexers.register',
-        appMock,
+        containerMock,
       );
     });
   });

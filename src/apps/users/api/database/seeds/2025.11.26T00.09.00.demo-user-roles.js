@@ -10,11 +10,10 @@ import { v4 as uuidv4 } from 'uuid';
 /**
  * Run the seed
  */
-export async function up(_, { app }) {
-  const { UserRole } = app.get('models');
+export async function up(_, { container }) {
+  const { UserRole } = container.resolve('models');
 
   // Get seed constants from the container
-  const container = app.get('container');
   const SEED_ROLES = container.resolve('roles:seed_constants');
   const SEED_USERS = container.resolve('users:seed_constants');
 
@@ -64,11 +63,11 @@ export async function up(_, { app }) {
 /**
  * Revert the seed
  */
-export async function down(_, { app }) {
-  const { UserRole } = app.get('models');
+export async function down(_, { container }) {
+  const { UserRole } = container.resolve('models');
 
   // Get seed constants from the container
-  const SEED_USERS = app.get('container').resolve('users:seed_constants');
+  const SEED_USERS = container.resolve('users:seed_constants');
 
   // Remove all seeded user roles by userId
   await UserRole.destroy({

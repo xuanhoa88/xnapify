@@ -28,7 +28,7 @@ class WebhookManager {
     /** @type {HookChannel|null} Injected via withContext() */
     this[HOOK] = null;
 
-    /** @type {Object|null} App context (proxy) from bootstrap */
+    /** @type {Object|null} DI container from bootstrap */
     this[CONTEXT] = null;
 
     /** @type {Map<string, { secret: string, signatureHeader: string }> } */
@@ -36,19 +36,19 @@ class WebhookManager {
   }
 
   /**
-   * Bind this manager to an application context.
+   * Bind this manager to a DI container.
    *
    * Called automatically by `registerEngines()` during bootstrap.
-   * Resolves the shared hook engine from the context and creates
+   * Resolves the shared hook engine from the container and creates
    * the 'webhook' channel for handler dispatch.
    *
-   * @param {Object} context - Application context (proxy)
-   * @param {Function} context.get - Provider getter
+   * @param {Object} container - DI container
+   * @param {Function} container.resolve - Service resolver
    * @returns {WebhookManager} this (for chaining)
    */
-  withContext(context) {
-    this[CONTEXT] = context;
-    const hook = context.get('hook');
+  withContext(container) {
+    this[CONTEXT] = container;
+    const hook = container.resolve('hook');
     this[HOOK] = hook('webhook');
     return this;
   }
@@ -184,8 +184,8 @@ class WebhookManager {
    * @returns {Promise<void>}
    */
   async dispatch(provider, payload, context) {
-    // Merge app context so handlers get (payload, { headers, query, ip, app })
-    const enrichedContext = { ...context, app: this[CONTEXT] };
+    // Merge container so handlers get (payload, { headers, query, ip, container })
+    const enrichedContext = { ...context, container: this[CONTEXT] };
 
     // beforeHandle lifecycle hook
     await this[HOOK].emit(WEBHOOK_EVENTS.BEFORE_HANDLE, {

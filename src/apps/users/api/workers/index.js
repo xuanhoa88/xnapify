@@ -74,10 +74,10 @@ export default function attachSearchMethods(workerPool) {
   /**
    * Register hooks to keep the users search index in sync with mutations.
    *
-   * @param {Object} app - Express app instance
+   * @param {Object} container - DI container instance
    */
-  workerPool.registerSearchHooks = function registerSearchHooks(app) {
-    const hook = app.get('hook');
+  workerPool.registerSearchHooks = function registerSearchHooks(container) {
+    const hook = container.resolve('hook');
     if (!hook) return;
 
     const pool = this;

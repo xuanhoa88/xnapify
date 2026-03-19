@@ -26,7 +26,8 @@ import * as roleService from '../../services/admin/role.service';
  * @param {Object} res - Express response object
  */
 export async function createRole(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { name, description, permissions } = req.body;
 
@@ -41,14 +42,14 @@ export async function createRole(req, res) {
       return http.sendValidationError(res, errors);
     }
 
-    const auth = req.app.get('auth');
+    const auth = container.resolve('auth');
 
     // Create role
     let role = await roleService.createRole(
       { name, description, permissions },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
@@ -80,7 +81,9 @@ export async function createRole(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getRoles(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const auth = container.resolve('auth');
   try {
     const { page, limit } = http.getPagination(req);
     const { search = '' } = req.query;
@@ -93,9 +96,9 @@ export async function getRoles(req, res) {
         search,
       },
       {
-        models: req.app.get('models'),
-        defaultResources: req.app.get('auth').DEFAULT_RESOURCES,
-        defaultActions: req.app.get('auth').DEFAULT_ACTIONS,
+        models: container.resolve('models'),
+        defaultResources: auth.DEFAULT_RESOURCES,
+        defaultActions: auth.DEFAULT_ACTIONS,
       },
     );
 
@@ -114,14 +117,14 @@ export async function getRoles(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getRoleById(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const auth = container.resolve('auth');
   try {
     const { id } = req.params;
 
-    const auth = req.app.get('auth');
-
     const role = await roleService.getRoleById(id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
     });
@@ -141,7 +144,9 @@ export async function getRoleById(req, res) {
  * @param {Object} res - Express response object
  */
 export async function updateRole(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const auth = container.resolve('auth');
   try {
     const { id } = req.params;
     const { name, description, permissions } = req.body;
@@ -158,8 +163,7 @@ export async function updateRole(req, res) {
     }
 
     // Get models from app context
-    const models = req.app.get('models');
-    const auth = req.app.get('auth');
+    const models = container.resolve('models');
 
     // Fetch role first to check if user has this role
     const existingRole = await roleService.getRoleById(id, {
@@ -179,7 +183,7 @@ export async function updateRole(req, res) {
       { name, description, permissions },
       {
         models,
-        hook: req.app.get('hook'),
+        hook: container.resolve('hook'),
         actorId: req.user.id,
         defaultResources: auth.DEFAULT_RESOURCES,
         defaultActions: auth.DEFAULT_ACTIONS,
@@ -217,13 +221,14 @@ export async function updateRole(req, res) {
  * @param {Object} res - Express response object
  */
 export async function deleteRole(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const auth = container.resolve('auth');
   try {
     const { id } = req.params;
 
     // Get models from app context
-    const models = req.app.get('models');
-    const auth = req.app.get('auth');
+    const models = container.resolve('models');
 
     // Fetch role first to check if user has this role
     const existingRole = await roleService.getRoleById(id, {
@@ -241,7 +246,7 @@ export async function deleteRole(req, res) {
     // Delete role (activities logged in service)
     await roleService.deleteRole(id, {
       models,
-      hook: req.app.get('hook'),
+      hook: container.resolve('hook'),
       actorId: req.user.id,
       defaultResources: auth.DEFAULT_RESOURCES,
       defaultActions: auth.DEFAULT_ACTIONS,
@@ -270,7 +275,8 @@ export async function deleteRole(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getRoleUsers(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { page, limit } = http.getPagination(req);
@@ -280,7 +286,7 @@ export async function getRoleUsers(req, res) {
     const result = await roleService.getUsersWithRole(
       id,
       { page, limit, search },
-      req.app.get('models'),
+      container.resolve('models'),
     );
 
     return http.sendSuccess(res, result);
@@ -301,7 +307,8 @@ export async function getRoleUsers(req, res) {
  * @param {Object} res - Express response object
  */
 export async function getRoleGroups(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { id } = req.params;
     const { page, limit } = http.getPagination(req);
@@ -311,7 +318,7 @@ export async function getRoleGroups(req, res) {
     const result = await roleService.getGroupsWithRole(
       id,
       { page, limit, search },
-      req.app.get('models'),
+      container.resolve('models'),
     );
 
     return http.sendSuccess(res, result);

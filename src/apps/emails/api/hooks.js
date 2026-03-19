@@ -5,10 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-export function registerEmailHooks(app) {
-  const hook = app.get('hook');
-  const emailManager = app.get('email');
-  const models = app.get('models');
+export function registerEmailHooks(container) {
+  // container is passed directly
+  // const container = app.get('container');
+  const hook = container.resolve('hook');
+  const emailManager = container.resolve('email');
+  const models = container.resolve('models');
 
   if (!hook || !emailManager || !models) {
     return;

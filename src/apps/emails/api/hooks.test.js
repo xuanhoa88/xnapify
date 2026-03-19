@@ -4,7 +4,7 @@ import { createFactory as createHookFactory } from '@shared/api/engines/hook/fac
 import { registerEmailHooks } from './hooks';
 
 describe('Email Hooks', () => {
-  let app;
+  let container;
   let hook;
   let emailManager;
   let models;
@@ -23,17 +23,17 @@ describe('Email Hooks', () => {
       },
     };
 
-    app = {
-      get: jest.fn(key => {
-        if (key === 'hook') return hook;
-        if (key === 'email') return emailManager;
-        if (key === 'models') return models;
+    container = {
+      resolve: jest.fn(name => {
+        if (name === 'hook') return hook;
+        if (name === 'email') return emailManager;
+        if (name === 'models') return models;
         return null;
       }),
     };
 
     // Register hooks
-    registerEmailHooks(app);
+    registerEmailHooks(container);
   });
 
   afterEach(() => {

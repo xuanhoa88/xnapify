@@ -5,7 +5,7 @@ Channel-based pub/sub for background job processing with priority, delays, retry
 ## Quick Start
 
 ```javascript
-const queue = app.get('container').resolve('queue');
+const queue = container.resolve('queue');
 
 // Create a channel and register handler (consumer)
 const notifications = queue('notifications', { concurrency: 5 });

@@ -20,10 +20,10 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
  * Sets up hooks for incremental index updates. Bulk indexing and worker
  * pools are owned by each domain module (users, groups).
  *
- * @param {Object} app - Express app instance
+ * @param {Object} container - DI container instance
  */
-export async function init(app) {
-  registerSearchHooks(app);
+export async function init(container) {
+  registerSearchHooks(container);
   console.info('[Search] ✅ Initialized');
 }
 

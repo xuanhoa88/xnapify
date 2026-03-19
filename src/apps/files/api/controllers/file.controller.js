@@ -24,7 +24,8 @@ import * as fileService from '../services/file.service';
  * @route   GET /api/files
  */
 export async function getFiles(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { view, parentId, search, page, pageSize } = req.query;
 
@@ -37,7 +38,7 @@ export async function getFiles(req, res) {
         page: page || 1,
         pageSize: pageSize || 50,
       },
-      { models: req.app.get('models') },
+      { models: container.resolve('models') },
     );
 
     return http.sendSuccess(res, result);
@@ -52,7 +53,8 @@ export async function getFiles(req, res) {
  * @route   POST /api/files/folder
  */
 export async function createFolder(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const [isValid, errors] = validateForm(createFolderFormSchema, req.body);
 
@@ -63,7 +65,7 @@ export async function createFolder(req, res) {
     const { name, parentId } = errors;
 
     const folder = await fileService.createFolder(req.user.id, name, parentId, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, { folder });
@@ -78,8 +80,9 @@ export async function createFolder(req, res) {
  * @route   POST /api/files/upload
  */
 export async function uploadFile(req, res) {
-  const http = req.app.get('http');
-  const fs = req.app.get('fs');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  const fs = container.resolve('fs');
 
   try {
     // Check upload result from middleware
@@ -109,7 +112,7 @@ export async function uploadFile(req, res) {
       fileMetadata,
       parentId,
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
       },
     );
 
@@ -125,7 +128,8 @@ export async function uploadFile(req, res) {
  * @route   PUT /api/files/:id/rename
  */
 export async function renameFile(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const [isValid, errors] = validateForm(renameFileFormSchema, req.body);
 
@@ -140,7 +144,7 @@ export async function renameFile(req, res) {
       req.params.id,
       name,
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
       },
     );
 
@@ -156,7 +160,8 @@ export async function renameFile(req, res) {
  * @route   PUT /api/files/:id/move
  */
 export async function moveFile(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { parentId } = req.body;
 
@@ -165,7 +170,7 @@ export async function moveFile(req, res) {
       req.params.id,
       parentId,
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
       },
     );
 
@@ -181,7 +186,8 @@ export async function moveFile(req, res) {
  * @route   PUT /api/files/:id/star
  */
 export async function toggleStar(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const { isStarred } = req.body;
 
@@ -190,7 +196,7 @@ export async function toggleStar(req, res) {
       req.params.id,
       isStarred,
       {
-        models: req.app.get('models'),
+        models: container.resolve('models'),
       },
     );
 
@@ -206,10 +212,11 @@ export async function toggleStar(req, res) {
  * @route   DELETE /api/files/:id
  */
 export async function trashFile(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     await fileService.trashFile(req.user.id, req.params.id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, { message: 'Item moved to trash' });
@@ -224,10 +231,11 @@ export async function trashFile(req, res) {
  * @route   POST /api/files/:id/restore
  */
 export async function restoreFile(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const file = await fileService.restoreFile(req.user.id, req.params.id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, { file, message: 'Item restored' });
@@ -242,11 +250,12 @@ export async function restoreFile(req, res) {
  * @route   DELETE /api/files/:id/permanent
  */
 export async function deletePermanent(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     await fileService.deleteFilePermanently(req.user.id, req.params.id, {
-      models: req.app.get('models'),
-      fs: req.app.get('fs'),
+      models: container.resolve('models'),
+      fs: container.resolve('fs'),
     });
 
     return http.sendSuccess(res, { message: 'Item permanently deleted' });
@@ -265,11 +274,12 @@ export async function deletePermanent(req, res) {
  * @route   DELETE /api/files/trash/empty
  */
 export async function emptyTrash(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     await fileService.emptyTrash(req.user.id, {
-      models: req.app.get('models'),
-      fs: req.app.get('fs'),
+      models: container.resolve('models'),
+      fs: container.resolve('fs'),
     });
 
     return http.sendSuccess(res, { message: 'Trash emptied' });
@@ -284,7 +294,8 @@ export async function emptyTrash(req, res) {
  * @route   PUT /api/files/:id/share
  */
 export async function updateSharing(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const [isValid, errors] = validateForm(shareFileFormSchema, req.body);
 
@@ -299,8 +310,8 @@ export async function updateSharing(req, res) {
       req.params.id,
       { shareType, shares },
       {
-        models: req.app.get('models'),
-        hook: req.app.get('hook'),
+        models: container.resolve('models'),
+        hook: container.resolve('hook'),
       },
     );
 
@@ -320,10 +331,11 @@ export async function updateSharing(req, res) {
  * @route   GET /api/files/:id/shares
  */
 export async function getFileShares(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const shares = await fileService.getFileShares(req.user.id, req.params.id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, shares);
@@ -338,7 +350,8 @@ export async function getFileShares(req, res) {
  * @route   GET /api/files/:id/download
  */
 export async function downloadFile(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
 
   try {
     const isDownload = req.query.download === 'true';
@@ -347,8 +360,8 @@ export async function downloadFile(req, res) {
       req.user && req.user.id ? req.user.id : null,
       req.params.id,
       {
-        models: req.app.get('models'),
-        fs: req.app.get('fs'),
+        models: container.resolve('models'),
+        fs: container.resolve('fs'),
         download: isDownload,
       },
     );
@@ -380,10 +393,11 @@ export async function downloadFile(req, res) {
  * @route   GET /api/files/storage
  */
 export async function getStorage(req, res) {
-  const http = req.app.get('http');
+  const container = req.app.get('container');
+  const http = container.resolve('http');
   try {
     const result = await fileService.getStorageUsage(req.user.id, {
-      models: req.app.get('models'),
+      models: container.resolve('models'),
     });
 
     return http.sendSuccess(res, result);

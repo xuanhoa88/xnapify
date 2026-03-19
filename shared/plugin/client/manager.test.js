@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
  * This source code is licensed under the MIT license found in the

@@ -471,7 +471,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
   return `<!doctype html>${html}`;
 }
 
-function makeSsrMiddleware(guardControl, baseUrl) {
+function makeSsrMiddleware(baseUrl) {
   // Track whether pluginManager has been initialized for this middleware instance
   let pluginsInitialized = false;
 
@@ -520,9 +520,6 @@ function makeSsrMiddleware(guardControl, baseUrl) {
       if (__DEV__) res.setHeader('X-Cache', 'MISS');
       req.on('close', handleClientDisconnect);
 
-      // Create a per-request DI container to avoid state leakage between requests
-      const container = new Container();
-
       const history = createMemoryHistory({
         initialEntries: [req.originalUrl || req.url || '/'],
         initialIndex: 0,
@@ -544,19 +541,19 @@ function makeSsrMiddleware(guardControl, baseUrl) {
         i18n,
         locale,
         history,
-        container,
+        container: new Container(),
         pathname: history.location.pathname,
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
         signal: abortController.signal,
       };
 
-      // Plugin init (restricted app access) — only once per middleware instance
+      // Plugin init — only once per middleware instance
       if (!pluginsInitialized) {
         try {
           await pluginManager.init({
             ...context,
             cwd: SERVER_CONFIG.cwd,
-            app: guardControl.proxy,
+            container: req.app.get('container'),
           });
           pluginsInitialized = true;
         } catch (err) {
@@ -585,7 +582,7 @@ function makeSsrMiddleware(guardControl, baseUrl) {
       context.store = store;
 
       const views = await promiseWithDeadline(
-        initializeViews({ container }),
+        initializeViews({ container: req.app.get('container') }),
         SERVER_TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
@@ -767,153 +764,6 @@ function validateWsToken(jwt, token) {
 }
 
 // ---------------------------------------------------------------------------
-// Provider Guard
-// ---------------------------------------------------------------------------
-
-function guardAppProviders(app, providers = []) {
-  const CORE_PROVIDERS = new Set([
-    ...providers,
-    'container',
-    'cwd',
-    'env',
-    'jwt',
-    'i18n',
-    'oauth',
-    'plugin',
-    'ws',
-    'models',
-    'nodeRED',
-  ]);
-
-  app.settings = app.settings || {};
-
-  let unlocked = false;
-
-  const shouldBlock = key =>
-    CORE_PROVIDERS.has(key) && app.settings[key] == null && !unlocked;
-
-  const logBlocked = (operation, key) => {
-    const error = new Error();
-    error.name = 'ProviderGuardError';
-    const stack = error.stack
-      ? error.stack.split('\n').slice(2, 6).join('\n')
-      : '(stack unavailable)';
-    console.warn(
-      `⚠️  Provider guard blocked ${operation} on "${key}"\n${stack}`,
-    );
-  };
-
-  const settingsCache = new WeakMap();
-  const getSettingsProxy = settings => {
-    if (!settingsCache.has(settings)) {
-      settingsCache.set(
-        settings,
-        new Proxy(settings, {
-          set(target, key, value) {
-            if (shouldBlock(key)) {
-              logBlocked('set', key);
-              return true;
-            }
-            return Reflect.set(target, key, value);
-          },
-          deleteProperty(target, key) {
-            if (shouldBlock(key)) {
-              logBlocked('delete', key);
-              return true;
-            }
-            return Reflect.deleteProperty(target, key);
-          },
-        }),
-      );
-    }
-    return settingsCache.get(settings);
-  };
-
-  const guardMethod = (original, operation) =>
-    function (key, ...args) {
-      if (shouldBlock(key)) {
-        logBlocked(operation, key);
-        return this;
-      }
-      return original.call(app, key, ...args);
-    };
-
-  // Route-mounting methods are unconditionally blocked when locked
-  const ROUTE_METHODS = new Set([
-    'use',
-    'all',
-    'post',
-    'put',
-    'delete',
-    'patch',
-    'route',
-  ]);
-
-  const guardRouteMethod = (original, operation) =>
-    function (...args) {
-      if (!unlocked) {
-        logBlocked(operation, '(route/middleware)');
-        return this;
-      }
-      return original.apply(app, args);
-    };
-
-  const guardedApp = new Proxy(app, {
-    get(target, prop, receiver) {
-      const value = Reflect.get(target, prop, receiver);
-      if (prop === 'set' || prop === 'enable' || prop === 'disable') {
-        return guardMethod(value, prop);
-      }
-      // Block route-mounting methods — modules must not add middleware/routes
-      if (ROUTE_METHODS.has(prop)) {
-        return guardRouteMethod(value, prop);
-      }
-      if (prop === 'settings') {
-        return getSettingsProxy(value);
-      }
-      return typeof value === 'function' ? value.bind(target) : value;
-    },
-  });
-
-  const pluginProxy = new Proxy(Object.freeze({}), {
-    get(_target, prop) {
-      if (prop === 'get') {
-        return key => {
-          if (CORE_PROVIDERS.has(key)) return app.get(key);
-          const err = new Error(`Plugin access denied for: ${String(key)}`);
-          err.code = 'PLUGIN_ACCESS_DENIED';
-          err.key = key;
-          throw err;
-        };
-      }
-      const err = new Error(`Plugins cannot access app.${String(prop)}`);
-      err.code = 'PLUGIN_ACCESS_DENIED';
-      err.property = prop;
-      throw err;
-    },
-    ownKeys() {
-      return ['get'];
-    },
-    getOwnPropertyDescriptor(_target, prop) {
-      return prop === 'get'
-        ? { configurable: true, enumerable: true }
-        : undefined;
-    },
-  });
-
-  return {
-    app: guardedApp,
-    proxy: pluginProxy,
-    unlock() {
-      unlocked = true;
-    },
-    lock() {
-      unlocked = false;
-    },
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Server Lifecycle
 // ---------------------------------------------------------------------------
 
@@ -1003,25 +853,34 @@ export async function bootstrapApp(app, server, options = {}) {
   set(process.env, 'RSK_APP_NAME', APP_METADATA.title);
   set(process.env, 'RSK_APP_DESC', APP_METADATA.description);
 
+  // Core DI container — the only provider stored on Express settings
+  const container = new Container();
+
+  container.instance('cwd', SERVER_CONFIG.cwd);
+  container.instance('env', SERVER_CONFIG.nodeEnv);
+  container.instance('jwt', configureJwt());
+  container.instance('i18n', i18n);
+  container.instance('plugin', pluginManager);
+
   // WebSocket
   appState.wsServer = createWebSocketServer(
     {
       path: SERVER_CONFIG.wsPath,
       enableLogging: !__DEV__,
-      onAuthentication: token => validateWsToken(app.get('jwt'), token),
+      onAuthentication: token =>
+        validateWsToken(container.resolve('jwt'), token),
     },
     server,
   );
+  container.instance('ws', appState.wsServer);
+  container.instance('nodeRED', appState.nodeRED);
 
-  // Core providers
-  app.set('container', new Container());
-  app.set('cwd', SERVER_CONFIG.cwd);
-  app.set('env', SERVER_CONFIG.nodeEnv);
-  app.set('jwt', configureJwt());
-  app.set('i18n', i18n);
-  app.set('nodeRED', appState.nodeRED);
-  app.set('ws', appState.wsServer);
-  app.set('plugin', pluginManager);
+  // Register container on Express settings (accessible via app.get / req.app.get)
+  app.set('container', container);
+  Object.defineProperty(app.settings, 'container', {
+    writable: false,
+    configurable: false,
+  });
 
   // Trust proxy
   app.set(
@@ -1167,11 +1026,7 @@ export async function bootstrapApp(app, server, options = {}) {
 
   // API routes
   const api = await import('./bootstrap/api');
-  const guardControl = guardAppProviders(
-    app,
-    Array.isArray(api.APP_PROVIDERS) ? api.APP_PROVIDERS : [],
-  );
-  const apiRouter = await api.default(guardControl);
+  const apiRouter = await api.default(app);
   app.use(SERVER_CONFIG.apiPrefix, apiRouter);
 
   // Node-RED
@@ -1180,15 +1035,15 @@ export async function bootstrapApp(app, server, options = {}) {
     port,
     host: resolvedHost,
     functionGlobalContext: {
-      app() {
-        return guardControl.proxy;
+      container() {
+        return app.get('container');
       },
     },
   });
   await appState.nodeRED.setupApiProxy(app, SERVER_CONFIG.apiPrefix);
 
   // SSR catch-all
-  app.get('*', makeSsrMiddleware(guardControl, baseUrl));
+  app.get('*', makeSsrMiddleware(baseUrl));
 
   // Error handler (must be last)
   app.use(makeErrorMiddleware());
