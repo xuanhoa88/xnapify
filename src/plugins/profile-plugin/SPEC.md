@@ -2,7 +2,7 @@
 
 > **Instructions for the AI:**
 > Read this document to understand WHAT features to build inside `src/plugins/profile-plugin`.
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely according to our architecture.
+> Read `.agent/rules.md` and `AGENT.md` to understand HOW to build them securely according to our architecture.
 
 ---
 

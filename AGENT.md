@@ -10,24 +10,36 @@
 react-starter-kit/
 ├── src/                          # Application source code
 │   ├── bootstrap/                # Application bootstrap & configuration
-│   ├── apps/                     # Business logic & Views (auto-discovered)
+│   ├── apps/                     # Business modules (auto-discovered)
 │   │   ├── (default)/            # Default module (homepage, etc.)
-│   │   │   ├── api/              # Backend logic
-│   │   │   └── views/            # Frontend views
-│   │   └── ...                   # Other modules
+│   │   │   ├── api/              # Backend: routes, controllers, models, services
+│   │   │   └── views/            # Frontend: React pages, Redux slices
+│   │   └── {module}/             # Other modules (users, roles, etc.)
+│   ├── plugins/                  # Plugin modules (auto-discovered)
 │   ├── client.js                 # Client entry point
 │   └── server.js                 # Server entry point
-├── shared/                       # Shared utilities (aliased as @shared)
+├── shared/                       # Shared libraries (aliased as @shared)
 │   ├── api/                      # Core API infrastructure
-│   │   ├── auth/                 # Auth middlewares & cookies
-│   │   ├── db/                   # Database & Sequelize
-│   │   └── ...                   # cache, email, fs, http, queue, etc.
+│   │   ├── engines/              # Auto-loaded engines
+│   │   │   ├── auth/             # Auth middlewares & cookies
+│   │   │   ├── cache/            # LRU caching
+│   │   │   ├── db/               # Sequelize ORM & migrations
+│   │   │   ├── hook/             # Channel-based event system
+│   │   │   ├── schedule/         # Cron scheduling
+│   │   │   ├── webhook/          # Webhook engine
+│   │   │   ├── worker/           # Piscina worker pools
+│   │   │   └── ...               # email, fs, http, queue, search, template
+│   │   ├── router/               # File-based API routing engine
+│   │   └── index.js              # Engine auto-loader
+│   ├── container/                # Dependency injection container
+│   ├── plugin/                   # Plugin registry (slots & hooks)
 │   ├── jwt/                      # JWT configuration & utilities
 │   ├── renderer/                 # SSR utilities and Redux store
 │   ├── fetch/                    # API client
 │   ├── ws/                       # WebSocket client
 │   ├── i18n/                     # i18n utilities
-│   ├── validator/                # SSR validator utilities
+│   ├── validator/                # Zod validation wrapper
+│   ├── utils/                    # General utilities
 │   └── node-red/                 # Node-RED integration & migrations
 ├── tools/                        # Build tools and tasks
 │   ├── tasks/                    # Build tasks (build, dev, clean, test, etc.)
@@ -37,9 +49,11 @@ react-starter-kit/
 │   └── run.js                    # Task runner
 ├── build/                        # Production build output
 ├── public/                       # Static assets
-├── .agent/                       # AI assistant workflows & skills
-│   ├── workflows/                # Development command documentation
-│   └── skills/                   # AI persona skills
+├── .agent/                       # AI assistant configuration
+│   ├── rules.md                  # Coding rules & constraints
+│   ├── workflows/                # Step-by-step development guides (23)
+│   ├── skills/                   # AI persona skills (12)
+│   └── templates/                # SPEC.md template
 ├── database.sqlite               # Local SQLite database (dev)
 └── .env.rsk                      # Environment variable template
 ```
@@ -136,15 +150,15 @@ The application uses an auto-discovery system for both API modules and page comp
 
 ### 2. Shared API vs Modules
 
-**Shared API** (`shared/api/` & `shared/jwt/`):
+**Shared API** (`shared/api/engines/` & `shared/jwt/`):
 
-- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `http`, `queue`, `schedule`, `webhook`, `worker`, `jwt`
-- Provide reusable capabilities for modules
-- Should not contain business logic
+- Core infrastructure: `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
+- Auto-loaded from `shared/api/engines/*/index.js` and re-exported via `shared/api/index.js`
+- Provide reusable capabilities for modules — should not contain business logic
 
 **Modules** (`@apps/`):
 
-- Business domains: `users`, `homepage`
+- Business domains: `users`, `roles`, `groups`, `permissions`, `files`, `emails`, etc.
 - Consume shared API to implement features
 - Structure: `api/` (backend) and `views/` (frontend)
 
@@ -169,8 +183,8 @@ The application uses an auto-discovery system for both API modules and page comp
 
 - **JWT-based authentication** with HTTP-only cookies
 - **RBAC system:** Users, Roles, Groups, Permissions
-- **Middleware:** `shared/api/auth/middlewares.js`
-- **Protected routes:** Use `requireAuth` middleware
+- **Middleware:** `shared/api/engines/auth/middlewares/` (`requireAuth`, `requirePermission`, `requireRole`, `requireGroup`, `requireOwnership`, `optionalAuth`)
+- **Protected routes:** Use `requireAuth` and `requirePermission` middlewares
 - **API endpoints:** `/api/auth/login`, `/api/auth/logout`, `/api/auth/me`, `/api/auth/register`
 
 ### 6. WebSocket Integration
@@ -873,10 +887,14 @@ polluting the regular test suite.
 
 ## Documentation
 
-- **README.md** - Quick start and overview
-- **src/bootstrap/GUIDELINES.md** - API architecture patterns
-- **.env.rsk** - Environment variable documentation
-- **Conversation history** - Recent refactorings and decisions
+- **README.md** — Quick start and overview
+- **AGENT.md** — This file; full architecture guide for AI agents
+- **.agent/rules.md** — Hard rules and coding constraints
+- **.agent/workflows/** — 23 step-by-step development guides
+- **.agent/skills/** — 12 specialized AI persona skills
+- **.agent/templates/SPEC.template.md** — Feature specification template
+- **.env.rsk** — Environment variable documentation
+- **CONTRIBUTING.md** — Contribution guidelines and commit conventions
 
 ## Support
 
@@ -884,4 +902,3 @@ For issues and questions, refer to:
 
 - GitHub Issues: https://github.com/xuanhoa88/rapid-rsk/issues
 - Repository: https://github.com/xuanhoa88/rapid-rsk
-```

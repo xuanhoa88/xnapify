@@ -22,7 +22,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ## 3. Security Constraints
 - **Validation**: Every single `req.body`, `req.query`, or `req.params` entering an API controller MUST be validated using the custom Zod wrapper imported from `@shared/validator`. Never trust raw input.
-- **Permissions**: Every new route you generate must include an RBAC role or permission check via `requireAuth` and `requirePermission` middlewares from `@shared/api/auth/middlewares.js`.
+- **Permissions**: Every new route you generate must include an RBAC role or permission check via `requireAuth` and `requirePermission` middlewares from `@shared/api/engines/auth/middlewares`.
 - **Environment Variables**: New environment configurations must always use the `RSK_` prefix.
 
 ---

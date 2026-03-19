@@ -2,7 +2,7 @@
 
 > **Instructions for the AI:** 
 > Read this document to understand WHAT features are built inside `src/apps/activities`. 
-> Read `.cursorrules` and `README.md` to understand HOW to build them securely against the core architecture.
+> Read `.agent/rules.md` and `AGENT.md` to understand HOW to build them securely against the core architecture.
 
 ---
 

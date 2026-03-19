@@ -105,4 +105,4 @@ npm test
 - Middleware functions should be **higher-order**: return a function `(req, res, next)`.
 - Always handle the `!req.user` case (authentication) before authorization.
 - Use consistent HTTP status codes: `401` for unauthenticated, `403` for unauthorized.
-- Export from the barrel `index.js` so it's available via `import { ... } from '@shared/api/auth/middlewares'`.
+- Export from the barrel `index.js` so it's available via `import { ... } from '@shared/api/engines/auth/middlewares'`.
