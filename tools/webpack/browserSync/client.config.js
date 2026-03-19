@@ -14,15 +14,15 @@ const CONFIG = Object.freeze({
   BODY_CHECK_INTERVAL: 50,
   MESSAGE_PREFIX: 'browser_sync_',
   HEARTBEAT_TIMEOUT: 10_000,
-  RECONNECT_WAIT: 2_000,
+  RECONNECT_WAIT: 8_000,
   INIT_RETRY_INTERVAL: 100,
   INIT_MAX_RETRIES: 50,
   SCROLL_STORAGE_KEY: '__bs_scroll_position',
   SCROLL_RESTORE_DELAY: 100,
-  POLL_INTERVAL: 2_000,
-  MAX_POLLS: 300, // 10 minutes max
+  POLL_INTERVAL: 5_000,
+  MAX_POLLS: 120, // 10 minutes max
   BANNER_ID: '__bs_reconnect_banner',
-  BANNER_MIN_DISPLAY: 2_000,
+  BANNER_MIN_DISPLAY: 5_000,
 });
 
 // Banner CSS (injected once)
