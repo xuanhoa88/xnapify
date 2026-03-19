@@ -11,8 +11,9 @@ import formatDistanceToNow from 'date-fns/formatDistanceToNow';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import s from './CommentActionsPopup.css';
 import Icons from './ToolbarIcon';
+
+import s from './CommentActionsPopup.css';
 
 const CommentActionsPopup = ({
   comments = [],

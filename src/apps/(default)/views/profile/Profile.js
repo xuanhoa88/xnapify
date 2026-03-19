@@ -15,6 +15,7 @@ import PersonalInfoCard from './components/PersonalInfoCard';
 import PreferencesCard from './components/PreferencesCard';
 import ProfileHeader from './components/ProfileHeader';
 import SecurityCard from './components/SecurityCard';
+
 import s from './Profile.css';
 
 function Profile() {

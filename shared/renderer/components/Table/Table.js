@@ -14,6 +14,7 @@ import Loader from '../Loader';
 
 import Empty from './Empty';
 import Pagination from './Pagination';
+
 import s from './Table.css';
 
 function Table({

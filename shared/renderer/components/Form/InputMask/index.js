@@ -12,9 +12,10 @@ import PropTypes from 'prop-types';
 import { useFormContext } from 'react-hook-form';
 
 import { useFormField, useMergeRefs } from '../FormContext';
-import s from '../Input/FormInput.css';
 
 import useMask from './useMask';
+
+import s from '../Input/FormInput.css';
 
 /**
  * FormInputMask - Masked input element to be used inside Form.Field

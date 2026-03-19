@@ -12,9 +12,10 @@ import { useTranslation } from 'react-i18next';
 
 import ContextMenu from '../ContextMenu';
 
-import s from './CodeBlockActionsPopup.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
+
+import s from './CodeBlockActionsPopup.css';
 
 /**
  * CodeBlockActionsPopup — A toolbar button that toggles a code block

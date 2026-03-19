@@ -17,6 +17,7 @@ import Icon from '@shared/renderer/components/Icon';
 import { getPreviewHtml, getPreviewError, clearPreview } from '../redux';
 
 import { TIPTAP_CORE_STYLES } from './styles';
+
 import s from './TemplateEditor.css';
 
 /**

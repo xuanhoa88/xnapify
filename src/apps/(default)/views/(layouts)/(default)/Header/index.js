@@ -10,8 +10,9 @@ import { useTranslation } from 'react-i18next';
 import { Link } from '@shared/renderer/components/History';
 
 import AuthSwitcher from './AuthSwitcher';
-import s from './Header.css';
 import LanguageSwitcher from './LanguageSwitcher';
+
+import s from './Header.css';
 
 /**
  * Header Component

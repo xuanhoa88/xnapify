@@ -17,7 +17,6 @@ import Loader from '@shared/renderer/components/Loader';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
 
-import s from './Dashboard.css';
 import {
   fetchActivities,
   getActivities,
@@ -27,6 +26,8 @@ import {
   isActivitiesInitialized,
   getActivitiesError,
 } from './redux';
+
+import s from './Dashboard.css';
 
 const getStatusTagVariant = status => {
   switch (status) {

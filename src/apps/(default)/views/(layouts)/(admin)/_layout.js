@@ -9,11 +9,12 @@ import PropTypes from 'prop-types';
 
 import ImpersonationBanner from '../components/ImpersonationBanner';
 
-import s from './Admin.css';
 import Drawer, { SIDER_WIDTH, SIDER_MINIMAL_WIDTH } from './Drawer';
 import FlashMessage from './FlashMessage';
 import Footer from './Footer';
 import Header from './Header';
+
+import s from './Admin.css';
 
 /**
  * AdminLayout Component

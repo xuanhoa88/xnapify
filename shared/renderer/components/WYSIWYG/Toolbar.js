@@ -18,10 +18,11 @@ import ColorPickerPopup from './ColorPickerPopup';
 import EmojiPickerButton from './EmojiPickerButton';
 import MediaActionsPopup from './MediaActionsPopup';
 import TableActionsPopup from './TableActionsPopup';
-import s from './Toolbar.css';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 import { useToolbarPrompt } from './ToolbarPromptModal';
+
+import s from './Toolbar.css';
 
 /**
  * Toolbar — Formatting toolbar for the Tiptap WYSIWYG editor.

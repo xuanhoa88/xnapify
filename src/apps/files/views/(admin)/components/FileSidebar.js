@@ -15,8 +15,9 @@ import {
   fetchStorageUsage,
 } from '../redux';
 
-import s from './FileSidebar.css';
 import FileUploader from './FileUploader';
+
+import s from './FileSidebar.css';
 
 const NAV_ITEMS = [
   { id: 'my_drive', label: 'sidebar.my_drive', icon: 'hard-drive' },

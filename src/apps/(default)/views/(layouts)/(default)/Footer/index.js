@@ -11,8 +11,9 @@ import { useTranslation } from 'react-i18next';
 
 import { Link } from '@shared/renderer/components/History';
 
-import s from './Footer.css';
 import ScrollToTop from './ScrollToTop';
+
+import s from './Footer.css';
 
 /**
  * Navigation links configuration

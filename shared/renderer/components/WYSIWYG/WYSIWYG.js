@@ -53,6 +53,7 @@ import Toolbar from './Toolbar';
 import ToolbarButton from './ToolbarButton';
 import Icons from './ToolbarIcon';
 import { ToolbarPromptProvider } from './ToolbarPromptModal';
+
 import s from './WYSIWYG.css';
 
 // Lightweight check: does the string contain common markdown syntax?

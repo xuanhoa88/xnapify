@@ -34,6 +34,7 @@ import { z } from '@shared/validator';
 import { updateProfileFormSchema } from '../../../../users/validator/auth';
 
 import Loader from './Loader';
+
 import s from './PersonalInfoCard.css';
 
 function PersonalInfoCard() {

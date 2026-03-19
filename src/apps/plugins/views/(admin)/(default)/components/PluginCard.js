@@ -16,6 +16,7 @@ import Icon from '@shared/renderer/components/Icon';
 import Tag from '@shared/renderer/components/Tag';
 
 import PluginActionsDropdown from './PluginActionsDropdown';
+
 import s from './PluginCard.css';
 
 function PluginCard({

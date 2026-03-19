@@ -15,11 +15,12 @@ import Icon from '@shared/renderer/components/Icon';
 import { isAuthenticated, toggleDrawer } from '@shared/renderer/redux';
 
 import Breadcrumbs from './Breadcrumbs';
-import s from './Header.css';
 import LanguageSwitcher from './LanguageSwitcher';
 import Messages from './Messages';
 import Notifications from './Notifications';
 import ProfileDropdown from './ProfileDropdown';
+
+import s from './Header.css';
 
 /**
  * AdminHeader Component

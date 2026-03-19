@@ -21,7 +21,6 @@ import { showWarningMessage } from '@shared/renderer/redux/features/ui/slice';
 import { useWebSocket } from '@shared/ws/client';
 
 import PluginCard from './components/PluginCard';
-import s from './Plugins.css';
 import {
   fetchPlugins,
   uploadPlugin,
@@ -33,6 +32,8 @@ import {
   isPluginUploading,
   isPluginsInitialized,
 } from './redux';
+
+import s from './Plugins.css';
 
 function Plugins() {
   const { t } = useTranslation();

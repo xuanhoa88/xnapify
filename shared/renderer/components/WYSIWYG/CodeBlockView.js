@@ -11,8 +11,9 @@ import { NodeViewContent, NodeViewWrapper } from '@tiptap/react';
 import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
-import s from './CodeBlockView.css';
 import Icons from './ToolbarIcon';
+
+import s from './CodeBlockView.css';
 
 /**
  * CodeBlockView — Custom Tiptap NodeView for code blocks.
