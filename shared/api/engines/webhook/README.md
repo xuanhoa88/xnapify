@@ -5,7 +5,7 @@ Inbound webhook handler registration with HMAC signature verification, lifecycle
 ## Quick Start
 
 ```javascript
-const webhook = app.get('webhook');
+const webhook = app.get('container').resolve('webhook');
 
 webhook.handler('stripe', {
   secret: process.env.STRIPE_WEBHOOK_SECRET,

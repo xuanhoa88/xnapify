@@ -217,7 +217,7 @@ const migrationsContext = require.context(
 const seedsContext = require.context('./database/seeds', false, /\.js$/);
 
 export default async function moduleInit(deps, app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
 
   // Run migrations first
   await db.connection.runMigrations([

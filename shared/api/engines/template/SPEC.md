@@ -25,7 +25,7 @@ shared/api/engines/template/
 
 ## 3. Default Singleton
 
-`index.js` exports `createFactory()`. Registered on DI as `app.get('template')`.
+`index.js` exports `createFactory()`. Registered on DI as `app.get('container').resolve('template')`.
 
 ## 4. Dependencies
 

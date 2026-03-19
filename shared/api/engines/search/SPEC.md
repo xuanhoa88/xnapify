@@ -208,7 +208,7 @@ const search = new Proxy({}, {
 
 **Why Proxy?** Prevents database connection issues during module bootstrap. The adapter is not created until the first `search.index()` or `search.search()` call, by which time DB connections are ready.
 
-The singleton is registered on the DI container as `app.get('search')` during engine autoloading.
+The singleton is registered on the DI container as `app.get('container').resolve('search')` during engine autoloading.
 
 ## 7. Error Handling
 
@@ -225,7 +225,7 @@ No dedicated error classes file. Errors thrown inline:
 
 ## 8. Integration Points
 
-- **Module `init(app)`**: Access via `app.get('search')`. Use `withNamespace()` to avoid collisions.
+- **Module `init(app)`**: Access via `app.get('container').resolve('search')`. Use `withNamespace()` to avoid collisions.
 - **Hook engine**: The search module listens for user/group hooks to update indexes.
 - **`RSK_SEARCH_TYPE`**: Environment variable to switch default adapter (`'memory'` or `'database'`).
 - **DB engine**: The database adapter requires `connection` and `DataTypes` from the DB engine. The factory auto-injects these during bootstrap.

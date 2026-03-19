@@ -107,7 +107,7 @@ async function resolvePermissions(req, adminBypass = true) {
 
   // 3. Use hook to let modules resolve permissions if not already populated
   if (!req.user.permissions) {
-    const hook = req.app.get('hook');
+    const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HOOK_CHANNEL)) {
       await hook(HOOK_CHANNEL).emit('resolve', req);
     }

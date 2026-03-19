@@ -146,7 +146,7 @@ const hook = createFactory();
 export default hook;
 ```
 
-The singleton is registered on the DI container as `app.get('hook')` during engine autoloading.
+The singleton is registered on the DI container as `app.get('container').resolve('hook')` during engine autoloading.
 
 ## 6. Error Handling
 
@@ -198,7 +198,7 @@ The hook engine is the **most widely used engine** across the codebase, with 50+
 ### Common Pattern (service layer)
 
 ```javascript
-const hook = app.get('hook');
+const hook = app.get('container').resolve('hook');
 await hook('users').emit('created', { user, context });
 ```
 
@@ -206,7 +206,7 @@ await hook('users').emit('created', { user, context });
 
 ```javascript
 export default function registerHooks(app) {
-  const hook = app.get('hook');
+  const hook = app.get('container').resolve('hook');
   hook('users').on('created', async (data) => {
     await sendWelcomeEmail(data.user);
   }, 10);

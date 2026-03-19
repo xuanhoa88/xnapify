@@ -194,7 +194,7 @@ const webhook = createFactory();
 export default webhook;
 ```
 
-The singleton is registered on the DI container as `app.get('webhook')` during engine autoloading. `withContext()` is called during bootstrap to bind the hook engine.
+The singleton is registered on the DI container as `app.get('container').resolve('webhook')` during engine autoloading. `withContext()` is called during bootstrap to bind the hook engine.
 
 ## 8. Testing
 
@@ -252,7 +252,7 @@ Uses a helper `createWebhook()` that creates a factory instance and binds it wit
 
 - **Bootstrap**: `registerEngines()` calls `webhook.withContext(app)` to inject the hook engine and DI container.
 - **Controller layer**: `POST /api/webhooks/:provider` reads raw body, verifies HMAC via `verifySignature`, then calls `webhook.dispatch()`.
-- **Module `init(app)`**: Modules register providers via `app.get('webhook').handler(...)`.
+- **Module `init(app)`**: Modules register providers via `app.get('container').resolve('webhook').handler(...)`.
 - **Hook engine**: The webhook engine uses a dedicated `'webhook'` HookChannel for all internal dispatch.
 
 ---

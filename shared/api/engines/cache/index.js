@@ -51,7 +51,7 @@ export { createFactory, withNamespace };
 
 /**
  * Singleton instance of Cache Engine
- * Used by the application via app.get('cache')
+ * Used by the application via app.container.resolve('cache')
  */
 const cache = createFactory({
   type: 'memory',

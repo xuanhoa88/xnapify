@@ -288,7 +288,7 @@ const fs = createFactory();
 export default fs;
 ```
 
-`createFactory()` also attaches `MIDDLEWARES` constant to the instance. The singleton is registered on the DI container as `app.get('fs')`.
+`createFactory()` also attaches `MIDDLEWARES` constant to the instance. The singleton is registered on the DI container as `app.get('container').resolve('fs')`.
 
 ## 10. Integration Points
 
@@ -296,7 +296,7 @@ export default fs;
 - **Worker engine**: Services auto-offload to the filesystem worker pool for batch operations.
 - **Schedule engine**: Schedule periodic file cleanup with `fs.list()` + `fs.remove()`.
 - **Queue engine**: Queue file processing jobs (image resize, thumbnail generation).
-- **Modules**: Access via `app.get('fs')` in module `init()`.
+- **Modules**: Access via `app.get('container').resolve('fs')` in module `init()`.
 
 ---
 

@@ -20,7 +20,7 @@ All engines live in `engines/` and are auto-discovered at startup. Each engine i
 |---|---|---|
 | **auth** | JWT, OAuth, permissions | `auth.middlewares.requirePermission('users:read')` |
 | **cache** | Key-value store | `await cache.set('key', value, 60000)` |
-| **db** | Sequelize ORM | `const { models } = app.get('db')` |
+| **db** | Sequelize ORM | `const { models } = app.get('container').resolve('db')` |
 | **email** | Email delivery | `await email.send({ to, subject, html })` |
 | **fs** | File operations | `await fs.upload({ fileName, buffer, mimeType })` |
 | **hook** | Pub/sub hooks | `hook('users').on('created', handler)` |

@@ -37,7 +37,8 @@ export function requireAuth(options = {}) {
       req.authMethod = 'token';
 
       if (includeUser) {
-        const jwt = req.app.get('jwt');
+        const container = req.app.get('container');
+        const jwt = container.resolve('jwt');
 
         // Decode without verifying first to check type
         // This avoids double verification for standard tokens
@@ -53,7 +54,7 @@ export function requireAuth(options = {}) {
         const { payload } = decodedToken;
         const strategyKey =
           payload && payload.type ? `auth.strategy.${payload.type}` : null;
-        const hook = req.app.get('hook');
+        const hook = container.resolve('hook');
         if (strategyKey && hook.has(strategyKey)) {
           // Delegate to registered strategy (event-based)
           await hook(strategyKey).emit('authenticate', req, {

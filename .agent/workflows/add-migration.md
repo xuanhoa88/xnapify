@@ -359,7 +359,7 @@ const migrationsContext = require.context(
 );
 
 export default async function moduleInit(deps, app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
 
   // Run migrations
   await db.connection.runMigrations([

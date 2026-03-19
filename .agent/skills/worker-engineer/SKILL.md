@@ -58,7 +58,7 @@ When a worker needs **both** `app` access (models, hooks, plugin manager) **and*
 2. **Piscina workers** handle CPU-bound subtasks (hashing, compression, image processing) called from within queue handlers.
 
 ### When to Use
-- Worker needs `app.get('models')`, `app.get('hook')`, or other `app` singletons → **Queue pattern**
+- Worker needs `app.get('container').resolve('models')`, `app.get('container').resolve('hook')`, or other `app` singletons → **Queue pattern**
 - Worker does CPU-intensive computation → **Piscina worker**
 - Worker needs **both** → **Hybrid** (queue orchestrates, Piscina computes)
 
@@ -82,12 +82,12 @@ async function handleInstallJob(app, job) {
   const checksum = await workerPool.computeChecksum(pluginDir);
 
   // Stateful: needs app for DB access
-  const { Plugin } = app.get('models');
+  const { Plugin } = app.get('container').resolve('models');
   await Plugin.update({ checksum }, { where: { id: pluginId } });
 }
 
 export function registerWorkers(app) {
-  const queue = app.get('queue');
+  const queue = app.get('container').resolve('queue');
   const channel = queue('my-channel');
   channel.on('install', job => handleInstallJob(app, job));
 }

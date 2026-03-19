@@ -193,7 +193,7 @@ export function translations() {
  * @param {Object} app - Express app instance
  */
 export async function migrations(app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
 
   try {
     await db.connection.runMigrations(
@@ -214,7 +214,7 @@ export async function migrations(app) {
  * @param {Object} app - Express app instance
  */
 export async function seeds(app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
 
   try {
     await db.connection.runSeeds(
@@ -235,7 +235,7 @@ export async function seeds(app) {
  * @param {Object} app - Express app instance
  */
 export async function init(app) {
-  const hook = app.get('hook');
+  const hook = app.get('container').resolve('hook');
 
   // Example: Register webhooks
   hook('{module-name}').on('created', async entity => {
@@ -366,7 +366,7 @@ export { del as delete };
 
 export async function list(req, res, next) {
   try {
-    const { models } = req.app.get('db');
+    const { models } = req.app.get('container').resolve('db');
     const items = await models.Module.findAll();
     res.json(items);
   } catch (error) {
@@ -377,7 +377,7 @@ export async function list(req, res, next) {
 export async function getOne(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('db');
+    const { models } = req.app.get('container').resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
@@ -392,7 +392,7 @@ export async function getOne(req, res, next) {
 
 export async function create(req, res, next) {
   try {
-    const { models } = req.app.get('db');
+    const { models } = req.app.get('container').resolve('db');
     const item = await models.Module.create(req.body);
     res.status(201).json(item);
   } catch (error) {
@@ -403,7 +403,7 @@ export async function create(req, res, next) {
 export async function update(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('db');
+    const { models } = req.app.get('container').resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {
@@ -420,7 +420,7 @@ export async function update(req, res, next) {
 export async function delete(req, res, next) {
   try {
     const { id } = req.params;
-    const { models } = req.app.get('db');
+    const { models } = req.app.get('container').resolve('db');
     const item = await models.Module.findByPk(id);
 
     if (!item) {

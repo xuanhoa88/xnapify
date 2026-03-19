@@ -300,7 +300,7 @@ When your worker needs `app` access (models, hooks, plugin manager, WebSocket), 
 | Need | Pattern |
 |------|---------|
 | Stateless, CPU-heavy work | Piscina worker (`createWorkerPool`) |
-| Needs `app.get('models')`, hooks, WS | Queue-based handler |
+| Needs `app.get('container').resolve('models')`, hooks, WS | Queue-based handler |
 | Both: stateful orchestration + CPU offload | Hybrid (queue calls Piscina) |
 
 ### Queue-Based Handler
@@ -309,8 +309,8 @@ When your worker needs `app` access (models, hooks, plugin manager, WebSocket), 
 // @apps/posts/api/services/post.workers.js
 async function handlePublishJob(app, job) {
   const { postId, actorId } = job.data;
-  const { Post } = app.get('models');
-  const hook = app.get('hook');
+  const { Post } = app.get('container').resolve('models');
+  const hook = app.get('container').resolve('hook');
 
   const post = await Post.findByPk(postId);
   await post.update({ status: 'published' });
@@ -323,7 +323,7 @@ async function handlePublishJob(app, job) {
 }
 
 export function registerPostWorkers(app) {
-  const queue = app.get('queue');
+  const queue = app.get('container').resolve('queue');
   const channel = queue('posts');
   channel.on('publish', job => handlePublishJob(app, job));
 }
@@ -355,7 +355,7 @@ async function handleProcessJob(app, job) {
   const hash = await workerPool.computeHash(job.data.filePath);
 
   // Stateful → main process (app access)
-  const { Item } = app.get('models');
+  const { Item } = app.get('container').resolve('models');
   await Item.update({ hash }, { where: { id: itemId } });
 }
 ```

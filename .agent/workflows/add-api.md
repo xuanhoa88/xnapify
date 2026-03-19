@@ -100,7 +100,7 @@ const routesContext = require.context('./routes', true, /\.js$/);
  * Migrations hook - called to run module migrations.
  */
 export async function migrations(app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
   await db.connection.runMigrations([
     { context: migrationsContext, prefix: 'posts' },
   ]);
@@ -110,7 +110,7 @@ export async function migrations(app) {
  * Seeds hook - called to run module seeds.
  */
 export async function seeds(app) {
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
   await db.connection.runSeeds([{ context: seedsContext, prefix: 'posts' }]);
 }
 
@@ -263,7 +263,7 @@ export async function update(req, res) {
   const auth = req.app.get('auth');
 
   try {
-    const models = req.app.get('models');
+    const models = req.app.get('container').resolve('models');
     const post = await models.Post.findByPk(req.params.id);
 
     if (!post) {

@@ -27,7 +27,8 @@ export function optionalAuth(options = {}) {
         return next(); // No token, continue without authentication
       }
 
-      const jwt = req.app.get('jwt');
+      const container = req.app.get('container');
+      const jwt = container.resolve('jwt');
 
       if (includeUser) {
         const decodedToken = jwt.decodeToken(token);
@@ -36,7 +37,7 @@ export function optionalAuth(options = {}) {
           const { payload } = decodedToken;
           const strategyKey =
             payload && payload.type ? `auth.strategy.${payload.type}` : null;
-          const hook = req.app.get('hook');
+          const hook = container.resolve('hook');
           if (strategyKey && hook.has(strategyKey)) {
             // Delegate to registered strategy (event-based)
             await hook(strategyKey).emit('authenticate', req, {

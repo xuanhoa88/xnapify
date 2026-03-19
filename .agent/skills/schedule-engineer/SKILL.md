@@ -9,11 +9,12 @@ When creating or modifying scheduled tasks, enforce these patterns.
 
 ## Registration Pattern
 
-Scheduled tasks are registered during module `init()` via `app.get('schedule')`.
+Scheduled tasks are registered during module `init()` via `app.get('container').resolve('schedule')`.
 
 ```javascript
 export async function init(app) {
-  const schedule = app.get('schedule');
+  const container = app.get('container');
+  const schedule = container.resolve('schedule');
 
   schedule.register('module:task-name', '0 0 * * *', async () => {
     // Task logic
@@ -33,7 +34,7 @@ export async function init(app) {
 
 ```javascript
 schedule.register('reports:weekly', '0 9 * * 1', async () => {
-  const pool = app.get('reports:workerPool');
+  const pool = container.resolve('reports:workerPool');
   await pool.sendRequest('weekly', 'GENERATE_REPORT', { week: getCurrentWeek() });
 });
 ```

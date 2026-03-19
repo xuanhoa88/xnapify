@@ -8,7 +8,7 @@ Sequelize ORM connection management with built-in migration and seed support. Re
 import { connection } from '@shared/api/engines/db';
 
 // Connection is pre-configured from RSK_DB_URL env var
-const { models } = app.get('db');
+const { models } = app.get('container').resolve('db');
 const users = await models.User.findAll();
 ```
 

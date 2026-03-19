@@ -92,7 +92,7 @@ export function requireOwnership(options = {}) {
     // 3. Hook-based resolution (for complex ownership like posts, comments, etc.)
     if (resourceType) {
       if (req.isOwner == null) {
-        const hook = req.app.get('hook');
+        const hook = req.app.get('container').resolve('hook');
         if (hook && hook.has(HOOK_CHANNEL)) {
           await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
         }
@@ -194,7 +194,7 @@ export function requireFlexibleOwnership(options = {}) {
         // Reset ownership state so each strategy gets a fresh hook resolution
         req.isOwner = undefined;
 
-        const hook = req.app.get('hook');
+        const hook = req.app.get('container').resolve('hook');
         if (hook && hook.has(HOOK_CHANNEL)) {
           await hook(HOOK_CHANNEL).emit('resolve', req, { resourceType });
         }
@@ -236,7 +236,7 @@ export function requireFlexibleOwnership(options = {}) {
  *
  * @example
  * // Hook listener in a module (e.g. documents module init):
- * app.get('hook')('auth.shared_ownership').on('resolve', async (req, { resourceType }) => {
+ * app.get('container').resolve('hook')('auth.shared_ownership').on('resolve', async (req, { resourceType }) => {
  *   if (resourceType === 'document') {
  *     const doc = await Document.findByPk(req.params.id, { include: 'collaborators' });
  *     req.sharedOwners = doc.collaborators.map(c => c.userId);
@@ -273,7 +273,7 @@ export function requireSharedOwnership(options = {}) {
 
     // 3. Emit hook to populate req.sharedOwners
     if (!req.sharedOwners) {
-      const hook = req.app.get('hook');
+      const hook = req.app.get('container').resolve('hook');
       if (hook && hook.has(SHARED_HOOK_CHANNEL)) {
         await hook(SHARED_HOOK_CHANNEL).emit('resolve', req, { resourceType });
       }
@@ -316,7 +316,7 @@ export function requireSharedOwnership(options = {}) {
  *
  * @example
  * // Hook listener populates the chain: [owner, manager, director]
- * app.get('hook')('auth.hierarchical_ownership').on('resolve', async (req, { resourceType }) => {
+ * app.get('container').resolve('hook')('auth.hierarchical_ownership').on('resolve', async (req, { resourceType }) => {
  *   if (resourceType === 'report') {
  *     const report = await Report.findByPk(req.params.id);
  *     req.ownerChain = await getManagementChain(report.authorId);
@@ -353,7 +353,7 @@ export function requireHierarchicalOwnership(options = {}) {
     }
 
     // 3. Emit hook to populate req.ownerChain
-    const hook = req.app.get('hook');
+    const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HIERARCHICAL_HOOK_CHANNEL)) {
       await hook(HIERARCHICAL_HOOK_CHANNEL).emit('resolve', req, {
         resourceType,
@@ -405,7 +405,7 @@ export function requireHierarchicalOwnership(options = {}) {
  * );
  *
  * // Hook listener resolves ownership + computes expiry
- * app.get('hook')('auth.time_based_ownership').on('resolve', async (req, ctx) => {
+ * app.get('container').resolve('hook')('auth.time_based_ownership').on('resolve', async (req, ctx) => {
  *   if (ctx.resourceType === 'post') {
  *     const post = await Post.findByPk(req.params.id);
  *     req.isOwner = String(post.authorId) === String(req.user.id);
@@ -436,7 +436,7 @@ export function requireTimeBasedOwnership(options = {}) {
     }
 
     // 3. Emit hook to resolve ownership + expiry
-    const hook = req.app.get('hook');
+    const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(TIME_BASED_HOOK_CHANNEL)) {
       await hook(TIME_BASED_HOOK_CHANNEL).emit('resolve', req, {
         resourceType,

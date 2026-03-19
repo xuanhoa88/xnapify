@@ -41,7 +41,7 @@ async function resolveGroups(req, adminBypass) {
 
   // 3. Use hook to let modules resolve groups if not already populated
   if (!req.user.groups) {
-    const hook = req.app.get('hook');
+    const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HOOK_CHANNEL)) {
       await hook(HOOK_CHANNEL).emit('resolve', req);
     }

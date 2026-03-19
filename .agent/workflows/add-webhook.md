@@ -15,7 +15,8 @@ The webhook engine dispatches incoming HTTP payloads to registered handlers. Han
 ```javascript
 // src/apps/{module-name}/api/index.js — inside init()
 export async function init(app) {
-  const webhook = app.get('webhook');
+  const container = app.get('container');
+  const webhook = container.resolve('webhook');
 
   webhook.register('{provider-name}', {
     secret: process.env.RSK_WEBHOOK_{PROVIDER}_SECRET,
@@ -52,7 +53,7 @@ Add the same variable to `.env.rsk` template with a comment.
 // src/apps/{module-name}/api/services/webhook.service.js
 
 export async function handlePaymentCompleted(payload, app) {
-  const { db } = app.get('db');
+  const { models } = app.get('container').resolve('db');
   // Process payment webhook
 }
 

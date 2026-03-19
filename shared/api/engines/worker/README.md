@@ -98,7 +98,7 @@ workerPool.computeChecksum = async function (dir, options = {}) {
 
 ```javascript
 // In module init(app):
-const { createWorkerPool } = app.get('worker');
+const { createWorkerPool } = app.get('container').resolve('worker');
 const pool = createWorkerPool('MyModule', workersContext, { maxWorkers: 1 });
 ```
 

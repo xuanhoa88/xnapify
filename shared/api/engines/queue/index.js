@@ -27,8 +27,8 @@
  * ---
  *
  * @example <caption>Basic Usage - Create channel and process jobs</caption>
- * // Access singleton instance (via app.get('queue') or import)
- * const queue = app.get('queue');
+ * // Access singleton instance (via app.container.resolve('queue') or import)
+ * const queue = app.container.resolve('queue');
  *
  * // Create/get a channel (consumer)
  * const zalo = queue('zalo', { concurrency: 5 });
@@ -106,7 +106,7 @@ export { createFactory };
 
 /**
  * Singleton instance of QueueFactory
- * Used by the application via app.get('queue')
+ * Used by the application via app.container.resolve('queue')
  */
 const queue = createFactory();
 

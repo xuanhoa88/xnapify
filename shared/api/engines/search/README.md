@@ -5,7 +5,7 @@ Full-text search with pluggable adapters (memory, database) and namespace isolat
 ## Quick Start
 
 ```javascript
-const search = app.get('search');
+const search = app.get('container').resolve('search');
 
 // Index a document
 await search.index({

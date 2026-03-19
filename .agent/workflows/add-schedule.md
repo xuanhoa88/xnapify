@@ -6,7 +6,7 @@ Add a scheduled task using the schedule engine (`@shared/api`).
 
 ## How Scheduling Works
 
-The schedule engine wraps `node-cron` and is accessible via `app.get('schedule')`. Tasks are registered during module `init()` and run automatically based on cron expressions.
+The schedule engine wraps `node-cron` and is accessible via `app.get('container').resolve('schedule')`. Tasks are registered during module `init()` and run automatically based on cron expressions.
 
 ## Step-by-Step
 
@@ -15,11 +15,12 @@ The schedule engine wraps `node-cron` and is accessible via `app.get('schedule')
 ```javascript
 // src/apps/{module-name}/api/index.js — inside init()
 export async function init(app) {
-  const schedule = app.get('schedule');
+  const container = app.get('container');
+  const schedule = container.resolve('schedule');
 
   // Lightweight task — runs directly
   schedule.register('{module-name}:daily-cleanup', '0 0 * * *', async () => {
-    const { models } = app.get('db');
+    const { models } = container.resolve('db');
     await models.TempFile.destroy({
       where: { createdAt: { [Op.lt]: subDays(new Date(), 7) } },
     });
@@ -28,7 +29,7 @@ export async function init(app) {
 
   // Heavy task — dispatch to worker pool
   schedule.register('{module-name}:weekly-report', '0 9 * * 1', async () => {
-    const workerPool = app.get('{module-name}:workerPool');
+    const workerPool = container.resolve('{module-name}:workerPool');
     await workerPool.sendRequest('weekly-report', 'GENERATE_REPORT', {
       week: getCurrentWeek(),
     });

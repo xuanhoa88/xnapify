@@ -48,7 +48,7 @@ export function refreshToken(options = {}) {
       }
 
       // Get JWT instance from app
-      const jwt = req.app.get('jwt');
+      const jwt = req.app.get('container').resolve('jwt');
 
       // Check if token is expired or close to expiration
       const isExpired = jwt.isTokenExpired(token);

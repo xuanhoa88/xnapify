@@ -54,7 +54,7 @@ export { createFactory, registerAdapter, withNamespace };
  * not at module import time. This avoids issues with DB connections
  * not being ready during app bootstrap.
  *
- * Accessed by the application via `app.get('search')`.
+ * Accessed by the application via `app.container.resolve('search')`.
  */
 let searchInstance = null;
 

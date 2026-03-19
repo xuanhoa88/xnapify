@@ -289,13 +289,24 @@ try {
 
 All shared infrastructure lives in `shared/api/engines/`. Engines are **auto-discovered** from `engines/*/index.js` and re-exported as named exports from `shared/api/index.js`.
 
+**Access patterns:**
+
 ```javascript
-// Consuming engines — import by name
+// 1. Direct import (shared code, top-level modules)
 import { db, auth, hook, cache } from '@shared/api';
 
-// Each engine's index.js exports its public API
-// Default export becomes the base, named exports are merged
+// 2. Via DI container in Express handlers (preferred in modules)
+// In init(app):
+const container = app.get('container');
+const hook = container.resolve('hook');
+const db = container.resolve('db');
+
+// In route handlers / controllers:
+const container = req.app.get('container');
+const { models } = container.resolve('db');
 ```
+
+> **Convention:** In module code (`init`, controllers, services), always use `app.get('container').resolve('name')` or `req.app.get('container').resolve('name')`. Direct imports are reserved for shared libraries.
 
 **Available Engines:** `auth`, `cache`, `db`, `email`, `fs`, `hook`, `http`, `queue`, `schedule`, `search`, `template`, `webhook`, `worker`
 
@@ -303,15 +314,16 @@ import { db, auth, hook, cache } from '@shared/api';
 
 1. Create `shared/api/engines/{name}/index.js`
 2. Export a default or named exports
-3. It's automatically available as `import { name } from '@shared/api'`
+3. It's automatically available via `container.resolve('{name}')`
 
 ### 11. Hook Engine
 
 Channel-based async event system (`shared/api/engines/hook`) for decoupled inter-module communication.
 
 ```javascript
-// Server-side: Get hook from Express app
-const hook = app.get('hook');
+// In init(app) or controllers:
+const container = app.get('container');  // or req.app.get('container')
+const hook = container.resolve('hook');
 
 // Create/get a channel
 const userHooks = hook('users');

@@ -14,11 +14,13 @@ When reviewing or generating code, enforce these security checks automatically.
 Every `req.body`, `req.query`, and `req.params` **must** be validated using Zod from `@shared/validator`.
 
 **Check for:**
+
 - Controller functions that access `req.body` without validation
 - Missing schema imports from the module's `validator/` directory
 - Raw `req.params.id` usage without type coercion
 
 **Correct pattern:**
+
 ```javascript
 import { z } from '@shared/validator';
 
@@ -38,16 +40,18 @@ export async function create(req, res, next) {
 Every API route **must** have RBAC guards unless explicitly public.
 
 **Check for:**
+
 - `_route.js` files with exported methods (`get`, `post`, etc.) that are plain functions without middleware chains
 - Missing `requireAuth` or `requirePermission` in method export arrays
 - Admin routes without permission checks
 
 **Correct pattern:**
+
 ```javascript
 // _route.js
 function requirePermission(perm) {
   return (req, res, next) => {
-    const auth = req.app.get('auth');
+    const auth = req.app.get('container').resolve('auth');
     return auth.middlewares.requirePermission(perm)(req, res, next);
   };
 }
@@ -65,6 +69,7 @@ export const post = [requirePermission('resource:create'), controller.create];
 - New env vars must be added to `.env.rsk` template with a comment
 
 **Check for:**
+
 - Hardcoded secrets, API keys, or tokens in source code
 - `process.env.SOMETHING` without the `RSK_` prefix (except `NODE_ENV`)
 - Missing entries in `.env.rsk`
@@ -81,6 +86,7 @@ export const post = [requirePermission('resource:create'), controller.create];
 - Use hooks, container bindings, or plugin slots for cross-module communication
 
 **Check for:**
+
 - `import ... from '@apps/other-module/...'` patterns
 - Direct file references across module boundaries
 

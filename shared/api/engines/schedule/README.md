@@ -18,10 +18,10 @@ Inside a module's `init()` lifecycle hook:
 
 ```javascript
 export async function init(app) {
-  const schedule = app.get('schedule');
+  const schedule = app.get('container').resolve('schedule');
 
   schedule.register('analytics:daily-rollup', '0 2 * * *', async () => {
-    const { models } = app.get('db');
+    const { models } = app.get('container').resolve('db');
     await models.AnalyticsRollup.computeDaily();
   });
 }

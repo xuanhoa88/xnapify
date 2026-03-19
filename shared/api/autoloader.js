@@ -316,13 +316,6 @@ async function runPhase(phase, lifecycles, handler) {
  * @returns {Promise<{apiModels: object, apiRoutes: Map, errors: object[]}>}
  */
 export async function discoverModules(modulesContext, app) {
-  if (!app) {
-    const err = new Error('Express app instance is required');
-    err.name = 'InvalidAppError';
-    err.code = 'INVALID_APP';
-    throw err;
-  }
-
   const startTime = Date.now();
   const adapter = createWebpackContextAdapter(modulesContext);
 
@@ -354,7 +347,7 @@ export async function discoverModules(modulesContext, app) {
   );
 
   // ─── Phase 2: models ──────────────────────────────────────────────────────
-  const db = app.get('db');
+  const db = app.get('container').resolve('db');
   const apiModels = {};
 
   if (!db) {

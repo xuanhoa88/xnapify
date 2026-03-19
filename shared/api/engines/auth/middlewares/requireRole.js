@@ -38,7 +38,7 @@ async function resolveRoles(req, adminBypass = false) {
 
   // 2. Use hook to let modules resolve roles if not already populated
   if (!req.user.roles) {
-    const hook = req.app.get('hook');
+    const hook = req.app.get('container').resolve('hook');
     if (hook && hook.has(HOOK_CHANNEL)) {
       await hook(HOOK_CHANNEL).emit('resolve', req);
     }
@@ -271,7 +271,7 @@ export function requireDynamicRole(options = {}) {
       const result = await resolver(req);
       requiredRoles = Array.isArray(result) ? result : [result];
     } else if (resourceType) {
-      const hook = req.app.get('hook');
+      const hook = req.app.get('container').resolve('hook');
       if (hook && hook.has(DYNAMIC_HOOK_CHANNEL)) {
         await hook(DYNAMIC_HOOK_CHANNEL).emit('resolve', req, { resourceType });
       }

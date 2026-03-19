@@ -5,7 +5,7 @@ Channel-based async event hooks with priority ordering and mutable arguments. En
 ## Quick Start
 
 ```javascript
-const hook = app.get('hook');
+const hook = app.get('container').resolve('hook');
 
 // Get or create a channel
 const userHooks = hook('users');

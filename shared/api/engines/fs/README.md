@@ -5,7 +5,7 @@ Streaming file operations with multiple provider support (local, memory, self-ho
 ## Quick Start
 
 ```javascript
-const fs = app.get('fs');
+const fs = app.get('container').resolve('fs');
 
 // Upload a file
 await fs.upload({ fileName: 'photo.jpg', buffer, mimeType: 'image/jpeg' });
