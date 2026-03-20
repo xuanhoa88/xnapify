@@ -157,8 +157,10 @@ export async function managePlugins({ pluginManager, models, cwd, queue }) {
       typeof queueChannel.queue.getJobs === 'function'
     ) {
       const allJobs = await queueChannel.queue.getJobs();
-      const busyJobs = allJobs.filter(j =>
-        ['pending', 'active', 'delayed'].includes(j.status),
+      const busyJobs = allJobs.filter(
+        j =>
+          ['pending', 'active', 'delayed'].includes(j.status) &&
+          j.name !== 'toggle',
       );
       const busyPluginIds = new Set();
       const busyPluginKeys = new Set();

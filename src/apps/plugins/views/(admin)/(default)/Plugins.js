@@ -71,18 +71,28 @@ function Plugins() {
   useEffect(() => {
     if (!ws) return;
     const handler = data => {
-      dispatch(fetchPlugins());
-
-      // Show flash warning when a tampered plugin is detected
-      if (data && data.type === 'PLUGIN_TAMPERED') {
-        dispatch(
-          showWarningMessage({
-            message: t(
-              'admin:plugins.tampered',
-              'A plugin failed integrity verification and has been deactivated for security.',
-            ),
-          }),
-        );
+      if (!data) return;
+      switch (data.type) {
+        case 'PLUGIN_INSTALLED':
+        case 'PLUGIN_UPDATED':
+          dispatch(fetchPlugins());
+          break;
+        case 'PLUGIN_TAMPERED': {
+          dispatch(fetchPlugins());
+          dispatch(
+            showWarningMessage({
+              message: t(
+                'admin:plugins.tampered',
+                'A plugin failed integrity verification and has been deactivated for security.',
+              ),
+            }),
+          );
+          break;
+        }
+        // PLUGIN_ACTIVATED, PLUGIN_DEACTIVATED, PLUGIN_UNINSTALLED
+        // — handled by Redux reducers, no re-fetch needed
+        default:
+          break;
       }
     };
     ws.on('plugin:updated', handler);
@@ -137,7 +147,6 @@ function Plugins() {
           ),
         }),
       );
-      dispatch(fetchPlugins());
     },
     [dispatch, t],
   );
@@ -160,7 +169,6 @@ function Plugins() {
           ),
         }),
       );
-      dispatch(fetchPlugins());
     },
     [dispatch, t],
   );
@@ -204,7 +212,6 @@ function Plugins() {
     async plugin => {
       try {
         await dispatch(upgradePlugin({ id: plugin.id, data: {} })).unwrap();
-        dispatch(fetchPlugins());
       } catch (error) {
         console.error('Upgrade failed', error);
       }

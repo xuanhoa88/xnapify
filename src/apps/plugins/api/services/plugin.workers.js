@@ -86,7 +86,7 @@ async function handleDeleteJob(container, job) {
   const { Plugin } = container.resolve('models');
 
   try {
-    if (pluginManager) {
+    if (pluginManager && pluginId) {
       if (pluginManager.isPluginLoaded(pluginId)) {
         await pluginManager.unloadPlugin(pluginId);
       } else {
@@ -116,19 +116,24 @@ async function handleDeleteJob(container, job) {
       }
     }
 
-    await Plugin.destroy({ where: { id: pluginId } });
+    if (pluginId) {
+      await Plugin.destroy({ where: { id: pluginId } });
+    }
     if (hook) {
       hook('admin:plugins').emit('deleted', {
-        plugin_id: pluginId,
+        plugin_id: pluginId || pluginKey,
         actor_id: actorId,
         data: { key: pluginKey },
       });
     }
 
-    notifyPluginChange(container, 'PLUGIN_UNINSTALLED', pluginId);
+    notifyPluginChange(container, 'PLUGIN_UNINSTALLED', pluginId || pluginKey);
     return { success: true };
   } catch (err) {
-    console.error(`[PluginWorker] Delete failed for ${pluginId}:`, err);
+    console.error(
+      `[PluginWorker] Delete failed for ${pluginId || pluginKey}:`,
+      err,
+    );
     throw err;
   }
 }
