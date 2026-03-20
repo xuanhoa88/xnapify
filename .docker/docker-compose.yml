@@ -1,0 +1,105 @@
+# =============================================================================
+# Docker Compose – React Starter Kit (rapid-rsk)
+# =============================================================================
+# Usage:
+#   docker compose -f .docker/docker-compose.yml up
+#   docker compose -f .docker/docker-compose.yml --profile postgres up
+#
+# Override per-environment settings by creating docker-compose.override.yml
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Application
+  # ---------------------------------------------------------------------------
+  app:
+    build:
+      context: ..
+      dockerfile: .docker/Dockerfile
+    container_name: rsk-app
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - '${RSK_PORT:-1337}:1337'
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      RSK_HOST: 0.0.0.0
+    volumes:
+      - rsk_uploads:/app/build/uploads
+      - rsk_nodered:/app/build/.node-red
+    networks:
+      - rsk-net
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:1337/']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL (activate with: --profile postgres)
+  # ---------------------------------------------------------------------------
+  postgres:
+    image: postgres:16-alpine
+    container_name: rsk-postgres
+    profiles:
+      - postgres
+    restart: unless-stopped
+    ports:
+      - '${RSK_PG_PORT:-5432}:5432'
+    environment:
+      POSTGRES_DB: ${RSK_PG_DB:-rsk}
+      POSTGRES_USER: ${RSK_PG_USER:-rsk}
+      POSTGRES_PASSWORD: ${RSK_PG_PASSWORD:-rsk_secret}
+    volumes:
+      - rsk_pg:/var/lib/postgresql/data
+    networks:
+      - rsk-net
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${RSK_PG_USER:-rsk}']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---------------------------------------------------------------------------
+  # MySQL (activate with: --profile mysql)
+  # ---------------------------------------------------------------------------
+  mysql:
+    image: mysql:8.0
+    container_name: rsk-mysql
+    profiles:
+      - mysql
+    restart: unless-stopped
+    ports:
+      - '${RSK_MYSQL_PORT:-3306}:3306'
+    environment:
+      MYSQL_DATABASE: ${RSK_MYSQL_DB:-rsk}
+      MYSQL_USER: ${RSK_MYSQL_USER:-rsk}
+      MYSQL_PASSWORD: ${RSK_MYSQL_PASSWORD:-rsk_secret}
+      MYSQL_ROOT_PASSWORD: ${RSK_MYSQL_ROOT_PASSWORD:-root_secret}
+    volumes:
+      - rsk_mysql:/var/lib/mysql
+    networks:
+      - rsk-net
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  rsk_uploads:
+  rsk_nodered:
+  rsk_pg:
+  rsk_mysql:
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  rsk-net:
+    driver: bridge

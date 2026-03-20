@@ -38,10 +38,8 @@ circle.yml
 appveyor.yml
 
 # Docker
-Dockerfile
+.docker/
 .dockerignore
-docker-compose.yml
-docker-compose.*.yml
 
 # Testing
 __tests__/

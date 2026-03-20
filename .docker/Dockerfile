@@ -15,22 +15,31 @@ RUN npm install
 COPY . .
 
 # Build application
-RUN npm run build
+# RSK_HOST must be 0.0.0.0 inside Docker so the server binds to all interfaces
+# (Webpack DefinePlugin bakes RSK_* env vars into the bundle at build time)
+RUN RSK_HOST=0.0.0.0 npm run build
 
 # =============================================================================
 # Production Stage
 # =============================================================================
 FROM node:18-alpine
 
+# Install su-exec for dropping privileges at runtime
+RUN apk add --no-cache su-exec
+
 WORKDIR /app
 
 # Copy built files from builder stage
 COPY --from=builder /build/build ./build
 
-# Change to build directory and install production dependencies
+# Install production dependencies
 WORKDIR /app/build
-RUN npm install --production && \
-    npm cache clean --force
+COPY --from=builder /build/package*.json ./
+RUN npm install --production && npm cache clean --force
+
+# Copy entrypoint script
+COPY .docker/entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
 
 # Set environment
 ENV NODE_ENV=production
@@ -38,8 +47,5 @@ ENV NODE_ENV=production
 # Expose port
 EXPOSE 1337
 
-# Run as non-root user
-USER node
-
-# Start server (running from /app/build directory)
+ENTRYPOINT ["entrypoint.sh"]
 CMD ["node", "server.js"]

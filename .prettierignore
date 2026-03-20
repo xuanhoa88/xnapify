@@ -64,6 +64,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Docker
+.docker/
+
 # Uploads
 uploads/
 

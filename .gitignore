@@ -185,7 +185,6 @@ dist-tsc/
 
 # Docker
 docker-compose.override.yml
-*.dockerfile
 
 # Misc
 .DS_Store

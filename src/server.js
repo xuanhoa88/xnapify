@@ -68,7 +68,7 @@ const SERVER_CONFIG = Object.freeze({
   cwd: __dirname,
   nodeEnv: process.env.NODE_ENV || 'development',
   port: validatePort(process.env.RSK_PORT, 1337),
-  host: sanitizeHost(process.env.RSK_HOST || '127.0.0.1'),
+  host: process.env.RSK_HOST || '127.0.0.1',
   wsPath: formatUrlPath(process.env.RSK_WS_PATH || 'ws'),
   apiPrefix: formatUrlPath(process.env.RSK_API_PREFIX || 'api'),
 
@@ -148,10 +148,6 @@ function sanitizeHost(host) {
 
 function formatUrlPath(urlPath) {
   return ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
-}
-
-function buildBaseUrl(port, host) {
-  return `http://${sanitizeHost(host)}:${port}`;
 }
 
 function promiseWithDeadline(promise, timeoutMs, operationName) {
@@ -839,12 +835,11 @@ export async function bootstrapApp(app, server, options = {}) {
     host = SERVER_CONFIG.host,
   } = options;
 
-  // Sanitize host so server.listen() and SSR self-fetch use the same address.
-  // e.g. 'localhost' → '127.0.0.1' prevents IPv4/IPv6 mismatch with node-fetch.
-  // We compute baseUrl here for SSR fetch calls, but global OAuth and Passport.js links
-  // rely on RSK_APP_URL which is evaluated globally at build time by Webpack.
+  // sanitizeHost converts wildcard/localhost to a routable loopback for self-fetch URLs
+  // e.g. '0.0.0.0' → '127.0.0.1', 'localhost' → '127.0.0.1'
+  // The raw `host` is kept for server.listen() so Docker can bind to all interfaces.
   const resolvedHost = sanitizeHost(host);
-  const baseUrl = buildBaseUrl(port, resolvedHost);
+  const baseUrl = `http://${resolvedHost}:${port}`;
 
   // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
@@ -1053,7 +1048,7 @@ export async function bootstrapApp(app, server, options = {}) {
   return {
     app,
     server,
-    listen: () => listen(server, baseUrl, port, resolvedHost),
+    listen: () => listen(server, baseUrl, port, host),
     dispose: () => disposeApp(),
   };
 }
