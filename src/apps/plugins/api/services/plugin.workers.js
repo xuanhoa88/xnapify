@@ -12,7 +12,6 @@ import workerPool from '../workers';
 
 import {
   installPluginDependencies,
-  uninstallPluginDependencies,
   notifyPluginChange,
 } from './plugin.helpers';
 
@@ -101,17 +100,20 @@ async function handleDeleteJob(container, job) {
         pluginManager.getDevPluginPath(cwd),
       ].filter(Boolean);
       for (const baseDir of dirs) {
-        const pDir = path.join(baseDir, pluginKey);
-        const relative = path.relative(baseDir, pDir);
-        if (
-          relative &&
-          !relative.startsWith('..') &&
-          !path.isAbsolute(relative)
-        ) {
-          if (fs.existsSync(pDir)) {
-            await uninstallPluginDependencies(pDir, { name: pluginKey });
-            await fs.promises.rm(pDir, { recursive: true, force: true });
+        try {
+          const pDir = path.join(baseDir, pluginKey);
+          const relative = path.relative(baseDir, pDir);
+          if (
+            relative &&
+            !relative.startsWith('..') &&
+            !path.isAbsolute(relative)
+          ) {
+            if (fs.existsSync(pDir)) {
+              await fs.promises.rm(pDir, { recursive: true, force: true });
+            }
           }
+        } catch {
+          // Non-fatal — directory will be removed next
         }
       }
     }
@@ -174,17 +176,13 @@ async function handleToggleJob(container, job) {
       }
     }
 
-    if (pluginDir) {
-      if (isActive) {
-        await installPluginDependencies(pluginDir, { name: pluginKey });
+    if (pluginDir && isActive) {
+      await installPluginDependencies(pluginDir, { name: pluginKey });
 
-        // Recompute checksum in worker thread after fresh npm install
-        const checksum = await workerPool.computeChecksum(pluginDir);
-        const { Plugin } = container.resolve('models');
-        await Plugin.update({ checksum }, { where: { id: pluginId } });
-      } else {
-        await uninstallPluginDependencies(pluginDir, { name: pluginKey });
-      }
+      // Recompute checksum in worker thread after fresh npm install
+      const checksum = await workerPool.computeChecksum(pluginDir);
+      const { Plugin } = container.resolve('models');
+      await Plugin.update({ checksum }, { where: { id: pluginId } });
     }
 
     if (pluginManager) {

@@ -265,33 +265,6 @@ export async function installPluginDependencies(pluginDir, plugin) {
   }
 }
 
-/**
- * Uninstall plugin dependencies
- * @param {string} pluginDir - Plugin directory path
- * @param {object} plugin - Plugin object (needs .name for error messages)
- */
-export async function uninstallPluginDependencies(pluginDir, plugin) {
-  try {
-    if (__DEV__) {
-      console.log(`[PluginService] Running npm uninstall in ${pluginDir}`);
-    }
-    await execFileAsync('npm', ['uninstall'], {
-      cwd: pluginDir,
-    });
-    if (__DEV__) {
-      console.log('[PluginService] npm uninstall completed successfully');
-    }
-  } catch (npmErr) {
-    console.error('[PluginService] npm uninstall failed:', npmErr);
-    const pluginName = (plugin && plugin.name) || path.basename(pluginDir);
-    const err = new Error(
-      `Failed to uninstall dependencies for plugin ${pluginName}`,
-    );
-    err.status = 500;
-    throw err;
-  }
-}
-
 // ========================================================================
 // WebSocket Notification Helper
 // ========================================================================

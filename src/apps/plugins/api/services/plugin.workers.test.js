@@ -10,7 +10,6 @@ jest.mock('../workers', () => {
 
 jest.mock('./plugin.helpers', () => ({
   installPluginDependencies: jest.fn().mockResolvedValue(undefined),
-  uninstallPluginDependencies: jest.fn().mockResolvedValue(undefined),
   notifyPluginChange: jest.fn(),
 }));
 
@@ -41,7 +40,6 @@ import workerPool from '../workers';
 
 import {
   installPluginDependencies,
-  uninstallPluginDependencies,
   notifyPluginChange,
 } from './plugin.helpers';
 import { registerPluginWorkers } from './plugin.workers';
@@ -343,19 +341,6 @@ describe('Plugin Workers', () => {
       expect(mockContainer._services.models.Plugin.update).toHaveBeenCalledWith(
         { checksum: 'new-hash' },
         { where: { id: 'p1' } },
-      );
-    });
-
-    it('should uninstall deps when deactivating', async () => {
-      const job = createMockJob({
-        isActive: false,
-      });
-
-      await handlers.toggle(job);
-
-      expect(uninstallPluginDependencies).toHaveBeenCalledWith(
-        '/plugins/test-plugin',
-        { name: 'test-plugin' },
       );
     });
   });
