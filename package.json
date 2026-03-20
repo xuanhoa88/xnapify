@@ -42,7 +42,7 @@
     "test:ci": "node tools/run test --ci",
     "benchmark": "node tools/run benchmark",
     "clean": "node tools/run clean",
-    "plugin": "node tools/run plugin",
+    "extension": "node tools/run extension",
     "build": "node tools/run build",
     "dev": "node tools/run dev"
   },

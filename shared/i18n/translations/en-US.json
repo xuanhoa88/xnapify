@@ -158,7 +158,7 @@
       "main": "Main",
       "management": "Management",
       "system": "System",
-      "plugins": "Plugins",
+      "extensions": "Extensions",
       "users": "Users",
       "roles": "Roles",
       "groups": "Groups",

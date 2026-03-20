@@ -89,13 +89,13 @@ class AppRouter extends Router {
  * Creates the router by discovering per-module view contexts.
  *
  * @param {Object} options - Router initialization options
- * @param {Object} options.plugin - Plugin manager instance (client or server)
+ * @param {Object} options.extension - Extension manager instance (client or server)
  * @param {Object} options.container - DI container instance (client or server)
  * @returns {Promise<Router>} Configured router instance
  */
 export default async function initializeRouter(options = {}) {
   // ─── Initialize ─────────────────────────────────────────────────────
-  const { plugin, container, store } = options;
+  const { extension, container, store } = options;
 
   // Discover modules and run lifecycle phases (translations → providers → views)
   const { mergedAdapter } = await discoverModules(viewsLifecycleContext, {
@@ -112,7 +112,7 @@ export default async function initializeRouter(options = {}) {
 
   const router = new AppRouter(mergedAdapter, {
     context: {
-      plugin,
+      extension,
       container,
     },
     errorHandler(error, ctx) {
@@ -133,16 +133,16 @@ export default async function initializeRouter(options = {}) {
         route.workspace ||
         (route.module && route.module.workspace) ||
         route.path;
-      const manager = ctx.plugin || plugin;
+      const manager = ctx.extension || extension;
 
       if (ns && manager) {
         if (!manager.isNamespaceLoaded(ns)) {
           if (__DEV__) {
-            console.log(`[Router] Loading plugin namespace: ${ns}`);
+            console.log(`[Router] Loading extension namespace: ${ns}`);
           }
           await manager.loadNamespace(ns);
         } else if (__DEV__) {
-          console.log(`[Router] Plugin namespace already loaded: ${ns}`);
+          console.log(`[Router] Extension namespace already loaded: ${ns}`);
         }
       }
     },
@@ -151,11 +151,11 @@ export default async function initializeRouter(options = {}) {
         route.workspace ||
         (route.module && route.module.workspace) ||
         route.path;
-      const manager = ctx.plugin || plugin;
+      const manager = ctx.extension || extension;
 
       if (ns && manager) {
         if (__DEV__) {
-          console.log(`[Router] Unloading plugin namespace: ${ns}`);
+          console.log(`[Router] Unloading extension namespace: ${ns}`);
         }
         await manager.unloadNamespace(ns);
       }

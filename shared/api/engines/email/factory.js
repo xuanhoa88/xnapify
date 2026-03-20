@@ -75,7 +75,7 @@ export class EmailManager {
             pass: process.env.RSK_SMTP_PASS,
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
           },
         ),
       );
@@ -90,7 +90,7 @@ export class EmailManager {
             apiKey: process.env.RSK_RESEND_KEY,
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
           },
         ),
       );
@@ -105,7 +105,7 @@ export class EmailManager {
             apiKey: process.env.RSK_SENDGRID_KEY,
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
           },
         ),
       );
@@ -122,7 +122,7 @@ export class EmailManager {
             region: process.env.RSK_MAILGUN_REGION || 'us',
             defaultFrom: process.env.RSK_MAIL_FROM,
             defaultFromName:
-              process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+              process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
           },
         ),
       );

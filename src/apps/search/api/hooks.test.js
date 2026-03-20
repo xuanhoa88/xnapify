@@ -4,7 +4,7 @@ import { registerSearchHooks } from './hooks';
 
 describe('Search Hooks', () => {
   describe('Plugin Hook Registration', () => {
-    test('executes search.indexers.register hook via plugin registry', () => {
+    test('executes search.indexers.register hook via extension registry', () => {
       const hook = createHookFactory();
       const registryMock = {
         executeHookParallel: jest.fn().mockResolvedValue([]),
@@ -13,7 +13,7 @@ describe('Search Hooks', () => {
       const containerMock = {
         resolve: jest.fn().mockImplementation(name => {
           if (name === 'hook') return hook;
-          if (name === 'plugin') return { registry: registryMock };
+          if (name === 'extension') return { registry: registryMock };
           return null;
         }),
       };

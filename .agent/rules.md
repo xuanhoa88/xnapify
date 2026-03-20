@@ -15,7 +15,7 @@ Whenever you provide assistance to a Developer on this codebase, you MUST adhere
 
 ## 2. Hard Coding Boundaries
 - **Use the Single Source of Truth**: The `AGENT.md` file defines the overarching architecture (React 18 SSR, Express 4, Sequelize, Redux Toolkit). **Never deviate** from these technologies. If a developer asks you to "install Tailwind," ask for explicit override permission first, because `AGENT.md` strictly enforces CSS Modules.
-- **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the `@shared/plugin` system or standard HTTP internal APIs for cross-domain communication.
+- **Stop at Domain Boundaries**: Never write deeply coupled code between two isolated applications (`@apps/billing` should not `import` from `@apps/invoices`). Always utilize the `@shared/extension` system or standard HTTP internal APIs for cross-domain communication.
 - **No Raw SQL**: Unless debugging a confirmed performance bottleneck, strictly utilize Sequelize ORM methods (`findAll`, `create`) and maintain the injection of `sequelize.models` correctly. 
 
 ---

@@ -28,7 +28,7 @@ Provide a unified, ultra-fast search interface across all system entities (users
   - **Lifecycle:** Rebuilds index from the database on startup or when bulk changes are detected via system hooks.
 
 ## 4. Frontend SSR Rendering (`views/`)
-*The Search module is currently API-focused. The UI is integrated into the global navigation bar via `PluginSlot` or shared components. Search results are typically displayed in a global overlay or dedicated search results page managed by the renderer.*
+*The Search module is currently API-focused. The UI is integrated into the global navigation bar via `ExtensionSlot` or shared components. Search results are typically displayed in a global overlay or dedicated search results page managed by the renderer.*
 
 ## 5. Localization (`translations/`)
 - **Keys:** `search.placeholder`, `search.results.count_stats`, `search.no_results.title`.

@@ -32,7 +32,7 @@ import i18n, {
 } from '@shared/i18n';
 import { configureJwt } from '@shared/jwt';
 import { NodeRedManager } from '@shared/node-red';
-import pluginManager from '@shared/plugin/server';
+import extensionManager from '@shared/extension/server';
 import {
   configureStore,
   setRuntimeVariable,
@@ -86,9 +86,9 @@ const STATIC_SECURITY_HEADERS = Object.entries({
 });
 
 const APP_METADATA = Object.freeze({
-  title: process.env['RSK_APP_NAME'] || 'React Starter Kit',
+  title: process.env.RSK_APP_NAME || 'React Starter Kit',
   description:
-    process.env['RSK_APP_DESC'] || 'Boilerplate for React.js web applications',
+    process.env.RSK_APP_DESC || 'Boilerplate for React.js web applications',
 });
 
 // ---------------------------------------------------------------------------
@@ -156,7 +156,7 @@ async function extractPageMetadata(page, req) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
-    image: (page && page.image) || process.env['RSK_APP_IMAGE'],
+    image: (page && page.image) || process.env.RSK_APP_IMAGE,
     type: (page && page.type) || 'website',
   };
 
@@ -255,7 +255,7 @@ const appState = {
   ssrResourcesPromise: null,
   wsServer: null,
   nodeRED: new NodeRedManager(),
-  onPluginRefreshed: null,
+  onExtensionRefreshed: null,
 };
 
 function invalidateCaches() {
@@ -317,7 +317,7 @@ const localeMiddleware = expressRequestLanguage({
 
 async function initializeViews({ container, store }) {
   const m = await import('./bootstrap/views');
-  const views = await m.default({ plugin: pluginManager, container, store });
+  const views = await m.default({ extension: extensionManager, container, store });
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
@@ -396,9 +396,9 @@ async function loadSsrResources$() {
     ['cssUrls', rawStyles],
   ]) {
     try {
-      target.push(...(pluginManager[key] || []));
+      target.push(...(extensionManager[key] || []));
     } catch (err) {
-      if (__DEV__) console.error(`❌ Failed to load plugin ${key}:`, err);
+      if (__DEV__) console.error(`❌ Failed to load extension ${key}:`, err);
     }
   }
 
@@ -443,7 +443,7 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
     scriptLinks,
     appState: {
       redux: context.store.getState(),
-      appUrl: process.env['RSK_APP_URL'],
+      appUrl: process.env.RSK_APP_URL,
     },
     nonce,
   };
@@ -453,8 +453,8 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
 }
 
 function makeSsrMiddleware(baseUrl) {
-  // Track whether pluginManager has been initialized for this middleware instance
-  let pluginsInitialized = false;
+  // Track whether extensionManager has been initialized for this middleware instance
+  let extensionsInitialized = false;
 
   return async (req, res, next) => {
     if (res.headersSent) return;
@@ -534,18 +534,18 @@ function makeSsrMiddleware(baseUrl) {
         signal: abortController.signal,
       };
 
-      // Plugin init — only once per middleware instance
-      if (!pluginsInitialized) {
+      // Extension init — only once per middleware instance
+      if (!extensionsInitialized) {
         try {
-          await pluginManager.init({
+          await extensionManager.init({
             ...context,
             cwd: SERVER_CONFIG.cwd,
             container: ssrContainer,
           });
-          pluginsInitialized = true;
+          extensionsInitialized = true;
         } catch (err) {
           if (__DEV__) {
-            console.warn('⚠️  Plugin initialization failed:', err.message);
+            console.warn('⚠️  Extension initialization failed:', err.message);
           }
         }
       }
@@ -831,7 +831,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
   // If undefined or invalid, default to the local port/host used by the server
   // Access via bracket notation to prevent Webpack DefinePlugin from replacing it with a build-time string
-  if (!/^(http|https):\/\/.+$/.test(process.env['RSK_APP_URL'] || '')) {
+  if (!/^(http|https):\/\/.+$/.test(process.env.RSK_APP_URL || '')) {
     set(process.env, 'RSK_APP_URL', baseUrl);
   }
 
@@ -846,7 +846,7 @@ export async function bootstrapApp(app, server, options = {}) {
   container.instance('env', SERVER_CONFIG.nodeEnv);
   container.instance('jwt', configureJwt());
   container.instance('i18n', i18n);
-  container.instance('plugin', pluginManager);
+  container.instance('extension', extensionManager);
 
   // WebSocket
   appState.wsServer = createWebSocketServer(
@@ -1008,15 +1008,15 @@ export async function bootstrapApp(app, server, options = {}) {
 }
 
 /**
- * Dispose application services (Node-RED, WebSocket, plugins, caches).
+ * Dispose application services (Node-RED, WebSocket, extensions, caches).
  * Does NOT close the HTTP server — used by dev.js during HMR.
  */
 export async function disposeApp() {
   console.info('🛑 Stopping application services...');
 
-  if (appState.onPluginRefreshed) {
-    process.removeListener('message', appState.onPluginRefreshed);
-    appState.onPluginRefreshed = null;
+  if (appState.onExtensionRefreshed) {
+    process.removeListener('message', appState.onExtensionRefreshed);
+    appState.onExtensionRefreshed = null;
   }
 
   const errors = [];
@@ -1062,13 +1062,13 @@ export async function disposeApp() {
 export async function destroyServer(server) {
   await disposeApp();
 
-  // Destroy plugin manager only on full shutdown (not during HMR dispose)
+  // Destroy extension manager only on full shutdown (not during HMR dispose)
   try {
-    if (typeof pluginManager.destroy === 'function') {
-      await pluginManager.destroy();
+    if (typeof extensionManager.destroy === 'function') {
+      await extensionManager.destroy();
     }
   } catch (err) {
-    console.error('   ⚠️  Plugin manager shutdown error:', err.message);
+    console.error('   ⚠️  Extension manager shutdown error:', err.message);
   }
 
   if (server && server.listening) {
@@ -1092,8 +1092,8 @@ export async function destroyServer(server) {
 // ---------------------------------------------------------------------------
 
 if (module.hot) {
-  // Flag to prevent concurrent plugin refreshes
-  let isRefreshingPlugins = false;
+  // Flag to prevent concurrent extension refreshes
+  let isRefreshingExtensions = false;
 
   module.hot.accept(err => {
     if (err) {
@@ -1105,47 +1105,47 @@ if (module.hot) {
     console.log('🔄 HMR: Caches cleared');
   });
 
-  appState.onPluginRefreshed = async msg => {
-    if (msg && msg.type === 'plugins-refreshed') {
-      if (isRefreshingPlugins) {
+  appState.onExtensionRefreshed = async msg => {
+    if (msg && msg.type === 'extensions-refreshed') {
+      if (isRefreshingExtensions) {
         if (__DEV__) {
-          console.log('🔌 Plugin refresh already in progress, skipping...');
+          console.log('🔌 Extension refresh already in progress, skipping...');
         }
         return;
       }
 
-      const pluginIds = Array.isArray(msg.plugins) ? msg.plugins : [];
-      const specific = pluginIds.length > 0;
+      const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
+      const specific = extensionIds.length > 0;
 
       console.log(
-        `🔌 Refreshing ${specific ? `plugins: ${pluginIds.join(', ')}` : 'all plugins'}...`,
+        `🔌 Refreshing all extensions'}...`,
       );
 
-      isRefreshingPlugins = true;
+      isRefreshingExtensions = true;
 
       const start = Date.now();
 
       try {
-        // ServerPluginManager.refresh() reads fresh manifests from disk
+        // ServerExtensionManager.refresh() reads fresh manifests from disk
         // for targeted reloads, bypassing the HTTP self-fetch cycle.
-        if (typeof pluginManager.refresh === 'function') {
-          await pluginManager.refresh(...pluginIds);
+        if (typeof extensionManager.refresh === 'function') {
+          await extensionManager.refresh(...extensionIds);
         }
         invalidateCaches();
         const duration = Date.now() - start;
-        console.log(`✅ Plugins refreshed in ${duration}ms`);
+        console.log(`✅ Extensions refreshed in ${duration}ms`);
       } catch (err) {
         console.error(
-          `❌ Failed to refresh ${specific ? 'plugins' : 'all plugins'}:`,
+          `❌ Failed to refresh extensions'}:`,
           err.message,
         );
       } finally {
-        isRefreshingPlugins = false;
+        isRefreshingExtensions = false;
       }
     }
   };
 
-  process.on('message', appState.onPluginRefreshed);
+  process.on('message', appState.onExtensionRefreshed);
 
   exports.hot = module.hot;
 } else {

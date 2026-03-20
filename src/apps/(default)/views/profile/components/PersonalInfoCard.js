@@ -13,11 +13,11 @@ import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
 import {
-  PluginSlot,
-  usePluginHooks,
+  ExtensionSlot,
+  useExtensionHooks,
   usePluginValidator,
   usePluginFormData,
-} from '@shared/plugin/client';
+} from '@shared/extension/client';
 import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
 import Icon from '@shared/renderer/components/Icon';
@@ -43,7 +43,7 @@ function PersonalInfoCard() {
   const user = useSelector(getUserProfile);
   const loading = useSelector(isProfileLoading);
   const error = useSelector(getProfileError);
-  const pluginHooks = usePluginHooks();
+  const pluginHooks = useExtensionHooks();
 
   // Fetch defaults from plugins
   const [pluginDefaultValues, loadingDefaultValues] = usePluginFormData(
@@ -217,7 +217,7 @@ function PersonalInfoFormFields({ loading }) {
       </Form.Field>
 
       {/* Render plugin slots */}
-      <PluginSlot
+      <ExtensionSlot
         name='profile.personal_info.fields'
         register={register}
         errors={errors}

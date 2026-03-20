@@ -11,8 +11,8 @@ import PropTypes from 'prop-types';
 import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
-import PluginSlot from '@shared/plugin/client/PluginSlot';
-import { usePluginSlots } from '@shared/plugin/client/usePlugin';
+import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
+import { useExtensionSlots } from '@shared/extension/client/useExtension';
 import Button from '@shared/renderer/components/Button';
 import Form from '@shared/renderer/components/Form';
 import {
@@ -46,8 +46,8 @@ function Login() {
   const loading = useSelector(isAuthLoading);
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
-  const oauthSlots = usePluginSlots('auth.oauth.buttons');
-  const quickAccessSlots = usePluginSlots('auth.login.quickAccess');
+  const oauthSlots = useExtensionSlots('auth.oauth.buttons');
+  const quickAccessSlots = useExtensionSlots('auth.login.quickAccess');
 
   const returnTo = useQuery('returnTo') || '/';
 
@@ -108,7 +108,7 @@ function Login() {
           {oauthSlots.length > 0 && (
             <>
               <div className={s.oauthButtonsContainer}>
-                <PluginSlot
+                <ExtensionSlot
                   name='auth.oauth.buttons'
                   className={s.oauthButton}
                 />
@@ -131,7 +131,7 @@ function Login() {
           >
             <LoginFormFields loading={loading} />
             {quickAccessSlots.length > 0 && (
-              <PluginSlot name='auth.login.quickAccess' />
+              <ExtensionSlot name='auth.login.quickAccess' />
             )}
           </Form>
 

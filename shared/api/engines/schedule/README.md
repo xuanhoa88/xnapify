@@ -122,7 +122,7 @@ For isolated scheduling (e.g., plugins with their own lifecycle):
 import { createFactory } from '@shared/api/engines/schedule';
 
 const pluginSchedule = createFactory({ autoStart: false });
-pluginSchedule.register('my-plugin:sync', '*/10 * * * *', syncHandler);
+pluginSchedule.register extension:sync', '*/10 * * * *', syncHandler);
 pluginSchedule.start(); // manually start when ready
 ```
 

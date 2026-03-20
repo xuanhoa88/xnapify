@@ -10,7 +10,7 @@ import passport from 'passport';
 /**
  * Dynamic OAuth provider registry.
  *
- * Plugins call `registerProvider()` during their `init()` lifecycle
+ * Extensions call `registerProvider()` during their `init()` lifecycle
  * to wire up their Passport strategy and declare their OAuth scopes.
  *
  * The `_route.js` files for `/api/auth/oauth/[provider]` use

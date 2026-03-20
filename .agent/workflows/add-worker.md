@@ -283,7 +283,7 @@ const results = await Promise.all(promises);
 
 ## Queue-Based Workers (Stateful)
 
-When your worker needs `app` access (models, hooks, plugin manager, WebSocket), use the **Queue Engine** instead. Piscina workers run in separate threads and **cannot** access `app` singletons.
+When your worker needs `app` access (models, hooks, extension manager, WebSocket), use the **Queue Engine** instead. Piscina workers run in separate threads and **cannot** access `app` singletons.
 
 ### Structure
 
@@ -360,5 +360,5 @@ async function handleProcessJob(app, job) {
 }
 ```
 
-See `src/apps/plugins/api/` for the canonical reference implementation.
+See `src/apps/extensions/api/` for the canonical reference implementation.
 

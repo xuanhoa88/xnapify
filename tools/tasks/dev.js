@@ -535,13 +535,13 @@ async function main() {
 
   // Forward plugin rebuild events to the client browser via hot middleware
   process.on('message', msg => {
-    if (msg && msg.type === 'plugins-refreshed' && hotMiddleware) {
+    if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
       if (typeof hotMiddleware.publish === 'function') {
         hotMiddleware.publish({
-          type: 'plugins-refreshed',
+          type: 'extensions-refreshed',
           plugins: msg.plugins,
         });
-        logInfo('🔌 Forwarded plugins-refreshed to client');
+        logInfo('🔌 Forwarded extensions-refreshed to client');
       }
     }
   });

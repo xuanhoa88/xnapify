@@ -6,15 +6,15 @@
  */
 
 /**
- * Register plugin search hooks.
+ * Register extension search hooks.
  *
- * Allows plugins to auto-register their own search indexers via
+ * Allows extensions to auto-register their own search indexers via
  * the `search.indexers.register` hook.
  *
  * @param {Object} container - DI container instance
  */
 export function registerSearchHooks(container) {
-  const { registry } = container.resolve('plugin');
+  const { registry } = container.resolve('extension');
 
   registry
     .executeHookParallel('search.indexers.register', container)

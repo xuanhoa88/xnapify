@@ -468,7 +468,7 @@ export async function generateRandomPassword(req, res) {
 export async function oauthCallback(req, res) {
   const container = req.app.get('container');
   const http = container.resolve('http');
-  const appUrl = process.env['RSK_APP_URL'];
+  const appUrl = process.env.RSK_APP_URL;
 
   try {
     const { provider } = req.params;

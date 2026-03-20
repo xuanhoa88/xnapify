@@ -50,7 +50,7 @@ export async function getProfile(req, res) {
       defaultActions: auth.DEFAULT_ACTIONS,
     });
 
-    // Emit hook event for plugins to modify the response
+    // Emit hook event for extensions to modify the response
     await hook('profile').emit('retrieved', normalizedUser);
 
     return http.sendSuccess(res, {
@@ -80,7 +80,7 @@ export async function updateProfile(req, res) {
     // 1. Initialize base schema
     const baseSchema = updateProfileFormSchema({ i18n, z });
 
-    // 2. Allow plugins to extend the schema via hooks
+    // 2. Allow extensions to extend the schema via hooks
     // We pass a mutable context with the schema
     const context = {
       schema: baseSchema,

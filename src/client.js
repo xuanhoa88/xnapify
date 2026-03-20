@@ -12,7 +12,7 @@ import { createBrowserHistory } from 'history';
 import { Container } from '@shared/container';
 import { createFetch } from '@shared/fetch';
 import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
-import pluginManager from '@shared/plugin/client';
+import extensionManager from '@shared/extension/client';
 import App from '@shared/renderer/App';
 import {
   configureStore,
@@ -75,7 +75,7 @@ const getNavUrl = (path, state) => {
 };
 
 history.push = (path, state) => {
-  if (pluginManager.needsReload) {
+  if (extensionManager.needsReload) {
     window.location.href = getNavUrl(path, state);
     return;
   }
@@ -83,7 +83,7 @@ history.push = (path, state) => {
 };
 
 history.replace = (path, state) => {
-  if (pluginManager.needsReload) {
+  if (extensionManager.needsReload) {
     window.location.replace(getNavUrl(path, state));
     return;
   }
@@ -269,7 +269,7 @@ async function initializeViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ plugin: pluginManager, container, store });
+        const views = m.default({ extension: extensionManager, container, store });
         log('✅ Views initialized');
         return views;
       })
@@ -310,8 +310,8 @@ async function initReactDOMClient() {
       throw err;
     }
 
-    // Expose ReactDOMClient for plugins (Global Vendors Pattern)
-    // Plugins dependent on 'react-dom/client' will use this global
+    // Expose ReactDOMClient for extensions (Global Vendors Pattern)
+    // Extensions dependent on 'react-dom/client' will use this global
     window.ReactDOMClient = ReactDOMClient;
   } catch {
     ReactDOMClient = REACT_DOM_UNAVAILABLE;
@@ -648,14 +648,14 @@ async function initializeApp() {
       });
 
       // Add a pending flag to prevent concurrent processing
-      let pendingPluginUpdate = null;
-      wsClient.on('plugin:updated', event => {
-        if (pendingPluginUpdate) return; // Skip if already processing
-        pendingPluginUpdate = (async () => {
+      let pendingExtensionUpdate = null;
+      wsClient.on('extension:updated', event => {
+        if (pendingExtensionUpdate) return; // Skip if already processing
+        pendingExtensionUpdate = (async () => {
           try {
-            await pluginManager.handleEvent(event);
+            await extensionManager.handleEvent(event);
           } finally {
-            pendingPluginUpdate = null;
+            pendingExtensionUpdate = null;
           }
         })();
       });
@@ -718,12 +718,12 @@ async function attemptStartup() {
   hasStarted = true;
   log('✅ Starting app...');
 
-  // Initialize plugins (Client Side)
+  // Initialize extensions (Client Side)
   try {
-    await pluginManager.init({ ...context });
+    await extensionManager.init({ ...context });
   } catch (error) {
-    log(`⚠️ Plugin initialization failed: ${error.message}`, 'error');
-    // Continue app startup even if plugins fail
+    log(`⚠️ Extension initialization failed: ${error.message}`, 'error');
+    // Continue app startup even if extensions fail
   }
 
   // Initialize app
@@ -762,8 +762,8 @@ if (module.hot) {
     );
   });
 
-  // Listen for plugin rebuild events from dev server via hot middleware
-  const RELOAD_PENDING = Symbol.for('__rsk.hmrPluginReloadPending__');
+  // Listen for extension rebuild events from dev server via hot middleware
+  const RELOAD_PENDING = Symbol.for('__rsk.hmrExtensionReloadPending__');
   let hmrEventSource = null;
   let isHmrInitialized = false;
 
@@ -786,11 +786,11 @@ if (module.hot) {
       const handleMessage = event => {
         try {
           const data = JSON.parse(event.data);
-          if (data && data.type === 'plugins-refreshed') {
-            log('🔌 Plugin(s) rebuilt, reload required');
+          if (data && data.type === 'extensions-refreshed') {
+            log('🔌 Extension(s) rebuilt, reload required');
 
             // Ensure next navigation triggers a full page reload
-            pluginManager.needsReload = true;
+            extensionManager.needsReload = true;
 
             // Show only one confirm at a time and debounce
             if (window[RELOAD_PENDING]) return;
@@ -801,7 +801,7 @@ if (module.hot) {
               // eslint-disable-next-line no-alert
               if (
                 window.confirm(
-                  'Plugin(s) updated. Reload now to apply changes?',
+                  'Extension(s) updated. Reload now to apply changes?',
                 )
               ) {
                 window.location.reload();

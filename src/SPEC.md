@@ -25,4 +25,4 @@ The `server.js` functions as an Express.js entrypoint that manages HTTP requests
 
 The source level intentionally avoids static route registration. Instead, it aggregates features from modular sub-directories during the bootstrap phase:
 - **Bootstrapping**: Components within `bootstrap/views.js` resolve route trees from the autonomous applications housed in `apps/`.
-- **Extensibility**: Elements within `plugins/` are permitted to inject middleware or frontend UI elements asynchronously without statically linking against core code paths, utilizing the `@shared/plugin/` pub/sub and registry interfaces.
+- **Extensibility**: Elements within `plugins/` are permitted to inject middleware or frontend UI elements asynchronously without statically linking against core code paths, utilizing the `@shared/extension/` pub/sub and registry interfaces.

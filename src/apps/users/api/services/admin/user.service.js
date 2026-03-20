@@ -186,7 +186,7 @@ export async function getUserList(options, ctx) {
     whereConditions.is_locked = true;
   }
 
-  // Emit event for plugins to modify where conditions
+  // Emit event for extensions to modify where conditions
   await ctx
     .hook('admin:users')
     .emit('list:before', whereConditions, { sequelize });
@@ -259,7 +259,7 @@ export async function getUserList(options, ctx) {
     formatAdminUserResponse(user, { defaultRoleName: options.defaultRoleName }),
   );
 
-  // Emit event for plugins to modify formatted users
+  // Emit event for extensions to modify formatted users
   await ctx.hook('admin:users').emit('list:after', formattedUsers);
 
   return {

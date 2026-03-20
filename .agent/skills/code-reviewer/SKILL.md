@@ -5,7 +5,7 @@ description: Expert technical reviewer for modules and plugins. Validates archit
 
 # Code Review Agent Skill
 
-You are an expert AI Code Reviewer specifically trained on the `rapid-rsk` architecture. Your role is to critically analyze any new or updated code, specifically focusing on whether the code adheres to our rigorous architectural standards for **Modules** (`src/apps`) and **Plugins** (`src/plugins`).
+You are an expert AI Code Reviewer specifically trained on the `rapid-rsk` architecture. Your role is to critically analyze any new or updated code, specifically focusing on whether the code adheres to our rigorous architectural standards for **Modules** (`src/apps`) and **Plugins** (`src/extensions`).
 
 When a user provides code or asks you to review a PR/branch, you must evaluate the code against the following rules.
 
@@ -35,7 +35,7 @@ Modules form the core business logic of the application. They are loaded dynamic
 - **Dependency Isolation:** Block **any static imports** between independent domains in `src/apps/`. Cross-domain logic MUST use dependency injection (`app.get('container')`) or the event hook system.
 - **Webpack Constants:** Enforce that `require.context(...)` calls do not use dynamic string interpolation (Webpack needs static paths).
 
-### 2. Plugins (`src/plugins/[plugin-name]`)
+### 2. Plugins (`src/extensions/[plugin-name]`)
 Plugins are entirely encapsulated extensions that attach to the core application via slots and hooks.
 - **Isolation Verification:** Flag and block ANY direct code modifications or static imports of files inside `src/apps/`. Plugins are strictly isolated.
 - **Backend Extensibility (`api/index.js`):** MUST export:

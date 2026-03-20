@@ -47,7 +47,7 @@ src/apps/[module_name]/
 Or for plugins:
 
 ```
-src/plugins/[plugin-name]/
+src/extensions/[plugin-name]/
 └── translations/
     ├── en-US.json
     └── vi-VN.json

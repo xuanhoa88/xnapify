@@ -52,7 +52,7 @@ schedule.register('daily-cleanup', '0 0 * * *', async () => {
 
 ## Hybrid Pattern: Queue + Piscina
 
-When a worker needs **both** `app` access (models, hooks, plugin manager) **and** CPU offloading, use the hybrid pattern:
+When a worker needs **both** `app` access (models, hooks, extension manager) **and** CPU offloading, use the hybrid pattern:
 
 1. **Queue handlers** run on the main thread for stateful operations (DB writes, hook emissions, WebSocket notifications).
 2. **Piscina workers** handle CPU-bound subtasks (hashing, compression, image processing) called from within queue handlers.
@@ -63,10 +63,10 @@ When a worker needs **both** `app` access (models, hooks, plugin manager) **and*
 - Worker needs **both** → **Hybrid** (queue orchestrates, Piscina computes)
 
 ### Reference Implementation
-See `src/apps/plugins/api/` for the canonical example:
+See `src/apps/extensions/api/` for the canonical example:
 - `workers/checksum.worker.js` — Stateless Piscina worker for SHA-256 hashing
 - `workers/index.js` — Worker pool with `computeChecksum()` / `verifyChecksum()` methods
-- `services/plugin.workers.js` — Queue handlers that call `workerPool.computeChecksum()` for CPU work while using `app` for DB/hooks
+- `services/extension.workers.js` — Queue handlers that call `workerPool.computeChecksum()` for CPU work while using `app` for DB/hooks
 
 ```javascript
 // Queue handler calling Piscina worker for CPU-bound subtask

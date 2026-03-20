@@ -15,7 +15,7 @@ react-starter-kit/
 │   │   │   ├── api/              # Backend: routes, controllers, models, services
 │   │   │   └── views/            # Frontend: React pages, Redux slices
 │   │   └── {module}/             # Other modules (users, roles, etc.)
-│   ├── plugins/                  # Plugin modules (auto-discovered)
+│   ├── extensions/                  # Extension packages (auto-discovered)
 │   ├── client.js                 # Client entry point
 │   └── server.js                 # Server entry point
 ├── shared/                       # Shared libraries (aliased as @shared)
@@ -32,7 +32,7 @@ react-starter-kit/
 │   │   ├── router/               # File-based API routing engine
 │   │   └── index.js              # Engine auto-loader
 │   ├── container/                # Dependency injection container
-│   ├── plugin/                   # Plugin registry (slots & hooks)
+│   ├── extension/                   # Extension registry (slots & hooks)
 │   ├── jwt/                      # JWT configuration & utilities
 │   ├── renderer/                 # SSR utilities and Redux store
 │   ├── fetch/                    # API client
@@ -194,21 +194,21 @@ The application uses an auto-discovery system for both API modules and page comp
 - Client connects via `shared/ws/`
 - Server implementation in `src/server.js` (`initWebSocket`)
 
-### 7. Plugin System
+### 7. Extension System
 
-The application features a robust plugin system (`shared/plugin`) for extending functionality without modifying core code.
+The application features a robust extension system (`shared/extension`) for extending functionality without modifying core code.
 
 **Core Concepts:**
 
-- **Registry:** Singleton managing all plugins, slots, and hooks.
-- **Slots:** UI extension points where plugins can render components.
+- **Registry:** Singleton managing all extensions, slots, and hooks.
+- **Slots:** UI extension points where extensions can render components.
 - **Hooks:** Logic extension points for modifying data or schema.
 
-**Using Plugins:**
+**Using Extensions:**
 
 ```javascript
-// Register a plugin
-import { registry } from '@shared/plugin/client';
+// Register an extension
+import { registry } from '@shared/extension/client';
 
 registry.register('my-plugin', {
   init: async (reg, context) => {
@@ -221,14 +221,14 @@ registry.register('my-plugin', {
 });
 
 // Render a Slot (in your component)
-import { PluginSlot } from '@shared/plugin/client';
+import { ExtensionSlot } from '@shared/extension/client';
 
-<PluginSlot name='profile.actions' props={userData} />;
+<ExtensionSlot name='profile.actions' props={userData} />;
 
 // Execute Hooks (in your logic)
-import { usePluginHooks } from '@shared/plugin/client';
+import { useExtensionHooks } from '@shared/extension/client';
 
-const hooks = usePluginHooks();
+const hooks = useExtensionHooks();
 const results = await hooks.execute('user.validate', userData);
 ```
 
@@ -240,7 +240,7 @@ The application embeds Node-RED (`shared/node-red`) for visual workflow automati
 
 - **Embedded Architecture:** Runs as middleware within the Express app, sharing the same port and server instance.
 - **Unified Authentication:** Uses the application's RBAC system. Users need `nodered:read` or `nodered:admin` permissions to access the editor.
-- **Flow Splitter Plugin:** Automatically splits the monolithic `flows.json` and creates versioned snapshots in `shared/node-red/migrations/`.
+- **Flow Splitter Extension:** Automatically splits the monolithic `flows.json` and creates versioned snapshots in `shared/node-red/migrations/`.
   - **Development:** Edits in the UI are split and saved as a new migration timestamp on deploy.
   - **Production:** Rebuilds `flows.json` from the latest migration snapshot on startup.
 
@@ -669,7 +669,7 @@ function LoginForm() {
 5. **Run linting:** `npm run lint` to ensure code style compliance
 6. **Update tests if behavior changed:** If you modified public API, return types, or function signatures, update the corresponding tests to match
 
-> **This applies to ALL code changes, including:** modifying existing modules, upgrading dependencies, refactoring internals, fixing bugs, adding hooks, and plugin modifications. There are NO exceptions.
+> **This applies to ALL code changes, including:** modifying existing modules, upgrading dependencies, refactoring internals, fixing bugs, adding hooks, and extension modifications. There are NO exceptions.
 
 ## Environment Variables
 

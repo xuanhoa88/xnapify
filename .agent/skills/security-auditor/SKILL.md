@@ -83,7 +83,7 @@ export const post = [requirePermission('resource:create'), controller.create];
 ### 5. Cross-Module Isolation
 
 - Modules (`@apps/*`) must **not** import directly from other modules
-- Use hooks, container bindings, or plugin slots for cross-module communication
+- Use hooks, container bindings, or extension slots for cross-module communication
 
 **Check for:**
 

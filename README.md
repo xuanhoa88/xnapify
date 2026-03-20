@@ -19,7 +19,7 @@
 - **Server-Side Rendering** — Fast initial loads with SEO-friendly HTML, then seamless SPA hydration
 - **Module Auto-Discovery** — Drop-in modules under `src/apps/` are automatically loaded (API + views)
 - **RBAC** — Built-in users, roles, groups, and granular permissions with middleware guards
-- **Plugin System** — Extend functionality through UI Slots and logic Hooks without touching core code
+- **Extension System** — Extend functionality through UI Slots and logic Hooks without touching core code
 - **Node-RED Integration** — Embedded visual workflow automation with versioned flow migrations
 - **Worker Pools** — Background job processing with concurrency control via [Piscina](https://github.com/piscinajs/piscina)
 - **WebSocket** — Real-time communication with token-based authentication
@@ -69,8 +69,8 @@ rapid-rsk/
 │   │   ├── search/             # Search engine
 │   │   ├── webhooks/           # Webhook management
 │   │   ├── activities/         # Activity logging
-│   │   └── plugins/            # Plugin management
-│   ├── plugins/                # Application plugins
+│   │   └── extensions/            # Extension management
+│   ├── extensions/                # Application extensions
 │   ├── client.js               # Client entry point
 │   └── server.js               # Server entry point
 ├── shared/                     # Shared libraries (@shared alias)
@@ -97,7 +97,7 @@ rapid-rsk/
 │   ├── ws/                     # WebSocket client
 │   ├── jwt/                    # JWT utilities
 │   ├── i18n/                   # Internationalization
-│   ├── plugin/                 # Plugin system (registry, slots, hooks)
+│   ├── extension/                 # Extension system (registry, slots, hooks)
 │   ├── validator/              # Validation (Zod)
 │   ├── node-red/               # Node-RED integration & migrations
 │   └── utils/                  # Common utilities
@@ -202,15 +202,15 @@ Each `_route.js` page can export lifecycle hooks:
 
 > **Note:** Redux reducer injection is handled in `views/index.js` `providers()` hook, not in `_route.js`.
 
-### Plugin System
+### Extension System
 
 Extend the application without modifying core code:
 
 ```javascript
-// Register a plugin
-import { registry } from '@shared/plugin/client';
+// Register an extension
+import { registry } from '@shared/extension/client';
 
-registry.register('my-plugin', {
+registry.register extension', {
   init: async (reg, context) => {
     reg.registerSlot('profile.actions', MyButton, { order: 10 });
     reg.registerHook('user.validate', myValidator);
@@ -218,7 +218,7 @@ registry.register('my-plugin', {
 });
 
 // Render a slot in JSX
-<PluginSlot name="profile.actions" props={userData} />
+<ExtensionSlot name="profile.actions" props={userData} />
 ```
 
 ### Authentication & RBAC

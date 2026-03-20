@@ -12,7 +12,7 @@ export const get = [
     const { provider } = req.params;
 
     // Get app URL from environment variable
-    const appUrl = process.env['RSK_APP_URL'];
+    const appUrl = process.env.RSK_APP_URL;
 
     try {
       passport.authenticate(

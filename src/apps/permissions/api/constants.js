@@ -47,10 +47,10 @@ export const SEED_PERMISSIONS = Object.freeze({
   // Activities (read only)
   activitiesRead: uuidv4(),
   // Plugins CRUD
-  pluginsCreate: uuidv4(),
-  pluginsRead: uuidv4(),
-  pluginsUpdate: uuidv4(),
-  pluginsDelete: uuidv4(),
+  extensionsCreate: uuidv4(),
+  extensionsRead: uuidv4(),
+  extensionsUpdate: uuidv4(),
+  extensionsDelete: uuidv4(),
   // Email templates CRUD
   emailTemplatesCreate: uuidv4(),
   emailTemplatesRead: uuidv4(),

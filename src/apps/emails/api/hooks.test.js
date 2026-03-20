@@ -171,7 +171,7 @@ describe('Email Hooks', () => {
         subject: expect.stringContaining('Password Was Changed'),
         html: expect.stringContaining('{{appName}}'),
         templateData: expect.objectContaining({
-          appName: process.env['RSK_APP_NAME'],
+          appName: process.env.RSK_APP_NAME,
         }),
       });
     });
@@ -191,7 +191,7 @@ describe('Email Hooks', () => {
         subject: expect.stringContaining('Account Has Been Removed'),
         html: expect.stringContaining('{{appName}}'),
         templateData: expect.objectContaining({
-          appName: process.env['RSK_APP_NAME'],
+          appName: process.env.RSK_APP_NAME,
         }),
       });
     });

@@ -17,7 +17,7 @@ import {
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import PluginSlot from '@shared/plugin/client/PluginSlot';
+import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
 
 import Modal from '../Modal';
 
@@ -38,7 +38,7 @@ const ToolbarPromptContext = createContext(null);
  *   title      – Modal header text
  *   label      – Input label (optional)
  *   defaultValue – Pre-filled value
- *   slotName   – PluginSlot name for customisation
+ *   slotName   – ExtensionSlot name for customisation
  *   onSubmit   – Callback receiving the trimmed input value
  */
 export function useToolbarPrompt() {
@@ -124,9 +124,9 @@ export function ToolbarPromptProvider({ editor, children }) {
       <Modal isOpen={isOpen} onClose={handleClose}>
         <Modal.Header onClose={handleClose}>{title}</Modal.Header>
         <Modal.Body>
-          {/* PluginSlot: plugins can replace the default input */}
+          {/* ExtensionSlot: plugins can replace the default input */}
           {slotName && (
-            <PluginSlot
+            <ExtensionSlot
               name={slotName}
               editor={editor}
               value={value}

@@ -83,7 +83,7 @@ The toolbar renders below the editor content and includes grouped buttons for:
 
 ### Prompt Modal System
 
-All URL/input prompts (link, image, video, audio, youtube, math) use an internal modal (`ToolbarPromptModal`) instead of `window.prompt`. Each prompt exposes a `PluginSlot` for customization:
+All URL/input prompts (link, image, video, audio, youtube, math) use an internal modal (`ToolbarPromptModal`) instead of `window.prompt`. Each prompt exposes a `ExtensionSlot` for customization:
 
 | Slot Name | Purpose |
 |-----------|---------|

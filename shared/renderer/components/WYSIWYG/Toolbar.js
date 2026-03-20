@@ -11,7 +11,7 @@ import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import PluginSlot from '@shared/plugin/client/PluginSlot';
+import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
 
 import CodeBlockActionsPopup from './CodeBlockActionsPopup';
 import ColorPickerPopup from './ColorPickerPopup';
@@ -400,7 +400,7 @@ export default function Toolbar({
       )}
 
       {/* Plugins */}
-      <PluginSlot name='wysiwyg.toolbar' editor={editor} />
+      <ExtensionSlot name='wysiwyg.toolbar' editor={editor} />
 
       {/* View Options */}
       <div className={s.toolbarGroup}>

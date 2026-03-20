@@ -8,7 +8,7 @@
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
-import PluginSlot from '@shared/plugin/client/PluginSlot';
+import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
 import ContextMenu from '@shared/renderer/components/ContextMenu';
 import ToolbarButton from '@shared/renderer/components/WYSIWYG/ToolbarButton';
 import Icons from '@shared/renderer/components/WYSIWYG/ToolbarIcon';
@@ -88,7 +88,7 @@ export default function EmailTemplateSelector({ editor }) {
           </ContextMenu.Item>
         ))}
         {/* Allow users/plugins to easily add more templates dynamically */}
-        <PluginSlot
+        <ExtensionSlot
           name='emails.templates.selector'
           editor={editor}
           onInsert={insertTemplate}

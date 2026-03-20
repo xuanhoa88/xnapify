@@ -102,7 +102,7 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 
 | Option      | Description                                |
 | ----------- | ------------------------------------------ |
-| `plugin`    | Plugin manager instance (client or server) |
+| `plugin`    | Extension manager instance (client or server) |
 | `container` | DI container instance                      |
 
 ### Module Discovery

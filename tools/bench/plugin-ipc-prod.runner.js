@@ -44,7 +44,7 @@ class SimpleRegistry {
   }
 }
 
-const PluginRegistryClass = SimpleRegistry;
+const ExtensionRegistryClass = SimpleRegistry;
 
 const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '10', 10);
 const REQUESTS = parseInt(process.env.BENCH_REQUESTS || '2000', 10);
@@ -89,7 +89,7 @@ function createApp(registry) {
 }
 
 (async () => {
-  const registry = new PluginRegistryClass();
+  const registry = new ExtensionRegistryClass();
 
   // Register handlers
   for (let i = 0; i < HANDLERS; i++) {

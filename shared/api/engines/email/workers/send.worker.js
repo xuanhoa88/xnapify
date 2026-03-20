@@ -108,7 +108,7 @@ function createProvider(options = {}) {
         pass: process.env.RSK_SMTP_PASS,
         defaultFrom: process.env.RSK_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
         ...explicitConfig,
       });
 
@@ -117,7 +117,7 @@ function createProvider(options = {}) {
         apiKey: process.env.RSK_SENDGRID_KEY,
         defaultFrom: process.env.RSK_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
         ...explicitConfig,
       });
 
@@ -128,7 +128,7 @@ function createProvider(options = {}) {
         region: process.env.RSK_MAILGUN_REGION,
         defaultFrom: process.env.RSK_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
         ...explicitConfig,
       });
 
@@ -137,7 +137,7 @@ function createProvider(options = {}) {
         apiKey: process.env.RSK_RESEND_KEY,
         defaultFrom: process.env.RSK_MAIL_FROM,
         defaultFromName:
-          process.env.RSK_MAIL_FROM_NAME || process.env['RSK_APP_NAME'],
+          process.env.RSK_MAIL_FROM_NAME || process.env.RSK_APP_NAME,
         ...explicitConfig,
       });
 

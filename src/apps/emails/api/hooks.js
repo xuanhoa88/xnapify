@@ -63,13 +63,13 @@ export function registerEmailHooks(container) {
       'welcome-email',
       {
         to: email,
-        subject: `Welcome to ${process.env['RSK_APP_NAME']}`,
+        subject: `Welcome to ${process.env.RSK_APP_NAME}`,
         html: `<p>Hi {{displayName}},</p><p>Welcome to {{appName}}! Your account has been successfully created.</p>`,
       },
       {
         user,
         displayName,
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -86,7 +86,7 @@ export function registerEmailHooks(container) {
       },
       {
         resetLink,
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -104,7 +104,7 @@ export function registerEmailHooks(container) {
       'admin-welcome-email',
       {
         to: email,
-        subject: `Your ${process.env['RSK_APP_NAME']} Account Has Been Created`,
+        subject: `Your ${process.env.RSK_APP_NAME} Account Has Been Created`,
         html: `
             <p>Hi {{displayName}},</p>
             <p>An administrator has created an account for you on {{appName}}.</p>
@@ -122,8 +122,8 @@ export function registerEmailHooks(container) {
         displayName,
         email,
         password,
-        appName: process.env['RSK_APP_NAME'],
-        loginUrl: `${process.env['RSK_APP_URL']}/login`,
+        appName: process.env.RSK_APP_NAME,
+        loginUrl: `${process.env.RSK_APP_URL}/login`,
       },
     );
   });
@@ -135,7 +135,7 @@ export function registerEmailHooks(container) {
       'admin-password-reset',
       {
         to: email,
-        subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Was Reset`,
+        subject: `Security Alert: Your ${process.env.RSK_APP_NAME} Password Was Reset`,
         html: `
             <p>Hi,</p>
             <p>An administrator has reset the password for your {{appName}} account.</p>
@@ -145,8 +145,8 @@ export function registerEmailHooks(container) {
       },
       {
         password,
-        appName: process.env['RSK_APP_NAME'],
-        loginUrl: `${process.env['RSK_APP_URL']}/login`,
+        appName: process.env.RSK_APP_NAME,
+        loginUrl: `${process.env.RSK_APP_URL}/login`,
       },
     );
   });
@@ -158,7 +158,7 @@ export function registerEmailHooks(container) {
       'admin-status-update',
       {
         to: email,
-        subject: `Account Status Update: Your ${process.env['RSK_APP_NAME']} Account is Now ${is_active ? 'Active' : 'Inactive'}`,
+        subject: `Account Status Update: Your ${process.env.RSK_APP_NAME} Account is Now ${is_active ? 'Active' : 'Inactive'}`,
         html: `
             <p>Hi,</p>
             <p>An administrator has updated the status of your {{appName}} account.</p>
@@ -169,7 +169,7 @@ export function registerEmailHooks(container) {
       {
         is_active,
         status: is_active ? 'Active' : 'Inactive',
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -181,7 +181,7 @@ export function registerEmailHooks(container) {
       'admin-account-deleted',
       {
         to: email,
-        subject: `Account Notice: Your ${process.env['RSK_APP_NAME']} Account Has Been Deleted`,
+        subject: `Account Notice: Your ${process.env.RSK_APP_NAME} Account Has Been Deleted`,
         html: `
             <p>Hi,</p>
             <p>An administrator has removed your account from {{appName}}.</p>
@@ -189,7 +189,7 @@ export function registerEmailHooks(container) {
           `,
       },
       {
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -205,7 +205,7 @@ export function registerEmailHooks(container) {
       'profile-password-changed',
       {
         to: email,
-        subject: `Security Alert: Your ${process.env['RSK_APP_NAME']} Password Was Changed`,
+        subject: `Security Alert: Your ${process.env.RSK_APP_NAME} Password Was Changed`,
         html: `
             <p>Hi,</p>
             <p>Your password for your {{appName}} account was recently changed.</p>
@@ -213,7 +213,7 @@ export function registerEmailHooks(container) {
           `,
       },
       {
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -225,7 +225,7 @@ export function registerEmailHooks(container) {
       'profile-account-deleted',
       {
         to: email,
-        subject: `Account Deleted: Your ${process.env['RSK_APP_NAME']} Account Has Been Removed`,
+        subject: `Account Deleted: Your ${process.env.RSK_APP_NAME} Account Has Been Removed`,
         html: `
             <p>Hi,</p>
             <p>Your {{appName}} account has been successfully deleted as requested.</p>
@@ -233,7 +233,7 @@ export function registerEmailHooks(container) {
           `,
       },
       {
-        appName: process.env['RSK_APP_NAME'],
+        appName: process.env.RSK_APP_NAME,
       },
     );
   });
@@ -249,7 +249,7 @@ export function registerEmailHooks(container) {
       'file-shared',
       {
         to: email,
-        subject: `New File Shared With You on ${process.env['RSK_APP_NAME']}`,
+        subject: `New File Shared With You on ${process.env.RSK_APP_NAME}`,
         html: `
             <p>Hi,</p>
             <p>{{sharerEmail}} has shared a file with you.</p>
@@ -258,8 +258,8 @@ export function registerEmailHooks(container) {
       },
       {
         sharerEmail,
-        appName: process.env['RSK_APP_NAME'],
-        driveUrl: `${process.env['RSK_APP_URL']}/drive`,
+        appName: process.env.RSK_APP_NAME,
+        driveUrl: `${process.env.RSK_APP_URL}/drive`,
       },
     );
   });

@@ -40,7 +40,7 @@ function log(phase) {
  * Providers hook — called during view bootstrap to share
  * client-side services/state with other view modules.
  *
- * @param {Object} context - Shared context (e.g., container, plugin)
+ * @param {Object} context - Shared context (e.g., container, extension)
  */
 export function providers({ container, store }) {
   // Inject Redux reducer
