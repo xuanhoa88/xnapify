@@ -441,7 +441,7 @@ export async function installPluginFromPackage(
   const pluginsDir = pluginManager.getPluginPath();
   const tempExtractDir = path.join(
     os.tmpdir(),
-    process.env.RSK_PLUGIN_PATH || 'plugins',
+    process.env.RSK_PLUGIN_DIR || 'plugins',
     path.parse(file.originalname || '').name,
   );
 

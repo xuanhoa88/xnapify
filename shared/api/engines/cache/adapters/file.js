@@ -42,7 +42,9 @@ export default class FileCache {
    */
   constructor(options = {}) {
     this.directory =
-      options.directory || path.join(os.homedir(), '.rsk', 'caches');
+      options.directory ||
+      process.env.RSK_CACHE_DIR ||
+      path.join(os.homedir(), '.rsk', 'caches');
     this.maxSize = options.maxSize || 10000;
     this.defaultTTL = options.ttl || 5 * 60 * 1000; // 5 minutes
     this.locks = new Map(); // In-memory locks for race condition prevention

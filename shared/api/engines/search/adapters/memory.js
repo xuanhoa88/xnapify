@@ -32,7 +32,9 @@ export default class MemorySearch {
    */
   constructor(options = {}) {
     this.directory =
-      options.directory || path.join(os.homedir(), '.rsk', 'fts');
+      options.directory ||
+      process.env.RSK_FTS_DIR ||
+      path.join(os.homedir(), '.rsk', 'fts');
     this.memoryIndex = new Map(); // Key: `${entityType}_${entityId}` -> Value: Document
     this.isInitialized = false;
     this._initPromise = null;

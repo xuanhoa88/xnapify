@@ -251,10 +251,8 @@ export default function createSettings(options = {}) {
     host = '127.0.0.1',
     port = 1337,
     protocol = 'http',
-    userDir = path.join(
-      process.env.RSK_NODERED_HOME || path.join(os.homedir(), '.rsk'),
-      '.node-red',
-    ),
+    userDir = process.env.RSK_NODERED_HOME ||
+      path.join(os.homedir(), '.rsk', '.node-red'),
     logLevel = process.env.RSK_NODERED_LOG_LEVEL || 'info',
     enableProjects = process.env.RSK_NODERED_PROJECTS === 'true',
     httpAdminRoot = '/~/red/admin',

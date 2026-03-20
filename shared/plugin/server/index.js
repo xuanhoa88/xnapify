@@ -120,10 +120,8 @@ class ServerPluginManager extends BasePluginManager {
   getPluginPath() {
     try {
       return path.resolve(
-        ...(process.env.RSK_PLUGIN_PATH
-          ? [process.env.RSK_PLUGIN_PATH]
-          : [os.homedir(), '.rsk', 'plugins']
-        ).filter(Boolean),
+        process.env.RSK_PLUGIN_DIR ||
+          path.join(os.homedir(), '.rsk', 'plugins'),
       );
     } catch (err) {
       console.error(`Failed to get plugin path:`, err);

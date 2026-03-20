@@ -25,9 +25,14 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       RSK_HOST: 0.0.0.0
+      # Writable directories — all under /app/data (single persistent volume)
+      RSK_UPLOAD_DIR: /app/data/uploads
+      RSK_NODERED_HOME: /app/data/node-red
+      RSK_PLUGIN_DIR: /app/data/plugins
+      RSK_CACHE_DIR: /app/data/caches
+      RSK_FTS_DIR: /app/data/fts
     volumes:
-      - rsk_uploads:/app/build/uploads
-      - rsk_nodered:/app/build/.node-red
+      - rsk_data:/app/data
     networks:
       - rsk-net
     healthcheck:
@@ -92,8 +97,7 @@ services:
 # Volumes
 # =============================================================================
 volumes:
-  rsk_uploads:
-  rsk_nodered:
+  rsk_data:
   rsk_pg:
   rsk_mysql:
 
