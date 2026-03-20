@@ -457,6 +457,8 @@ function makeSsrMiddleware(baseUrl) {
   let pluginsInitialized = false;
 
   return async (req, res, next) => {
+    if (res.headersSent) return;
+
     const startTime = Date.now();
 
     let store = null;
