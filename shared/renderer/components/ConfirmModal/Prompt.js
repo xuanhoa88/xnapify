@@ -93,10 +93,10 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
       const result = await onSubmit(value.trim());
       setSubmitting(false);
 
-      if (result && result.success !== false) {
+      if (!result || result.success !== false) {
         resetState();
         onSuccess && onSuccess(value.trim());
-      } else if (result) {
+      } else {
         setError(
           result.error ||
             t(
@@ -104,10 +104,6 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
               'Failed to submit',
             ),
         );
-      } else {
-        // Assume success if no error signature is explicitly returned
-        resetState();
-        onSuccess && onSuccess(value.trim());
       }
     } catch (err) {
       setSubmitting(false);
