@@ -7,6 +7,8 @@
 
 import * as pluginController from '../../../../controllers/plugin.controller';
 
+export const useRateLimit = false;
+
 function requirePermission(permission) {
   return (req, res, next) => {
     const {

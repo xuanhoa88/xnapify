@@ -51,6 +51,15 @@ import * as postController from '../../../controllers/post.controller';
  */
 // export const middleware = [requireAuth];
 
+/**
+ * Rate limiting:
+ *   - Omit → use app default rate limiter
+ *   - false → skip rate limiting (e.g. static assets)
+ *   - { max, windowMs } → custom per-route limiter (merged with defaults)
+ */
+// export const useRateLimit = false;
+// export const useRateLimit = { max: 200, windowMs: 60_000 };
+
 // GET /api/posts
 export const get = postController.getAll;
 

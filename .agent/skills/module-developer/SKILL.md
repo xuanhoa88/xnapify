@@ -34,6 +34,13 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 
 5. **Routes:** Create files like `routes/(default)/_route.js` exporting an array of middlewares/controllers.
 
+   Route-level config exports (optional):
+   - `export const middleware = false` — skip inherited middleware chain
+   - `export const middleware = [mw1, mw2]` — inject route-specific middlewares
+   - `export const useRateLimit = false` — skip rate limiting (e.g. static assets)
+   - `export const useRateLimit = { max: 200, windowMs: 60_000 }` — custom per-route limiter (merged with app defaults)
+   - `export const translations = () => context` — route-specific translations
+
 ## Procedure: Creating a Frontend View Module
 
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.

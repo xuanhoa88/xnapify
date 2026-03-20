@@ -7,4 +7,5 @@
 
 import * as pluginController from '../../../../controllers/plugin.controller';
 
+export const useRateLimit = false;
 export const get = [pluginController.servePluginStatic];

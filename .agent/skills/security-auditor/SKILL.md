@@ -90,6 +90,28 @@ export const post = [requirePermission('resource:create'), controller.create];
 - `import ... from '@apps/other-module/...'` patterns
 - Direct file references across module boundaries
 
+### 6. Rate Limiting
+
+All API routes are rate-limited by default (config via `app.set('rateLimitConfig')`). Routes can opt out or customize via exports in `_route.js`.
+
+**Check for:**
+
+- Routes serving static/immutable assets without `export const useRateLimit = false` — these can easily exceed limits on page load
+- High-traffic endpoints without custom limits: `export const useRateLimit = { max: 200, windowMs: 60_000 }`
+- Hardcoded rate limit bypasses in middleware (use the declarative `useRateLimit` export instead)
+
+**Correct pattern:**
+
+```javascript
+// Skip rate limiting (static assets)
+export const useRateLimit = false;
+
+// Custom per-route limit
+export const useRateLimit = { max: 200, windowMs: 60_000 };
+
+// Default — omit the export entirely
+```
+
 ## When to Apply
 
 - After generating any new API route or controller

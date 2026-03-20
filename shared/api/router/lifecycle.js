@@ -16,6 +16,7 @@ import {
   ROUTE_MOUNT_KEY,
   ROUTE_TRANSLATIONS_KEY,
 } from './constants';
+import { resolveRateLimiter } from './rateLimit';
 import { log, normalizeError } from './utils';
 
 /**
@@ -236,6 +237,11 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
   // Generic/inherited route middleware chain + Custom route parsers
   const baseMiddleware = createMiddlewareRunner(configs, middlewares);
 
+  // Rate limiter — lazy-init on first request, then cached in closure.
+  // `module.rateLimit` is static; `rateLimitConfig` is set once at startup.
+  // `undefined` = not yet resolved, `null` = resolved but no limiter.
+  let cachedRateLimiter;
+
   return function (req, res, next) {
     // Determine the active method
     const method = req.method.toLowerCase(); // 'get', 'post', 'put', 'patch', 'delete'
@@ -278,11 +284,25 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
       return next();
     }
 
+    // Lazy-init rate limiter on first request
+    if (cachedRateLimiter === undefined) {
+      if (module.useRateLimit === false) {
+        cachedRateLimiter = null;
+      } else {
+        const rl = resolveRateLimiter(module.useRateLimit);
+        cachedRateLimiter = typeof rl === 'function' ? rl : null;
+      }
+    }
+
     // Compile the final action pipeline for this specific incoming method!
-    const runMethodPipeline =
-      routeMiddlewares.length > 0
-        ? composeMiddleware(baseMiddleware, ...routeMiddlewares)
-        : baseMiddleware;
+    const hasExtra = cachedRateLimiter || routeMiddlewares.length > 0;
+    const runMethodPipeline = hasExtra
+      ? composeMiddleware(
+          ...(cachedRateLimiter ? [cachedRateLimiter] : []),
+          baseMiddleware,
+          ...routeMiddlewares,
+        )
+      : baseMiddleware;
 
     return runMethodPipeline(req, res, err => {
       // If error from middleware, pass to next error handler

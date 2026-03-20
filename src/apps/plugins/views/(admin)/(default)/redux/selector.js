@@ -34,7 +34,12 @@ const getPluginsState = state => {
 
 export const getPlugins = state => {
   const data = getPluginsState(state);
-  return (data && data.plugins) || [];
+  const plugins = (data && data.plugins) || [];
+  return plugins.slice().sort((a, b) => {
+    const nameA = (a.name || a.key || '').toLowerCase();
+    const nameB = (b.name || b.key || '').toLowerCase();
+    return nameA.localeCompare(nameB);
+  });
 };
 
 export const isPluginsInitialized = state => {

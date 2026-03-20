@@ -13,9 +13,9 @@ import path from 'path';
 
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
-import rateLimit from 'express-rate-limit';
 import expressRequestLanguage from 'express-request-language';
 import { createMemoryHistory } from 'history';
+import isLocalhostIp from 'is-localhost-ip';
 import set from 'lodash/set';
 import toString from 'lodash/toString';
 import { LRUCache } from 'lru-cache';
@@ -45,15 +45,6 @@ import { createWebSocketServer } from '@shared/ws/server';
 // Constants & Configuration
 // ---------------------------------------------------------------------------
 
-const LOCALHOST_IPS = new Set([
-  '0.0.0.0',
-  '127.0.0.1',
-  '::1',
-  '::',
-  '::ffff:127.0.0.1',
-  'localhost',
-]);
-
 const SERVER_TIMEOUTS = Object.freeze({
   STORE_INIT: 5_000,
   VIEWS_LOAD: 5_000,
@@ -77,11 +68,6 @@ const SERVER_CONFIG = Object.freeze({
     process.env.RSK_COMPRESSION_LEVEL || (__DEV__ ? 1 : 6),
     10,
   ),
-
-  enableRateLimit: process.env.RSK_RATE_LIMIT !== 'false',
-  rateLimitWindow:
-    parseInt(process.env.RSK_RATE_LIMIT_WINDOW, 10) || 15 * 60_000,
-  rateLimitMax: parseInt(process.env.RSK_RATE_LIMIT_MAX, 10) || 50,
 
   enableSSRCache: process.env.RSK_SSR_CACHE === 'true',
   ssrCacheTTL: parseInt(process.env.RSK_SSR_CACHE_TTL, 10) || 60_000,
@@ -122,9 +108,8 @@ function validatePort(port, defaultPort = 1337) {
     : 1337;
 }
 
-function sanitizeHost(host) {
-  // Non-local hosts are returned as-is (e.g. '192.168.1.10')
-  if (!LOCALHOST_IPS.has(host)) return host;
+async function sanitizeHost(host) {
+  if (!(await isLocalhostIp(host))) return host;
 
   // 'localhost' → '127.0.0.1': node-fetch resolves 'localhost' to IPv4
   // but Node.js server.listen('localhost') binds to IPv6 (::1).
@@ -167,7 +152,7 @@ function promiseWithDeadline(promise, timeoutMs, operationName) {
   ]);
 }
 
-function extractPageMetadata(page, req) {
+async function extractPageMetadata(page, req) {
   const metadata = {
     title: (page && page.title) || APP_METADATA.title,
     description: (page && page.description) || APP_METADATA.description,
@@ -179,7 +164,7 @@ function extractPageMetadata(page, req) {
     const rawHost = req.get('host');
     const normalizedHost = rawHost.split(':')[0];
 
-    if (!LOCALHOST_IPS.has(normalizedHost)) {
+    if (!(await isLocalhostIp(normalizedHost))) {
       const baseUrl = req.protocol + '://' + rawHost;
       const fullUrl = new URL(req.originalUrl || req.path, baseUrl);
 
@@ -615,7 +600,7 @@ function makeSsrMiddleware(baseUrl) {
         renderToHtml({
           context,
           component: page.component,
-          metadata: extractPageMetadata(page, req),
+          metadata: await extractPageMetadata(page, req),
           nonce: req.cspNonce,
         }),
         SERVER_TIMEOUTS.RENDER,
@@ -838,7 +823,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // sanitizeHost converts wildcard/localhost to a routable loopback for self-fetch URLs
   // e.g. '0.0.0.0' → '127.0.0.1', 'localhost' → '127.0.0.1'
   // The raw `host` is kept for server.listen() so Docker can bind to all interfaces.
-  const resolvedHost = sanitizeHost(host);
+  const resolvedHost = await sanitizeHost(host);
   const baseUrl = `http://${resolvedHost}:${port}`;
 
   // Ensure an absolute RSK_APP_URL exists (used by OAuth callbacks, Passport, etc.)
@@ -989,39 +974,6 @@ export async function bootstrapApp(app, server, options = {}) {
 
     next();
   });
-
-  // Rate limiter
-  if (SERVER_CONFIG.enableRateLimit) {
-    const windowMs = __DEV__ ? 60_000 : SERVER_CONFIG.rateLimitWindow;
-    const max = __DEV__ ? 100 : SERVER_CONFIG.rateLimitMax;
-    app.use(
-      SERVER_CONFIG.apiPrefix,
-      rateLimit({
-        windowMs,
-        max,
-        standardHeaders: true,
-        legacyHeaders: false,
-        skip(req) {
-          const ip = req.ip || req.socket.remoteAddress || '';
-          return (
-            req.headers &&
-            !req.headers['x-forwarded-for'] &&
-            LOCALHOST_IPS.has(ip)
-          );
-        },
-        handler(req, res, _next, rateLimitInfo) {
-          res.status(rateLimitInfo.statusCode || 429).json({
-            success: false,
-            error: 'Too many requests from this IP, please try again later.',
-            retryAfter: Math.ceil(windowMs / 60_000) + ' minutes',
-            limit: max,
-            current: (req.rateLimit && req.rateLimit.used) || 0,
-            requestId: req.id,
-          });
-        },
-      }),
-    );
-  }
 
   // API routes
   const api = await import('./bootstrap/api');

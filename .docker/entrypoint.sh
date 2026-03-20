@@ -7,10 +7,18 @@ if [ "$(id -u)" = "0" ]; then
   # App build dir (SQLite DB lives here)
   chown node:node /app/build
 
-  # Persistent data dir (uploads, plugins, Node-RED, caches)
+  # Bundled plugins dir (npm install runs here during plugin activate)
+  # Only chown if ownership is wrong (avoids O(n) walk on every restart)
+  if [ -d /app/build/plugins ] && [ "$(stat -c '%u' /app/build/plugins 2>/dev/null)" != "1000" ]; then
+    chown -R node:node /app/build/plugins
+  fi
+
+  # Persistent data dir (uploads, plugins, Node-RED, caches, FTS)
   # Subdirectories are created by the app on first use
   mkdir -p /app/data
-  chown -R node:node /app/data
+  if [ "$(stat -c '%u' /app/data 2>/dev/null)" != "1000" ]; then
+    chown -R node:node /app/data
+  fi
 
   exec su-exec node "$@"
 else

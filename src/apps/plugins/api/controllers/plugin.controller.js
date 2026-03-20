@@ -254,15 +254,13 @@ export const updatePluginStatus = async (req, res) => {
       },
     );
 
-    // Convert to plain object and inject active job status for immediate frontend feedback
-    const pluginData = {
-      ...(typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin),
-      job_status: 'ACTIVE',
-    };
+    // Convert to plain object (toggle is synchronous — no background job)
+    const pluginData =
+      typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin;
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('plugin:updated', {
-      type: result.is_active ? 'PLUGIN_INSTALLED' : 'PLUGIN_UNINSTALLED',
+      type: result.is_active ? 'PLUGIN_ACTIVATED' : 'PLUGIN_DEACTIVATED',
       pluginId: id,
       data: { manifest: pluginData },
     });

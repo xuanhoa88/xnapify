@@ -17,7 +17,10 @@ import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import { useRbac } from '@shared/renderer/components/Rbac';
 import Table from '@shared/renderer/components/Table';
-import { showWarningMessage } from '@shared/renderer/redux/features/ui/slice';
+import {
+  showSuccessMessage,
+  showWarningMessage,
+} from '@shared/renderer/redux/features/ui/slice';
 import { useWebSocket } from '@shared/ws/client';
 
 import PluginCard from './components/PluginCard';
@@ -104,8 +107,16 @@ function Plugins() {
   const handleDeleteAction = useCallback(
     async item => {
       await dispatch(uninstallPlugin(item.id)).unwrap();
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'admin:plugins.uninstallSuccess',
+            'Plugin uninstalled successfully.',
+          ),
+        }),
+      );
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // --- Activate ---
@@ -118,9 +129,17 @@ function Plugins() {
       await dispatch(
         togglePluginStatus({ id: item.id, isActive: true }),
       ).unwrap();
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'admin:plugins.activateSuccess',
+            'Plugin activated successfully.',
+          ),
+        }),
+      );
       dispatch(fetchPlugins());
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // --- Deactivate ---
@@ -133,9 +152,17 @@ function Plugins() {
       await dispatch(
         togglePluginStatus({ id: item.id, isActive: false }),
       ).unwrap();
+      dispatch(
+        showSuccessMessage({
+          message: t(
+            'admin:plugins.deactivateSuccess',
+            'Plugin deactivated successfully.',
+          ),
+        }),
+      );
       dispatch(fetchPlugins());
     },
-    [dispatch],
+    [dispatch, t],
   );
 
   // --- Install (Upload) ---
@@ -159,7 +186,15 @@ function Plugins() {
     if (!file) return;
     await dispatch(uploadPlugin(file)).unwrap();
     pendingFileRef.current = null;
-  }, [dispatch]);
+    dispatch(
+      showSuccessMessage({
+        message: t(
+          'admin:plugins.installSuccess',
+          'Plugin installed successfully.',
+        ),
+      }),
+    );
+  }, [dispatch, t]);
 
   const handleInstallCancel = useCallback(() => {
     pendingFileRef.current = null;

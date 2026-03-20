@@ -275,22 +275,30 @@ export async function getActivePlugins({ pluginManager, models, cache, cwd }) {
  * @param {Object} context - App context
  */
 export async function deletePlugin(id, { models, cache, cwd, actorId, queue }) {
-  const { plugin } = await resolvePlugin(models, id);
+  const { plugin, pluginKey } = await resolvePlugin(models, id, {
+    required: false,
+  });
+
+  // Plugin not found in DB — could be a disk-only plugin discovered from filesystem.
+  // Decrypt the ID to get the plugin key for directory deletion.
+  if (!plugin && !pluginKey) {
+    throw PluginError.notFound();
+  }
 
   // Enqueue the background deletion job
   if (queue && cwd) {
     const queueChannel = queue('plugins');
     queueChannel.emit('delete', {
-      pluginId: plugin.id,
-      pluginKey: plugin.key,
+      pluginId: plugin ? plugin.id : null,
+      pluginKey: plugin ? plugin.key : pluginKey,
       actorId,
     });
-  } else {
+  } else if (plugin) {
     // Fallback if app context is missing: destroy DB record immediately
     await plugin.destroy();
   }
 
-  if (cache) await invalidateCache(cache, plugin.id);
+  if (cache && plugin) await invalidateCache(cache, plugin.id);
 
   return true;
 }
@@ -441,7 +449,7 @@ export async function installPluginFromPackage(
   const pluginsDir = pluginManager.getPluginPath();
   const tempExtractDir = path.join(
     os.tmpdir(),
-    process.env.RSK_PLUGIN_DIR || 'plugins',
+    'rsk-plugin-install',
     path.parse(file.originalname || '').name,
   );
 

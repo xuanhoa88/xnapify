@@ -25,7 +25,10 @@ The `.dockerignore` stays in the **project root** (Docker requirement — must b
 2. **Production stage** (`node:18-alpine`): Copies built output + `node_modules`, installs `su-exec`
 
 ### Entrypoint
-The `entrypoint.sh` script runs as root to `chown` the build directory for the `node` user, then drops privileges via `su-exec node`.
+The `entrypoint.sh` script runs as root to fix volume ownership, then drops privileges via `su-exec node`.
+
+- Uses **conditional** `chown -R` — only runs when ownership is wrong (avoids O(n) walk on every restart)
+- Fixes: `/app/build` (SQLite), `/app/build/plugins` (bundled plugins need write for `npm install`), `/app/data` (persistent volume)
 
 ### Build Context
 - `build.context` is `..` (project root) so Webpack can access all source files
@@ -51,7 +54,9 @@ environment:
 
 ## Conventions
 
-- Volume names use `rsk_` prefix: `rsk_uploads`, `rsk_nodered`, `rsk_pg`, `rsk_mysql`
+- **Single persistent volume**: `rsk_data` mounted at `/app/data` — all writable dirs are subdirectories
+- Writable dirs set via env vars: `RSK_UPLOAD_DIR`, `RSK_NODERED_HOME`, `RSK_PLUGIN_DIR`, `RSK_CACHE_DIR`, `RSK_FTS_DIR`
+- Volume names use `rsk_` prefix: `rsk_data`, `rsk_pg`, `rsk_mysql`
 - Network: `rsk-net` (bridge driver)
 - Container names: `rsk-app`, `rsk-postgres`, `rsk-mysql`
 - Optional services use Docker Compose profiles: `--profile postgres`, `--profile mysql`

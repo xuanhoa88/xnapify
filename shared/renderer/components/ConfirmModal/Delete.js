@@ -73,7 +73,7 @@ const ConfirmDeleteModal = forwardRef(
         const result = await onDelete(item);
         setDeleting(false);
 
-        if (result.success) {
+        if (!result || result.success !== false) {
           resetState();
           onSuccess && onSuccess(item);
         } else {
