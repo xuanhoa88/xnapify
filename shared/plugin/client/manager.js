@@ -347,6 +347,11 @@ class ClientPluginManager extends BasePluginManager {
         this.needsReload = true;
         break;
 
+      case 'PLUGIN_ACTIVATED':
+      case 'PLUGIN_DEACTIVATED':
+        // No client-side action needed — Redux handles state updates
+        break;
+
       default:
         console.warn(`[ClientPluginManager] Unknown event type: ${type}`);
     }

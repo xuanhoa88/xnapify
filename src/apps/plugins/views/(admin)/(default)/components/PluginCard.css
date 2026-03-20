@@ -93,6 +93,23 @@
   flex-wrap: nowrap;
 }
 
+/* Shimmer text effect for action-in-progress badges */
+.actionTag {
+  display: inline-block;
+  background: linear-gradient(
+    90deg,
+    currentcolor 0%,
+    var(--color-warning-text, #b45309) 40%,
+    rgb(255 255 255 / 80%) 50%,
+    var(--color-warning-text, #b45309) 60%,
+    currentcolor 100%
+  );
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 1.5s infinite;
+}
+
 /* Meta Group (Author & Repo) - Clean and understated */
 .metaGroup {
   display: flex;

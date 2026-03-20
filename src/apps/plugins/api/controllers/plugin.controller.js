@@ -206,7 +206,7 @@ export const uploadPlugin = async (req, res) => {
     // Convert to plain object and inject active job status for immediate frontend feedback
     const pluginData = {
       ...(typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin),
-      job_status: 'ACTIVE',
+      job_status: 'INSTALLING',
     };
 
     const ws = container.resolve('ws');

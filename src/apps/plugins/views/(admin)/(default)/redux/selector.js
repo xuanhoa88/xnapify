@@ -1,9 +1,4 @@
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
+import { createSelector } from '@reduxjs/toolkit';
 
 import { normalizeState, SLICE_NAME } from './slice';
 
@@ -32,15 +27,18 @@ const getPluginsState = state => {
 // DATA SELECTORS
 // =============================================================================
 
-export const getPlugins = state => {
+const getRawPlugins = state => {
   const data = getPluginsState(state);
-  const plugins = (data && data.plugins) || [];
-  return plugins.slice().sort((a, b) => {
+  return (data && data.plugins) || [];
+};
+
+export const getPlugins = createSelector([getRawPlugins], plugins =>
+  plugins.slice().sort((a, b) => {
     const nameA = (a.name || a.key || '').toLowerCase();
     const nameB = (b.name || b.key || '').toLowerCase();
     return nameA.localeCompare(nameB);
-  });
-};
+  }),
+);
 
 export const isPluginsInitialized = state => {
   const data = getPluginsState(state);

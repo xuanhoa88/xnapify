@@ -260,4 +260,6 @@ Modal.Actions = ModalActions;
 Modal.SelectionCount = ModalSelectionCount;
 Modal.Button = ModalButton;
 
+export { s as modalStyles };
+
 export default Modal;

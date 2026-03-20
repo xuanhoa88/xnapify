@@ -21,6 +21,7 @@ import s from './PluginCard.css';
 
 function PluginCard({
   plugin,
+  actionLabel,
   activeDropdownId,
   onToggleDropdown,
   onActivate,
@@ -31,11 +32,24 @@ function PluginCard({
 }) {
   const { t } = useTranslation();
   const [isLocalLoading, setLocalLoading] = useState(false);
-  const isLoading = isLocalLoading || plugin.job_status === 'ACTIVE';
+
+  // Map server job_status to display labels for reload persistence
+  const JOB_STATUS_LABELS = {
+    ACTIVATING: t('admin:common.activating', 'Activating...'),
+    DEACTIVATING: t('admin:common.deactivating', 'Deactivating...'),
+    UNINSTALLING: t('admin:common.uninstalling', 'Uninstalling...'),
+  };
+
+  // Skeleton loading only for install/upgrade background jobs
+  const isLoading = isLocalLoading || plugin.job_status === 'INSTALLING';
+  // Client-side actionLabel takes priority; fall back to server job_status
+  const resolvedActionLabel =
+    actionLabel || JOB_STATUS_LABELS[plugin.job_status] || null;
+  const isActionPending = Boolean(resolvedActionLabel);
 
   // Reset local loading when the server confirms the job is done
   useEffect(() => {
-    if (isLocalLoading && plugin.job_status !== 'ACTIVE') {
+    if (isLocalLoading && !plugin.job_status) {
       setLocalLoading(false);
     }
   }, [isLocalLoading, plugin.job_status]);
@@ -66,20 +80,25 @@ function PluginCard({
               </div>
             ) : (
               <div className={s.badges}>
-                <Tag
-                  variant={plugin.is_active ? 'success' : 'neutral'}
-                  {...(canUpdate && {
-                    title: plugin.is_active
-                      ? t('admin:common.deactivate', 'Deactivate')
-                      : t('admin:common.activate', 'Activate'),
-                    onClick: handleToggleStatus,
-                  })}
-                  style={isLoading ? { cursor: 'wait' } : {}}
-                >
-                  {plugin.is_active
-                    ? t('admin:common.active', 'Active')
-                    : t('admin:common.inactive', 'Inactive')}
-                </Tag>
+                {isActionPending ? (
+                  <Tag variant='warning'>
+                    <span className={s.actionTag}>{resolvedActionLabel}</span>
+                  </Tag>
+                ) : (
+                  <Tag
+                    variant={plugin.is_active ? 'success' : 'neutral'}
+                    {...(canUpdate && {
+                      title: plugin.is_active
+                        ? t('admin:common.deactivate', 'Deactivate')
+                        : t('admin:common.activate', 'Activate'),
+                      onClick: handleToggleStatus,
+                    })}
+                  >
+                    {plugin.is_active
+                      ? t('admin:common.active', 'Active')
+                      : t('admin:common.inactive', 'Inactive')}
+                  </Tag>
+                )}
               </div>
             )}
             {!isLoading && (
@@ -177,6 +196,7 @@ PluginCard.propTypes = {
       repository: PropTypes.string,
     }),
   }).isRequired,
+  actionLabel: PropTypes.string,
   activeDropdownId: PropTypes.string,
   onToggleDropdown: PropTypes.func.isRequired,
   onActivate: PropTypes.func.isRequired,

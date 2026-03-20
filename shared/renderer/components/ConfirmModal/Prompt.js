@@ -36,14 +36,12 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
   const { t } = useTranslation();
   const inputRef = useRef(null);
 
-  // Internal state
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [value, setValue] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Reset state helper
   const resetState = useCallback(() => {
     setIsOpen(false);
     setTitle('');
@@ -52,7 +50,6 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
     setSubmitting(false);
   }, []);
 
-  // Expose methods via ref
   useImperativeHandle(
     ref,
     () => ({
@@ -84,19 +81,14 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
   }, [submitting, resetState]);
 
   const handleConfirm = useCallback(async () => {
-    // We allow empty value here so that the parent onSubmit can perform Zod validation
-    // and return a proper error message if needed.
     setSubmitting(true);
     setError(null);
 
     try {
       const result = await onSubmit(value.trim());
-      setSubmitting(false);
 
-      if (!result || result.success !== false) {
-        resetState();
-        onSuccess && onSuccess(value.trim());
-      } else {
+      if (result && result.success === false) {
+        setSubmitting(false);
         setError(
           result.error ||
             t(
@@ -104,7 +96,11 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
               'Failed to submit',
             ),
         );
+        return;
       }
+
+      resetState();
+      onSuccess && onSuccess(value.trim());
     } catch (err) {
       setSubmitting(false);
       setError(
@@ -154,12 +150,7 @@ const ConfirmPromptModal = forwardRef(({ onSubmit, onSuccess }, ref) => {
             onClick={handleConfirm}
             disabled={submitting}
           >
-            {submitting
-              ? t(
-                  'shared:components.confirmModal.prompt.submitting',
-                  'Submitting...',
-                )
-              : t('shared:components.confirmModal.prompt.submit', 'Create')}
+            {t('shared:components.confirmModal.prompt.submit', 'Create')}
           </Modal.Button>
         </Modal.Actions>
       </Modal.Footer>

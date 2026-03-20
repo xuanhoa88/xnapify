@@ -30,27 +30,19 @@ const ConfirmDeleteModal = forwardRef(
   ({ title, getItemName, onDelete, onSuccess }, ref) => {
     const { t } = useTranslation();
 
-    // Internal state
     const [isOpen, setIsOpen] = useState(false);
     const [item, setItem] = useState(null);
-    const [error, setError] = useState(null);
-    const [deleting, setDeleting] = useState(false);
 
-    // Reset state helper
     const resetState = useCallback(() => {
       setIsOpen(false);
       setItem(null);
-      setError(null);
-      setDeleting(false);
     }, []);
 
-    // Expose methods via ref
     useImperativeHandle(
       ref,
       () => ({
         open: targetItem => {
           setItem(targetItem);
-          setError(null);
           setIsOpen(true);
         },
         close: resetState,
@@ -58,51 +50,19 @@ const ConfirmDeleteModal = forwardRef(
       [resetState],
     );
 
-    const handleClose = useCallback(() => {
-      if (!deleting) {
-        resetState();
-      }
-    }, [deleting, resetState]);
-
-    const handleConfirm = useCallback(async () => {
+    const handleConfirm = useCallback(() => {
       if (!item) return;
-      setDeleting(true);
-      setError(null);
-
-      try {
-        const result = await onDelete(item);
-        setDeleting(false);
-
-        if (!result || result.success !== false) {
-          resetState();
-          onSuccess && onSuccess(item);
-        } else {
-          setError(
-            result.error ||
-              t(
-                'shared:components.confirmModal.delete.error.failed',
-                'Failed to delete',
-              ),
-          );
-        }
-      } catch (err) {
-        setDeleting(false);
-        setError(
-          err.message ||
-            t(
-              'shared:components.confirmModal.delete.error.occurred',
-              'An error occurred',
-            ),
-        );
-      }
-    }, [item, onDelete, resetState, onSuccess, t]);
+      resetState();
+      onDelete(item);
+      onSuccess && onSuccess(item);
+    }, [item, onDelete, resetState, onSuccess]);
 
     const itemName = item && getItemName ? getItemName(item) : '';
 
     return (
-      <Modal isOpen={isOpen} onClose={handleClose}>
-        <Modal.Header onClose={handleClose}>{title}</Modal.Header>
-        <Modal.Body error={error}>
+      <Modal isOpen={isOpen} onClose={resetState}>
+        <Modal.Header onClose={resetState}>{title}</Modal.Header>
+        <Modal.Body>
           <Modal.Description>
             {t(
               'shared:components.confirmModal.delete.description',
@@ -113,24 +73,11 @@ const ConfirmDeleteModal = forwardRef(
         </Modal.Body>
         <Modal.Footer>
           <Modal.Actions>
-            <Modal.Button
-              variant='secondary'
-              onClick={handleClose}
-              disabled={deleting}
-            >
+            <Modal.Button variant='secondary' onClick={resetState}>
               {t('shared:components.confirmModal.delete.cancel', 'Cancel')}
             </Modal.Button>
-            <Modal.Button
-              variant='primary'
-              onClick={handleConfirm}
-              disabled={deleting}
-            >
-              {deleting
-                ? t(
-                    'shared:components.confirmModal.delete.deleting',
-                    'Deleting...',
-                  )
-                : t('shared:components.confirmModal.delete.delete', 'Delete')}
+            <Modal.Button variant='primary' onClick={handleConfirm}>
+              {t('shared:components.confirmModal.delete.delete', 'Delete')}
             </Modal.Button>
           </Modal.Actions>
         </Modal.Footer>

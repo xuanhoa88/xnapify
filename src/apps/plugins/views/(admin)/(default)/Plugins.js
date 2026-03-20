@@ -53,6 +53,7 @@ function Plugins() {
   // Search state
   const [search, setSearch] = useState('');
   const [activeDropdownId, setActiveDropdownId] = useState(null);
+  const [actionMap, setActionMap] = useState({});
 
   // Modals & Refs
   const deleteModalRef = useRef();
@@ -75,8 +76,18 @@ function Plugins() {
       switch (data.type) {
         case 'PLUGIN_INSTALLED':
         case 'PLUGIN_UPDATED':
+        case 'PLUGIN_UNINSTALLED': {
           dispatch(fetchPlugins());
+          if (data.pluginId) {
+            setActionMap(prev => {
+              if (!(data.pluginId in prev)) return prev;
+              const next = { ...prev };
+              delete next[data.pluginId];
+              return next;
+            });
+          }
           break;
+        }
         case 'PLUGIN_TAMPERED': {
           dispatch(fetchPlugins());
           dispatch(
@@ -89,8 +100,6 @@ function Plugins() {
           );
           break;
         }
-        // PLUGIN_ACTIVATED, PLUGIN_DEACTIVATED, PLUGIN_UNINSTALLED
-        // — handled by Redux reducers, no re-fetch needed
         default:
           break;
       }
@@ -116,15 +125,27 @@ function Plugins() {
 
   const handleDeleteAction = useCallback(
     async item => {
-      await dispatch(uninstallPlugin(item.id)).unwrap();
-      dispatch(
-        showSuccessMessage({
-          message: t(
-            'admin:plugins.uninstallSuccess',
-            'Plugin uninstalled successfully.',
-          ),
-        }),
-      );
+      setActionMap(prev => ({
+        ...prev,
+        [item.id]: t('admin:common.uninstalling', 'Uninstalling...'),
+      }));
+      try {
+        await dispatch(uninstallPlugin(item.id)).unwrap();
+        dispatch(
+          showSuccessMessage({
+            message: t(
+              'admin:plugins.uninstallSuccess',
+              'Plugin uninstalled successfully.',
+            ),
+          }),
+        );
+      } finally {
+        setActionMap(prev => {
+          const next = { ...prev };
+          delete next[item.id];
+          return next;
+        });
+      }
     },
     [dispatch, t],
   );
@@ -136,17 +157,29 @@ function Plugins() {
 
   const handleActivateAction = useCallback(
     async item => {
-      await dispatch(
-        togglePluginStatus({ id: item.id, isActive: true }),
-      ).unwrap();
-      dispatch(
-        showSuccessMessage({
-          message: t(
-            'admin:plugins.activateSuccess',
-            'Plugin activated successfully.',
-          ),
-        }),
-      );
+      setActionMap(prev => ({
+        ...prev,
+        [item.id]: t('admin:common.activating', 'Activating...'),
+      }));
+      try {
+        await dispatch(
+          togglePluginStatus({ id: item.id, isActive: true }),
+        ).unwrap();
+        dispatch(
+          showSuccessMessage({
+            message: t(
+              'admin:plugins.activateSuccess',
+              'Plugin activated successfully.',
+            ),
+          }),
+        );
+      } finally {
+        setActionMap(prev => {
+          const next = { ...prev };
+          delete next[item.id];
+          return next;
+        });
+      }
     },
     [dispatch, t],
   );
@@ -158,17 +191,29 @@ function Plugins() {
 
   const handleDeactivateAction = useCallback(
     async item => {
-      await dispatch(
-        togglePluginStatus({ id: item.id, isActive: false }),
-      ).unwrap();
-      dispatch(
-        showSuccessMessage({
-          message: t(
-            'admin:plugins.deactivateSuccess',
-            'Plugin deactivated successfully.',
-          ),
-        }),
-      );
+      setActionMap(prev => ({
+        ...prev,
+        [item.id]: t('admin:common.deactivating', 'Deactivating...'),
+      }));
+      try {
+        await dispatch(
+          togglePluginStatus({ id: item.id, isActive: false }),
+        ).unwrap();
+        dispatch(
+          showSuccessMessage({
+            message: t(
+              'admin:plugins.deactivateSuccess',
+              'Plugin deactivated successfully.',
+            ),
+          }),
+        );
+      } finally {
+        setActionMap(prev => {
+          const next = { ...prev };
+          delete next[item.id];
+          return next;
+        });
+      }
     },
     [dispatch, t],
   );
@@ -283,6 +328,7 @@ function Plugins() {
           <PluginCard
             key={plugin.id}
             plugin={plugin}
+            actionLabel={actionMap[plugin.id]}
             activeDropdownId={activeDropdownId}
             onToggleDropdown={handleToggleDropdown}
             onActivate={handleActivate}
@@ -319,7 +365,6 @@ function Plugins() {
         }
         onConfirm={handleActivateAction}
         confirmLabel={t('admin:common.activate', 'Activate')}
-        confirmingLabel={t('admin:common.activating', 'Activating...')}
       />
 
       {/* Deactivate confirmation */}
@@ -335,7 +380,6 @@ function Plugins() {
         }
         onConfirm={handleDeactivateAction}
         confirmLabel={t('admin:common.deactivate', 'Deactivate')}
-        confirmingLabel={t('admin:common.deactivating', 'Deactivating...')}
       />
 
       {/* Install confirmation */}
@@ -352,7 +396,6 @@ function Plugins() {
         onConfirm={handleInstallAction}
         onSuccess={handleInstallCancel}
         confirmLabel={t('admin:plugins.installButton', 'Install')}
-        confirmingLabel={t('admin:plugins.installing', 'Installing...')}
       />
     </div>
   );

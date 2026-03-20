@@ -157,29 +157,38 @@ export async function managePlugins({ pluginManager, models, cwd, queue }) {
       typeof queueChannel.queue.getJobs === 'function'
     ) {
       const allJobs = await queueChannel.queue.getJobs();
-      const busyJobs = allJobs.filter(
-        j =>
-          ['pending', 'active', 'delayed'].includes(j.status) &&
-          j.name !== 'toggle',
+      const busyJobs = allJobs.filter(j =>
+        ['pending', 'active', 'delayed'].includes(j.status),
       );
-      const busyPluginIds = new Set();
-      const busyPluginKeys = new Set();
+
+      // Map pluginId/pluginKey → specific job_status
+      const statusByPluginId = new Map();
+      const statusByPluginKey = new Map();
 
       for (const job of busyJobs) {
-        if (job.data.pluginId) busyPluginIds.add(job.data.pluginId);
-        if (job.data.pluginKey) busyPluginKeys.add(job.data.pluginKey);
-        // Special case for install which might only have pluginDir/pluginName before DB is known
+        let status;
+        if (job.name === 'toggle') {
+          status = job.data.isActive ? 'ACTIVATING' : 'DEACTIVATING';
+        } else if (job.name === 'delete') {
+          status = 'UNINSTALLING';
+        } else {
+          status = 'INSTALLING';
+        }
+
+        if (job.data.pluginId) statusByPluginId.set(job.data.pluginId, status);
+        if (job.data.pluginKey)
+          statusByPluginKey.set(job.data.pluginKey, status);
         if (job.data.pluginDir)
-          busyPluginKeys.add(path.basename(job.data.pluginDir));
+          statusByPluginKey.set(path.basename(job.data.pluginDir), status);
       }
 
       for (const p of plugins) {
-        if (
-          busyPluginIds.has(p.id) ||
-          busyPluginKeys.has(p.key) ||
-          busyPluginKeys.has(p.name)
-        ) {
-          p.job_status = 'ACTIVE';
+        const status =
+          statusByPluginId.get(p.id) ||
+          statusByPluginKey.get(p.key) ||
+          statusByPluginKey.get(p.name);
+        if (status) {
+          p.job_status = status;
         }
       }
     }
