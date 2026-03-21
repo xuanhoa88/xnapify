@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Test extension",
+  "description": "Extended profile fields, validation, and IPC handlers",
   "rsk": {
     "subscribe": [
       "/profile"

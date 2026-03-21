@@ -1,5 +1,6 @@
 {
   "name": "@rsk-extension/search-indexer",
   "version": "1.0.0",
-  "main": "api.js"
+  "main": "api.js",
+  "description": "Search indexing hooks for custom entities"
 }
