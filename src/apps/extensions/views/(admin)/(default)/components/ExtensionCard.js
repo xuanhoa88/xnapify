@@ -20,7 +20,7 @@ import ExtensionActionsDropdown from './ExtensionActionsDropdown';
 import s from './ExtensionCard.css';
 
 function ExtensionCard({
-  plugin,
+  extension,
   actionLabel,
   activeDropdownId,
   onToggleDropdown,
@@ -41,27 +41,27 @@ function ExtensionCard({
   };
 
   // Skeleton loading only for install/upgrade background jobs
-  const isLoading = isLocalLoading || plugin.job_status === 'INSTALLING';
+  const isLoading = isLocalLoading || extension.job_status === 'INSTALLING';
   // Client-side actionLabel takes priority; fall back to server job_status
   const resolvedActionLabel =
-    actionLabel || JOB_STATUS_LABELS[plugin.job_status] || null;
+    actionLabel || JOB_STATUS_LABELS[extension.job_status] || null;
   const isActionPending = Boolean(resolvedActionLabel);
 
   // Reset local loading when the server confirms the job is done
   useEffect(() => {
-    if (isLocalLoading && !plugin.job_status) {
+    if (isLocalLoading && !extension.job_status) {
       setLocalLoading(false);
     }
-  }, [isLocalLoading, plugin.job_status]);
+  }, [isLocalLoading, extension.job_status]);
 
   const handleToggleStatus = useCallback(() => {
     if (!canUpdate || isLoading) return;
-    if (plugin.is_active) {
-      onDeactivate(plugin);
+    if (extension.is_active) {
+      onDeactivate(extension);
     } else {
-      onActivate(plugin);
+      onActivate(extension);
     }
-  }, [canUpdate, isLoading, plugin, onActivate, onDeactivate]);
+  }, [canUpdate, isLoading, extension, onActivate, onDeactivate]);
 
   return (
     <Card
@@ -86,15 +86,15 @@ function ExtensionCard({
                   </Tag>
                 ) : (
                   <Tag
-                    variant={plugin.is_active ? 'success' : 'neutral'}
+                    variant={extension.is_active ? 'success' : 'neutral'}
                     {...(canUpdate && {
-                      title: plugin.is_active
+                      title: extension.is_active
                         ? t('admin:common.deactivate', 'Deactivate')
                         : t('admin:common.activate', 'Activate'),
                       onClick: handleToggleStatus,
                     })}
                   >
-                    {plugin.is_active
+                    {extension.is_active
                       ? t('admin:common.active', 'Active')
                       : t('admin:common.inactive', 'Inactive')}
                   </Tag>
@@ -103,8 +103,8 @@ function ExtensionCard({
             )}
             {!isLoading && (
               <ExtensionActionsDropdown
-                plugin={plugin}
-                isOpen={activeDropdownId === plugin.id}
+                extension={extension}
+                isOpen={activeDropdownId === extension.id}
                 onToggle={onToggleDropdown}
                 onUpgrade={onUpgrade}
                 onDelete={onDelete}
@@ -137,14 +137,14 @@ function ExtensionCard({
             <p className={s.description}>
               {extension.description ||
                 t(
-                  'admin:plugins.noDescriptionAvailable',
+                  'admin:extensions.noDescriptionAvailable',
                   'No description available',
                 )}
             </p>
-            {plugin.options &&
-            (plugin.options.author || plugin.options.repository) ? (
+            {extension.options &&
+            (extension.options.author || extension.options.repository) ? (
               <div className={s.metaGroup}>
-                {plugin.options.author && (
+                {extension.options.author && (
                   <span className={s.metaItem} title='Author'>
                     <svg
                       className={s.metaIcon}
@@ -158,12 +158,12 @@ function ExtensionCard({
                       <path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' />
                       <circle cx='12' cy='7' r='4' />
                     </svg>
-                    {plugin.options.author}
+                    {extension.options.author}
                   </span>
                 )}
-                {plugin.options.repository && (
+                {extension.options.repository && (
                   <a
-                    href={plugin.options.repository}
+                    href={extension.options.repository}
                     target='_blank'
                     rel='noopener noreferrer'
                     className={clsx(s.metaItem, s.metaLink)}
@@ -184,7 +184,7 @@ function ExtensionCard({
 }
 
 ExtensionCard.propTypes = {
-  plugin: PropTypes.shape({
+  extension: PropTypes.shape({
     id: PropTypes.string.isRequired,
     name: PropTypes.string,
     description: PropTypes.string,

@@ -15,8 +15,8 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   ExtensionSlot,
   useExtensionHooks,
-  usePluginValidator,
-  usePluginFormData,
+  useExtensionValidator,
+  useExtensionFormData,
 } from '@shared/extension/client';
 import Button from '@shared/renderer/components/Button';
 import Form, { useFormContext } from '@shared/renderer/components/Form';
@@ -43,10 +43,10 @@ function PersonalInfoCard() {
   const user = useSelector(getUserProfile);
   const loading = useSelector(isProfileLoading);
   const error = useSelector(getProfileError);
-  const pluginHooks = useExtensionHooks();
+  const extensionHooks = useExtensionHooks();
 
-  // Fetch defaults from plugins
-  const [pluginDefaultValues, loadingDefaultValues] = usePluginFormData(
+  // Fetch defaults from extensions
+  const [extensionDefaultValues, loadingDefaultValues] = useExtensionFormData(
     'profile.personal_info.formData',
     user,
   );
@@ -57,8 +57,8 @@ function PersonalInfoCard() {
     [i18n],
   );
 
-  // Extend schema with plugins
-  const [extendedValidator, loadingValidator] = usePluginValidator(
+  // Extend schema with extensions
+  const [extendedValidator, loadingValidator] = useExtensionValidator(
     'profile.personal_info.validator',
     baseSchema,
     z,
@@ -76,8 +76,8 @@ function PersonalInfoCard() {
 
   // Derive default values from user (memoized to prevent unnecessary re-renders)
   const defaultValues = useMemo(
-    () => merge({}, user, pluginDefaultValues),
-    [user, pluginDefaultValues],
+    () => merge({}, user, extensionDefaultValues),
+    [user, extensionDefaultValues],
   );
 
   // Handle form submit - Form component provides methods via callback
@@ -86,8 +86,8 @@ function PersonalInfoCard() {
       try {
         await dispatch(updateUserProfile(data)).unwrap();
 
-        // Execute plugin hooks
-        await pluginHooks.execute('profile.personal_info.submit', data, {
+        // Execute extension hooks
+        await extensionHooks.execute('profile.personal_info.submit', data, {
           dispatch,
           user,
         });
@@ -104,7 +104,7 @@ function PersonalInfoCard() {
         // Error is handled by Redux state
       }
     },
-    [dispatch, t, pluginHooks, user],
+    [dispatch, t, extensionHooks, user],
   );
 
   if (loadingDefaultValues || loadingValidator) {
@@ -216,7 +216,7 @@ function PersonalInfoFormFields({ loading }) {
         />
       </Form.Field>
 
-      {/* Render plugin slots */}
+      {/* Render extension slots */}
       <ExtensionSlot
         name='profile.personal_info.fields'
         register={register}

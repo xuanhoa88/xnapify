@@ -14,13 +14,13 @@ export * from './selector';
 // Public API - Actions (from slice)
 export {
   // Per-operation error clear actions
-  clearPluginListError,
-  clearPluginUploadError,
-  clearPluginUpgradeError,
-  clearPluginToggleError,
-  clearPluginUninstallError,
+  clearExtensionListError,
+  clearExtensionUploadError,
+  clearExtensionUpgradeError,
+  clearExtensionToggleError,
+  clearExtensionUninstallError,
   // Utility actions
-  resetPluginsState,
+  resetExtensionsState,
   // Slice name constant
   SLICE_NAME,
 } from './slice';

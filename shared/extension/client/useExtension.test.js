@@ -15,8 +15,8 @@ import { registry } from '../utils/Registry';
 
 import {
   useExtensionHooks,
-  usePluginValidator,
-  usePluginFormData,
+  useExtensionValidator,
+  useExtensionFormData,
 } from './useExtension';
 
 // Mock Registry
@@ -26,7 +26,7 @@ jest.mock('../utils/Registry', () => ({
   },
 }));
 
-describe('usePlugin', () => {
+describe('useExtension', () => {
   let comp;
 
   beforeEach(() => {
@@ -66,7 +66,7 @@ describe('usePlugin', () => {
     });
   });
 
-  describe('usePluginValidator', () => {
+  describe('useExtensionValidator', () => {
     it('should execute hook and extend schema sequentially', async () => {
       registry.executeHook.mockResolvedValue([
         { first: true },
@@ -79,7 +79,7 @@ describe('usePlugin', () => {
       const Dummy = () => {
         const baseSchema = useMemo(() => ({ base: true }), []);
         const validator = useMemo(() => ({ validator: 'zod' }), []);
-        const [schema, loading] = usePluginValidator(
+        const [schema, loading] = useExtensionValidator(
           'test.validator',
           baseSchema,
           validator,
@@ -105,7 +105,7 @@ describe('usePlugin', () => {
 
       const Dummy = () => {
         const baseSchema = useMemo(() => ({ base: true }), []);
-        const [schema, loading] = usePluginValidator(
+        const [schema, loading] = useExtensionValidator(
           'test.error',
           baseSchema,
           'dummy-validator',
@@ -125,8 +125,8 @@ describe('usePlugin', () => {
     });
   });
 
-  describe('usePluginFormData', () => {
-    it('should aggregate form data from multiple plugins', async () => {
+  describe('useExtensionFormData', () => {
+    it('should aggregate form data from multiple extensions', async () => {
       registry.executeHook.mockResolvedValue([
         { field1: 'value1' },
         { field2: 'value2' },
@@ -137,7 +137,7 @@ describe('usePlugin', () => {
 
       const Dummy = () => {
         const context = useMemo(() => ({ user: '1' }), []);
-        const [data, loading] = usePluginFormData('test.form', context);
+        const [data, loading] = useExtensionFormData('test.form', context);
         resultData = data;
         isLoading = loading;
         return null;
@@ -154,7 +154,7 @@ describe('usePlugin', () => {
     it('returns empty when no context provided', async () => {
       let isLoading;
       const Dummy = () => {
-        const [, loading] = usePluginFormData('test.no-ctx', null);
+        const [, loading] = useExtensionFormData('test.no-ctx', null);
         isLoading = loading;
         return null;
       };

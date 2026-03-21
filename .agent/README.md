@@ -45,7 +45,7 @@ Skills dictate HOW the AI behaves during complex tasks (e.g., refactoring or cod
 
 **Available Skills include:**
 - **`code-reviewer`:** Instructs the AI on exact Architectural violations. If a developer bypasses the dependency injection `container` to write a static import between two separate domains, the `code-reviewer` skill empowers the AI to flag it and suggest a Hook/Pipeline fix.
-- **`module-developer` / `extension-developer`:** Trains the AI on the explicit differences between a core application module (which changes the database via `.migrations()`) and a plugin (which extends logic securely via slots and hooks).
+- **`module-developer` / `extension-developer`:** Trains the AI on the explicit differences between a core application module (which changes the database via `.migrations()`) and an extension (which extends logic securely via slots and hooks).
 - **`test-and-benchmark` / `worker-engineer`:** Specialized instruction on Node.js clustering and Jest timing protocols.
 
 ---

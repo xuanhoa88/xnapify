@@ -38,7 +38,7 @@ When calling `browser_subagent`, your `Task` prompt must include:
 
 | Field | Description |
 |-------|-------------|
-| **URL** | Full URL with correct port, e.g. `http://localhost:1337/admin/plugins` |
+| **URL** | Full URL with correct port, e.g. `http://localhost:1337/admin/extensions` |
 | **Steps** | Numbered, specific actions (click X, wait for Y, verify Z) |
 | **Return condition** | What to report back (screenshot, text content, pass/fail) |
 | **Recording name** | Descriptive snake_case, max 3 words |
@@ -64,9 +64,9 @@ Return: Describe what you observed — did [expected behavior] occur? Include an
 ### 1. Visual Verification (CSS / Animation)
 
 ```
-Navigate to http://localhost:{PORT}/admin/plugins.
-1. Wait for plugin cards to load.
-2. Click the action menu on any plugin card.
+Navigate to http://localhost:{PORT}/admin/extensions.
+1. Wait for extension cards to load.
+2. Click the action menu on any extension card.
 3. Click "Activate" to open the confirm modal.
 4. Click the "Activate" confirm button.
 5. IMMEDIATELY observe the button text — it should change to "Activating..." with a shimmer animation.
@@ -132,7 +132,7 @@ Use descriptive `snake_case` names, max 3 words:
 | Form submission | `form_submit_flow` |
 | Navigation check | `nav_routing_test` |
 | Error handling | `error_state_check` |
-| Plugin actions | `plugin_action_test` |
+| Extension actions | `extension_action_test` |
 
 ---
 

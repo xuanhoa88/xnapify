@@ -8,7 +8,7 @@
 
 ## Objective
 
-Provide a managed cron scheduling layer that modules and plugins can use to register, monitor, and control recurring background tasks with automatic lifecycle management and graceful shutdown.
+Provide a managed cron scheduling layer that modules and extensions can use to register, monitor, and control recurring background tasks with automatic lifecycle management and graceful shutdown.
 
 ## 1. Architecture
 
@@ -203,7 +203,7 @@ Tests instantiate `ScheduleManager` directly with `{ autoStart: false }` to avoi
 
 - **Module `init(container)`**: Primary registration point. Access via `container.resolve('schedule')`.
 - **Worker Engine**: Cron handlers can dispatch heavy work to worker pools (keep handlers lightweight, offload to `workerPool.sendRequest()`).
-- **Plugin lifecycle**: Plugins can create isolated instances via `createFactory()` and manage their own teardown.
+- **Extension lifecycle**: Extensions can create isolated instances via `createFactory()` and manage their own teardown.
 
 ---
 

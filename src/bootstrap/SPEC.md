@@ -102,7 +102,7 @@ Discovers `src/apps/*/api/index.js` files. Each module goes through the lifecycl
 
 | Option      | Description                                |
 | ----------- | ------------------------------------------ |
-| `plugin`    | Extension manager instance (client or server) |
+| `extension` | Extension manager instance (client or server) |
 | `container` | DI container instance                      |
 
 ### Module Discovery
@@ -126,11 +126,11 @@ Overrides `resolve(context)` to handle metadata:
 | Feature          | Description                                                                |
 | ---------------- | -------------------------------------------------------------------------- |
 | `errorHandler`   | In `__DEV__`: throws non-403 errors. In prod: redirects to `/error` route. |
-| `onRouteInit`    | Loads plugin namespace for the route (if not already loaded).              |
-| `onRouteDestroy` | Unloads plugin namespace for the route.                                    |
+| `onRouteInit`    | Loads extension namespace for the route (if not already loaded).              |
+| `onRouteDestroy` | Unloads extension namespace for the route.                                    |
 | Catch-all        | `/*path` → redirects to `/not-found` route.                                |
 
-Plugin namespace is derived from: `route.workspace` → `route.module.workspace` → `route.path`.
+Extension namespace is derived from: `route.workspace` → `route.module.workspace` → `route.path`.
 
 ## 4. CORS Middleware (`api/middlewares/cors.js`)
 

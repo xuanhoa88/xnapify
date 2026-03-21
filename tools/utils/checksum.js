@@ -10,7 +10,7 @@ const { hashElement } = require('folder-hash');
 /**
  * Default options for folder hashing.
  * Excludes volatile / non-source files so the checksum
- * only changes when the actual plugin code changes.
+ * only changes when the actual extension code changes.
  */
 const DEFAULT_OPTIONS = {
   algo: 'sha256',
@@ -24,13 +24,13 @@ const DEFAULT_OPTIONS = {
 };
 
 /**
- * Compute a SHA-256 checksum of a plugin directory.
+ * Compute a SHA-256 checksum of an extension directory.
  *
  * Uses the `folder-hash` package for recursive, deterministic hashing.
  * The returned hash changes if any tracked source file inside `dir` is
  * added, removed, renamed, or modified.
  *
- * @param {string} dir - Absolute path to the plugin directory
+ * @param {string} dir - Absolute path to the extension directory
  * @param {Object} [options] - Override default hash options
  * @returns {Promise<string>} Hex-encoded SHA-256 hash
  */

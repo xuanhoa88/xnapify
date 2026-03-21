@@ -426,7 +426,7 @@ export async function runUnmount(route, ctx) {
       }
     }
 
-    // Auto-uninstall plugins via router options callback
+    // Auto-uninstall extensions via router options callback
     if (
       // eslint-disable-next-line no-underscore-dangle
       ctx._instance &&

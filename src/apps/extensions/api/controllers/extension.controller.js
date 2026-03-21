@@ -10,22 +10,22 @@ import express from 'express';
 import { validateForm, z } from '@shared/validator';
 
 import {
-  pluginStatusSchema,
-  pluginUpgradeSchema,
+  extensionStatusSchema,
+  extensionUpgradeSchema,
 } from '../../validator/extension';
 import * as extensionService from '../services/extension.service';
 
 // ========================================================================
-// PLUGIN CONTROLLERS
+// EXTENSION CONTROLLERS
 // ========================================================================
 
 /**
- * List all available plugins
+ * List all available extensions
  *
  * @route   GET /api/extensions
  * @access  Public (Cached)
  */
-export const listPlugins = async (req, res) => {
+export const listExtensions = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
   try {
@@ -36,18 +36,18 @@ export const listPlugins = async (req, res) => {
       cwd: container.resolve('cwd'),
       actorId: req.user && req.user.id,
     });
-    return http.sendSuccess(res, { plugins });
+    return http.sendSuccess(res, { extensions });
   } catch (err) {
-    return http.sendServerError(res, 'Failed to list plugins', err);
+    return http.sendServerError(res, 'Failed to list extensions', err);
   }
 };
 
 /**
- * Get plugin details
+ * Get extension details
  *
  * @route   GET /api/extensions/:id
  */
-export const getPlugin = async (req, res) => {
+export const getExtension = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
   try {
@@ -66,7 +66,7 @@ export const getPlugin = async (req, res) => {
       const ws = container.resolve('ws');
       if (ws) {
         ws.sendToPublicChannel('extension:updated', {
-          type: 'PLUGIN_TAMPERED',
+          type: 'EXTENSION_TAMPERED',
           extensionId: req.params.id,
         });
       }
@@ -77,14 +77,14 @@ export const getPlugin = async (req, res) => {
     if (err.status === 404) {
       return http.sendError(res, err.message, 404);
     }
-    return http.sendServerError(res, 'Failed to get plugin details', err);
+    return http.sendServerError(res, 'Failed to get extension details', err);
   }
 };
 
 /**
- * Serve plugin static files
+ * Serve extension static files
  */
-export const servePluginStatic = async (req, res, next) => {
+export const serveExtensionStatic = async (req, res, next) => {
   const container = req.app.get('container');
   const staticDir = await extensionService.getExtensionStaticDir(
     {
@@ -96,7 +96,7 @@ export const servePluginStatic = async (req, res, next) => {
   );
   if (!staticDir) {
     const http = container.resolve('http');
-    return http.sendError(res, 'Invalid Plugin ID', 400);
+    return http.sendError(res, 'Invalid Extension ID', 400);
   }
 
   // Use the catch-all :path* param from [id]/static/[...path]/_route.js
@@ -110,9 +110,9 @@ export const servePluginStatic = async (req, res, next) => {
 };
 
 /**
- * List all plugins (Admin) - Including inactive/missing
+ * List all extensions (Admin) - Including inactive/missing
  *
- * @route   GET /api/admin/plugins
+ * @route   GET /api/admin/extensions
  * @access  Admin
  */
 export const manageExtensions = async (req, res) => {
@@ -126,9 +126,9 @@ export const manageExtensions = async (req, res) => {
       actorId: req.user && req.user.id,
       queue: container.resolve('queue'),
     });
-    return http.sendSuccess(res, { plugins });
+    return http.sendSuccess(res, { extensions });
   } catch (err) {
-    return http.sendServerError(res, 'Failed to manage plugins', err);
+    return http.sendServerError(res, 'Failed to manage extensions', err);
   }
 };
 
@@ -137,7 +137,7 @@ export const manageExtensions = async (req, res) => {
 // ========================================================================
 
 /**
- * Delete Plugin (Admin)
+ * Delete Extension (Admin)
  */
 export const deleteExtension = async (req, res) => {
   const container = req.app.get('container');
@@ -156,13 +156,13 @@ export const deleteExtension = async (req, res) => {
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
-      type: 'PLUGIN_UNINSTALLED',
+      type: 'EXTENSION_UNINSTALLED',
       extensionId: id,
     });
 
-    return http.sendSuccess(res, { message: 'Plugin deleted' });
+    return http.sendSuccess(res, { message: 'Extension deleted' });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to delete plugin', error);
+    return http.sendServerError(res, 'Failed to delete extension', error);
   }
 };
 
@@ -171,8 +171,8 @@ export const deleteExtension = async (req, res) => {
 // ========================================================================
 
 /**
- * Upload Plugin (Admin)
- * Route: POST /api/admin/plugins/upload
+ * Upload Extension (Admin)
+ * Route: POST /api/admin/extensions/upload
  */
 export const uploadExtension = async (req, res) => {
   const container = req.app.get('container');
@@ -193,7 +193,7 @@ export const uploadExtension = async (req, res) => {
     }
 
     const models = container.resolve('models');
-    const plugin = await extensionService.installExtensionFromPackage(file, {
+    const extension = await extensionService.installExtensionFromPackage(file, {
       extensionManager: container.resolve('extension'),
       models,
       cache: container.resolve('cache'),
@@ -205,43 +205,45 @@ export const uploadExtension = async (req, res) => {
 
     // Convert to plain object and inject active job status for immediate frontend feedback
     const extensionData = {
-      ...(typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin),
+      ...(typeof extension.toJSON === 'function'
+        ? extension.toJSON()
+        : extension),
       job_status: 'INSTALLING',
     };
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
-      type: 'PLUGIN_INSTALLED',
+      type: 'EXTENSION_INSTALLED',
       extensionId: extensionData.id,
       data: { manifest: extensionData },
     });
 
     return http.sendSuccess(
       res,
-      { plugin: extensionData, message: 'Plugin installed successfully' },
+      { extension: extensionData, message: 'Extension installed successfully' },
       201,
     );
   } catch (error) {
-    return http.sendServerError(res, 'Failed to upload plugin', error);
+    return http.sendServerError(res, 'Failed to upload extension', error);
   }
 };
 
 /**
- * Update Plugin Status (Admin)
- * Route: PATCH /api/admin/plugins/:id/status
+ * Update Extension Status (Admin)
+ * Route: PATCH /api/admin/extensions/:id/status
  */
-export const updatePluginStatus = async (req, res) => {
+export const updateExtensionStatus = async (req, res) => {
   const container = req.app.get('container');
   const http = container.resolve('http');
   try {
     const { id } = req.params;
     const i18n = container.resolve('i18n');
-    const schema = pluginStatusSchema({ i18n, z });
+    const schema = extensionStatusSchema({ i18n, z });
     const [isValid, result] = validateForm(() => schema, req.body);
     if (!isValid) return http.sendValidationError(res, result);
 
     const models = container.resolve('models');
-    const plugin = await extensionService.toggleExtensionStatus(
+    const extension = await extensionService.toggleExtensionStatus(
       id,
       result.is_active,
       {
@@ -256,24 +258,28 @@ export const updatePluginStatus = async (req, res) => {
 
     // Convert to plain object (toggle is synchronous — no background job)
     const extensionData =
-      typeof plugin.toJSON === 'function' ? plugin.toJSON() : plugin;
+      typeof extension.toJSON === 'function' ? extension.toJSON() : extension;
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
-      type: result.is_active ? 'PLUGIN_ACTIVATED' : 'PLUGIN_DEACTIVATED',
+      type: result.is_active ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
       extensionId: id,
       data: { manifest: extensionData },
     });
 
-    return http.sendSuccess(res, { plugin: extensionData });
+    return http.sendSuccess(res, { extension: extensionData });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to update plugin status', error);
+    return http.sendServerError(
+      res,
+      'Failed to update extension status',
+      error,
+    );
   }
 };
 
 /**
- * Upgrade Plugin (Admin)
- * Route: PATCH /api/admin/plugins/:id
+ * Upgrade Extension (Admin)
+ * Route: PATCH /api/admin/extensions/:id
  */
 export const upgradeExtension = async (req, res) => {
   const container = req.app.get('container');
@@ -281,12 +287,12 @@ export const upgradeExtension = async (req, res) => {
   try {
     const { id } = req.params;
     const i18n = container.resolve('i18n');
-    const schema = pluginUpgradeSchema({ i18n, z });
+    const schema = extensionUpgradeSchema({ i18n, z });
     const [isValid, result] = validateForm(() => schema, req.body);
     if (!isValid) return http.sendValidationError(res, result);
 
     const models = container.resolve('models');
-    const plugin = await extensionService.upgradeExtension(id, result, {
+    const extension = await extensionService.upgradeExtension(id, result, {
       models,
       cache: container.resolve('cache'),
       actorId: req.user && req.user.id,
@@ -294,13 +300,13 @@ export const upgradeExtension = async (req, res) => {
 
     const ws = container.resolve('ws');
     ws.sendToPublicChannel('extension:updated', {
-      type: 'PLUGIN_UPDATED',
+      type: 'EXTENSION_UPDATED',
       extensionId: id,
     });
 
-    return http.sendSuccess(res, { plugin });
+    return http.sendSuccess(res, { extension });
   } catch (error) {
-    return http.sendServerError(res, 'Failed to upgrade plugin', error);
+    return http.sendServerError(res, 'Failed to upgrade extension', error);
   }
 };
 
@@ -309,10 +315,10 @@ export const upgradeExtension = async (req, res) => {
 // ========================================================================
 
 /**
- * Handle Plugin IPC
+ * Handle Extension IPC
  *
- * Centralized gateway for plugin inter-process communication.
- * Plugins register IPC handlers via registry.registerHook('ipc:<extensionId>:<action>', handler).
+ * Centralized gateway for extension inter-process communication.
+ * Extensions register IPC handlers via registry.registerHook('ipc:<extensionId>:<action>', handler).
  * The gateway validates the request, executes the hook, and returns the result.
  *
  * @route   POST /api/extensions/:id/ipc
@@ -336,21 +342,21 @@ export const handleIPC = async (req, res) => {
 
     // Build the hook ID: ipc:<extensionId>:<action>
     const hookId = `ipc:${id}:${action}`;
-    const { registry: pluginRegistry } = req.app
+    const { registry: extensionRegistry } = req.app
       .get('container')
       .resolve('extension');
 
     // Check if any handler is registered before executing
-    if (!pluginRegistry.hasHook(hookId)) {
+    if (!extensionRegistry.hasHook(hookId)) {
       return http.sendError(
         res,
-        `No IPC handler registered for action "${action}" on plugin "${id}"`,
+        `No IPC handler registered for action "${action}" on extension "${id}"`,
         404,
       );
     }
 
     // Execute the IPC hook (in parallel for maximum throughput)
-    const results = await pluginRegistry.executeHookParallel(hookId, data, {
+    const results = await extensionRegistry.executeHookParallel(hookId, data, {
       req,
       res,
     });
@@ -358,6 +364,6 @@ export const handleIPC = async (req, res) => {
     // Return the first handler's result (single handler per action is expected)
     return http.sendSuccess(res, results[0] || null);
   } catch (error) {
-    return http.sendServerError(res, 'Plugin IPC failed', error);
+    return http.sendServerError(res, 'Extension IPC failed', error);
   }
 };

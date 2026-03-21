@@ -1,8 +1,8 @@
 ---
-description: Modify, upgrade, or maintain existing features, modules, or plugins with mandatory test verification
+description: Modify, upgrade, or maintain existing features, modules, or extensions with mandatory test verification
 ---
 
-When modifying, upgrading, refactoring, or maintaining existing code (features, modules, plugins, shared libraries), follow this workflow to ensure nothing breaks.
+When modifying, upgrading, refactoring, or maintaining existing code (features, modules, extensions, shared libraries), follow this workflow to ensure nothing breaks.
 
 ## 1. Assess Impact
 

@@ -35,7 +35,7 @@ describe('ServerExtensionManager', () => {
     serverManager[INITIALIZED] = false;
 
     mockContext = {
-      fetch: jest.fn().mockResolvedValue({ data: { plugins: [] } }),
+      fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),
       cwd: '/test/cwd',
     };
 
@@ -53,13 +53,13 @@ describe('ServerExtensionManager', () => {
   });
 
   describe('resolveEntryPoint', () => {
-    it('resolves server.js for browser plugins', () => {
+    it('resolves server.js for browser extensions', () => {
       expect(serverManager.resolveEntryPoint({ browser: 'index.js' })).toBe(
         'server.js',
       );
     });
 
-    it('resolves api.js for main-only plugins', () => {
+    it('resolves api.js for main-only extensions', () => {
       expect(serverManager.resolveEntryPoint({ main: 'api.js' })).toBe(
         'api.js',
       );
@@ -67,14 +67,14 @@ describe('ServerExtensionManager', () => {
   });
 
   describe('loadExtensionModule', () => {
-    it('throws if plugin name is missing', async () => {
+    it('throws if extension name is missing', async () => {
       await expect(
         serverManager.loadExtensionModule('test', 'api.js', {}, {}),
-      ).rejects.toThrow('Plugin name required');
+      ).rejects.toThrow('Extension name required');
     });
 
-    it('loads and boots API plugin', async () => {
-      const manifest = { name: 'test_plugin', id: 'test', main: 'api.js' };
+    it('loads and boots API extension', async () => {
+      const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
 
       const mockApi = {
         init: jest.fn().mockResolvedValue(true),
@@ -99,12 +99,12 @@ describe('ServerExtensionManager', () => {
 
     it('loads View module from server.js', async () => {
       const manifest = {
-        name: 'test_plugin',
+        name: 'test_extension',
         id: 'test',
         browser: 'src/index.js',
       };
 
-      const mockView = { default: { name: 'ViewPlugin' } };
+      const mockView = { default: { name: 'ViewExtension' } };
       jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockView);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
@@ -122,17 +122,17 @@ describe('ServerExtensionManager', () => {
   });
 
   describe('installExtension', () => {
-    it('calls install hook if exported by plugin API', async () => {
+    it('calls install hook if exported by extension API', async () => {
       const mockApi = { install: jest.fn().mockResolvedValue() };
       jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
 
-      const manifest = { name: 'test_plugin', main: 'api.js' };
+      const manifest = { name: 'test_extension', main: 'api.js' };
 
       const result = await serverManager.installExtension(
-        'test_plugin_id',
+        'test_extension_id',
         manifest,
       );
 
@@ -148,10 +148,10 @@ describe('ServerExtensionManager', () => {
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
 
-      const manifest = { name: 'test_plugin', main: 'api.js' };
+      const manifest = { name: 'test_extension', main: 'api.js' };
 
       const result = await serverManager.installExtension(
-        'test_plugin_id',
+        'test_extension_id',
         manifest,
       );
 
@@ -160,10 +160,10 @@ describe('ServerExtensionManager', () => {
     });
 
     it('skips install hook if manifest has no main', async () => {
-      const manifest = { name: 'test_plugin' }; // no "main"
+      const manifest = { name: 'test_extension' }; // no "main"
 
       const result = await serverManager.installExtension(
-        'test_plugin_id',
+        'test_extension_id',
         manifest,
       );
 
@@ -172,17 +172,17 @@ describe('ServerExtensionManager', () => {
   });
 
   describe('uninstallExtension', () => {
-    it('calls uninstall hook if exported by plugin API', async () => {
+    it('calls uninstall hook if exported by extension API', async () => {
       const mockApi = { uninstall: jest.fn().mockResolvedValue() };
       jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
 
-      const manifest = { name: 'test_plugin', main: 'api.js' };
+      const manifest = { name: 'test_extension', main: 'api.js' };
 
       const result = await serverManager.uninstallExtension(
-        'test_plugin_id',
+        'test_extension_id',
         manifest,
       );
 

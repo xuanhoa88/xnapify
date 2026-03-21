@@ -70,16 +70,16 @@ describe('Hook', () => {
     expect(callback).not.toHaveBeenCalled();
   });
 
-  test('clears hooks for a specific plugin', async () => {
+  test('clears hooks for a specific extension', async () => {
     const cb1 = jest.fn();
-    const cb2 = jest.fn(); // Registered by another plugin
-    const cb3 = jest.fn(); // Registered by same plugin but different hook
+    const cb2 = jest.fn(); // Registered by another extension
+    const cb3 = jest.fn(); // Registered by same extension but different hook
 
-    hooks.register('p.hook1', cb1, 'plugin-a');
-    hooks.register('p.hook1', cb2, 'plugin-b');
-    hooks.register('p.hook2', cb3, 'plugin-a');
+    hooks.register('p.hook1', cb1, 'extension-a');
+    hooks.register('p.hook1', cb2, 'extension-b');
+    hooks.register('p.hook2', cb3, 'extension-a');
 
-    hooks.clear('plugin-a');
+    hooks.clear('extension-a');
 
     await hooks.execute('p.hook1');
     await hooks.execute('p.hook2');

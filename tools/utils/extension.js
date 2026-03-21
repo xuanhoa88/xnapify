@@ -8,17 +8,17 @@
 const snakeCase = require('lodash/snakeCase');
 
 /**
- * Convert a plugin key/name to a consistent container name.
+ * Convert an extension key/name to a consistent container name.
  *
  * Used by:
- *  - Webpack plugin config (Module Federation `name`)
- *  - API service (plugin loader response)
+ *  - Webpack extension config (Module Federation `name`)
+ *  - API service (extension loader response)
  *
- * @param {string} key - Plugin key (e.g. "rsk_plugin_test")
- * @returns {string} Container name (e.g. "plugin_rsk_plugin_test")
+ * @param {string} key - Extension key (e.g. "rsk_extension_test")
+ * @returns {string} Container name (e.g. "rsk_extension_test")
  */
 function toContainerName(key) {
-  return `plugin_${snakeCase(key)}`;
+  return `extension_${snakeCase(key)}`;
 }
 
 module.exports = { toContainerName };

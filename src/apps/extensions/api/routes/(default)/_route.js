@@ -7,4 +7,4 @@
 
 import * as extensionController from '../../controllers/extension.controller';
 
-export const get = [extensionController.listPlugins];
+export const get = [extensionController.listExtensions];

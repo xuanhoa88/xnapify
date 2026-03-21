@@ -21,8 +21,8 @@ const mockModuleLoader = {
   files: () => [
     './(default)/api/routes/(default)/_route.js',
     './auth/api/routes/(default)/_route.js',
-    './plugins/api/routes/[id]/_route.js',
-    './plugins/api/routes/_middleware.js',
+    './extensions/api/routes/[id]/_route.js',
+    './extensions/api/routes/_middleware.js',
     './users/api/routes/(admin)/_route.js',
     './users/api/routes/(admin)/(default)/_route.js',
     './users/api/routes/(admin)/_middleware.js',
@@ -40,15 +40,15 @@ const mockModuleLoader = {
         // Handlers must explicitly call res.json() — no auto-formatting
         get: (req, res) => {
           res.json({
-            plugin: req.params.id,
-            hasMiddleware: req.hasPluginMiddleware || false,
+            extension: req.params.id,
+            hasMiddleware: req.hasExtensionMiddleware || false,
           });
         },
       };
     }
     if (path.includes('_middleware')) {
       return (req, res, next) => {
-        req.hasPluginMiddleware = true;
+        req.hasExtensionMiddleware = true;
         next();
       };
     }
@@ -70,9 +70,9 @@ describe('Router Engine', () => {
     const authRoute = rootRoute.children.find(r => r.path === '/auth');
     expect(authRoute).toBeDefined();
 
-    // /plugins/:id should exist
-    const pluginRoute = rootRoute.children.find(r => r.path === '/plugins/:id');
-    expect(pluginRoute).toBeDefined();
+    // /extensions/:id should exist
+    const extensionRoute = rootRoute.children.find(r => r.path === '/extensions/:id');
+    expect(extensionRoute).toBeDefined();
 
     // /admin/users should exist from (admin) route group injection
     const adminRoute = rootRoute.children.find(r => r.path === '/admin/users');
@@ -107,7 +107,7 @@ describe('Router Engine', () => {
 
     const req = {
       method: 'GET',
-      path: '/plugins/my-plugin-id',
+      path: '/extensions/my-extension-id',
       params: {},
     };
 
@@ -119,10 +119,10 @@ describe('Router Engine', () => {
     await resolve(req, res, next);
 
     expect(res.json).toHaveBeenCalledWith({
-      plugin: 'my-plugin-id',
+      extension: 'my-extension-id',
       hasMiddleware: true,
     });
-    expect(req.params.id).toBe('my-plugin-id');
+    expect(req.params.id).toBe('my-extension-id');
   });
 
   it('should execute collocated middlewares sequentially', async () => {
@@ -131,7 +131,7 @@ describe('Router Engine', () => {
 
     const req = {
       method: 'GET',
-      path: '/plugins/my-plugin-id',
+      path: '/extensions/my-extension-id',
       params: {},
     };
 
@@ -142,9 +142,9 @@ describe('Router Engine', () => {
 
     await resolve(req, res, next);
 
-    expect(req.hasPluginMiddleware).toBe(true);
+    expect(req.hasExtensionMiddleware).toBe(true);
     expect(res.json).toHaveBeenCalledWith({
-      plugin: 'my-plugin-id',
+      extension: 'my-extension-id',
       hasMiddleware: true,
     });
   });
@@ -205,18 +205,18 @@ describe('Error Normalization', () => {
   });
 });
 
-describe('Router.add() — Dynamic Plugin Injection', () => {
-  it('should add plugin routes that are reachable', async () => {
+describe('Router.add() — Dynamic Extension Injection', () => {
+  it('should add extension routes that are reachable', async () => {
     const router = new Router(mockModuleLoader);
 
-    const pluginAdapter = {
+    const extensionAdapter = {
       files: () => ['./(default)/api/routes/stats/_route.js'],
       load: () => ({
         get: (req, res) => res.json({ stats: true }),
       }),
     };
 
-    const added = router.add(pluginAdapter);
+    const added = router.add(extensionAdapter);
     expect(added.length).toBeGreaterThan(0);
 
     const req = { method: 'GET', path: '/stats', params: {} };
@@ -230,14 +230,14 @@ describe('Router.add() — Dynamic Plugin Injection', () => {
   it('should merge children into existing parent routes', async () => {
     const router = new Router(mockModuleLoader);
 
-    const pluginAdapter = {
+    const extensionAdapter = {
       files: () => ['./(default)/api/routes/extra/_route.js'],
       load: () => ({
         get: (req, res) => res.json({ extra: true }),
       }),
     };
 
-    router.add(pluginAdapter);
+    router.add(extensionAdapter);
     // Root route should still exist; the new route merges as a child
     const rootRoute = router.routes.find(r => r.path === '/');
     expect(rootRoute).toBeDefined();
@@ -263,18 +263,18 @@ describe('Router.add() — Dynamic Plugin Injection', () => {
   });
 });
 
-describe('Router.remove() — Plugin Route Removal', () => {
+describe('Router.remove() — Extension Route Removal', () => {
   it('should remove routes from a specific adapter', async () => {
     const router = new Router(mockModuleLoader);
 
-    const pluginAdapter = {
+    const extensionAdapter = {
       files: () => ['./(default)/api/routes/removable/_route.js'],
       load: () => ({
         get: (req, res) => res.json({ removable: true }),
       }),
     };
 
-    router.add(pluginAdapter);
+    router.add(extensionAdapter);
 
     // Verify it was added
     let req = { method: 'GET', path: '/removable', params: {} };
@@ -284,7 +284,7 @@ describe('Router.remove() — Plugin Route Removal', () => {
     expect(res.json).toHaveBeenCalledWith({ removable: true });
 
     // Remove it
-    const removed = router.remove(pluginAdapter);
+    const removed = router.remove(extensionAdapter);
     expect(removed).toBe(true);
 
     // Verify it's gone

@@ -19,7 +19,7 @@ function requirePermission(permission) {
 }
 
 export const post = [
-  requirePermission('plugins:create'),
+  requirePermission('extensions:create'),
   (req, res, next) =>
     req.app
       .get('container')

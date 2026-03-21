@@ -478,7 +478,7 @@ export class NodeRedManager {
         this._runtime,
       );
 
-      // Register the flow splitter plugin
+      // Register the flow splitter extension
       this._registerFlowSplitter();
     } catch (error) {
       throw new NodeRedError(
@@ -849,7 +849,7 @@ export class NodeRedManager {
   }
 
   /**
-   * Register the flow splitter plugin
+   * Register the flow splitter extension
    * @private
    */
   _registerFlowSplitter() {
@@ -871,9 +871,9 @@ export class NodeRedManager {
       };
 
       initFlowSplitter(RED);
-      Logger.success('Flow splitter plugin registered');
+      Logger.success('Flow splitter extension registered');
     } catch (err) {
-      Logger.warn('Failed to register flow splitter plugin:', err.message);
+      Logger.warn('Failed to register flow splitter extension:', err.message);
     }
   }
 }

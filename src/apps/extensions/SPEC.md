@@ -1,64 +1,73 @@
-# Plugins Module AI Specification
+# Extensions Module AI Specification
 
-> **Instructions for the AI:** 
-> Read this document to understand the plugin ecosystem and extensibility logic inside `src/apps/extensions`.
+> **Instructions for the AI:**
+> Read this document to understand the extension ecosystem and extensibility logic inside `src/apps/extensions`.
 > This module manages the lifecycle of external extensions that hook into the core system.
 
 ---
 
 ## Objective
-Provide a unified framework for installing, managing, and executing system plugins with isolated runtime environments and IPC capabilities.
+
+Provide a unified framework for installing, managing, and executing system extensions with isolated runtime environments and IPC capabilities.
 
 ## 1. Database Modifications (`api/models`)
-- **Model:** `Plugin`
+
+- **Model:** `Extension`
   - **Properties:**
     - `id`: UUID (Primary Key)
     - `name`: String (Display name)
-    - `key`: String (Unique identifier, e.g., `user-analytics-plugin`)
+    - `key`: String (Unique identifier, e.g., `user-analytics-extension`)
     - `version`: String (SemVer)
     - `status`: Enum (`active`, `inactive`, `error`)
-    - `config`: JSON (Plugin-specific settings)
+    - `config`: JSON (Extension-specific settings)
     - `checksum`: String (For security verification)
 
 ## 2. API Routes & Controllers (`api/`)
-- **Method & Path:** `GET /api/plugins`
-  - **Security:** Requires `plugins:read` permission.
-  - **Logic:** Lists all installed plugins and their current status.
-- **Method & Path:** `POST /api/plugins/upload`
-  - **Security:** Requires `plugins:manage` permission.
-  - **Logic:** Receives plugin bundle (.zip), verifies checksum, and extracts to plugin storage.
-- **Method & Path:** `PATCH /api/plugins/[id]/status`
-  - **Logic:** Enables or disables a plugin, triggering hot-reloading of slots and hooks.
-- **Method & Path:** `POST /api/plugins/[id]/ipc`
-  - **Logic:** Provides an Inter-Process Communication gateway for plugins to interact with the core application services.
-- **Method & Path:** `GET /api/plugins/[id]/static/[...path]`
-  - **Logic:** Serves internal static assets belonging to a specific plugin.
+
+- **Method & Path:** `GET /api/extensions`
+  - **Security:** Requires `extensions:read` permission.
+  - **Logic:** Lists all installed extensions and their current status.
+- **Method & Path:** `POST /api/extensions/upload`
+  - **Security:** Requires `extensions:manage` permission.
+  - **Logic:** Receives extension bundle (.zip), verifies checksum, and extracts to extension storage.
+- **Method & Path:** `PATCH /api/extensions/[id]/status`
+  - **Logic:** Enables or disables an extension, triggering hot-reloading of slots and hooks.
+- **Method & Path:** `POST /api/extensions/[id]/ipc`
+  - **Logic:** Provides an Inter-Process Communication gateway for extensions to interact with the core application services.
+- **Method & Path:** `GET /api/extensions/[id]/static/[...path]`
+  - **Logic:** Serves internal static assets belonging to a specific extension.
 
 ## 3. Frontend SSR Rendering (`views/`)
-- **Admin View:** `/admin/plugins`
-  - **Component:** `PluginManager.js`.
-  - **Logic:** Dashboard for managing the plugin ecosystem, showing active slots, hooks, and allowing status toggles. Includes upload interface for new plugins.
+
+- **Admin View:** `/admin/extensions`
+  - **Component:** `ExtensionManager.js`.
+  - **Logic:** Dashboard for managing the extension ecosystem, showing active slots, hooks, and allowing status toggles. Includes upload interface for new extensions.
 - **Registry:** Interacts with `@shared/extension` to register UI slots and logic hooks at runtime.
 
 ## 4. Localization (`translations/`)
-- **Keys:** `plugins.status.active`, `plugins.actions.install`, `plugins.errors.invalid_checksum`.
-- **Note:** Plugin descriptions and UI labels may come from the plugin's own translation files, which are merged into the global i18next instance.
 
-## 5. Workers & Background Processing (`api/workers/`, `api/services/plugin.workers.js`)
+- **Keys:** `extensions.status.active`, `extensions.actions.install`, `extensions.errors.invalid_checksum`.
+- **Note:** Extension descriptions and UI labels may come from the extension's own translation files, which are merged into the global i18next instance.
+
+## 5. Workers & Background Processing (`api/workers/`, `api/services/extension.workers.js`)
 
 ### Piscina Worker Pool (`api/workers/`)
+
 CPU-bound operations are offloaded to Piscina worker threads via `createWorkerPool`:
+
 - **`checksum.worker.js`**: Stateless worker exporting `COMPUTE_CHECKSUM` and `VERIFY_CHECKSUM` for SHA-256 directory hashing.
 - **`index.js`**: Worker pool setup with `computeChecksum(dir)` and `verifyChecksum(dir, expected)` high-level methods.
 
-### Queue-Based Handlers (`api/services/plugin.workers.js`)
+### Queue-Based Handlers (`api/services/extension.workers.js`)
+
 Stateful operations that need `app` access (models, hooks, extension manager, WebSocket) use the Queue Engine:
-- **`install`**: Runs npm install, computes checksum (via worker pool), reloads plugin, emits hooks.
-- **`delete`**: Unloads plugin, removes files (with path traversal guard), destroys DB record.
-- **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages plugin load state.
+
+- **`install`**: Runs npm install, computes checksum (via worker pool), reloads extension, emits hooks.
+- **`delete`**: Unloads extension, removes files (with path traversal guard), destroys DB record.
+- **`toggle`**: Verifies checksum (via worker pool) before activation, installs/uninstalls deps, manages extension load state.
 
 Handlers are registered in the `init(container)` lifecycle hook and capture `app` via closure.
 
 ---
-*Note: This spec reflects the CURRENT implementation of the extension system.*
 
+_Note: This spec reflects the CURRENT implementation of the extension system._

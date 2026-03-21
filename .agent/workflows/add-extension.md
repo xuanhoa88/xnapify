@@ -1,12 +1,12 @@
 ---
-description: Add a plugin with slots, hooks, and optional API endpoints
+description: Add an extension with slots, hooks, and optional API endpoints
 ---
 
-Add a new plugin with API endpoints, UI components, validation, and database support.
+Add a new extension with API endpoints, UI components, validation, and database support.
 
-## When to Use Plugins
+## When to Use Extensions
 
-Use plugins for:
+Use extensions for:
 
 - Optional features that can be toggled on/off
 - Features that extend existing modules (e.g., profile enhancements)
@@ -14,18 +14,18 @@ Use plugins for:
 - Third-party integrations
 - A/B testing and feature flags
 
-## Plugin Structure
+## Extension Structure
 
 ```
-src/extensions/{plugin-name}/
-├── package.json                # Plugin metadata
+src/extensions/{extension-name}/
+├── package.json                # Extension metadata
 ├── api/
-│   ├── index.js                # Backend plugin definition
+│   ├── index.js                # Backend extension definition
 │   └── database/
 │       ├── migrations/         # Database migrations
 │       └── seeds/              # Database seeds
 ├── views/
-│   ├── index.js                # Frontend plugin definition
+│   ├── index.js                # Frontend extension definition
 │   ├── {ComponentName}.js       # React components
 │   └── {ComponentName}.scss     # Component styles
 ├── validator/
@@ -40,47 +40,47 @@ src/extensions/{plugin-name}/
 
 ## Step-by-Step Guide
 
-### 1. Create Plugin Directory & package.json
+### 1. Create Extension Directory & package.json
 
 ```bash
-mkdir -p src/extensions/{plugin-name}
+mkdir -p src/extensions/{extension-name}
 ```
 
 ```json
 {
-  "name": "{plugin-name}",
+  "name": "{extension-name}",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Brief plugin description",
+  "description": "Brief extension description",
   "rsk": {
     "subscribe": ["/route-path"]
   }
 }
 ```
 
-**`rsk.subscribe`** declares which route namespaces activate the plugin's frontend.
+**`rsk.subscribe`** declares which route namespaces activate the extension's frontend.
 The `Registry.define()` method reads namespaces from this field — **NOT** from a `register()` method in code.
 
 Example:
 
 ```json
 {
-  "name": "@rsk-plugin/notifications",
+  "name": "@rsk-extension/notifications",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Notification system plugin",
+  "description": "Notification system extension",
   "rsk": {
     "subscribe": ["/dashboard", "/notifications"]
   }
 }
 ```
 
-### 2. Create Backend Plugin (API)
+### 2. Create Backend Extension (API)
 
 ```javascript
-// src/extensions/{plugin-name}/api/index.js
+// src/extensions/{extension-name}/api/index.js
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
@@ -114,7 +114,7 @@ const translationsContext = require.context(
   /\.json$/i,
 );
 
-// Plugin definition for backend
+// Extension definition for backend
 export default {
   // Store handlers for cleanup
   [HANDLERS]: {},
@@ -126,27 +126,27 @@ export default {
 
   // Lifecycle: Initialize on server startup
   async init(registry, context) {
-    console.log('[Plugin] Initialized for ' + __PLUGIN_NAME__);
+    console.log('[Extension] Initialized for ' + __EXTENSION_NAME__);
 
     // Run database migrations
     const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Plugin] Database migrations executed');
+        console.log('[Extension] Database migrations executed');
       } catch (error) {
-        console.error('[Plugin] Migration failed:', error.message);
+        console.error('[Extension] Migration failed:', error.message);
       }
 
       try {
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: __PLUGIN_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Plugin] Database seeds executed');
+        console.log('[Extension] Database seeds executed');
       } catch (error) {
-        console.error('[Plugin] Seed failed:', error.message);
+        console.error('[Extension] Seed failed:', error.message);
       }
     }
 
@@ -167,7 +167,7 @@ export default {
         context.schema = context.schema.extend({
           profile: inner.optional(),
         });
-        console.log('[Plugin] Extended profile schema via hook');
+        console.log('[Extension] Extended profile schema via hook');
       }
     };
 
@@ -175,15 +175,15 @@ export default {
     hook('profile').on('validation:update', this[HANDLERS].updateValidation);
 
     // =========================================================================
-    // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
+    // IPC Handlers (accessible via POST /api/extensions/:id/ipc)
     // =========================================================================
 
     // Example Middleware: logs timing
     const loggingMiddleware = async (data, ctx, next) => {
-      console.log(`[Plugin] IPC Request started`);
+      console.log(`[Extension] IPC Request started`);
       const start = Date.now();
       const result = await next();
-      console.log(`[Plugin] IPC Request ended in ${Date.now() - start}ms`);
+      console.log(`[Extension] IPC Request ended in ${Date.now() - start}ms`);
       return result;
     };
 
@@ -192,22 +192,22 @@ export default {
       loggingMiddleware,
       async data => {
         return {
-          message: `Hello from ${__PLUGIN_NAME__}!`,
+          message: `Hello from ${__EXTENSION_NAME__}!`,
           received: data,
           timestamp: new Date().toISOString(),
         };
       },
     );
 
-    // Register IPC handler - include plugin name for auto-cleanup
+    // Register IPC handler - include extension name for auto-cleanup
     registry.registerHook(
-      `ipc:${__PLUGIN_NAME__}:hello`,
+      `ipc:${__EXTENSION_NAME__}:hello`,
       this[HANDLERS].ipcHello,
-      __PLUGIN_NAME__,
+      __EXTENSION_NAME__,
     );
   },
 
-  // Lifecycle: Cleanup on plugin disable
+  // Lifecycle: Cleanup on extension disable
   async destroy(registry, context) {
     const hook = context.container.resolve('hook');
 
@@ -221,35 +221,35 @@ export default {
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: __PLUGIN_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Plugin] Database seeds destroyed');
+        console.log('[Extension] Database seeds destroyed');
       } catch (error) {
-        console.error('[Plugin] Seed undo failed:', error.message);
+        console.error('[Extension] Seed undo failed:', error.message);
       }
 
       try {
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Plugin] Database migrations reverted');
+        console.log('[Extension] Database migrations reverted');
       } catch (error) {
-        console.error('[Plugin] Migration revert failed:', error.message);
+        console.error('[Extension] Migration revert failed:', error.message);
       }
     }
 
     // Clear handlers
     this[HANDLERS] = {};
 
-    console.log('[Plugin] Destroyed');
+    console.log('[Extension] Destroyed');
   },
 };
 ```
 
-### 3. Create Frontend Plugin (Views)
+### 3. Create Frontend Extension (Views)
 
 ```javascript
-// src/extensions/{plugin-name}/views/index.js
+// src/extensions/{extension-name}/views/index.js
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
@@ -258,7 +258,7 @@ export default {
  */
 
 import { profileSchema } from '../validator';
-import PluginField from './PluginField';
+import ExtensionField from './ExtensionField';
 
 // Private symbol for storing composed handlers (needed for cleanup)
 const HANDLERS = Symbol('handlers');
@@ -304,11 +304,11 @@ const handleProfileDefaults = async user => {
  */
 const loggingMiddleware = (data, context, next) => {
   const start = Date.now();
-  console.log('[Plugin] Submit pipeline started', data);
+  console.log('[Extension] Submit pipeline started', data);
 
   return Promise.resolve(next()).then(result => {
     console.log(
-      `[Plugin] Submit pipeline completed in ${Date.now() - start}ms`,
+      `[Extension] Submit pipeline completed in ${Date.now() - start}ms`,
     );
     return result;
   });
@@ -320,14 +320,14 @@ const loggingMiddleware = (data, context, next) => {
 const nicknameGuard = (data, context, next) => {
   const nickname = data && data.profile && data.profile.nickname;
   if (nickname && nickname.length < 3) {
-    console.warn('[Plugin] Nickname too short, skipping submit hook logic');
+    console.warn('[Extension] Nickname too short, skipping submit hook logic');
     return Promise.resolve(); // Short-circuit: don't call next()
   }
   return next();
 };
 
 // =========================================================================
-// Plugin Definition
+// Extension Definition
 // =========================================================================
 
 export default {
@@ -339,10 +339,10 @@ export default {
     return translationsContext;
   },
 
-  // Lifecycle: init (called when plugin is initialized)
+  // Lifecycle: init (called when extension is initialized)
   init(registry, _context) {
     // 1. Register Slot Component
-    registry.registerSlot('profile.personal_info.fields', PluginField, {
+    registry.registerSlot('profile.personal_info.fields', ExtensionField, {
       order: 10,
     });
 
@@ -358,7 +358,7 @@ export default {
       nicknameGuard,
       async data => {
         if (data.profile.nickname) {
-          console.log(`[Plugin] Hello, ${data.profile.nickname}!`);
+          console.log(`[Extension] Hello, ${data.profile.nickname}!`);
         }
       },
     );
@@ -373,12 +373,12 @@ export default {
       handleProfileDefaults,
     );
 
-    console.log('[Plugin] Initialized');
+    console.log('[Extension] Initialized');
   },
 
-  // Lifecycle: destroy (called when plugin is disabled)
+  // Lifecycle: destroy (called when extension is disabled)
   destroy(registry) {
-    registry.unregisterSlot('profile.personal_info.fields', PluginField);
+    registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',
       extendProfileValidator,
@@ -395,27 +395,27 @@ export default {
     // Clean up handlers
     this[HANDLERS] = {};
 
-    console.log('[Plugin] Destroyed');
+    console.log('[Extension] Destroyed');
   },
 };
 ```
 
-### 4. Create Plugin Component
+### 4. Create Extension Component
 
 ```javascript
-// src/extensions/{plugin-name}/views/PluginField.js
+// src/extensions/{extension-name}/views/ExtensionField.js
 import { useCallback } from 'react';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 import Form from '@shared/renderer/components/Form';
-import s from './PluginField.scss';
+import s from './ExtensionField.scss';
 
 /**
- * Plugin form field component injected into the form via slot
+ * Extension form field component injected into the form via slot
  * Receives register (React Hook Form) and context (fetch, etc.)
  */
-export default function PluginField({ register, context }) {
-  const { t } = useTranslation(`plugin:${__PLUGIN_NAME__}`);
+export default function ExtensionField({ register, context }) {
+  const { t } = useTranslation(`extension:${__EXTENSION_NAME__}`);
 
   const handleAsyncValidate = useCallback(
     async value => {
@@ -423,7 +423,7 @@ export default function PluginField({ register, context }) {
       if (!value || value.length < 3) return true;
       try {
         const response = await context.fetch(
-          `/api/plugins/${__PLUGIN_NAME__}/ipc`,
+          `/api/extensions/${__EXTENSION_NAME__}/ipc`,
           {
             method: 'POST',
             body: {
@@ -464,14 +464,14 @@ export default function PluginField({ register, context }) {
   );
 }
 
-PluginField.propTypes = {
+ExtensionField.propTypes = {
   register: PropTypes.func.isRequired,
   context: PropTypes.object.isRequired,
 };
 ```
 
 ```scss
-// src/extensions/{plugin-name}/views/PluginField.scss
+// src/extensions/{extension-name}/views/ExtensionField.scss
 .formText {
   margin-top: 0.25rem;
   font-size: 0.875rem;
@@ -482,7 +482,7 @@ PluginField.propTypes = {
 ### 5. Create Validation Schemas
 
 ```javascript
-// src/extensions/{plugin-name}/validator/index.js
+// src/extensions/{extension-name}/validator/index.js
 /**
  * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
  *
@@ -503,7 +503,7 @@ export const profileSchema = zod => {
         .string()
         .min(3, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.nickname_too_short`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.nickname_too_short`,
           },
         })
         .max(50)
@@ -514,7 +514,7 @@ export const profileSchema = zod => {
         .string()
         .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.birthdate_format`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.birthdate_format`,
           },
         })
         .optional()
@@ -527,10 +527,10 @@ export const profileSchema = zod => {
 ### 6. Create Translations
 
 ```json
-// src/extensions/{plugin-name}/translations/en-US.json
+// src/extensions/{extension-name}/translations/en-US.json
 {
   "nickname": "Nickname",
-  "nickname_hint": "Added via Plugin (min 3 chars)",
+  "nickname_hint": "Added via Extension (min 3 chars)",
   "birthdate": "Birthdate",
   "validations": {
     "nickname_taken": "This nickname is already taken",
@@ -544,31 +544,31 @@ export const profileSchema = zod => {
 ### 7. Create Database Migration (Optional)
 
 ```javascript
-// src/extensions/{plugin-name}/api/database/migrations/1.initial.js
+// src/extensions/{extension-name}/api/database/migrations/1.initial.js
 /**
- * Migration for plugin initial setup
+ * Migration for extension initial setup
  */
 export async function up(connection, Sequelize) {
   const queryInterface = connection.queryInterface;
 
   // Create table or modify existing tables
-  // await queryInterface.createTable('plugin_data', { ... });
+  // await queryInterface.createTable('extension_data', { ... });
 }
 
 export async function down(connection, Sequelize) {
   const queryInterface = connection.queryInterface;
 
   // Rollback changes
-  // await queryInterface.dropTable('plugin_data');
+  // await queryInterface.dropTable('extension_data');
 }
 ```
 
 ### 8. Create Database Seed (Optional)
 
 ```javascript
-// src/extensions/{plugin-name}/api/database/seeds/1.initial.js
+// src/extensions/{extension-name}/api/database/seeds/1.initial.js
 /**
- * Seed initial data for plugin
+ * Seed initial data for extension
  */
 export async function up(connection) {
   // const models = connection.models;
@@ -581,20 +581,20 @@ export async function down(connection) {
 }
 ```
 
-## Complete Example: Comment Plugin
+## Complete Example: Comment Extension
 
 ### Step 1: Setup
 
 ```bash
-mkdir -p src/extensions/comments-plugin/{api/database/{migrations,seeds},views,validator,translations}
-cd src/extensions/comments-plugin
+mkdir -p src/extensions/comments-extension/{api/database/{migrations,seeds},views,validator,translations}
+cd src/extensions/comments-extension
 ```
 
 ### Step 2: package.json
 
 ```json
 {
-  "name": "@rsk-plugin/comments",
+  "name": "@rsk-extension/comments",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
@@ -615,11 +615,13 @@ export const commentSchema = zod => {
       text: zod
         .string()
         .min(1, {
-          params: { i18n: `plugin:${__PLUGIN_NAME__}:validations.required` },
+          params: {
+            i18n: `extension:${__EXTENSION_NAME__}:validations.required`,
+          },
         })
         .max(1000, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.too_long`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.too_long`,
           },
         }),
     }),
@@ -642,7 +644,7 @@ export const commentSchema = zod => {
 }
 ```
 
-### Step 5: Frontend Plugin
+### Step 5: Frontend Extension
 
 ```javascript
 // views/index.js
@@ -682,19 +684,19 @@ export default {
 
     registry.registerHook('posts.comments.validator', extendCommentValidator);
 
-    console.log('[Comments Plugin] Initialized');
+    console.log('[Comments Extension] Initialized');
   },
 
   destroy(registry) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
     registry.unregisterHook('posts.comments.validator', extendCommentValidator);
     this[HANDLERS] = {};
-    console.log('[Comments Plugin] Destroyed');
+    console.log('[Comments Extension] Destroyed');
   },
 };
 ```
 
-### Step 6: Backend Plugin
+### Step 6: Backend Extension
 
 ```javascript
 // api/index.js
@@ -725,11 +727,11 @@ export default {
     if (db) {
       try {
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Comments Plugin] Migrations executed');
+        console.log('[Comments Extension] Migrations executed');
       } catch (error) {
-        console.error('[Comments Plugin] Migration failed:', error);
+        console.error('[Comments Extension] Migration failed:', error);
       }
     }
 
@@ -737,12 +739,12 @@ export default {
 
     // Example handler for comment creation hook
     this[HANDLERS].onCommentCreated = function (comment) {
-      console.log('[Comments Plugin] New comment created:', comment.id);
+      console.log('[Comments Extension] New comment created:', comment.id);
     };
 
     hook('posts').on('comment:created', this[HANDLERS].onCommentCreated);
 
-    console.log('[Comments Plugin] Backend initialized');
+    console.log('[Comments Extension] Backend initialized');
   },
 
   async destroy(registry, context) {
@@ -756,21 +758,21 @@ export default {
     if (db) {
       try {
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Comments Plugin] Migrations reverted');
+        console.log('[Comments Extension] Migrations reverted');
       } catch (error) {
-        console.error('[Comments Plugin] Migration revert failed:', error);
+        console.error('[Comments Extension] Migration revert failed:', error);
       }
     }
 
     this[HANDLERS] = {};
-    console.log('[Comments Plugin] Backend destroyed');
+    console.log('[Comments Extension] Backend destroyed');
   },
 };
 ```
 
-## Plugin Hooks & Events
+## Extension Hooks & Events
 
 ### Common Hook Points
 
@@ -789,28 +791,31 @@ registry.registerHook('posts.validator', extendValidator);
 // Unregister a hook
 registry.unregisterHook('posts.validator', extendValidator);
 
-// Listen to plugin events
+// Listen to extension events
 const hook = context.container.resolve('hook');
 hook('posts').on('created', post => {
   console.log('Post created:', post);
 });
 ```
 
-## IPC Handlers (Inter-Plugin Communication)
+## IPC Handlers (Inter-Extension Communication)
 
 IPC handlers allow frontend components to call backend logic via HTTP POST requests.
 
 ### Calling IPC from Frontend
 
 ```javascript
-// In a plugin component
-const response = await context.fetch(`/api/plugins/${__PLUGIN_NAME__}/ipc`, {
-  method: 'POST',
-  body: {
-    action: 'checkNickname', // Handler name
-    data: { nickname: value }, // Payload
+// In an extension component
+const response = await context.fetch(
+  `/api/extensions/${__EXTENSION_NAME__}/ipc`,
+  {
+    method: 'POST',
+    body: {
+      action: 'checkNickname', // Handler name
+      data: { nickname: value }, // Payload
+    },
   },
-});
+);
 
 if (response.success) {
   console.log(response.data);
@@ -841,17 +846,17 @@ this[HANDLERS].ipcCheckNickname = registry.createPipeline(
   },
 );
 
-// Register with plugin ID for auto-cleanup
+// Register with extension ID for auto-cleanup
 registry.registerHook(
-  `ipc:${__PLUGIN_NAME__}:checkNickname`,
+  `ipc:${__EXTENSION_NAME__}:checkNickname`,
   this[HANDLERS].ipcCheckNickname,
-  __PLUGIN_NAME__,
+  __EXTENSION_NAME__,
 );
 ```
 
 ### IPC Request Format
 
-- **Endpoint:** `POST /api/plugins/{pluginId}/ipc`
+- **Endpoint:** `POST /api/extensions/{extensionId}/ipc`
 - **Body (JSON):**
   ```json
   {
@@ -870,33 +875,33 @@ registry.registerHook(
 ## Best Practices
 
 1. **Use Symbol for Handler Storage**: Store handlers in `this[HANDLERS]` for cleanup on destroy
-2. **Namespace Everything**: Use `plugin:{__PLUGIN_NAME__}:` prefix for i18n keys
-3. **Cleanup on Destroy**: Always unregister hooks/slots when plugin is disabled
+2. **Namespace Everything**: Use `extension:{__EXTENSION_NAME__}:` prefix for i18n keys
+3. **Cleanup on Destroy**: Always unregister hooks/slots when extension is disabled
 4. **Store Composed Handlers**: When using `registry.createPipeline()`, store the result in `this[HANDLERS]` so you can unregister it by reference
 5. **Deep Merge Schemas**: When extending nested objects like `profile`, check for `.unwrap()` and merge properly
 6. **Error Handling**: Wrap migrations/seeds in try-catch blocks
 7. **Validation**: Use Zod schema factories for both client & server validation
 8. **Migrations**: Use versioned filenames (1.initial.js, 2.add_field.js) and call `revertMigrations()` in destroy
-9. **Testing**: Create test files (ComponentName.test.js) for critical plugin parts
-10. **Register with Plugin ID**: Include `__PLUGIN_NAME__` when registering hooks for auto-cleanup on unregister
+9. **Testing**: Create test files (ComponentName.test.js) for critical extension parts
+10. **Register with Extension ID**: Include `__EXTENSION_NAME__` when registering hooks for auto-cleanup on unregister
 
 ## Common Issues
 
-### Plugin Not Loading
+### Extension Not Loading
 
-- Check `__PLUGIN_NAME__` and `__PLUGIN_DESCRIPTION__` globals are defined
-- Verify `rsk.subscribe` in `package.json` lists the route paths where the plugin should activate (e.g., `["/login", "/profile"]`)
-- Ensure both `api/index.js` and `views/index.js` export default plugin definitions
+- Check `__EXTENSION_NAME__` and `__EXTENSION_DESCRIPTION__` globals are defined
+- Verify `rsk.subscribe` in `package.json` lists the route paths where the extension should activate (e.g., `["/login", "/profile"]`)
+- Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
-- Verify the plugin was built by Webpack (check `.cache/dev/plugins/` for build output)
+- Verify the extension was built by Webpack (check `.cache/dev/extensions/` for build output)
 
 ### Slots Not Appearing
 
 - Verify slot name matches the feature (e.g., `profile.personal_info.fields`)
-- Check component path in slot registration (e.g., `PluginField` must be imported correctly)
+- Check component path in slot registration (e.g., `ExtensionField` must be imported correctly)
 - Ensure `order` property is set (higher numbers appear later)
-- Verify form component receives `register` and `context` as props, not `data` and `onDataChange`
-- Check that both backend and frontend plugins are loaded correctly
+- Verify form component receives `register` and `context` as props
+- Check that both backend and frontend extensions are loaded correctly
 
 ### Validation Not Working
 
@@ -908,5 +913,5 @@ registry.registerHook(
 
 ### Translations Missing
 
-- Verify `translations()` declarative method is added to the plugin definitions
+- Verify `translations()` declarative method is added to the extension definitions
 - Check JSON file is in `translations/` directory

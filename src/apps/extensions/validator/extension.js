@@ -6,22 +6,22 @@
  */
 
 /**
- * Plugin status schema
+ * Extension status schema
  */
-export const pluginStatusSchema = ({ i18n, z }) =>
+export const extensionStatusSchema = ({ i18n, z }) =>
   z.object({
     is_active: z.boolean({
       required_error: i18n.t(
-        'zod:plugin.status_required',
+        'zod:extension.status_required',
         'Status is required',
       ),
     }),
   });
 
 /**
- * Plugin upgrade schema
+ * Extension upgrade schema
  */
-export const pluginUpgradeSchema = ({ i18n: _i18n, z }) =>
+export const extensionUpgradeSchema = ({ i18n: _i18n, z }) =>
   z
     .object({
       name: z.string().optional(),

@@ -120,7 +120,7 @@ const channel = queue('jobs', { type: 'redis' });
 
 ## Isolated Instances
 
-For testing or plugins with independent lifecycle:
+For testing or extensions with independent lifecycle:
 
 ```javascript
 import { createFactory } from '@shared/api/engines/queue';

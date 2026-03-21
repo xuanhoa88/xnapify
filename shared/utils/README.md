@@ -35,7 +35,7 @@ console.log(context.val); // 2
 
 ### `webpackContextAdapter.js` (`createWebpackContextAdapter`)
 
-Creates an adapter over Webpack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering plugins or Node-RED nodes).
+Creates an adapter over Webpack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
 
 - `files()`: Returns an array of matched file paths.
 - `load(path)`: Requires and returns the specific module.

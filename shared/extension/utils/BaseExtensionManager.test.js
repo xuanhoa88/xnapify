@@ -119,7 +119,7 @@ describe('BaseExtensionManager', () => {
         success: true,
         data: {
           containerName: 'test_container',
-          manifest: { id: 'test-plugin', main: 'index.js' },
+          manifest: { id: 'test-extension', main: 'index.js' },
         },
       });
 
@@ -131,17 +131,17 @@ describe('BaseExtensionManager', () => {
         .spyOn(manager, 'executeExtension')
         .mockResolvedValue(mockExtensionInstance);
 
-      const result = await manager.loadExtension('test-plugin');
+      const result = await manager.loadExtension('test-extension');
 
       expect(result).toBe(mockExtensionInstance);
       expect(registry.define).toHaveBeenCalledWith(
         mockExtensionInstance,
         mockContext,
-        { id: 'test-plugin', main: 'index.js' },
+        { id: 'test-extension', main: 'index.js' },
       );
       expect(mockExtensionInstance.onLoad).toHaveBeenCalledWith(mockContext);
 
-      const meta = manager[EXTENSION_METADATA].get('test-plugin');
+      const meta = manager[EXTENSION_METADATA].get('test-extension');
       expect(meta.state).toBe(ExtensionState.LOADED);
     });
 
@@ -154,9 +154,9 @@ describe('BaseExtensionManager', () => {
         message: 'Not found',
       });
 
-      await manager.loadExtension('fail-plugin');
+      await manager.loadExtension('fail-extension');
 
-      const meta = manager[EXTENSION_METADATA].get('fail-plugin');
+      const meta = manager[EXTENSION_METADATA].get('fail-extension');
       expect(meta.state).toBe(ExtensionState.FAILED);
       expect(meta.error.message).toBe('Not found');
     });
@@ -197,7 +197,7 @@ describe('BaseExtensionManager', () => {
   });
 
   describe('unloadExtension', () => {
-    it('unregisters plugin from registry', async () => {
+    it('unregisters extension from registry', async () => {
       manager[INITIALIZED] = true;
       manager.init(mockContext);
 
@@ -217,7 +217,7 @@ describe('BaseExtensionManager', () => {
   });
 
   describe('loadNamespace', () => {
-    it('activates plugins for a namespace', async () => {
+    it('activates extensions for a namespace', async () => {
       manager[INITIALIZED] = true;
       manager.init(mockContext);
 

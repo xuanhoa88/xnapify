@@ -9,7 +9,7 @@ export async function up({ context, Sequelize }) {
   const { DataTypes } = Sequelize;
   const queryInterface = context.getQueryInterface();
 
-  await queryInterface.createTable('test_plugin_table', {
+  await queryInterface.createTable('test_extension_table', {
     id: {
       type: DataTypes.INTEGER,
       primaryKey: true,
@@ -32,5 +32,5 @@ export async function up({ context, Sequelize }) {
 
 export async function down({ context }) {
   const queryInterface = context.getQueryInterface();
-  await queryInterface.dropTable('test_plugin_table');
+  await queryInterface.dropTable('test_extension_table');
 }

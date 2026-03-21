@@ -203,20 +203,20 @@ for (const [name, adapter] of apiRoutes) {
 }
 ```
 
-### 7. Dynamic Plugins (Add / Remove Base Routes)
+### 7. Dynamic Extensions (Add / Remove Base Routes)
 
-If your app supports loading external plugin modules on the fly, you can dynamically attach or detach them.
+If your app supports loading external extension modules on the fly, you can dynamically attach or detach them.
 
 ```javascript
 import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
-const pluginAdapter = createWebpackContextAdapter(
+const extensionAdapter = createWebpackContextAdapter(
   require.context('/path/to/my-module/api/routes'),
 );
 
-// Attach the plugin's routes dynamically
-apiRouter.add(pluginAdapter);
+// Attach the extension's routes dynamically
+apiRouter.add(extensionAdapter);
 
-// Unload when disabling plugin
-apiRouter.remove(pluginAdapter);
+// Unload when disabling extension
+apiRouter.remove(extensionAdapter);
 ```

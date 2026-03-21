@@ -14,10 +14,10 @@ import ContextMenu from '@shared/renderer/components/ContextMenu';
 import Icon from '@shared/renderer/components/Icon';
 
 /**
- * ExtensionActionsDropdown - Dropdown menu for plugin actions
+ * ExtensionActionsDropdown - Dropdown menu for extension actions
  */
 function ExtensionActionsDropdown({
-  plugin,
+  extension,
   isOpen,
   onToggle,
   onUpgrade,
@@ -26,8 +26,8 @@ function ExtensionActionsDropdown({
   const { t } = useTranslation();
 
   const handleToggle = useCallback(() => {
-    onToggle(isOpen ? null : plugin.id);
-  }, [isOpen, plugin.id, onToggle]);
+    onToggle(isOpen ? null : extension.id);
+  }, [isOpen, extension.id, onToggle]);
 
   return (
     <ContextMenu isOpen={isOpen} onToggle={handleToggle}>
@@ -38,21 +38,21 @@ function ExtensionActionsDropdown({
       </ContextMenu.Trigger>
       <ContextMenu.Menu>
         <ContextMenu.Item
-          onClick={() => onUpgrade(plugin)}
+          onClick={() => onUpgrade(extension)}
           icon={<Icon name='arrowUp' size={16} />}
-          disabled={!plugin.isInstalled}
-          permission='plugins:update'
+          disabled={!extension.isInstalled}
+          permission='extensions:update'
         >
-          {t('admin:plugins.checkForUpdates', 'Check for Updates')}
+          {t('admin:extensions.checkForUpdates', 'Check for Updates')}
         </ContextMenu.Item>
         <ContextMenu.Divider />
         <ContextMenu.Item
-          onClick={() => onDelete(plugin)}
+          onClick={() => onDelete(extension)}
           icon={<Icon name='trash' size={16} />}
           variant='danger'
-          permission='plugins:delete'
+          permission='extensions:delete'
         >
-          {t('admin:plugins.uninstall', 'Uninstall')}
+          {t('admin:extensions.uninstall', 'Uninstall')}
         </ContextMenu.Item>
       </ContextMenu.Menu>
     </ContextMenu>
@@ -60,7 +60,7 @@ function ExtensionActionsDropdown({
 }
 
 ExtensionActionsDropdown.propTypes = {
-  plugin: PropTypes.object.isRequired,
+  extension: PropTypes.object.isRequired,
   isOpen: PropTypes.bool.isRequired,
   onToggle: PropTypes.func.isRequired,
   onUpgrade: PropTypes.func.isRequired,

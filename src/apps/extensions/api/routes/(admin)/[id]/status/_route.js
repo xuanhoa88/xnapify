@@ -19,6 +19,6 @@ function requirePermission(permission) {
 }
 
 export const patch = [
-  requirePermission('plugins:update'),
-  extensionController.updatePluginStatus,
+  requirePermission('extensions:update'),
+  extensionController.updateExtensionStatus,
 ];

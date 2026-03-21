@@ -6,14 +6,14 @@
  */
 
 /**
- * Facebook Webhook Plugin
+ * Facebook Webhook Extension
  *
  * Registers a Facebook webhook handler so incoming Facebook events
  * (page updates, messaging, etc.) are automatically verified and dispatched.
  *
  * ## How It Works
  *
- * 1. Plugin `init()` resolves the webhook engine from the DI container
+ * 1. Extension `init()` resolves the webhook engine from the DI container
  * 2. Calls `webhook.handler('facebook', { secret, signatureHeader, handler })`
  * 3. Facebook sends POST requests to `/webhooks/facebook`
  * 4. The webhook engine auto-verifies the HMAC signature using `x-hub-signature-256`
@@ -33,7 +33,7 @@
 // Private symbol for handlers storage
 const HANDLERS = Symbol('handlers');
 
-const TAG = '[Facebook Plugin]';
+const TAG = '[Facebook Extension]';
 
 export default {
   // Store handlers for cleanup
@@ -42,7 +42,7 @@ export default {
   /**
    * Init — register the Facebook webhook handler.
    *
-   * @param {Object} registry - Plugin registry
+   * @param {Object} registry - Extension registry
    * @param {Object} context - App context
    */
   async init(registry, context) {
@@ -125,7 +125,7 @@ export default {
   /**
    * Destroy — remove the Facebook webhook handler.
    *
-   * @param {Object} registry - Plugin registry
+   * @param {Object} registry - Extension registry
    * @param {Object} context - App context
    */
   async destroy(registry, context) {

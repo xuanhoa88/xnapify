@@ -92,7 +92,7 @@ export const DEFAULT_RESOURCES = Object.freeze({
   EMAILS: 'emails',
   WEBHOOKS: 'webhooks',
   ACTIVITIES: 'activities',
-  PLUGINS: 'plugins',
+  EXTENSIONS: 'extensions',
 });
 
 /**
@@ -255,25 +255,25 @@ export const SYSTEM_PERMISSIONS = Object.freeze([
     description: 'View activity logs',
   },
 
-  // Plugin management
+  // Extension management
   {
-    resource: DEFAULT_RESOURCES.PLUGINS,
+    resource: DEFAULT_RESOURCES.EXTENSIONS,
     action: DEFAULT_ACTIONS.CREATE,
-    description: 'Upload/Install plugins',
+    description: 'Upload/Install extensions',
   },
   {
-    resource: DEFAULT_RESOURCES.PLUGINS,
+    resource: DEFAULT_RESOURCES.EXTENSIONS,
     action: DEFAULT_ACTIONS.READ,
-    description: 'View plugins',
+    description: 'View extensions',
   },
   {
-    resource: DEFAULT_RESOURCES.PLUGINS,
+    resource: DEFAULT_RESOURCES.EXTENSIONS,
     action: DEFAULT_ACTIONS.UPDATE,
-    description: 'Enable/Disable plugins',
+    description: 'Enable/Disable extensions',
   },
   {
-    resource: DEFAULT_RESOURCES.PLUGINS,
+    resource: DEFAULT_RESOURCES.EXTENSIONS,
     action: DEFAULT_ACTIONS.DELETE,
-    description: 'Delete plugins',
+    description: 'Delete extensions',
   },
 ]);

@@ -73,17 +73,17 @@ See `src/apps/extensions/api/` for the canonical example:
 import workerPool from '../workers';
 
 async function handleInstallJob(app, job) {
-  const { pluginDir, pluginId } = job.data;
+  const { extensionDir, extensionId } = job.data;
 
   // I/O-bound: runs in main process (needs app)
-  await installPluginDependencies(pluginDir);
+  await installExtensionDependencies(extensionDir);
 
   // CPU-bound: offloaded to Piscina thread
-  const checksum = await workerPool.computeChecksum(pluginDir);
+  const checksum = await workerPool.computeChecksum(extensionDir);
 
   // Stateful: needs app for DB access
-  const { Plugin } = container.resolve('models');
-  await Plugin.update({ checksum }, { where: { id: pluginId } });
+  const { Extension } = container.resolve('models');
+  await Extension.update({ checksum }, { where: { id: extensionId } });
 }
 
 export function registerWorkers(container) {

@@ -278,21 +278,21 @@ describe('Layouts', () => {
 // Dynamic Add / Remove
 // =============================================================================
 
-describe('Router.add() — Dynamic Plugin Injection', () => {
-  it('should add plugin routes that are resolvable', async () => {
+describe('Router.add() — Dynamic Extension Injection', () => {
+  it('should add extension routes that are resolvable', async () => {
     const router = new Router(mockModuleLoader);
 
-    const pluginAdapter = createAdapter({
-      './(default)/views/plugin-page/_route.js': {
-        default: () => 'PluginPage',
-        getInitialProps: () => ({ plugin: true }),
+    const extensionAdapter = createAdapter({
+      './(default)/views/extension-page/_route.js': {
+        default: () => 'ExtensionPage',
+        getInitialProps: () => ({ extension: true }),
       },
     });
 
-    const added = router.add(pluginAdapter);
+    const added = router.add(extensionAdapter);
     expect(added.length).toBeGreaterThan(0);
 
-    const result = await router.resolve({ pathname: '/plugin-page' });
+    const result = await router.resolve({ pathname: '/extension-page' });
     expect(result).toBeDefined();
     expect(result.component).toBeDefined();
   });
@@ -305,8 +305,8 @@ describe('Router.add() — Dynamic Plugin Injection', () => {
   });
 });
 
-describe('Router.remove() — Plugin Route Removal', () => {
-  it('should remove plugin routes making them unresolvable', async () => {
+describe('Router.remove() — Extension Route Removal', () => {
+  it('should remove extension routes making them unresolvable', async () => {
     // Use adapter without a root catch-all
     const baseAdapter = createAdapter({
       './(default)/views/base/_route.js': {
@@ -315,13 +315,13 @@ describe('Router.remove() — Plugin Route Removal', () => {
     });
     const router = new Router(baseAdapter);
 
-    const pluginAdapter = createAdapter({
+    const extensionAdapter = createAdapter({
       './(default)/views/removable/_route.js': {
         default: () => 'RemovablePage',
       },
     });
 
-    router.add(pluginAdapter);
+    router.add(extensionAdapter);
 
     // Verify it was added
     const result = await router.resolve({ pathname: '/removable' });
@@ -329,7 +329,7 @@ describe('Router.remove() — Plugin Route Removal', () => {
     expect(result.component).toBeDefined();
 
     // Remove it
-    const removed = router.remove(pluginAdapter);
+    const removed = router.remove(extensionAdapter);
     expect(removed).toBe(true);
 
     // Verify it's gone (resolves to null since no route matches)

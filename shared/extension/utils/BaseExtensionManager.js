@@ -25,7 +25,7 @@ export const LOADED_VERSIONS = Symbol('__rsk.loadedExtensionVersions__');
 export const EXTENSION_MANAGER_INIT = Symbol('__rsk.extensionManagerInit__');
 
 /**
- * Plugin states
+ * Extension states
  */
 export const ExtensionState = Object.freeze({
   PENDING: 'pending',
@@ -37,7 +37,7 @@ export const ExtensionState = Object.freeze({
 });
 
 /**
- * Plugin metadata structure
+ * Extension metadata structure
  * @typedef {Object} ExtensionMetadata
  * @property {string} id - Extension identifier
  * @property {string} state - Current extension state
@@ -52,10 +52,10 @@ export class BaseExtensionManager {
   constructor() {
     this[INITIALIZED] = false;
     this[EXTENSION_CONTEXT] = null;
-    this[ACTIVE_EXTENSIONS] = new Map(); // id -> plugin instance
+    this[ACTIVE_EXTENSIONS] = new Map(); // id -> extension instance
     this[EXTENSION_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
-    this[LOADED_VERSIONS] = new Map(); // pluginId -> version
+    this[LOADED_VERSIONS] = new Map(); // extensionId -> version
     this[EXTENSION_MANAGER_INIT] = null; // initialization promise
   }
 
@@ -68,7 +68,7 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Build plugin asset URL
+   * Build extension asset URL
    * @param {string} id - Extension ID
    * @param {string} filename - Asset filename
    * @returns {string} Extension asset URL
@@ -116,8 +116,8 @@ export class BaseExtensionManager {
     this[EXTENSION_CONTEXT] = context;
 
     // Singleton pattern: Skip re-initialization if already initialized
-    // This prevents redundant plugin loading on subsequent calls (e.g., per-request on server)
-    // We check the explicit INITIALIZED flag instead of active plugin count
+    // This prevents redundant extension loading on subsequent calls (e.g., per-request on server)
+    // We check the explicit INITIALIZED flag instead of active extension count
     // to handle cases where no extensions are installed (count = 0)
     if (this[INITIALIZED]) {
       return;
@@ -132,42 +132,42 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Fetch and load all active plugins from API
+   * Fetch and load all active extensions from API
    */
   async fetchAll() {
     try {
       const { data: response } =
         await this[EXTENSION_CONTEXT].fetch('/api/extensions');
-      const plugins =
+      const extensions =
         response && Array.isArray(response.extensions) ? response.extensions : [];
       const results = await Promise.allSettled(
-        plugins.map(plugin => {
-          const id = typeof plugin === 'object' ? plugin.id : plugin;
-          const manifest = typeof plugin === 'object' ? plugin : null;
+        extensions.map(item => {
+          const id = typeof item === 'object' ? item.id : item;
+          const manifest = typeof item === 'object' ? item : null;
           return this.loadExtension(id, manifest);
         }),
       );
 
       // Report failures
       const failures = results
-        .map((result, index) => ({ result, plugin: plugins[index] }))
+        .map((result, index) => ({ result, item: extensions[index] }))
         .filter(({ result }) => result.status === 'rejected');
       if (failures.length > 0) {
         console.warn(
           `[ExtensionManager] ${failures.length} extension(s) failed to load:`,
-          failures.map(({ plugin }) =>
-            typeof plugin === 'object' ? plugin.id : plugin,
+          failures.map(({ item }) =>
+            typeof item === 'object' ? item.id : item,
           ),
         );
       }
 
       // Report success
       const success = results
-        .map((result, index) => ({ result, plugin: plugins[index] }))
+        .map((result, index) => ({ result, item: extensions[index] }))
         .filter(({ result }) => result.status === 'fulfilled');
 
       await this.emit('extensions:initialized', {
-        total: plugins.length,
+        total: extensions.length,
         loaded: success.length,
         failed: failures.length,
       });
@@ -179,7 +179,7 @@ export class BaseExtensionManager {
 
   /**
    * Resolve the extension entry point based on manifest
-   * @param {Object} _manifest - Plugin manifest
+   * @param {Object} _manifest - Extension manifest
    * @returns {string} Entry point filename
    */
   resolveEntryPoint(_manifest) {
@@ -191,7 +191,7 @@ export class BaseExtensionManager {
    * Load extension module
    * @param {string} _id - Extension ID
    * @param {string} _entryPoint - Resolved entry point filename
-   * @param {Object} _manifest - Plugin manifest
+   * @param {Object} _manifest - Extension manifest
    * @param {Object} _options - Additional options (containerName)
    * @returns {Promise<Object|null>} Extension instance or null if skipped
    */
@@ -202,17 +202,17 @@ export class BaseExtensionManager {
 
   /**
    * Load extension dependencies
-   * @param {string} pluginId - Plugin requesting dependencies
+   * @param {string} extensionId - Extension requesting dependencies
    * @param {Array<Object<string, string>>} dependencies - Array of dependency IDs
    */
-  async loadDependencies(pluginId, dependencies) {
+  async loadDependencies(extensionId, dependencies) {
     const missing = Object.keys(dependencies).filter(
       depId => !this[ACTIVE_EXTENSIONS].has(depId),
     );
 
     if (missing.length > 0) {
       console.log(
-        `[ExtensionManager] Loading dependencies for "${pluginId}":`,
+        `[ExtensionManager] Loading dependencies for "${extensionId}":`,
         missing,
       );
 
@@ -224,13 +224,13 @@ export class BaseExtensionManager {
    * Execute extension code safely
    * @param {string} id - Extension ID
    * @param {string} entryPoint - Resolved entry point filename
-   * @param {Object} manifest - Plugin manifest
+   * @param {Object} manifest - Extension manifest
    * @param {Object} options - Additional options (containerName)
    * @returns {Promise<Object|null>} Extension instance or null if skipped
    */
   async executeExtension(id, entryPoint, manifest, options) {
     try {
-      const pluginModule = await this.loadExtensionModule(
+      const extModule = await this.loadExtensionModule(
         id,
         entryPoint,
         manifest,
@@ -238,59 +238,59 @@ export class BaseExtensionManager {
       );
 
       // Null is valid - extension was skipped (e.g., API-only on client)
-      if (!pluginModule) {
+      if (!extModule) {
         if (__DEV__) {
           console.log(
             `[ExtensionManager] Extension ${id} returned null module (skipped)`,
           );
         }
         const err = new Error(`Extension "${id}" returned null module (skipped)`);
-        err.name = 'PluginSkippedError';
+        err.name = 'ExtensionSkippedError';
         err.status = 400;
         throw err;
       }
 
       // Handle various export formats
-      let plugin = pluginModule.default || pluginModule;
+      let ext = extModule.default || extModule;
 
-      // If it's still a module namespace object with no default, try finding the plugin object
+      // If it's still a module namespace object with no default, try finding the extension object
       if (
-        plugin &&
-        typeof plugin === 'object' &&
-        !('register' in plugin) &&
-        !('name' in plugin)
+        ext &&
+        typeof ext === 'object' &&
+        !('register' in ext) &&
+        !('name' in ext)
       ) {
-        if (id && plugin[id]) {
-          plugin = plugin[id];
+        if (id && ext[id]) {
+          ext = ext[id];
         }
       }
 
       if (__DEV__) {
         console.log(
           `[ExtensionManager] Loaded extension module for ${id}:`,
-          typeof plugin,
+          typeof ext,
           'Keys:',
-          Object.keys(plugin || {}),
+          Object.keys(ext || {}),
         );
       }
 
-      if (!plugin) {
+      if (!ext) {
         const error = new Error(
           `Extension "${id}" did not export a valid extension object`,
         );
         error.name = 'ExtensionManagerError';
-        error.pluginId = id;
+        error.extensionId = id;
         throw error;
       }
 
-      return plugin;
+      return ext;
     } catch (error) {
       // Wrap other errors with context
       const err = new Error(
         `Extension execution failed for "${id}": ${error.message}`,
       );
       err.name = 'ExtensionManagerError';
-      err.pluginId = id;
+      err.extensionId = id;
       err.originalError = error;
       console.error(`[ExtensionManager] Extension "${id}" failed to load:`, err);
 
@@ -303,18 +303,18 @@ export class BaseExtensionManager {
 
   /**
    * Validate extension structure
-   * @param {Object} plugin - Plugin object
+   * @param {Object} ext - Extension object
    */
-  validateExtensionStructure(plugin) {
-    if (!plugin || typeof plugin !== 'object') {
+  validateExtensionStructure(ext) {
+    if (!ext || typeof ext !== 'object') {
       const error = new Error('Extension must be an object');
       error.name = 'ExtensionManagerError';
       throw error;
     }
 
     // Extensions must have at least an init function or a name property
-    const hasInit = typeof plugin.init === 'function';
-    const hasName = 'name' in plugin;
+    const hasInit = typeof ext.init === 'function';
+    const hasName = 'name' in ext;
 
     if (!hasInit && !hasName) {
       const error = new Error(
@@ -363,7 +363,7 @@ export class BaseExtensionManager {
 
     try {
       // Load extension dependencies first (ensures dependency graph is satisfied)
-      // Dependencies are loaded recursively before the plugin itself
+      // Dependencies are loaded recursively before the extension itself
       if (
         manifest &&
         manifest.rsk &&
@@ -373,7 +373,7 @@ export class BaseExtensionManager {
         await this.loadDependencies(id, manifest.rsk.require);
       }
 
-      // Fetch plugin bundle details from API — skip if the caller
+      // Fetch extension bundle details from API — skip if the caller
       // explicitly marked the manifest as read from disk (server-side
       // refresh sets fromDisk = true after reading the built manifest).
       let containerName = null;
@@ -387,7 +387,7 @@ export class BaseExtensionManager {
         const response = await this[EXTENSION_CONTEXT].fetch(`/api/extensions/${id}`);
         if (!response || !response.success) {
           const error = new Error(
-            (response && response.message) || 'Failed to fetch plugin bundle',
+            (response && response.message) || 'Failed to fetch extension bundle',
           );
           error.name = 'ExtensionManagerError';
           throw error;
@@ -415,13 +415,13 @@ export class BaseExtensionManager {
         return null;
       }
 
-      // Load the plugin via MF container or require
-      let plugin = await this.executeExtension(id, entryPoint, manifest, {
+      // Load the extension via MF container or require
+      let ext = await this.executeExtension(id, entryPoint, manifest, {
         containerName,
       });
 
       // Handle null return (extension was skipped by loadExtensionModule)
-      if (!plugin) {
+      if (!ext) {
         const metadata = this[EXTENSION_METADATA].get(id);
         metadata.state = ExtensionState.LOADED;
         metadata.loadedAt = Date.now();
@@ -430,18 +430,18 @@ export class BaseExtensionManager {
       }
 
       // Handle ES module default export
-      plugin = plugin.default || plugin;
+      ext = ext.default || ext;
 
       // Validate extension structure
-      this.validateExtensionStructure(plugin);
+      this.validateExtensionStructure(ext);
 
       // Register with registry
       if (__DEV__) {
-        console.log(`[ExtensionManager] Defining plugin in registry: ${id}`);
+        console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
       }
-      await registry.define(plugin, this[EXTENSION_CONTEXT], manifest);
+      await registry.define(ext, this[EXTENSION_CONTEXT], manifest);
 
-      // Plugin activation (init/destroy) is deferred to loadNamespace.
+      // Extension activation (init/destroy) is deferred to loadNamespace.
       // loadExtension only fetches, validates, and defines.
 
       // Update metadata
@@ -450,17 +450,17 @@ export class BaseExtensionManager {
       metadata.loadedAt = Date.now();
       metadata.manifest = { ...manifest };
 
-      // Call plugin lifecycle hook
-      if (typeof plugin.onLoad === 'function') {
-        await plugin.onLoad(this[EXTENSION_CONTEXT]);
+      // Call extension lifecycle hook
+      if (typeof ext.onLoad === 'function') {
+        await ext.onLoad(this[EXTENSION_CONTEXT]);
       }
 
       if (__DEV__) {
         console.log(`[ExtensionManager] Successfully loaded extension: ${id}`);
       }
-      await this.emit('extension:loaded', { id, plugin, manifest });
+      await this.emit('extension:loaded', { id, ext, manifest });
 
-      return plugin;
+      return ext;
     } catch (error) {
       console.error(`[ExtensionManager] Failed to load extension "${id}":`, error);
 
@@ -502,17 +502,17 @@ export class BaseExtensionManager {
     await this.emit('extension:unloading', { id });
 
     try {
-      const plugin = this[ACTIVE_EXTENSIONS].get(id);
+      const ext = this[ACTIVE_EXTENSIONS].get(id);
 
-      // Call plugin View lifecycle hook
-      if (plugin && typeof plugin.onUnload === 'function') {
-        await plugin.onUnload(this[EXTENSION_CONTEXT]);
+      // Call extension lifecycle hook
+      if (ext && typeof ext.onUnload === 'function') {
+        await ext.onUnload(this[EXTENSION_CONTEXT]);
       }
 
       // Unregister from registry
       await registry.unregister(id, this[EXTENSION_CONTEXT]);
 
-      // Remove from active plugins
+      // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
 
       // Update metadata
@@ -572,7 +572,7 @@ export class BaseExtensionManager {
     });
 
     try {
-      // Unload existing plugin (this calls uninstall hook)
+      // Unload existing extension (this calls uninstall hook)
       if (this[ACTIVE_EXTENSIONS].has(id)) {
         await this.unloadExtension(id);
       }
@@ -602,11 +602,11 @@ export class BaseExtensionManager {
   /**
    * Install an extension (one-time setup, calls install() lifecycle hook).
    *
-   * Client: delegates to `registry.installExtension()` which finds the plugin
+   * Client: delegates to the registry which finds the extension
    * definition by ID and calls its `install()` hook.
    *
    * Server: `ServerExtensionManager` overrides this method to load the API module
-   * directly from disk (the plugin may not yet be registered in the Registry).
+   * directly from disk (the extension may not yet be registered in the Registry).
    *
    * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if installed successfully
@@ -641,11 +641,11 @@ export class BaseExtensionManager {
   /**
    * Uninstall an extension (one-time teardown, calls uninstall() lifecycle hook).
    *
-   * Client: delegates to `registry.uninstallExtension()` which finds the plugin
+   * Client: delegates to the registry which finds the extension
    * definition by ID and calls its `uninstall()` hook.
    *
    * Server: `ServerExtensionManager` overrides this method to load the API module
-   * directly from disk (the plugin may already be unloaded from the Registry).
+   * directly from disk (the extension may already be unloaded from the Registry).
    *
    * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if uninstalled successfully
@@ -686,17 +686,17 @@ export class BaseExtensionManager {
    * @returns {boolean}
    */
   isNamespaceLoaded(ns) {
-    const plugins = registry.getDefinitions(ns);
-    if (!plugins) return false;
+    const extensions = registry.getDefinitions(ns);
+    if (!extensions) return false;
 
-    for (const plugin of plugins) {
-      if (registry.has(plugin.id)) return true;
+    for (const def of extensions) {
+      if (registry.has(def.id)) return true;
     }
     return false;
   }
 
   /**
-   * Load all plugins for a given namespace (runtime activation)
+   * Load all extensions for a given namespace (runtime activation)
    * @param {string} ns - Namespace to load
    */
   async loadNamespace(ns) {
@@ -711,21 +711,21 @@ export class BaseExtensionManager {
     await this.emit('namespace:loading', { ns });
 
     try {
-      const plugins = registry.getDefinitions(ns);
-      if (!plugins) {
+      const extensions = registry.getDefinitions(ns);
+      if (!extensions) {
         return;
       }
       if (__DEV__) {
         console.log(
-          `[ExtensionManager] Found ${plugins.size} extensions for namespace ${ns}`,
+          `[ExtensionManager] Found ${extensions.size} extensions for namespace ${ns}`,
         );
       }
 
-      for (const plugin of plugins) {
-        if (this[ACTIVE_EXTENSIONS].has(plugin.id)) {
+      for (const def of extensions) {
+        if (this[ACTIVE_EXTENSIONS].has(def.id)) {
           if (__DEV__) {
             console.log(
-              `[ExtensionManager] Extension "${plugin.id}" is already active. Skipping component registration.`,
+              `[ExtensionManager] Extension "${def.id}" is already active. Skipping component registration.`,
             );
           }
           continue;
@@ -733,85 +733,85 @@ export class BaseExtensionManager {
 
         if (__DEV__) {
           console.log(
-            `[ExtensionManager] Loading extension from namespace: ${plugin.id}`,
+            `[ExtensionManager] Loading extension from namespace: ${def.id}`,
           );
         }
 
         // Wrap init/destroy for the standard register method
-        const pluginInstance = {
-          ...plugin,
+        const extInstance = {
+          ...def,
           init: async reg => {
             if (__DEV__) {
-              console.log(`[ExtensionManager] Initializing extension: ${plugin.id}`);
+              console.log(`[ExtensionManager] Initializing extension: ${def.id}`);
             }
 
             // Auto-register translations before init if extension exports translations()
-            if (typeof plugin.translations === 'function') {
+            if (typeof def.translations === 'function') {
               try {
-                const translations = getTranslations(plugin.translations());
+                const translations = getTranslations(def.translations());
                 if (Object.keys(translations).length > 0) {
                   addNamespace(
-                    `extension:${plugin.id}`,
+                    `extension:${def.id}`,
                     translations,
                     this[EXTENSION_CONTEXT].i18n,
                   );
                 }
               } catch (error) {
                 console.error(
-                  `[ExtensionManager] Failed to register translations for ${plugin.id}:`,
+                  `[ExtensionManager] Failed to register translations for ${def.id}:`,
                   error,
                 );
               }
             }
 
-            if (typeof plugin.init === 'function') {
+            if (typeof def.init === 'function') {
               try {
-                await plugin.init(reg, this[EXTENSION_CONTEXT]);
+                await def.init(reg, this[EXTENSION_CONTEXT]);
               } catch (error) {
                 console.error(
-                  `[ExtensionManager] Failed to initialize extension ${plugin.id}:`,
+                  `[ExtensionManager] Failed to initialize extension ${def.id}:`,
                   error,
                 );
                 await this.emit('extension:init-error', {
-                  id: plugin.id,
+                  id: def.id,
                   error,
                   phase: 'init',
                 });
               }
             } else if (__DEV__) {
               console.warn(
-                `[ExtensionManager] Extension ${plugin.id} has no 'init' method`,
+                `[ExtensionManager] Extension ${def.id} has no 'init' method`,
               );
             }
           },
           destroy: async reg => {
             if (__DEV__) {
-              console.log(`[ExtensionManager] Destroying extension: ${plugin.id}`);
+              console.log(`[ExtensionManager] Destroying extension: ${def.id}`);
             }
-            if (typeof plugin.destroy === 'function') {
+            if (typeof def.destroy === 'function') {
               try {
-                await plugin.destroy(reg, this[EXTENSION_CONTEXT]);
+                await def.destroy(reg, this[EXTENSION_CONTEXT]);
               } catch (error) {
                 console.error(
-                  `[ExtensionManager] Failed to destroy extension ${plugin.id}:`,
+                  `[ExtensionManager] Failed to destroy extension ${def.id}:`,
                   error,
                 );
                 await this.emit('extension:destroy-error', {
-                  id: plugin.id,
+                  id: def.id,
                   error,
                   phase: 'destroy',
                 });
               }
             } else if (__DEV__) {
               console.warn(
-                `[ExtensionManager] Extension ${plugin.id} has no 'destroy' method`,
+                `[ExtensionManager] Extension ${def.id} has no 'destroy' method`,
               );
             }
           },
         };
 
-        await registry.register(plugin.id, pluginInstance);
-        this[ACTIVE_EXTENSIONS].set(plugin.id, pluginInstance);
+        await registry.register(def.id, extInstance);
+        this[ACTIVE_EXTENSIONS].set(def.id, extInstance);
       }
 
       if (__DEV__) {
@@ -841,12 +841,12 @@ export class BaseExtensionManager {
     await this.emit('namespace:unloading', { ns });
 
     try {
-      const plugins = registry.getDefinitions(ns);
-      if (!plugins) return;
+      const extensions = registry.getDefinitions(ns);
+      if (!extensions) return;
 
-      for (const plugin of plugins) {
-        await registry.unregister(plugin.id, this[EXTENSION_CONTEXT]);
-        this[ACTIVE_EXTENSIONS].delete(plugin.id);
+      for (const def of extensions) {
+        await registry.unregister(def.id, this[EXTENSION_CONTEXT]);
+        this[ACTIVE_EXTENSIONS].delete(def.id);
       }
 
       if (__DEV__) {
@@ -1008,11 +1008,11 @@ export class BaseExtensionManager {
    * Unlike destroy(), this preserves context and event handlers,
    * allowing the manager to immediately re-initialize.
    *
-   * @param {Array<string>} [pluginIds] - Specific extension IDs to refresh.
+   * @param {Array<string>} [extensionIds] - Specific extension IDs to refresh.
    *   If provided, only those extensions are reloaded (unload → load).
    *   If omitted or empty, all extensions are refreshed.
    */
-  async refresh(...pluginIds) {
+  async refresh(...extensionIds) {
     // Guard: if context was destroyed (e.g. by HMR dispose), skip refresh.
     // The manager will be re-initialized via init() when the new bundle loads.
     if (!this[EXTENSION_CONTEXT]) {
@@ -1024,14 +1024,14 @@ export class BaseExtensionManager {
       return;
     }
 
-    // Resolve incoming names to actual plugin IDs.
-    // The build tool sends manifest names (e.g. 'rsk_plugin_test') but the
-    // extension manager tracks plugins by their API IDs (UUIDs).  We match
+    // Resolve incoming names to actual extension IDs.
+    // The build tool sends manifest names but the
+    // extension manager tracks extensions by their API IDs (UUIDs).  We match
     // incoming names against manifest.name stored in extension metadata.
     let resolvedIds = [];
 
-    if (pluginIds.length > 0) {
-      const nameSet = new Set(pluginIds);
+    if (extensionIds.length > 0) {
+      const nameSet = new Set(extensionIds);
 
       for (const [id, metadata] of this[EXTENSION_METADATA].entries()) {
         const manifestName = metadata.manifest && metadata.manifest.name;
@@ -1051,10 +1051,10 @@ export class BaseExtensionManager {
       );
     }
 
-    await this.emit('extensions:refreshing', { pluginIds: resolvedIds });
+    await this.emit('extensions:refreshing', { extensionIds: resolvedIds });
 
     if (specific) {
-      // Targeted refresh: properly tear down and reload each plugin
+      // Targeted refresh: properly tear down and reload each extension
       for (const id of resolvedIds) {
         // Unload if active (registered in a namespace)
         if (this[ACTIVE_EXTENSIONS].has(id)) {
@@ -1066,7 +1066,7 @@ export class BaseExtensionManager {
         this[LOADED_VERSIONS].delete(id);
       }
 
-      // Re-load the plugins (fetchAll would re-load everything;
+      // Re-load the extensions (fetchAll would re-load everything;
       // here we load only the targeted ones)
       await Promise.all(resolvedIds.map(id => this.loadExtension(id)));
     } else {
@@ -1084,7 +1084,7 @@ export class BaseExtensionManager {
     }
 
     await this.emit('extensions:refreshed', {
-      pluginIds: specific ? resolvedIds : null,
+      extensionIds: specific ? resolvedIds : null,
     });
 
     if (__DEV__) {
@@ -1103,8 +1103,8 @@ export class BaseExtensionManager {
     await this.emit('manager:destroying');
 
     // Unload all extensions
-    const pluginIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-    await Promise.all(pluginIds.map(id => this.unloadExtension(id)));
+    const extensionIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
+    await Promise.all(extensionIds.map(id => this.unloadExtension(id)));
 
     // Clear all internal state
     this[ACTIVE_EXTENSIONS].clear();

@@ -8,7 +8,7 @@ Learn how to manage Node-RED flow changes using the Git-friendly migration syste
 
 ## Overview
 
-The application uses a custom **Flow Splitter Plugin** (`src/shared/node-red/flow-splitter.js`) to solve the issue of binary-like `flows.json` in version control.
+The application uses a custom **Flow Splitter Extension** (`src/shared/node-red/flow-splitter.js`) to solve the issue of binary-like `flows.json` in version control.
 
 Instead of tracking `flows.json` directly, we track **Migration Snapshots**.
 
@@ -23,7 +23,7 @@ Instead of tracking `flows.json` directly, we track **Migration Snapshots**.
 
 **What happens automatically:**
 
-1. The plugin detects the deploy event.
+1. The extension detects the deploy event.
 2. It splits the new flows into granular JSON files in `.node-red/src/` (tabs, subflows, config-nodes).
 3. It compares this state against the latest snapshot in `src/shared/node-red/migrations/`.
 4. If changes are detected, it creates a **new snapshot directory**:
@@ -58,14 +58,14 @@ src/shared/node-red/
 │   │   ├── subflows/
 │   │   └── config-nodes/
 │   └── 2024.01.02T15.30.00/ ...
-└── flow-splitter.js      # The plugin logic
+└── flow-splitter.js      # The extension logic
 ```
 
 ## Manual Operations
 
 ### Force a Migration
 
-If you edited flows but didn't deploy (or if the auto-save failed), you can force a split by restarting the dev server. The plugin runs on both **Deploy** and **Startup**.
+If you edited flows but didn't deploy (or if the auto-save failed), you can force a split by restarting the dev server. The extension runs on both **Deploy** and **Startup**.
 
 ### Rollback
 
@@ -79,4 +79,4 @@ To roll back to a previous version of flows:
 ## Troubleshooting
 
 - **Flows not updating?** Check the console logs for `[rsk-flow-splitter]`. It informs you when it saves a migration or rebuilds flows.
-- **Migration not saved?** The plugin compares the current state with the latest migration. if they are identical, it skips saving to avoid noise.
+- **Migration not saved?** The extension compares the current state with the latest migration. if they are identical, it skips saving to avoid noise.

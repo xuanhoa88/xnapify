@@ -10,13 +10,13 @@ import { createSlice } from '@reduxjs/toolkit';
 import {
   fetchExtensions,
   uploadExtension,
-  upgradePlugin,
-  togglePluginStatus,
+  upgradeExtension,
+  toggleExtensionStatus,
   uninstallExtension,
 } from './thunks';
 
 /**
- * Plugins Slice
+ * Extensions Slice
  */
 
 const createOperationState = () => ({ loading: false, error: null });
@@ -36,7 +36,7 @@ const createFreshOperations = () => ({
  * Create fresh data object
  */
 const createFreshData = () => ({
-  plugins: [],
+  extensions: [],
   initialized: false,
 });
 
@@ -99,38 +99,38 @@ const createRejectedHandler = operationKey => (state, action) => {
   Object.assign(state, normalized);
 };
 
-export const SLICE_NAME = '@admin/plugins';
+export const SLICE_NAME = '@admin/extensions';
 
 const extensionsSlice = createSlice({
   name: SLICE_NAME,
   initialState,
   reducers: {
-    clearPluginListError: state => {
+    clearExtensionListError: state => {
       const normalized = normalizeState(state);
       normalized.operations.list.error = null;
       Object.assign(state, normalized);
     },
-    clearPluginUploadError: state => {
+    clearExtensionUploadError: state => {
       const normalized = normalizeState(state);
       normalized.operations.upload.error = null;
       Object.assign(state, normalized);
     },
-    clearPluginUpgradeError: state => {
+    clearExtensionUpgradeError: state => {
       const normalized = normalizeState(state);
       normalized.operations.upgrade.error = null;
       Object.assign(state, normalized);
     },
-    clearPluginToggleError: state => {
+    clearExtensionToggleError: state => {
       const normalized = normalizeState(state);
       normalized.operations.toggleStatus.error = null;
       Object.assign(state, normalized);
     },
-    clearPluginUninstallError: state => {
+    clearExtensionUninstallError: state => {
       const normalized = normalizeState(state);
       normalized.operations.uninstall.error = null;
       Object.assign(state, normalized);
     },
-    resetPluginsState: () => initialState,
+    resetExtensionsState: () => initialState,
   },
   extraReducers: builder => {
     // List
@@ -139,7 +139,7 @@ const extensionsSlice = createSlice({
       .addCase(fetchExtensions.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.list = createOperationState();
-        normalized.data.plugins = action.payload;
+        normalized.data.extensions = action.payload;
         normalized.data.initialized = true;
         Object.assign(state, normalized);
       })
@@ -151,14 +151,14 @@ const extensionsSlice = createSlice({
       .addCase(uploadExtension.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.upload = createOperationState();
-        // Add new plugin to list or replace if exists
-        const index = normalized.data.plugins.findIndex(
+        // Add new extension to list or replace if exists
+        const index = normalized.data.extensions.findIndex(
           p => p.id === action.payload.id,
         );
         if (index !== -1) {
-          normalized.data.plugins[index] = action.payload;
+          normalized.data.extensions[index] = action.payload;
         } else {
-          normalized.data.plugins.push(action.payload);
+          normalized.data.extensions.push(action.payload);
         }
         Object.assign(state, normalized);
       })
@@ -166,36 +166,36 @@ const extensionsSlice = createSlice({
 
     // Upgrade
     builder
-      .addCase(upgradePlugin.pending, createPendingHandler('upgrade'))
-      .addCase(upgradePlugin.fulfilled, (state, action) => {
+      .addCase(upgradeExtension.pending, createPendingHandler('upgrade'))
+      .addCase(upgradeExtension.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.upgrade = createOperationState();
-        const index = normalized.data.plugins.findIndex(
+        const index = normalized.data.extensions.findIndex(
           p => p.id === action.payload.id,
         );
         if (index !== -1) {
-          normalized.data.plugins[index] = action.payload;
+          normalized.data.extensions[index] = action.payload;
         }
         Object.assign(state, normalized);
       })
-      .addCase(upgradePlugin.rejected, createRejectedHandler('upgrade'));
+      .addCase(upgradeExtension.rejected, createRejectedHandler('upgrade'));
 
     // Toggle Status
     builder
-      .addCase(togglePluginStatus.pending, createPendingHandler('toggleStatus'))
-      .addCase(togglePluginStatus.fulfilled, (state, action) => {
+      .addCase(toggleExtensionStatus.pending, createPendingHandler('toggleStatus'))
+      .addCase(toggleExtensionStatus.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.toggleStatus = createOperationState();
-        const index = normalized.data.plugins.findIndex(
+        const index = normalized.data.extensions.findIndex(
           p => p.id === action.payload.id,
         );
         if (index !== -1) {
-          normalized.data.plugins[index] = action.payload;
+          normalized.data.extensions[index] = action.payload;
         }
         Object.assign(state, normalized);
       })
       .addCase(
-        togglePluginStatus.rejected,
+        toggleExtensionStatus.rejected,
         createRejectedHandler('toggleStatus'),
       );
 
@@ -205,7 +205,7 @@ const extensionsSlice = createSlice({
       .addCase(uninstallExtension.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.uninstall = createOperationState();
-        normalized.data.plugins = normalized.data.plugins.filter(
+        normalized.data.extensions = normalized.data.extensions.filter(
           p => p.id !== action.payload,
         );
         Object.assign(state, normalized);
@@ -215,12 +215,12 @@ const extensionsSlice = createSlice({
 });
 
 export const {
-  clearPluginListError,
-  clearPluginUploadError,
-  clearPluginUpgradeError,
-  clearPluginToggleError,
-  clearPluginUninstallError,
-  resetPluginsState,
+  clearExtensionListError,
+  clearExtensionUploadError,
+  clearExtensionUpgradeError,
+  clearExtensionToggleError,
+  clearExtensionUninstallError,
+  resetExtensionsState,
 } = extensionsSlice.actions;
 
 export default extensionsSlice.reducer;

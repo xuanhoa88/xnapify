@@ -7,7 +7,7 @@
 
 import { profileSchema } from '../validator';
 
-import PluginField from './PluginField';
+import ExtensionField from './ExtensionField';
 
 // Private symbol for storing composed handlers (needed for cleanup)
 const HANDLERS = Symbol('handlers');
@@ -54,11 +54,11 @@ const handleProfileDefaults = async user => {
  */
 const loggingMiddleware = (data, context, next) => {
   const start = Date.now();
-  console.log('[Test Plugin] Submit pipeline started', data);
+  console.log('[Test Extension] Submit pipeline started', data);
 
   return Promise.resolve(next()).then(result => {
     console.log(
-      `[Test Plugin] Submit pipeline completed in ${Date.now() - start}ms`,
+      `[Test Extension] Submit pipeline completed in ${Date.now() - start}ms`,
     );
     return result;
   });
@@ -71,27 +71,27 @@ const nicknameGuard = (data, context, next) => {
   const nickname = data && data.profile && data.profile.nickname;
   if (nickname && nickname.length < 3) {
     console.warn(
-      '[Test Plugin] Nickname too short, skipping submit hook logic',
+      '[Test Extension] Nickname too short, skipping submit hook logic',
     );
     return Promise.resolve(); // Short-circuit: don't call next()
   }
   return next();
 };
 
-// Plugin definition
+// Extension definition
 export default {
   // Store composed handlers for cleanup
   [HANDLERS]: {},
 
-  // Declarative translations — auto-registered by plugin manager before init
+  // Declarative translations — auto-registered by extension manager before init
   translations() {
     return translationsContext;
   },
 
-  // Lifecycle: init (called when plugin is initialized)
+  // Lifecycle: init (called when extension is initialized)
   init(registry, _context) {
     // 1. Register Slot Component
-    registry.registerSlot('profile.personal_info.fields', PluginField, {
+    registry.registerSlot('profile.personal_info.fields', ExtensionField, {
       order: 10,
     });
 
@@ -107,7 +107,7 @@ export default {
       nicknameGuard,
       async data => {
         if (data.profile.nickname) {
-          console.log(`[Test Plugin] Hello, ${data.profile.nickname}!`);
+          console.log(`[Test Extension] Hello, ${data.profile.nickname}!`);
         }
       },
     );
@@ -121,12 +121,12 @@ export default {
       'profile.personal_info.formData',
       handleProfileDefaults,
     );
-    console.log('[Test Plugin] Initialized');
+    console.log('[Test Extension] Initialized');
   },
 
-  // Lifecycle: destroy (called when plugin is disabled)
+  // Lifecycle: destroy (called when extension is disabled)
   destroy(registry) {
-    registry.unregisterSlot('profile.personal_info.fields', PluginField);
+    registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',
       extendProfileValidator,
@@ -143,6 +143,6 @@ export default {
     // Clean up handlers
     this[HANDLERS] = {};
 
-    console.log('[Test Plugin] Destroyed');
+    console.log('[Test Extension] Destroyed');
   },
 };

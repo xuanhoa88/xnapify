@@ -70,7 +70,7 @@ Discovers and boots API modules in deterministic lifecycle order.
 
 #### Module Loading Order
 
-1. Core modules (ordered): `permissions`, `roles`, `groups`, `users`, `auth`, `files`, `plugins`
+1. Core modules (ordered): `permissions`, `roles`, `groups`, `users`, `auth`, `files`, `extensions`
 2. Additional core from `RSK_MODULE_DEFAULTS` env
 3. Remaining modules alphabetically
 

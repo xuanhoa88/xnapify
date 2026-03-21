@@ -19,11 +19,11 @@ function requirePermission(permission) {
 }
 
 export const PATCH = [
-  requirePermission('plugins:upgrade'),
-  extensionController.upgradePlugin,
+  requirePermission('extensions:upgrade'),
+  extensionController.upgradeExtension,
 ];
 
 export const DELETE = [
-  requirePermission('plugins:delete'),
+  requirePermission('extensions:delete'),
   extensionController.deleteExtension,
 ];

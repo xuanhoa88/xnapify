@@ -133,8 +133,9 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Ensure Module Federation shared scope is initialized
-   * For SSR: Wait for hydration to complete before loading extensions
+   * Ensure Module Federation shared scope is initialized.
+   * The shared scope is available as soon as Webpack's client bundle
+   * executes, so no additional waiting is required.
    * @returns {Promise<void>}
    */
   async _ensureReady() {
@@ -143,16 +144,6 @@ class ClientExtensionManager extends BaseExtensionManager {
     }
 
     this[EXTENSION_MANAGER_INIT] = (async () => {
-      // Wait for SSR hydration to complete
-      if (document.readyState !== 'complete') {
-        await new Promise(resolve => {
-          window.addEventListener('load', resolve, { once: true });
-        });
-      }
-
-      // Extra delay for React hydration to complete
-      await new Promise(resolve => setTimeout(resolve, 100));
-
       // Verify shared scope is available
       // eslint-disable-next-line no-undef
       if (

@@ -26,10 +26,10 @@ import {
 // ========================================================================
 
 /**
- * Scan a directory and add plugins to the map
+ * Scan a directory and add extensions to the map
  * @param {string} dirPath - Directory path
- * @param {string} source - Source of plugins ('remote' or 'local')
- * @param {Map} fsExtensionsMap - Map to store plugins
+ * @param {string} source - Source of extensions ('remote' or 'local')
+ * @param {Map} fsExtensionsMap - Map to store extensions
  */
 async function scanDirectory(dirPath, source, fsExtensionsMap) {
   try {
@@ -78,7 +78,12 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
  * @param {string} options.cwd - Current working directory
  * @returns {Promise<Array>} Array of extension objects
  */
-export async function manageExtensions({ extensionManager, models, cwd, queue }) {
+export async function manageExtensions({
+  extensionManager,
+  models,
+  cwd,
+  queue,
+}) {
   const installedExtensionsDir = extensionManager.getExtensionPath();
   const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
 
@@ -148,7 +153,7 @@ export async function manageExtensions({ extensionManager, models, cwd, queue })
   // Convert Map to Array
   extensions.push(...fsExtensionsMap.values());
 
-  // Attach job_status if there are active queue jobs for these plugins
+  // Attach job_status if there are active queue jobs for these extensions
   if (queue) {
     const queueChannel = queue('extensions');
     if (
@@ -175,11 +180,15 @@ export async function manageExtensions({ extensionManager, models, cwd, queue })
           status = 'INSTALLING';
         }
 
-        if (job.data.extensionId) statusByExtensionId.set(job.data.extensionId, status);
+        if (job.data.extensionId)
+          statusByExtensionId.set(job.data.extensionId, status);
         if (job.data.extensionKey)
           statusByExtensionKey.set(job.data.extensionKey, status);
         if (job.data.extensionDir)
-          statusByExtensionKey.set(path.basename(job.data.extensionDir), status);
+          statusByExtensionKey.set(
+            path.basename(job.data.extensionDir),
+            status,
+          );
       }
 
       for (const p of extensions) {
@@ -194,7 +203,9 @@ export async function manageExtensions({ extensionManager, models, cwd, queue })
     }
   }
 
-  console.debug(`[manageExtensions] Total extensions found: ${extensions.length}`);
+  console.debug(
+    `[manageExtensions] Total extensions found: ${extensions.length}`,
+  );
 
   return extensions;
 }
@@ -202,14 +213,19 @@ export async function manageExtensions({ extensionManager, models, cwd, queue })
 /**
  * Get active extensions (Public/Loader)
  * Optimised to only fetch active extensions from DB and verify FS presence.
- * Does NOT scan the entire plugins directory.
+ * Does NOT scan the entire extensions directory.
  * @param {object} options - Options with models, cache, cwd
  * @param {object} options.models - Models instance
  * @param {object} options.cache - Cache instance
  * @param {string} options.cwd - Current working directory
- * @returns {Promise<Array>} Array of active plugin objects
+ * @returns {Promise<Array>} Array of active extension objects
  */
-export async function getActiveExtensions({ extensionManager, models, cache, cwd }) {
+export async function getActiveExtensions({
+  extensionManager,
+  models,
+  cache,
+  cwd,
+}) {
   const ACTIVE_EXTENSIONS_CACHE_KEY = 'extensions:list:active';
 
   // Return cached result if valid
@@ -285,14 +301,17 @@ export async function getActiveExtensions({ extensionManager, models, cache, cwd
  * @param {string} id - Extension UUID or encrypted extension.key
  * @param {Object} context - App context
  */
-export async function deleteExtension(id, { models, cache, cwd, actorId, queue }) {
-  const { plugin, extensionKey } = await resolveExtension(models, id, {
+export async function deleteExtension(
+  id,
+  { models, cache, cwd, actorId, queue },
+) {
+  const { extension, extensionKey } = await resolveExtension(models, id, {
     required: false,
   });
 
   // Extension not found in DB — could be a disk-only extension discovered from filesystem.
-  // Decrypt the ID to get the plugin key for directory deletion.
-  if (!plugin && !extensionKey) {
+  // Decrypt the ID to get the extension key for directory deletion.
+  if (!extension && !extensionKey) {
     throw ExtensionError.notFound();
   }
 
@@ -300,16 +319,16 @@ export async function deleteExtension(id, { models, cache, cwd, actorId, queue }
   if (queue && cwd) {
     const queueChannel = queue('extensions');
     queueChannel.emit('delete', {
-      extensionId: plugin ? plugin.id : null,
-      extensionKey: plugin ? plugin.key : extensionKey,
+      extensionId: extension ? extension.id : null,
+      extensionKey: extension ? extension.key : extensionKey,
       actorId,
     });
-  } else if (plugin) {
+  } else if (extension) {
     // Fallback if app context is missing: destroy DB record immediately
-    await plugin.destroy();
+    await extension.destroy();
   }
 
-  if (cache && plugin) await invalidateCache(cache, plugin.id);
+  if (cache && extension) await invalidateCache(cache, extension.id);
 
   return true;
 }
@@ -319,9 +338,12 @@ export async function deleteExtension(id, { models, cache, cwd, actorId, queue }
  * @param {object} context - Context with cwd, models, and cache
  * @param {string} id - Extension ID (DB UUID or encrypted key)
  * @returns {Promise<Object>} Extension data with containerName and manifest
- * @throws {ExtensionError} If plugin ID is invalid or plugin not found
+ * @throws {ExtensionError} If extension ID is invalid or extension not found
  */
-export async function getExtensionById({ extensionManager, cwd, models, cache }, id) {
+export async function getExtensionById(
+  { extensionManager, cwd, models, cache },
+  id,
+) {
   const cacheKey = `extensions:detail:${id}`;
 
   // Return cached result if available
@@ -331,7 +353,7 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
   }
 
   // Resolve extension.key from mixed ID
-  const { plugin: dbExtensionRecord, extensionKey } = await resolveExtension(
+  const { extension: dbExtensionRecord, extensionKey } = await resolveExtension(
     models,
     id,
     { required: false },
@@ -350,7 +372,10 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
 
   let manifest = null;
   if (resolvedDir) {
-    manifest = await readExtensionManifest(path.dirname(resolvedDir), extensionKey);
+    manifest = await readExtensionManifest(
+      path.dirname(resolvedDir),
+      extensionKey,
+    );
   }
 
   if (!manifest) {
@@ -361,11 +386,11 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
   const containerName = (manifest.rsk && manifest.rsk.containerName) || null;
 
   try {
-    const assetsPath = path.join(resolvedDir, 'plugin.css');
+    const assetsPath = path.join(resolvedDir, 'extension.css');
     await fs.promises.access(assetsPath);
     manifest.hasClientCss = true;
   } catch {
-    // plugin.css might not exist if plugin has no CSS or build failed
+    // extension.css might not exist if extension has no CSS or build failed
   }
 
   try {
@@ -373,10 +398,10 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
     await fs.promises.access(assetsPath);
     manifest.hasClientScript = true;
   } catch {
-    // remote.js might not exist if plugin has no remote or build failed
+    // remote.js might not exist if extension has no remote or build failed
   }
 
-  // Validate checksum against DB (only for production plugins, not dev)
+  // Validate checksum against DB (only for production extensions, not dev)
   if (models && !isDevExtension) {
     const dbExtension =
       dbExtensionRecord ||
@@ -385,7 +410,7 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
       const manifestChecksum = (manifest.rsk && manifest.rsk.checksum) || null;
       if (dbExtension.checksum !== manifestChecksum) {
         console.error(
-          `[extensionService] ⛔ Checksum mismatch for plugin "${extensionKey}": ` +
+          `[extensionService] ⛔ Checksum mismatch for extension "${extensionKey}": ` +
             `DB=${dbExtension.checksum}, manifest=${manifest.rsk.checksum}. ` +
             `Auto-deactivating extension — possible code tampering detected.`,
         );
@@ -416,13 +441,18 @@ export async function getExtensionById({ extensionManager, cwd, models, cache },
 }
 
 /**
- * Get plugin static files directory path
+ * Get extension static files directory path
  * @param {object} context - Context with cwd and models
  * @param {string} id - Extension ID (DB UUID or encrypted key)
  * @returns {Promise<string|null>} Extension static files directory path or null if invalid
  */
-export async function getExtensionStaticDir({ extensionManager, cwd, models }, id) {
-  const { extensionKey } = await resolveExtension(models, id, { required: false });
+export async function getExtensionStaticDir(
+  { extensionManager, cwd, models },
+  id,
+) {
+  const { extensionKey } = await resolveExtension(models, id, {
+    required: false,
+  });
   if (!extensionKey) return null;
 
   const { dir } = resolveExtensionDir(extensionManager, cwd, extensionKey);
@@ -435,7 +465,7 @@ export async function getExtensionStaticDir({ extensionManager, cwd, models }, i
  * Steps:
  *  1. Extract the zip to a temp directory.
  *  2. Read and validate the manifest (package.json).
- *  3. Move files to the final plugins directory.
+ *  3. Move files to the final extensions directory.
  *  4. Create or update the DB record.
  *  5. Enqueue the heavy dependencies install and module reload.
  *  6. Log activities and invalidate cache.
@@ -521,7 +551,7 @@ export async function installExtensionFromPackage(
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
-    // 4a. Security: prevent path traversal via crafted plugin names
+    // 4a. Security: prevent path traversal via crafted extension names
     validateExtensionNameSafe(extensionName, extensionsDir);
 
     // 5. Move to final destination
@@ -534,7 +564,7 @@ export async function installExtensionFromPackage(
     await fs.promises.rename(extensionRoot, finalExtensionDir);
 
     // 6. Create or update DB record
-    const [plugin, created] = await Extension.findOrCreate({
+    const [extension, created] = await Extension.findOrCreate({
       where: { key: extensionName },
       defaults: {
         name: (manifest.rsk && manifest.rsk.name) || extensionName,
@@ -550,7 +580,7 @@ export async function installExtensionFromPackage(
     });
 
     if (!created) {
-      await plugin.update({
+      await extension.update({
         name: (manifest.rsk && manifest.rsk.name) || extensionName,
         description: manifest.description,
         version: extensionVersion,
@@ -567,14 +597,14 @@ export async function installExtensionFromPackage(
     const queueChannel = queue('extensions');
     queueChannel.emit('install', {
       extensionDir: finalExtensionDir,
-      extensionId: plugin.id,
+      extensionId: extension.id,
       extensionKey: extensionName,
       actorId,
     });
 
     if (cache) await invalidateCache(cache);
 
-    return plugin;
+    return extension;
   } catch (err) {
     console.error('Extension install error:', err);
     throw err;
@@ -616,12 +646,12 @@ export async function toggleExtensionStatus(
   const { Extension } = models;
 
   // Resolve extension — may need to create DB record for FS-only extension
-  let { plugin, extensionKey } = await resolveExtension(models, id, {
+  let { extension, extensionKey } = await resolveExtension(models, id, {
     required: false,
   });
 
   // FS-only extension with no DB record yet — create one
-  if (!plugin && extensionKey && cwd) {
+  if (!extension && extensionKey && cwd) {
     const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
     const installedExtensionsDir = extensionManager.getExtensionPath();
 
@@ -631,7 +661,10 @@ export async function toggleExtensionStatus(
       manifest = await readExtensionManifest(localExtensionsDir, extensionKey);
     }
     if (!manifest && installedExtensionsDir) {
-      manifest = await readExtensionManifest(installedExtensionsDir, extensionKey);
+      manifest = await readExtensionManifest(
+        installedExtensionsDir,
+        extensionKey,
+      );
     }
 
     if (!manifest) {
@@ -641,7 +674,7 @@ export async function toggleExtensionStatus(
     const { name: extensionName, version: extensionVersion } =
       validateManifest(manifest);
 
-    [plugin] = await Extension.findOrCreate({
+    [extension] = await Extension.findOrCreate({
       where: { key: extensionKey },
       defaults: {
         name: (manifest.rsk && manifest.rsk.name) || extensionName,
@@ -653,7 +686,7 @@ export async function toggleExtensionStatus(
     });
   }
 
-  if (!plugin) {
+  if (!extension) {
     throw ExtensionError.notFound();
   }
 
@@ -661,11 +694,11 @@ export async function toggleExtensionStatus(
   const { dir: extensionDir, isDevExtension } = resolveExtensionDir(
     extensionManager,
     cwd,
-    plugin.key,
+    extension.key,
   );
 
-  // Update plugin status
-  await plugin.update({ is_active: isActive });
+  // Update extension status
+  await extension.update({ is_active: isActive });
 
   if (cache) await invalidateCache(cache, id);
 
@@ -673,8 +706,8 @@ export async function toggleExtensionStatus(
   if (queue) {
     const queueChannel = queue('extensions');
     queueChannel.emit('toggle', {
-      extensionId: plugin.id,
-      extensionKey: plugin.key,
+      extensionId: extension.id,
+      extensionKey: extension.key,
       extensionDir,
       isActive,
       actorId,
@@ -682,7 +715,7 @@ export async function toggleExtensionStatus(
     });
   }
 
-  return plugin;
+  return extension;
 }
 
 /**
@@ -696,18 +729,18 @@ export async function upgradeExtension(
   data,
   { models, cache, hook, actorId },
 ) {
-  const { plugin } = await resolveExtension(models, id);
+  const { extension } = await resolveExtension(models, id);
 
-  await plugin.update(data);
+  await extension.update(data);
   if (cache) await invalidateCache(cache, id);
 
   if (hook) {
     hook('admin:extensions').emit('upgraded', {
-      extension_id: plugin.id,
+      extension_id: extension.id,
       options: data,
       actor_id: actorId,
     });
   }
 
-  return plugin;
+  return extension;
 }

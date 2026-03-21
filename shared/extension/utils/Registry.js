@@ -25,7 +25,7 @@ const REGISTRATIONS = Symbol('__rsk.extensionRegistrations__');
  */
 class ExtensionRegistry {
   constructor() {
-    this[EXTENSIONS] = new Map(); // Map<id, plugin>
+    this[EXTENSIONS] = new Map(); // Map<id, extension>
     this[SLOTS] = new Map(); // Map<slotId, Map<component, options>>
     this[HOOKS] = new Hook(); // Specialized hook manager
     this[DEFINITIONS] = new Map(); // Map<namespace, Array<definition>>
@@ -34,22 +34,22 @@ class ExtensionRegistry {
   }
 
   // =========================================================================
-  // Plugin Management
+  // Extension Management
   // =========================================================================
 
   /**
    * Register an extension (idempotent, supports async init)
    * @param {string} extensionId - Extension identifier
-   * @param {Object} plugin - { name, init, destroy }
-   * @param {Object} context - Optional plugin context (i18n, store, etc.)
+   * @param {Object} ext - { name, init, destroy }
+   * @param {Object} context - Optional extension context (i18n, store, etc.)
    * @returns {Promise<this>}
    */
-  async register(extensionId, plugin, context) {
+  async register(extensionId, ext, context) {
     if (this[EXTENSIONS].has(extensionId)) return this;
 
-    this[EXTENSIONS].set(extensionId, { ...plugin, id: extensionId });
-    if (typeof plugin.init === 'function') {
-      await plugin.init(this, context);
+    this[EXTENSIONS].set(extensionId, { ...ext, id: extensionId });
+    if (typeof ext.init === 'function') {
+      await ext.init(this, context);
     }
     return this;
   }
@@ -58,7 +58,7 @@ class ExtensionRegistry {
    * Unregister an extension by ID (supports async destroy)
    * Automatically cleans up all registrations made by this extension
    * @param {string} extensionId - Extension identifier
-   * @param {Object} context - Optional plugin context
+   * @param {Object} context - Optional extension context
    * @returns {Promise<this>}
    */
   async unregister(extensionId, context) {
@@ -66,9 +66,9 @@ class ExtensionRegistry {
     // eslint-disable-next-line no-underscore-dangle
     this._clearExtensionRegistrations(extensionId);
 
-    const plugin = this[EXTENSIONS].get(extensionId);
-    if (plugin && typeof plugin.destroy === 'function') {
-      await plugin.destroy(this, context);
+    const ext = this[EXTENSIONS].get(extensionId);
+    if (ext && typeof ext.destroy === 'function') {
+      await ext.destroy(this, context);
     }
     this[EXTENSIONS].delete(extensionId);
     return this;
@@ -109,7 +109,7 @@ class ExtensionRegistry {
 
   /**
    * Clear all registrations made by an extension
-   * @param {string} extensionId - Plugin to clear registrations for
+   * @param {string} extensionId - Extension to clear registrations for
    */
   _clearExtensionRegistrations(extensionId) {
     const reg = this[REGISTRATIONS].get(extensionId);
@@ -160,13 +160,13 @@ class ExtensionRegistry {
     const meta = { description: manifest.description };
 
     if (!extensionId) {
-      console.warn('[ExtensionRegistry] Plugin definition missing name');
+      console.warn('[ExtensionRegistry] Extension definition missing name');
       return this;
     }
 
     if (namespaces.length === 0) {
       console.warn(
-        `[ExtensionRegistry] Plugin "${extensionId}" has no subscribed namespaces`,
+        `[ExtensionRegistry] Extension "${extensionId}" has no subscribed namespaces`,
       );
     }
 
@@ -199,9 +199,9 @@ class ExtensionRegistry {
   }
 
   /**
-   * Find a plugin definition by ID across all namespaces
-   * @param {string} id - Plugin ID
-   * @returns {Object|null} Plugin definition or null
+   * Find an extension definition by ID across all namespaces
+   * @param {string} id - Extension ID
+   * @returns {Object|null} Extension definition or null
    */
   findDefinition(id) {
     for (const [, definitions] of this[DEFINITIONS]) {
@@ -213,8 +213,8 @@ class ExtensionRegistry {
   }
 
   /**
-   * Remove a plugin definition by ID across all namespaces
-   * @param {string} id - Plugin ID
+   * Remove an extension definition by ID across all namespaces
+   * @param {string} id - Extension ID
    * @returns {boolean} True if any definition was removed
    */
   undefine(id) {
@@ -224,7 +224,7 @@ class ExtensionRegistry {
         if (def.id === id) {
           definitions.delete(def);
           removed = true;
-          // Don't break here, as plugin might be defined in multiple namespaces
+          // Don't break here, as extension might be defined in multiple namespaces
         }
       }
     }
@@ -232,24 +232,24 @@ class ExtensionRegistry {
   }
 
   /**
-   * Get all plugin definitions for a namespace
+   * Get all extension definitions for a namespace
    * @param {string} ns - Namespace
-   * @returns {Set|null} Set of plugin definitions or null
+   * @returns {Set|null} Set of extension definitions or null
    */
   getDefinitions(ns) {
     return this[DEFINITIONS].get(ns) || null;
   }
 
   /**
-   * Install a specific plugin by ID
+   * Install a specific extension by ID
    * Calls the install() lifecycle hook if present
-   * @param {string} id - Plugin ID
+   * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if installed successfully
    */
   async installExtension(id) {
     const definition = this.findDefinition(id);
     if (!definition) {
-      console.warn(`[ExtensionRegistry] Cannot install: plugin "${id}" not found`);
+      console.warn(`[ExtensionRegistry] Cannot install: extension "${id}" not found`);
       return false;
     }
 
@@ -262,7 +262,7 @@ class ExtensionRegistry {
         }
       } catch (error) {
         console.error(
-          `[ExtensionRegistry] Failed to install plugin "${id}":`,
+          `[ExtensionRegistry] Failed to install extension "${id}":`,
           error,
         );
         throw error;
@@ -273,16 +273,16 @@ class ExtensionRegistry {
   }
 
   /**
-   * Uninstall a specific plugin by ID
+   * Uninstall a specific extension by ID
    * Calls the uninstall() lifecycle hook if present
-   * @param {string} id - Plugin ID
+   * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if uninstalled successfully
    */
   async uninstallExtension(id) {
     const definition = this.findDefinition(id);
     if (!definition) {
       console.warn(
-        `[ExtensionRegistry] Cannot uninstall: plugin "${id}" not found`,
+        `[ExtensionRegistry] Cannot uninstall: extension "${id}" not found`,
       );
       return false;
     }
@@ -296,7 +296,7 @@ class ExtensionRegistry {
         }
       } catch (error) {
         console.error(
-          `[ExtensionRegistry] Failed to uninstall plugin "${id}":`,
+          `[ExtensionRegistry] Failed to uninstall extension "${id}":`,
           error,
         );
         throw error;
@@ -307,20 +307,20 @@ class ExtensionRegistry {
   }
 
   /**
-   * Update a specific plugin by ID
+   * Update a specific extension by ID
    * Unloads current instance and reloads for new version
-   * @param {string} id - Plugin ID
+   * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if updated successfully
    */
   async updateExtension(id) {
     if (__DEV__) {
-      console.log(`[ExtensionRegistry] Updating plugin: ${id}`);
+      console.log(`[ExtensionRegistry] Updating extension: ${id}`);
     }
 
     // Find definition
     const definition = this.findDefinition(id);
     if (!definition) {
-      console.warn(`[ExtensionRegistry] Cannot load: plugin "${id}" not found`);
+      console.warn(`[ExtensionRegistry] Cannot load: extension "${id}" not found`);
       return false;
     }
 
@@ -329,7 +329,7 @@ class ExtensionRegistry {
       await this.unregister(id, definition.context);
     }
 
-    // Reload plugin
+    // Reload extension
     return this.register(id, definition, definition.context);
   }
 
@@ -386,7 +386,7 @@ class ExtensionRegistry {
    * Register a hook callback (idempotent - Set handles deduplication)
    * @param {string} hookId - Hook identifier
    * @param {Function} callback - Callback function (can be async)
-   * @param {string} [extensionId] - Optional plugin ID for auto-cleanup
+   * @param {string} [extensionId] - Optional extension ID for auto-cleanup
    */
   registerHook(hookId, callback, extensionId) {
     this[HOOKS].register(hookId, callback, extensionId);

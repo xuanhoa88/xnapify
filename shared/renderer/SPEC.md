@@ -65,7 +65,7 @@ AppContext.Provider → ReduxProvider → I18nextProvider → HistoryProvider �
 Server-side rendered HTML document with:
 - SEO meta tags (`<title>`, `<meta description>`)
 - Open Graph meta (`og:title`, `og:description`, `og:image`, etc.)
-- CSS/JS injection with `data-plugin-id` support
+- CSS/JS injection with `data-extension-id` support
 - State hydration via `window.__PRELOADED_STATE__`
 - PWA manifest and CSP nonce support
 
@@ -123,8 +123,8 @@ The router uses a `NavigationEntry` queue to prevent race conditions during rapi
 Routes can be added/removed at runtime:
 
 ```javascript
-const adapter = router.add(pluginAdapter);  // Merges into existing tree
-router.remove(pluginAdapter);               // Removes by adapter reference (source tagging)
+const adapter = router.add(extensionAdapter);  // Merges into existing tree
+router.remove(extensionAdapter);               // Removes by adapter reference (source tagging)
 ```
 
 ### 4. Redux (`redux/`)

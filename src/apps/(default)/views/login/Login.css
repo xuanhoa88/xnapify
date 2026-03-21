@@ -326,6 +326,10 @@
    OAUTH BUTTONS & DIVIDER
    ============================================================================= */
 
+.oauthSection:empty {
+  display: none;
+}
+
 .oauthButtonsContainer {
   display: flex;
   flex-wrap: wrap;

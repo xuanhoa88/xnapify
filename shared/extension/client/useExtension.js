@@ -26,16 +26,16 @@ export function useExtensionHooks() {
 }
 
 /**
- * Hook to extend a validator schema with plugin-registered extenders
+ * Hook to extend a validator schema with extension-registered extenders
  *
  * Usage:
- *   const [schema, loading] = usePluginValidator('profile.validator', baseSchema, z);
+ *   const [schema, loading] = useExtensionValidator('profile.validator', baseSchema, z);
  *
  * @param {string} hookId - Hook identifier
  * @param {ZodSchema} baseSchema - Base Zod schema object
  * @param {Object} validator - Zod instance (caller provides)
  */
-export function usePluginValidator(hookId, baseSchema, validator) {
+export function useExtensionValidator(hookId, baseSchema, validator) {
   const [schema, setSchema] = useState(baseSchema);
   const [loading, setLoading] = useState(true);
 
@@ -66,7 +66,7 @@ export function usePluginValidator(hookId, baseSchema, validator) {
           setLoading(false);
         }
       } catch (error) {
-        console.error(`[usePluginValidator] Error executing ${hookId}:`, error);
+        console.error(`[useExtensionValidator] Error executing ${hookId}:`, error);
         if (mounted) {
           setLoading(false);
         }
@@ -84,15 +84,15 @@ export function usePluginValidator(hookId, baseSchema, validator) {
 }
 
 /**
- * Hook to fetch form data from plugins
+ * Hook to fetch form data from extensions
  *
  * Usage:
- *   const [formData, loading] = usePluginFormData('profile.formData', user);
+ *   const [formData, loading] = useExtensionFormData('profile.formData', user);
  *
  * @param {string} hookId - Hook identifier
  * @param {any} context - Context to pass to the hook
  */
-export function usePluginFormData(hookId, context) {
+export function useExtensionFormData(hookId, context) {
   const [formData, setFormData] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -112,13 +112,13 @@ export function usePluginFormData(hookId, context) {
       try {
         const results = await registry.executeHook(hookId, contextRef.current);
         if (mounted) {
-          // Merge all results into a single object (last plugin wins)
+          // Merge all results into a single object (last extension wins)
           const merged = Object.assign({}, ...results);
           setFormData(merged);
           setLoading(false);
         }
       } catch (error) {
-        console.error(`[usePluginFormData] Error executing ${hookId}:`, error);
+        console.error(`[useExtensionFormData] Error executing ${hookId}:`, error);
         if (mounted) {
           setLoading(false);
         }
@@ -139,7 +139,7 @@ export function usePluginFormData(hookId, context) {
  * Hook to get components registered for a named slot
  *
  * Subscribes to registry updates so the component re-renders
- * when plugins register or unregister slot entries.
+ * when extensions register or unregister slot entries.
  *
  * Usage:
  *   const slots = useExtensionSlots('auth.oauth.buttons');

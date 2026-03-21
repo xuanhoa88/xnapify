@@ -11,7 +11,7 @@ const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
 const { logWarn } = require('../utils/logger');
-const { toContainerName } = require('../utils/plugin');
+const { toContainerName } = require('../utils/extension');
 
 const {
   createCacheGroups,
@@ -61,39 +61,39 @@ class StripRootCSSPlugin {
 }
 
 /**
- * Validate plugin and extract metadata
+ * Validate extension and extract metadata
  */
-function validatePlugin(plugin) {
+function validateExtension(extension) {
   if (
-    !plugin ||
-    typeof plugin.name !== 'string' ||
-    plugin.name.trim().length === 0
+    !extension ||
+    typeof extension.name !== 'string' ||
+    extension.name.trim().length === 0
   ) {
-    logWarn('Skipping plugin with invalid name:', plugin);
+    logWarn('Skipping extension with invalid name:', extension);
     return null;
   }
 
-  if (!plugin.path) {
-    logWarn(`Plugin "${plugin.name}" missing path`);
+  if (!extension.path) {
+    logWarn(`Extension "${extension.name}" missing path`);
     return null;
   }
 
-  if (!plugin.manifest || (!plugin.manifest.browser && !plugin.manifest.main)) {
-    logWarn(`Plugin "${plugin.name}" missing UI or API entry point`);
+  if (!extension.manifest || (!extension.manifest.browser && !extension.manifest.main)) {
+    logWarn(`Extension "${extension.name}" missing UI or API entry point`);
     return null;
   }
 
   return {
-    pluginName: plugin.name,
-    pluginPath: plugin.path,
-    pluginDescription: plugin.manifest.description || plugin.name,
-    clientPath: plugin.manifest.browser
-      ? path.resolve(plugin.path, plugin.manifest.browser)
+    extensionName: extension.name,
+    extensionPath: extension.path,
+    extensionDescription: extension.manifest.description || extension.name,
+    clientPath: extension.manifest.browser
+      ? path.resolve(extension.path, extension.manifest.browser)
       : null,
-    apiPath: plugin.manifest.main
-      ? path.resolve(plugin.path, plugin.manifest.main)
+    apiPath: extension.manifest.main
+      ? path.resolve(extension.path, extension.manifest.main)
       : null,
-    libraryName: toContainerName(plugin.name),
+    libraryName: toContainerName(extension.name),
   };
 }
 
@@ -102,28 +102,28 @@ function validatePlugin(plugin) {
 // =============================================================================
 
 /**
- * Create CSS Modules localIdentName for a plugin
+ * Create CSS Modules localIdentName for an extension
  */
-const getPluginLocalIdentName = pluginName =>
+const getExtensionLocalIdentName = extensionName =>
   isDev
-    ? `${pluginName}_[local]__[hash:base64:5]`
-    : `${pluginName}_[hash:base64:5]`;
+    ? `${extensionName}_[local]__[hash:base64:5]`
+    : `${extensionName}_[hash:base64:5]`;
 
 // =============================================================================
 // CONFIG BUILDERS
 // =============================================================================
 
 /**
- * Create client configs for plugin
+ * Create client configs for extension
  * Returns both browser (Module Federation) and server (CommonJS + CSS) builds
  */
-function createClientConfig(pluginData, pluginDefines, buildPath) {
-  const { pluginName, clientPath, libraryName } = pluginData;
+function createClientConfig(extensionData, extensionDefines, buildPath) {
+  const { extensionName, clientPath, libraryName } = extensionData;
 
   if (!clientPath) return [];
 
-  const outputPath = path.join(buildPath, pluginName);
-  const localIdentName = getPluginLocalIdentName(pluginName);
+  const outputPath = path.join(buildPath, extensionName);
+  const localIdentName = getExtensionLocalIdentName(extensionName);
 
   const clientConfig = createWebpackConfig('client', {
     entry: clientPath,
@@ -144,7 +144,7 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
         cacheGroups: createCacheGroups('async'),
       },
     },
-    performance: false, // plugins are async remotes — size hints not meaningful
+    performance: false, // extensions are async remotes — size hints not meaningful
     module: {
       rules: [
         createCSSRule({
@@ -157,13 +157,13 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
       new webpack.ProvidePlugin({
         process: require.resolve('process/browser'),
       }),
-      pluginDefines,
+      extensionDefines,
       createEnvDefine(),
       new webpack.container.ModuleFederationPlugin({
         name: libraryName,
         filename: 'remote.js',
         exposes: {
-          './plugin': clientPath,
+          './extension': clientPath,
         },
         shared: createSharedDependencies(pkg.dependencies || {}, {
           eager: false,
@@ -176,7 +176,7 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
   });
 
   clientConfig.resolve.modules.unshift(
-    path.join(pluginData.pluginPath, 'node_modules'),
+    path.join(extensionData.extensionPath, 'node_modules'),
   );
 
   // Server build (CommonJS + CSS extraction)
@@ -196,10 +196,10 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
       ],
     },
     plugins: [
-      pluginDefines,
+      extensionDefines,
       createEnvDefine(),
       new MiniCssExtractPlugin({
-        filename: 'plugin.css',
+        filename: 'extension.css',
         ignoreOrder: isDev,
       }),
       new StripRootCSSPlugin(),
@@ -208,17 +208,17 @@ function createClientConfig(pluginData, pluginDefines, buildPath) {
   });
 
   serverConfig.resolve.modules.unshift(
-    path.join(pluginData.pluginPath, 'node_modules'),
+    path.join(extensionData.extensionPath, 'node_modules'),
   );
 
   return [clientConfig, serverConfig];
 }
 
 /**
- * Create API server config (if plugin has API entry)
+ * Create API server config (if extension has API entry)
  */
-function createApiConfig(pluginData, pluginDefines, buildPath) {
-  const { pluginName, apiPath } = pluginData;
+function createApiConfig(extensionData, extensionDefines, buildPath) {
+  const { extensionName, apiPath } = extensionData;
 
   if (!apiPath) return [];
 
@@ -226,16 +226,16 @@ function createApiConfig(pluginData, pluginDefines, buildPath) {
     entry: apiPath,
     experiments: { outputModule: false },
     output: {
-      path: path.join(buildPath, pluginName),
+      path: path.join(buildPath, extensionName),
       filename: 'api.js',
     },
-    plugins: [pluginDefines, createEnvDefine(), createProgressPlugin()].filter(
+    plugins: [extensionDefines, createEnvDefine(), createProgressPlugin()].filter(
       Boolean,
     ),
   });
 
   apiConfig.resolve.modules.unshift(
-    path.join(pluginData.pluginPath, 'node_modules'),
+    path.join(extensionData.extensionPath, 'node_modules'),
   );
 
   return [apiConfig];
@@ -246,15 +246,15 @@ function createApiConfig(pluginData, pluginDefines, buildPath) {
 // =============================================================================
 
 /**
- * Create webpack configuration for plugins
+ * Create webpack configuration for extensions
  * @param {Object} options
- * @param {Array} options.plugins - Plugin objects to build
+ * @param {Array} options.extensions - Extension objects to build
  * @param {string} options.buildPath - Output directory
  * @returns {Array} Array of webpack configurations
  */
-function createPluginConfig({ plugins = [], buildPath }) {
-  if (!Array.isArray(plugins)) {
-    throw new Error('plugins must be an array');
+function createExtensionConfig({ extensions = [], buildPath }) {
+  if (!Array.isArray(extensions)) {
+    throw new Error('extensions must be an array');
   }
 
   if (typeof buildPath !== 'string' || buildPath.trim().length === 0) {
@@ -263,24 +263,24 @@ function createPluginConfig({ plugins = [], buildPath }) {
 
   const configs = [];
 
-  for (const plugin of plugins) {
-    const pluginData = validatePlugin(plugin);
-    if (!pluginData) continue;
+  for (const extension of extensions) {
+    const extensionData = validateExtension(extension);
+    if (!extensionData) continue;
 
-    // Create shared plugin defines once
-    const pluginDefines = createDefinePlugin({
-      __PLUGIN_NAME__: JSON.stringify(pluginData.pluginName),
-      __PLUGIN_DESCRIPTION__: JSON.stringify(pluginData.pluginDescription),
+    // Create shared extension defines once
+    const extensionDefines = createDefinePlugin({
+      __EXTENSION_NAME__: JSON.stringify(extensionData.extensionName),
+      __EXTENSION_DESCRIPTION__: JSON.stringify(extensionData.extensionDescription),
     });
 
     // Create browser and server builds
-    configs.push(...createClientConfig(pluginData, pluginDefines, buildPath));
+    configs.push(...createClientConfig(extensionData, extensionDefines, buildPath));
 
     // Optionally create API build
-    configs.push(...createApiConfig(pluginData, pluginDefines, buildPath));
+    configs.push(...createApiConfig(extensionData, extensionDefines, buildPath));
   }
 
   return [...new Set(configs)];
 }
 
-module.exports = createPluginConfig;
+module.exports = createExtensionConfig;

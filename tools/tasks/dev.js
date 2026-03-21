@@ -33,7 +33,7 @@ const {
 } = require('../webpack/browserSync/server.config');
 
 const clean = require('./clean');
-const buildPlugins = require('./plugin');
+const buildExtensions = require('./extension');
 
 // Unique symbol to mark webpack middlewares
 const kWebpackMiddleware = Symbol('__rsk.webpackMiddleware__');
@@ -530,16 +530,16 @@ async function main() {
   // Generate JWT
   await generateJWT(config.CWD);
 
-  // Build plugins
-  await buildPlugins({ watch: true });
+  // Build extensions
+  await buildExtensions({ watch: true });
 
-  // Forward plugin rebuild events to the client browser via hot middleware
+  // Forward extension rebuild events to the client browser via hot middleware
   process.on('message', msg => {
     if (msg && msg.type === 'extensions-refreshed' && hotMiddleware) {
       if (typeof hotMiddleware.publish === 'function') {
         hotMiddleware.publish({
           type: 'extensions-refreshed',
-          plugins: msg.plugins,
+          extensions: msg.extensions,
         });
         logInfo('🔌 Forwarded extensions-refreshed to client');
       }

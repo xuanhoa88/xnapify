@@ -6,7 +6,7 @@
  */
 
 /**
- * Checksum Worker - Stateless Piscina worker for plugin checksum operations.
+ * Checksum Worker - Stateless Piscina worker for extension checksum operations.
  * Runs in a separate thread to avoid blocking the main event loop
  * during CPU-intensive SHA-256 directory hashing.
  */
@@ -39,7 +39,7 @@ function mergeOptions(overrides = {}) {
 }
 
 /**
- * Compute SHA-256 checksum of a plugin directory.
+ * Compute SHA-256 checksum of an extension directory.
  *
  * @param {{ dir: string, options?: Object }} data
  * @returns {Promise<string>} Hex-encoded hash
@@ -52,7 +52,7 @@ export async function COMPUTE_CHECKSUM(data) {
 }
 
 /**
- * Verify a plugin directory against an expected checksum.
+ * Verify an extension directory against an expected checksum.
  *
  * @param {{ dir: string, expectedChecksum: string, options?: Object }} data
  * @returns {Promise<{ valid: boolean, actual: string }>}

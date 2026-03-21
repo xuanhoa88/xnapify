@@ -56,7 +56,7 @@ When an `ownerKey` is provided during registration, the binding is marked as "pe
 
 `container.cleanup(...ownerKeys)` allows selective clearing processes.
 - Without arguments, it removes only **non-persistent** bindings.
-- With `ownerKeys` provided, it removes non-persistent bindings **AND** any persistent bindings owned by any of the provided tracking keys. This is useful for clearing specific plugin scopes.
+- With `ownerKeys` provided, it removes non-persistent bindings **AND** any persistent bindings owned by any of the provided tracking keys. This is useful for clearing specific extension scopes.
 
 ## Validation and Errors
 

@@ -19,7 +19,7 @@ const viewsContext = require.context(
 // LOGGING
 // =============================================================================
 
-const TAG = 'Plugins';
+const TAG = 'Extensions';
 
 /**
  * Log a lifecycle phase message.

@@ -27,7 +27,7 @@ class Hook {
     if (callbacks.has(callback)) {
       console.warn(
         `[HookRegistry] Duplicate callback registration for hook "${hookId}"${
-          extensionId ? ` by plugin "${extensionId}"` : ''
+          extensionId ? ` by extension "${extensionId}"` : ''
         }`,
       );
       return this;
@@ -35,7 +35,7 @@ class Hook {
 
     callbacks.add(callback);
 
-    // Track for plugin cleanup
+    // Track for extension cleanup
     if (extensionId) {
       if (!this.registrations.has(extensionId)) {
         this.registrations.set(extensionId, new Set());

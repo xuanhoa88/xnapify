@@ -1,6 +1,6 @@
 export default {
-  async init(pluginRegistry, _context) {
-    pluginRegistry.registerHook('search.indexers.register', async app => {
+  async init(registry, _context) {
+    registry.registerHook('search.indexers.register', async app => {
       const hook = app.get('container').resolve('hook');
 
       // Example: observe a custom entity lifecycle and index it

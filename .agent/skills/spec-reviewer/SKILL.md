@@ -17,9 +17,9 @@ If a `SPEC.md` violates *any* of the following rules, you must **REJECT the spec
 
 ### 1. Database & Persistence Layer
 - **Valid:** The developer specifies what sequelize `model` they are querying.
-- **Valid:** The developer is building a Plugin and specifies using a `reg.registerHook` to alter the database.
+- **Valid:** The developer is building an Extension and specifies using a `reg.registerHook` to alter the database.
 - **Invalid:** The developer attempts to inject custom raw SQL.
-- **Invalid:** The developer is building a Plugin but specifies editing core `api/models` directly.
+- **Invalid:** The developer is building an Extension but specifies editing core `api/models` directly.
 
 ### 2. API Security & Validation
 - **Valid:** The endpoints specify strict Route Middlewares (`requireAuth` and `requirePermission`).

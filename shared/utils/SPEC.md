@@ -16,7 +16,7 @@ An asynchronous middleware composer mirroring Koa's `koa-compose` logic but adap
 
 ## `webpackContextAdapter.js` (`createWebpackContextAdapter`)
 
-A wrapper function designed to decouple domain logic (like the `node-red` settings generator or `plugin` loader) from Webpack's non-standard `require.context` API.
+A wrapper function designed to decouple domain logic (like the `node-red` settings generator or `extension` loader) from Webpack's non-standard `require.context` API.
 
 ### Interface Mapping
 - `adapter.files()` strictly maps to `ctx.keys()`.

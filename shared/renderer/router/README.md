@@ -101,20 +101,20 @@ export default function Dashboard() {
 }
 ```
 
-## 6. Dynamic Plugin Registration
+## 6. Dynamic Extension Registration
 
 The Router supports adding and removing routes dynamically at runtime without restarting the application!
 
 ```javascript
 import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
 
-const pluginAdapter = createWebpackContextAdapter(
+const extensionAdapter = createWebpackContextAdapter(
   require.context('/path/to/my-module/views'),
 );
 
 // Add dynamic routes seamlessly into the existing active app tree
-router.add(pluginAdapter);
+router.add(extensionAdapter);
 
 // Unmount and flush those specific routes on demand
-router.remove(pluginAdapter);
+router.remove(extensionAdapter);
 ```

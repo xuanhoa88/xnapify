@@ -25,9 +25,9 @@ describe('ExtensionRegistry', () => {
   describe('Extension Management', () => {
     test('registers an extension and initializes it', async () => {
       const init = jest.fn().mockResolvedValue();
-      const plugin = { name: 'Test Extension', init };
+      const ext = { name: 'Test Extension', init };
 
-      await registry.register('extension-1', plugin, { someContext: true });
+      await registry.register('extension-1', ext, { someContext: true });
 
       expect(registry.has('extension-1')).toBe(true);
       expect(registry.get('extension-1')).toMatchObject({
@@ -40,9 +40,9 @@ describe('ExtensionRegistry', () => {
 
     test('unregisters an extension and calls destroy', async () => {
       const destroy = jest.fn().mockResolvedValue();
-      const plugin = { name: 'Test Extension', destroy };
+      const ext = { name: 'Test Extension', destroy };
 
-      await registry.register('extension-1', plugin);
+      await registry.register('extension-1', ext);
       await registry.unregister('extension-1', { someContext: true });
 
       expect(registry.has('extension-1')).toBe(false);
@@ -85,42 +85,42 @@ describe('ExtensionRegistry', () => {
     test('can define multiple namespaces via subscribe', () => {
       const definition = { init: jest.fn() };
       const manifest = {
-        name: 'plugin-multi-ns',
-        rsk: { subscribe: ['core', 'ui'], name: 'plugin-multi-ns' },
+        name: 'extension-multi-ns',
+        rsk: { subscribe: ['core', 'ui'], name: 'extension-multi-ns' },
       };
 
       registry.define(definition, {}, manifest);
 
       expect(registry.getDefinitions('core').size).toBe(1);
       expect(registry.getDefinitions('ui').size).toBe(1);
-      expect(registry.findDefinition('plugin-multi-ns')).toBeDefined();
+      expect(registry.findDefinition('extension-multi-ns')).toBeDefined();
     });
 
-    test('installs a plugin by ID', async () => {
+    test('installs an extension by ID', async () => {
       const install = jest.fn().mockResolvedValue();
       const definition = { install };
       const manifest = {
-        name: 'plugin-to-install',
-        rsk: { subscribe: ['core'], name: 'plugin-to-install' },
+        name: 'extension-to-install',
+        rsk: { subscribe: ['core'], name: 'extension-to-install' },
       };
 
       registry.define(definition, { contextVal: 42 }, manifest);
-      const result = await registry.installExtension('plugin-to-install');
+      const result = await registry.installExtension('extension-to-install');
 
       expect(result).toBe(true);
       expect(install).toHaveBeenCalledWith({ contextVal: 42 });
     });
 
-    test('uninstalls a plugin by ID', async () => {
+    test('uninstalls an extension by ID', async () => {
       const uninstall = jest.fn().mockResolvedValue();
       const definition = { uninstall };
       const manifest = {
-        name: 'plugin-to-uninstall',
-        rsk: { subscribe: ['core'], name: 'plugin-to-uninstall' },
+        name: 'extension-to-uninstall',
+        rsk: { subscribe: ['core'], name: 'extension-to-uninstall' },
       };
 
       registry.define(definition, { contextVal: 42 }, manifest);
-      const result = await registry.uninstallExtension('plugin-to-uninstall');
+      const result = await registry.uninstallExtension('extension-to-uninstall');
 
       expect(result).toBe(true);
       expect(uninstall).toHaveBeenCalledWith({ contextVal: 42 });
@@ -131,17 +131,17 @@ describe('ExtensionRegistry', () => {
       const destroy = jest.fn().mockResolvedValue();
 
       // Initial mock extension already registered
-      await registry.register('plugin-updatable', { destroy });
+      await registry.register('extension-updatable', { destroy });
 
       const definition = { init };
       const manifest = {
-        name: 'plugin-updatable',
-        rsk: { subscribe: ['core'], name: 'plugin-updatable' },
+        name: 'extension-updatable',
+        rsk: { subscribe: ['core'], name: 'extension-updatable' },
       };
 
       registry.define(definition, { contextVal: 42 }, manifest);
 
-      const result = await registry.updateExtension('plugin-updatable');
+      const result = await registry.updateExtension('extension-updatable');
 
       // The registry unregisters the current instance and registers the new one built from definition
       expect(result).toBe(registry);

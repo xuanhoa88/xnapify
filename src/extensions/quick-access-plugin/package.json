@@ -1,5 +1,5 @@
 {
-  "name": "@rsk-plugin/quick-access",
+  "name": "@rsk-extension/quick-access",
   "version": "1.0.0",
   "browser": "views/index.js",
   "description": "Quick login with demo user accounts",

@@ -11,8 +11,8 @@
  */
 const DEFAULT_EXTENSIONS = [
   {
-    key: 'rsk_plugin_quick_access',
-    name: '@rsk-plugin/quick-access',
+    key: 'rsk_extension_quick_access',
+    name: '@rsk-extension/quick-access',
     description: 'Quick login with demo user accounts',
     version: '1.0.0',
   },

@@ -1,7 +1,7 @@
 {
-  "name": "@rsk-module/plugins",
+  "name": "@rsk-module/extensions",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Plugins module"
+  "description": "Extensions module"
 }

@@ -12,10 +12,10 @@ import { useTranslation } from 'react-i18next';
 
 import Form from '@shared/renderer/components/Form';
 
-import s from './PluginField.scss';
+import s from './ExtensionField.scss';
 
-export default function PluginField({ register, context }) {
-  const { t } = useTranslation(`plugin:${__PLUGIN_NAME__}`);
+export default function ExtensionField({ register, context }) {
+  const { t } = useTranslation(`extension:${__EXTENSION_NAME__}`);
 
   const handleAsyncValidate = useCallback(
     async value => {
@@ -23,7 +23,7 @@ export default function PluginField({ register, context }) {
       if (!value || value.length < 3) return true;
       try {
         const response = await context.fetch(
-          `/api/plugins/${__PLUGIN_NAME__}/ipc`,
+          `/api/extensions/${__EXTENSION_NAME__}/ipc`,
           {
             method: 'POST',
             body: {
@@ -72,7 +72,7 @@ export default function PluginField({ register, context }) {
   );
 }
 
-PluginField.propTypes = {
+ExtensionField.propTypes = {
   register: PropTypes.func.isRequired,
   context: PropTypes.object,
 };

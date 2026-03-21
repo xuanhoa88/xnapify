@@ -87,7 +87,7 @@ export default function EmailTemplateSelector({ editor }) {
             {t('admin:emails.templates.blocks.' + tmpl.id, tmpl.label)}
           </ContextMenu.Item>
         ))}
-        {/* Allow users/plugins to easily add more templates dynamically */}
+        {/* Allow users/extensions to easily add more templates dynamically */}
         <ExtensionSlot
           name='emails.templates.selector'
           editor={editor}

@@ -85,9 +85,9 @@ const mockQueueChannel = {
 const mockQueue = jest.fn(() => mockQueueChannel);
 
 const mockExtensionManager = {
-  getExtensionPath: jest.fn(() => '/mock/plugins'),
+  getExtensionPath: jest.fn(() => '/mock/extensions'),
   getDevExtensionPath: jest.fn(cwd =>
-    path.resolve(cwd, process.env.RSK_PLUGIN_LOCAL_PATH || 'plugins'),
+    path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions'),
   ),
 };
 
@@ -110,43 +110,46 @@ describe('Extension Service', () => {
     it('should list extensions from DB and FS', async () => {
       // Mock FS via imported mocked module
       // Mock FS via fs.promises.readdir used in service for sequential calls
-      // 1st call: Installed plugins (remote)
+      // 1st call: Installed extensions (remote)
       fs.promises.readdir.mockResolvedValueOnce([
-        { name: 'fs-plugin', isDirectory: () => true },
+        { name: 'fs-extension', isDirectory: () => true },
       ]);
-      // 2nd call: Local plugins (local)
+      // 2nd call: Local extensions (local)
       fs.promises.readdir.mockResolvedValueOnce([
-        { name: 'local-plugin', isDirectory: () => true },
+        { name: 'local-extension', isDirectory: () => true },
       ]);
 
       fs.existsSync.mockReturnValue(true);
       // fs.promises.readFile is used in readExtensionManifest
       fs.promises.readFile.mockImplementation(path => {
-        if (path.includes('fs-plugin')) {
+        if (path.includes('fs-extension')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'fs-plugin',
+              name: 'fs-extension',
               version: '1.0.0',
-              rsk: { name: 'FS Extension', plugin: { key: 'fs-plugin' } },
+              rsk: { name: 'FS Extension', extension: { key: 'fs-extension' } },
             }),
           );
         }
-        if (path.includes('local-plugin')) {
+        if (path.includes('local-extension')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'local-plugin',
+              name: 'local-extension',
               version: '1.0.0',
-              rsk: { name: 'Local Extension', plugin: { key: 'local-plugin' } },
+              rsk: {
+                name: 'Local Extension',
+                extension: { key: 'local-extension' },
+              },
             }),
           );
         }
-        // DB plugin (exists in DB, assumed in FS for this test case setup)
-        if (path.includes('db-plugin')) {
+        // DB extension (exists in DB, assumed in FS for this test case setup)
+        if (path.includes('db-extension')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'db-plugin',
+              name: 'db-extension',
               version: '1.0.0',
-              rsk: { name: 'DB Extension', plugin: { key: 'db-plugin' } },
+              rsk: { name: 'DB Extension', extension: { key: 'db-extension' } },
             }),
           );
         }
@@ -157,19 +160,19 @@ describe('Extension Service', () => {
       mockModels.Extension.findAll.mockResolvedValue([
         {
           id: 'db-1',
-          key: 'db-plugin',
+          key: 'db-extension',
           is_active: true,
           update: mockDbUpdate,
           toJSON: () => ({
             name: 'DB Extension',
-            key: 'db-plugin',
+            key: 'db-extension',
             is_active: true,
           }),
         },
       ]);
 
-      // Set local plugin path to differ from installed path
-      process.env.RSK_PLUGIN_LOCAL_PATH = 'local-plugins';
+      // Set local extension path to differ from installed path
+      process.env.RSK_EXTENSION_LOCAL_PATH = 'local-extensions';
 
       const result = await manageExtensions(mockContext);
 
@@ -184,46 +187,49 @@ describe('Extension Service', () => {
       expect(localExtension).toBeDefined();
       expect(localExtension.source).toBe('local');
 
-      const dbExtension = result.find(p => p.key === 'db-plugin');
+      const dbExtension = result.find(p => p.key === 'db-extension');
       expect(dbExtension).toBeUndefined();
       expect(mockDbUpdate).toHaveBeenCalledWith({ is_active: false });
     });
 
-    it('should deactivate DB plugins if not found on FS', async () => {
+    it('should deactivate DB extensions if not found on FS', async () => {
       fs.promises.readdir.mockResolvedValue([]); // No files
       const mockUpdate = jest.fn();
       mockModels.Extension.findAll.mockResolvedValue([
         {
           id: 'db-1',
-          key: 'missing-plugin',
+          key: 'missing-extension',
           is_active: true,
           update: mockUpdate,
           toJSON: () => ({
             name: 'Missing Extension',
-            key: 'missing-plugin',
+            key: 'missing-extension',
             is_active: true,
           }),
         },
       ]);
 
       const result = await manageExtensions(mockContext);
-      const missingPlugin = result.find(p => p.key === 'missing-plugin');
-      expect(missingPlugin).toBeUndefined();
+      const missingExtension = result.find(p => p.key === 'missing-extension');
+      expect(missingExtension).toBeUndefined();
       expect(mockUpdate).toHaveBeenCalledWith({ is_active: false });
     });
 
-    it('should list FS-only plugins when DB is empty', async () => {
+    it('should list FS-only extensions when DB is empty', async () => {
       fs.promises.readdir.mockResolvedValue([
-        { name: 'new-plugin', isDirectory: () => true },
+        { name: 'new-extension', isDirectory: () => true },
       ]);
       fs.existsSync.mockReturnValue(true);
       fs.promises.readFile.mockImplementation(p => {
-        if (p.includes('new-plugin')) {
+        if (p.includes('new-extension')) {
           return Promise.resolve(
             JSON.stringify({
-              name: 'new-plugin',
+              name: 'new-extension',
               version: '1.0.0',
-              rsk: { name: 'New Extension', plugin: { key: 'new-plugin' } },
+              rsk: {
+                name: 'New Extension',
+                extension: { key: 'new-extension' },
+              },
             }),
           );
         }
@@ -235,10 +241,10 @@ describe('Extension Service', () => {
       const result = await manageExtensions(mockContext);
 
       expect(result).toHaveLength(1);
-      const plugin = result[0];
-      expect(plugin.name).toBe('New Extension');
-      expect(plugin.isInstalled).toBe(false);
-      expect(plugin.isActive).toBe(false);
+      const extension = result[0];
+      expect(extension.name).toBe('New Extension');
+      expect(extension.isInstalled).toBe(false);
+      expect(extension.isActive).toBe(false);
     });
   });
 
@@ -262,7 +268,7 @@ describe('Extension Service', () => {
             JSON.stringify({
               name: 'Active',
               version: '1.0',
-              rsk: { plugin: { key: 'active-p' } },
+              rsk: { extension: { key: 'active-p' } },
             }),
           );
         }

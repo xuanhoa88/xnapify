@@ -6,9 +6,9 @@
  */
 
 /**
- * Plugin Worker Pool - Manages Piscina-backed checksum operations.
+ * Extension Worker Pool - Manages Piscina-backed checksum operations.
  * Offloads CPU-bound hashing to worker threads so the main event loop
- * stays responsive during plugin install / toggle flows.
+ * stays responsive during extension install / toggle flows.
  */
 
 import { createWorkerPool } from '@shared/api/engines/worker';
@@ -16,15 +16,15 @@ import { createWorkerPool } from '@shared/api/engines/worker';
 // Auto-load workers via require.context (*.worker.js)
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
 
-const workerPool = createWorkerPool('Plugins', workersContext, {
+const workerPool = createWorkerPool('Extensions', workersContext, {
   maxWorkers: 2,
-  workerTimeout: 120_000, // large plugin dirs may take time
+  workerTimeout: 120_000, // large extension dirs may take time
 });
 
 /**
- * Compute SHA-256 checksum for a plugin directory.
+ * Compute SHA-256 checksum for an extension directory.
  *
- * @param {string} dir - Absolute path to plugin directory
+ * @param {string} dir - Absolute path to extension directory
  * @param {Object} [options] - Hash options override
  * @returns {Promise<string>} Hex-encoded hash
  */
@@ -39,9 +39,9 @@ workerPool.computeChecksum = async function computeChecksum(dir, options = {}) {
 };
 
 /**
- * Verify a plugin directory against an expected checksum.
+ * Verify an extension directory against an expected checksum.
  *
- * @param {string} dir - Absolute path to plugin directory
+ * @param {string} dir - Absolute path to extension directory
  * @param {string} expectedChecksum - Trusted checksum from DB
  * @param {Object} [options] - Hash options override
  * @returns {Promise<{ valid: boolean, actual: string }>}

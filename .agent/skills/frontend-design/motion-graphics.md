@@ -39,7 +39,7 @@ JSON-based vector animations:
 
 - LottieFiles.com (free library)
 - After Effects + Bodymovin (custom)
-- Figma plugins (export from design)
+- Figma extensions (export from design)
 
 ---
 

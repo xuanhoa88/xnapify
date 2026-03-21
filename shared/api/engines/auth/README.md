@@ -168,9 +168,9 @@ import { ADMIN_ROLE, DEFAULT_ROLE, SYSTEM_PERMISSIONS, DEFAULT_RESOURCES, DEFAUL
 | `DEFAULT_GROUP` | `'users'` |
 | `ADMIN_GROUP` | `'administrators'` |
 
-Permission format: `resource:action` (e.g., `users:read`, `plugins:delete`, `*:*`).
+Permission format: `resource:action` (e.g., `users:read`, `extensions:delete`, `*:*`).
 
-Resources: `users`, `roles`, `groups`, `permissions`, `apiKeys`, `nodered`, `files`, `emails`, `webhooks`, `activities`, `plugins`.
+Resources: `users`, `roles`, `groups`, `permissions`, `apiKeys`, `nodered`, `files`, `emails`, `webhooks`, `activities`, `extensions`.
 
 Actions: `create`, `read`, `update`, `delete`, `impersonate`, `*` (manage).
 

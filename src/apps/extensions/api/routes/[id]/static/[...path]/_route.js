@@ -8,4 +8,4 @@
 import * as extensionController from '../../../../controllers/extension.controller';
 
 export const useRateLimit = false;
-export const get = [extensionController.servePluginStatic];
+export const get = [extensionController.serveExtensionStatic];

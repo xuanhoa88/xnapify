@@ -9,7 +9,7 @@ import React, { useContext } from 'react';
 
 /**
  * React Context for the global application context.
- * Enables dependency injection for deeply nested components (like plugins)
+ * Enables dependency injection for deeply nested components (like extensions)
  * without prop drilling or relying on global singletons that break SSR.
  */
 export const AppContext = React.createContext(null);

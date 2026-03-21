@@ -1,6 +1,6 @@
 {
   "nickname": "Tên hiển thị",
-  "nickname_hint": "Thêm qua Test Plugin (tối thiểu 3 ký tự)",
+  "nickname_hint": "Thêm qua Test Extension (tối thiểu 3 ký tự)",
   "birthdate": "Ngày sinh",
   "validations": {
     "nickname_taken": "Tên hiển thị đã tồn tại",

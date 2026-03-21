@@ -19,6 +19,6 @@ function requirePermission(permission) {
 }
 
 export const get = [
-  requirePermission('plugins:read'),
-  extensionController.managePlugins,
+  requirePermission('extensions:read'),
+  extensionController.manageExtensions,
 ];

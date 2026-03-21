@@ -289,7 +289,7 @@ Uses `__mocks__/uuid.js` (sequential `mock-uuid-N`). Creates a fresh `createFact
 - **Module `init(container)`**: Access via `container.resolve('queue')`. Create channels for domain-specific job processing.
 - **Worker Engine**: Queue handlers can dispatch CPU-bound subtasks to worker pools (hybrid pattern).
 - **Schedule Engine**: Cron handlers can emit jobs to queue channels for rate-limited processing.
-- **Plugin lifecycle**: Plugins use queue channels for background install/toggle operations.
+- **Extension lifecycle: Extensions use queue channels for background install/toggle operations.
 
 ---
 

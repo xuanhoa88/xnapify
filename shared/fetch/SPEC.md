@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `shared/fetch/` library provides an isomorphic HTTP data fetching wrapper built around the standard Fetch API. It implements a plugin-like lifecycle architecture to intercept, transform, and handle requests and responses universally across the server and client.
+The `shared/fetch/` library provides an isomorphic HTTP data fetching wrapper built around the standard Fetch API. It implements an extension-like lifecycle architecture to intercept, transform, and handle requests and responses universally across the server and client.
 
 ## Architecture
 

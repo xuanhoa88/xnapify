@@ -7,7 +7,7 @@ const ExtensionRegistry = require('@shared/extension/utils/Registry').default;
 
 describe('extension IPC stress', () => {
   let registry;
-  const hookId = 'ipc:stress-plugin:echo';
+  const hookId = 'ipc:stress-extension:echo';
 
   beforeEach(() => {
     registry = new ExtensionRegistry();
@@ -23,7 +23,11 @@ describe('extension IPC stress', () => {
 
     // Register handlers - each returns the payload and its handler index
     for (let i = 0; i < handlers; i++) {
-      registry.registerHook(hookId, async data => ({ i, data }), `plugin-${i}`);
+      registry.registerHook(
+        hookId,
+        async data => ({ i, data }),
+        `extension-${i}`,
+      );
     }
 
     console.log('--- Benchmarking Extension IPC ---');

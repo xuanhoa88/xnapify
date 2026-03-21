@@ -146,7 +146,7 @@ export default function Html({
               rel='stylesheet'
               type='text/css'
               href={href}
-              {...(id ? { 'data-plugin-id': id } : {})}
+              {...(id ? { 'data-extension-id': id } : {})}
             />
           );
         })}
@@ -169,7 +169,7 @@ export default function Html({
               rel='preload'
               href={src}
               as='script'
-              {...(id ? { 'data-plugin-id': id } : {})}
+              {...(id ? { 'data-extension-id': id } : {})}
             />
           );
         })}
@@ -191,7 +191,7 @@ export default function Html({
               key={src}
               type='text/javascript'
               src={src}
-              {...(id ? { 'data-plugin-id': id } : {})}
+              {...(id ? { 'data-extension-id': id } : {})}
             />
           );
         })}

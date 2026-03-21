@@ -39,7 +39,7 @@ export async function migrations(container) {
   const db = container.resolve('db');
 
   await db.connection.runMigrations(
-    [{ context: migrationsContext, prefix: 'plugins' }],
+    [{ context: migrationsContext, prefix: 'extensions' }],
     { container },
   );
 }
@@ -52,9 +52,12 @@ export async function migrations(container) {
 export async function seeds(container) {
   const db = container.resolve('db');
 
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'plugins' }], {
-    container,
-  });
+  await db.connection.runSeeds(
+    [{ context: seedsContext, prefix: 'extensions' }],
+    {
+      container,
+    },
+  );
 }
 
 /**

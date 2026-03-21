@@ -7,4 +7,13 @@
 
 /**
  * Jest setup file (setupFiles phase — runs before test environment).
+ *
+ * Define build-time globals that Webpack's DefinePlugin normally injects.
+ * The `globals` key in jest.config only works reliably with the default
+ * test environment; per-file @jest-environment overrides can lose them.
+ * Defining them here guarantees availability in every test suite.
  */
+// eslint-disable-next-line no-underscore-dangle
+global.__DEV__ = false;
+// eslint-disable-next-line no-underscore-dangle
+global.__TEST__ = true;

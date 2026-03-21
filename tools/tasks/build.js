@@ -39,7 +39,7 @@ const {
 } = require('../webpack/app.config');
 
 const clean = require('./clean');
-const buildPlugins = require('./plugin');
+const buildExtensions = require('./extension');
 
 // Build configuration
 
@@ -344,13 +344,13 @@ async function main() {
         description: 'Copying static files',
       },
       {
-        name: 'plugins',
+        name: 'extensions',
         task: () =>
-          withBuildRetry(() => buildPlugins(), {
-            operation: 'build-plugins',
+          withBuildRetry(() => buildExtensions(), {
+            operation: 'build-extensions',
             verbose,
           }),
-        description: 'Building plugins',
+        description: 'Building extensions',
       },
       {
         name: 'bundle',

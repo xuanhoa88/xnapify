@@ -399,7 +399,7 @@ export default function Toolbar({
         </>
       )}
 
-      {/* Plugins */}
+      {/* Extensions */}
       <ExtensionSlot name='wysiwyg.toolbar' editor={editor} />
 
       {/* View Options */}

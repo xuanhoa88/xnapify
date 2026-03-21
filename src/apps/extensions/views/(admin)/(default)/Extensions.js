@@ -27,28 +27,28 @@ import ExtensionCard from './components/ExtensionCard';
 import {
   fetchExtensions,
   uploadExtension,
-  upgradePlugin,
-  togglePluginStatus,
+  upgradeExtension,
+  toggleExtensionStatus,
   uninstallExtension,
-  getPlugins,
-  isPluginsListLoading,
-  isPluginUploading,
-  isPluginsInitialized,
+  getExtensions,
+  isExtensionsListLoading,
+  isExtensionUploading,
+  isExtensionsInitialized,
 } from './redux';
 
 import s from './Extensions.css';
 
-function Plugins() {
+function Extensions() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
   const { hasPermission } = useRbac();
-  const canCreate = hasPermission('plugins:create');
-  const canUpdate = hasPermission('plugins:update');
+  const canCreate = hasPermission('extensions:create');
+  const canUpdate = hasPermission('extensions:update');
 
-  const plugins = useSelector(getPlugins);
-  const loading = useSelector(isPluginsListLoading);
-  const uploading = useSelector(isPluginUploading);
-  const initialized = useSelector(isPluginsInitialized);
+  const extensions = useSelector(getExtensions);
+  const loading = useSelector(isExtensionsListLoading);
+  const uploading = useSelector(isExtensionUploading);
+  const initialized = useSelector(isExtensionsInitialized);
 
   // Search state
   const [search, setSearch] = useState('');
@@ -67,16 +67,16 @@ function Plugins() {
     dispatch(fetchExtensions());
   }, [dispatch]);
 
-  // Listen for background job completion via WebSocket to refresh plugin list
+  // Listen for background job completion via WebSocket to refresh extension list
   const ws = useWebSocket();
   useEffect(() => {
     if (!ws) return;
     const handler = data => {
       if (!data) return;
       switch (data.type) {
-        case 'PLUGIN_INSTALLED':
-        case 'PLUGIN_UPDATED':
-        case 'PLUGIN_UNINSTALLED': {
+        case 'EXTENSION_INSTALLED':
+        case 'EXTENSION_UPDATED':
+        case 'EXTENSION_UNINSTALLED': {
           dispatch(fetchExtensions());
           if (data.extensionId) {
             setActionMap(prev => {
@@ -88,13 +88,13 @@ function Plugins() {
           }
           break;
         }
-        case 'PLUGIN_TAMPERED': {
+        case 'EXTENSION_TAMPERED': {
           dispatch(fetchExtensions());
           dispatch(
             showWarningMessage({
               message: t(
-                'admin:plugins.tampered',
-                'A plugin failed integrity verification and has been deactivated for security.',
+                'admin:extensions.tampered',
+                'An extension failed integrity verification and has been deactivated for security.',
               ),
             }),
           );
@@ -119,8 +119,8 @@ function Plugins() {
   }, []);
 
   // --- Uninstall (existing ConfirmModal.Delete) ---
-  const handleDelete = useCallback(plugin => {
-    deleteModalRef.current && deleteModalRef.current.open(plugin);
+  const handleDelete = useCallback(extension => {
+    deleteModalRef.current && deleteModalRef.current.open(extension);
   }, []);
 
   const handleDeleteAction = useCallback(
@@ -134,8 +134,8 @@ function Plugins() {
         dispatch(
           showSuccessMessage({
             message: t(
-              'admin:plugins.uninstallSuccess',
-              'Plugin uninstalled successfully.',
+              'admin:extensions.uninstallSuccess',
+              'Extension uninstalled successfully.',
             ),
           }),
         );
@@ -151,8 +151,8 @@ function Plugins() {
   );
 
   // --- Activate ---
-  const handleActivate = useCallback(plugin => {
-    activateModalRef.current && activateModalRef.current.open(plugin);
+  const handleActivate = useCallback(extension => {
+    activateModalRef.current && activateModalRef.current.open(extension);
   }, []);
 
   const handleActivateAction = useCallback(
@@ -163,13 +163,13 @@ function Plugins() {
       }));
       try {
         await dispatch(
-          togglePluginStatus({ id: item.id, isActive: true }),
+          toggleExtensionStatus({ id: item.id, isActive: true }),
         ).unwrap();
         dispatch(
           showSuccessMessage({
             message: t(
-              'admin:plugins.activateSuccess',
-              'Plugin activated successfully.',
+              'admin:extensions.activateSuccess',
+              'Extension activated successfully.',
             ),
           }),
         );
@@ -185,8 +185,8 @@ function Plugins() {
   );
 
   // --- Deactivate ---
-  const handleDeactivate = useCallback(plugin => {
-    deactivateModalRef.current && deactivateModalRef.current.open(plugin);
+  const handleDeactivate = useCallback(extension => {
+    deactivateModalRef.current && deactivateModalRef.current.open(extension);
   }, []);
 
   const handleDeactivateAction = useCallback(
@@ -197,13 +197,13 @@ function Plugins() {
       }));
       try {
         await dispatch(
-          togglePluginStatus({ id: item.id, isActive: false }),
+          toggleExtensionStatus({ id: item.id, isActive: false }),
         ).unwrap();
         dispatch(
           showSuccessMessage({
             message: t(
-              'admin:plugins.deactivateSuccess',
-              'Plugin deactivated successfully.',
+              'admin:extensions.deactivateSuccess',
+              'Extension deactivated successfully.',
             ),
           }),
         );
@@ -242,8 +242,8 @@ function Plugins() {
     dispatch(
       showSuccessMessage({
         message: t(
-          'admin:plugins.installSuccess',
-          'Plugin installed successfully.',
+          'admin:extensions.installSuccess',
+          'Extension installed successfully.',
         ),
       }),
     );
@@ -254,9 +254,11 @@ function Plugins() {
   }, []);
 
   const handleUpgrade = useCallback(
-    async plugin => {
+    async extension => {
       try {
-        await dispatch(upgradePlugin({ id: plugin.id, data: {} })).unwrap();
+        await dispatch(
+          upgradeExtension({ id: extension.id, data: {} }),
+        ).unwrap();
       } catch (error) {
         console.error('Upgrade failed', error);
       }
@@ -264,24 +266,24 @@ function Plugins() {
     [dispatch],
   );
 
-  // Filter plugins
-  const filteredPlugins = useMemo(
+  // Filter extensions
+  const filteredExtensions = useMemo(
     () =>
-      plugins.filter(
+      extensions.filter(
         p =>
           (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
           (p.key && p.key.toLowerCase().includes(search.toLowerCase())),
       ),
-    [plugins, search],
+    [extensions, search],
   );
 
-  if (!initialized || (loading && plugins.length === 0)) {
+  if (!initialized || (loading && extensions.length === 0)) {
     return (
       <div className={s.root}>
         <Box.Header
           icon={<Icon name='extension' size={24} />}
-          title={t('admin:navigation.plugins', 'Plugins')}
-          subtitle={t('admin:plugins.subtitle', 'Manage system plugins')}
+          title={t('admin:navigation.extensions', 'Extensions')}
+          subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
         />
         <Loader variant='cards' />
       </div>
@@ -292,8 +294,8 @@ function Plugins() {
     <div className={s.root}>
       <Box.Header
         icon={<Icon name='extension' size={24} />}
-        title={t('admin:navigation.plugins', 'Plugins')}
-        subtitle={t('admin:plugins.subtitle', 'Manage system plugins')}
+        title={t('admin:navigation.extensions', 'Extensions')}
+        subtitle={t('admin:extensions.subtitle', 'Manage system extensions')}
       >
         <div className={s.headerActions}>
           <input
@@ -310,8 +312,8 @@ function Plugins() {
           >
             <Icon name='plus' size={16} />
             {uploading
-              ? t('admin:plugins.uploading', 'Uploading...')
-              : t('admin:plugins.upload', 'Upload Plugin')}
+              ? t('admin:extensions.uploading', 'Uploading...')
+              : t('admin:extensions.upload', 'Upload Extension')}
           </Button>
         </div>
       </Box.Header>
@@ -320,15 +322,15 @@ function Plugins() {
         className={s.filters}
         value={search}
         onChange={handleSearchChange}
-        placeholder={t('admin:plugins.search', 'Search plugins...')}
+        placeholder={t('admin:extensions.search', 'Search extensions...')}
       />
 
       <div className={s.grid}>
-        {filteredPlugins.map(plugin => (
+        {filteredExtensions.map(extension => (
           <ExtensionCard
-            key={plugin.id}
-            plugin={plugin}
-            actionLabel={actionMap[plugin.id]}
+            key={extension.id}
+            extension={extension}
+            actionLabel={actionMap[extension.id]}
             activeDropdownId={activeDropdownId}
             onToggleDropdown={handleToggleDropdown}
             onActivate={handleActivate}
@@ -343,10 +345,10 @@ function Plugins() {
       {/* Uninstall confirmation */}
       <ConfirmModal.Delete
         ref={deleteModalRef}
-        title={t('admin:plugins.uninstall', 'Uninstall Plugin')}
+        title={t('admin:extensions.uninstall', 'Uninstall Extension')}
         message={t(
-          'admin:plugins.uninstall_message',
-          'Are you sure you want to uninstall this plugin? This will remove it from the database.',
+          'admin:extensions.uninstall_message',
+          'Are you sure you want to uninstall this extension? This will remove it from the database.',
         )}
         getItemName={p => p.name}
         onDelete={handleDeleteAction}
@@ -355,11 +357,11 @@ function Plugins() {
       {/* Activate confirmation */}
       <ConfirmModal.Action
         ref={activateModalRef}
-        title={t('admin:plugins.activate', 'Activate Plugin')}
+        title={t('admin:extensions.activate', 'Activate Extension')}
         getDescription={p =>
           t(
-            'admin:plugins.activateConfirm',
-            'Are you sure you want to activate "{{name}}"? The plugin will start running immediately.',
+            'admin:extensions.activateConfirm',
+            'Are you sure you want to activate "{{name}}"? The extension will start running immediately.',
             { name: p.name },
           )
         }
@@ -370,11 +372,11 @@ function Plugins() {
       {/* Deactivate confirmation */}
       <ConfirmModal.Action
         ref={deactivateModalRef}
-        title={t('admin:plugins.deactivate', 'Deactivate Plugin')}
+        title={t('admin:extensions.deactivate', 'Deactivate Extension')}
         getDescription={p =>
           t(
-            'admin:plugins.deactivateConfirm',
-            'Are you sure you want to deactivate "{{name}}"? The plugin will stop running.',
+            'admin:extensions.deactivateConfirm',
+            'Are you sure you want to deactivate "{{name}}"? The extension will stop running.',
             { name: p.name },
           )
         }
@@ -385,20 +387,20 @@ function Plugins() {
       {/* Install confirmation */}
       <ConfirmModal.Action
         ref={installModalRef}
-        title={t('admin:plugins.install', 'Install Plugin')}
+        title={t('admin:extensions.install', 'Install Extension')}
         getDescription={p =>
           t(
-            'admin:plugins.installConfirm',
+            'admin:extensions.installConfirm',
             'Are you sure you want to install "{{name}}"?',
             { name: p.name },
           )
         }
         onConfirm={handleInstallAction}
         onSuccess={handleInstallCancel}
-        confirmLabel={t('admin:plugins.installButton', 'Install')}
+        confirmLabel={t('admin:extensions.installButton', 'Install')}
       />
     </div>
   );
 }
 
-export default Plugins;
+export default Extensions;

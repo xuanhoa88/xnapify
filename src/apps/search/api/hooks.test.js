@@ -3,7 +3,7 @@ import { createFactory as createHookFactory } from '@shared/api/engines/hook/fac
 import { registerSearchHooks } from './hooks';
 
 describe('Search Hooks', () => {
-  describe('Plugin Hook Registration', () => {
+  describe('Extension Hook Registration', () => {
     test('executes search.indexers.register hook via extension registry', () => {
       const hook = createHookFactory();
       const registryMock = {

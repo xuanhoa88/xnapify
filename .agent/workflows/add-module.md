@@ -571,7 +571,7 @@ function log(phase) {
  * Providers hook — share client-side services with other modules.
  * Called during view bootstrap before route initialization.
  *
- * @param {Object} context - Shared context (container, store, plugin, etc.)
+ * @param {Object} context - Shared context (container, store, extension, etc.)
  */
 export function providers({ container, store }) {
   // Inject Redux reducer at bootstrap time
@@ -650,8 +650,8 @@ export async function middleware(context, next) {
 /**
  * Register — called once when route is discovered
  */
-export function register({ store, i18n, plugin }) {
-  plugin.registerMenu({
+export function register({ store, i18n, extension }) {
+  extension.registerMenu({
     ns: 'admin',
     item: {
       ns: i18n.t('navigation.admin'),
@@ -667,8 +667,8 @@ export function register({ store, i18n, plugin }) {
 /**
  * Mount — called when route is mounted
  */
-export function mount({ store, i18n, path, plugin }) {
-  plugin.addBreadcrumb(
+export function mount({ store, i18n, path, extension }) {
+  extension.addBreadcrumb(
     { label: i18n.t('navigation.module'), url: path },
     'admin',
   );

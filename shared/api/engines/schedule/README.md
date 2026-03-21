@@ -116,14 +116,14 @@ schedule.register('reports:weekly', '0 9 * * 1', async () => {
 
 ## Custom Instances
 
-For isolated scheduling (e.g., plugins with their own lifecycle):
+For isolated scheduling (e.g., extensions with their own lifecycle):
 
 ```javascript
 import { createFactory } from '@shared/api/engines/schedule';
 
-const pluginSchedule = createFactory({ autoStart: false });
-pluginSchedule.register extension:sync', '*/10 * * * *', syncHandler);
-pluginSchedule.start(); // manually start when ready
+const extensionSchedule = createFactory({ autoStart: false });
+extensionSchedule.register extension:sync', '*/10 * * * *', syncHandler);
+extensionSchedule.start(); // manually start when ready
 ```
 
 Each instance registers its own `SIGTERM`/`SIGINT` cleanup handlers.

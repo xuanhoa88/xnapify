@@ -8,20 +8,20 @@
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
 /**
- * Plugins Thunks
+ * Extensions Thunks
  *
- * Async thunk actions for admin plugins CRUD operations.
+ * Async thunk actions for admin extensions CRUD operations.
  */
 
 /**
- * Fetch all plugins
+ * Fetch all extensions
  */
 export const fetchExtensions = createAsyncThunk(
-  'admin/plugins/fetchExtensions',
+  'admin/extensions/fetchExtensions',
   async (_, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/admin/plugins');
-      return data.plugins || [];
+      const { data } = await fetch('/api/admin/extensions');
+      return data.extensions || [];
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }
@@ -29,20 +29,20 @@ export const fetchExtensions = createAsyncThunk(
 );
 
 /**
- * Upload a plugin
+ * Upload an extension
  */
 export const uploadExtension = createAsyncThunk(
-  'admin/plugins/uploadExtension',
+  'admin/extensions/uploadExtension',
   async (file, { extra: { fetch }, rejectWithValue }) => {
     try {
       const formData = new FormData();
       formData.append('file', file);
 
-      const { data } = await fetch('/api/admin/plugins/upload', {
+      const { data } = await fetch('/api/admin/extensions/upload', {
         method: 'POST',
         body: formData,
       });
-      return data.plugin;
+      return data.extension;
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }
@@ -50,17 +50,17 @@ export const uploadExtension = createAsyncThunk(
 );
 
 /**
- * Upgrade a plugin
+ * Upgrade an extension
  */
-export const upgradePlugin = createAsyncThunk(
-  'admin/plugins/upgradePlugin',
+export const upgradeExtension = createAsyncThunk(
+  'admin/extensions/upgradeExtension',
   async ({ id, data }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data: responseData } = await fetch(`/api/admin/plugins/${id}`, {
+      const { data: responseData } = await fetch(`/api/admin/extensions/${id}`, {
         method: 'PATCH',
         body: data,
       });
-      return responseData.plugin;
+      return responseData.extension;
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }
@@ -68,17 +68,17 @@ export const upgradePlugin = createAsyncThunk(
 );
 
 /**
- * Toggle plugin status
+ * Toggle extension status
  */
-export const togglePluginStatus = createAsyncThunk(
-  'admin/plugins/toggleStatus',
+export const toggleExtensionStatus = createAsyncThunk(
+  'admin/extensions/toggleStatus',
   async ({ id, isActive }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch(`/api/admin/plugins/${id}/status`, {
+      const { data } = await fetch(`/api/admin/extensions/${id}/status`, {
         method: 'PATCH',
         body: { is_active: isActive },
       });
-      return data.plugin;
+      return data.extension;
     } catch (error) {
       return rejectWithValue(error.data || error.message);
     }
@@ -86,13 +86,13 @@ export const togglePluginStatus = createAsyncThunk(
 );
 
 /**
- * Uninstall plugin
+ * Uninstall extension
  */
 export const uninstallExtension = createAsyncThunk(
-  'admin/plugins/uninstall',
+  'admin/extensions/uninstall',
   async (id, { extra: { fetch }, rejectWithValue }) => {
     try {
-      await fetch(`/api/admin/plugins/${id}`, {
+      await fetch(`/api/admin/extensions/${id}`, {
         method: 'DELETE',
       });
       return id;

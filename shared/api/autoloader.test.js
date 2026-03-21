@@ -29,7 +29,7 @@ describe('shared/api/autoloader', () => {
         'permissions',
         'auth',
         'files',
-        'plugins',
+        'extensions',
         'emails',
         'webhooks',
         'search',
@@ -65,7 +65,7 @@ describe('shared/api/autoloader', () => {
         'permissions',
         'auth',
         'files',
-        'plugins',
+        'extensions',
         'emails',
         'webhooks',
         'search',
@@ -151,7 +151,7 @@ describe('shared/api/autoloader', () => {
             'permissions',
             'auth',
             'files',
-            'plugins',
+            'extensions',
             'emails',
             'webhooks',
             'search',
@@ -195,7 +195,7 @@ describe('shared/api/autoloader', () => {
             'permissions',
             'auth',
             'files',
-            'plugins',
+            'extensions',
             'emails',
             'webhooks',
             'search',
@@ -240,7 +240,7 @@ describe('shared/api/autoloader', () => {
             routes: jest.fn(),
           };
         }
-        if (key === './plugins/api/index.js') {
+        if (key === './extensions/api/index.js') {
           return { init: jest.fn() };
         }
         if (
@@ -290,7 +290,7 @@ describe('shared/api/autoloader', () => {
             'permissions',
             'auth',
             'files',
-            'plugins',
+            'extensions',
             'emails',
             'webhooks',
             'search',
@@ -319,7 +319,7 @@ describe('shared/api/autoloader', () => {
             models: () => mockModelContext,
           };
         }
-        if (key === './plugins/api/index.js') return { init: jest.fn() };
+        if (key === './extensions/api/index.js') return { init: jest.fn() };
         if (
           [
             'roles',

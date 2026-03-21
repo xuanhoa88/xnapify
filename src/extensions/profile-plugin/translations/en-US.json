@@ -1,6 +1,6 @@
 {
   "nickname": "Nickname",
-  "nickname_hint": "Added via Test Plugin (min 3 chars)",
+  "nickname_hint": "Added via Test Extension (min 3 chars)",
   "birthdate": "Birthdate",
   "validations": {
     "nickname_taken": "This nickname is already taken",

@@ -119,11 +119,11 @@ Searches sources in order. First non-null wins.
 
 ### Resources (`DEFAULT_RESOURCES`)
 
-`ALL` (`*`), `USERS`, `ROLES`, `GROUPS`, `PERMISSIONS`, `API_KEYS`, `NODE_RED`, `FILES`, `EMAILS`, `WEBHOOKS`, `ACTIVITIES`, `PLUGINS`.
+`ALL` (`*`), `USERS`, `ROLES`, `GROUPS`, `PERMISSIONS`, `API_KEYS`, `NODE_RED`, `FILES`, `EMAILS`, `WEBHOOKS`, `ACTIVITIES`, `EXTENSIONS`.
 
 ### System Permissions (30 total)
 
-Format: `{ resource, action, description }`. Covers: super admin (`*:*`), users (CRUD + impersonate), roles (CRUD), groups (CRUD), permissions (CRUD), Node-RED (admin/read), API keys (create/delete), files (CRUD), activities (read), plugins (CRUD).
+Format: `{ resource, action, description }`. Covers: super admin (`*:*`), users (CRUD + impersonate), roles (CRUD), groups (CRUD), permissions (CRUD), Node-RED (admin/read), API keys (create/delete), files (CRUD), activities (read), extensions (CRUD).
 
 ## 4. Middleware: `requireAuth(options?)`
 

@@ -78,7 +78,7 @@ The toolbar renders below the editor content and includes grouped buttons for:
 - **Links & Media** — Link, Image, Video/Audio/YouTube, Emoji picker
 - **Code & Math** — Code block (with language picker), Math (LaTeX), Horizontal rule
 - **History** — Undo / Redo
-- **Plugin slot** — `wysiwyg.toolbar` for plugin-injected buttons
+- **Extension slot** — `wysiwyg.toolbar` for extension-injected buttons
 - **View options** — Full-screen toggle
 
 ### Prompt Modal System
@@ -94,7 +94,7 @@ All URL/input prompts (link, image, video, audio, youtube, math) use an internal
 | `wysiwyg.prompt.youtube` | YouTube URL input |
 | `wysiwyg.prompt.math` | LaTeX expression input |
 
-Plugins can register custom components (e.g., file uploaders) for any slot.
+Extensions can register custom components (e.g., file uploaders) for any slot.
 
 ## Markdown Support
 
@@ -104,7 +104,7 @@ When `markdown={true}` (default), the component auto-converts between HTML and m
 - **Markdown → HTML**: marked with pre-processors for LaTeX (`$...$` / `$$...$$`), audio/video URLs, and mentions
 - **Auto-detection**: If raw HTML is passed but `markdown={true}`, the component detects non-markdown content and passes it through unchanged
 
-## Plugin Slots
+## Extension Slots
 
 | Slot Name | Location | Props |
 |-----------|----------|-------|
@@ -135,5 +135,5 @@ When `markdown={true}` (default), the component auto-converts between HTML and m
 | `MediaExtensions.js` | Video and Audio node extensions |
 | `MentionList.js` | `@mention` suggestion dropdown |
 | `markdownUtils.js` | HTML ↔ Markdown conversion utilities |
-| `suggestion.js` | Mention suggestion plugin configuration |
+| `suggestion.js` | Mention suggestion extension configuration |
 | `constants.js` | Emoji dictionary and common emoji list |

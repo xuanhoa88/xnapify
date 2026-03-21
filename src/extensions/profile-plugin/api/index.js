@@ -34,50 +34,53 @@ const seedsContext = require.context(
   /\.[cm]?[jt]s$/i,
 );
 
-// Plugin definition for backend
+// Extension definition for backend
 export default {
   // Store handlers for cleanup
   [HANDLERS]: {},
 
-  // Declarative translations — auto-registered by plugin manager before init
+  // Declarative translations — auto-registered by extension manager before init
   translations() {
     return translationsContext;
   },
 
-  // Lifecycle: install (called once when the user clicks 'Install Plugin')
+  // Lifecycle: install (called once when the user clicks 'Install Extension')
   async install(registry, context) {
-    console.log('[Test Plugin] Installing...', __PLUGIN_NAME__);
+    console.log('[Test Extension] Installing...', __EXTENSION_NAME__);
     const db = context.container.resolve('db');
     if (db) {
       try {
-        console.log('[Test Plugin] Migration keys:', migrationsContext.keys());
+        console.log(
+          '[Test Extension] Migration keys:',
+          migrationsContext.keys(),
+        );
         await db.connection.runMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Test Plugin] Database migrations executed');
+        console.log('[Test Extension] Database migrations executed');
       } catch (error) {
         console.error(
-          '[Test Plugin] Database migration failed:',
+          '[Test Extension] Database migration failed:',
           error.message,
         );
       }
 
       try {
-        console.log('[Test Plugin] Seed keys:', seedsContext.keys());
+        console.log('[Test Extension] Seed keys:', seedsContext.keys());
         await db.connection.runSeeds([
-          { context: seedsContext, prefix: __PLUGIN_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Test Plugin] Database seeds executed');
+        console.log('[Test Extension] Database seeds executed');
       } catch (error) {
-        console.error('[Test Plugin] Database seed failed:', error.message);
+        console.error('[Test Extension] Database seed failed:', error.message);
       }
     }
   },
 
-  // Lifecycle: init (called when plugin is initialized on server)
+  // Lifecycle: init (called when extension is initialized on server)
   async init(registry, context) {
     console.log(
-      '[Test Plugin] Backend logic initialized for ' + __PLUGIN_NAME__,
+      '[Test Extension] Backend logic initialized for ' + __EXTENSION_NAME__,
     );
 
     // Get hook engine
@@ -97,7 +100,7 @@ export default {
         context.schema = context.schema.extend({
           profile: inner.optional(),
         });
-        console.log('[Test Plugin] Extended profile schema via hook');
+        console.log('[Test Extension] Extended profile schema via hook');
       }
     };
     hook('profile').on('validation:update', this[HANDLERS].updateValidation);
@@ -107,7 +110,7 @@ export default {
     // as native EAV rows by the core profile service.
     this[HANDLERS].updating = function (profileData) {
       console.log(
-        '[Test Plugin] Persisting nickname as native EAV row:',
+        '[Test Extension] Persisting nickname as native EAV row:',
         pick(profileData, ['nickname', 'mobile', 'birthdate']),
       );
     };
@@ -122,7 +125,9 @@ export default {
       let nickname = user.profile.nickname || null;
       if (!nickname && user.email) {
         nickname = snakeCase(user.email.split('@')[0]);
-        console.log('[Test Plugin] Generated nickname from email: ' + nickname);
+        console.log(
+          '[Test Extension] Generated nickname from email: ' + nickname,
+        );
       }
       user.profile.nickname = nickname || null;
 
@@ -133,7 +138,7 @@ export default {
       user.profile.mobile = user.profile.mobile || null;
 
       console.log(
-        '[Test Plugin] Added nickname to response: ' + user.profile.nickname,
+        '[Test Extension] Added nickname to response: ' + user.profile.nickname,
       );
     };
 
@@ -141,18 +146,18 @@ export default {
     hook('profile').on('retrieved', this[HANDLERS].formatResponse);
 
     // =========================================================================
-    // IPC Handlers (accessible via POST /api/plugins/:id/ipc)
+    // IPC Handlers (accessible via POST /api/extensions/:id/ipc)
     // =========================================================================
 
     // Example Middleware: Logs the start and end of an IPC request
     const loggingMiddleware = async (data, ctx, next) => {
-      console.log(`[Test Plugin] IPC Middleware -> Request started`, data);
+      console.log(`[Test Extension] IPC Middleware -> Request started`, data);
       const start = Date.now();
 
       const result = await next(); // Proceed to the next middleware or handler
 
       console.log(
-        `[Test Plugin] IPC Middleware -> Request ended in ${Date.now() - start}ms`,
+        `[Test Extension] IPC Middleware -> Request ended in ${Date.now() - start}ms`,
       );
       return result;
     };
@@ -169,18 +174,18 @@ export default {
     this[HANDLERS].ipcHello = registry.createPipeline(
       loggingMiddleware,
       async data => {
-        console.log('[Test Plugin] IPC hello called with:', data);
+        console.log('[Test Extension] IPC hello called with:', data);
         return {
-          message: `Hello from ${__PLUGIN_NAME__}!`,
+          message: `Hello from ${__EXTENSION_NAME__}!`,
           received: data,
           timestamp: new Date().toISOString(),
         };
       },
     );
     registry.registerHook(
-      `ipc:${__PLUGIN_NAME__}:hello`,
+      `ipc:${__EXTENSION_NAME__}:hello`,
       this[HANDLERS].ipcHello,
-      __PLUGIN_NAME__,
+      __EXTENSION_NAME__,
     );
 
     // IPC handler to check if a nickname exists using createPipeline
@@ -211,21 +216,23 @@ export default {
 
           return { exists: !!existing };
         } catch (err) {
-          console.error('[Test Plugin] Error checking nickname:', err);
+          console.error('[Test Extension] Error checking nickname:', err);
           return { exists: false, error: err.message };
         }
       },
     );
     registry.registerHook(
-      `ipc:${__PLUGIN_NAME__}:checkNickname`,
+      `ipc:${__EXTENSION_NAME__}:checkNickname`,
       this[HANDLERS].ipcCheckNickname,
-      __PLUGIN_NAME__,
+      __EXTENSION_NAME__,
     );
   },
 
-  // Lifecycle: destroy (called when plugin is disabled)
+  // Lifecycle: destroy (called when extension is disabled)
   async destroy(registry, context) {
-    console.log('[Test Plugin] Backend logic destroyed for ' + __PLUGIN_NAME__);
+    console.log(
+      '[Test Extension] Backend logic destroyed for ' + __EXTENSION_NAME__,
+    );
 
     // Unsubscribe from hooks
     const hook = context.container.resolve('hook');
@@ -243,29 +250,29 @@ export default {
     this[HANDLERS] = {};
   },
 
-  // Lifecycle: uninstall (called once when the user deletes the plugin)
+  // Lifecycle: uninstall (called once when the user deletes the extension)
   async uninstall(registry, context) {
-    console.log('[Test Plugin] Uninstalling...', __PLUGIN_NAME__);
+    console.log('[Test Extension] Uninstalling...', __EXTENSION_NAME__);
     const db = context.container.resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([
-          { context: seedsContext, prefix: __PLUGIN_NAME__ },
+          { context: seedsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Test Plugin] Database seeds destroyed');
+        console.log('[Test Extension] Database seeds destroyed');
       } catch (error) {
-        console.error('[Test Plugin] Database seed failed:', error.message);
+        console.error('[Test Extension] Database seed failed:', error.message);
       }
 
       try {
-        console.log('[Test Plugin] Database migrations/seeds destroyed');
+        console.log('[Test Extension] Database migrations/seeds destroyed');
         await db.connection.revertMigrations([
-          { context: migrationsContext, prefix: __PLUGIN_NAME__ },
+          { context: migrationsContext, prefix: __EXTENSION_NAME__ },
         ]);
-        console.log('[Test Plugin] Database migrations destroyed');
+        console.log('[Test Extension] Database migrations destroyed');
       } catch (error) {
         console.error(
-          '[Test Plugin] Database migration failed:',
+          '[Test Extension] Database migration failed:',
           error.message,
         );
       }

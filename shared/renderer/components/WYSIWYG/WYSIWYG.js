@@ -419,7 +419,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
       // Gracefully recover from the DragHandle ↔ column-resize decoration
       // conflict that throws "Cannot read properties of undefined
       // (reading 'localsInner')" during updateState. When this happens we
-      // reconfigure the state to reset stale plugin decorations.
+      // reconfigure the state to reset stale editor decorations.
       dispatchTransaction(transaction) {
         if (this.view.isDestroyed) return;
 
@@ -429,7 +429,7 @@ const WYSIWYG = forwardRef(function WYSIWYG$(
         try {
           this.view.updateState(state);
         } catch {
-          // Reset plugin decorations by reconfiguring with same plugins
+          // Reset decorations by reconfiguring with same plugins
           const cleanState = state.reconfigure({ plugins: state.plugins });
           this.view.updateState(cleanState);
         }

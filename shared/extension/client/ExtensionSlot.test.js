@@ -38,7 +38,11 @@ describe('ExtensionSlot', () => {
     act(() => {
       comp = renderer.create(<ExtensionSlot name='empty.slot' />);
     });
-    expect(comp.toJSON()).toBeNull();
+    // div wrapper is always rendered (for SSR hydration safety)
+    const tree = comp.toJSON();
+    expect(tree.type).toBe('div');
+    expect(tree.props['data-slot']).toBe('empty.slot');
+    expect(tree.children).toBeNull();
   });
 
   test('renders registered components with props and context', () => {
@@ -64,16 +68,17 @@ describe('ExtensionSlot', () => {
     });
 
     const tree = comp.toJSON();
-    // React fragment renders as an array of JSON elements in react-test-renderer
-    expect(tree).toBeInstanceOf(Array);
-    expect(tree).toHaveLength(2);
+    // div wrapper contains the rendered components
+    expect(tree.type).toBe('div');
+    expect(tree.props['data-slot']).toBe('test.slot');
+    expect(tree.children).toHaveLength(2);
 
-    expect(tree[0].props.className).toBe('mock1');
-    expect(tree[0].props.title).toContain('"custom":"hello"');
-    expect(tree[0].props.title).toContain('"ctx":{"mockContext":true}');
+    expect(tree.children[0].props.className).toBe('mock1');
+    expect(tree.children[0].props.title).toContain('"custom":"hello"');
+    expect(tree.children[0].props.title).toContain('"ctx":{"mockContext":true}');
 
-    expect(tree[1].props.className).toBe('mock2');
-    expect(tree[1].children[0]).toBe('hello');
+    expect(tree.children[1].props.className).toBe('mock2');
+    expect(tree.children[1].children[0]).toBe('hello');
   });
 
   test('updates dynamically when registry changes', () => {
@@ -83,7 +88,8 @@ describe('ExtensionSlot', () => {
       comp = renderer.create(<ExtensionSlot name='dynamic.slot' />);
     });
 
-    expect(comp.toJSON()).toBeNull();
+    // Empty wrapper initially
+    expect(comp.toJSON().children).toBeNull();
 
     act(() => {
       // simulate registering a component after rendering
@@ -91,8 +97,9 @@ describe('ExtensionSlot', () => {
     });
 
     const tree = comp.toJSON();
-    expect(tree).toBeDefined();
-    expect(tree.type).toBe('span');
-    expect(tree.children[0]).toBe('Added dynamically');
+    expect(tree.type).toBe('div');
+    expect(tree.children).toHaveLength(1);
+    expect(tree.children[0].type).toBe('span');
+    expect(tree.children[0].children[0]).toBe('Added dynamically');
   });
 });

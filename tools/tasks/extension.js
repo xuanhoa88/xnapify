@@ -18,31 +18,31 @@ const webpack = require('webpack');
 const config = require('../config');
 const { computeChecksum } = require('../utils/checksum');
 const { logInfo, logError, formatDuration } = require('../utils/logger');
-const { toContainerName } = require('../utils/plugin');
+const { toContainerName } = require('../utils/extension');
 const { isDev } = require('../webpack/base.config');
-const createPluginConfig = require('../webpack/plugin.config');
+const createExtensionConfig = require('../webpack/extension.config');
 
 // Promisify execFile
 const execFileAsync = util.promisify(execFile);
 
 // Configuration
-const PLUGIN_PATH = config.env('RSK_EXTENSION_LOCAL_PATH', 'extensions');
-const PLUGINS_DIR = path.resolve(config.APP_DIR, PLUGIN_PATH);
-const PLUGINS_BUILD_DIR = path.resolve(config.BUILD_DIR, PLUGIN_PATH);
+const EXTENSION_PATH = config.env('RSK_EXTENSION_LOCAL_PATH', 'extensions');
+const EXTENSIONS_DIR = path.resolve(config.APP_DIR, EXTENSION_PATH);
+const EXTENSIONS_BUILD_DIR = path.resolve(config.BUILD_DIR, EXTENSION_PATH);
 
 /**
- * Discover plugins from the plugins directory
- * @returns {Array} Array of plugin objects with name, path, and parsed manifest
+ * Discover extensions from the extensions directory
+ * @returns {Array} Array of extension objects with name, path, and parsed manifest
  */
-function discoverPlugins() {
-  if (!fs.existsSync(PLUGINS_DIR)) {
+function discoverExtensions() {
+  if (!fs.existsSync(EXTENSIONS_DIR)) {
     return [];
   }
 
   return fs
-    .readdirSync(PLUGINS_DIR)
+    .readdirSync(EXTENSIONS_DIR)
     .map(name => {
-      const extensionPath = path.join(PLUGINS_DIR, name);
+      const extensionPath = path.join(EXTENSIONS_DIR, name);
       const manifestPath = path.join(extensionPath, 'package.json');
 
       try {
@@ -69,17 +69,17 @@ function discoverPlugins() {
     .filter(Boolean);
 }
 /**
- * Generate package.json for each built plugin
- * @param {Array} plugins - Array of plugin objects
+ * Generate package.json for each built extension
+ * @param {Array} extensions - Array of extension objects
  */
-async function generateManifests(plugins) {
+async function generateManifests(extensions) {
   for (const {
     name,
     version,
     manifest: initialManifest,
     path: extensionPath,
-  } of plugins) {
-    const outputDir = path.join(PLUGINS_BUILD_DIR, name);
+  } of extensions) {
+    const outputDir = path.join(EXTENSIONS_BUILD_DIR, name);
 
     if (!fs.existsSync(outputDir)) {
       fs.mkdirSync(outputDir, { recursive: true });
@@ -175,7 +175,7 @@ function handleBuildResult(err, stats, isWatch) {
 }
 
 /**
- * Bundle plugins using Webpack
+ * Bundle extensions using Webpack
  * @param {Object} options - Build options
  * @param {boolean} options.watch - Whether to watch for changes
  * @returns {Promise<void>}
@@ -184,54 +184,54 @@ async function buildExtensions(options = {}) {
   const isWatch =
     config.env('NODE_ENV') === 'development' &&
     (options.watch || process.argv.includes('--watch'));
-  const plugins = discoverPlugins();
+  const extensions = discoverExtensions();
 
-  if (plugins.length === 0) {
+  if (extensions.length === 0) {
     logInfo('📦 No extensions found to build');
 
     // In watch mode, stay alive and use webpack's native watch
     if (isWatch) {
-      logInfo('👀 Watching for new plugins...');
+      logInfo('👀 Watching for new extensions...');
 
-      // Ensure plugins directory exists
-      if (!fs.existsSync(PLUGINS_DIR)) {
-        fs.mkdirSync(PLUGINS_DIR, { recursive: true });
+      // Ensure extensions directory exists
+      if (!fs.existsSync(EXTENSIONS_DIR)) {
+        fs.mkdirSync(EXTENSIONS_DIR, { recursive: true });
       }
 
       // Create a placeholder entry file for webpack to watch
-      const placeholderFile = path.join(PLUGINS_DIR, '.placeholder.js');
+      const placeholderFile = path.join(EXTENSIONS_DIR, '.placeholder.js');
       if (!fs.existsSync(placeholderFile)) {
         fs.writeFileSync(placeholderFile, '// Placeholder for webpack watch\n');
       }
 
-      // Create minimal webpack config to watch the plugins directory
+      // Create minimal webpack config to watch the extensions directory
       const watchConfig = {
         mode: 'development',
         entry: placeholderFile,
         output: {
-          path: PLUGINS_BUILD_DIR,
+          path: EXTENSIONS_BUILD_DIR,
           filename: '.placeholder.js',
         },
         plugins: [
           {
             apply: compiler => {
-              // Add plugins directory to watch dependencies
+              // Add extensions directory to watch dependencies
               compiler.hooks.afterCompile.tap(
-                'WatchPluginsDir',
+                'WatchExtensionsDir',
                 compilation => {
-                  compilation.contextDependencies.add(PLUGINS_DIR);
+                  compilation.contextDependencies.add(EXTENSIONS_DIR);
                 },
               );
 
-              // Check for new plugins after each compilation
-              compiler.hooks.done.tap('CheckForPlugins', async () => {
-                const newPlugins = discoverPlugins();
-                if (newPlugins.length > 0) {
+              // Check for new extensions after each compilation
+              compiler.hooks.done.tap('CheckForExtensions', async () => {
+                const newExtensions = discoverExtensions();
+                if (newExtensions.length > 0) {
                   logInfo(
-                    `🔍 New plugin(s) detected: ${newPlugins.map(p => p.name).join(', ')}`,
+                    `🔍 New extension(s) detected: ${newExtensions.map(p => p.name).join(', ')}`,
                   );
                   compiler.close(() => {
-                    // Restart with real plugins
+                    // Restart with real extensions
                     buildExtensions(options);
                   });
                 }
@@ -244,7 +244,7 @@ async function buildExtensions(options = {}) {
       const watcher = webpack(watchConfig);
       // specific return for empty watch case?
       // Current logic strictly returned a promise that never resolves (watcher.watch)
-      // For dev server, we probably want it to resolve immediately if no plugins so server can start.
+      // For dev server, we probably want it to resolve immediately if no extensions so server can start.
       // But if we return, the process might exit if not held open?
       // tools/run.js waits for the promise.
       // If we resolve, run.js finishes this task.
@@ -276,14 +276,14 @@ async function buildExtensions(options = {}) {
     return;
   }
 
-  logInfo(`🚀 Building ${plugins.length} plugin(s)...`);
+  logInfo(`🚀 Building ${extensions.length} extension(s)...`);
   const start = Date.now();
 
-  // Ensure all plugins have their dependencies installed before building
+  // Ensure all extensions have their dependencies installed before building
   if (isDev) {
-    logInfo(`📦 Installing dependencies for ${plugins.length} plugin(s)...`);
-    for (const plugin of plugins) {
-      if (fs.existsSync(path.join(plugin.path, 'package.json'))) {
+    logInfo(`📦 Installing dependencies for ${extensions.length} extension(s)...`);
+    for (const ext of extensions) {
+      if (fs.existsSync(path.join(ext.path, 'package.json'))) {
         try {
           await execFileAsync(
             'npm',
@@ -295,15 +295,15 @@ async function buildExtensions(options = {}) {
               '--engine-strict',
               '--no-package-lock',
             ],
-            { cwd: plugin.path },
+            { cwd: ext.path },
           );
           if (config.env('NODE_ENV') === 'development') {
             console.log(
-              `[PluginBuild] npm install completed for ${plugin.name}`,
+              `[ExtensionBuild] npm install completed for ${ext.name}`,
             );
           }
         } catch (npmErr) {
-          logError(`Failed to install dependencies for plugin ${plugin.name}`);
+          logError(`Failed to install dependencies for extension ${ext.name}`);
           console.error(npmErr);
         }
       }
@@ -311,9 +311,9 @@ async function buildExtensions(options = {}) {
   }
 
   const compiler = webpack(
-    createPluginConfig({
-      plugins,
-      buildPath: PLUGINS_BUILD_DIR,
+    createExtensionConfig({
+      extensions,
+      buildPath: EXTENSIONS_BUILD_DIR,
     }),
   );
 
@@ -328,15 +328,15 @@ async function buildExtensions(options = {}) {
         return;
       }
 
-      await generateManifests(plugins);
+      await generateManifests(extensions);
 
       const duration = Date.now() - start;
       logInfo(`✅ Extension build completed in ${formatDuration(duration)}`);
 
-      // Notify the server process to refresh plugins on successful rebuild
+      // Notify the server process to refresh extensions on successful rebuild
       if (!error && isWatch) {
-        const extensionNames = plugins.map(p => p.name);
-        const msg = { type: 'extensions-refreshed', plugins: extensionNames };
+        const extensionNames = extensions.map(p => p.name);
+        const msg = { type: 'extensions-refreshed', extensions: extensionNames };
         if (typeof process.send === 'function') {
           process.send(msg);
         } else {
@@ -359,7 +359,7 @@ async function buildExtensions(options = {}) {
     };
 
     if (isWatch) {
-      logInfo('👀 Watching for plugin changes...');
+      logInfo('👀 Watching for extension changes...');
       compiler.watch(
         {
           ignored: [

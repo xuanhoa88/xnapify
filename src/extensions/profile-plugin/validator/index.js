@@ -18,7 +18,7 @@ export const profileSchema = zod => {
         .string()
         .min(3, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.nickname_too_short`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.nickname_too_short`,
           },
         })
         .max(50)
@@ -29,7 +29,7 @@ export const profileSchema = zod => {
         .string()
         .regex(/^\+\d{2} \(\d{3}\) \d{3}-\d{4}$/, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.mobile_format`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.mobile_format`,
           },
         })
         .optional()
@@ -38,7 +38,7 @@ export const profileSchema = zod => {
         .string()
         .regex(/^\d{2}\/\d{2}\/\d{4}$/, {
           params: {
-            i18n: `plugin:${__PLUGIN_NAME__}:validations.birthdate_format`,
+            i18n: `extension:${__EXTENSION_NAME__}:validations.birthdate_format`,
           },
         })
         .optional()

@@ -44,10 +44,10 @@ src/apps/[module_name]/
     └── vi-VN.json
 ```
 
-Or for plugins:
+Or for extensions:
 
 ```
-src/extensions/[plugin-name]/
+src/extensions/[extension-name]/
 └── translations/
     ├── en-US.json
     └── vi-VN.json
@@ -56,7 +56,7 @@ src/extensions/[plugin-name]/
 ### 2. Registering Translations
 
 Translations are dynamically discovered by the global `AppRouter`. 
-Any App or Plugin that provides `.json` translation files must explicitly export a `translations()` hook inside its respective index loop (e.g. `src/apps/[module]/views/index.js` or `src/apps/[module]/views/(default)/_route.js`):
+Any App or Extension that provides `.json` translation files must explicitly export a `translations()` hook inside its respective index loop (e.g. `src/apps/[module]/views/index.js` or `src/apps/[module]/views/(default)/_route.js`):
 
 ```javascript
 // Load translations using Webpack context

@@ -190,7 +190,7 @@ The hook engine is the **most widely used engine** across the codebase, with 50+
 - **Auth middleware**: `auth.permissions`, `auth.roles`, `auth.groups`, `auth.ownership`, `auth.strategy.{type}` — pluggable auth resolution.
 - **User module**: Login, registration, profile updates, password changes — emit hooks for cross-module reactions.
 - **Admin controllers**: User, role, permission, group CRUD — emit hooks for activity logging and cache invalidation.
-- **Plugin lifecycle**: Plugin install/uninstall/toggle — emit hooks for system-wide notification.
+- **Extension lifecycle: Extension install/uninstall/toggle — emit hooks for system-wide notification.
 - **Search module**: Listens for user/group hooks to update search indexes.
 - **Email module**: Listens for user hooks to send transactional emails.
 - **Activity module**: Listens for admin hooks to log audit trail entries.

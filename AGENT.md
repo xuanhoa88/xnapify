@@ -210,7 +210,7 @@ The application features a robust extension system (`shared/extension`) for exte
 // Register an extension
 import { registry } from '@shared/extension/client';
 
-registry.register('my-plugin', {
+registry.register('my-extension', {
   init: async (reg, context) => {
     // Register UI slot
     reg.registerSlot('profile.actions', MyButton, { order: 10 });

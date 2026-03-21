@@ -65,8 +65,8 @@ function createMockContainer(overrides = {}) {
       isExtensionLoaded: jest.fn(() => false),
       unloadExtension: jest.fn().mockResolvedValue(undefined),
       emit: jest.fn().mockResolvedValue(undefined),
-      getExtensionPath: jest.fn(() => '/plugins'),
-      getDevExtensionPath: jest.fn(() => '/dev-plugins'),
+      getExtensionPath: jest.fn(() => '/extensions'),
+      getDevExtensionPath: jest.fn(() => '/dev-extensions'),
     },
     hook: jest.fn(() => ({ emit: jest.fn() })),
     ws: { sendToPublicChannel: jest.fn() },
@@ -88,8 +88,8 @@ function createMockJob(data = {}) {
   return {
     data: {
       extensionId: 'p1',
-      extensionKey: 'test-plugin',
-      extensionDir: '/plugins/test-plugin',
+      extensionKey: 'test-extension',
+      extensionDir: '/extensions/test-extension',
       actorId: 'user-1',
       ...data,
     },
@@ -141,14 +141,17 @@ describe('Extension Workers', () => {
       const result = await handlers.install(job);
 
       expect(installExtensionDependencies).toHaveBeenCalledWith(
-        '/plugins/test-plugin',
-        { name: 'test-plugin' },
+        '/extensions/test-extension',
+        { name: 'test-extension' },
       );
       expect(workerPool.computeChecksum).toHaveBeenCalledWith(
-        '/plugins/test-plugin',
+        '/extensions/test-extension',
       );
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockContainer._services.models.Extension.update).toHaveBeenCalledWith(
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.models.Extension.update,
+      ).toHaveBeenCalledWith(
         { checksum: 'abc123hash' },
         { where: { id: 'p1' } },
       );
@@ -199,7 +202,7 @@ describe('Extension Workers', () => {
   });
 
   describe('delete handler', () => {
-    it('should unload plugin, remove files, and destroy DB record', async () => {
+    it('should unload extension, remove files, and destroy DB record', async () => {
       // eslint-disable-next-line no-underscore-dangle
       mockContainer._services.extension.isExtensionLoaded.mockReturnValue(true);
       fs.existsSync.mockReturnValue(true);
@@ -207,11 +210,10 @@ describe('Extension Workers', () => {
       const job = createMockJob();
       const result = await handlers.delete(job);
 
-      // eslint-disable-next-line no-underscore-dangle
-      expect(mockContainer._services.extension.unloadExtension).toHaveBeenCalledWith(
-        'p1',
-      );
-      // eslint-disable-next-line no-underscore-dangle
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.extension.unloadExtension,
+      ).toHaveBeenCalledWith('p1');
       expect(
         // eslint-disable-next-line no-underscore-dangle
         mockContainer._services.models.Extension.destroy,
@@ -221,9 +223,11 @@ describe('Extension Workers', () => {
       expect(result).toEqual({ success: true });
     });
 
-    it('should emit extension:unloaded when plugin is not loaded', async () => {
+    it('should emit extension:unloaded when extension is not loaded', async () => {
       // eslint-disable-next-line no-underscore-dangle
-      mockContainer._services.extension.isExtensionLoaded.mockReturnValue(false);
+      mockContainer._services.extension.isExtensionLoaded.mockReturnValue(
+        false,
+      );
 
       const job = createMockJob();
       await handlers.delete(job);
@@ -252,13 +256,13 @@ describe('Extension Workers', () => {
 
   describe('toggle handler', () => {
     it('should verify checksum before activating non-dev extensions', async () => {
-      const mockDbPlugin = {
+      const mockDbExtension = {
         checksum: 'expected-hash',
         update: jest.fn(),
       };
       // eslint-disable-next-line no-underscore-dangle
       mockContainer._services.models.Extension.findByPk.mockResolvedValue(
-        mockDbPlugin,
+        mockDbExtension,
       );
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
@@ -274,7 +278,7 @@ describe('Extension Workers', () => {
       const result = await handlers.toggle(job);
 
       expect(workerPool.verifyChecksum).toHaveBeenCalledWith(
-        '/plugins/test-plugin',
+        '/extensions/test-extension',
         'expected-hash',
       );
       expect(result).toEqual({ success: true });
@@ -282,13 +286,13 @@ describe('Extension Workers', () => {
 
     it('should reject activation on checksum mismatch', async () => {
       const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      const mockDbPlugin = {
+      const mockDbExtension = {
         checksum: 'expected-hash',
         update: jest.fn(),
       };
       // eslint-disable-next-line no-underscore-dangle
       mockContainer._services.models.Extension.findByPk.mockResolvedValue(
-        mockDbPlugin,
+        mockDbExtension,
       );
 
       workerPool.verifyChecksum.mockResolvedValueOnce({
@@ -304,7 +308,7 @@ describe('Extension Workers', () => {
       const result = await handlers.toggle(job);
 
       expect(result).toEqual({ success: false, reason: 'checksum_mismatch' });
-      expect(mockDbPlugin.update).toHaveBeenCalledWith({ is_active: false });
+      expect(mockDbExtension.update).toHaveBeenCalledWith({ is_active: false });
       expect(notifyExtensionChange).toHaveBeenCalledWith(
         mockContainer,
         'EXTENSION_TAMPERED',
@@ -335,13 +339,13 @@ describe('Extension Workers', () => {
       await handlers.toggle(job);
 
       expect(workerPool.computeChecksum).toHaveBeenCalledWith(
-        '/plugins/test-plugin',
+        '/extensions/test-extension',
       );
       // eslint-disable-next-line no-underscore-dangle
-      expect(mockContainer._services.models.Extension.update).toHaveBeenCalledWith(
-        { checksum: 'new-hash' },
-        { where: { id: 'p1' } },
-      );
+      expect(
+        // eslint-disable-next-line no-underscore-dangle
+        mockContainer._services.models.Extension.update,
+      ).toHaveBeenCalledWith({ checksum: 'new-hash' }, { where: { id: 'p1' } });
     });
   });
 });

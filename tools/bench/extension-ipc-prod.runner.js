@@ -1,10 +1,10 @@
 #!/usr/bin/env node
-// Standalone production-grade plugin IPC benchmark runner
+// Standalone production-grade extension IPC benchmark runner
 // Usage (defaults):
-//   node tools/bench/plugin-ipc-prod.runner.js
+//   node tools/bench/extension-ipc-prod.runner.js
 // Environment variables:
 //   BENCH_HANDLERS, BENCH_REQUESTS, BENCH_CONCURRENCY, BENCH_PAYLOAD_BYTES
-//   BENCH_PLUGIN_ID, BENCH_IO_MS (avg simulated I/O in ms), BENCH_RECORD (path)
+//   BENCH_EXTENSION_ID, BENCH_IO_MS (avg simulated I/O in ms), BENCH_RECORD (path)
 
 const fs = require('fs');
 const http = require('http');
@@ -20,7 +20,7 @@ class SimpleRegistry {
     this.hooks = new Map();
   }
 
-  registerHook(hookId, callback /*, pluginId */) {
+  registerHook(hookId, callback /*, extensionId */) {
     if (!this.hooks.has(hookId)) this.hooks.set(hookId, []);
     this.hooks.get(hookId).push(callback);
   }
@@ -50,7 +50,7 @@ const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '10', 10);
 const REQUESTS = parseInt(process.env.BENCH_REQUESTS || '2000', 10);
 const CONCURRENCY = parseInt(process.env.BENCH_CONCURRENCY || '500', 10);
 const PAYLOAD_BYTES = parseInt(process.env.BENCH_PAYLOAD_BYTES || '256', 10);
-const PLUGIN_ID = process.env.BENCH_PLUGIN_ID || 'stress-plugin';
+const EXTENSION_ID = process.env.BENCH_EXTENSION_ID || 'stress-extension';
 const BENCH_IO_MS = parseInt(process.env.BENCH_IO_MS || '0', 10); // avg simulated I/O
 const RECORD_PATH = process.env.BENCH_RECORD || '';
 
@@ -66,7 +66,7 @@ function createApp(registry) {
   // Use express.json (built-in) instead of body-parser for better performance
   app.use(express.json({ limit: '1mb' }));
 
-  app.post('/api/plugins/:id/ipc', async (req, res) => {
+  app.post('/api/extensions/:id/ipc', async (req, res) => {
     const { id } = req.params;
     const { action, data } = req.body || {};
     if (!action) return res.status(400).json({ error: 'missing action' });
@@ -94,7 +94,7 @@ function createApp(registry) {
   // Register handlers
   for (let i = 0; i < HANDLERS; i++) {
     registry.registerHook(
-      `ipc:${PLUGIN_ID}:echo`,
+      `ipc:${EXTENSION_ID}:echo`,
       async payload => {
         if (BENCH_IO_MS > 0) {
           // simulate I/O latency with a Promise-based delay
@@ -107,7 +107,7 @@ function createApp(registry) {
           s += payload && payload.blob ? payload.blob.length : 0;
         return { handler: i, ok: true };
       },
-      `plugin-${i}`,
+      `extension-${i}`,
     );
   }
 
@@ -117,7 +117,7 @@ function createApp(registry) {
   });
 
   const { port } = server.address();
-  const url = `http://127.0.0.1:${port}/api/plugins/${PLUGIN_ID}/ipc`;
+  const url = `http://127.0.0.1:${port}/api/extensions/${EXTENSION_ID}/ipc`;
   console.log(`Started server at ${url}`);
 
   // Create HTTP agent with keep-alive for connection reuse (major performance win)

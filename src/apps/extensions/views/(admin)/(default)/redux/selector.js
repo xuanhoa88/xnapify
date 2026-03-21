@@ -16,9 +16,9 @@ const getOperationState = (state, operationKey) => {
 };
 
 /**
- * Get plugins data from state
+ * Get extensions data from state
  */
-const getPluginsState = state => {
+const getExtensionsState = state => {
   const normalized = normalizeState(state && state[SLICE_NAME]);
   return normalized.data;
 };
@@ -27,21 +27,21 @@ const getPluginsState = state => {
 // DATA SELECTORS
 // =============================================================================
 
-const getRawPlugins = state => {
-  const data = getPluginsState(state);
-  return (data && data.plugins) || [];
+const getRawExtensions = state => {
+  const data = getExtensionsState(state);
+  return (data && data.extensions) || [];
 };
 
-export const getPlugins = createSelector([getRawPlugins], plugins =>
-  plugins.slice().sort((a, b) => {
+export const getExtensions = createSelector([getRawExtensions], extensions =>
+  extensions.slice().sort((a, b) => {
     const nameA = (a.name || a.key || '').toLowerCase();
     const nameB = (b.name || b.key || '').toLowerCase();
     return nameA.localeCompare(nameB);
   }),
 );
 
-export const isPluginsInitialized = state => {
-  const data = getPluginsState(state);
+export const isExtensionsInitialized = state => {
+  const data = getExtensionsState(state);
   return !!(data && data.initialized);
 };
 
@@ -49,12 +49,12 @@ export const isPluginsInitialized = state => {
 // LIST OPERATION
 // =============================================================================
 
-export const isPluginsListLoading = state => {
+export const isExtensionsListLoading = state => {
   const op = getOperationState(state, 'list');
   return !!(op && op.loading);
 };
 
-export const getPluginsListError = state => {
+export const getExtensionsListError = state => {
   const op = getOperationState(state, 'list');
   return (op && op.error) || null;
 };
@@ -63,12 +63,12 @@ export const getPluginsListError = state => {
 // UPLOAD OPERATION
 // =============================================================================
 
-export const isPluginUploading = state => {
+export const isExtensionUploading = state => {
   const op = getOperationState(state, 'upload');
   return !!(op && op.loading);
 };
 
-export const getPluginUploadError = state => {
+export const getExtensionUploadError = state => {
   const op = getOperationState(state, 'upload');
   return (op && op.error) || null;
 };
@@ -77,12 +77,12 @@ export const getPluginUploadError = state => {
 // UPGRADE OPERATION
 // =============================================================================
 
-export const isPluginUpgrading = state => {
+export const isExtensionUpgrading = state => {
   const op = getOperationState(state, 'upgrade');
   return !!(op && op.loading);
 };
 
-export const getPluginUpgradeError = state => {
+export const getExtensionUpgradeError = state => {
   const op = getOperationState(state, 'upgrade');
   return (op && op.error) || null;
 };
@@ -91,12 +91,12 @@ export const getPluginUpgradeError = state => {
 // TOGGLE STATUS OPERATION
 // =============================================================================
 
-export const isPluginToggling = state => {
+export const isExtensionToggling = state => {
   const op = getOperationState(state, 'toggleStatus');
   return !!(op && op.loading);
 };
 
-export const getPluginToggleError = state => {
+export const getExtensionToggleError = state => {
   const op = getOperationState(state, 'toggleStatus');
   return (op && op.error) || null;
 };
@@ -105,12 +105,12 @@ export const getPluginToggleError = state => {
 // UNINSTALL OPERATION
 // =============================================================================
 
-export const isPluginUninstalling = state => {
+export const isExtensionUninstalling = state => {
   const op = getOperationState(state, 'uninstall');
   return !!(op && op.loading);
 };
 
-export const getPluginUninstallError = state => {
+export const getExtensionUninstallError = state => {
   const op = getOperationState(state, 'uninstall');
   return (op && op.error) || null;
 };

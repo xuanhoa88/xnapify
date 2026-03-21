@@ -78,7 +78,7 @@ const CORE_MODULES = new Set([
   'users',
   'auth',
   'files',
-  'plugins',
+  'extensions',
   'emails',
   'webhooks',
   'search',

@@ -30,20 +30,20 @@ const silent = isSilent();
 function detectNodeEnv(taskConfig) {
   const taskArgs = process.argv.slice(3).map(arg => arg.toLowerCase());
 
-  // Plugin task rules
-  if (taskConfig.name === 'plugin') {
+  // Extension task rules
+  if (taskConfig.name === 'extension') {
     if (
       taskArgs.includes('--watch') ||
       taskArgs.includes('--dev') ||
       taskArgs.includes('--development')
     ) {
       logDebug(
-        'Auto-detected NODE_ENV=development from --watch flag in plugin task',
+        'Auto-detected NODE_ENV=development from --watch flag in extension task',
       );
       return 'development';
     }
 
-    logDebug('Auto-detected NODE_ENV=production from plugin task');
+    logDebug('Auto-detected NODE_ENV=production from extension task');
     return 'production';
   }
 
@@ -145,8 +145,8 @@ const AVAILABLE_TASKS = [
     processEnv: { NODE_ENV: 'test' },
   },
   {
-    name: 'plugin',
-    description: 'Build plugins (use --watch for development)',
+    name: 'extension',
+    description: 'Build extensions (use --watch for development)',
   },
   {
     name: 'clean',

@@ -11,7 +11,7 @@ shared/node-red/
 ├── index.js          # NodeRedManager: Lifecycle orchestrator
 ├── auth.js           # RskAuthStrategy: Passport adapter mapped to our JWT service
 ├── settings.js       # Dynamic configuration generation, node extraction
-└── flow-splitter.js  # Node-RED event plugin for splitting/rebuilding flows
+└── flow-splitter.js  # Node-RED event extension for splitting/rebuilding flows
 ```
 
 ## `NodeRedManager` (`index.js`)

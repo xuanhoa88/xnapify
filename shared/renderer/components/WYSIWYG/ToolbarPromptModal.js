@@ -124,7 +124,7 @@ export function ToolbarPromptProvider({ editor, children }) {
       <Modal isOpen={isOpen} onClose={handleClose}>
         <Modal.Header onClose={handleClose}>{title}</Modal.Header>
         <Modal.Body>
-          {/* ExtensionSlot: plugins can replace the default input */}
+          {/* ExtensionSlot: extensions can replace the default input */}
           {slotName && (
             <ExtensionSlot
               name={slotName}
@@ -134,7 +134,7 @@ export function ToolbarPromptProvider({ editor, children }) {
             />
           )}
 
-          {/* Default text input (always rendered; plugin can visually hide) */}
+          {/* Default text input (always rendered; extension can visually hide) */}
           <div className={s.inputContainer}>
             {label && <label className={s.inputLabel}>{label}</label>}
             <input

@@ -12,7 +12,6 @@ import { useTranslation, Trans } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
 import ExtensionSlot from '@shared/extension/client/ExtensionSlot';
-import { useExtensionSlots } from '@shared/extension/client/useExtension';
 import Button from '@shared/renderer/components/Button';
 import Form from '@shared/renderer/components/Form';
 import {
@@ -46,9 +45,6 @@ function Login() {
   const loading = useSelector(isAuthLoading);
   const error = useSelector(getAuthError);
   const currentLocale = useSelector(getLocale);
-  const oauthSlots = useExtensionSlots('auth.oauth.buttons');
-  const quickAccessSlots = useExtensionSlots('auth.login.quickAccess');
-
   const returnTo = useQuery('returnTo') || '/';
 
   // Clear error on unmount
@@ -105,24 +101,24 @@ function Login() {
 
           <Form.Error message={error} />
 
-          {oauthSlots.length > 0 && (
-            <>
-              <div className={s.oauthButtonsContainer}>
-                <ExtensionSlot
-                  name='auth.oauth.buttons'
-                  className={s.oauthButton}
-                />
-              </div>
+          {/* OAuth buttons slot — container is always rendered for SSR hydration safety.
+             CSS hides the wrapper when the slot is empty (no children). */}
+          <div className={s.oauthSection} suppressHydrationWarning>
+            <div className={s.oauthButtonsContainer}>
+              <ExtensionSlot
+                name='auth.oauth.buttons'
+                className={s.oauthButton}
+              />
+            </div>
 
-              <div className={s.divider}>
-                <span className={s.dividerLine} />
-                <span className={s.dividerText}>
-                  {t('login.orDivider', 'OR')}
-                </span>
-                <span className={s.dividerLine} />
-              </div>
-            </>
-          )}
+            <div className={s.divider}>
+              <span className={s.dividerLine} />
+              <span className={s.dividerText}>
+                {t('login.orDivider', 'OR')}
+              </span>
+              <span className={s.dividerLine} />
+            </div>
+          </div>
 
           <Form
             schema={loginFormSchema}
@@ -130,9 +126,7 @@ function Login() {
             onSubmit={handleSubmit}
           >
             <LoginFormFields loading={loading} />
-            {quickAccessSlots.length > 0 && (
-              <ExtensionSlot name='auth.login.quickAccess' />
-            )}
+            <ExtensionSlot name='auth.login.quickAccess' />
           </Form>
 
           <div className={s.registerLink}>

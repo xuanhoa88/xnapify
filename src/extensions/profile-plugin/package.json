@@ -1,15 +1,15 @@
 {
-  "name": "@rsk-plugin/profile",
+  "name": "@rsk-extension/profile",
   "version": "1.0.0",
   "browser": "views/index.js",
   "main": "api/index.js",
-  "description": "Test plugin",
+  "description": "Test extension",
   "rsk": {
     "subscribe": [
       "/profile"
     ],
     "require": {
-      "@rsk-plugin/users": "^1.0.0"
+      "@rsk-extension/users": "^1.0.0"
     }
   },
   "dependencies": {

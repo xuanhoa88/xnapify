@@ -61,8 +61,8 @@ const config = {
     __DEV__: 'readonly',
     __TEST__: 'readonly',
 
-    __PLUGIN_NAME__: 'readonly',
-    __PLUGIN_DESCRIPTION__: 'readonly',
+    __EXTENSION_NAME__: 'readonly',
+    __EXTENSION_DESCRIPTION__: 'readonly',
   },
 
   rules: {

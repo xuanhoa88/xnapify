@@ -89,8 +89,8 @@ const result = await router.resolve('/dashboard');
 Dynamic route management:
 
 ```javascript
-router.add(pluginAdapter);     // Merge plugin routes
-router.remove(pluginAdapter);  // Remove by adapter reference
+router.add(extensionAdapter);     // Merge extension routes
+router.remove(extensionAdapter);  // Remove by adapter reference
 ```
 
 ## Redux

@@ -1,5 +1,5 @@
 {
-  "name": "@rsk-plugin/search-indexer",
+  "name": "@rsk-extension/search-indexer",
   "version": "1.0.0",
   "main": "api.js"
 }

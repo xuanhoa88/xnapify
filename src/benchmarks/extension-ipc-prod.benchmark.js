@@ -1,6 +1,6 @@
 // Production-grade extension IPC stress benchmark
-// - Creates a lightweight Express server exposing POST /api/plugins/:id/ipc
-// - Registers many handlers on the registry (simulating plugins)
+// - Creates a lightweight Express server exposing POST /api/extensions/:id/ipc
+// - Registers many handlers on the registry (simulating extensions)
 // - Fires many concurrent HTTP requests to measure routing, serialization, and registry execution costs
 
 const { performance } = require('perf_hooks');
@@ -9,14 +9,15 @@ const bodyParser = require('body-parser');
 const express = require('express');
 const fetch = require('node-fetch');
 
-const ExtensionRegistryClass = require('@shared/extension/utils/Registry').default;
+const ExtensionRegistryClass =
+  require('@shared/extension/utils/Registry').default;
 
 // Configurable via environment variables (with sensible defaults)
 const HANDLERS = parseInt(process.env.BENCH_HANDLERS || '50', 10);
 const REQUESTS = parseInt(process.env.BENCH_REQUESTS || '1000', 10);
 const CONCURRENCY = parseInt(process.env.BENCH_CONCURRENCY || '200', 10);
 const PAYLOAD_BYTES = parseInt(process.env.BENCH_PAYLOAD_BYTES || '256', 10);
-const PLUGIN_ID = process.env.BENCH_PLUGIN_ID || 'stress-plugin';
+const EXTENSION_ID = process.env.BENCH_EXTENSION_ID || 'stress-extension';
 const BENCH_IO_MS = parseInt(process.env.BENCH_IO_MS || '0', 10);
 const RECORD_PATH = process.env.BENCH_RECORD || '';
 
@@ -33,7 +34,7 @@ function createApp(registry) {
   const app = express();
   app.use(bodyParser.json({ limit: '1mb' }));
 
-  app.post('/api/plugins/:id/ipc', async (req, res) => {
+  app.post('/api/extensions/:id/ipc', async (req, res) => {
     const { id } = req.params;
     const { action, data } = req.body || {};
     if (!action) return res.status(400).json({ error: 'missing action' });
@@ -55,7 +56,7 @@ function createApp(registry) {
   return app;
 }
 
-describe('plugin-ipc-prod', () => {
+describe('extension-ipc-prod', () => {
   let server;
   let url;
   let registry;
@@ -63,11 +64,11 @@ describe('plugin-ipc-prod', () => {
   beforeAll(done => {
     registry = new ExtensionRegistryClass();
 
-    // Register handlers for PLUGIN_ID:action="echo"
+    // Register handlers for EXTENSION_ID:action="echo"
     for (let i = 0; i < HANDLERS; i++) {
       // simulate lightweight async handler; optionally include I/O latency
       registry.registerHook(
-        `ipc:${PLUGIN_ID}:echo`,
+        `ipc:${EXTENSION_ID}:echo`,
         async payload => {
           if (BENCH_IO_MS > 0) {
             await new Promise(r => setTimeout(r, BENCH_IO_MS));
@@ -78,14 +79,14 @@ describe('plugin-ipc-prod', () => {
             s += payload && payload.blob ? payload.blob.length : 0;
           return { handler: i, ok: true };
         },
-        `plugin-${i}`,
+        `extension-${i}`,
       );
     }
 
     const app = createApp(registry);
     server = app.listen(0, () => {
       const { port } = server.address();
-      url = `http://127.0.0.1:${port}/api/plugins/${PLUGIN_ID}/ipc`;
+      url = `http://127.0.0.1:${port}/api/extensions/${EXTENSION_ID}/ipc`;
       done();
     });
   });

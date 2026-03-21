@@ -42,7 +42,7 @@ Body parsing scoped to API only:
 ```javascript
 import initializeRouter from '@src/bootstrap/views';
 
-const router = await initializeRouter({ plugin, container });
+const router = await initializeRouter({ extension, container });
 const page = await router.resolve({ pathname, store });
 ```
 
@@ -51,7 +51,7 @@ const page = await router.resolve({ pathname, store });
 - **Module discovery** — auto-discovers `src/apps/*/views/index.js` → lifecycle: translations → providers → views.
 - **Title handling** — page title suffixed with ` - {AppName}`, or just `{AppName}` if no title.
 - **Description fallback** — uses app description from Redux state when page has none.
-- **Plugin namespaces** — loaded on route init, unloaded on destroy.
+- **Extension namespaces** — loaded on route init, unloaded on destroy.
 - **Error handling** — `__DEV__`: throws errors. Production: redirects to `/error`.
 - **Catch-all** — `/*path` → `/not-found`.
 

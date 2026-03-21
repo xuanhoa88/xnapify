@@ -46,7 +46,7 @@ export const SEED_PERMISSIONS = Object.freeze({
   filesDelete: uuidv4(),
   // Activities (read only)
   activitiesRead: uuidv4(),
-  // Plugins CRUD
+  // Extensions CRUD
   extensionsCreate: uuidv4(),
   extensionsRead: uuidv4(),
   extensionsUpdate: uuidv4(),

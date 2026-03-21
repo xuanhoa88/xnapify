@@ -80,7 +80,7 @@ Creates and returns a bound `WorkerPool` instance. Each module creates its own p
 
 | Param | Type | Default | Description |
 |---|---|---|---|
-| `engineName` | `string` | *required* | Name used in log messages (e.g. `'Search'`, `'🔌 Plugin'`) |
+| `engineName` | `string` | *required* | Name used in log messages (e.g. `'Search'`, `'🔌 Extension'`) |
 | `workersContext` | `require.context` | *required* | Webpack context matching `*.worker.js` files |
 | `options.maxWorkers` | `number` | `min(os.cpus().length, 4)` | Maximum Piscina threads |
 | `options.workerTimeout` | `number` | `60000` | Per-task timeout in ms |
@@ -174,12 +174,12 @@ Unlike other engines (`schedule`, `hook`), the worker engine exports only the `c
 
 ## 8. Usage Patterns in the Codebase
 
-### Direct Import (plugin module)
+### Direct Import (extension module)
 
 ```javascript
 import { createWorkerPool } from '@shared/api/engines/worker';
 const workersContext = require.context('./', false, /\.worker\.[cm]?[jt]s$/i);
-const workerPool = createWorkerPool('🔌 Plugin', workersContext, { maxWorkers: 2 });
+const workerPool = createWorkerPool('🔌 Extension', workersContext, { maxWorkers: 2 });
 ```
 
 ### DI-based (search, activities modules)
@@ -212,7 +212,7 @@ await workerPool.sendRequest('flexsearch', 'INDEX_USER',
 
 - **Module `init(container)`**: Access via `container.resolve('worker')` to get the factory, then create module-specific pools.
 - **Schedule Engine**: Cron handlers can dispatch heavy work to worker pools.
-- **Plugin lifecycle**: Plugins can import `createWorkerPool` directly for isolated pools.
+- **Extension lifecycle**: Extensions can import `createWorkerPool` directly for isolated pools.
 - **Hybrid pattern**: Queue handlers (main thread, `app` access) call `workerPool.sendRequest()` for CPU-bound subtasks.
 
 ---

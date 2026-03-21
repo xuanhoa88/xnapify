@@ -15,15 +15,15 @@ import { decryptExtensionId, encryptExtensionId } from '../utils/crypto';
 // Promisify execFile
 const execFileAsync = promisify(execFile);
 
-// Cache for plugin list
+// Cache for extension list
 export const CACHE_TTL = 60 * 1000; // 1 minute
 
 // ========================================================================
-// Plugin Error
+// Extension Error
 // ========================================================================
 
 /**
- * Custom error class for plugin operations.
+ * Custom error class for extension operations.
  * Provides typed factory methods for consistent error handling.
  */
 export class ExtensionError extends Error {
@@ -41,34 +41,38 @@ export class ExtensionError extends Error {
   static notFound(detail = '') {
     return new ExtensionError(
       detail ? `Extension not found: ${detail}` : 'Extension not found',
-      'PluginNotFound',
+      'ExtensionNotFound',
       404,
     );
   }
 
   static invalidId() {
-    return new ExtensionError('Invalid plugin ID', 'InvalidPluginId', 400);
+    return new ExtensionError(
+      'Invalid extension ID',
+      'InvalidExtensionId',
+      400,
+    );
   }
 
   static invalidPackage(message) {
     return new ExtensionError(
-      message || 'Invalid plugin package',
-      'InvalidPluginPackage',
+      message || 'Invalid extension package',
+      'InvalidExtensionPackage',
       400,
     );
   }
 }
 
 // ========================================================================
-// Plugin Error
+// Extension Error
 // ========================================================================
 
 // ========================================================================
-// Plugin Resolution (DRY — used by 4 service functions)
+// Extension Resolution (DRY — used by 4 service functions)
 // ========================================================================
 
 /**
- * Resolve a plugin record from a mixed ID (DB UUID or encrypted key).
+ * Resolve an extension record from a mixed ID (DB UUID or encrypted key).
  *
  * Lookup order:
  *  1. Try `findByPk(id)` — works for installed extensions with UUID.
@@ -78,32 +82,32 @@ export class ExtensionError extends Error {
  * @param {string} id - Extension UUID or encrypted extension key
  * @param {Object} [options]
  * @param {boolean} [options.required=true] - Throw if not found
- * @returns {Promise<{plugin: Object|null, extensionKey: string|null}>}
+ * @returns {Promise<{extension: Object|null, extensionKey: string|null}>}
  */
 export async function resolveExtension(models, id, { required = true } = {}) {
   const { Extension } = models;
 
   // 1. Try DB primary key (UUID)
-  let plugin = await Extension.findByPk(id);
-  let extensionKey = plugin ? plugin.key : null;
+  let extension = await Extension.findByPk(id);
+  let extensionKey = extension ? extension.key : null;
 
   // 2. Fall back to encrypted key
-  if (!plugin) {
+  if (!extension) {
     extensionKey = decryptExtensionId(id);
     if (extensionKey) {
-      plugin = await Extension.findOne({ where: { key: extensionKey } });
+      extension = await Extension.findOne({ where: { key: extensionKey } });
     }
   }
 
-  if (!plugin && required) {
+  if (!extension && required) {
     throw ExtensionError.notFound();
   }
 
-  return { plugin, extensionKey };
+  return { extension, extensionKey };
 }
 
 /**
- * Resolve the physical directory of a plugin on disk.
+ * Resolve the physical directory of an extension on disk.
  *
  * Delegates to `extensionManager.resolveExtensionDir()` as the single source
  * of truth for dev/prod path resolution. Falls back to manual resolution
@@ -111,11 +115,12 @@ export async function resolveExtension(models, id, { required = true } = {}) {
  *
  * @param {Object} extensionManager - ServerExtensionManager instance
  * @param {string} cwd - Current working directory (unused when delegating)
- * @param {string} extensionKey - Plugin directory name / key
+ * @param {string} extensionKey - Extension directory name / key
  * @returns {{ dir: string|null, isDevExtension: boolean }}
  */
 export function resolveExtensionDir(extensionManager, cwd, extensionKey) {
-  if (!extensionManager || !extensionKey) return { dir: null, isDevExtension: false };
+  if (!extensionManager || !extensionKey)
+    return { dir: null, isDevExtension: false };
 
   // Delegate to extensionManager's canonical implementation
   if (typeof extensionManager.resolveExtensionDir === 'function') {
@@ -148,14 +153,18 @@ export function resolveExtensionDir(extensionManager, cwd, extensionKey) {
 // ========================================================================
 
 /**
- * Read plugin manifest from directory
- * @param {string} extensionsDir - Plugins directory path
- * @param {string} extensionName - Plugin directory name
- * @returns {Promise<Object|null>} Plugin manifest or null if invalid
+ * Read extension manifest from directory
+ * @param {string} extensionsDir - Extensions directory path
+ * @param {string} extensionName - Extension directory name
+ * @returns {Promise<Object|null>} Extension manifest or null if invalid
  */
 export async function readExtensionManifest(extensionsDir, extensionName) {
   try {
-    const manifestPath = path.join(extensionsDir, extensionName, 'package.json');
+    const manifestPath = path.join(
+      extensionsDir,
+      extensionName,
+      'package.json',
+    );
     const manifestContent = await fs.promises.readFile(manifestPath, 'utf8');
     return JSON.parse(manifestContent);
   } catch (e) {
@@ -167,7 +176,7 @@ export async function readExtensionManifest(extensionsDir, extensionName) {
 }
 
 /**
- * Validate a parsed plugin manifest (requires name + version).
+ * Validate a parsed extension manifest (requires name + version).
  *
  * @param {Object} manifest - Parsed package.json content
  * @returns {{ name: string, version: string }} Validated fields
@@ -180,7 +189,7 @@ export function validateManifest(manifest) {
 
   if (name.length === 0 || version.length === 0) {
     throw ExtensionError.invalidPackage(
-      'Invalid plugin manifest: missing required fields (name, version)',
+      'Invalid extension manifest: missing required fields (name, version)',
     );
   }
 
@@ -188,11 +197,11 @@ export function validateManifest(manifest) {
 }
 
 /**
- * Validate that a plugin name is safe for use in file paths.
+ * Validate that an extension name is safe for use in file paths.
  * Prevents path traversal attacks (e.g. "../../etc").
  *
  * @param {string} extensionName - Extension name from manifest
- * @param {string} baseDir - Base directory plugins are stored in
+ * @param {string} baseDir - Base directory extensions are stored in
  * @throws {ExtensionError} If the name escapes the base directory
  */
 export function validateExtensionNameSafe(extensionName, baseDir) {
@@ -200,7 +209,7 @@ export function validateExtensionNameSafe(extensionName, baseDir) {
   const relative = path.relative(baseDir, resolved);
   if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) {
     throw ExtensionError.invalidPackage(
-      `Invalid plugin name "${extensionName}": path traversal detected`,
+      `Invalid extension name "${extensionName}": path traversal detected`,
     );
   }
 }
@@ -210,9 +219,9 @@ export function validateExtensionNameSafe(extensionName, baseDir) {
 // ========================================================================
 
 /**
- * Invalidate plugin caches
+ * Invalidate extension caches
  * @param {object} cache - Cache engine instance
- * @param {string} [extensionId] - Optional plugin ID to invalidate detail cache
+ * @param {string} [extensionId] - Optional extension ID to invalidate detail cache
  */
 export async function invalidateCache(cache, extensionId) {
   if (cache) {
@@ -227,11 +236,11 @@ export async function invalidateCache(cache, extensionId) {
 // ========================================================================
 
 /**
- * Install plugin dependencies
- * @param {string} extensionDir - Plugin directory path
- * @param {object} plugin - Plugin object (needs .name for error messages)
+ * Install extension dependencies
+ * @param {string} extensionDir - Extension directory path
+ * @param {object} extension - Extension object (needs .name for error messages)
  */
-export async function installExtensionDependencies(extensionDir, plugin) {
+export async function installExtensionDependencies(extensionDir, extension) {
   try {
     if (__DEV__) {
       console.log(`[ExtensionService] Running npm install in ${extensionDir}`);
@@ -256,9 +265,10 @@ export async function installExtensionDependencies(extensionDir, plugin) {
     }
   } catch (npmErr) {
     console.error('[ExtensionService] npm install failed:', npmErr);
-    const extensionName = (plugin && plugin.name) || path.basename(extensionDir);
+    const extensionName =
+      (extension && extension.name) || path.basename(extensionDir);
     const err = new Error(
-      `Failed to install dependencies for plugin ${extensionName}`,
+      `Failed to install dependencies for extension ${extensionName}`,
     );
     err.status = 500;
     throw err;
@@ -270,13 +280,13 @@ export async function installExtensionDependencies(extensionDir, plugin) {
 // ========================================================================
 
 /**
- * Send a plugin change notification over WebSocket.
+ * Send a extension change notification over WebSocket.
  * Includes manifest data for EXTENSION_INSTALLED / EXTENSION_UPDATED so the
- * client-side PluginManager can inject CSS/JS tags.
+ * client-side extensionManager can inject CSS/JS tags.
  *
  * @param {Object} container - DI container instance
- * @param {string} type - Event type (EXTENSION_INSTALLED, EXTENSION_UPDATED, PLUGIN_UNINSTALLED, PLUGIN_TAMPERED)
- * @param {string} extensionId - Plugin ID
+ * @param {string} type - Event type (EXTENSION_INSTALLED, EXTENSION_UPDATED, EXTENSION_UNINSTALLED, EXTENSION_TAMPERED)
+ * @param {string} extensionId - extension ID
  */
 export function notifyExtensionChange(container, type, extensionId) {
   const ws = container.resolve('ws');

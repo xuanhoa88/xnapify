@@ -6,7 +6,7 @@
  */
 
 /**
- * Node-RED Flow Splitter Plugin
+ * Node-RED Flow Splitter Extension
  *
  * Automatically splits flows.json into individual files (per tab, subflow,
  * and config-node) on every deploy or startup. When flows.json is empty,
@@ -20,8 +20,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const PLUGIN_NAME = 'rsk-flow-splitter';
-const PLUGIN_LOG_PREFIX = `[${PLUGIN_NAME}]`;
+const EXTENSION_NAME = 'rsk-flow-splitter';
+const EXTENSION_LOG_PREFIX = `[${EXTENSION_NAME}]`;
 const SPLIT_CONFIG_FILE = '.config.flow-splitter.json';
 const DEFAULT_CONFIG = Object.freeze({
   fileFormat: 'json',
@@ -135,7 +135,7 @@ function saveMigration(splitDir, adapter, RED) {
     );
     if (dirsAreEqual(splitDir, latestDir)) {
       RED.log.info(
-        `${PLUGIN_LOG_PREFIX} No flow changes detected, skipping migration`,
+        `${EXTENSION_LOG_PREFIX} No flow changes detected, skipping migration`,
       );
       return;
     }
@@ -146,10 +146,10 @@ function saveMigration(splitDir, adapter, RED) {
 
   try {
     copyDirSync(splitDir, migrationDir);
-    RED.log.info(`${PLUGIN_LOG_PREFIX} 💾 Migration saved: ${timestamp}`);
+    RED.log.info(`${EXTENSION_LOG_PREFIX} 💾 Migration saved: ${timestamp}`);
   } catch (err) {
     RED.log.error(
-      `${PLUGIN_LOG_PREFIX} Failed to save migration: ${err.message}`,
+      `${EXTENSION_LOG_PREFIX} Failed to save migration: ${err.message}`,
     );
   }
 }
@@ -187,7 +187,7 @@ function applyLatestMigration(splitDir, adapter, RED) {
   const latest = timestamps[timestamps.length - 1];
   const files = migrationMap.get(latest);
 
-  RED.log.info(`${PLUGIN_LOG_PREFIX} 📦 Applying migration: ${latest}`);
+  RED.log.info(`${EXTENSION_LOG_PREFIX} 📦 Applying migration: ${latest}`);
 
   // Write each file from the adapter to the split dir
   for (const { key, subdir, filename } of files) {
@@ -198,10 +198,10 @@ function applyLatestMigration(splitDir, adapter, RED) {
     const destPath = path.join(destDir, filename);
     // content from require() of a JSON file is already a JS object
     fs.writeFileSync(destPath, JSON.stringify(content, null, 2));
-    RED.log.info(`${PLUGIN_LOG_PREFIX} Restored: ${subdir}/${filename}`);
+    RED.log.info(`${EXTENSION_LOG_PREFIX} Restored: ${subdir}/${filename}`);
   }
 
-  RED.log.info(`${PLUGIN_LOG_PREFIX} ✅ Migration applied: ${latest}`);
+  RED.log.info(`${EXTENSION_LOG_PREFIX} ✅ Migration applied: ${latest}`);
   return true;
 }
 
@@ -345,7 +345,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
     const filename = `${getUniqueFilename(usedNames, tab.label, tab.id)}.${ext}`;
     const filePath = path.join(tabsDir, filename);
     fs.writeFileSync(filePath, JSON.stringify(tab.nodes, null, 2));
-    RED.log.info(`${PLUGIN_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`);
+    RED.log.info(`${EXTENSION_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`);
   }
 
   // Write subflows
@@ -354,7 +354,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
     const filePath = path.join(subflowsDir, filename);
     fs.writeFileSync(filePath, JSON.stringify(sf.nodes, null, 2));
     RED.log.info(
-      `${PLUGIN_LOG_PREFIX} Saved subflow: ${sf.label} → ${filename}`,
+      `${EXTENSION_LOG_PREFIX} Saved subflow: ${sf.label} → ${filename}`,
     );
   }
 
@@ -365,7 +365,7 @@ function splitFlows(flowsArray, config, rootPath, RED) {
     const filePath = path.join(configNodesDir, filename);
     fs.writeFileSync(filePath, JSON.stringify(configNodes, null, 2));
     RED.log.info(
-      `${PLUGIN_LOG_PREFIX} Saved ${configNodes.length} config node(s) → ${filename}`,
+      `${EXTENSION_LOG_PREFIX} Saved ${configNodes.length} config node(s) → ${filename}`,
     );
   }
 
@@ -385,7 +385,7 @@ function rebuildFlows(config, rootPath, RED) {
 
   if (!fs.existsSync(destBase)) {
     RED.log.info(
-      `${PLUGIN_LOG_PREFIX} No source directory found, skipping rebuild`,
+      `${EXTENSION_LOG_PREFIX} No source directory found, skipping rebuild`,
     );
     return null;
   }
@@ -409,12 +409,12 @@ function rebuildFlows(config, rootPath, RED) {
         if (Array.isArray(nodes)) {
           allNodes = allNodes.concat(nodes);
           RED.log.info(
-            `${PLUGIN_LOG_PREFIX} Loaded: ${subdir}/${file} (${nodes.length} node(s))`,
+            `${EXTENSION_LOG_PREFIX} Loaded: ${subdir}/${file} (${nodes.length} node(s))`,
           );
         }
       } catch (err) {
         RED.log.warn(
-          `${PLUGIN_LOG_PREFIX} Failed to parse ${subdir}/${file}: ${err.message}`,
+          `${EXTENSION_LOG_PREFIX} Failed to parse ${subdir}/${file}: ${err.message}`,
         );
       }
     }
@@ -422,7 +422,7 @@ function rebuildFlows(config, rootPath, RED) {
 
   if (allNodes.length === 0) {
     RED.log.info(
-      `${PLUGIN_LOG_PREFIX} No split files found, nothing to rebuild`,
+      `${EXTENSION_LOG_PREFIX} No split files found, nothing to rebuild`,
     );
     return null;
   }
@@ -478,11 +478,11 @@ function writeConfig(config, rootPath) {
  */
 function handleFlowsStarted(RED) {
   return async eventData => {
-    RED.log.info(`${PLUGIN_LOG_PREFIX} Flow start event detected`);
+    RED.log.info(`${EXTENSION_LOG_PREFIX} Flow start event detected`);
 
     const { userDir } = RED.settings;
     if (!userDir) {
-      RED.log.error(`${PLUGIN_LOG_PREFIX} userDir not configured`);
+      RED.log.error(`${EXTENSION_LOG_PREFIX} userDir not configured`);
       return;
     }
 
@@ -497,7 +497,7 @@ function handleFlowsStarted(RED) {
     if (!hasFlows) {
       // ─── Rebuild mode: no flows loaded, try to reconstruct ─────────
       RED.log.info(
-        `${PLUGIN_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
+        `${EXTENSION_LOG_PREFIX} No flows in runtime, attempting rebuild from split files`,
       );
 
       // Try to apply latest migration if no split files exist
@@ -510,7 +510,7 @@ function handleFlowsStarted(RED) {
       const rebuilt = rebuildFlows(config, rootPath, RED);
       if (!rebuilt) {
         RED.log.info(
-          `${PLUGIN_LOG_PREFIX} No split files found, nothing to do`,
+          `${EXTENSION_LOG_PREFIX} No split files found, nothing to do`,
         );
         return;
       }
@@ -519,17 +519,17 @@ function handleFlowsStarted(RED) {
       const monolithPath = path.join(rootPath, config.monolithFilename);
       fs.writeFileSync(monolithPath, JSON.stringify(rebuilt, null, 4));
       RED.log.info(
-        `${PLUGIN_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
+        `${EXTENSION_LOG_PREFIX} Rebuilt ${config.monolithFilename} with ${rebuilt.length} node(s)`,
       );
 
       // Reload flows in the runtime
       try {
-        RED.log.info(`${PLUGIN_LOG_PREFIX} Reloading flows...`);
+        RED.log.info(`${EXTENSION_LOG_PREFIX} Reloading flows...`);
         await RED.nodes.loadFlows(true);
-        RED.log.info(`${PLUGIN_LOG_PREFIX} Flows reloaded`);
+        RED.log.info(`${EXTENSION_LOG_PREFIX} Flows reloaded`);
       } catch (err) {
         RED.log.error(
-          `${PLUGIN_LOG_PREFIX} Failed to reload flows: ${err.message}`,
+          `${EXTENSION_LOG_PREFIX} Failed to reload flows: ${err.message}`,
         );
       }
       return;
@@ -537,7 +537,7 @@ function handleFlowsStarted(RED) {
 
     // ─── Split mode: flows exist, split them ─────────────────────────
     RED.log.info(
-      `${PLUGIN_LOG_PREFIX} Splitting ${flowsFromEvent.length} node(s) into individual files`,
+      `${EXTENSION_LOG_PREFIX} Splitting ${flowsFromEvent.length} node(s) into individual files`,
     );
 
     splitFlows(flowsFromEvent, config, rootPath, RED);
@@ -558,25 +558,25 @@ function handleFlowsStarted(RED) {
       if (fs.existsSync(monolithPath)) {
         fs.unlinkSync(monolithPath);
         RED.log.info(
-          `${PLUGIN_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
+          `${EXTENSION_LOG_PREFIX} Deleted ${config.monolithFilename} (split files are the source of truth)`,
         );
       }
     } catch (err) {
       RED.log.warn(
-        `${PLUGIN_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
+        `${EXTENSION_LOG_PREFIX} Could not delete ${config.monolithFilename}: ${err.message}`,
       );
     }
 
-    RED.log.info(`${PLUGIN_LOG_PREFIX} Split complete ✅`);
+    RED.log.info(`${EXTENSION_LOG_PREFIX} Split complete ✅`);
   };
 }
 
 /**
- * Main plugin export
+ * Main extension export
  * @param {object} RED - Node-RED runtime
  */
 export default function flowSplitter(RED) {
-  RED.log.info(`${PLUGIN_LOG_PREFIX} Initializing...`);
+  RED.log.info(`${EXTENSION_LOG_PREFIX} Initializing...`);
 
   if (RED.events.rskFlowSplitterHandler) {
     RED.events.removeListener(

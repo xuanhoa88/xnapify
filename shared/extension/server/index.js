@@ -41,7 +41,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         if (manifest && manifest.hasClientCss) {
           this[EXTENSION_CSS_ENTRY_POINTS].set(
             id,
-            this.getExtensionAssetUrl(id, `plugin.css?v=${currentVersion}`),
+            this.getExtensionAssetUrl(id, `extension.css?v=${currentVersion}`),
           );
         }
 
@@ -65,9 +65,9 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Clean up API instances when extension is unloaded
     this.on('extension:unloaded', async ({ id }) => {
       try {
-        const apiPlugin = this[EXTENSION_API_ENTRY_POINTS].get(id);
-        if (apiPlugin && typeof apiPlugin.destroy === 'function') {
-          await apiPlugin.destroy(this.registry, this[EXTENSION_CONTEXT]);
+        const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
+        if (apiEntry && typeof apiEntry.destroy === 'function') {
+          await apiEntry.destroy(this.registry, this[EXTENSION_CONTEXT]);
           if (__DEV__) {
             console.log(`[ExtensionManager] Destroyed API for: ${id}`);
           }
@@ -136,54 +136,54 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   getDevExtensionPath(cwd = process.cwd()) {
     try {
-      return path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'plugins');
+      return path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions');
     } catch (err) {
-      console.error(`Failed to get dev plugin path for ${cwd}:`, err);
+      console.error(`Failed to get dev extension path for ${cwd}:`, err);
       return null;
     }
   }
 
   /**
-   * Resolve the physical directory of a plugin on disk.
+   * Resolve the physical directory of an extension on disk.
    * Checks local/dev path first (dev override), then installed/remote path.
    *
-   * This is the single source of truth for plugin path resolution — used
+   * This is the single source of truth for extension path resolution — used
    * internally by `_getExtensionBundlePath` and externally by the service layer
-   * (via `plugin.helpers.resolveExtensionDir`).
+   * (via `extension.helpers.resolveExtensionDir`).
    *
-   * @param {string} extensionKey - Plugin directory name / key
-   * @returns {{ dir: string|null, isDevPlugin: boolean }}
+   * @param {string} extensionKey - Extension directory name / key
+   * @returns {{ dir: string|null, isDevExtension: boolean }}
    */
   resolveExtensionDir(extensionKey) {
-    if (!extensionKey) return { dir: null, isDevPlugin: false };
+    if (!extensionKey) return { dir: null, isDevExtension: false };
 
-    const basePluginDir = extensionKey.split(path.sep)[0] || extensionKey;
+    const baseExtensionDir = extensionKey.split(path.sep)[0] || extensionKey;
 
     try {
       if (this[EXTENSION_CONTEXT] && this[EXTENSION_CONTEXT].cwd) {
         const devBaseDir = this.getDevExtensionPath(this[EXTENSION_CONTEXT].cwd);
-        if (devBaseDir && fs.existsSync(path.join(devBaseDir, basePluginDir))) {
-          return { dir: path.join(devBaseDir, extensionKey), isDevPlugin: true };
+        if (devBaseDir && fs.existsSync(path.join(devBaseDir, baseExtensionDir))) {
+          return { dir: path.join(devBaseDir, extensionKey), isDevExtension: true };
         }
       }
 
       const baseDir = this.getExtensionPath();
-      if (baseDir && fs.existsSync(path.join(baseDir, basePluginDir))) {
-        return { dir: path.join(baseDir, extensionKey), isDevPlugin: false };
+      if (baseDir && fs.existsSync(path.join(baseDir, baseExtensionDir))) {
+        return { dir: path.join(baseDir, extensionKey), isDevExtension: false };
       }
     } catch (err) {
       console.error(
-        `[ServerExtensionManager] Failed to resolve plugin dir for ${extensionKey}:`,
+        `[ServerExtensionManager] Failed to resolve extension dir for ${extensionKey}:`,
         err,
       );
     }
 
-    return { dir: null, isDevPlugin: false };
+    return { dir: null, isDevExtension: false };
   }
 
   /**
-   * Read a plugin's package.json manifest from its directory on disk.
-   * @param {string} extensionDir - Absolute path to the plugin directory
+   * Read an extension's package.json manifest from its directory on disk.
+   * @param {string} extensionDir - Absolute path to the extension directory
    * @returns {Object|null} Parsed manifest or null on failure
    */
   // eslint-disable-next-line class-methods-use-this
@@ -197,10 +197,10 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Get the path to a plugin's bundle file.
+   * Get the path to an extension's bundle file.
    * Delegates to `resolveExtensionDir` for dev/prod path resolution.
    *
-   * @param {string} extensionDir - Plugin directory name
+   * @param {string} extensionDir - Extension directory name
    * @param {string} filename - Bundle filename
    * @returns {string|null} Absolute path to the bundle file
    */
@@ -215,7 +215,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @returns {Object} Module exports
    */
   loadModule(bundlePath) {
-    // Use non-webpack require to load plugins from filesystem
+    // Use non-webpack require to load extensions from filesystem
     // eslint-disable-next-line no-undef
     const requireFunc =
       typeof __non_webpack_require__ === 'function'
@@ -253,8 +253,8 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Ensure server plugin manager is ready
-   * For SSR: Ensures context is valid before loading plugins
+   * Ensure server extension manager is ready
+   * For SSR: Ensures context is valid before loading extensions
    * @returns {Promise<void>}
    */
   async _ensureReady() {
@@ -268,7 +268,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       this._validateServerContext();
 
       if (__DEV__) {
-        console.log('[ServerExtensionManager] Server plugin manager ready');
+        console.log('[ServerExtensionManager] Server extension manager ready');
       }
     })();
 
@@ -276,8 +276,8 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Resolve the plugin entry point based on manifest
-   * @param {Object} manifest - Plugin manifest
+   * Resolve the extension entry point based on manifest
+   * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null
    */
   resolveEntryPoint(manifest) {
@@ -288,14 +288,14 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Run a lifecycle hook from the plugin's API module.
+   * Run a lifecycle hook from the extension's API module.
    * Uses the provided manifest to resolve the API bundle path and calls the
    * named export.  The caller MUST supply the manifest — this method does NOT
    * perform any API fetch.
    *
-   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
+   * @param {string} id - Extension key
    * @param {string} hookName - Name of the hook (e.g. 'install', 'uninstall')
-   * @param {Object} manifest - Plugin manifest (must contain `name` and `main`)
+   * @param {Object} manifest - Extension manifest (must contain `name` and `main`)
    * @returns {Promise<void>}
    * @private
    */
@@ -334,7 +334,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       );
     } else if (__DEV__) {
       console.log(
-        `[ServerExtensionManager] Plugin ${id} does not expose a ${hookName} hook. Skipping.`,
+        `[ServerExtensionManager] Extension ${id} does not expose a ${hookName} hook. Skipping.`,
       );
     }
   }
@@ -344,35 +344,35 @@ class ServerExtensionManager extends BaseExtensionManager {
    * the install() lifecycle hook directly.
    *
    * Overrides `BaseExtensionManager.installExtension()` which delegates to the
-   * registry. On the server the plugin may not yet be registered in the
+   * registry. On the server the extension may not yet be registered in the
    * Registry, so we load the module from disk via `_runLifecycleHook`.
    *
-   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
-   * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
+   * @param {string} id - Extension key
+   * @param {Object} manifest - Extension manifest object (must contain `name` and `main`)
    * @returns {Promise<boolean>} True if the hook ran successfully
    */
   async installExtension(id, manifest) {
     if (typeof id !== 'string' || id.trim().length === 0) {
-      const error = new Error('Plugin ID must be a non-empty string');
-      error.name = 'PluginManagerError';
-      await this.emit('plugin:validation-failed', { id, error });
+      const error = new Error('Extension ID must be a non-empty string');
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:validation-failed', { id, error });
       console.error(error);
       return false;
     }
 
-    await this.emit('plugin:installing', { id });
+    await this.emit('extension:installing', { id });
 
     try {
       // eslint-disable-next-line no-underscore-dangle
       await this._runLifecycleHook(id, 'install', manifest);
-      await this.emit('plugin:installed', { id });
+      await this.emit('extension:installed', { id });
       return true;
     } catch (error) {
       console.error(
-        `[ServerExtensionManager] Failed to install plugin "${id}":`,
+        `[ServerExtensionManager] Failed to install extension "${id}":`,
         error,
       );
-      await this.emit('plugin:install-failed', { id, error });
+      await this.emit('extension:install-failed', { id, error });
       throw error;
     }
   }
@@ -382,53 +382,53 @@ class ServerExtensionManager extends BaseExtensionManager {
    * the uninstall() lifecycle hook directly.
    *
    * Overrides `BaseExtensionManager.uninstallExtension()` which delegates to the
-   * registry. On the server the plugin may already be unloaded from the
+   * registry. On the server the extension may already be unloaded from the
    * Registry, so we load the module from disk via `_runLifecycleHook`.
    *
-   * @param {string} id - Plugin key (e.g. 'rsk_plugin_test')
-   * @param {Object} manifest - Plugin manifest object (must contain `name` and `main`)
+   * @param {string} id - Extension key
+   * @param {Object} manifest - Extension manifest object (must contain `name` and `main`)
    * @returns {Promise<boolean>} True if the hook ran successfully
    */
   async uninstallExtension(id, manifest) {
     if (typeof id !== 'string' || id.trim().length === 0) {
-      const error = new Error('Plugin ID must be a non-empty string');
-      error.name = 'PluginManagerError';
-      await this.emit('plugin:validation-failed', { id, error });
+      const error = new Error('Extension ID must be a non-empty string');
+      error.name = 'ExtensionManagerError';
+      await this.emit('extension:validation-failed', { id, error });
       console.error(error);
       return false;
     }
 
-    await this.emit('plugin:uninstalling', { id });
+    await this.emit('extension:uninstalling', { id });
 
     try {
       // eslint-disable-next-line no-underscore-dangle
       await this._runLifecycleHook(id, 'uninstall', manifest);
-      await this.emit('plugin:uninstalled', { id });
+      await this.emit('extension:uninstalled', { id });
       return true;
     } catch (error) {
       console.error(
-        `[ServerExtensionManager] Failed to uninstall plugin "${id}":`,
+        `[ServerExtensionManager] Failed to uninstall extension "${id}":`,
         error,
       );
-      await this.emit('plugin:uninstall-failed', { id, error });
+      await this.emit('extension:uninstall-failed', { id, error });
       throw error;
     }
   }
 
   /**
-   * Load plugin module (server uses require, not MF containers)
-   * @param {string} id - Plugin ID
+   * Load extension module (server uses require, not MF containers)
+   * @param {string} id - Extension ID
    * @param {string|null} entryPoint - Resolved entry point filename
-   * @param {object} manifest - Plugin manifest
+   * @param {object} manifest - Extension manifest
    * @param {object} options - Additional options (containerName)
-   * @returns {Promise<Object|null>} Plugin module or null
+   * @returns {Promise<Object|null>} Extension module or null
    */
   async loadExtensionModule(id, entryPoint, manifest, _options) {
-    // Skip if no entry point resolved (e.g. client-only plugin)
+    // Skip if no entry point resolved (e.g. client-only extension)
     if (!entryPoint) {
       if (__DEV__) {
         console.log(
-          `[ServerExtensionManager] Skipping plugin ${id} (no server entry point)`,
+          `[ServerExtensionManager] Skipping extension ${id} (no server entry point)`,
         );
       }
       return null;
@@ -440,17 +440,17 @@ class ServerExtensionManager extends BaseExtensionManager {
     const extensionDir = manifest && manifest.name;
 
     try {
-      // Validate plugin directory name early (fail-fast)
+      // Validate extension directory name early (fail-fast)
       if (!extensionDir) {
         const error = new Error(
-          `Plugin name required for server-side plugin loading: ${id}`,
+          `Extension name required for server-side extension loading: ${id}`,
         );
-        error.code = 'PLUGIN_NAME_REQUIRED';
+        error.code = 'EXTENSION_NAME_REQUIRED';
         error.extensionId = id;
         throw error;
       }
 
-      // Ensure server is ready before loading any plugin
+      // Ensure server is ready before loading any extension
       // eslint-disable-next-line no-underscore-dangle
       await this._ensureReady();
 
@@ -469,7 +469,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         );
         if (__DEV__) {
           console.log(
-            `[ServerExtensionManager] Loading plugin ${id} from ${bundlePath}${versionChanged ? ' (version changed)' : ''}`,
+            `[ServerExtensionManager] Loading extension ${id} from ${bundlePath}${versionChanged ? ' (version changed)' : ''}`,
           );
         }
         const viewModule = this.loadModule(bundlePath);
@@ -487,7 +487,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           const apiModule = this.loadModule(apiBundlePath);
           const extensionApi = apiModule.default || apiModule;
 
-          // Object-only pattern: plugins must export { init(context), destroy?(context) }
+          // Object-only pattern: extensions must export { init(context), destroy?(context) }
           if (extensionApi && typeof extensionApi.init === 'function') {
             if (__DEV__) {
               console.log(`[ServerExtensionManager] Booting API for ${id}`);
@@ -532,7 +532,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // Return plugin module if available
+      // Return extension module if available
       if (extensionModule) {
         return extensionModule;
       }
@@ -611,7 +611,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           } else {
             // Enrich manifest with client asset flags (like the service does)
             try {
-              if (fs.existsSync(path.join(dir, 'plugin.css'))) {
+              if (fs.existsSync(path.join(dir, 'extension.css'))) {
                 freshManifest.hasClientCss = true;
               }
               if (fs.existsSync(path.join(dir, 'remote.js'))) {

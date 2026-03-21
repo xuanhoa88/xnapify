@@ -28,7 +28,7 @@ The `.dockerignore` stays in the **project root** (Docker requirement — must b
 The `entrypoint.sh` script runs as root to fix volume ownership, then drops privileges via `su-exec node`.
 
 - Uses **conditional** `chown -R` — only runs when ownership is wrong (avoids O(n) walk on every restart)
-- Fixes: `/app/build` (SQLite), `/app/build/plugins` (bundled plugins need write for `npm install`), `/app/data` (persistent volume)
+- Fixes: `/app/build` (SQLite), `/app/build/extensions` (bundled extensions need write for `npm install`), `/app/data` (persistent volume)
 
 ### Build Context
 - `build.context` is `..` (project root) so Webpack can access all source files
@@ -55,7 +55,7 @@ environment:
 ## Conventions
 
 - **Single persistent volume**: `rsk_data` mounted at `/app/data` — all writable dirs are subdirectories
-- Writable dirs set via env vars: `RSK_UPLOAD_DIR`, `RSK_NODERED_HOME`, `RSK_PLUGIN_DIR`, `RSK_CACHE_DIR`, `RSK_FTS_DIR`
+- Writable dirs set via env vars: `RSK_UPLOAD_DIR`, `RSK_NODERED_HOME`, `RSK_EXTENSION_DIR`, `RSK_CACHE_DIR`, `RSK_FTS_DIR`
 - Volume names use `rsk_` prefix: `rsk_data`, `rsk_pg`, `rsk_mysql`
 - Network: `rsk-net` (bridge driver)
 - Container names: `rsk-app`, `rsk-postgres`, `rsk-mysql`

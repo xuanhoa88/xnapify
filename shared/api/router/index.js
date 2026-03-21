@@ -92,7 +92,7 @@ export class Router {
   }
 
   /**
-   * Dynamically adds routes from a new adapter (e.g. a plugin).
+   * Dynamically adds routes from a new adapter (e.g. an extension).
    * @param {Object} adapter - Module loader for the new routes
    * @returns {Object[]} The newly added route nodes
    */
