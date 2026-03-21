@@ -5,13 +5,51 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { useState, useEffect, useCallback, memo } from 'react';
+import { Component, useState, useEffect, useCallback, memo } from 'react';
 
 import PropTypes from 'prop-types';
 
 import { useAppContext } from '@shared/renderer/AppContext';
 
 import { registry } from '../utils/Registry';
+
+/**
+ * Error boundary that catches render errors from extension components.
+ * Prevents a single broken extension from crashing the entire page.
+ */
+class SlotErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error, info) {
+    console.error(
+      `[ExtensionSlot] Extension component crashed:`,
+      error,
+      info.componentStack,
+    );
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return null;
+    }
+    return this.props.children;
+  }
+}
+
+SlotErrorBoundary.propTypes = {
+  children: PropTypes.node,
+};
+
+SlotErrorBoundary.defaultProps = {
+  children: null,
+};
 
 /**
  * ExtensionSlot - Renders components registered for a named slot
@@ -22,6 +60,9 @@ import { registry } from '../utils/Registry';
  * asynchronously via Module Federation. React cannot reconcile the
  * structural difference, so we skip server rendering of slot children
  * and let the client fill them in once extensions are ready.
+ *
+ * Each extension component is wrapped in a SlotErrorBoundary so that
+ * a crashing extension renders nothing instead of taking down the page.
  *
  * Usage:
  *   <ExtensionSlot name="profile.fields" formData={formData} />
@@ -54,15 +95,19 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   return (
     <div data-slot={name}>
       {mounted &&
-        components.map(({ component: Component, ...options }, index) => {
+        components.map(({ component: Comp, ...options }, index) => {
           const key =
             options.id ||
             options.key ||
-            Component.displayName ||
-            Component.name ||
+            Comp.displayName ||
+            Comp.name ||
             `${name}-${index}`;
 
-          return <Component key={key} {...props} context={context} />;
+          return (
+            <SlotErrorBoundary key={key}>
+              <Comp {...props} context={context} />
+            </SlotErrorBoundary>
+          );
         })}
     </div>
   );

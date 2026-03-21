@@ -48,11 +48,15 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
         );
         const manifest = await readExtensionManifest(dirPath, dirent.name);
         if (manifest) {
-          console.debug(`[manageExtensions] Added extension: ${dirent.name}`);
-          const encryptedId = encryptExtensionId(dirent.name);
-          fsExtensionsMap.set(dirent.name, {
+          // Use manifest.name (the built package name) as map key so it
+          // matches the DB key derived from snakeCase(manifest.name).
+          // Falls back to folder name when manifest.name is absent.
+          const mapKey = manifest.name || dirent.name;
+          console.debug(`[manageExtensions] Added extension: ${mapKey}`);
+          const encryptedId = encryptExtensionId(mapKey);
+          fsExtensionsMap.set(mapKey, {
             ...manifest,
-            name: (manifest.rsk && manifest.rsk.name) || dirent.name,
+            name: (manifest.rsk && manifest.rsk.name) || mapKey,
             id: encryptedId,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'

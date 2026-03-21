@@ -7,6 +7,8 @@
 
 import {
   BaseExtensionManager,
+  ACTIVE_EXTENSIONS,
+  EXTENSION_METADATA,
   EXTENSION_MANAGER_INIT,
 } from '../utils/BaseExtensionManager';
 
@@ -28,7 +30,10 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Inject extension.css
       if (manifest.hasClientCss) {
         if (!document.querySelector(`link[data-extension-id="${id}"]`)) {
-          const href = this.getExtensionAssetUrl(id, `extension.css?v=${version}`);
+          const href = this.getExtensionAssetUrl(
+            id,
+            `extension.css?v=${version}`,
+          );
           const link = document.createElement('link');
           link.rel = 'stylesheet';
           link.href = href;
@@ -159,6 +164,17 @@ class ClientExtensionManager extends BaseExtensionManager {
           '[ClientExtensionManager] Module Federation ready for extensions',
         );
       }
+
+      // Expose debug inspector in dev mode
+      if (__DEV__) {
+        // eslint-disable-next-line no-underscore-dangle
+        window.__RSK_EXTENSION_DEBUG__ = {
+          registry: this.registry,
+          metadata: this[EXTENSION_METADATA],
+          active: this[ACTIVE_EXTENSIONS],
+          manager: this,
+        };
+      }
     })();
 
     return this[EXTENSION_MANAGER_INIT];
@@ -281,13 +297,17 @@ class ClientExtensionManager extends BaseExtensionManager {
       const extensionModule = await this.getContainerModule(container);
 
       if (__DEV__) {
-        console.log(`[ClientExtensionManager] Successfully loaded extension: ${id}`);
+        console.log(
+          `[ClientExtensionManager] Successfully loaded extension: ${id}`,
+        );
       }
 
       return extensionModule.default || extensionModule;
     } catch (err) {
       // Enhanced error with full context for debugging
-      const error = new Error(`Failed to load extension "${id}": ${err.message}`);
+      const error = new Error(
+        `Failed to load extension "${id}": ${err.message}`,
+      );
       error.code = err.code || 'EXTENSION_LOAD_FAILED';
       error.extensionId = id;
       error.containerName = containerName;

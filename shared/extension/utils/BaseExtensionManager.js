@@ -31,6 +31,7 @@ export const ExtensionState = Object.freeze({
   PENDING: 'pending',
   LOADING: 'loading',
   LOADED: 'loaded',
+  ACTIVE: 'active',
   FAILED: 'failed',
   UNLOADING: 'unloading',
   UNLOADED: 'unloaded',
@@ -139,7 +140,9 @@ export class BaseExtensionManager {
       const { data: response } =
         await this[EXTENSION_CONTEXT].fetch('/api/extensions');
       const extensions =
-        response && Array.isArray(response.extensions) ? response.extensions : [];
+        response && Array.isArray(response.extensions)
+          ? response.extensions
+          : [];
       const results = await Promise.allSettled(
         extensions.map(item => {
           const id = typeof item === 'object' ? item.id : item;
@@ -205,7 +208,18 @@ export class BaseExtensionManager {
    * @param {string} extensionId - Extension requesting dependencies
    * @param {Array<Object<string, string>>} dependencies - Array of dependency IDs
    */
-  async loadDependencies(extensionId, dependencies) {
+  async loadDependencies(extensionId, dependencies, _loadingChain) {
+    const chain = _loadingChain || new Set();
+
+    // Circular dependency detection
+    if (chain.has(extensionId)) {
+      const cycle = [...chain, extensionId].join(' → ');
+      const error = new Error(`Circular dependency detected: ${cycle}`);
+      error.name = 'ExtensionManagerError';
+      throw error;
+    }
+    chain.add(extensionId);
+
     const missing = Object.keys(dependencies).filter(
       depId => !this[ACTIVE_EXTENSIONS].has(depId),
     );
@@ -216,7 +230,9 @@ export class BaseExtensionManager {
         missing,
       );
 
-      await Promise.all(missing.map(depId => this.loadExtension(depId)));
+      await Promise.all(
+        missing.map(depId => this.loadExtension(depId, undefined, chain)),
+      );
     }
   }
 
@@ -244,7 +260,9 @@ export class BaseExtensionManager {
             `[ExtensionManager] Extension ${id} returned null module (skipped)`,
           );
         }
-        const err = new Error(`Extension "${id}" returned null module (skipped)`);
+        const err = new Error(
+          `Extension "${id}" returned null module (skipped)`,
+        );
         err.name = 'ExtensionSkippedError';
         err.status = 400;
         throw err;
@@ -292,7 +310,10 @@ export class BaseExtensionManager {
       err.name = 'ExtensionManagerError';
       err.extensionId = id;
       err.originalError = error;
-      console.error(`[ExtensionManager] Extension "${id}" failed to load:`, err);
+      console.error(
+        `[ExtensionManager] Extension "${id}" failed to load:`,
+        err,
+      );
 
       // Only throw in dev mode
       if (__DEV__) {
@@ -331,7 +352,7 @@ export class BaseExtensionManager {
    * @param {Object} manifest - Optional extension manifest
    * @returns {Promise<Object|null>} Extension instance or null if skipped
    */
-  async loadExtension(id, manifest = null) {
+  async loadExtension(id, manifest = null, _loadingChain) {
     if (!id || typeof id !== 'string') {
       const error = new Error('Extension ID must be a non-empty string');
       error.name = 'ExtensionManagerError';
@@ -370,7 +391,7 @@ export class BaseExtensionManager {
         manifest.rsk.require &&
         manifest.rsk.require.length > 0
       ) {
-        await this.loadDependencies(id, manifest.rsk.require);
+        await this.loadDependencies(id, manifest.rsk.require, _loadingChain);
       }
 
       // Fetch extension bundle details from API — skip if the caller
@@ -384,10 +405,13 @@ export class BaseExtensionManager {
         // Clean up the internal flag
         delete manifest.fromDisk;
       } else {
-        const response = await this[EXTENSION_CONTEXT].fetch(`/api/extensions/${id}`);
+        const response = await this[EXTENSION_CONTEXT].fetch(
+          `/api/extensions/${id}`,
+        );
         if (!response || !response.success) {
           const error = new Error(
-            (response && response.message) || 'Failed to fetch extension bundle',
+            (response && response.message) ||
+              'Failed to fetch extension bundle',
           );
           error.name = 'ExtensionManagerError';
           throw error;
@@ -462,7 +486,10 @@ export class BaseExtensionManager {
 
       return ext;
     } catch (error) {
-      console.error(`[ExtensionManager] Failed to load extension "${id}":`, error);
+      console.error(
+        `[ExtensionManager] Failed to load extension "${id}":`,
+        error,
+      );
 
       // Update metadata
       const metadata = this[EXTENSION_METADATA].get(id);
@@ -523,7 +550,10 @@ export class BaseExtensionManager {
       console.log(`[ExtensionManager] Successfully unloaded extension: ${id}`);
       await this.emit('extension:unloaded', { id });
     } catch (error) {
-      console.error(`[ExtensionManager] Failed to unload extension "${id}":`, error);
+      console.error(
+        `[ExtensionManager] Failed to unload extension "${id}":`,
+        error,
+      );
 
       if (metadata) {
         metadata.state = ExtensionState.FAILED;
@@ -593,7 +623,10 @@ export class BaseExtensionManager {
 
       await this.emit('extension:updated', { id, oldVersion, newVersion });
     } catch (error) {
-      console.error(`[ExtensionManager] Failed to update extension "${id}":`, error);
+      console.error(
+        `[ExtensionManager] Failed to update extension "${id}":`,
+        error,
+      );
       await this.emit('extension:update-failed', { id, error });
       console.error(error);
     }
@@ -632,7 +665,10 @@ export class BaseExtensionManager {
       }
       return result;
     } catch (error) {
-      console.error(`[ExtensionManager] Failed to install extension "${id}":`, error);
+      console.error(
+        `[ExtensionManager] Failed to install extension "${id}":`,
+        error,
+      );
       await this.emit('extension:install-failed', { id, error });
       console.error(error);
     }
@@ -742,7 +778,9 @@ export class BaseExtensionManager {
           ...def,
           init: async reg => {
             if (__DEV__) {
-              console.log(`[ExtensionManager] Initializing extension: ${def.id}`);
+              console.log(
+                `[ExtensionManager] Initializing extension: ${def.id}`,
+              );
             }
 
             // Auto-register translations before init if extension exports translations()
@@ -812,6 +850,12 @@ export class BaseExtensionManager {
 
         await registry.register(def.id, extInstance);
         this[ACTIVE_EXTENSIONS].set(def.id, extInstance);
+
+        // Transition metadata state to ACTIVE
+        const meta = this[EXTENSION_METADATA].get(def.id);
+        if (meta) {
+          meta.state = ExtensionState.ACTIVE;
+        }
       }
 
       if (__DEV__) {
@@ -819,7 +863,10 @@ export class BaseExtensionManager {
       }
       await this.emit('namespace:loaded', { ns });
     } catch (error) {
-      console.error(`[ExtensionManager] Failed to load namespace "${ns}":`, error);
+      console.error(
+        `[ExtensionManager] Failed to load namespace "${ns}":`,
+        error,
+      );
       await this.emit('namespace:load-failed', { ns, error });
       console.error(error);
     }

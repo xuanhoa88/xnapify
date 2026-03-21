@@ -32,7 +32,7 @@ const SERVER_LOGGER_OPTIONS = {
 };
 
 // Check if running on server
-const isServer = typeof window === 'undefined';
+const serverSide = typeof window === 'undefined';
 
 /**
  * Validates reducer injection parameters
@@ -104,15 +104,6 @@ function separateInitialState(initialState, rootReducerKeys) {
   return { filteredInitialState, pendingDynamicState };
 }
 
-/**
- * Configure and create Redux store using Redux Toolkit
- * @param {Object} initialState - Initial Redux state
- * @param {Object} helpersConfig - Extra argument for thunk middleware
- * @param {Function} helpersConfig.fetch - Isomorphic fetch function
- * @param {Object} helpersConfig.history - History instance (memory on server, browser on client)
- * @param {Object} helpersConfig.i18n - i18next instance
- * @returns {Store} Configured Redux store with dynamic reducer injection
- */
 // Cache known root reducer keys
 const rootReducerKeys = Object.keys(rootReducer);
 
@@ -152,7 +143,7 @@ export default function configureStore(
   const createMiddleware = getDefaultMiddleware => {
     const middleware = getDefaultMiddleware({
       thunk: {
-        extraArgument: helpersConfig,
+        extraArgument: { ...helpersConfig, serverSide },
       },
       // Disable serializable check for i18n instance and other non-serializable data
       serializableCheck: false,
@@ -173,7 +164,7 @@ export default function configureStore(
             // Predicate to avoid logging specific actions
             predicate: (getState, action) =>
               !SKIP_LOG_ACTIONS.includes(action.type),
-            ...(isServer ? SERVER_LOGGER_OPTIONS : {}),
+            ...(serverSide ? SERVER_LOGGER_OPTIONS : {}),
           }),
         );
       } catch (err) {
@@ -277,7 +268,7 @@ export default function configureStore(
       // 2. It's not an identity reducer
       // 3. Force option is not set
       if (existingReducer && !isIdentityReducer && !options.force) {
-        if (__DEV__ && !isServer && !options.silent) {
+        if (__DEV__ && !serverSide && !options.silent) {
           console.log(`[Redux] Reducer already injected: ${key}`);
         }
         return false;
@@ -298,7 +289,7 @@ export default function configureStore(
       }
 
       // Log the injection
-      if (__DEV__ && !isServer && !options.silent) {
+      if (__DEV__ && !serverSide && !options.silent) {
         const actionLabels = {
           injected: 'Injected',
           replaced_identity: 'Replaced identity',
@@ -337,7 +328,7 @@ export default function configureStore(
     delete injectedReducers[key];
     store.replaceReducer(rebuildRootReducer());
 
-    if (__DEV__ && !isServer && !options.silent) {
+    if (__DEV__ && !serverSide && !options.silent) {
       console.log(`[Redux] Removed reducer: ${key}`);
     }
 
@@ -388,7 +379,7 @@ export default function configureStore(
       }
     });
 
-    if (__DEV__ && !isServer && !options.silent) {
+    if (__DEV__ && !serverSide && !options.silent) {
       if (injected.length > 0) {
         console.log(`[Redux] Batch injected reducers: ${injected.join(', ')}`);
       }
@@ -439,7 +430,7 @@ export default function configureStore(
     if (needsRebuild) {
       store.replaceReducer(rebuildRootReducer());
 
-      if (__DEV__ && !isServer && !options.silent) {
+      if (__DEV__ && !serverSide && !options.silent) {
         console.log(`[Redux] Batch removed reducers: ${removed.join(', ')}`);
       }
 
@@ -521,7 +512,7 @@ export default function configureStore(
   if (Object.keys(pendingDynamicState).length > 0) {
     store.replaceReducer(rebuildRootReducer());
 
-    if (__DEV__ && !isServer) {
+    if (__DEV__ && !serverSide) {
       console.log(
         `[Redux] Pre-loaded SSR state for: ${Object.keys(pendingDynamicState).join(', ')}`,
       );
@@ -529,7 +520,7 @@ export default function configureStore(
   }
 
   // Cleanup function for server-side rendering
-  if (isServer) {
+  if (serverSide) {
     store.close = () => {
       reducerListeners.clear();
     };

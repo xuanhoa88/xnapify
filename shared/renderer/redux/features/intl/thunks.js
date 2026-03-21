@@ -23,9 +23,9 @@ import {
  * @param {Object} params.history - History object
  * @returns {Promise<Object>}
  */
-async function persistLocaleCookie({ locale, fetch, history }) {
+async function persistLocaleCookie({ locale, fetch, history, serverSide }) {
   // Skip on server-side
-  if (typeof window === 'undefined') {
+  if (serverSide) {
     return { success: true, skipped: true };
   }
 
@@ -60,7 +60,7 @@ async function persistLocaleCookie({ locale, fetch, history }) {
  * @returns {Function} Redux thunk action
  */
 export function setLocale(locale) {
-  return async (dispatch, getState, { i18n, fetch, history }) => {
+  return async (dispatch, getState, { i18n, fetch, history, serverSide }) => {
     const { intl } = getState();
     try {
       // Check if locale is available
@@ -120,7 +120,7 @@ export function setLocale(locale) {
 
       // Persist locale (browser only) - fire and forget
       // Don't await to avoid blocking the UI
-      persistLocaleCookie({ locale, fetch, history });
+      persistLocaleCookie({ locale, fetch, history, serverSide });
 
       return { success: true, data: locale };
     } catch (error) {

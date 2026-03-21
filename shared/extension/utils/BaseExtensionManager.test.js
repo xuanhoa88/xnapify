@@ -191,8 +191,16 @@ describe('BaseExtensionManager', () => {
       });
 
       expect(loadExtensionSpy).toHaveBeenCalledTimes(2);
-      expect(loadExtensionSpy).toHaveBeenCalledWith('missing-dep-1');
-      expect(loadExtensionSpy).toHaveBeenCalledWith('missing-dep-2');
+      expect(loadExtensionSpy).toHaveBeenCalledWith(
+        'missing-dep-1',
+        undefined,
+        expect.any(Set),
+      );
+      expect(loadExtensionSpy).toHaveBeenCalledWith(
+        'missing-dep-2',
+        undefined,
+        expect.any(Set),
+      );
     });
   });
 
