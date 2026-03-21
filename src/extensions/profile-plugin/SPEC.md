@@ -1,7 +1,7 @@
 # Test Extension AI Specification
 
 > **Instructions for the AI:**
-> Read this document to understand WHAT features to build inside `src/extensions/profile-plugin`.
+> Read this document to understand WHAT features to build inside `src/extensions/profile`.
 > Read `.agent/rules.md` and `AGENT.md` to understand HOW to build them securely according to our architecture.
 
 ---
@@ -22,7 +22,7 @@ _Define what data needs to be modified or hooked into._
 
 _Define any isolated endpoints this extension needs to expose._
 
-- **Method & Path:** [e.g., `POST /api/extension/profile-plugin/ipc`]
+- **Method & Path:** [e.g., `POST /api/extension/profile/ipc`]
 - **Expected Payload:** [e.g., `{ targetId: z.string(), action: z.enum(['start', 'stop']) }`]
 - **Security:** [e.g., Wrap route in `requireAuth` and `requirePermission('admin:test')`.]
 - **Service Logic:** [Describe what the controller should actually do under the hood.]
