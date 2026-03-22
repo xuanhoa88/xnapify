@@ -55,6 +55,12 @@ export async function up({ context, Sequelize }) {
       allowNull: false,
       comment: 'Whether extension is active globally',
     },
+    type: {
+      type: DataTypes.STRING(10),
+      allowNull: false,
+      defaultValue: 'plugin',
+      comment: 'Extension type: plugin or module',
+    },
     options: {
       type: DataTypes.JSON,
       defaultValue: {},
@@ -76,6 +82,7 @@ export async function up({ context, Sequelize }) {
   await queryInterface.addIndex('extensions', ['name'], { unique: true });
   await queryInterface.addIndex('extensions', ['key'], { unique: true });
   await queryInterface.addIndex('extensions', ['is_active']);
+  await queryInterface.addIndex('extensions', ['type']);
 }
 
 /**

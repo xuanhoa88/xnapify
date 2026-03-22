@@ -8,16 +8,27 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import clsx from 'clsx';
+import merge from 'lodash/merge';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
+import Button from '@shared/renderer/components/Button';
 import Card from '@shared/renderer/components/Card';
 import Icon from '@shared/renderer/components/Icon';
-import Tag from '@shared/renderer/components/Tag';
 
 import ExtensionActionsDropdown from './ExtensionActionsDropdown';
 
 import s from './ExtensionCard.css';
+
+/**
+ * Capability icon definitions
+ */
+const CAPABILITY_DEFS = [
+  { key: 'api', icon: 'database', label: 'API' },
+  { key: 'views', icon: 'dashboard', label: 'Views' },
+  { key: 'hooks', icon: 'share', label: 'Hooks' },
+  { key: 'translations', icon: 'globe', label: 'i18n' },
+];
 
 function ExtensionCard({
   extension,
@@ -63,74 +74,74 @@ function ExtensionCard({
     }
   }, [canUpdate, isLoading, extension, onActivate, onDeactivate]);
 
+  const capabilities = merge({}, extension.capabilities);
+  const isModule = (extension.type || 'plugin') === 'module';
+  const authorText =
+    extension.author || (extension.options && extension.options.author);
+  const isLocal =
+    extension.source === 'local' || extension.source === 'db+local';
+
   return (
     <Card
       variant='default'
-      interactive
-      className={clsx(s.root, { [s.loading]: isLoading })}
+      className={clsx(s.root, {
+        [s.loading]: isLoading,
+        [s.inactive]: !extension.is_active,
+      })}
     >
-      <Card.Header
-        className={s.header}
-        actions={
-          <div className={s.headerRight}>
-            {isLoading ? (
-              <div className={s.badges}>
-                <div className={clsx(s.skeleton, s.skeletonVersion)} />
-                <div className={clsx(s.skeleton, s.skeletonBadge)} />
+      <div className={s.header}>
+        <div className={s.iconWrapper}>
+          <Icon name='extension' size={24} />
+        </div>
+        <div className={s.headerText}>
+          {isLoading ? (
+            <div className={s.skeletonWrapper}>
+              <div className={clsx(s.skeleton, s.skeletonTitle)} />
+            </div>
+          ) : (
+            <>
+              <div className={s.titleRow}>
+                <h3 className={s.name} title={extension.name}>
+                  {extension.name}
+                </h3>
+                <span className={s.version}>v{extension.version}</span>
               </div>
-            ) : (
-              <div className={s.badges}>
-                {isActionPending ? (
-                  <Tag variant='warning'>
-                    <span className={s.actionTag}>{resolvedActionLabel}</span>
-                  </Tag>
-                ) : (
-                  <Tag
-                    variant={extension.is_active ? 'success' : 'neutral'}
-                    {...(canUpdate && {
-                      title: extension.is_active
-                        ? t('admin:common.deactivate', 'Deactivate')
-                        : t('admin:common.activate', 'Activate'),
-                      onClick: handleToggleStatus,
+              <div className={s.subtitleRow}>
+                <span
+                  className={clsx(s.typeBadge, { [s.typeModule]: isModule })}
+                >
+                  {isModule
+                    ? t('admin:extensions.typeModule', 'Module')
+                    : t('admin:extensions.typePlugin', 'Plugin')}
+                </span>
+                {extension.source && (
+                  <span
+                    className={clsx(s.typeBadge, s.sourceBadge, {
+                      [s.sourceLocal]: isLocal,
                     })}
                   >
-                    {extension.is_active
-                      ? t('admin:common.active', 'Active')
-                      : t('admin:common.inactive', 'Inactive')}
-                  </Tag>
+                    {isLocal
+                      ? t('admin:extensions.sourceLocal', 'LOCAL')
+                      : t('admin:extensions.sourceRemote', 'REMOTE')}
+                  </span>
+                )}
+                {authorText && (
+                  <span className={s.author}>&bull; {authorText}</span>
                 )}
               </div>
-            )}
-            {!isLoading && (
-              <ExtensionActionsDropdown
-                extension={extension}
-                isOpen={activeDropdownId === extension.id}
-                onToggle={onToggleDropdown}
-                onUpgrade={onUpgrade}
-                onDelete={onDelete}
-              />
-            )}
-          </div>
-        }
-      >
-        {isLoading ? (
-          <div className={s.headerLeft}>
-            <div className={clsx(s.skeleton, s.skeletonTitle)} />
-            <div className={clsx(s.skeleton, s.skeletonVersion)} />
-          </div>
-        ) : (
-          <div className={s.headerLeft}>
-            <h3 className={s.name}>{extension.name}</h3>
-            <span className={s.version}>v{extension.version}</span>
-          </div>
-        )}
-      </Card.Header>
-      <Card.Body className={s.body}>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className={s.body}>
         {isLoading ? (
           <div className={s.skeletonWrapper}>
             <div className={clsx(s.skeleton, s.skeletonText)} />
             <div className={clsx(s.skeleton, s.skeletonText)} />
-            <div className={clsx(s.skeleton, s.skeletonMeta)} />
+            <div
+              className={clsx(s.skeleton, s.skeletonText, s.skeletonShort)}
+            />
           </div>
         ) : (
           <>
@@ -141,44 +152,79 @@ function ExtensionCard({
                   'No description available',
                 )}
             </p>
-            {extension.options &&
-            (extension.options.author || extension.options.repository) ? (
-              <div className={s.metaGroup}>
-                {extension.options.author && (
-                  <span className={s.metaItem} title='Author'>
-                    <svg
-                      className={s.metaIcon}
-                      viewBox='0 0 24 24'
-                      fill='none'
-                      stroke='currentColor'
-                      strokeWidth='2'
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                    >
-                      <path d='M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2' />
-                      <circle cx='12' cy='7' r='4' />
-                    </svg>
-                    {extension.options.author}
-                  </span>
-                )}
-                {extension.options.repository && (
-                  <a
-                    href={extension.options.repository}
-                    target='_blank'
-                    rel='noopener noreferrer'
-                    className={clsx(s.metaItem, s.metaLink)}
-                    title='Repository'
-                    onClick={e => e.stopPropagation()}
+
+            <div className={s.capabilitiesRow}>
+              {CAPABILITY_DEFS.map(cap => {
+                const active = Boolean(capabilities[cap.key]);
+                return (
+                  <span
+                    key={cap.key}
+                    className={clsx(s.capPill, {
+                      [s.capabilityActive]: active,
+                    })}
+                    title={cap.label}
                   >
-                    <Icon name='github' />
-                    Repository
-                  </a>
-                )}
-              </div>
-            ) : null}
+                    <Icon name={cap.icon} size={14} />
+                    <span className={s.capabilityLabel}>{cap.label}</span>
+                  </span>
+                );
+              })}
+            </div>
           </>
         )}
-      </Card.Body>
+      </div>
+
+      <div className={s.footer}>
+        <div className={s.footerActions}>
+          {extension.options && extension.options.repository && (
+            <Button
+              variant='outline'
+              size='small'
+              onClick={() =>
+                window.open(extension.options.repository, '_blank')
+              }
+            >
+              {t('admin:common.details', 'Details')}
+            </Button>
+          )}
+          <Button
+            variant='outline'
+            size='small'
+            onClick={() => onDelete(extension)}
+          >
+            {t('admin:common.remove', 'Remove')}
+          </Button>
+
+          {!isLoading && (
+            <ExtensionActionsDropdown
+              extension={extension}
+              isOpen={activeDropdownId === extension.id}
+              onToggle={onToggleDropdown}
+              onUpgrade={onUpgrade}
+              onDelete={onDelete}
+            />
+          )}
+        </div>
+
+        <div className={s.footerToggle}>
+          {isLoading ? (
+            <div className={clsx(s.skeleton, s.skeletonSwitch)} />
+          ) : isActionPending ? (
+            <span className={s.actionTag}>{resolvedActionLabel}</span>
+          ) : (
+            <label className={s.toggleSwitch}>
+              <input
+                type='checkbox'
+                checked={extension.is_active}
+                onChange={handleToggleStatus}
+                disabled={!canUpdate}
+                aria-label={t('admin:common.toggleStatus', 'Toggle status')}
+              />
+              <span className={s.toggleSlider} />
+            </label>
+          )}
+        </div>
+      </div>
     </Card>
   );
 }
@@ -191,6 +237,15 @@ ExtensionCard.propTypes = {
     version: PropTypes.string,
     is_active: PropTypes.bool,
     job_status: PropTypes.string,
+    type: PropTypes.oneOf(['plugin', 'module']),
+    source: PropTypes.string,
+    author: PropTypes.string,
+    capabilities: PropTypes.shape({
+      api: PropTypes.bool,
+      views: PropTypes.bool,
+      hooks: PropTypes.bool,
+      translations: PropTypes.bool,
+    }),
     options: PropTypes.shape({
       author: PropTypes.string,
       repository: PropTypes.string,

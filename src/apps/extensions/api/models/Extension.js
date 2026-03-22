@@ -66,6 +66,16 @@ export default function createExtensionModel({ connection, DataTypes }) {
         comment: 'Whether extension is active globally',
       },
 
+      type: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        defaultValue: 'plugin',
+        validate: {
+          isIn: [['plugin', 'module']],
+        },
+        comment: 'Extension type: plugin or module',
+      },
+
       options: {
         type: DataTypes.JSON,
         defaultValue: {},

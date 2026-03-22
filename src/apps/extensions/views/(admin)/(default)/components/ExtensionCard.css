@@ -1,231 +1,268 @@
-/**
- * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE.txt file in the root directory of this source tree.
- */
-
-/* Clean, Premium Card Root styling */
 .root {
   display: flex;
   flex-direction: column;
-  position: relative;
-  transition:
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
-  overflow: hidden;
-  background-color: var(--color-background);
+  background-color: var(--color-background, #fff);
+  border-radius: 8px;
   border: 1px solid var(--color-border-subtle, #eaeaea);
-  border-radius: 12px; /* Smooth rounded corners matching mockup */
+  overflow: hidden;
+  height: 100%;
 }
 
-.root:hover {
-  box-shadow: 0 4px 16px rgb(0 0 0 / 6%);
-  border-color: var(--color-border-default, #d1d5db);
-}
-
-.root.loading {
+.loading {
+  opacity: 0.7;
   pointer-events: none;
-  opacity: 0.8;
 }
 
-/* Header Enhancements */
+.inactive {
+  background-color: #f8f9fa;
+}
+
+/* Header */
 .header {
-  border-bottom: none;
-  padding-bottom: 0; /* Let body padding handle the spacing */
-  align-items: flex-start;
-}
-
-.headerLeft {
   display: flex;
-  flex-direction: column;
-  gap: var(--spacing-1, 4px);
+  padding: 16px;
+  align-items: flex-start;
+  gap: 16px;
 }
 
-.body {
-  padding-top: var(--spacing-4, 16px);
+.iconWrapper {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background-color: #f1f3f4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #5f6368;
+  flex-shrink: 0;
+}
+
+.inactive .iconWrapper {
+  opacity: 0.6;
+}
+
+.headerText {
   display: flex;
   flex-direction: column;
   flex: 1;
+  min-width: 0;
 }
 
-/* Typography styles */
+.titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .name {
   margin: 0;
-  font-size: var(--font-size-lg, 18px);
-  font-weight: 600;
-  color: var(--color-text-primary);
-  line-height: 1.2;
-  word-break: break-word;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--color-text, #202124);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .version {
-  font-size: var(--font-size-xs);
-  color: var(--color-text-secondary, #6b7280);
-  font-family: var(--font-family-mono);
+  font-size: 13px;
+  color: var(--color-text-muted, #5f6368);
+}
 
-  /* Removed background to match mockup */
-  display: block;
+.subtitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.typeBadge, .sourceBadge {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #f1f3f4;
+  color: #5f6368;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.typeModule {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.sourceLocal {
+  background: #e6f4ea;
+  color: #1e8e3e;
+}
+
+.author {
+  font-size: 12px;
+  color: #80868b;
+  margin-left: 4px;
+}
+
+/* Body */
+.body {
+  padding: 0 16px 16px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .description {
-  margin: 0 0 var(--spacing-4) 0;
-  color: var(--color-text-secondary, #4b5563);
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-muted, #5f6368);
   line-height: 1.5;
-  font-size: var(
-    --font-size-base,
-    1rem
-  ); /* Standard text size for readability */
 }
 
-/* Actions and Tag alignments */
-.headerRight {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-3, 12px);
-  flex-shrink: 0;
-  height: 32px; /* Align vertically with title */
-}
-
-.badges {
-  display: flex;
-  gap: var(--spacing-2);
-  flex-wrap: nowrap;
-}
-
-/* Shimmer text effect for action-in-progress badges */
-.actionTag {
-  display: inline-block;
-  background: linear-gradient(
-    90deg,
-    currentcolor 0%,
-    var(--color-warning-text, #b45309) 40%,
-    rgb(255 255 255 / 80%) 50%,
-    var(--color-warning-text, #b45309) 60%,
-    currentcolor 100%
-  );
-  background-size: 200% 100%;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: shimmer 1.5s infinite;
-}
-
-/* Meta Group (Author & Repo) - Clean and understated */
-.metaGroup {
+.capabilitiesRow {
   display: flex;
   flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.capPill {
+  display: inline-flex;
   align-items: center;
-  gap: var(--spacing-4, 16px);
+  gap: 4px;
+  font-size: 11px;
+  color: #5f6368;
+  background: #f1f3f4;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.capabilityActive {
+  background: #e8f0fe;
+  color: #1967d2;
+}
+
+.capabilityLabel {
+  margin-left: 2px;
+}
+
+/* Footer & Actions */
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid var(--color-border-subtle, #eaeaea);
+  background-color: var(--color-background, #fff);
   margin-top: auto;
 }
 
-.metaItem {
-  display: inline-flex;
+.footerActions {
+  display: flex;
   align-items: center;
-  font-size: var(--font-size-sm, 14px);
-  color: var(--color-text-secondary, #6b7280);
-  gap: var(--spacing-2, 6px);
+  gap: 8px;
 }
 
-.metaIcon {
-  width: 16px;
-  height: 16px;
-  opacity: 0.8;
-  color: currentcolor;
+.footerToggle {
+  display: flex;
+  align-items: center;
 }
 
-.metaLink {
-  text-decoration: none;
-  transition: color 0.15s ease;
+.actionTag {
+  font-size: 12px;
+  color: #f59e0b;
+  font-weight: 500;
 }
 
-.metaLink:hover {
-  color: var(--color-primary-default, #2563eb);
+/* Chrome Toggle Switch */
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  margin: 0;
 }
 
-/* Skeleton Enhancements */
+.toggleSwitch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggleSlider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #b9b9b9;
+  transition: 0.3s;
+  border-radius: 20px;
+}
+
+.toggleSlider::before {
+  position: absolute;
+  content: "";
+  height: 14px;
+  width: 14px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: 0.3s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 30%);
+}
+
+.toggleSwitch input:checked + .toggleSlider {
+  background-color: #1a73e8; /* Default Chrome Blue */
+}
+
+.toggleSwitch input:checked + .toggleSlider::before {
+  transform: translateX(16px);
+}
+
+.toggleSwitch input:disabled + .toggleSlider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Skeletons */
 .skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-background-secondary) 0%,
-    var(--color-background-tertiary) 50%,
-    var(--color-background-secondary) 100%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: var(--radius-sm);
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-
-  100% {
-    background-position: -200% 0;
-  }
+  background-color: var(--color-border-subtle, #e2e8f0);
+  border-radius: 4px;
+  animation: pulse 1.5s infinite ease-in-out;
 }
 
 .skeletonWrapper {
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-2);
+  gap: 8px;
 }
 
 .skeletonTitle {
   width: 150px;
-  height: 24px;
+  height: 20px;
+  margin-bottom: 8px;
 }
 
 .skeletonText {
   width: 100%;
   height: 16px;
-  margin-bottom: var(--spacing-2);
+  margin-bottom: 8px;
 }
 
-.skeletonText:last-child {
-  width: 80%;
-}
-
-.skeletonMeta {
+.skeletonShort {
   width: 60%;
-  height: 16px;
-  margin-top: var(--spacing-2);
 }
 
-.skeletonBadge {
-  width: 68px;
-  height: 28px;
-  border-radius: var(--radius-full);
+.skeletonSwitch {
+  width: 36px;
+  height: 20px;
+  border-radius: 20px;
 }
-
-.skeletonVersion {
-  width: 60px;
-  height: 16px;
-}
-
-/* =============================================================================
-   RESPONSIVE DESIGN - MOBILE
-   ============================================================================= */
-
-@media (max-width: 768px) {
-  .root {
-    padding: var(--spacing-3);
-  }
-
-  .name {
-    font-size: 1rem;
-    flex: 1;
-    min-width: 120px;
-  }
-
-  .headerRight {
-    gap: var(--spacing-2);
-  }
-}
-
-@media (max-width: 375px) {
-  .name {
-    font-size: var(--font-size-sm);
-  }
+@keyframes pulse {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
 }

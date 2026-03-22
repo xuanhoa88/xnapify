@@ -10,17 +10,83 @@
   min-height: 100%;
 }
 
-/* Filters */
-.filters {
+
+
+/* Toolbar: Filters and Search */
+.toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: var(--spacing-4);
   margin-bottom: var(--spacing-6);
-  padding: var(--spacing-4) var(--spacing-6);
-  background: var(--color-background);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--color-border);
+}
+
+/* Filter Tabs inside Toolbar */
+.filterTabs {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-1, 4px);
+  padding: var(--spacing-1, 4px);
+  background: var(--color-background-tertiary, #e5e7eb);
+  border-radius: var(--radius-lg, 8px);
+  overflow-x: auto;
+}
+
+.filterTab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2, 6px);
+  padding: var(--spacing-2, 8px) var(--spacing-3, 12px);
+  border: none;
+  background: transparent;
+  font-size: var(--font-size-sm, 14px);
+  font-family: inherit;
+  font-weight: 500;
+  color: var(--color-text-secondary, #6b7280);
+  cursor: pointer;
+  border-radius: var(--radius-md, 6px);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.filterTab:hover {
+  color: var(--color-text-primary);
+}
+
+.filterTabActive {
+  background-color: var(--color-background, #fff);
+  color: var(--color-primary-default, #2563eb);
+  box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
+}
+
+.filterTabCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 var(--spacing-1);
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  border-radius: var(--radius-full);
+  background-color: rgb(0 0 0 / 5%);
+  color: var(--color-text-secondary);
+}
+
+.filterTabActive .filterTabCount {
+  background-color: var(--color-primary-subtle, #eff6ff);
+  color: var(--color-primary-default, #2563eb);
+}
+
+/* Search bar inside toolbar */
+.searchContainer {
+  flex: 1;
+  max-width: 320px;
+}
+
+.searchBar {
+  margin: 0;
+  width: 100%;
 }
 
 .grid {
@@ -29,7 +95,32 @@
   gap: var(--spacing-6);
 }
 
-/* Extension Card - Supplementary styles (Card component handles base styling) */
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--spacing-12, 48px) var(--spacing-6);
+  text-align: center;
+  color: var(--color-text-secondary, #6b7280);
+  background: var(--color-background);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--color-border, #e5e7eb);
+}
+
+.emptyTitle {
+  margin: var(--spacing-4) 0 var(--spacing-2) 0;
+  font-size: var(--font-size-lg, 18px);
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.emptySubtitle {
+  margin: 0;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6b7280);
+}
 
 /* Header Actions */
 .headerActions {
@@ -46,12 +137,21 @@
     padding: var(--spacing-3);
   }
 
-  /* Filters - 2-column grid */
-  .filters {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+  .filterTabs {
+    padding: var(--spacing-1) var(--spacing-2);
+    gap: 0;
+  }
+
+  .filterTab {
+    padding: var(--spacing-1) var(--spacing-3);
+    font-size: var(--font-size-xs, 12px);
+  }
+
+  /* Search Container - 100% width on mobile */
+  .searchContainer {
+    width: 100%;
+    max-width: none;
     padding: var(--spacing-3);
-    gap: var(--spacing-2);
     margin-bottom: var(--spacing-4);
   }
 
@@ -68,7 +168,11 @@
     padding: var(--spacing-2);
   }
 
-  .filters {
-    grid-template-columns: 1fr;
+  .searchContainer {
+    padding: var(--spacing-2);
+  }
+
+  .filterTabs {
+    overflow-x: auto;
   }
 }

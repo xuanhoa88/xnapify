@@ -7,6 +7,8 @@
 
 import { useEffect, useCallback, useState, useRef, useMemo } from 'react';
 
+import clsx from 'clsx';
+import toLower from 'lodash/toLower';
 import { useTranslation } from 'react-i18next';
 import { useDispatch, useSelector } from 'react-redux';
 
@@ -38,6 +40,33 @@ import {
 
 import s from './Extensions.css';
 
+/**
+ * Filter tab definitions
+ */
+const FILTER_TABS = [
+  { key: 'all', labelKey: 'admin:extensions.filterAll', fallback: 'All' },
+  {
+    key: 'plugins',
+    labelKey: 'admin:extensions.filterPlugins',
+    fallback: 'Plugins',
+  },
+  {
+    key: 'modules',
+    labelKey: 'admin:extensions.filterModules',
+    fallback: 'Modules',
+  },
+  {
+    key: 'active',
+    labelKey: 'admin:extensions.filterActive',
+    fallback: 'Active',
+  },
+  {
+    key: 'inactive',
+    labelKey: 'admin:extensions.filterInactive',
+    fallback: 'Inactive',
+  },
+];
+
 function Extensions() {
   const { t } = useTranslation();
   const dispatch = useDispatch();
@@ -50,8 +79,9 @@ function Extensions() {
   const uploading = useSelector(isExtensionUploading);
   const initialized = useSelector(isExtensionsInitialized);
 
-  // Search state
+  // Search & filter state
   const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [activeDropdownId, setActiveDropdownId] = useState(null);
   const [actionMap, setActionMap] = useState({});
 
@@ -266,16 +296,56 @@ function Extensions() {
     [dispatch],
   );
 
-  // Filter extensions
-  const filteredExtensions = useMemo(
-    () =>
-      extensions.filter(
-        p =>
-          (p.name && p.name.toLowerCase().includes(search.toLowerCase())) ||
-          (p.key && p.key.toLowerCase().includes(search.toLowerCase())),
-      ),
-    [extensions, search],
-  );
+  // Count per tab for badges
+  const tabCounts = useMemo(() => {
+    let activeCount = 0;
+    let pluginCount = 0;
+    let moduleCount = 0;
+    for (let i = 0; i < extensions.length; i++) {
+      if (extensions[i].is_active) activeCount++;
+      if ((extensions[i].type || 'plugin') === 'module') {
+        moduleCount++;
+      } else {
+        pluginCount++;
+      }
+    }
+    return {
+      all: extensions.length,
+      plugins: pluginCount,
+      modules: moduleCount,
+      active: activeCount,
+      inactive: extensions.length - activeCount,
+    };
+  }, [extensions]);
+
+  // Filter extensions by tab and search
+  const filteredExtensions = useMemo(() => {
+    let result = extensions;
+
+    // Apply tab filter
+    if (activeFilter === 'plugins') {
+      result = result.filter(p => (p.type || 'plugin') === 'plugin');
+    } else if (activeFilter === 'modules') {
+      result = result.filter(p => (p.type || 'plugin') === 'module');
+    } else if (activeFilter === 'active') {
+      result = result.filter(p => p.is_active);
+    } else if (activeFilter === 'inactive') {
+      result = result.filter(p => !p.is_active);
+    }
+
+    // Apply search
+    if (search) {
+      const lowerSearch = toLower(search);
+      result = result.filter(p => {
+        return (
+          (p.name && toLower(p.name).indexOf(lowerSearch) !== -1) ||
+          (p.key && toLower(p.key).indexOf(lowerSearch) !== -1)
+        );
+      });
+    }
+
+    return result;
+  }, [extensions, activeFilter, search]);
 
   if (!initialized || (loading && extensions.length === 0)) {
     return (
@@ -318,29 +388,78 @@ function Extensions() {
         </div>
       </Box.Header>
 
-      <Table.SearchBar
-        className={s.filters}
-        value={search}
-        onChange={handleSearchChange}
-        placeholder={t('admin:extensions.search', 'Search extensions...')}
-      />
+      {/* Toolbar: Filter Tabs + Search */}
+      <div className={s.toolbar}>
+        <div className={s.filterTabs}>
+          {FILTER_TABS.map(tab => (
+            <Button
+              key={tab.key}
+              type='button'
+              className={clsx(s.filterTab, {
+                [s.filterTabActive]: activeFilter === tab.key,
+              })}
+              onClick={() => setActiveFilter(tab.key)}
+            >
+              {t(tab.labelKey, tab.fallback)}
+              <span className={s.filterTabCount}>{tabCounts[tab.key]}</span>
+            </Button>
+          ))}
+        </div>
 
-      <div className={s.grid}>
-        {filteredExtensions.map(extension => (
-          <ExtensionCard
-            key={extension.id}
-            extension={extension}
-            actionLabel={actionMap[extension.id]}
-            activeDropdownId={activeDropdownId}
-            onToggleDropdown={handleToggleDropdown}
-            onActivate={handleActivate}
-            onDeactivate={handleDeactivate}
-            onUpgrade={handleUpgrade}
-            onDelete={handleDelete}
-            canUpdate={canUpdate}
+        <div className={s.searchContainer}>
+          <Table.SearchBar
+            className={s.searchBar}
+            value={search}
+            onChange={handleSearchChange}
+            placeholder={t('admin:extensions.search', 'Search extensions...')}
           />
-        ))}
+        </div>
       </div>
+
+      {filteredExtensions.length === 0 ? (
+        <div className={s.emptyState}>
+          <Icon name='extension' size={48} />
+          <p className={s.emptyTitle}>
+            {search
+              ? t(
+                  'admin:extensions.noSearchResults',
+                  'No extensions match your search',
+                )
+              : t(
+                  'admin:extensions.noExtensionsInFilter',
+                  'No extensions in this category',
+                )}
+          </p>
+          <p className={s.emptySubtitle}>
+            {search
+              ? t(
+                  'admin:extensions.tryDifferentSearch',
+                  'Try a different search term or clear the filter.',
+                )
+              : t(
+                  'admin:extensions.tryDifferentFilter',
+                  'Try selecting a different filter tab.',
+                )}
+          </p>
+        </div>
+      ) : (
+        <div className={s.grid}>
+          {filteredExtensions.map(extension => (
+            <ExtensionCard
+              key={extension.id}
+              extension={extension}
+              actionLabel={actionMap[extension.id]}
+              activeDropdownId={activeDropdownId}
+              onToggleDropdown={handleToggleDropdown}
+              onActivate={handleActivate}
+              onDeactivate={handleDeactivate}
+              onUpgrade={handleUpgrade}
+              onDelete={handleDelete}
+              canUpdate={canUpdate}
+            />
+          ))}
+        </div>
+      )}
 
       {/* Uninstall confirmation */}
       <ConfirmModal.Delete

@@ -9,6 +9,8 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
+import merge from 'lodash/merge';
+
 import {
   CACHE_TTL,
   ExtensionError,
@@ -54,10 +56,29 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
           const mapKey = manifest.name || dirent.name;
           console.debug(`[manageExtensions] Added extension: ${mapKey}`);
           const encryptedId = encryptExtensionId(mapKey);
+          const rsk = merge({}, manifest.rsk);
+
+          // Derive type from manifest (plugin or module)
+          const type =
+            rsk.type === 'module' || rsk.type === 'plugin'
+              ? rsk.type
+              : 'plugin';
+
+          // Derive capabilities from manifest fields
+          const subscribe = rsk.subscribe || [];
+          const capabilities = {
+            api: Boolean(manifest.main),
+            views: Boolean(manifest.browser),
+            hooks: Array.isArray(subscribe) && subscribe.length > 0,
+            translations: Boolean(rsk.translations),
+          };
+
           fsExtensionsMap.set(mapKey, {
             ...manifest,
-            name: (manifest.rsk && manifest.rsk.name) || mapKey,
+            name: rsk.name || mapKey,
             id: encryptedId,
+            type,
+            capabilities,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'
           });
@@ -526,7 +547,7 @@ export async function installExtensionFromPackage(
       const entries = await fs.promises.readdir(tempExtractDir, {
         withFileTypes: true,
       });
-      const subdirs = entries.filter(dirent => dirent.isDirectory());
+      const subdirs = entries.filter(d => d.isDirectory());
 
       console.debug('[installExtensionFromPackage] Extracted contents:', {
         tempExtractDir,
