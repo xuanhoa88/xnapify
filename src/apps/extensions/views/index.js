@@ -6,6 +6,7 @@
  */
 
 import reducer, { SLICE_NAME } from './(admin)/(default)/redux';
+import hubReducer, { SLICE_NAME as HUB_SLICE_NAME } from './(admin)/hub/redux';
 
 // Auto-load view routes via require.context
 // Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
@@ -39,6 +40,7 @@ function log(phase) {
  */
 export function providers({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
+  store.injectReducer(HUB_SLICE_NAME, hubReducer);
 }
 
 /**

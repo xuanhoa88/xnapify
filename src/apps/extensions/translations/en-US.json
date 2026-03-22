@@ -1,0 +1,31 @@
+{
+  "admin": {
+    "hub": {
+      "title": "Extension Hub",
+      "subtitle": "Discover and install plugins and modules to extend your application.",
+      "searchPlaceholder": "Search extensions by name or tag...",
+      "search": "Search",
+      "featured": "Featured",
+      "results": "results",
+      "sortPopular": "Most popular",
+      "sortRecent": "Recently added",
+      "sortName": "Name",
+      "noResults": "No extensions found",
+      "loading": "Loading extensions...",
+      "loadError": "Failed to load extensions",
+      "retry": "Retry",
+      "categoryAll": "All",
+      "byAuthor": "by {{author}}",
+      "officialBadge": "Official RSK Extension",
+      "screenshotAlt": "Screenshot {{number}}",
+      "overview": "Overview",
+      "version": "Version",
+      "author": "Author",
+      "installs": "Installs",
+      "type": "Type",
+      "category": "Category",
+      "testedWith": "Tested with",
+      "install": "Install"
+    }
+  }
+}

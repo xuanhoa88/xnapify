@@ -24,16 +24,24 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'system',
-      label: i18n.t('admin:navigation.system', 'System'),
+      id: 'extensions',
+      label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
       order: 90,
       items: [
         {
+          path: '/admin/extensions/hub',
+          label: i18n.t('admin:navigation.hub', 'Hub'),
+          icon: 'globe',
+          permission: 'extensions:read',
+          order: 10,
+        },
+        {
           path: '/admin/extensions',
-          label: i18n.t('admin:navigation.extensions', 'Extensions'),
+          label: i18n.t('admin:navigation.extensions', 'Manage'),
           icon: 'extension',
           permission: 'extensions:read',
           order: 20,
+          exact: true,
         },
       ],
     }),
@@ -48,6 +56,12 @@ export function unregister({ store }) {
     unregisterMenu({
       ns: 'admin',
       path: '/admin/extensions',
+    }),
+  );
+  store.dispatch(
+    unregisterMenu({
+      ns: 'admin',
+      path: '/admin/extensions/hub',
     }),
   );
 }
