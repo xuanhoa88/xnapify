@@ -5,6 +5,7 @@
   "main": "api/index.js",
   "description": "Facebook OAuth login provider",
   "rsk": {
+    "icon": "facebook",
     "subscribe": [
       "/login"
     ]

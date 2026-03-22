@@ -17,8 +17,9 @@ const webpack = require('webpack');
 
 const config = require('../config');
 const { computeChecksum } = require('../utils/checksum');
-const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { toContainerName } = require('../utils/extension');
+const { copyDir, pathExists } = require('../utils/fs');
+const { logInfo, logError, formatDuration } = require('../utils/logger');
 const { isDev } = require('../webpack/base.config');
 const createExtensionConfig = require('../webpack/extension.config');
 
@@ -140,6 +141,22 @@ async function generateManifests(extensions) {
       path.join(outputDir, 'package.json'),
       JSON.stringify(outputManifest, null, 2),
     );
+  }
+}
+
+/**
+ * Copy static assets (e.g. assets/) from extension source to build output
+ * @param {Array} extensions - Array of extension objects
+ */
+async function copyStaticAssets(extensions) {
+  for (const { name, path: extensionPath } of extensions) {
+    const assetsSource = path.join(extensionPath, 'assets');
+    const assetsTarget = path.join(EXTENSIONS_BUILD_DIR, name, 'assets');
+
+    if (await pathExists(assetsSource)) {
+      await copyDir(assetsSource, assetsTarget);
+      logInfo(`📁 Copied static assets for ${name}`);
+    }
   }
 }
 
@@ -329,6 +346,7 @@ async function buildExtensions(options = {}) {
       }
 
       await generateManifests(extensions);
+      await copyStaticAssets(extensions);
 
       const duration = Date.now() - start;
       logInfo(`✅ Extension build completed in ${formatDuration(duration)}`);

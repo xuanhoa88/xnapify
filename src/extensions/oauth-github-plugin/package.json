@@ -5,6 +5,7 @@
   "main": "api/index.js",
   "description": "GitHub OAuth login provider",
   "rsk": {
+    "icon": "github",
     "subscribe": [
       "/login"
     ]

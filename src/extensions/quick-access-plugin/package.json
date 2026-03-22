@@ -4,6 +4,7 @@
   "browser": "views/index.js",
   "description": "Quick login with demo user accounts",
   "rsk": {
+    "icon": "key",
     "subscribe": [
       "/login"
     ]

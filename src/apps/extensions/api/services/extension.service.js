@@ -73,12 +73,16 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
             translations: Boolean(rsk.translations),
           };
 
+          // Icon from manifest (built-in name or relative path)
+          const icon = rsk.icon || null;
+
           fsExtensionsMap.set(mapKey, {
             ...manifest,
             name: rsk.name || mapKey,
             id: encryptedId,
             type,
             capabilities,
+            icon,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'
           });

@@ -65,14 +65,18 @@ function ExtensionCard({
     }
   }, [isLocalLoading, extension.job_status]);
 
-  const handleToggleStatus = useCallback(() => {
-    if (!canUpdate || isLoading) return;
-    if (extension.is_active) {
-      onDeactivate(extension);
-    } else {
-      onActivate(extension);
-    }
-  }, [canUpdate, isLoading, extension, onActivate, onDeactivate]);
+  const handleToggleStatus = useCallback(
+    e => {
+      e.preventDefault();
+      if (!canUpdate || isLoading) return;
+      if (extension.is_active) {
+        onDeactivate(extension);
+      } else {
+        onActivate(extension);
+      }
+    },
+    [canUpdate, isLoading, extension, onActivate, onDeactivate],
+  );
 
   const capabilities = merge({}, extension.capabilities);
   const isModule = (extension.type || 'plugin') === 'module';
@@ -91,7 +95,24 @@ function ExtensionCard({
     >
       <div className={s.header}>
         <div className={s.iconWrapper}>
-          <Icon name='extension' size={24} />
+          {extension.icon && /^https?:\/\//.test(extension.icon) ? (
+            <img
+              src={extension.icon}
+              alt={extension.name}
+              className={s.iconImage}
+            />
+          ) : extension.icon && /[./]/.test(extension.icon) ? (
+            <img
+              src={`/api/extensions/${extension.id}/static/${extension.icon}`}
+              alt={extension.name}
+              className={s.iconImage}
+            />
+          ) : (
+            <Icon
+              name={extension.icon || (isModule ? 'dashboard' : 'extension')}
+              size={28}
+            />
+          )}
         </div>
         <div className={s.headerText}>
           {isLoading ? (
@@ -216,7 +237,8 @@ function ExtensionCard({
               <input
                 type='checkbox'
                 checked={extension.is_active}
-                onChange={handleToggleStatus}
+                onChange={() => {}}
+                onClick={handleToggleStatus}
                 disabled={!canUpdate}
                 aria-label={t('admin:common.toggleStatus', 'Toggle status')}
               />
@@ -239,6 +261,7 @@ ExtensionCard.propTypes = {
     job_status: PropTypes.string,
     type: PropTypes.oneOf(['plugin', 'module']),
     source: PropTypes.string,
+    icon: PropTypes.string,
     author: PropTypes.string,
     capabilities: PropTypes.shape({
       api: PropTypes.bool,
