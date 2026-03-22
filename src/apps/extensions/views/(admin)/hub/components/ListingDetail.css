@@ -1,0 +1,363 @@
+/**
+ * React Starter Kit (https://github.com/xuanhoa88/rapid-rsk/)
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.txt file in the root directory of this source tree.
+ */
+
+/* ── Detail drawer (right slide panel) ───────────────────────── */
+
+.drawerContent {
+  padding: 0 var(--spacing-6) var(--spacing-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-8, 32px);
+}
+
+/* Hero header row: icon + meta pills + author */
+
+.detailHero {
+  display: flex;
+  gap: var(--spacing-4);
+  align-items: flex-start;
+  padding-bottom: var(--spacing-5);
+  border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.detailHeroIcon {
+  flex-shrink: 0;
+  width: 88px;
+  height: 88px;
+  border-radius: var(--radius-xl, 14px);
+  background: var(--color-background-tertiary, #f3f4f6);
+  border: 1px solid var(--color-border, #e5e7eb);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+}
+
+.detailHeroIcon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detailHeroInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.detailHeroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  margin-bottom: var(--spacing-3);
+}
+
+.detailName {
+  margin: 0 0 var(--spacing-3) 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--color-text-primary, #0f172a);
+  line-height: 1.2;
+}
+
+.officialPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: #dbeafe;
+  color: #1d4ed8;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.metaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  background: var(--color-background-tertiary, #f3f4f6);
+  color: var(--color-text-secondary, #6b7280);
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+.categoryPill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  background: #f0fdf4;
+  color: #15803d;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.detailAuthor {
+  margin: 0;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6b7280);
+}
+
+/* Screenshot strip: clickable thumbnails */
+
+.screenshotStrip {
+  display: flex;
+  gap: var(--spacing-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.screenshotStrip::-webkit-scrollbar {
+  display: none;
+}
+
+.screenshotThumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 160px;
+  height: 100px;
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+  border: 1px solid var(--color-border, #e5e7eb);
+  cursor: pointer;
+  padding: 0;
+  background: none;
+  transition: box-shadow 0.15s ease;
+}
+
+.screenshotThumb:hover {
+  box-shadow:
+    0 0 0 2px #3b82f6,
+    0 4px 12px rgb(0 0 0 / 15%);
+}
+
+.screenshotThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.screenshotZoom {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgb(0 0 0 / 35%);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.screenshotThumb:hover .screenshotZoom {
+  opacity: 1;
+}
+
+/* Description */
+
+.detailDescription h3 {
+  margin: 0 0 var(--spacing-2) 0;
+  font-size: var(--font-size-md, 16px);
+  font-weight: 700;
+  color: var(--color-text-primary);
+}
+
+.detailDescription p {
+  margin: 0;
+  font-size: var(--font-size-sm, 14px);
+  color: var(--color-text-secondary, #6b7280);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+/* Metadata rows */
+
+.sidebarMeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5, 20px);
+  padding-top: var(--spacing-5);
+  border-top: 1px solid var(--color-border, #e5e7eb);
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  grid-template-rows: auto auto;
+  column-gap: var(--spacing-2);
+}
+
+.metaRowIcon {
+  grid-row: 1 / 3;
+  grid-column: 1;
+  display: flex;
+  align-items: center;
+  padding-top: 2px;
+  color: var(--color-text-secondary, #9ca3af);
+}
+
+.metaRowLabel {
+  grid-row: 1;
+  grid-column: 2;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-secondary, #9ca3af);
+  margin-bottom: 2px;
+}
+
+.metaRowValue {
+  grid-row: 2;
+  grid-column: 2;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-primary, #0f172a);
+  text-transform: capitalize;
+}
+
+/* Tags */
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-1);
+}
+
+.tag {
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  background: var(--color-background-tertiary, #f3f4f6);
+  border-radius: var(--radius-sm, 4px);
+  color: var(--color-text-secondary, #6b7280);
+  border: 1px solid var(--color-border, #e5e7eb);
+}
+
+/* ── Fullscreen lightbox ──────────────────────────────────────── */
+
+.lightboxOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 90%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.lightboxContent {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 90vw;
+  max-height: 90vh;
+}
+
+.lightboxImg {
+  max-width: 80vw;
+  max-height: 82vh;
+  object-fit: contain;
+  border-radius: var(--radius-lg, 8px);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 60%);
+  animation: zoomIn 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.lightboxClose {
+  position: fixed;
+  top: var(--spacing-5);
+  right: var(--spacing-5);
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 12%);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightboxClose:hover {
+  background: rgb(255 255 255 / 25%);
+}
+
+.lightboxNav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 12%);
+  border: none;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.lightboxNav:hover {
+  background: rgb(255 255 255 / 25%);
+}
+
+.lightboxNavPrev {
+  left: var(--spacing-5);
+}
+
+.lightboxNavNext {
+  right: var(--spacing-5);
+}
+
+.lightboxDots {
+  position: fixed;
+  bottom: var(--spacing-6);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.lightboxDot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: rgb(255 255 255 / 35%);
+  border: none;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  padding: 0;
+}
+
+.lightboxDotActive {
+  background: #fff;
+  width: 20px;
+}
+
+@keyframes zoomIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

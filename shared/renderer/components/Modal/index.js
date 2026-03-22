@@ -53,7 +53,7 @@ const ModalHeader = ({ children, onClose, className }) => (
 );
 
 ModalHeader.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   onClose: PropTypes.func,
   className: PropTypes.string,
 };
@@ -71,7 +71,7 @@ const ModalBody = ({ children, error, className }) => (
 );
 
 ModalBody.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   error: PropTypes.string,
   className: PropTypes.string,
 };
@@ -85,7 +85,7 @@ const ModalFooter = ({ children, className }) => (
 );
 
 ModalFooter.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   className: PropTypes.string,
 };
 
@@ -98,7 +98,7 @@ const ModalDescription = ({ children, className }) => (
 );
 
 ModalDescription.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   className: PropTypes.string,
 };
 
@@ -111,7 +111,7 @@ const ModalActions = ({ children, className }) => (
 );
 
 ModalActions.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   className: PropTypes.string,
 };
 
@@ -170,7 +170,7 @@ const ModalButton = ({
 );
 
 ModalButton.propTypes = {
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   variant: PropTypes.oneOf(['primary', 'secondary']),
   disabled: PropTypes.bool,
   onClick: PropTypes.func,
@@ -244,10 +244,10 @@ const Modal = ({
 };
 
 Modal.propTypes = {
-  isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
+  isOpen: PropTypes.bool,
+  onClose: PropTypes.func,
   placement: PropTypes.oneOf(['center', 'right']),
-  children: PropTypes.node.isRequired,
+  children: PropTypes.node,
   className: PropTypes.string,
 };
 
