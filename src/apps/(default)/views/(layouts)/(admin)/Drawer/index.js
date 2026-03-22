@@ -93,12 +93,14 @@ function Drawer({ minimal = false }) {
   }, []);
 
   const handleLogout = useCallback(async () => {
+    const currentPath = history.location.pathname;
     await dispatch(logout());
     handleCloseMobileDrawer();
     if (ws) {
       ws.logout();
     }
-  }, [dispatch, handleCloseMobileDrawer, ws]);
+    history.replace(`/login?returnTo=${encodeURIComponent(currentPath)}`);
+  }, [dispatch, handleCloseMobileDrawer, ws, history]);
 
   const isActive = useCallback(
     (path, exact = false) => {

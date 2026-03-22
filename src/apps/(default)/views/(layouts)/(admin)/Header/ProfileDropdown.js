@@ -58,7 +58,8 @@ function ProfileDropdown() {
       if (ws) {
         ws.logout();
       }
-      history.replace('/');
+      const currentPath = history.location.pathname;
+      history.replace(`/login?returnTo=${encodeURIComponent(currentPath)}`);
     },
     [dispatch, ws, history],
   );
