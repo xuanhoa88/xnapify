@@ -10,9 +10,9 @@ import 'whatwg-fetch';
 import { createBrowserHistory } from 'history';
 
 import { Container } from '@shared/container';
+import extensionManager from '@shared/extension/client';
 import { createFetch } from '@shared/fetch';
 import i18n, { DEFAULT_LOCALE } from '@shared/i18n';
-import extensionManager from '@shared/extension/client';
 import App from '@shared/renderer/App';
 import {
   configureStore,
@@ -269,7 +269,11 @@ async function initializeViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ extension: extensionManager, container, store });
+        const views = m.default({
+          extension: extensionManager,
+          container,
+          store,
+        });
         log('✅ Views initialized');
         return views;
       })

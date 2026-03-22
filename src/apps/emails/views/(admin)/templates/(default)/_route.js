@@ -23,9 +23,10 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'notifications',
-      label: i18n.t('admin:navigation.notifications', 'Notifications'),
-      order: 50,
+      id: 'communications',
+      label: i18n.t('admin:navigation.communications', 'Communications'),
+      order: 40,
+      icon: 'mail',
       items: [
         {
           path: '/admin/emails/templates',

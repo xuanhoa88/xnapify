@@ -66,7 +66,10 @@ export function useExtensionValidator(hookId, baseSchema, validator) {
           setLoading(false);
         }
       } catch (error) {
-        console.error(`[useExtensionValidator] Error executing ${hookId}:`, error);
+        console.error(
+          `[useExtensionValidator] Error executing ${hookId}:`,
+          error,
+        );
         if (mounted) {
           setLoading(false);
         }
@@ -118,7 +121,10 @@ export function useExtensionFormData(hookId, context) {
           setLoading(false);
         }
       } catch (error) {
-        console.error(`[useExtensionFormData] Error executing ${hookId}:`, error);
+        console.error(
+          `[useExtensionFormData] Error executing ${hookId}:`,
+          error,
+        );
         if (mounted) {
           setLoading(false);
         }

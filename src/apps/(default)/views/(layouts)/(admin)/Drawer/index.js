@@ -127,6 +127,7 @@ function Drawer({ minimal = false }) {
       {
         ns: mainKey,
         order: 0,
+        icon: 'dashboard',
         items: [
           {
             path: '/admin',
@@ -151,6 +152,7 @@ function Drawer({ minimal = false }) {
       sections.push({
         ns: section.label || section.id,
         order: section.order != null ? section.order : 99,
+        icon: section.icon,
         items: [...validItems].sort((a, b) => {
           const orderDiff =
             (a.order != null ? a.order : 99) - (b.order != null ? b.order : 99);
@@ -242,16 +244,43 @@ function Drawer({ minimal = false }) {
 
         {/* Menu */}
         <nav className={s.menu}>
-          {menuItems.map(group => (
-            <div key={group.ns} className={s.menuGroup}>
-              <div className={s.menuGroupLabel}>{group.ns}</div>
-              <ul className={s.menuList}>
-                {group.items.map(item => (
-                  <li key={item.path}>{renderLink(item)}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {menuItems.map(group => {
+            const hasActiveChild = group.items.some(item =>
+              isActive(item.path, item.exact),
+            );
+
+            return (
+              <div
+                key={group.ns}
+                className={clsx(s.menuGroup, {
+                  [s.groupActive]: hasActiveChild,
+                })}
+              >
+                {/* Group trigger for minimal mode / Header for expanded mode */}
+                <div className={s.menuGroupHeader}>
+                  {group.icon && (
+                    <div className={s.menuGroupIconWrapper}>
+                      <Icon
+                        name={group.icon}
+                        size={20}
+                        className={s.menuGroupIcon}
+                      />
+                    </div>
+                  )}
+                  <div className={s.menuGroupLabel}>{group.ns}</div>
+                </div>
+
+                {/* Flyout panel (or inline list in expanded mode) */}
+                <div className={s.menuFlyoutContent}>
+                  <ul className={s.menuList}>
+                    {group.items.map(item => (
+                      <li key={item.path}>{renderLink(item)}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })}
 
           {/* Divider */}
           <div className={s.divider} />

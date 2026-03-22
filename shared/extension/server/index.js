@@ -21,7 +21,9 @@ import {
 // Symbols for internal state
 const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.extensionApiEntryPoints__');
 const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.extensionCssEntryPoints__');
-const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__rsk.extensionScriptEntryPoints__');
+const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
+  '__rsk.extensionScriptEntryPoints__',
+);
 
 class ServerExtensionManager extends BaseExtensionManager {
   constructor() {
@@ -73,7 +75,10 @@ class ServerExtensionManager extends BaseExtensionManager {
           }
         }
       } catch (err) {
-        console.error(`[ExtensionManager] Failed to destroy API for ${id}:`, err);
+        console.error(
+          `[ExtensionManager] Failed to destroy API for ${id}:`,
+          err,
+        );
         this.emit('extension:error', { id, error: err, phase: 'api-destroy' });
       }
       this[EXTENSION_API_ENTRY_POINTS].delete(id);
@@ -136,7 +141,10 @@ class ServerExtensionManager extends BaseExtensionManager {
    */
   getDevExtensionPath(cwd = process.cwd()) {
     try {
-      return path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions');
+      return path.resolve(
+        cwd,
+        process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions',
+      );
     } catch (err) {
       console.error(`Failed to get dev extension path for ${cwd}:`, err);
       return null;
@@ -161,9 +169,17 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     try {
       if (this[EXTENSION_CONTEXT] && this[EXTENSION_CONTEXT].cwd) {
-        const devBaseDir = this.getDevExtensionPath(this[EXTENSION_CONTEXT].cwd);
-        if (devBaseDir && fs.existsSync(path.join(devBaseDir, baseExtensionDir))) {
-          return { dir: path.join(devBaseDir, extensionKey), isDevExtension: true };
+        const devBaseDir = this.getDevExtensionPath(
+          this[EXTENSION_CONTEXT].cwd,
+        );
+        if (
+          devBaseDir &&
+          fs.existsSync(path.join(devBaseDir, baseExtensionDir))
+        ) {
+          return {
+            dir: path.join(devBaseDir, extensionKey),
+            isDevExtension: true,
+          };
         }
       }
 
@@ -313,7 +329,10 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!extensionDir) return;
 
     // eslint-disable-next-line no-underscore-dangle
-    const apiBundlePath = this._getExtensionBundlePath(extensionDir, manifest.main);
+    const apiBundlePath = this._getExtensionBundlePath(
+      extensionDir,
+      manifest.main,
+    );
 
     // eslint-disable-next-line no-underscore-dangle
     await this._ensureReady();
@@ -548,7 +567,9 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       return null;
     } catch (err) {
-      const error = new Error(`Failed to load extension "${id}": ${err.message}`);
+      const error = new Error(
+        `Failed to load extension "${id}": ${err.message}`,
+      );
       error.code = err.code || 'EXTENSION_LOAD_FAILED';
       error.extensionId = id;
       error.originalError = err;
@@ -662,7 +683,9 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Reload each extension with the fresh disk manifest
     // (loadExtension will skip the HTTP fetch because containerName is populated)
     await Promise.all(
-      resolvedEntries.map(({ id, manifest }) => this.loadExtension(id, manifest)),
+      resolvedEntries.map(({ id, manifest }) =>
+        this.loadExtension(id, manifest),
+      ),
     );
 
     await this.emit('extensions:refreshed', {

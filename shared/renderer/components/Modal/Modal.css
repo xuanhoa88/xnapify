@@ -288,37 +288,3 @@
     font-size: var(--font-size-xs);
   }
 }
-
-/* =============================================================================
-   SHIMMER TEXT - Loading state for confirm buttons
-   ============================================================================= */
-
-@keyframes shimmerText {
-  0% {
-    background-position: 200% center;
-  }
-
-  100% {
-    background-position: -200% center;
-  }
-}
-
-.shimmerText {
-  background: linear-gradient(
-    90deg,
-    currentcolor 0%,
-    currentcolor 35%,
-    rgb(255 255 255 / 70%) 50%,
-    currentcolor 65%,
-    currentcolor 100%
-  );
-  background-size: 200% 100%;
-
-  /* stylelint-disable-next-line property-no-vendor-prefix */
-  -webkit-background-clip: text;
-  background-clip: text;
-
-  /* stylelint-disable-next-line property-no-vendor-prefix */
-  -webkit-text-fill-color: transparent;
-  animation: shimmerText 1.5s ease-in-out infinite;
-}

@@ -10,8 +10,8 @@ const path = require('path');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const webpack = require('webpack');
 
-const { logWarn } = require('../utils/logger');
 const { toContainerName } = require('../utils/extension');
+const { logWarn } = require('../utils/logger');
 
 const {
   createCacheGroups,
@@ -78,7 +78,10 @@ function validateExtension(extension) {
     return null;
   }
 
-  if (!extension.manifest || (!extension.manifest.browser && !extension.manifest.main)) {
+  if (
+    !extension.manifest ||
+    (!extension.manifest.browser && !extension.manifest.main)
+  ) {
     logWarn(`Extension "${extension.name}" missing UI or API entry point`);
     return null;
   }
@@ -229,9 +232,11 @@ function createApiConfig(extensionData, extensionDefines, buildPath) {
       path: path.join(buildPath, extensionName),
       filename: 'api.js',
     },
-    plugins: [extensionDefines, createEnvDefine(), createProgressPlugin()].filter(
-      Boolean,
-    ),
+    plugins: [
+      extensionDefines,
+      createEnvDefine(),
+      createProgressPlugin(),
+    ].filter(Boolean),
   });
 
   apiConfig.resolve.modules.unshift(
@@ -270,14 +275,20 @@ function createExtensionConfig({ extensions = [], buildPath }) {
     // Create shared extension defines once
     const extensionDefines = createDefinePlugin({
       __EXTENSION_NAME__: JSON.stringify(extensionData.extensionName),
-      __EXTENSION_DESCRIPTION__: JSON.stringify(extensionData.extensionDescription),
+      __EXTENSION_DESCRIPTION__: JSON.stringify(
+        extensionData.extensionDescription,
+      ),
     });
 
     // Create browser and server builds
-    configs.push(...createClientConfig(extensionData, extensionDefines, buildPath));
+    configs.push(
+      ...createClientConfig(extensionData, extensionDefines, buildPath),
+    );
 
     // Optionally create API build
-    configs.push(...createApiConfig(extensionData, extensionDefines, buildPath));
+    configs.push(
+      ...createApiConfig(extensionData, extensionDefines, buildPath),
+    );
   }
 
   return [...new Set(configs)];

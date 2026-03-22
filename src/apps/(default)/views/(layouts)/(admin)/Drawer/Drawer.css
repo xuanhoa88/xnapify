@@ -133,6 +133,7 @@
 /* --- Section group --- */
 
 .menuGroup {
+  position: relative;
   margin-bottom: var(--spacing-1);
 }
 
@@ -576,5 +577,137 @@
 
   to {
     opacity: 1;
+  }
+}
+
+/* =============================================================================
+   FLYOUT & MINIMAL GROUPING
+   ============================================================================= */
+
+/* Group container styling */
+
+.menuGroupHeader {
+  display: flex;
+  align-items: center;
+}
+
+.menuGroupIconWrapper {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 2px auto;
+  border-radius: var(--radius-md);
+  color: rgb(255 255 255 / 60%);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.menuGroupIconWrapper:hover {
+  color: rgb(255 255 255 / 90%);
+  background: rgb(255 255 255 / 8%);
+}
+
+.groupActive .menuGroupIconWrapper {
+  color: #fff;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 8px rgb(37 99 235 / 40%);
+}
+
+.menuGroupIcon {
+  font-size: 18px;
+}
+
+/* Base state for flyout structure */
+.menuFlyoutContent {
+  display: block; /* regular block in expanded mode */
+}
+
+/* -----------------------------------------------------------------------------
+   MINIMAL/COLLAPSED MODE OVERRIDES
+   ----------------------------------------------------------------------------- */
+.collapsed .menuGroupHeader,
+.minimal .menuGroupHeader {
+  justify-content: center;
+}
+
+.collapsed .menuGroupLabel,
+.minimal .menuGroupLabel {
+  display: none;
+}
+
+.collapsed .menuGroupIconWrapper,
+.minimal .menuGroupIconWrapper {
+  display: flex;
+}
+
+.collapsed .menuFlyoutContent,
+.minimal .menuFlyoutContent {
+  display: none;
+  position: absolute;
+  left: 100%;
+  top: 0;
+  min-width: 220px;
+  background: var(--sider-bg);
+  border: 1px solid var(--sider-border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 20px rgb(0 0 0 / 50%);
+  padding: var(--spacing-2) 0;
+  z-index: calc(var(--z-modal) + 10);
+  margin-left: 4px;
+}
+
+/* Show flyout on hover */
+.collapsed .menuGroup:hover .menuFlyoutContent,
+.minimal .menuGroup:hover .menuFlyoutContent {
+  display: block;
+  animation: flyoutFadeIn 0.15s ease-out forwards;
+}
+
+/* Invisible bridge to prevent hover loss when moving mouse across the gap */
+.collapsed .menuFlyoutContent::before,
+.minimal .menuFlyoutContent::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -8px;
+  width: 8px;
+  height: 100%;
+}
+
+/* Flyout items need to reset their layout from minimal square back to row */
+.collapsed .menuFlyoutContent .menuItem,
+.minimal .menuFlyoutContent .menuItem {
+  justify-content: flex-start;
+  width: auto;
+  height: 38px;
+  padding: 0 var(--spacing-3) 0 var(--spacing-4);
+  margin: 1px var(--spacing-2);
+  gap: 16px;
+}
+
+.collapsed .menuFlyoutContent .menuItemLabel,
+.minimal .menuFlyoutContent .menuItemLabel {
+  opacity: 1;
+  width: auto;
+  position: static;
+  display: inline;
+}
+
+.collapsed .menuFlyoutContent .tooltip,
+.minimal .menuFlyoutContent .tooltip {
+  display: none !important; /* Tooltips inside flyout are unnecessary */
+}
+
+@keyframes flyoutFadeIn {
+  0% {
+    opacity: 0;
+    transform: translateX(-5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateX(0);
   }
 }

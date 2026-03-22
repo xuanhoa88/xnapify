@@ -53,7 +53,9 @@ describe('ExtensionRegistry', () => {
       await registry.register('extension-1', {});
 
       const component = () => null;
-      registry.registerSlot('header', component, { extensionId: 'extension-1' });
+      registry.registerSlot('header', component, {
+        extensionId: 'extension-1',
+      });
       registry.registerHook('test.hook', () => {}, 'extension-1');
 
       expect(registry.getSlot('header')).toHaveLength(1);
@@ -120,7 +122,9 @@ describe('ExtensionRegistry', () => {
       };
 
       registry.define(definition, { contextVal: 42 }, manifest);
-      const result = await registry.uninstallExtension('extension-to-uninstall');
+      const result = await registry.uninstallExtension(
+        'extension-to-uninstall',
+      );
 
       expect(result).toBe(true);
       expect(uninstall).toHaveBeenCalledWith({ contextVal: 42 });

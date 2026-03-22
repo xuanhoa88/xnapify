@@ -27,6 +27,7 @@ export function register({ store, i18n }) {
       id: 'extensions',
       label: i18n.t('admin:navigation.extensionsGroup', 'Extensions'),
       order: 90,
+      icon: 'extension',
       items: [
         {
           path: '/admin/extensions/hub',

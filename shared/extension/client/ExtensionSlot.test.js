@@ -75,7 +75,9 @@ describe('ExtensionSlot', () => {
 
     expect(tree.children[0].props.className).toBe('mock1');
     expect(tree.children[0].props.title).toContain('"custom":"hello"');
-    expect(tree.children[0].props.title).toContain('"ctx":{"mockContext":true}');
+    expect(tree.children[0].props.title).toContain(
+      '"ctx":{"mockContext":true}',
+    );
 
     expect(tree.children[1].props.className).toBe('mock2');
     expect(tree.children[1].children[0]).toBe('hello');

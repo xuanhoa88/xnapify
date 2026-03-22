@@ -345,7 +345,9 @@ function splitFlows(flowsArray, config, rootPath, RED) {
     const filename = `${getUniqueFilename(usedNames, tab.label, tab.id)}.${ext}`;
     const filePath = path.join(tabsDir, filename);
     fs.writeFileSync(filePath, JSON.stringify(tab.nodes, null, 2));
-    RED.log.info(`${EXTENSION_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`);
+    RED.log.info(
+      `${EXTENSION_LOG_PREFIX} Saved tab: ${tab.label} → ${filename}`,
+    );
   }
 
   // Write subflows

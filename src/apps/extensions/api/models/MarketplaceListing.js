@@ -180,7 +180,11 @@ export default function createMarketplaceListingModel({
       updatedAt: 'updated_at',
       scopes: {
         published: { where: { status: 'published' } },
-        featured: { where: { status: 'published' }, order: [['install_count', 'DESC']], limit: 10 },
+        featured: {
+          where: { status: 'published' },
+          order: [['install_count', 'DESC']],
+          limit: 10,
+        },
       },
     },
   );

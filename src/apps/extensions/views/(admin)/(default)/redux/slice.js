@@ -182,7 +182,10 @@ const extensionsSlice = createSlice({
 
     // Toggle Status
     builder
-      .addCase(toggleExtensionStatus.pending, createPendingHandler('toggleStatus'))
+      .addCase(
+        toggleExtensionStatus.pending,
+        createPendingHandler('toggleStatus'),
+      )
       .addCase(toggleExtensionStatus.fulfilled, (state, action) => {
         const normalized = normalizeState(state);
         normalized.operations.toggleStatus = createOperationState();

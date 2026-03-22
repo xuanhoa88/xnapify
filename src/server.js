@@ -23,6 +23,7 @@ import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
 
 import { Container } from '@shared/container';
+import extensionManager from '@shared/extension/server';
 import { createFetch } from '@shared/fetch';
 import i18n, {
   DEFAULT_LOCALE,
@@ -32,7 +33,6 @@ import i18n, {
 } from '@shared/i18n';
 import { configureJwt } from '@shared/jwt';
 import { NodeRedManager } from '@shared/node-red';
-import extensionManager from '@shared/extension/server';
 import {
   configureStore,
   setRuntimeVariable,
@@ -317,7 +317,11 @@ const localeMiddleware = expressRequestLanguage({
 
 async function initializeViews({ container, store }) {
   const m = await import('./bootstrap/views');
-  const views = await m.default({ extension: extensionManager, container, store });
+  const views = await m.default({
+    extension: extensionManager,
+    container,
+    store,
+  });
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
@@ -1115,11 +1119,8 @@ if (module.hot) {
       }
 
       const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
-      const specific = extensionIds.length > 0;
 
-      console.log(
-        `🔌 Refreshing all extensions'}...`,
-      );
+      console.log(`🔌 Refreshing all extensions'}...`);
 
       isRefreshingExtensions = true;
 
@@ -1135,10 +1136,7 @@ if (module.hot) {
         const duration = Date.now() - start;
         console.log(`✅ Extensions refreshed in ${duration}ms`);
       } catch (err) {
-        console.error(
-          `❌ Failed to refresh extensions'}:`,
-          err.message,
-        );
+        console.error(`❌ Failed to refresh extensions'}:`, err.message);
       } finally {
         isRefreshingExtensions = false;
       }

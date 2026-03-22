@@ -42,7 +42,11 @@ export function decryptExtensionId(token) {
   }
 
   try {
-    const decipher = crypto.createDecipheriv('aes-256-ecb', EXTENSION_KEY, null);
+    const decipher = crypto.createDecipheriv(
+      'aes-256-ecb',
+      EXTENSION_KEY,
+      null,
+    );
     let decrypted = decipher.update(token, 'hex', 'utf8');
     decrypted += decipher.final('utf8');
     return decrypted;

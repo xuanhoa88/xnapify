@@ -23,9 +23,10 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'management',
-      label: i18n.t('admin:navigation.management', 'Management'),
+      id: 'identity-access',
+      label: i18n.t('admin:navigation.identityAccess', 'Identity & Access'),
       order: 10,
+      icon: 'shield',
       items: [
         {
           path: '/admin/groups',

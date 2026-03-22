@@ -11,7 +11,10 @@
 
 /* eslint-env jest */
 
-import { INITIALIZED, EXTENSION_MANAGER_INIT } from '../utils/BaseExtensionManager';
+import {
+  INITIALIZED,
+  EXTENSION_MANAGER_INIT,
+} from '../utils/BaseExtensionManager';
 
 import clientManager from './manager';
 
@@ -71,7 +74,9 @@ describe('ClientExtensionManager', () => {
       const link = document.querySelector('link[data-extension-id="test-p"]');
       expect(link).toBeTruthy();
       expect(link.rel).toBe('stylesheet');
-      expect(link.href).toContain('/api/extensions/test-p/static/extension.css');
+      expect(link.href).toContain(
+        '/api/extensions/test-p/static/extension.css',
+      );
     });
 
     it('injects script when manifest.hasClientScript is true', async () => {
@@ -80,7 +85,9 @@ describe('ClientExtensionManager', () => {
         manifest: { hasClientScript: true },
       });
 
-      const script = document.querySelector('script[data-extension-id="test-p"]');
+      const script = document.querySelector(
+        'script[data-extension-id="test-p"]',
+      );
       expect(script).toBeTruthy();
       expect(script.src).toContain('/api/extensions/test-p/static/remote.js');
     });
@@ -168,7 +175,9 @@ describe('ClientExtensionManager', () => {
         extensionId: 'old-p',
       });
 
-      expect(document.querySelector('link[data-extension-id="old-p"]')).toBeNull();
+      expect(
+        document.querySelector('link[data-extension-id="old-p"]'),
+      ).toBeNull();
       expect(clientManager.needsReload).toBe(true);
     });
 

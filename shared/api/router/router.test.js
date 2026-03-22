@@ -71,7 +71,9 @@ describe('Router Engine', () => {
     expect(authRoute).toBeDefined();
 
     // /extensions/:id should exist
-    const extensionRoute = rootRoute.children.find(r => r.path === '/extensions/:id');
+    const extensionRoute = rootRoute.children.find(
+      r => r.path === '/extensions/:id',
+    );
     expect(extensionRoute).toBeDefined();
 
     // /admin/users should exist from (admin) route group injection

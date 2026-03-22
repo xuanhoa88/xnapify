@@ -44,9 +44,10 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'management',
-      label: i18n.t('admin:navigation.management', 'Management'),
-      order: 10,
+      id: 'content',
+      label: i18n.t('admin:navigation.content', 'Content'),
+      order: 20,
+      icon: 'folder',
       items: [
         {
           path: '/admin/files',

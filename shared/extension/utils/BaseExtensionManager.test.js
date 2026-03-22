@@ -126,7 +126,10 @@ describe('BaseExtensionManager', () => {
       // Mock resolved entry point
       jest.spyOn(manager, 'resolveEntryPoint').mockReturnValue('index.js');
 
-      const mockExtensionInstance = { name: 'Test Extension', onLoad: jest.fn() };
+      const mockExtensionInstance = {
+        name: 'Test Extension',
+        onLoad: jest.fn(),
+      };
       jest
         .spyOn(manager, 'executeExtension')
         .mockResolvedValue(mockExtensionInstance);

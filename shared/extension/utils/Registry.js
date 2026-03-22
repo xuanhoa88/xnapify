@@ -249,7 +249,9 @@ class ExtensionRegistry {
   async installExtension(id) {
     const definition = this.findDefinition(id);
     if (!definition) {
-      console.warn(`[ExtensionRegistry] Cannot install: extension "${id}" not found`);
+      console.warn(
+        `[ExtensionRegistry] Cannot install: extension "${id}" not found`,
+      );
       return false;
     }
 
@@ -320,7 +322,9 @@ class ExtensionRegistry {
     // Find definition
     const definition = this.findDefinition(id);
     if (!definition) {
-      console.warn(`[ExtensionRegistry] Cannot load: extension "${id}" not found`);
+      console.warn(
+        `[ExtensionRegistry] Cannot load: extension "${id}" not found`,
+      );
       return false;
     }
 

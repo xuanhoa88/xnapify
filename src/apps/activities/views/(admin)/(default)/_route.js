@@ -30,6 +30,7 @@ export function register({ store, i18n }) {
       id: 'monitoring',
       label: i18n.t('admin:navigation.monitoring', 'Monitoring'),
       order: 30, // After Management
+      icon: 'activity',
       items: [
         {
           path: '/admin/activities',

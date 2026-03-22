@@ -120,6 +120,7 @@ const handleRegisterMenu = (state, payload) => {
       id: sectionId,
       label: payload.label || sectionId,
       order: payload.order != null ? payload.order : 99,
+      icon: payload.icon,
       items: [],
     };
     state.menus[ns].push(section);
@@ -130,6 +131,9 @@ const handleRegisterMenu = (state, payload) => {
     }
     if (payload.label) {
       section.label = payload.label;
+    }
+    if (payload.icon) {
+      section.icon = payload.icon;
     }
   }
 

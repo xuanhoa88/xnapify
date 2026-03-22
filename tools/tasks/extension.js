@@ -49,7 +49,8 @@ function discoverExtensions() {
       try {
         const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
         const hasMain =
-          manifest.main && fs.existsSync(path.join(extensionPath, manifest.main));
+          manifest.main &&
+          fs.existsSync(path.join(extensionPath, manifest.main));
         const hasBrowser =
           manifest.browser &&
           fs.existsSync(path.join(extensionPath, manifest.browser));
@@ -298,7 +299,9 @@ async function buildExtensions(options = {}) {
 
   // Ensure all extensions have their dependencies installed before building
   if (isDev) {
-    logInfo(`📦 Installing dependencies for ${extensions.length} extension(s)...`);
+    logInfo(
+      `📦 Installing dependencies for ${extensions.length} extension(s)...`,
+    );
     for (const ext of extensions) {
       if (fs.existsSync(path.join(ext.path, 'package.json'))) {
         try {
@@ -354,7 +357,10 @@ async function buildExtensions(options = {}) {
       // Notify the server process to refresh extensions on successful rebuild
       if (!error && isWatch) {
         const extensionNames = extensions.map(p => p.name);
-        const msg = { type: 'extensions-refreshed', extensions: extensionNames };
+        const msg = {
+          type: 'extensions-refreshed',
+          extensions: extensionNames,
+        };
         if (typeof process.send === 'function') {
           process.send(msg);
         } else {

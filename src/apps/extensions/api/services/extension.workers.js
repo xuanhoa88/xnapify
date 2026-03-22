@@ -32,7 +32,9 @@ async function handleInstallJob(container, job) {
 
   try {
     job.updateProgress(10);
-    await installExtensionDependencies(extensionDir, { name: extensionKey || extensionId });
+    await installExtensionDependencies(extensionDir, {
+      name: extensionKey || extensionId,
+    });
     job.updateProgress(50);
 
     // Compute checksum in worker thread (avoids blocking event loop)
@@ -129,7 +131,11 @@ async function handleDeleteJob(container, job) {
       });
     }
 
-    notifyExtensionChange(container, 'EXTENSION_UNINSTALLED', extensionId || extensionKey);
+    notifyExtensionChange(
+      container,
+      'EXTENSION_UNINSTALLED',
+      extensionId || extensionKey,
+    );
     return { success: true };
   } catch (err) {
     console.error(
@@ -147,8 +153,14 @@ async function handleDeleteJob(container, job) {
  * @param {Object} job - Queue job
  */
 async function handleToggleJob(container, job) {
-  const { extensionId, extensionKey, isActive, actorId, extensionDir, isDevExtension } =
-    job.data;
+  const {
+    extensionId,
+    extensionKey,
+    isActive,
+    actorId,
+    extensionDir,
+    isDevExtension,
+  } = job.data;
   const extensionManager = container.resolve('extension');
   const hook = container.resolve('hook');
 
@@ -200,7 +212,9 @@ async function handleToggleJob(container, job) {
         if (extensionManager.isExtensionLoaded(extensionId)) {
           await extensionManager.unloadExtension(extensionId);
         } else {
-          await extensionManager.emit('extension:unloaded', { id: extensionId });
+          await extensionManager.emit('extension:unloaded', {
+            id: extensionId,
+          });
         }
       }
     }
