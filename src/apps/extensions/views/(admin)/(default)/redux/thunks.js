@@ -18,11 +18,14 @@ import { createAsyncThunk } from '@reduxjs/toolkit';
  */
 export const fetchExtensions = createAsyncThunk(
   'admin/extensions/fetchExtensions',
-  async (_, { extra: { fetch }, rejectWithValue }) => {
+  async (options, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data } = await fetch('/api/admin/extensions');
+      const { data } = await fetch('/api/admin/extensions', {
+        signal: options && options.signal,
+      });
       return data.extensions || [];
     } catch (error) {
+      if (error.name === 'AbortError') return [];
       return rejectWithValue(error.data || error.message);
     }
   },
@@ -56,10 +59,13 @@ export const upgradeExtension = createAsyncThunk(
   'admin/extensions/upgradeExtension',
   async ({ id, data }, { extra: { fetch }, rejectWithValue }) => {
     try {
-      const { data: responseData } = await fetch(`/api/admin/extensions/${id}`, {
-        method: 'PATCH',
-        body: data,
-      });
+      const { data: responseData } = await fetch(
+        `/api/admin/extensions/${id}`,
+        {
+          method: 'PATCH',
+          body: data,
+        },
+      );
       return responseData.extension;
     } catch (error) {
       return rejectWithValue(error.data || error.message);

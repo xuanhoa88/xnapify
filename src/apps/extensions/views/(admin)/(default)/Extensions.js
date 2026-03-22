@@ -101,13 +101,17 @@ function Extensions() {
   const ws = useWebSocket();
   useEffect(() => {
     if (!ws) return;
-    const handler = data => {
-      if (!data) return;
+    const controller = new AbortController();
+    const { signal } = controller;
+
+    const handler = async data => {
+      if (!data || signal.aborted) return;
       switch (data.type) {
         case 'EXTENSION_INSTALLED':
         case 'EXTENSION_UPDATED':
         case 'EXTENSION_UNINSTALLED': {
-          dispatch(fetchExtensions());
+          await dispatch(fetchExtensions({ signal }));
+          if (signal.aborted) return;
           if (data.extensionId) {
             setActionMap(prev => {
               if (!(data.extensionId in prev)) return prev;
@@ -118,8 +122,51 @@ function Extensions() {
           }
           break;
         }
+        case 'EXTENSION_ACTIVATED': {
+          await dispatch(fetchExtensions({ signal }));
+          if (signal.aborted) return;
+          if (data.extensionId) {
+            setActionMap(prev => {
+              if (!(data.extensionId in prev)) return prev;
+              const next = { ...prev };
+              delete next[data.extensionId];
+              return next;
+            });
+          }
+          dispatch(
+            showSuccessMessage({
+              message: t(
+                'admin:extensions.activateSuccess',
+                'Extension activated successfully.',
+              ),
+            }),
+          );
+          break;
+        }
+        case 'EXTENSION_DEACTIVATED': {
+          await dispatch(fetchExtensions({ signal }));
+          if (signal.aborted) return;
+          if (data.extensionId) {
+            setActionMap(prev => {
+              if (!(data.extensionId in prev)) return prev;
+              const next = { ...prev };
+              delete next[data.extensionId];
+              return next;
+            });
+          }
+          dispatch(
+            showSuccessMessage({
+              message: t(
+                'admin:extensions.deactivateSuccess',
+                'Extension deactivated successfully.',
+              ),
+            }),
+          );
+          break;
+        }
         case 'EXTENSION_TAMPERED': {
-          dispatch(fetchExtensions());
+          await dispatch(fetchExtensions({ signal }));
+          if (signal.aborted) return;
           dispatch(
             showWarningMessage({
               message: t(
@@ -136,6 +183,7 @@ function Extensions() {
     };
     ws.on('extension:updated', handler);
     return () => {
+      controller.abort();
       ws.off('extension:updated', handler);
     };
   }, [ws, dispatch, t]);
@@ -195,15 +243,8 @@ function Extensions() {
         await dispatch(
           toggleExtensionStatus({ id: item.id, isActive: true }),
         ).unwrap();
-        dispatch(
-          showSuccessMessage({
-            message: t(
-              'admin:extensions.activateSuccess',
-              'Extension activated successfully.',
-            ),
-          }),
-        );
-      } finally {
+        // Success toast deferred to WebSocket EXTENSION_ACTIVATED handler
+      } catch {
         setActionMap(prev => {
           const next = { ...prev };
           delete next[item.id];
@@ -229,15 +270,8 @@ function Extensions() {
         await dispatch(
           toggleExtensionStatus({ id: item.id, isActive: false }),
         ).unwrap();
-        dispatch(
-          showSuccessMessage({
-            message: t(
-              'admin:extensions.deactivateSuccess',
-              'Extension deactivated successfully.',
-            ),
-          }),
-        );
-      } finally {
+        // Success toast deferred to WebSocket EXTENSION_DEACTIVATED handler
+      } catch {
         setActionMap(prev => {
           const next = { ...prev };
           delete next[item.id];
