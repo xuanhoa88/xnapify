@@ -41,6 +41,43 @@ export default function ListingDetail({ listing = null, onClose }) {
     return () => window.removeEventListener('keydown', onKey);
   }, [lightboxIdx, screenshots.length]);
 
+  const metaItems = [
+    {
+      icon: 'star',
+      label: t('admin:hub.version', 'Version'),
+      value: listing && (
+        <span style={{ textTransform: 'none' }}>v{listing.version}</span>
+      ),
+    },
+    {
+      icon: 'user',
+      label: t('admin:hub.author', 'Author'),
+      value: (listing && listing.author) || '—',
+    },
+    {
+      icon: 'download',
+      label: t('admin:hub.installs', 'Installs'),
+      value: ((listing && listing.install_count) || 0).toLocaleString(),
+    },
+    {
+      icon: 'extension',
+      label: t('admin:hub.type', 'Type'),
+      value: listing && listing.type,
+    },
+    {
+      icon: 'folder',
+      label: t('admin:hub.category', 'Category'),
+      value: listing && listing.category,
+    },
+    listing && listing.compatibility
+      ? {
+          icon: 'check-circle',
+          label: t('admin:hub.testedWith', 'Tested with'),
+          value: `RSK ${listing.compatibility}`,
+        }
+      : null,
+  ].filter(Boolean);
+
   return (
     <>
       <Modal isOpen={!!listing} onClose={onClose} placement='right'>
@@ -122,57 +159,15 @@ export default function ListingDetail({ listing = null, onClose }) {
 
             {/* ── Metadata rows ─────────────────────── */}
             <div className={s.sidebarMeta}>
-              {[
-                {
-                  icon: 'star',
-                  label: t('admin:hub.version', 'Version'),
-                  value: listing && (
-                    <span style={{ textTransform: 'none' }}>
-                      v{listing.version}
-                    </span>
-                  ),
-                },
-                {
-                  icon: 'user',
-                  label: t('admin:hub.author', 'Author'),
-                  value: (listing && listing.author) || '—',
-                },
-                {
-                  icon: 'download',
-                  label: t('admin:hub.installs', 'Installs'),
-                  value: (
-                    (listing && listing.install_count) ||
-                    0
-                  ).toLocaleString(),
-                },
-                {
-                  icon: 'extension',
-                  label: t('admin:hub.type', 'Type'),
-                  value: listing && listing.type,
-                },
-                {
-                  icon: 'folder',
-                  label: t('admin:hub.category', 'Category'),
-                  value: listing && listing.category,
-                },
-                listing && listing.compatibility
-                  ? {
-                      icon: 'check-circle',
-                      label: t('admin:hub.testedWith', 'Tested with'),
-                      value: `RSK ${listing.compatibility}`,
-                    }
-                  : null,
-              ]
-                .filter(Boolean)
-                .map(row => (
-                  <div key={row.label} className={s.metaRow}>
-                    <span className={s.metaRowIcon}>
-                      <Icon name={row.icon} size={14} />
-                    </span>
-                    <span className={s.metaRowLabel}>{row.label}</span>
-                    <span className={s.metaRowValue}>{row.value}</span>
-                  </div>
-                ))}
+              {metaItems.map(row => (
+                <div key={row.label} className={s.metaRow}>
+                  <span className={s.metaRowIcon}>
+                    <Icon name={row.icon} size={14} />
+                  </span>
+                  <span className={s.metaRowLabel}>{row.label}</span>
+                  <span className={s.metaRowValue}>{row.value}</span>
+                </div>
+              ))}
             </div>
 
             {/* ── Tags ──────────────────────────────── */}
