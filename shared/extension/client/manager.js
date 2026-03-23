@@ -5,21 +5,28 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
+
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
+  EXTENSION_CONTEXT,
   EXTENSION_METADATA,
   EXTENSION_MANAGER_INIT,
 } from '../utils/BaseExtensionManager';
 
-// Private symbol for reload state
+// Private symbols
 const NEEDS_RELOAD = Symbol('__rsk.needsReloadExtensions__');
+const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.extensionRouteAdapters__');
+const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.pendingRouteInjections__');
 
 class ClientExtensionManager extends BaseExtensionManager {
   constructor() {
     super();
 
     this[NEEDS_RELOAD] = false;
+    this[EXTENSION_ROUTE_ADAPTERS] = new Map();
+    this[PENDING_ROUTE_INJECTIONS] = [];
 
     // Inject CSS and script tags when a extension is loaded at runtime
     this.on('extension:loaded', ({ id, manifest }) => {
@@ -73,6 +80,10 @@ class ClientExtensionManager extends BaseExtensionManager {
         .querySelectorAll(`script[data-extension-id="${id}"]`)
         .forEach(el => el.remove());
 
+      // Remove injected view routes
+      // eslint-disable-next-line no-underscore-dangle
+      this._removeRouteAdapters(id);
+
       if (__DEV__) {
         console.log(`[ExtensionManager] Removed resources for: ${id}`);
       }
@@ -87,6 +98,122 @@ class ClientExtensionManager extends BaseExtensionManager {
   /** @private */
   set needsReload(value) {
     this[NEEDS_RELOAD] = value;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Route injection (mirrors ServerExtensionManager)
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Resolve the view router from the DI container.
+   * @returns {Object|null} Router instance or null
+   * @private
+   */
+  _resolveRouter() {
+    const ctx = this[EXTENSION_CONTEXT];
+    try {
+      return ctx && ctx.container ? ctx.container.resolve('viewRouter') : null;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Normalize and inject (or buffer) view routes for an extension.
+   * @param {string} id - Extension ID
+   * @param {*} hookResult - Return value of the extension's views() hook
+   * @private
+   */
+  _injectRoutes(id, hookResult) {
+    const adapter = normalizeRouteAdapter(hookResult, 'views');
+    // eslint-disable-next-line no-underscore-dangle
+    const router = this._resolveRouter();
+
+    if (!router) {
+      // Router not available yet — buffer for later injection
+      this[PENDING_ROUTE_INJECTIONS].push({ id, adapter });
+      if (__DEV__) {
+        console.log(
+          `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
+        );
+      }
+      return;
+    }
+
+    router.add(adapter);
+
+    if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
+      this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+    }
+    this[EXTENSION_ROUTE_ADAPTERS].get(id).view = adapter;
+
+    if (__DEV__) {
+      console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
+    }
+  }
+
+  /**
+   * Inject buffered and stored extension view routes into the router.
+   *
+   * Called by views bootstrap after the router is created. Handles:
+   * 1. Pending injections buffered before the router was ready
+   * 2. Re-injection of already-stored adapters (e.g. on HMR/SSR)
+   *
+   * @param {Object} [viewRouter] - The current view router instance
+   */
+  flushPendingRoutes(viewRouter) {
+    // 1. Process pending injections (buffer → store)
+    const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
+    for (const { id, adapter } of pending) {
+      if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
+        this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+      }
+      this[EXTENSION_ROUTE_ADAPTERS].get(id).view = adapter;
+    }
+
+    // 2. Resolve the router (prefer explicit param over container lookup)
+    // eslint-disable-next-line no-underscore-dangle
+    const router = viewRouter || this._resolveRouter();
+    if (!router) {
+      if (__DEV__) {
+        console.warn(
+          '[ClientExtensionManager] viewRouter unavailable for flush',
+        );
+      }
+      return;
+    }
+
+    // 3. Inject all stored view adapters into the current router
+    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
+      if (!adapters.view) continue;
+
+      router.add(adapters.view);
+      if (__DEV__) {
+        console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
+      }
+    }
+  }
+
+  /**
+   * Remove injected route adapters for an extension.
+   * @param {string} id - Extension ID
+   * @private
+   */
+  _removeRouteAdapters(id) {
+    const adapters = this[EXTENSION_ROUTE_ADAPTERS].get(id);
+    if (!adapters || !adapters.view) return;
+
+    // eslint-disable-next-line no-underscore-dangle
+    const router = this._resolveRouter();
+    if (router) {
+      router.remove(adapters.view);
+    }
+
+    this[EXTENSION_ROUTE_ADAPTERS].delete(id);
+
+    if (__DEV__) {
+      console.log(`[ClientExtensionManager] Removed route adapters for: ${id}`);
+    }
   }
 
   /**
@@ -297,6 +424,20 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Get the exposed extension module
       // eslint-disable-next-line no-underscore-dangle
       const extensionModule = await this._getContainerModule(container);
+      const ext = extensionModule.default || extensionModule;
+
+      // Inject view routes if the extension provides a views() hook
+      if (ext && typeof ext.views === 'function') {
+        try {
+          // eslint-disable-next-line no-underscore-dangle
+          this._injectRoutes(id, ext.views());
+        } catch (err) {
+          console.error(
+            `[ClientExtensionManager] Failed to inject view routes for ${id}:`,
+            err.message,
+          );
+        }
+      }
 
       if (__DEV__) {
         console.log(
@@ -304,7 +445,7 @@ class ClientExtensionManager extends BaseExtensionManager {
         );
       }
 
-      return extensionModule.default || extensionModule;
+      return ext;
     } catch (err) {
       // Enhanced error with full context for debugging
       const error = new Error(

@@ -13,6 +13,7 @@
 
 import {
   INITIALIZED,
+  EXTENSION_CONTEXT,
   EXTENSION_MANAGER_INIT,
 } from '../utils/BaseExtensionManager';
 
@@ -215,6 +216,62 @@ describe('ClientExtensionManager', () => {
       await clientManager.onWebSocketEvent({});
 
       expect(clientManager.needsReload).toBe(false);
+    });
+  });
+
+  describe('route injection', () => {
+    let mockRouter;
+
+    beforeEach(() => {
+      mockRouter = {
+        add: jest.fn().mockReturnValue([]),
+        remove: jest.fn().mockReturnValue(true),
+      };
+    });
+
+    it('flushPendingRoutes injects buffered view adapters', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // Simulate buffered injection (no router available)
+      clientManager[EXTENSION_CONTEXT] = { container: null };
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+
+      // Flush with router
+      clientManager.flushPendingRoutes(mockRouter);
+
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('_injectRoutes injects directly when router is available', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      clientManager[EXTENSION_CONTEXT] = {
+        container: { resolve: () => mockRouter },
+      };
+
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('extension:unloaded removes route adapters', async () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      clientManager[EXTENSION_CONTEXT] = {
+        container: { resolve: () => mockRouter },
+      };
+
+      // Inject routes first
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+
+      // Trigger unload
+      await clientManager.emit('extension:unloaded', { id: 'test-ext' });
+
+      expect(mockRouter.remove).toHaveBeenCalledWith(mockAdapter);
     });
   });
 });

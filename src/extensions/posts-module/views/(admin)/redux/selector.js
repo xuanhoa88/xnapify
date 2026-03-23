@@ -2,94 +2,105 @@
  * Posts Selectors
  */
 
-import { normalizeState, SLICE_NAME } from './slice';
+import { createSelector } from '@reduxjs/toolkit';
+
+import { SLICE_NAME } from './slice';
 
 // =============================================================================
-// HELPER FUNCTIONS
+// STABLE DEFAULTS (referentially stable to prevent re-renders)
 // =============================================================================
 
-const getOperationState = (state, operationKey) => {
-  const normalized = normalizeState(state && state[SLICE_NAME]);
-  if (!normalized.operations) return null;
-  return normalized.operations[operationKey] || null;
-};
+const EMPTY_ARRAY = [];
+const DEFAULT_DATA = { posts: EMPTY_ARRAY, pagination: null, initialized: {} };
+const DEFAULT_OPERATIONS = {};
 
-const getPostsState = state => {
-  const normalized = normalizeState(state && state[SLICE_NAME]);
-  return normalized.data;
-};
+// =============================================================================
+// BASE SELECTORS (raw state access)
+// =============================================================================
+
+const getSlice = state => state && state[SLICE_NAME];
+
+const getPostsData = createSelector(
+  getSlice,
+  slice => (slice && slice.data) || DEFAULT_DATA,
+);
+
+const getOperations = createSelector(
+  getSlice,
+  slice => (slice && slice.operations) || DEFAULT_OPERATIONS,
+);
 
 // =============================================================================
 // DATA SELECTORS
 // =============================================================================
 
-export const getPosts = state => {
-  const data = getPostsState(state);
-  return (data && data.posts) || [];
-};
+export const getPosts = createSelector(
+  getPostsData,
+  data => data.posts || EMPTY_ARRAY,
+);
 
-export const getPostsPagination = state => {
-  const data = getPostsState(state);
-  return (data && data.pagination) || null;
-};
+export const getPostsPagination = createSelector(
+  getPostsData,
+  data => data.pagination || null,
+);
 
-export const isPostsListInitialized = state => {
-  const data = getPostsState(state);
-  return !!(data && data.initialized && data.initialized.list);
-};
+export const isPostsListInitialized = createSelector(
+  getPostsData,
+  data => !!(data.initialized && data.initialized.list),
+);
 
 // =============================================================================
 // LIST OPERATION (fetchPosts)
 // =============================================================================
 
-export const isPostsListLoading = state => {
-  const op = getOperationState(state, 'list');
-  return !!(op && op.loading);
-};
+export const isPostsListLoading = createSelector(
+  getOperations,
+  ops => !!(ops.list && ops.list.loading),
+);
 
-export const getPostsListError = state => {
-  const op = getOperationState(state, 'list');
-  return (op && op.error) || null;
-};
+export const getPostsListError = createSelector(
+  getOperations,
+  ops => (ops.list && ops.list.error) || null,
+);
 
 // =============================================================================
 // CREATE OPERATION (createPost)
 // =============================================================================
 
-export const isPostCreateLoading = state => {
-  const op = getOperationState(state, 'create');
-  return !!(op && op.loading);
-};
+export const isPostCreateLoading = createSelector(
+  getOperations,
+  ops => !!(ops.create && ops.create.loading),
+);
 
-export const getPostCreateError = state => {
-  const op = getOperationState(state, 'create');
-  return (op && op.error) || null;
-};
+export const getPostCreateError = createSelector(
+  getOperations,
+  ops => (ops.create && ops.create.error) || null,
+);
 
 // =============================================================================
 // UPDATE OPERATION (updatePost)
 // =============================================================================
 
-export const isPostUpdateLoading = state => {
-  const op = getOperationState(state, 'update');
-  return !!(op && op.loading);
-};
+export const isPostUpdateLoading = createSelector(
+  getOperations,
+  ops => !!(ops.update && ops.update.loading),
+);
 
-export const getPostUpdateError = state => {
-  const op = getOperationState(state, 'update');
-  return (op && op.error) || null;
-};
+export const getPostUpdateError = createSelector(
+  getOperations,
+  ops => (ops.update && ops.update.error) || null,
+);
 
 // =============================================================================
 // DELETE OPERATION (deletePost)
 // =============================================================================
 
-export const isPostDeleteLoading = state => {
-  const op = getOperationState(state, 'delete');
-  return !!(op && op.loading);
-};
+export const isPostDeleteLoading = createSelector(
+  getOperations,
+  ops => !!(ops.delete && ops.delete.loading),
+);
 
-export const getPostDeleteError = state => {
-  const op = getOperationState(state, 'delete');
-  return (op && op.error) || null;
-};
+export const getPostDeleteError = createSelector(
+  getOperations,
+  ops => (ops.delete && ops.delete.error) || null,
+);

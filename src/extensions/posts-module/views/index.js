@@ -20,10 +20,8 @@ const translationsContext = require.context(
 );
 
 export default {
-  init(_registry, _context, { store } = {}) {
-    if (store) {
-      store.injectReducer(SLICE_NAME, reducer);
-    }
+  init(_registry, { store }) {
+    store.injectReducer(SLICE_NAME, reducer);
   },
 
   destroy(_registry) {
