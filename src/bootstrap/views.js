@@ -136,11 +136,11 @@ export default async function initializeRouter(options = {}) {
       const manager = ctx.extension || extension;
 
       if (ns && manager) {
-        if (!manager.isNamespaceLoaded(ns)) {
+        if (!manager.isNamespaceActive(ns)) {
           if (__DEV__) {
             console.log(`[Router] Loading extension namespace: ${ns}`);
           }
-          await manager.loadNamespace(ns);
+          await manager.activateNamespace(ns);
         } else if (__DEV__) {
           console.log(`[Router] Extension namespace already loaded: ${ns}`);
         }
@@ -157,10 +157,13 @@ export default async function initializeRouter(options = {}) {
         if (__DEV__) {
           console.log(`[Router] Unloading extension namespace: ${ns}`);
         }
-        await manager.unloadNamespace(ns);
+        await manager.deactivateNamespace(ns);
       }
     },
   });
+
+  // Register on container so extensions can inject view routes via router.add()
+  container.instance('viewRouter', router);
 
   // Append catch-all route for 404s
   router.routes.push({

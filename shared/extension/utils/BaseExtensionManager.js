@@ -127,15 +127,15 @@ export class BaseExtensionManager {
     this[INITIALIZED] = true;
 
     // Subclasses can implement this
-    this.subscribeToEvents();
+    this.onReady();
 
-    await this.fetchAll();
+    await this.syncExtensions();
   }
 
   /**
    * Fetch and load all active extensions from API
    */
-  async fetchAll() {
+  async syncExtensions() {
     try {
       const { data: response } =
         await this[EXTENSION_CONTEXT].fetch('/api/extensions');
@@ -198,7 +198,7 @@ export class BaseExtensionManager {
    * @param {Object} _options - Additional options (containerName)
    * @returns {Promise<Object|null>} Extension instance or null if skipped
    */
-  async loadExtensionModule(_id, _entryPoint, _manifest, _options) {
+  async _bootstrapExtension(_id, _entryPoint, _manifest, _options) {
     // Override in subclasses
     return null;
   }
@@ -233,92 +233,6 @@ export class BaseExtensionManager {
       await Promise.all(
         missing.map(depId => this.loadExtension(depId, undefined, chain)),
       );
-    }
-  }
-
-  /**
-   * Execute extension code safely
-   * @param {string} id - Extension ID
-   * @param {string} entryPoint - Resolved entry point filename
-   * @param {Object} manifest - Extension manifest
-   * @param {Object} options - Additional options (containerName)
-   * @returns {Promise<Object|null>} Extension instance or null if skipped
-   */
-  async executeExtension(id, entryPoint, manifest, options) {
-    try {
-      const extModule = await this.loadExtensionModule(
-        id,
-        entryPoint,
-        manifest,
-        options,
-      );
-
-      // Null is valid - extension was skipped (e.g., API-only on client)
-      if (!extModule) {
-        if (__DEV__) {
-          console.log(
-            `[ExtensionManager] Extension ${id} returned null module (skipped)`,
-          );
-        }
-        const err = new Error(
-          `Extension "${id}" returned null module (skipped)`,
-        );
-        err.name = 'ExtensionSkippedError';
-        err.status = 400;
-        throw err;
-      }
-
-      // Handle various export formats
-      let ext = extModule.default || extModule;
-
-      // If it's still a module namespace object with no default, try finding the extension object
-      if (
-        ext &&
-        typeof ext === 'object' &&
-        !('register' in ext) &&
-        !('name' in ext)
-      ) {
-        if (id && ext[id]) {
-          ext = ext[id];
-        }
-      }
-
-      if (__DEV__) {
-        console.log(
-          `[ExtensionManager] Loaded extension module for ${id}:`,
-          typeof ext,
-          'Keys:',
-          Object.keys(ext || {}),
-        );
-      }
-
-      if (!ext) {
-        const error = new Error(
-          `Extension "${id}" did not export a valid extension object`,
-        );
-        error.name = 'ExtensionManagerError';
-        error.extensionId = id;
-        throw error;
-      }
-
-      return ext;
-    } catch (error) {
-      // Wrap other errors with context
-      const err = new Error(
-        `Extension execution failed for "${id}": ${error.message}`,
-      );
-      err.name = 'ExtensionManagerError';
-      err.extensionId = id;
-      err.originalError = error;
-      console.error(
-        `[ExtensionManager] Extension "${id}" failed to load:`,
-        err,
-      );
-
-      // Only throw in dev mode
-      if (__DEV__) {
-        throw err;
-      }
     }
   }
 
@@ -439,12 +353,13 @@ export class BaseExtensionManager {
         return null;
       }
 
-      // Load the extension via MF container or require
-      let ext = await this.executeExtension(id, entryPoint, manifest, {
+      // Load the extension module (subclass handles require/MF + unwrapping)
+      // eslint-disable-next-line no-underscore-dangle
+      const ext = await this._bootstrapExtension(id, entryPoint, manifest, {
         containerName,
       });
 
-      // Handle null return (extension was skipped by loadExtensionModule)
+      // Null = extension was skipped (e.g., API-only on client)
       if (!ext) {
         const metadata = this[EXTENSION_METADATA].get(id);
         metadata.state = ExtensionState.LOADED;
@@ -453,9 +368,6 @@ export class BaseExtensionManager {
         return null;
       }
 
-      // Handle ES module default export
-      ext = ext.default || ext;
-
       // Validate extension structure
       this.validateExtensionStructure(ext);
 
@@ -463,9 +375,9 @@ export class BaseExtensionManager {
       if (__DEV__) {
         console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
       }
-      await registry.define(ext, this[EXTENSION_CONTEXT], manifest);
+      await registry.defineExtension(ext, this[EXTENSION_CONTEXT], manifest);
 
-      // Extension activation (init/destroy) is deferred to loadNamespace.
+      // Extension activation (init/destroy) is deferred to activateNamespace.
       // loadExtension only fetches, validates, and defines.
 
       // Update metadata
@@ -656,7 +568,7 @@ export class BaseExtensionManager {
     await this.emit('extension:installing', { id });
 
     try {
-      const result = await registry.installExtension(id);
+      const result = await registry.runInstallHook(id);
       if (result) {
         if (__DEV__) {
           console.log(`[ExtensionManager] Installed extension: ${id}`);
@@ -698,7 +610,7 @@ export class BaseExtensionManager {
     await this.emit('extension:uninstalling', { id });
 
     try {
-      const result = await registry.uninstallExtension(id);
+      const result = await registry.runUninstallHook(id);
       if (result) {
         if (__DEV__) {
           console.log(`[ExtensionManager] Uninstalled extension: ${id}`);
@@ -721,7 +633,7 @@ export class BaseExtensionManager {
    * @param {string} ns - Namespace to check
    * @returns {boolean}
    */
-  isNamespaceLoaded(ns) {
+  isNamespaceActive(ns) {
     const extensions = registry.getDefinitions(ns);
     if (!extensions) return false;
 
@@ -735,7 +647,7 @@ export class BaseExtensionManager {
    * Load all extensions for a given namespace (runtime activation)
    * @param {string} ns - Namespace to load
    */
-  async loadNamespace(ns) {
+  async activateNamespace(ns) {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'ExtensionManagerError';
@@ -876,7 +788,7 @@ export class BaseExtensionManager {
    * Unload all extensions for a given namespace (runtime deactivation)
    * @param {string} ns - Namespace to unload
    */
-  async unloadNamespace(ns) {
+  async deactivateNamespace(ns) {
     if (typeof ns !== 'string' || ns.trim().length === 0) {
       const error = new Error('Namespace must be a non-empty string');
       error.name = 'ExtensionManagerError';
@@ -966,7 +878,7 @@ export class BaseExtensionManager {
   /**
    * Subscribe to events (abstract method)
    */
-  subscribeToEvents() {
+  onReady() {
     // Override in subclasses
   }
 
@@ -975,7 +887,7 @@ export class BaseExtensionManager {
    * Subclasses should implement for environment-specific event handling.
    * @param {Object} _event - Event object
    */
-  async handleEvent(_event) {
+  async onWebSocketEvent(_event) {
     // Override in subclasses
   }
 
@@ -1113,7 +1025,7 @@ export class BaseExtensionManager {
         this[LOADED_VERSIONS].delete(id);
       }
 
-      // Re-load the extensions (fetchAll would re-load everything;
+      // Re-load the extensions (syncExtensions would re-load everything;
       // here we load only the targeted ones)
       await Promise.all(resolvedIds.map(id => this.loadExtension(id)));
     } else {
@@ -1127,7 +1039,7 @@ export class BaseExtensionManager {
       this[INITIALIZED] = false;
       this[EXTENSION_MANAGER_INIT] = null;
 
-      await this.fetchAll();
+      await this.syncExtensions();
     }
 
     await this.emit('extensions:refreshed', {

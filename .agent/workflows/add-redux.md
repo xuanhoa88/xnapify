@@ -546,7 +546,7 @@ export function providers({ container, store }) {
 }
 
 export function views() {
-  return viewsContext;
+  return ['{module-name}', viewsContext];
 }
 ```
 

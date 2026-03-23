@@ -12,7 +12,7 @@
 
 import os from 'os';
 
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 import { WorkerError } from './errors';
 

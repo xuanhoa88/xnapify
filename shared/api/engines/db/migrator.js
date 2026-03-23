@@ -8,7 +8,7 @@
 import * as Sequelize from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(

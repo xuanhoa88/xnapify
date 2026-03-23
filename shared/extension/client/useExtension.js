@@ -155,10 +155,12 @@ export function useExtensionFormData(hookId, context) {
  * @returns {Array} Array of registered slot entries
  */
 export function useExtensionSlots(name) {
-  const [components, setComponents] = useState(() => registry.getSlot(name));
+  const [components, setComponents] = useState(() =>
+    registry.getSlotEntries(name),
+  );
 
   const sync = useCallback(() => {
-    setComponents(registry.getSlot(name));
+    setComponents(registry.getSlotEntries(name));
   }, [name]);
 
   useEffect(() => {

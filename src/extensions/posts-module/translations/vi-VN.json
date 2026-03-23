@@ -1,0 +1,44 @@
+{
+  "title": "Bài viết",
+  "subtitle": "Quản lý nội dung",
+  "loading": "Đang tải bài viết...",
+  "search": "Tìm kiếm bài viết...",
+  "addPost": "Thêm bài viết",
+  "edit": "Sửa",
+  "delete": "Xóa",
+  "seoPreview": "Xem trước SEO",
+  "seoPreview.title": "Xem trước SEO",
+  "noPermissionToCreate": "Bạn không có quyền tạo bài viết",
+  "noPermissionToUpdate": "Bạn không có quyền sửa bài viết",
+  "noPermissionToDelete": "Bạn không có quyền xóa bài viết",
+  "filter": {
+    "allStatus": "Tất cả trạng thái",
+    "draft": "Bản nháp",
+    "published": "Đã xuất bản",
+    "archived": "Đã lưu trữ"
+  },
+  "table": {
+    "title": "Tiêu đề",
+    "status": "Trạng thái",
+    "date": "Ngày"
+  },
+  "empty": {
+    "title": "Chưa có bài viết",
+    "description": "Tạo bài viết đầu tiên để bắt đầu."
+  },
+  "errors": {
+    "load": "Lỗi khi tải bài viết"
+  },
+  "deleteConfirm": {
+    "title": "Xóa bài viết",
+    "message": "Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.",
+    "confirm": "Xóa"
+  },
+  "validations": {
+    "titleRequired": "Tiêu đề là bắt buộc",
+    "titleMax": "Tiêu đề quá dài",
+    "slugMax": "Slug quá dài",
+    "excerptMax": "Tóm tắt quá dài",
+    "statusInvalid": "Trạng thái phải là bản nháp, đã xuất bản hoặc đã lưu trữ"
+  }
+}

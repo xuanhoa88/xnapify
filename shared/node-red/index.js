@@ -6,7 +6,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 import initFlowSplitter from './flow-splitter';
 import {

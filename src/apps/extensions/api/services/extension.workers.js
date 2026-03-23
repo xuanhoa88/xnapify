@@ -98,7 +98,7 @@ async function handleDeleteJob(container, job) {
     // Remove files from both directories (with path traversal guard)
     if (cwd && extensionManager) {
       const dirs = [
-        extensionManager.getExtensionPath(),
+        extensionManager.getInstalledExtensionsDir(),
         extensionManager.getDevExtensionPath(cwd),
       ].filter(Boolean);
       for (const baseDir of dirs) {

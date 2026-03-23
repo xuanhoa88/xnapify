@@ -22,7 +22,7 @@
 
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 // =============================================================================
 // CONSTANTS

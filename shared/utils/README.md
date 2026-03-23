@@ -4,7 +4,7 @@ A collection of small, universal utility functions used across the React Starter
 
 ## Available Utilities
 
-### `composer.js` (`composeMiddleware`)
+### `middleware.js` (`composeMiddleware`)
 
 Composes an array of Express-style middleware functions (`(req, res, next) => void` or `(context, next) => void`) into a single executable function. 
 
@@ -15,7 +15,7 @@ Composes an array of Express-style middleware functions (`(req, res, next) => vo
 
 **Example:**
 ```javascript
-import { composeMiddleware } from '@shared/utils/composer';
+import { composeMiddleware } from '@shared/utils/middleware';
 
 const m1 = async (ctx, next) => {
   ctx.val = 1;
@@ -33,7 +33,7 @@ await pipeline(context);
 console.log(context.val); // 2
 ```
 
-### `webpackContextAdapter.js` (`createWebpackContextAdapter`)
+### `contextAdapter.js` (`createWebpackContextAdapter`)
 
 Creates an adapter over Webpack's `require.context` to provide a standardized, predictable interface for dynamically loading modules (e.g., auto-discovering extensions or Node-RED nodes).
 
@@ -43,7 +43,7 @@ Creates an adapter over Webpack's `require.context` to provide a standardized, p
 
 **Example:**
 ```javascript
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 // Retrieve all scripts matching the regex in the folder
 const context = require.context('./scripts', false, /\.js$/);
@@ -53,6 +53,24 @@ adapter.files().forEach(filePath => {
     const mod = adapter.load(filePath);
     console.log("Loaded:", filePath, mod);
 });
+```
+
+### `routeAdapter.js` (`createRouteAdapter`, `normalizeRouteAdapter`)
+
+Creates prefixed route adapters for extension modules. Builds on `contextAdapter.js` by mapping `require.context` keys to prefixed paths that the router's collector expects.
+
+- Validates `moduleName` (non-empty string) and `type` (`'api'` or `'views'`).
+- `normalizeRouteAdapter` accepts either a `[name, context]` tuple or a pre-built adapter object.
+
+**Example:**
+```javascript
+// In an extension's API entry point:
+export default {
+  routes() {
+    // Returns a tuple — the framework builds the adapter automatically
+    return ['posts', require.context('./routes', true, /\.[cm]?[jt]s$/i)];
+  },
+};
 ```
 
 ## See Also

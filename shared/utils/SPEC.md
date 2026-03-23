@@ -4,7 +4,7 @@
 
 The `shared/utils/` directory acts as a dumping ground for highly reusable, pure, small-footprint functions that lack strong domain coupling to specific backend or frontend architectures.
 
-## `composer.js` (`composeMiddleware`)
+## `middleware.js` (`composeMiddleware`)
 
 An asynchronous middleware composer mirroring Koa's `koa-compose` logic but adapted specifically for generic argument spreading and Express-like `next(err)` error passing.
 
@@ -14,7 +14,7 @@ An asynchronous middleware composer mirroring Koa's `koa-compose` logic but adap
 - **Promise Return**: Returns a native `Promise`. Catching `error` objects passed into `next(err)` triggers the returned Promise to reject with the given error.
 - **Trailing Next Callback**: If the very last argument passed into the composed function invocation is a function, it treats it as the final trailing `next` callback (the terminus of the pipeline). All preceding arguments are treated as the pipeline `context` arguments.
 
-## `webpackContextAdapter.js` (`createWebpackContextAdapter`)
+## `contextAdapter.js` (`createWebpackContextAdapter`)
 
 A wrapper function designed to decouple domain logic (like the `node-red` settings generator or `extension` loader) from Webpack's non-standard `require.context` API.
 
@@ -24,3 +24,21 @@ A wrapper function designed to decouple domain logic (like the `node-red` settin
 - `adapter.resolve(path)` strictly maps to `ctx.resolve(path)`.
 
 This decoupling allows testing environments (like Jest) that mock `require.context` to operate cleanly under a standardized interface without needing to replicate internal Webpack hidden properties.
+
+## `routeAdapter.js` (`createRouteAdapter`, `normalizeRouteAdapter`)
+
+A higher-level adapter that builds on `contextAdapter.js` to provide prefixed route adapters for extension modules. Used by `ServerExtensionManager._injectRoutes()` to dynamically inject extension routes into the API and view routers.
+
+### Path Mapping
+- **API routes**: `./` → `./${moduleName}/api/routes/`
+- **View routes**: `./` → `./${moduleName}/views/`
+
+### Input Validation
+- `moduleName` must be a non-empty string (throws `TypeError`).
+- `type` must be `'api'` or `'views'` (throws `TypeError`).
+- `normalizeRouteAdapter` validates that non-tuple inputs have the required `{ files(), load() }` shape.
+
+### `normalizeRouteAdapter` Overloading
+Accepts two input forms:
+1. **Tuple** `[moduleName, requireContext]` → delegates to `createRouteAdapter`
+2. **Adapter object** `{ files(), load() }` → passes through after shape validation

@@ -47,13 +47,14 @@ describe('ClientExtensionManager', () => {
     jest.restoreAllMocks();
   });
 
-  describe('initializeContainer', () => {
+  describe('_initializeContainer', () => {
     it('initializes MF container with shared scope', async () => {
       const mockContainer = {
         init: jest.fn().mockResolvedValue(true),
       };
 
-      await clientManager.initializeContainer(mockContainer, 'testContainer');
+      // eslint-disable-next-line no-underscore-dangle
+      await clientManager._initializeContainer(mockContainer, 'testContainer');
 
       expect(mockContainer.init).toHaveBeenCalledWith(
         // eslint-disable-next-line no-underscore-dangle
@@ -144,13 +145,13 @@ describe('ClientExtensionManager', () => {
     });
   });
 
-  describe('handleEvent', () => {
+  describe('onWebSocketEvent', () => {
     beforeEach(() => {
       clientManager.needsReload = false;
     });
 
     it('injects resources and sets needsReload on EXTENSION_INSTALLED', async () => {
-      await clientManager.handleEvent({
+      await clientManager.onWebSocketEvent({
         type: 'EXTENSION_INSTALLED',
         extensionId: 'new-p',
         data: { manifest: { hasClientCss: true } },
@@ -170,7 +171,7 @@ describe('ClientExtensionManager', () => {
       });
       clientManager.needsReload = false;
 
-      await clientManager.handleEvent({
+      await clientManager.onWebSocketEvent({
         type: 'EXTENSION_UNINSTALLED',
         extensionId: 'old-p',
       });
@@ -182,7 +183,7 @@ describe('ClientExtensionManager', () => {
     });
 
     it('sets needsReload on EXTENSION_UPDATED', async () => {
-      await clientManager.handleEvent({
+      await clientManager.onWebSocketEvent({
         type: 'EXTENSION_UPDATED',
         extensionId: 'existing-p',
         data: { manifest: { hasClientScript: true } },
@@ -191,9 +192,27 @@ describe('ClientExtensionManager', () => {
       expect(clientManager.needsReload).toBe(true);
     });
 
+    it('sets needsReload on EXTENSION_ACTIVATED', async () => {
+      await clientManager.onWebSocketEvent({
+        type: 'EXTENSION_ACTIVATED',
+        extensionId: 'activated-p',
+      });
+
+      expect(clientManager.needsReload).toBe(true);
+    });
+
+    it('sets needsReload on EXTENSION_DEACTIVATED', async () => {
+      await clientManager.onWebSocketEvent({
+        type: 'EXTENSION_DEACTIVATED',
+        extensionId: 'deactivated-p',
+      });
+
+      expect(clientManager.needsReload).toBe(true);
+    });
+
     it('ignores invalid events', async () => {
-      await clientManager.handleEvent(null);
-      await clientManager.handleEvent({});
+      await clientManager.onWebSocketEvent(null);
+      await clientManager.onWebSocketEvent({});
 
       expect(clientManager.needsReload).toBe(false);
     });

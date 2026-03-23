@@ -79,7 +79,7 @@ const ExtensionSlot = memo(function ExtensionSlot({ name, ...props }) {
   }, []);
 
   const syncComponents = useCallback(() => {
-    setComponents(registry.getSlot(name));
+    setComponents(registry.getSlotEntries(name));
   }, [name]);
 
   useEffect(() => {

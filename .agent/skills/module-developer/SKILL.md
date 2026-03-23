@@ -25,7 +25,7 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
    - `migrations(container)`: executes `db.connection.runMigrations()`.
    - `seeds(container)`: executes `db.connection.runSeeds()`.
    - `init(container)`: registers hooks, schedules, queue-based workers, or Piscina worker pools.
-   - `routes()`: returns the Webpack context for routes.
+   - `routes()`: returns `[moduleName, routesContext]` tuple for dynamic routing.
 
    *Note: Ensure you include `translations()` hook if this module provides backend i18n JSON.*
 
@@ -46,7 +46,7 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 1. **Setup Directory:** Create `src/apps/[module_name]/views/`.
 2. **The Index File (`views/index.js`):** Export the following hooks:
    - `providers({ container, store })`: bind UI components or Redux states to the container for cross-module usage. Use `store.injectReducer(SLICE_NAME, reducer)` to inject Redux reducers at bootstrap time.
-   - `views()`: returns Webpack context for view discovery.
+   - `views()`: returns `[moduleName, viewsContext]` tuple for view discovery.
 
 3. **Defining Pages:** 
    Views are discovered via hierarchical `_route.js` files.

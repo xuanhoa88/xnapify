@@ -124,10 +124,10 @@ export async function seeds(container) {
 }
 
 /**
- * Routes hook - returns the webpack context for dynamic routing.
+ * Routes hook — return [moduleName, context] tuple for dynamic routing.
  */
 export function routes() {
-  return routesContext;
+  return ['{module-name}', routesContext];
 }
 
 /**

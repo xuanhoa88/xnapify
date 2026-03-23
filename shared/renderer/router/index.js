@@ -225,6 +225,10 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     this._registrationPromise = null;
 
+    // Routes added via add() that still need register() lifecycle calls
+    // eslint-disable-next-line no-underscore-dangle
+    this._pendingRoutes = [];
+
     // Max recursion depth for next() calls
     // eslint-disable-next-line no-underscore-dangle
     this._maxDepth = this.options.maxDepth || 50;
@@ -346,7 +350,9 @@ export class Router {
     // 2. Tag all new routes with the adapter source
     newRoutes.forEach(route => tagRoutes(route, adapter));
 
-    // 3. Merge into existing tree deeply
+    // 3. Merge into existing tree deeply, tracking actually inserted routes
+    const insertedRoutes = [];
+
     const insertDeep = (routesList, routeToInsert) => {
       let bestParent = null;
 
@@ -384,9 +390,11 @@ export class Router {
         } else {
           existing.children = existing.children || [];
           existing.children.push(routeToInsert);
+          insertedRoutes.push(routeToInsert);
         }
       } else {
         routesList.push(routeToInsert);
+        insertedRoutes.push(routeToInsert);
       }
     };
 
@@ -397,7 +405,14 @@ export class Router {
     validateConfig(this.routes);
     this.routes.forEach(route => linkParents(route));
 
-    // 4. Clear matcher cache so new URLs resolve correctly
+    // 4. Track genuinely inserted routes for deferred register() lifecycle calls
+    // eslint-disable-next-line no-underscore-dangle
+    if (insertedRoutes.length > 0) {
+      // eslint-disable-next-line no-underscore-dangle
+      this._pendingRoutes.push(...insertedRoutes);
+    }
+
+    // 5. Clear matcher cache so new URLs resolve correctly
     return newRoutes;
   }
 
@@ -566,6 +581,14 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     if (this._autoRegister) {
       await this.register(ctx);
+    }
+
+    // Register routes added via add() after initial registration
+    // eslint-disable-next-line no-underscore-dangle
+    if (this._pendingRoutes.length > 0) {
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = this._pendingRoutes.splice(0);
+      await traverseRoutes(pending, 'register', ctx, false);
     }
 
     // Check if navigation was cancelled

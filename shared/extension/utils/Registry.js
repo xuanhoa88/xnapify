@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { composeMiddleware } from '@shared/utils/composer';
+import { composeMiddleware } from '@shared/utils/middleware';
 
 import Hook from './Hook';
 
@@ -147,7 +147,7 @@ class ExtensionRegistry {
    * @param {Object} context - Extension context
    * @param {Object} manifest - Extension manifest from package.json
    */
-  define(definition, context, manifest) {
+  defineExtension(definition, context, manifest) {
     if (!manifest || !manifest.rsk) {
       console.warn(
         '[ExtensionRegistry] Invalid extension definition: missing manifest or rsk key',
@@ -164,7 +164,12 @@ class ExtensionRegistry {
       return this;
     }
 
-    if (namespaces.length === 0) {
+    // Auto-detect kind: extensions with API/view entry points are modules
+    const extensionType =
+      manifest.rsk.kind ||
+      (manifest.main || manifest.browser ? 'module' : 'plugin');
+
+    if (namespaces.length === 0 && extensionType !== 'module') {
       console.warn(
         `[ExtensionRegistry] Extension "${extensionId}" has no subscribed namespaces`,
       );
@@ -217,7 +222,7 @@ class ExtensionRegistry {
    * @param {string} id - Extension ID
    * @returns {boolean} True if any definition was removed
    */
-  undefine(id) {
+  removeDefinition(id) {
     let removed = false;
     for (const [, definitions] of this[DEFINITIONS]) {
       for (const def of definitions) {
@@ -246,7 +251,7 @@ class ExtensionRegistry {
    * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if installed successfully
    */
-  async installExtension(id) {
+  async runInstallHook(id) {
     const definition = this.findDefinition(id);
     if (!definition) {
       console.warn(
@@ -280,7 +285,7 @@ class ExtensionRegistry {
    * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if uninstalled successfully
    */
-  async uninstallExtension(id) {
+  async runUninstallHook(id) {
     const definition = this.findDefinition(id);
     if (!definition) {
       console.warn(
@@ -314,7 +319,7 @@ class ExtensionRegistry {
    * @param {string} id - Extension ID
    * @returns {Promise<boolean>} True if updated successfully
    */
-  async updateExtension(id) {
+  async runUpdateHook(id) {
     if (__DEV__) {
       console.log(`[ExtensionRegistry] Updating extension: ${id}`);
     }
@@ -373,7 +378,7 @@ class ExtensionRegistry {
   }
 
   /** Get components for a slot (sorted by order) */
-  getSlot(slotId) {
+  getSlotEntries(slotId) {
     const slotMap = this[SLOTS].get(slotId);
     if (!slotMap) return [];
 

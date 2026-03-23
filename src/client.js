@@ -657,7 +657,7 @@ async function initializeApp() {
         if (pendingExtensionUpdate) return; // Skip if already processing
         pendingExtensionUpdate = (async () => {
           try {
-            await extensionManager.handleEvent(event);
+            await extensionManager.onWebSocketEvent(event);
           } finally {
             pendingExtensionUpdate = null;
           }

@@ -1,0 +1,13 @@
+{
+  "name": "@rsk-extension/posts",
+  "version": "1.0.0",
+  "browser": "views/index.js",
+  "main": "api/index.js",
+  "description": "WordPress-style post management with CRUD API and admin views",
+  "rsk": {
+    "kind": "module"
+  },
+  "dependencies": {
+    "react-serp-preview": "^1.1.0"
+  }
+}

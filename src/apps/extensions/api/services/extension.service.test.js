@@ -85,7 +85,7 @@ const mockQueueChannel = {
 const mockQueue = jest.fn(() => mockQueueChannel);
 
 const mockExtensionManager = {
-  getExtensionPath: jest.fn(() => '/mock/extensions'),
+  getInstalledExtensionsDir: jest.fn(() => '/mock/extensions'),
   getDevExtensionPath: jest.fn(cwd =>
     path.resolve(cwd, process.env.RSK_EXTENSION_LOCAL_PATH || 'extensions'),
   ),

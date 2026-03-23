@@ -58,11 +58,11 @@ describe('ExtensionRegistry', () => {
       });
       registry.registerHook('test.hook', () => {}, 'extension-1');
 
-      expect(registry.getSlot('header')).toHaveLength(1);
+      expect(registry.getSlotEntries('header')).toHaveLength(1);
 
       await registry.unregister('extension-1');
 
-      expect(registry.getSlot('header')).toHaveLength(0);
+      expect(registry.getSlotEntries('header')).toHaveLength(0);
       // Hooks clearing is tested in Hook.test.js, but we ensure the Registry calls clear
     });
   });
@@ -76,7 +76,7 @@ describe('ExtensionRegistry', () => {
         rsk: { subscribe: ['core'], name: 'extension-1' },
       };
 
-      registry.define(definition, { appContext: true }, manifest);
+      registry.defineExtension(definition, { appContext: true }, manifest);
       const def = registry.findDefinition('extension-1');
 
       expect(def).toBeDefined();
@@ -91,7 +91,7 @@ describe('ExtensionRegistry', () => {
         rsk: { subscribe: ['core', 'ui'], name: 'extension-multi-ns' },
       };
 
-      registry.define(definition, {}, manifest);
+      registry.defineExtension(definition, {}, manifest);
 
       expect(registry.getDefinitions('core').size).toBe(1);
       expect(registry.getDefinitions('ui').size).toBe(1);
@@ -106,8 +106,8 @@ describe('ExtensionRegistry', () => {
         rsk: { subscribe: ['core'], name: 'extension-to-install' },
       };
 
-      registry.define(definition, { contextVal: 42 }, manifest);
-      const result = await registry.installExtension('extension-to-install');
+      registry.defineExtension(definition, { contextVal: 42 }, manifest);
+      const result = await registry.runInstallHook('extension-to-install');
 
       expect(result).toBe(true);
       expect(install).toHaveBeenCalledWith({ contextVal: 42 });
@@ -121,10 +121,8 @@ describe('ExtensionRegistry', () => {
         rsk: { subscribe: ['core'], name: 'extension-to-uninstall' },
       };
 
-      registry.define(definition, { contextVal: 42 }, manifest);
-      const result = await registry.uninstallExtension(
-        'extension-to-uninstall',
-      );
+      registry.defineExtension(definition, { contextVal: 42 }, manifest);
+      const result = await registry.runUninstallHook('extension-to-uninstall');
 
       expect(result).toBe(true);
       expect(uninstall).toHaveBeenCalledWith({ contextVal: 42 });
@@ -143,9 +141,9 @@ describe('ExtensionRegistry', () => {
         rsk: { subscribe: ['core'], name: 'extension-updatable' },
       };
 
-      registry.define(definition, { contextVal: 42 }, manifest);
+      registry.defineExtension(definition, { contextVal: 42 }, manifest);
 
-      const result = await registry.updateExtension('extension-updatable');
+      const result = await registry.runUpdateHook('extension-updatable');
 
       // The registry unregisters the current instance and registers the new one built from definition
       expect(result).toBe(registry);
@@ -162,7 +160,7 @@ describe('ExtensionRegistry', () => {
       registry.registerSlot('test.slot', comp2, { order: 20 });
       registry.registerSlot('test.slot', comp1, { order: 10 });
 
-      const slots = registry.getSlot('test.slot');
+      const slots = registry.getSlotEntries('test.slot');
 
       expect(slots).toHaveLength(2);
       expect(slots[0].component).toBe(comp1);
@@ -174,7 +172,7 @@ describe('ExtensionRegistry', () => {
       registry.registerSlot('test.slot', comp);
       registry.unregisterSlot('test.slot', comp);
 
-      expect(registry.getSlot('test.slot')).toHaveLength(0);
+      expect(registry.getSlotEntries('test.slot')).toHaveLength(0);
     });
   });
 

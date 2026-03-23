@@ -129,7 +129,7 @@ export function resolveExtensionDir(extensionManager, cwd, extensionKey) {
 
   // Fallback for backward compatibility
   const devBase = extensionManager.getDevExtensionPath(cwd);
-  const prodBase = extensionManager.getExtensionPath();
+  const prodBase = extensionManager.getInstalledExtensionsDir();
 
   if (devBase) {
     const devPath = path.join(devBase, extensionKey);

@@ -256,13 +256,13 @@ export function models() {
 }
 
 /**
- * Routes hook — return webpack require.context for routes.
- * Called during dynamic router setup.
+ * Routes hook — return [moduleName, context] tuple for dynamic routing.
+ * The framework auto-builds the prefix adapter from the tuple.
  *
- * @returns {Object} Webpack require.context object
+ * @returns {Array} [moduleName, webpackContext]
  */
 export function routes() {
-  return routesContext;
+  return ['{module-name}', routesContext];
 }
 ```
 
@@ -604,14 +604,14 @@ export function translations() {
 }
 
 /**
- * Views hook — return webpack require.context for module views.
- * Called during view route discovery phase.
+ * Views hook — return [moduleName, context] tuple for view discovery.
+ * The framework auto-builds the prefix adapter from the tuple.
  *
- * @returns {Object} Webpack require.context for views
+ * @returns {Array} [moduleName, webpackContext]
  */
 export function views() {
   log('Views declared');
-  return viewsContext;
+  return ['{module-name}', viewsContext];
 }
 ```
 
@@ -885,7 +885,7 @@ Modules are auto-discovered during application bootstrap:
 | `seeds(container)`      | Run database seeds                     | After module migrations  | Yes   |
 | `init(container)`       | Initialize module                      | All models loaded        | Yes   |
 | `models()`        | Return models webpack context          | Model discovery phase    | No    |
-| `routes()`        | Return routes webpack context          | Router setup phase       | No    |
+| `routes()`        | Return `[name, context]` tuple         | Router setup phase       | No    |
 | `translations()`  | Provide webpack context for i18n files | Module loaded (optional) | No    |
 
 ### Frontend (Views)
@@ -893,7 +893,7 @@ Modules are auto-discovered during application bootstrap:
 | Hook                 | Purpose                      | Called When          | Async |
 | -------------------- | ---------------------------- | -------------------- | ----- |
 | `providers(context)` | Bind client services         | Module loaded        | No    |
-| `views()`            | Return views webpack context | View discovery phase | No    |
+| `views()`            | Return `[name, context]` tuple | View discovery phase | No    |
 
 ## API File-Based Routing
 

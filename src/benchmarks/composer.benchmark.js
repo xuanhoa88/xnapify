@@ -4,7 +4,7 @@
 
 const { performance } = require('perf_hooks');
 
-const { composeMiddleware } = require('@shared/utils/composer');
+const { composeMiddleware } = require('@shared/utils/middleware');
 
 // Create a bunch of dummy middleware that just calls next()
 function createNoopMiddleware(count) {

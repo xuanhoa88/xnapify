@@ -14,12 +14,12 @@ import {
 } from '../utils/BaseExtensionManager';
 import { registry } from '../utils/Registry';
 
-import serverManager from '.';
+import serverManager from './manager';
 
 // Mock Registry
 jest.mock('../utils/Registry', () => ({
   registry: {
-    define: jest.fn().mockResolvedValue(true),
+    defineExtension: jest.fn().mockResolvedValue(true),
     register: jest.fn().mockResolvedValue(true),
     unregister: jest.fn().mockResolvedValue(true),
   },
@@ -66,10 +66,11 @@ describe('ServerExtensionManager', () => {
     });
   });
 
-  describe('loadExtensionModule', () => {
+  describe('_bootstrapExtension', () => {
     it('throws if extension name is missing', async () => {
       await expect(
-        serverManager.loadExtensionModule('test', 'api.js', {}, {}),
+        // eslint-disable-next-line no-underscore-dangle
+        serverManager._bootstrapExtension('test', 'api.js', {}, {}),
       ).rejects.toThrow('Extension name required');
     });
 
@@ -80,12 +81,13 @@ describe('ServerExtensionManager', () => {
         init: jest.fn().mockResolvedValue(true),
       };
 
-      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
 
-      const result = await serverManager.loadExtensionModule(
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await serverManager._bootstrapExtension(
         'test',
         'api.js',
         manifest,
@@ -105,12 +107,13 @@ describe('ServerExtensionManager', () => {
       };
 
       const mockView = { default: { name: 'ViewExtension' } };
-      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockView);
+      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockView);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/server.js');
 
-      const result = await serverManager.loadExtensionModule(
+      // eslint-disable-next-line no-underscore-dangle
+      const result = await serverManager._bootstrapExtension(
         'test',
         'server.js',
         manifest,
@@ -124,7 +127,7 @@ describe('ServerExtensionManager', () => {
   describe('installExtension', () => {
     it('calls install hook if exported by extension API', async () => {
       const mockApi = { install: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
@@ -136,14 +139,16 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      expect(serverManager.loadModule).toHaveBeenCalledWith('/abs/path/api.js');
+      expect(serverManager.requireModule).toHaveBeenCalledWith(
+        '/abs/path/api.js',
+      );
       expect(mockApi.install).toHaveBeenCalledWith(registry, mockContext);
       expect(result).toBe(true);
     });
 
     it('skips install hook if not exported', async () => {
       const mockApi = { init: jest.fn() }; // no install()
-      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
@@ -174,7 +179,7 @@ describe('ServerExtensionManager', () => {
   describe('uninstallExtension', () => {
     it('calls uninstall hook if exported by extension API', async () => {
       const mockApi = { uninstall: jest.fn().mockResolvedValue() };
-      jest.spyOn(serverManager, 'loadModule').mockReturnValue(mockApi);
+      jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
       jest
         .spyOn(serverManager, '_getExtensionBundlePath')
         .mockReturnValue('/abs/path/api.js');
@@ -186,7 +191,9 @@ describe('ServerExtensionManager', () => {
         manifest,
       );
 
-      expect(serverManager.loadModule).toHaveBeenCalledWith('/abs/path/api.js');
+      expect(serverManager.requireModule).toHaveBeenCalledWith(
+        '/abs/path/api.js',
+      );
       expect(mockApi.uninstall).toHaveBeenCalledWith(registry, mockContext);
       expect(result).toBe(true);
     });

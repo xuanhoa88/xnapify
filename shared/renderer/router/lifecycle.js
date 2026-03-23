@@ -9,7 +9,7 @@ import merge from 'lodash/merge';
 
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
-import { composeMiddleware } from '@shared/utils/composer';
+import { composeMiddleware } from '@shared/utils/middleware';
 
 import {
   ROUTE_INIT_KEY,

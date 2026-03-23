@@ -11,7 +11,7 @@ import path from 'path';
 
 import merge from 'lodash/merge';
 
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 import { createNodeRedAuth, createNodeRedLogoutConfig } from './auth';
 

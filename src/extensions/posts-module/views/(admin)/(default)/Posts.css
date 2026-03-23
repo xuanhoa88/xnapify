@@ -1,0 +1,44 @@
+/**
+ * Posts page styles — CSS Module
+ */
+.root {
+  padding: var(--spacing-8);
+  background: var(--color-background-secondary);
+  min-height: 100%;
+}
+
+.statusFilter {
+  padding: 6px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-background);
+  font-size: var(--font-size-sm);
+  color: var(--color-text);
+}
+
+.excerpt {
+  font-size: var(--font-size-xs);
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-1);
+}
+
+.actions {
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+/* =============================================================================
+   RESPONSIVE DESIGN - MOBILE
+   ============================================================================= */
+
+@media (max-width: 768px) {
+  .root {
+    padding: var(--spacing-3);
+  }
+}
+
+@media (max-width: 375px) {
+  .root {
+    padding: var(--spacing-2);
+  }
+}

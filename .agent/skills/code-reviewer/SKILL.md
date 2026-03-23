@@ -27,10 +27,10 @@ Modules form the core business logic of the application. They are loaded dynamic
   - `migrations(container)`
   - `seeds(container)`
   - `init(container)`
-  - `routes()`
+  - `routes()` (returns `[name, context]` tuple or Webpack context)
 - **Frontend Hooks (`views/index.js`):** MUST export:
   - `providers({ container })`
-  - `views()` (returns Webpack context)
+  - `views()` (returns `[name, context]` tuple or Webpack context)
 - **Frontend Routing:** Any `_route.js` file MUST export exactly: `register`, `mount`, `getInitialProps`, and the default component.
 - **Dependency Isolation:** Block **any static imports** between independent domains in `src/apps/`. Cross-domain logic MUST use dependency injection (`app.get('container')`) or the event hook system.
 - **Webpack Constants:** Enforce that `require.context(...)` calls do not use dynamic string interpolation (Webpack needs static paths).

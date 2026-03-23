@@ -22,7 +22,7 @@ import { registry } from './Registry';
 // Mock Registry
 jest.mock('./Registry', () => ({
   registry: {
-    define: jest.fn().mockResolvedValue(true),
+    defineExtension: jest.fn().mockResolvedValue(true),
     register: jest.fn().mockResolvedValue(true),
     unregister: jest.fn().mockResolvedValue(true),
     getDefinitions: jest.fn(),
@@ -64,20 +64,20 @@ describe('BaseExtensionManager', () => {
       );
     });
 
-    it('initializes once and calls fetchAll', async () => {
-      const fetchAllSpy = jest.spyOn(manager, 'fetchAll').mockResolvedValue();
+    it('initializes once and calls syncExtensions', async () => {
+      const syncSpy = jest.spyOn(manager, 'syncExtensions').mockResolvedValue();
 
       await manager.init(mockContext);
       expect(manager[INITIALIZED]).toBe(true);
-      expect(fetchAllSpy).toHaveBeenCalledTimes(1);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
 
       // Second call should skip
       await manager.init(mockContext);
-      expect(fetchAllSpy).toHaveBeenCalledTimes(1);
+      expect(syncSpy).toHaveBeenCalledTimes(1);
     });
   });
 
-  describe('fetchAll', () => {
+  describe('syncExtensions', () => {
     it('fetches extensions and calls loadExtension for each', async () => {
       mockContext.fetch.mockResolvedValue({
         data: {
@@ -131,13 +131,13 @@ describe('BaseExtensionManager', () => {
         onLoad: jest.fn(),
       };
       jest
-        .spyOn(manager, 'executeExtension')
+        .spyOn(manager, '_bootstrapExtension')
         .mockResolvedValue(mockExtensionInstance);
 
       const result = await manager.loadExtension('test-extension');
 
       expect(result).toBe(mockExtensionInstance);
-      expect(registry.define).toHaveBeenCalledWith(
+      expect(registry.defineExtension).toHaveBeenCalledWith(
         mockExtensionInstance,
         mockContext,
         { id: 'test-extension', main: 'index.js' },
@@ -227,7 +227,7 @@ describe('BaseExtensionManager', () => {
     });
   });
 
-  describe('loadNamespace', () => {
+  describe('activateNamespace', () => {
     it('activates extensions for a namespace', async () => {
       manager[INITIALIZED] = true;
       manager.init(mockContext);
@@ -235,7 +235,7 @@ describe('BaseExtensionManager', () => {
       const mockDef = { id: 'p1', init: jest.fn() };
       registry.getDefinitions.mockReturnValue(new Set([mockDef]));
 
-      await manager.loadNamespace('ui');
+      await manager.activateNamespace('ui');
 
       expect(registry.register).toHaveBeenCalledWith(
         'p1',

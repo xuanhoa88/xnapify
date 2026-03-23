@@ -53,6 +53,6 @@ An async wrapper. If `hasNamespace()` returns `false`, it executes the `loader()
 ## Loader Extraction (`loader.js`)
 
 `getTranslations(adapter)` abstracts the iteration of `require.context` constructs.
-1. Utilizes `@shared/utils/webpackContextAdapter` to handle both pure `require.context` or already-adapted modules.
+1. Utilizes `@shared/utils/contextAdapter` to handle both pure `require.context` or already-adapted modules.
 2. Applies regex `([^/]+)\.json$/i` to extract the exact locale name from the filename.
 3. Consolidates into an object of translations mapped by Locale Code.

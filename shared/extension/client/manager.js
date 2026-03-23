@@ -95,7 +95,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {string} containerName - Container name
    * @returns {Promise<void>}
    */
-  async initializeContainer(container, containerName) {
+  async _initializeContainer(container, containerName) {
     // Check if already initialized
     // eslint-disable-next-line no-underscore-dangle
     if (container.__initialized__) {
@@ -132,7 +132,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} container - MF container
    * @returns {Promise<Object>} Module
    */
-  async getContainerModule(container) {
+  async _getContainerModule(container) {
     const factory = await container.get('./extension');
     return factory();
   }
@@ -249,7 +249,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} manifest - Extension manifest
    * @param {Object} options - Additional options (containerName)
    */
-  async loadExtensionModule(id, entryPoint, manifest, options) {
+  async _bootstrapExtension(id, entryPoint, manifest, options) {
     // Skip if no entry point resolved (e.g. server-only extension)
     if (!entryPoint) {
       if (__DEV__) {
@@ -291,10 +291,12 @@ class ClientExtensionManager extends BaseExtensionManager {
       }
 
       // Initialize the container with the host's shared scope
-      await this.initializeContainer(container, containerName);
+      // eslint-disable-next-line no-underscore-dangle
+      await this._initializeContainer(container, containerName);
 
       // Get the exposed extension module
-      const extensionModule = await this.getContainerModule(container);
+      // eslint-disable-next-line no-underscore-dangle
+      const extensionModule = await this._getContainerModule(container);
 
       if (__DEV__) {
         console.log(
@@ -327,7 +329,7 @@ class ClientExtensionManager extends BaseExtensionManager {
   /**
    * Subscribe to WebSocket events (Client only)
    */
-  subscribeToEvents() {
+  onReady() {
     console.log('[ClientExtensionManager] Ready to receive WebSocket events');
   }
 
@@ -335,7 +337,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * Handle external event (e.g., from WebSocket)
    * @param {Object} event - Event object
    */
-  async handleEvent(event) {
+  async onWebSocketEvent(event) {
     if (!event || !event.type) {
       console.warn('[ClientExtensionManager] Invalid event received:', event);
       return;
@@ -346,21 +348,24 @@ class ClientExtensionManager extends BaseExtensionManager {
 
     switch (type) {
       case 'EXTENSION_INSTALLED':
-      case 'EXTENSION_UPDATED':
+      case 'EXTENSION_UPDATED': {
         // Instantly inject CSS/script so user sees the effect
         await this.emit('extension:loaded', { id: extensionId, manifest });
         this.needsReload = true;
         break;
+      }
 
-      case 'EXTENSION_UNINSTALLED':
+      case 'EXTENSION_UNINSTALLED': {
         // Remove CSS/script tags from the DOM
         await this.emit('extension:unloaded', { id: extensionId });
         this.needsReload = true;
         break;
+      }
 
       case 'EXTENSION_ACTIVATED':
       case 'EXTENSION_DEACTIVATED':
-        // No client-side action needed — Redux handles state updates
+        // Reload needed so new routes/menus are picked up
+        this.needsReload = true;
         break;
 
       default:

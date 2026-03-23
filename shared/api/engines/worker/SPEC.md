@@ -24,7 +24,7 @@ shared/api/engines/worker/
 ```
 index.js
 ├── createWorkerPool.js
-│   ├── @shared/utils/webpackContextAdapter
+│   ├── @shared/utils/contextAdapter
 │   ├── piscina (runtime-loaded, not bundled)
 │   └── errors.js
 └── errors.js
@@ -65,7 +65,7 @@ Uses `Error.captureStackTrace` for clean stack traces.
 
 **File:** `createWorkerPool.js` (closure-level helpers)
 
-- `createWebpackContextAdapter(workersContext)` — wraps Webpack's `require.context` into a portable `{ files(), load(key), resolve(key) }` adapter (from `@shared/utils/webpackContextAdapter`).
+- `createWebpackContextAdapter(workersContext)` — wraps Webpack's `require.context` into a portable `{ files(), load(key), resolve(key) }` adapter (from `@shared/utils/contextAdapter`).
 - `getAvailableWorkers()` — extracts worker names from `*.worker.[cm]?[jt]s` pattern via `adapter.files()`.
 - `tryImportWorkerModule(workerName)` — loads and caches worker modules in a `Map` (`workerModuleCache`) for same-process execution. Returns `null` on failure (triggers thread fallback).
 - `getWorkerPath(workerName)` — resolves absolute filesystem path via `adapter.resolve()` for Piscina thread execution.

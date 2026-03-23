@@ -65,7 +65,7 @@ function createMockContainer(overrides = {}) {
       isExtensionLoaded: jest.fn(() => false),
       unloadExtension: jest.fn().mockResolvedValue(undefined),
       emit: jest.fn().mockResolvedValue(undefined),
-      getExtensionPath: jest.fn(() => '/extensions'),
+      getInstalledExtensionsDir: jest.fn(() => '/extensions'),
       getDevExtensionPath: jest.fn(() => '/dev-extensions'),
     },
     hook: jest.fn(() => ({ emit: jest.fn() })),

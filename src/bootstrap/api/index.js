@@ -143,6 +143,8 @@ function createApiMiddlewareStack(app) {
  * @returns {Router} Assembled Express router
  */
 function buildApiRouter(app, apiRoutes) {
+  const container = app.get('container');
+
   // Create API middleware stack
   const apiMiddlewares = createApiMiddlewareStack(app);
 
@@ -167,6 +169,15 @@ function buildApiRouter(app, apiRoutes) {
       log(`[${name}] Failed to load routes: ${error.message}`, 'error');
     }
   }
+
+  // Dedicated DynamicRouter for extension route injection.
+  // Extensions call container.resolve('apiRouter').add(adapter) to inject routes.
+  const extensionApiRouter = new DynamicRouter({
+    files: () => [],
+    load: () => ({}),
+  });
+  router.use(...apiMiddlewares, extensionApiRouter.resolve);
+  container.instance('apiRouter', extensionApiRouter);
 
   log(`Dynamic router built (${apiRoutes.size} module(s))`);
 

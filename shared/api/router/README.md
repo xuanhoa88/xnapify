@@ -8,16 +8,16 @@ The API router maps the file system directory structure directly into URL endpoi
 
 ### Architecture
 
-| Component      | Purpose                                                          |
-| -------------- | ---------------------------------------------------------------- |
-| `collector.js` | Scans file paths for `_route.js`, `_middleware.js`, and configs  |
-| `builder.js`   | Constructs a structured route tree from collected modules        |
-| `radix.js`     | Radix tree (compressed trie) for O(log n) URL matching           |
-| `matcher.js`   | Caches the radix tree and exposes `findRoute()`                  |
-| `lifecycle.js` | Composes middleware chains and executes route handlers           |
-| `composer.js`  | Koa-style middleware composition for correct async/sync handling |
-| `index.js`     | `Router` class — the public API                                  |
-| `utils.js`     | Logging, error normalization (`RouterError`), path utilities     |
+| Component       | Purpose                                                          |
+| --------------- | ---------------------------------------------------------------- |
+| `collector.js`  | Scans file paths for `_route.js`, `_middleware.js`, and configs  |
+| `builder.js`    | Constructs a structured route tree from collected modules        |
+| `radix.js`      | Radix tree (compressed trie) for O(log n) URL matching           |
+| `matcher.js`    | Caches the radix tree and exposes `findRoute()`                  |
+| `lifecycle.js`  | Composes middleware chains and executes route handlers           |
+| `middleware.js` | Koa-style middleware composition for correct async/sync handling |
+| `index.js`      | `Router` class — the public API                                  |
+| `utils.js`      | Logging, error normalization (`RouterError`), path utilities     |
 
 ## How to Use
 
@@ -208,7 +208,7 @@ for (const [name, adapter] of apiRoutes) {
 If your app supports loading external extension modules on the fly, you can dynamically attach or detach them.
 
 ```javascript
-import { createWebpackContextAdapter } from '@shared/utils/webpackContextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 const extensionAdapter = createWebpackContextAdapter(
   require.context('/path/to/my-module/api/routes'),

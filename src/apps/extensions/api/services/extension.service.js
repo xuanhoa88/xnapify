@@ -58,11 +58,10 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
           const encryptedId = encryptExtensionId(mapKey);
           const rsk = merge({}, manifest.rsk);
 
-          // Derive type from manifest (plugin or module)
+          // Auto-detect kind: extensions with API/view entry points are modules
           const type =
-            rsk.type === 'module' || rsk.type === 'plugin'
-              ? rsk.type
-              : 'plugin';
+            rsk.kind ||
+            (manifest.main || manifest.browser ? 'module' : 'plugin');
 
           // Derive capabilities from manifest fields
           const subscribe = rsk.subscribe || [];
@@ -113,7 +112,7 @@ export async function manageExtensions({
   cwd,
   queue,
 }) {
-  const installedExtensionsDir = extensionManager.getExtensionPath();
+  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
   const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
 
   const { Extension } = models;
@@ -264,7 +263,7 @@ export async function getActiveExtensions({
   }
 
   const { Extension } = models;
-  const installedExtensionsDir = extensionManager.getExtensionPath();
+  const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
   const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
 
   // 1. Fetch only active extensions from DB
@@ -516,7 +515,7 @@ export async function installExtensionFromPackage(
 
   const { Extension } = models;
   const tempPath = file.path;
-  const extensionsDir = extensionManager.getExtensionPath();
+  const extensionsDir = extensionManager.getInstalledExtensionsDir();
   const tempExtractDir = path.join(
     os.tmpdir(),
     'rsk-extension-install',
@@ -682,7 +681,7 @@ export async function toggleExtensionStatus(
   // FS-only extension with no DB record yet — create one
   if (!extension && extensionKey && cwd) {
     const localExtensionsDir = extensionManager.getDevExtensionPath(cwd);
-    const installedExtensionsDir = extensionManager.getExtensionPath();
+    const installedExtensionsDir = extensionManager.getInstalledExtensionsDir();
 
     // Check local/dev first (dev override), then installed
     let manifest = null;
