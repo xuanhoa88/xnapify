@@ -229,7 +229,7 @@ async function handleToggleJob(container, job) {
 
     notifyExtensionChange(
       container,
-      isActive ? 'EXTENSION_UPDATED' : 'EXTENSION_UNINSTALLED',
+      isActive ? 'EXTENSION_ACTIVATED' : 'EXTENSION_DEACTIVATED',
       extensionId,
     );
     return { success: true };

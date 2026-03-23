@@ -165,6 +165,12 @@ export default async function initializeRouter(options = {}) {
   // Register on container so extensions can inject view routes via router.add()
   container.instance('viewRouter', router);
 
+  // Flush any extension view routes that were buffered during init
+  // (extensions load before the router is created)
+  if (extension && typeof extension.flushPendingRoutes === 'function') {
+    extension.flushPendingRoutes();
+  }
+
   // Append catch-all route for 404s
   router.routes.push({
     path: '/*path',

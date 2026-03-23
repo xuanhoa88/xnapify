@@ -27,6 +27,7 @@ const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
   '__rsk.extensionScriptEntryPoints__',
 );
 const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.extensionRouteAdapters__');
+const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.pendingRouteInjections__');
 
 class ServerExtensionManager extends BaseExtensionManager {
   constructor() {
@@ -35,6 +36,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_CSS_ENTRY_POINTS] = new Map();
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
     this[EXTENSION_ROUTE_ADAPTERS] = new Map();
+    this[PENDING_ROUTE_INJECTIONS] = [];
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:loaded', ({ id }) => this._onExtensionLoaded(id));
@@ -128,9 +130,19 @@ class ServerExtensionManager extends BaseExtensionManager {
     const routerKey = type === 'api' ? 'apiRouter' : 'viewRouter';
     // eslint-disable-next-line no-underscore-dangle
     const router = this._resolveFromContainer(routerKey);
-    if (!router) return;
-
     const adapter = normalizeRouteAdapter(hookResult, type);
+
+    if (!router) {
+      // Router not available yet — buffer for later injection
+      this[PENDING_ROUTE_INJECTIONS].push({ id, adapter, type });
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] Buffered ${type} route(s) for ${id} (router not ready)`,
+        );
+      }
+      return;
+    }
+
     const added = router.add(adapter);
 
     if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
@@ -143,6 +155,51 @@ class ServerExtensionManager extends BaseExtensionManager {
       console.log(
         `[ServerExtensionManager] Injected ${added.length} ${type} route(s) for ${id}`,
       );
+    }
+  }
+
+  /**
+   * Inject extension route adapters into the current router.
+   *
+   * Handles two cases:
+   * 1. Pending injections buffered during init (router wasn't ready yet)
+   * 2. Already-stored adapters that need re-injection when a new router
+   *    is created (SSR creates a new router per request, but init runs once)
+   *
+   * Called by views bootstrap after the router is created and registered.
+   */
+  flushPendingRoutes() {
+    // 1. Process pending injections first (buffer → store)
+    const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
+    for (const { id, adapter, type } of pending) {
+      if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
+        this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+      }
+      const adapterKey = type === 'api' ? 'api' : 'view';
+      this[EXTENSION_ROUTE_ADAPTERS].get(id)[adapterKey] = adapter;
+    }
+
+    // 2. Inject all stored view adapters into the current router
+    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
+      if (!adapters.view) continue;
+
+      // eslint-disable-next-line no-underscore-dangle
+      const router = this._resolveFromContainer('viewRouter');
+      if (!router) {
+        if (__DEV__) {
+          console.warn(
+            `[ServerExtensionManager] viewRouter unavailable for ${id}`,
+          );
+        }
+        break;
+      }
+
+      const added = router.add(adapters.view);
+      if (__DEV__) {
+        console.log(
+          `[ServerExtensionManager] Injected ${added.length} view route(s) for ${id}`,
+        );
+      }
     }
   }
 
