@@ -7,6 +7,7 @@
 
 import { useRef, useCallback, useMemo, useEffect } from 'react';
 
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector, useDispatch } from 'react-redux';
 
@@ -76,7 +77,7 @@ function ProfileHeader() {
     <div className={s.profileHeader}>
       <div className={s.avatarSection}>
         <div
-          className={`${s.avatarWrapper} ${loading ? s.avatarLoading : ''}`}
+          className={clsx(s.avatarWrapper, { [s.avatarLoading]: loading })}
           onClick={handleAvatarClick}
           role='button'
           tabIndex={0}
@@ -106,7 +107,7 @@ function ProfileHeader() {
           disabled={loading}
         />
         {error && (
-          <div className={`${s.avatarMessage} ${s.avatarError}`}>{error}</div>
+          <div className={clsx(s.avatarMessage, s.avatarError)}>{error}</div>
         )}
       </div>
 

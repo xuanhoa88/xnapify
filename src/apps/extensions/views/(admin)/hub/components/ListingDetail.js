@@ -7,6 +7,7 @@
 
 import { useEffect, useState } from 'react';
 
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -217,7 +218,7 @@ export default function ListingDetail({ listing = null, onClose }) {
               {screenshots.length > 1 && (
                 <button
                   type='button'
-                  className={`${s.lightboxNav} ${s.lightboxNavPrev}`}
+                  className={clsx(s.lightboxNav, s.lightboxNavPrev)}
                   onClick={() =>
                     setLightboxIdx(
                       i => (i - 1 + screenshots.length) % screenshots.length,
@@ -238,7 +239,7 @@ export default function ListingDetail({ listing = null, onClose }) {
               {screenshots.length > 1 && (
                 <button
                   type='button'
-                  className={`${s.lightboxNav} ${s.lightboxNavNext}`}
+                  className={clsx(s.lightboxNav, s.lightboxNavNext)}
                   onClick={() =>
                     setLightboxIdx(i => (i + 1) % screenshots.length)
                   }
@@ -252,7 +253,9 @@ export default function ListingDetail({ listing = null, onClose }) {
                   <button
                     key={i}
                     type='button'
-                    className={`${s.lightboxDot} ${i === lightboxIdx ? s.lightboxDotActive : ''}`}
+                    className={clsx(s.lightboxDot, {
+                      [s.lightboxDotActive]: i === lightboxIdx,
+                    })}
                     onClick={() => setLightboxIdx(i)}
                     aria-label={`Screenshot ${i + 1}`}
                   />

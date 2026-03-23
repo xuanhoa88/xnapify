@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@shared/renderer/components/Button';
@@ -117,7 +118,9 @@ function AdminNotifications() {
             {notifications.map(notification => (
               <div
                 key={notification.id}
-                className={`${s.notificationItem} ${!notification.read ? s.unread : ''}`}
+                className={clsx(s.notificationItem, {
+                  [s.unread]: !notification.read,
+                })}
               >
                 <span className={s.notificationIcon}>
                   {getTypeIcon(notification.type)}

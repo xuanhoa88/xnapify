@@ -166,9 +166,10 @@ export default async function initializeRouter(options = {}) {
   container.instance('viewRouter', router);
 
   // Flush any extension view routes that were buffered during init
-  // (extensions load before the router is created)
+  // (extensions load before the router is created; also re-injects on
+  // subsequent SSR requests where a new router is created)
   if (extension && typeof extension.flushPendingRoutes === 'function') {
-    extension.flushPendingRoutes();
+    extension.flushPendingRoutes(router);
   }
 
   // Append catch-all route for 404s

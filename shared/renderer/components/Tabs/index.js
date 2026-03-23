@@ -13,6 +13,7 @@ import {
   useMemo,
 } from 'react';
 
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 import s from './Tabs.css';
@@ -74,7 +75,7 @@ function Tabs({ children, defaultTab, onChange, className }) {
 
   return (
     <TabsContext.Provider value={contextValue}>
-      <div className={`${s.tabs} ${className || ''}`}>{children}</div>
+      <div className={clsx(s.tabs, className)}>{children}</div>
     </TabsContext.Provider>
   );
 }
@@ -91,7 +92,7 @@ Tabs.propTypes = {
  */
 function TabList({ children, className }) {
   return (
-    <div className={`${s.tabList} ${className || ''}`} role='tablist'>
+    <div className={clsx(s.tabList, className)} role='tablist'>
       {children}
     </div>
   );
@@ -133,7 +134,10 @@ function Tab({ children, id, icon, disabled, className }) {
       aria-controls={`panel-${id}`}
       id={`tab-${id}`}
       tabIndex={isActive ? 0 : -1}
-      className={`${s.tab} ${isActive ? s.tabActive : ''} ${disabled ? s.tabDisabled : ''} ${className || ''}`}
+      className={clsx(s.tab, {
+        [s.tabActive]: isActive,
+        [s.tabDisabled]: disabled,
+      })}
       onClick={handleClick}
       onKeyDown={handleKeyDown}
       disabled={disabled}
@@ -156,7 +160,7 @@ Tab.propTypes = {
  * Tab Panels Container
  */
 function TabPanels({ children, className }) {
-  return <div className={`${s.tabPanels} ${className || ''}`}>{children}</div>;
+  return <div className={clsx(s.tabPanels, className)}>{children}</div>;
 }
 
 TabPanels.propTypes = {
@@ -180,7 +184,7 @@ function TabPanel({ children, id, className }) {
       role='tabpanel'
       id={`panel-${id}`}
       aria-labelledby={`tab-${id}`}
-      className={`${s.tabPanel} ${className || ''}`}
+      className={clsx(s.tabPanel, className)}
     >
       {children}
     </div>

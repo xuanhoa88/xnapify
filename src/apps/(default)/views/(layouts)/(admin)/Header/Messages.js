@@ -7,6 +7,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 
+import clsx from 'clsx';
 import { useTranslation } from 'react-i18next';
 
 import Button from '@shared/renderer/components/Button';
@@ -135,7 +136,7 @@ function AdminMessages() {
             {messages.map(message => (
               <div
                 key={message.id}
-                className={`${s.messageItem} ${!message.read ? s.unread : ''}`}
+                className={clsx(s.messageItem, { [s.unread]: !message.read })}
               >
                 <div className={s.messageAvatar}>
                   {message.avatar ? (

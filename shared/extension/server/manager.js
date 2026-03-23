@@ -167,8 +167,13 @@ class ServerExtensionManager extends BaseExtensionManager {
    *    is created (SSR creates a new router per request, but init runs once)
    *
    * Called by views bootstrap after the router is created and registered.
+   *
+   * @param {Object} [viewRouter] - The current view router instance.
+   *   When provided, bypasses container resolution (avoids stale context on
+   *   subsequent SSR requests where init() returns early without updating
+   *   the container reference).
    */
-  flushPendingRoutes() {
+  flushPendingRoutes(viewRouter) {
     // 1. Process pending injections first (buffer → store)
     const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
     for (const { id, adapter, type } of pending) {
@@ -179,20 +184,21 @@ class ServerExtensionManager extends BaseExtensionManager {
       this[EXTENSION_ROUTE_ADAPTERS].get(id)[adapterKey] = adapter;
     }
 
-    // 2. Inject all stored view adapters into the current router
+    // 2. Resolve the router (prefer explicit param over container lookup)
+    // eslint-disable-next-line no-underscore-dangle
+    const router = viewRouter || this._resolveFromContainer('viewRouter');
+    if (!router) {
+      if (__DEV__) {
+        console.warn(
+          '[ServerExtensionManager] viewRouter unavailable for flush',
+        );
+      }
+      return;
+    }
+
+    // 3. Inject all stored view adapters into the current router
     for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
       if (!adapters.view) continue;
-
-      // eslint-disable-next-line no-underscore-dangle
-      const router = this._resolveFromContainer('viewRouter');
-      if (!router) {
-        if (__DEV__) {
-          console.warn(
-            `[ServerExtensionManager] viewRouter unavailable for ${id}`,
-          );
-        }
-        break;
-      }
 
       const added = router.add(adapters.view);
       if (__DEV__) {

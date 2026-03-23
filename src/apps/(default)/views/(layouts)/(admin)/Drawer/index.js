@@ -125,6 +125,7 @@ function Drawer({ minimal = false }) {
     const mainKey = t('admin:navigation.main', 'Main');
     const sections = [
       {
+        id: 'main',
         ns: mainKey,
         order: 0,
         icon: 'dashboard',
@@ -150,6 +151,7 @@ function Drawer({ minimal = false }) {
       if (validItems.length === 0) return;
 
       sections.push({
+        id: section.id,
         ns: section.label || section.id,
         order: section.order != null ? section.order : 99,
         icon: section.icon,
@@ -251,7 +253,7 @@ function Drawer({ minimal = false }) {
 
             return (
               <div
-                key={group.ns}
+                key={group.id || group.ns}
                 className={clsx(s.menuGroup, {
                   [s.groupActive]: hasActiveChild,
                 })}
