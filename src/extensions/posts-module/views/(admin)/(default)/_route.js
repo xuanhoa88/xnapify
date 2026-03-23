@@ -19,7 +19,7 @@ export function register({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
-      id: 'content-management',
+      id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
       icon: 'file-text',
