@@ -156,6 +156,16 @@ const handleRegisterMenu = (state, payload) => {
       section.items.push(newItem);
     }
   });
+
+  // Sort items by order to ensure deterministic state regardless of
+  // registration order (apps vs extensions may register in different
+  // order on server vs client, causing SSR hydration mismatches).
+  section.items.sort((a, b) => {
+    const orderDiff =
+      (a.order != null ? a.order : 99) - (b.order != null ? b.order : 99);
+    if (orderDiff !== 0) return orderDiff;
+    return (a.label || '').localeCompare(b.label || '');
+  });
 };
 
 // Shared menu unregistration logic

@@ -457,9 +457,6 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
 }
 
 function makeSsrMiddleware(baseUrl) {
-  // Track whether extensionManager has been initialized for this middleware instance
-  let extensionsInitialized = false;
-
   return async (req, res, next) => {
     if (res.headersSent) return;
 
@@ -537,22 +534,6 @@ function makeSsrMiddleware(baseUrl) {
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
         signal: abortController.signal,
       };
-
-      // Extension init — only once per middleware instance
-      if (!extensionsInitialized) {
-        try {
-          await extensionManager.init({
-            ...context,
-            cwd: SERVER_CONFIG.cwd,
-            container: ssrContainer,
-          });
-          extensionsInitialized = true;
-        } catch (err) {
-          if (__DEV__) {
-            console.warn('⚠️  Extension initialization failed:', err.message);
-          }
-        }
-      }
 
       store = await promiseWithDeadline(
         createReduxStore(
@@ -986,6 +967,26 @@ export async function bootstrapApp(app, server, options = {}) {
   const apiRouter = await api.default(app);
   app.use(SERVER_CONFIG.apiPrefix, apiRouter);
 
+  // Initialize extensions at bootstrap time (after API router is created)
+  // so they use the app container which has apiRouter registered.
+  try {
+    await extensionManager.init({
+      i18n,
+      fetch: createFetch(nodeFetch, {
+        defaults: {
+          baseUrl,
+          headers: { 'User-Agent': 'RSK-Server' },
+        },
+      }),
+      container: () => app.get('container'),
+      cwd: SERVER_CONFIG.cwd,
+    });
+  } catch (err) {
+    if (__DEV__) {
+      console.warn('⚠️  Extension initialization failed:', err.message);
+    }
+  }
+
   // Node-RED
   await appState.nodeRED.init(app, server, {
     ...SERVER_CONFIG,
@@ -993,8 +994,16 @@ export async function bootstrapApp(app, server, options = {}) {
     host: resolvedHost,
     functionGlobalContext: {
       container: () => app.get('container'),
+      fetch: () =>
+        createFetch(nodeFetch, {
+          defaults: {
+            headers: { 'User-Agent': 'RSK-NodeRED' },
+          },
+        }),
     },
   });
+
+  // Node-RED API proxy
   await appState.nodeRED.setupApiProxy(app, SERVER_CONFIG.apiPrefix);
 
   // SSR catch-all

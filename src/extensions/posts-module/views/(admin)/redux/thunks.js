@@ -6,12 +6,14 @@
 
 import { createAsyncThunk } from '@reduxjs/toolkit';
 
+import { SLICE_NAME } from './slice';
+
 /**
  * Fetch posts with pagination and optional status filter
  */
 export const fetchPosts = createAsyncThunk(
-  'admin/posts/fetchPosts',
-  async (options = {}, { extra: { fetch }, rejectWithValue }) => {
+  `${SLICE_NAME}/fetchPosts`,
+  async (options = {}, { extra: { fetch }, rejectWithValue, signal }) => {
     try {
       const { page = 1, limit = 20, status = '' } = options || {};
 
@@ -21,6 +23,7 @@ export const fetchPosts = createAsyncThunk(
           limit,
           status: status || undefined,
         },
+        signal,
       });
 
       return data;
@@ -34,7 +37,7 @@ export const fetchPosts = createAsyncThunk(
  * Create a new post
  */
 export const createPost = createAsyncThunk(
-  'admin/posts/createPost',
+  `${SLICE_NAME}/createPost`,
   async (postData, { dispatch, extra: { fetch }, rejectWithValue }) => {
     try {
       const { data } = await fetch('/api/admin/posts', {
@@ -55,7 +58,7 @@ export const createPost = createAsyncThunk(
  * Update an existing post
  */
 export const updatePost = createAsyncThunk(
-  'admin/posts/updatePost',
+  `${SLICE_NAME}/updatePost`,
   async (
     { postId, postData },
     { dispatch, extra: { fetch }, rejectWithValue },
@@ -79,7 +82,7 @@ export const updatePost = createAsyncThunk(
  * Delete a post by ID
  */
 export const deletePost = createAsyncThunk(
-  'admin/posts/deletePost',
+  `${SLICE_NAME}/deletePost`,
   async (postId, { extra: { fetch }, rejectWithValue }) => {
     try {
       await fetch(`/api/admin/posts/${postId}`, {

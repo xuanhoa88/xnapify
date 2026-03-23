@@ -270,9 +270,9 @@ async function initializeViews() {
     cachedViews = import('./bootstrap/views')
       .then(m => {
         const views = m.default({
-          extension: extensionManager,
           container,
           store,
+          extension: extensionManager,
         });
         log('✅ Views initialized');
         return views;
@@ -724,7 +724,7 @@ async function attemptStartup() {
 
   // Initialize extensions (Client Side)
   try {
-    await extensionManager.init({ ...context });
+    await extensionManager.init({ ...context, container: () => container });
   } catch (error) {
     log(`⚠️ Extension initialization failed: ${error.message}`, 'error');
     // Continue app startup even if extensions fail

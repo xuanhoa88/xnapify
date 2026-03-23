@@ -247,7 +247,7 @@ describe('ClientExtensionManager', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       clientManager[EXTENSION_CONTEXT] = {
-        container: { resolve: () => mockRouter },
+        container: () => ({ resolve: () => mockRouter }),
       };
 
       // eslint-disable-next-line no-underscore-dangle
@@ -260,7 +260,7 @@ describe('ClientExtensionManager', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       clientManager[EXTENSION_CONTEXT] = {
-        container: { resolve: () => mockRouter },
+        container: () => ({ resolve: () => mockRouter }),
       };
 
       // Inject routes first
@@ -272,6 +272,46 @@ describe('ClientExtensionManager', () => {
       await clientManager.emit('extension:unloaded', { id: 'test-ext' });
 
       expect(mockRouter.remove).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('end-to-end: _bootstrapExtension injects view routes automatically', async () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+      const mockManifest = {
+        name: 'test-ext',
+        main: 'remoteEntry.js',
+        rsk: { containerName: 'testContainer' },
+      };
+
+      // Mock the module returned from the container
+      const mockModule = {
+        views: () => mockAdapter,
+      };
+
+      clientManager[EXTENSION_CONTEXT] = {
+        container: () => ({ resolve: () => mockRouter }),
+      };
+
+      // Mock the container loading process
+      jest.spyOn(clientManager, '_loadScript').mockResolvedValue();
+      jest.spyOn(clientManager, '_initializeContainer').mockResolvedValue();
+      jest
+        .spyOn(clientManager, '_getContainerModule')
+        .mockResolvedValue(mockModule);
+
+      // Set global container
+      window.testContainer = {};
+
+      // Bootstrap the extension
+      // eslint-disable-next-line no-underscore-dangle
+      await clientManager._bootstrapExtension(
+        'test-ext',
+        'remote.js',
+        mockManifest,
+        { containerName: 'testContainer' },
+      );
+
+      // Verify that the views function was called and the adapter injected
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
     });
   });
 });

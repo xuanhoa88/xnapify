@@ -112,7 +112,7 @@ class ClientExtensionManager extends BaseExtensionManager {
   _resolveRouter() {
     const ctx = this[EXTENSION_CONTEXT];
     try {
-      return ctx && ctx.container ? ctx.container.resolve('viewRouter') : null;
+      return ctx.container().resolve('viewRouter');
     } catch {
       return null;
     }

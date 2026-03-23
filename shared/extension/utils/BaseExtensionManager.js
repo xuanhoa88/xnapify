@@ -22,6 +22,7 @@ export const EXTENSION_CONTEXT = Symbol('__rsk.extensionContext__');
 export const EXTENSION_METADATA = Symbol('__rsk.extensionMetadata__');
 export const EVENT_HANDLERS = Symbol('__rsk.extensionEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedExtensionVersions__');
+const RESOLVED_CONTEXT_CACHE = Symbol('__rsk.resolvedContextCache__');
 export const EXTENSION_MANAGER_INIT = Symbol('__rsk.extensionManagerInit__');
 
 /**
@@ -88,6 +89,36 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Return the current EXTENSION_CONTEXT with `container` resolved.
+   * Supports lazy containers (e.g. `container: () => app.get('container')`).
+   * @returns {Object} Context with a resolved container
+   */
+  // eslint-disable-next-line class-methods-use-this, no-underscore-dangle
+  _resolvedContext() {
+    if (this[RESOLVED_CONTEXT_CACHE]) return this[RESOLVED_CONTEXT_CACHE];
+    const ctx = this[EXTENSION_CONTEXT];
+    if (!ctx) return ctx;
+    const c = ctx.container;
+    if (typeof c !== 'function') {
+      this[RESOLVED_CONTEXT_CACHE] = ctx;
+      return ctx;
+    }
+    try {
+      const resolved = { ...ctx, container: c() };
+      this[RESOLVED_CONTEXT_CACHE] = resolved;
+      return resolved;
+    } catch (err) {
+      if (__DEV__) {
+        console.error(
+          '[ExtensionManager] Lazy container() threw:',
+          err.message,
+        );
+      }
+      return ctx;
+    }
+  }
+
+  /**
    * Initialize the extension manager
    *
    * @param {Object} context - Application context
@@ -115,6 +146,7 @@ export class BaseExtensionManager {
 
     // Update context for the current request/navigation
     this[EXTENSION_CONTEXT] = context;
+    this[RESOLVED_CONTEXT_CACHE] = null;
 
     // Singleton pattern: Skip re-initialization if already initialized
     // This prevents redundant extension loading on subsequent calls (e.g., per-request on server)
@@ -375,7 +407,8 @@ export class BaseExtensionManager {
       if (__DEV__) {
         console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
       }
-      await registry.defineExtension(ext, this[EXTENSION_CONTEXT], manifest);
+      // eslint-disable-next-line no-underscore-dangle
+      await registry.defineExtension(ext, this._resolvedContext(), manifest);
 
       // Extension activation (init/destroy) is deferred to activateNamespace.
       // loadExtension only fetches, validates, and defines.
@@ -388,7 +421,8 @@ export class BaseExtensionManager {
 
       // Call extension lifecycle hook
       if (typeof ext.onLoad === 'function') {
-        await ext.onLoad(this[EXTENSION_CONTEXT]);
+        // eslint-disable-next-line no-underscore-dangle
+        await ext.onLoad(this._resolvedContext());
       }
 
       if (__DEV__) {
@@ -445,11 +479,13 @@ export class BaseExtensionManager {
 
       // Call extension lifecycle hook
       if (ext && typeof ext.onUnload === 'function') {
-        await ext.onUnload(this[EXTENSION_CONTEXT]);
+        // eslint-disable-next-line no-underscore-dangle
+        await ext.onUnload(this._resolvedContext());
       }
 
       // Unregister from registry
-      await registry.unregister(id, this[EXTENSION_CONTEXT]);
+      // eslint-disable-next-line no-underscore-dangle
+      await registry.unregister(id, this._resolvedContext());
 
       // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
@@ -716,7 +752,8 @@ export class BaseExtensionManager {
 
             if (typeof def.init === 'function') {
               try {
-                await def.init(reg, this[EXTENSION_CONTEXT]);
+                // eslint-disable-next-line no-underscore-dangle
+                await def.init(reg, this._resolvedContext());
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to initialize extension ${def.id}:`,
@@ -740,7 +777,8 @@ export class BaseExtensionManager {
             }
             if (typeof def.destroy === 'function') {
               try {
-                await def.destroy(reg, this[EXTENSION_CONTEXT]);
+                // eslint-disable-next-line no-underscore-dangle
+                await def.destroy(reg, this._resolvedContext());
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to destroy extension ${def.id}:`,

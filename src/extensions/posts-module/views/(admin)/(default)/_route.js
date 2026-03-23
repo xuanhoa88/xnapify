@@ -22,7 +22,7 @@ export function register({ store, i18n }) {
       id: 'content',
       label: i18n.t('admin:navigation.content', 'Content'),
       order: 20,
-      icon: 'file-text',
+      icon: 'folder',
       items: [
         {
           path: '/admin/posts',

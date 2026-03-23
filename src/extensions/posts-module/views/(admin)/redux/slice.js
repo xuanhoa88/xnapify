@@ -72,21 +72,16 @@ export const normalizeState = state => {
 };
 
 const createPendingHandler = operationKey => state => {
-  const normalized = normalizeState(state);
-  normalized.operations[operationKey] = { loading: true, error: null };
-  Object.assign(state, normalized);
+  state.operations[operationKey].loading = true;
+  state.operations[operationKey].error = null;
 };
 
 const createRejectedHandler = operationKey => (state, action) => {
-  const normalized = normalizeState(state);
-  normalized.operations[operationKey] = {
-    loading: false,
-    error:
-      action.payload ||
-      (action.error && action.error.message) ||
-      'An error occurred',
-  };
-  Object.assign(state, normalized);
+  state.operations[operationKey].loading = false;
+  state.operations[operationKey].error =
+    action.payload ||
+    (action.error && action.error.message) ||
+    'An error occurred';
 };
 
 /**
@@ -99,24 +94,16 @@ const postsSlice = createSlice({
   initialState,
   reducers: {
     clearPostsListError: state => {
-      const normalized = normalizeState(state);
-      normalized.operations.list.error = null;
-      Object.assign(state, normalized);
+      state.operations.list.error = null;
     },
     clearPostCreateError: state => {
-      const normalized = normalizeState(state);
-      normalized.operations.create.error = null;
-      Object.assign(state, normalized);
+      state.operations.create.error = null;
     },
     clearPostUpdateError: state => {
-      const normalized = normalizeState(state);
-      normalized.operations.update.error = null;
-      Object.assign(state, normalized);
+      state.operations.update.error = null;
     },
     clearPostDeleteError: state => {
-      const normalized = normalizeState(state);
-      normalized.operations.delete.error = null;
-      Object.assign(state, normalized);
+      state.operations.delete.error = null;
     },
     resetPostsState: () => initialState,
   },
@@ -125,12 +112,11 @@ const postsSlice = createSlice({
     builder
       .addCase(fetchPosts.pending, createPendingHandler('list'))
       .addCase(fetchPosts.fulfilled, (state, action) => {
-        const normalized = normalizeState(state);
-        normalized.data.posts = action.payload.posts || [];
-        normalized.data.pagination = action.payload.pagination || null;
-        normalized.data.initialized.list = true;
-        normalized.operations.list = createOperationState();
-        Object.assign(state, normalized);
+        state.data.posts = action.payload.posts || [];
+        state.data.pagination = action.payload.pagination || null;
+        state.data.initialized.list = true;
+        state.operations.list.loading = false;
+        state.operations.list.error = null;
       })
       .addCase(fetchPosts.rejected, createRejectedHandler('list'));
 
@@ -138,10 +124,9 @@ const postsSlice = createSlice({
     builder
       .addCase(createPost.pending, createPendingHandler('create'))
       .addCase(createPost.fulfilled, (state, action) => {
-        const normalized = normalizeState(state);
-        normalized.data.posts.unshift(action.payload);
-        normalized.operations.create = createOperationState();
-        Object.assign(state, normalized);
+        state.data.posts.unshift(action.payload);
+        state.operations.create.loading = false;
+        state.operations.create.error = null;
       })
       .addCase(createPost.rejected, createRejectedHandler('create'));
 
@@ -149,18 +134,14 @@ const postsSlice = createSlice({
     builder
       .addCase(updatePost.pending, createPendingHandler('update'))
       .addCase(updatePost.fulfilled, (state, action) => {
-        const normalized = normalizeState(state);
-        const index = normalized.data.posts.findIndex(
+        const index = state.data.posts.findIndex(
           p => p.id === action.payload.id,
         );
         if (index !== -1) {
-          normalized.data.posts[index] = {
-            ...normalized.data.posts[index],
-            ...action.payload,
-          };
+          Object.assign(state.data.posts[index], action.payload);
         }
-        normalized.operations.update = createOperationState();
-        Object.assign(state, normalized);
+        state.operations.update.loading = false;
+        state.operations.update.error = null;
       })
       .addCase(updatePost.rejected, createRejectedHandler('update'));
 
@@ -168,12 +149,11 @@ const postsSlice = createSlice({
     builder
       .addCase(deletePost.pending, createPendingHandler('delete'))
       .addCase(deletePost.fulfilled, (state, action) => {
-        const normalized = normalizeState(state);
-        normalized.data.posts = normalized.data.posts.filter(
+        state.data.posts = state.data.posts.filter(
           p => p.id !== action.payload,
         );
-        normalized.operations.delete = createOperationState();
-        Object.assign(state, normalized);
+        state.operations.delete.loading = false;
+        state.operations.delete.error = null;
       })
       .addCase(deletePost.rejected, createRejectedHandler('delete'));
   },

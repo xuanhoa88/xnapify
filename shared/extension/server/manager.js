@@ -120,7 +120,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   _resolveFromContainer(key) {
     const ctx = this[EXTENSION_CONTEXT];
     try {
-      return ctx && ctx.container ? ctx.container.resolve(key) : null;
+      return ctx.container().resolve(key);
     } catch {
       return null;
     }
@@ -184,28 +184,35 @@ class ServerExtensionManager extends BaseExtensionManager {
       this[EXTENSION_ROUTE_ADAPTERS].get(id)[adapterKey] = adapter;
     }
 
-    // 2. Resolve the router (prefer explicit param over container lookup)
+    // 2. Resolve routers
     // eslint-disable-next-line no-underscore-dangle
-    const router = viewRouter || this._resolveFromContainer('viewRouter');
-    if (!router) {
-      if (__DEV__) {
-        console.warn(
-          '[ServerExtensionManager] viewRouter unavailable for flush',
-        );
+    const vRouter = viewRouter || this._resolveFromContainer('viewRouter');
+    // eslint-disable-next-line no-underscore-dangle
+    const aRouter = this._resolveFromContainer('apiRouter');
+
+    // 3. Inject all stored adapters into their respective routers
+    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
+      if (adapters.view && vRouter) {
+        const added = vRouter.add(adapters.view);
+        if (__DEV__) {
+          console.log(
+            `[ServerExtensionManager] Injected ${added.length} view route(s) for ${id}`,
+          );
+        }
       }
-      return;
+
+      if (adapters.api && aRouter) {
+        const added = aRouter.add(adapters.api);
+        if (__DEV__) {
+          console.log(
+            `[ServerExtensionManager] Injected ${added.length} API route(s) for ${id}`,
+          );
+        }
+      }
     }
 
-    // 3. Inject all stored view adapters into the current router
-    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
-      if (!adapters.view) continue;
-
-      const added = router.add(adapters.view);
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Injected ${added.length} view route(s) for ${id}`,
-        );
-      }
+    if (!vRouter && __DEV__) {
+      console.warn('[ServerExtensionManager] viewRouter unavailable for flush');
     }
   }
 
@@ -609,7 +616,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Booting API for ${id}`);
         }
-        await extensionApi.init(this.registry, this[EXTENSION_CONTEXT]);
+        await extensionApi.init(this.registry, this._resolvedContext());
         this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
       } else {
         console.warn(
