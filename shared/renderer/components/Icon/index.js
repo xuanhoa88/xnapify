@@ -5,6 +5,9 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { memo } from 'react';
+
+import clsx from 'clsx';
 import PropTypes from 'prop-types';
 
 /**
@@ -273,7 +276,7 @@ const iconPaths = Object.freeze({
 });
 
 // Available icon names (alphabetically ordered)
-const iconNames = Object.keys(iconPaths).sort();
+export const NAMES = Object.keys(iconPaths).sort();
 
 /**
  * Check if a value is an external icon reference (URL or path).
@@ -287,28 +290,50 @@ function isExternalIcon(name) {
   );
 }
 
-function Icon({ name, size = 20, className = '', style = {} }) {
+function Icon({ name, size = 20, className, style, title, ...rest }) {
+  const cls = clsx(className);
+
   // External icon: render as <img> for extension-provided assets
   if (isExternalIcon(name)) {
     return (
       <img
         src={name}
-        alt=''
+        alt={title || ''}
         width={size}
         height={size}
-        className={className}
+        className={cls || undefined}
         style={{ objectFit: 'contain', ...style }}
+        {...rest}
       />
     );
   }
 
-  const renderPaths = () => {
-    const paths = iconPaths[name];
-    if (!paths) return null;
+  const paths = iconPaths[name];
 
-    // Handle array of paths
-    if (Array.isArray(paths)) {
-      return paths.map((d, i) => (
+  // Dev-mode warning for unknown icon names
+  if (!paths && __DEV__) {
+    console.warn(`[Icon] Unknown icon name: "${name}"`);
+  }
+
+  // Normalize to array for uniform rendering
+  const pathList = paths ? (Array.isArray(paths) ? paths : [paths]) : [];
+
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox='0 0 24 24'
+      fill='none'
+      xmlns='http://www.w3.org/2000/svg'
+      className={cls || undefined}
+      style={style}
+      aria-hidden={!title}
+      role={title ? 'img' : undefined}
+      {...(title ? { 'aria-label': title } : {})}
+      {...rest}
+    >
+      {title && <title>{title}</title>}
+      {pathList.map((d, i) => (
         <path
           key={i}
           d={d}
@@ -318,33 +343,7 @@ function Icon({ name, size = 20, className = '', style = {} }) {
           strokeLinejoin='round'
           fill='none'
         />
-      ));
-    }
-
-    // Single path
-    return (
-      <path
-        d={paths}
-        stroke='currentColor'
-        strokeWidth='2'
-        strokeLinecap='round'
-        strokeLinejoin='round'
-        fill='none'
-      />
-    );
-  };
-
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox='0 0 24 24'
-      fill='none'
-      xmlns='http://www.w3.org/2000/svg'
-      className={className}
-      style={style}
-    >
-      {renderPaths()}
+      ))}
     </svg>
   );
 }
@@ -361,7 +360,7 @@ Icon.propTypes = {
     // Allow built-in icon names OR external paths/URLs
     if (
       typeof value === 'string' &&
-      (isExternalIcon(value) || iconNames.includes(value))
+      (isExternalIcon(value) || NAMES.includes(value))
     ) {
       return null;
     }
@@ -373,6 +372,7 @@ Icon.propTypes = {
   size: PropTypes.number,
   className: PropTypes.string,
   style: PropTypes.object,
+  title: PropTypes.string,
 };
 
-export default Icon;
+export default memo(Icon);
