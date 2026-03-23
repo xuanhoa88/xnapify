@@ -59,8 +59,18 @@ mkdir -p src/extensions/{extension-name}
 }
 ```
 
-**`rsk.subscribe`** declares which route namespaces activate the extension's frontend.
-The `Registry.define()` method reads namespaces from this field — **NOT** from a `register()` method in code.
+**`rsk.subscribe`** declares which namespaces activate the extension's frontend.
+
+- **Plugin-kind extensions** (no `views()` hook): You **must** list route paths manually (e.g., `["/login", "/profile"]`).
+- **Module-kind extensions** (with `views()` hook): The namespace is **auto-derived** from the `views()` return tuple `[moduleName, context]`. You can omit `rsk.subscribe` — it will be populated automatically (e.g., `"posts"`).
+- Extensions are **eagerly activated** during loading — their `init()` runs immediately after registration, so Redux reducers and sidebar menus are available before the user navigates to the route.
+
+**Route namespace override:** A `_route.js` file can export `namespace` to override which namespace the route belongs to:
+
+```javascript
+// _route.js
+export const namespace = 'my-custom-namespace';
+```
 
 Example:
 
@@ -890,7 +900,9 @@ registry.registerHook(
 ### Extension Not Loading
 
 - Check `__EXTENSION_NAME__` and `__EXTENSION_DESCRIPTION__` globals are defined
-- Verify `rsk.subscribe` in `package.json` lists the route paths where the extension should activate (e.g., `["/login", "/profile"]`)
+- For **plugin-kind** extensions: verify `rsk.subscribe` in `package.json` lists the route paths where the extension should activate (e.g., `["/login", "/profile"]`)
+- For **module-kind** extensions: the namespace is auto-derived from `views()` — check that `views()` returns a valid `[moduleName, context]` tuple
+- Extensions are eagerly activated via `ensureNamespaceActive()` during loading — check console for `[ExtensionManager] Activating namespace:` logs
 - Ensure both `api/index.js` and `views/index.js` export default extension definitions
 - Check browser console for any initialization errors
 - Verify the extension was built by Webpack (check `.cache/dev/extensions/` for build output)

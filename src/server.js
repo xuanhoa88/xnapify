@@ -978,7 +978,7 @@ export async function bootstrapApp(app, server, options = {}) {
           headers: { 'User-Agent': 'RSK-Server' },
         },
       }),
-      container: () => app.get('container'),
+      container,
       cwd: SERVER_CONFIG.cwd,
     });
   } catch (err) {

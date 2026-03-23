@@ -431,6 +431,16 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
+   * Server has no persistent store at boot — SSR creates a per-request store
+   * and activates namespaces via onRouteInit during rendering.
+   * @returns {boolean}
+   */
+  // eslint-disable-next-line class-methods-use-this
+  _shouldEagerActivate() {
+    return false;
+  }
+
+  /**
    * Resolve the extension entry point based on manifest
    * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null
@@ -615,7 +625,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           console.log(`[ServerExtensionManager] Booting API for ${id}`);
         }
         // eslint-disable-next-line no-underscore-dangle
-        await extensionApi.init(this.registry, this._resolvedContext());
+        await extensionApi.init(this.registry, this[EXTENSION_CONTEXT]);
         this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
       } else {
         console.warn(

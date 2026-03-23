@@ -89,33 +89,14 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Return the current EXTENSION_CONTEXT with `container` resolved.
-   * Supports lazy containers (e.g. `container: () => app.get('container')`).
-   * @returns {Object} Context with a resolved container
+   * Whether module-kind extensions should eagerly activate during loadExtension.
+   * Client returns true (persistent store available), server returns false
+   * (no persistent store at boot; SSR activates per-request via onRouteInit).
+   * @returns {boolean}
    */
-  // eslint-disable-next-line class-methods-use-this, no-underscore-dangle
-  _resolvedContext() {
-    if (this[RESOLVED_CONTEXT_CACHE]) return this[RESOLVED_CONTEXT_CACHE];
-    const ctx = this[EXTENSION_CONTEXT];
-    if (!ctx) return ctx;
-    const c = ctx.container;
-    if (typeof c !== 'function') {
-      this[RESOLVED_CONTEXT_CACHE] = ctx;
-      return ctx;
-    }
-    try {
-      const resolved = { ...ctx, container: c() };
-      this[RESOLVED_CONTEXT_CACHE] = resolved;
-      return resolved;
-    } catch (err) {
-      if (__DEV__) {
-        console.error(
-          '[ExtensionManager] Lazy container() threw:',
-          err.message,
-        );
-      }
-      return ctx;
-    }
+  // eslint-disable-next-line class-methods-use-this
+  _shouldEagerActivate() {
+    return true;
   }
 
   /**
@@ -449,39 +430,42 @@ export class BaseExtensionManager {
         console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
       }
       // eslint-disable-next-line no-underscore-dangle
-      await registry.defineExtension(ext, this._resolvedContext(), manifest);
+      await registry.defineExtension(ext, this[EXTENSION_CONTEXT], manifest);
+
+      // Determine extension kind: 'module' (has views() hook) or 'plugin'
+      const extensionType =
+        (manifest.rsk && manifest.rsk.kind) ||
+        (typeof ext.views === 'function' ? 'module' : 'plugin');
 
       // Module-kind extensions auto-subscribe to a namespace derived from
-      // their views() hook. Activate these eagerly so init() runs immediately
+      // their views() hook. Activate eagerly so init() runs immediately
       // (injecting Redux reducers and registering sidebar menus) rather than
       // waiting for route-based activateNamespace which creates a
       // chicken-and-egg problem (menu invisible → can't navigate → can't activate).
-      const subs =
-        manifest.rsk && Array.isArray(manifest.rsk.subscribe)
-          ? manifest.rsk.subscribe
-          : [];
-      for (const ns of subs) {
-        if (!this.isNamespaceActive(ns)) {
-          if (__DEV__) {
-            console.log(
-              `[ExtensionManager] Eagerly activating namespace: ${ns}`,
-            );
-          }
+      // Plugin-kind extensions activate lazily on route navigation via onRouteInit.
+      // eslint-disable-next-line no-underscore-dangle
+      if (extensionType === 'module' && this._shouldEagerActivate()) {
+        const subs =
+          manifest.rsk && Array.isArray(manifest.rsk.subscribe)
+            ? manifest.rsk.subscribe
+            : [];
+        for (const ns of subs) {
           // eslint-disable-next-line no-await-in-loop
-          await this.activateNamespace(ns);
+          await this.ensureNamespaceActive(ns);
         }
       }
 
       // Update metadata
       const metadata = this[EXTENSION_METADATA].get(id);
       metadata.state = ExtensionState.LOADED;
+      metadata.kind = extensionType;
       metadata.loadedAt = Date.now();
       metadata.manifest = { ...manifest };
 
       // Call extension lifecycle hook
       if (typeof ext.onLoad === 'function') {
         // eslint-disable-next-line no-underscore-dangle
-        await ext.onLoad(this._resolvedContext());
+        await ext.onLoad(this[EXTENSION_CONTEXT]);
       }
 
       if (__DEV__) {
@@ -539,12 +523,12 @@ export class BaseExtensionManager {
       // Call extension lifecycle hook
       if (ext && typeof ext.onUnload === 'function') {
         // eslint-disable-next-line no-underscore-dangle
-        await ext.onUnload(this._resolvedContext());
+        await ext.onUnload(this[EXTENSION_CONTEXT]);
       }
 
       // Unregister from registry
       // eslint-disable-next-line no-underscore-dangle
-      await registry.unregister(id, this._resolvedContext());
+      await registry.unregister(id, this[EXTENSION_CONTEXT]);
 
       // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
@@ -724,6 +708,24 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Activate a namespace only if it is not already active.
+   * Convenience wrapper around isNamespaceActive + activateNamespace.
+   * @param {string} ns - Namespace to ensure is active
+   */
+  async ensureNamespaceActive(ns) {
+    if (this.isNamespaceActive(ns)) {
+      if (__DEV__) {
+        console.log(`[ExtensionManager] Namespace already active: ${ns}`);
+      }
+      return;
+    }
+    if (__DEV__) {
+      console.log(`[ExtensionManager] Activating namespace: ${ns}`);
+    }
+    await this.activateNamespace(ns);
+  }
+
+  /**
    * Check if a namespace is loaded (at least one extension from it is registered)
    * @param {string} ns - Namespace to check
    * @returns {boolean}
@@ -736,6 +738,34 @@ export class BaseExtensionManager {
       if (registry.has(def.id)) return true;
     }
     return false;
+  }
+
+  /**
+   * Get the kind of an extension ('module' or 'plugin')
+   * @param {string} id - Extension ID
+   * @returns {string|null} 'module', 'plugin', or null if not found
+   */
+  getExtensionKind(id) {
+    const meta = this[EXTENSION_METADATA].get(id);
+    return meta ? meta.kind : null;
+  }
+
+  /**
+   * Check if an extension is module-kind (has views, eagerly activated)
+   * @param {string} id - Extension ID
+   * @returns {boolean}
+   */
+  isModuleExtension(id) {
+    return this.getExtensionKind(id) === 'module';
+  }
+
+  /**
+   * Check if an extension is plugin-kind (no views, lazily activated on route)
+   * @param {string} id - Extension ID
+   * @returns {boolean}
+   */
+  isPluginExtension(id) {
+    return this.getExtensionKind(id) === 'plugin';
   }
 
   /**
@@ -812,7 +842,7 @@ export class BaseExtensionManager {
             if (typeof def.init === 'function') {
               try {
                 // eslint-disable-next-line no-underscore-dangle
-                await def.init(reg, this._resolvedContext());
+                await def.init(reg, this[EXTENSION_CONTEXT]);
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to initialize extension ${def.id}:`,
@@ -837,7 +867,7 @@ export class BaseExtensionManager {
             if (typeof def.destroy === 'function') {
               try {
                 // eslint-disable-next-line no-underscore-dangle
-                await def.destroy(reg, this._resolvedContext());
+                await def.destroy(reg, this[EXTENSION_CONTEXT]);
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to destroy extension ${def.id}:`,

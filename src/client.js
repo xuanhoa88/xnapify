@@ -724,7 +724,7 @@ async function attemptStartup() {
 
   // Initialize extensions (Client Side)
   try {
-    await extensionManager.init({ ...context, container: () => container });
+    await extensionManager.init({ ...context, container });
   } catch (error) {
     log(`⚠️ Extension initialization failed: ${error.message}`, 'error');
     // Continue app startup even if extensions fail

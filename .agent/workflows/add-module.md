@@ -606,6 +606,8 @@ export function translations() {
 /**
  * Views hook — return [moduleName, context] tuple for view discovery.
  * The framework auto-builds the prefix adapter from the tuple.
+ * The moduleName is also used as the default namespace for extension activation
+ * (i.e. module-kind extensions auto-derive their rsk.subscribe from this value).
  *
  * @returns {Array} [moduleName, webpackContext]
  */
@@ -628,6 +630,13 @@ Frontend routes work similarly to backend routes, but use React:
 
 import { isAuthenticated, hasPermission } from '@shared/renderer/redux';
 import ModuleList from './ModuleList';
+
+/**
+ * Optional: Override the namespace used for extension activation.
+ * By default, the namespace is the route path. Set this to group
+ * multiple routes under a single extension namespace.
+ */
+// export const namespace = '{module-name}';
 
 /**
  * Middleware — permission check
@@ -956,6 +965,8 @@ Routes are discovered from `views/` using special files:
 - Verify view route exports `default` component
 - Check middleware returns `next()` for route to continue
 - Ensure Redux store is injected in `views/index.js` `providers()` hook
+- If using as an extension module, verify namespace activation — check console for `[ExtensionManager] Activating namespace:` logs
+- A `_route.js` can export `namespace` to override which namespace the route belongs to
 
 ### Database Models Missing
 

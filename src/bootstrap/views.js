@@ -129,30 +129,15 @@ export default async function initializeRouter(options = {}) {
       });
     },
     async onRouteInit(route, ctx) {
-      const ns =
-        route.workspace ||
-        (route.module && route.module.workspace) ||
-        route.moduleName ||
-        route.path;
+      const ns = (route.module && route.module.namespace) || route.path;
       const manager = ctx.extension || extension;
 
       if (ns && manager) {
-        if (!manager.isNamespaceActive(ns)) {
-          if (__DEV__) {
-            console.log(`[Router] Loading extension namespace: ${ns}`);
-          }
-          await manager.activateNamespace(ns);
-        } else if (__DEV__) {
-          console.log(`[Router] Extension namespace already loaded: ${ns}`);
-        }
+        await manager.ensureNamespaceActive(ns);
       }
     },
     async onRouteDestroy(route, ctx) {
-      const ns =
-        route.workspace ||
-        (route.module && route.module.workspace) ||
-        route.moduleName ||
-        route.path;
+      const ns = (route.module && route.module.namespace) || route.path;
       const manager = ctx.extension || extension;
 
       if (ns && manager) {
