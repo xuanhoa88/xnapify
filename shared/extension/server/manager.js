@@ -16,7 +16,7 @@ import {
   ACTIVE_EXTENSIONS,
   EXTENSION_CONTEXT,
   LOADED_VERSIONS,
-  EXTENSION_MANAGER_INIT,
+  EXTENSION_INIT,
   EXTENSION_METADATA,
 } from '../utils/BaseExtensionManager';
 
@@ -413,11 +413,11 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @returns {Promise<void>}
    */
   async _ensureReady() {
-    if (this[EXTENSION_MANAGER_INIT]) {
-      return this[EXTENSION_MANAGER_INIT];
+    if (this[EXTENSION_INIT]) {
+      return this[EXTENSION_INIT];
     }
 
-    this[EXTENSION_MANAGER_INIT] = (async () => {
+    this[EXTENSION_INIT] = (async () => {
       // Validate server context
       // eslint-disable-next-line no-underscore-dangle
       this._validateServerContext();
@@ -427,7 +427,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
     })();
 
-    return this[EXTENSION_MANAGER_INIT];
+    return this[EXTENSION_INIT];
   }
 
   /**
@@ -572,21 +572,19 @@ class ServerExtensionManager extends BaseExtensionManager {
     const extensionModule = viewModule.default || viewModule;
 
     // Inject view routes if the extension provides a views() hook
-    if (extensionModule && typeof extensionModule.views === 'function') {
-      try {
-        // eslint-disable-next-line no-underscore-dangle
-        this._injectRoutes(id, extensionModule.views(), 'views');
-      } catch (err) {
-        console.error(
-          `[ServerExtensionManager] Failed to inject view routes for ${id}:`,
-          err.message,
-        );
-        this.emit('extension:error', {
-          id,
-          error: err,
-          phase: 'view-routes',
-        });
-      }
+    try {
+      // eslint-disable-next-line no-underscore-dangle
+      this._bootstrapViewRoutes(id, extensionModule, manifest, 'views');
+    } catch (err) {
+      console.error(
+        `[ServerExtensionManager] Failed to inject view routes for ${id}:`,
+        err.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error: err,
+        phase: 'view-routes',
+      });
     }
 
     return extensionModule;
@@ -616,6 +614,7 @@ class ServerExtensionManager extends BaseExtensionManager {
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Booting API for ${id}`);
         }
+        // eslint-disable-next-line no-underscore-dangle
         await extensionApi.init(this.registry, this._resolvedContext());
         this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
       } else {

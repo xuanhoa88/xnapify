@@ -14,7 +14,7 @@
 import {
   INITIALIZED,
   EXTENSION_CONTEXT,
-  EXTENSION_MANAGER_INIT,
+  EXTENSION_INIT,
 } from '../utils/BaseExtensionManager';
 
 import clientManager from './manager';
@@ -24,7 +24,7 @@ describe('ClientExtensionManager', () => {
 
   beforeEach(async () => {
     clientManager[INITIALIZED] = false;
-    clientManager[EXTENSION_MANAGER_INIT] = null;
+    clientManager[EXTENSION_INIT] = null;
 
     mockContext = {
       fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),

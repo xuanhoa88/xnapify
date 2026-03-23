@@ -1,7 +1,7 @@
 /**
  * Posts admin listing page
  */
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 
 import format from 'date-fns/format';
 import { useTranslation } from 'react-i18next';
@@ -13,6 +13,7 @@ import Icon from '@shared/renderer/components/Icon';
 import Loader from '@shared/renderer/components/Loader';
 import Modal from '@shared/renderer/components/Modal';
 import { useRbac } from '@shared/renderer/components/Rbac';
+import { SearchableSelect } from '@shared/renderer/components/SearchableSelect';
 import Table from '@shared/renderer/components/Table';
 import Tag from '@shared/renderer/components/Tag';
 
@@ -47,47 +48,62 @@ function Posts() {
   const error = useSelector(getPostsListError);
   const deleting = useSelector(isPostDeleteLoading);
 
+  // Filter state
+  const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const deleteModalRef = useRef();
+  const [deleteTarget, setDeleteTarget] = useState(null);
   const [seoPost, setSeoPost] = useState(null);
 
   useEffect(() => {
     dispatch(
       fetchPosts({
         page: currentPage,
+        search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, statusFilter]);
+  }, [dispatch, currentPage, search, statusFilter]);
 
   const refreshPosts = useCallback(() => {
     dispatch(
       fetchPosts({
         page: currentPage,
+        search,
         status: statusFilter,
       }),
     );
-  }, [dispatch, currentPage, statusFilter]);
+  }, [dispatch, currentPage, search, statusFilter]);
+
+  // Filter handlers
+  const handleSearchChange = useCallback(value => {
+    setSearch(value);
+    setCurrentPage(1);
+  }, []);
 
   const handleStatusFilterChange = useCallback(value => {
     setStatusFilter(value);
     setCurrentPage(1);
   }, []);
 
-  const handleDelete = useCallback(post => {
-    if (deleteModalRef.current) {
-      deleteModalRef.current.open(post);
-    }
+  const handleClearAllFilters = useCallback(() => {
+    setSearch('');
+    setStatusFilter('');
+    setCurrentPage(1);
   }, []);
 
-  const handleConfirmDelete = useCallback(
-    async post => {
-      await dispatch(deletePost(post.id)).unwrap();
-      refreshPosts();
-    },
-    [dispatch, refreshPosts],
-  );
+  const hasActiveFilters = search || statusFilter;
+
+  const handleDelete = useCallback(post => {
+    setDeleteTarget(post);
+  }, []);
+
+  const handleConfirmDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    await dispatch(deletePost(deleteTarget.id)).unwrap();
+    setDeleteTarget(null);
+    refreshPosts();
+  }, [dispatch, deleteTarget, refreshPosts]);
 
   // Loading state — first fetch or loading with no data
   if (!initialized || (loading && posts.length === 0)) {
@@ -96,7 +112,7 @@ function Posts() {
         <Box.Header
           icon={<Icon name='book-open' size={24} />}
           title={t('posts:title', 'Posts')}
-          subtitle={t('posts:subtitle', 'Manage content')}
+          subtitle={t('posts:subtitle', 'Create and manage your content')}
         />
         <Loader
           variant='skeleton'
@@ -113,7 +129,7 @@ function Posts() {
         <Box.Header
           icon={<Icon name='book-open' size={24} />}
           title={t('posts:title', 'Posts')}
-          subtitle={t('posts:subtitle', 'Manage content')}
+          subtitle={t('posts:subtitle', 'Create and manage your content')}
         />
         <Table.Error
           title={t('posts:errors.load', 'Error loading posts')}
@@ -129,7 +145,7 @@ function Posts() {
       <Box.Header
         icon={<Icon name='book-open' size={24} />}
         title={t('posts:title', 'Posts')}
-        subtitle={t('posts:subtitle', 'Manage content')}
+        subtitle={t('posts:subtitle', 'Create and manage your content')}
       >
         <Button
           variant='primary'
@@ -146,24 +162,50 @@ function Posts() {
       </Box.Header>
 
       <Table.SearchBar
+        className={s.filters}
+        value={search}
+        onChange={handleSearchChange}
         placeholder={t('posts:search', 'Search posts...')}
-        value=''
-        onChange={() => {}}
       >
-        <select
-          className={s.statusFilter}
+        <SearchableSelect
+          className={s.filterSearchableSelect}
+          options={[
+            {
+              value: '',
+              label: t('posts:filter.allStatus', 'All Status'),
+            },
+            {
+              value: 'draft',
+              label: t('posts:filter.draft', 'Draft'),
+            },
+            {
+              value: 'published',
+              label: t('posts:filter.published', 'Published'),
+            },
+            {
+              value: 'archived',
+              label: t('posts:filter.archived', 'Archived'),
+            },
+          ]}
           value={statusFilter}
-          onChange={e => handleStatusFilterChange(e.target.value)}
-        >
-          <option value=''>{t('posts:filter.allStatus', 'All Status')}</option>
-          <option value='draft'>{t('posts:filter.draft', 'Draft')}</option>
-          <option value='published'>
-            {t('posts:filter.published', 'Published')}
-          </option>
-          <option value='archived'>
-            {t('posts:filter.archived', 'Archived')}
-          </option>
-        </select>
+          onChange={handleStatusFilterChange}
+          placeholder={t('posts:filter.allStatus', 'All Status')}
+          showSearch={false}
+        />
+        <div className={s.filterActions}>
+          {hasActiveFilters && (
+            <Button
+              variant='ghost'
+              size='small'
+              onClick={handleClearAllFilters}
+              type='button'
+              title={t('posts:filter.resetAll', 'Reset all filters')}
+            >
+              <Icon name='x' size={12} />
+              {t('posts:filter.clearFilters', 'Clear Filters')}
+            </Button>
+          )}
+        </div>
       </Table.SearchBar>
 
       <Table
@@ -172,10 +214,10 @@ function Posts() {
             title: t('posts:table.title', 'Title'),
             key: 'title',
             render: (_, post) => (
-              <div>
+              <div className={s.titleCell}>
                 <strong>{post.title}</strong>
                 {post.excerpt && (
-                  <div className={s.excerpt}>{post.excerpt}</div>
+                  <span className={s.excerpt}>{post.excerpt}</span>
                 )}
               </div>
             ),
@@ -185,13 +227,18 @@ function Posts() {
             key: 'status',
             render: (_, post) => {
               const variants = {
-                draft: 'default',
+                draft: 'warning',
                 published: 'success',
-                archived: 'warning',
+                archived: 'error',
+              };
+              const labels = {
+                draft: t('posts:status.draft', 'Draft'),
+                published: t('posts:status.published', 'Published'),
+                archived: t('posts:status.archived', 'Archived'),
               };
               return (
-                <Tag variant={variants[post.status] || 'default'}>
-                  {post.status}
+                <Tag variant={variants[post.status] || 'warning'}>
+                  {labels[post.status] || post.status}
                 </Tag>
               );
             },
@@ -294,18 +341,31 @@ function Posts() {
         }}
       />
 
-      <Modal.Confirm
-        ref={deleteModalRef}
-        title={t('posts:deleteConfirm.title', 'Delete Post')}
-        message={t(
-          'posts:deleteConfirm.message',
-          'Are you sure you want to delete this post? This action cannot be undone.',
-        )}
-        confirmLabel={t('posts:deleteConfirm.confirm', 'Delete')}
-        variant='danger'
-        loading={deleting}
-        onConfirm={handleConfirmDelete}
-      />
+      <Modal isOpen={!!deleteTarget} onClose={() => setDeleteTarget(null)}>
+        <Modal.Header onClose={() => setDeleteTarget(null)}>
+          {t('posts:deleteConfirm.title', 'Delete Post')}
+        </Modal.Header>
+        <Modal.Body>
+          {t(
+            'posts:deleteConfirm.message',
+            'Are you sure you want to delete this post? This action cannot be undone.',
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Modal.Actions>
+            <Modal.Button onClick={() => setDeleteTarget(null)}>
+              {t('common:cancel', 'Cancel')}
+            </Modal.Button>
+            <Modal.Button
+              variant='primary'
+              onClick={handleConfirmDelete}
+              disabled={deleting}
+            >
+              {t('posts:deleteConfirm.confirm', 'Delete')}
+            </Modal.Button>
+          </Modal.Actions>
+        </Modal.Footer>
+      </Modal>
 
       <SeoPreview
         post={seoPost}

@@ -22,8 +22,8 @@ export const EXTENSION_CONTEXT = Symbol('__rsk.extensionContext__');
 export const EXTENSION_METADATA = Symbol('__rsk.extensionMetadata__');
 export const EVENT_HANDLERS = Symbol('__rsk.extensionEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedExtensionVersions__');
+export const EXTENSION_INIT = Symbol('__rsk.extensionInit__');
 const RESOLVED_CONTEXT_CACHE = Symbol('__rsk.resolvedContextCache__');
-export const EXTENSION_MANAGER_INIT = Symbol('__rsk.extensionManagerInit__');
 
 /**
  * Extension states
@@ -58,7 +58,7 @@ export class BaseExtensionManager {
     this[EXTENSION_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
     this[LOADED_VERSIONS] = new Map(); // extensionId -> version
-    this[EXTENSION_MANAGER_INIT] = null; // initialization promise
+    this[EXTENSION_INIT] = null; // initialization promise
   }
 
   /**
@@ -236,6 +236,47 @@ export class BaseExtensionManager {
   }
 
   /**
+   * Inject view routes from an extension module that provides a views() hook.
+   *
+   * Calls views(), auto-derives the namespace from the views() tuple
+   * [moduleName, context] for module-kind extensions (so activateNamespace()
+   * can find and initialise them, e.g. inject Redux reducers), then delegates
+   * to the subclass _injectRoutes implementation.
+   *
+   * @param {string} id - Extension ID
+   * @param {Object} ext - Extension module exports
+   * @param {Object} manifest - Extension manifest (mutated in place)
+   * @param {...any} injectArgs - Extra args forwarded to _injectRoutes
+   * @returns {boolean} True if routes were injected
+   * @protected
+   */
+  _bootstrapViewRoutes(id, ext, manifest, ...injectArgs) {
+    if (!ext || typeof ext.views !== 'function') return false;
+
+    const viewsResult = ext.views();
+
+    // Auto-subscribe module namespace from [moduleName, context] tuple
+    if (
+      Array.isArray(viewsResult) &&
+      viewsResult.length === 2 &&
+      typeof viewsResult[0] === 'string'
+    ) {
+      const moduleName = viewsResult[0];
+      const rsk = manifest.rsk || {};
+      const subs = rsk.subscribe || [];
+      if (!subs.includes(moduleName)) {
+        // eslint-disable-next-line no-param-reassign
+        manifest.rsk = { ...rsk, subscribe: [...subs, moduleName] };
+      }
+    }
+
+    // eslint-disable-next-line no-underscore-dangle
+    this._injectRoutes(id, viewsResult, ...injectArgs);
+
+    return true;
+  }
+
+  /**
    * Load extension dependencies
    * @param {string} extensionId - Extension requesting dependencies
    * @param {Array<Object<string, string>>} dependencies - Array of dependency IDs
@@ -410,8 +451,26 @@ export class BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       await registry.defineExtension(ext, this._resolvedContext(), manifest);
 
-      // Extension activation (init/destroy) is deferred to activateNamespace.
-      // loadExtension only fetches, validates, and defines.
+      // Module-kind extensions auto-subscribe to a namespace derived from
+      // their views() hook. Activate these eagerly so init() runs immediately
+      // (injecting Redux reducers and registering sidebar menus) rather than
+      // waiting for route-based activateNamespace which creates a
+      // chicken-and-egg problem (menu invisible → can't navigate → can't activate).
+      const subs =
+        manifest.rsk && Array.isArray(manifest.rsk.subscribe)
+          ? manifest.rsk.subscribe
+          : [];
+      for (const ns of subs) {
+        if (!this.isNamespaceActive(ns)) {
+          if (__DEV__) {
+            console.log(
+              `[ExtensionManager] Eagerly activating namespace: ${ns}`,
+            );
+          }
+          // eslint-disable-next-line no-await-in-loop
+          await this.activateNamespace(ns);
+        }
+      }
 
       // Update metadata
       const metadata = this[EXTENSION_METADATA].get(id);
@@ -1075,7 +1134,7 @@ export class BaseExtensionManager {
       this[EXTENSION_METADATA].clear();
       this[LOADED_VERSIONS].clear();
       this[INITIALIZED] = false;
-      this[EXTENSION_MANAGER_INIT] = null;
+      this[EXTENSION_INIT] = null;
 
       await this.syncExtensions();
     }
@@ -1110,7 +1169,7 @@ export class BaseExtensionManager {
     this[LOADED_VERSIONS].clear();
     this[EXTENSION_CONTEXT] = null;
     this[INITIALIZED] = false;
-    this[EXTENSION_MANAGER_INIT] = null;
+    this[EXTENSION_INIT] = null;
 
     await this.emit('manager:destroyed');
 

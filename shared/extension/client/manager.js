@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+
+
 import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
 
 import {
@@ -12,7 +14,7 @@ import {
   ACTIVE_EXTENSIONS,
   EXTENSION_CONTEXT,
   EXTENSION_METADATA,
-  EXTENSION_MANAGER_INIT,
+  EXTENSION_INIT,
 } from '../utils/BaseExtensionManager';
 
 // Private symbols
@@ -271,11 +273,11 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @returns {Promise<void>}
    */
   async _ensureReady() {
-    if (this[EXTENSION_MANAGER_INIT]) {
-      return this[EXTENSION_MANAGER_INIT];
+    if (this[EXTENSION_INIT]) {
+      return this[EXTENSION_INIT];
     }
 
-    this[EXTENSION_MANAGER_INIT] = (async () => {
+    this[EXTENSION_INIT] = (async () => {
       // Verify shared scope is available
       // eslint-disable-next-line no-undef
       if (
@@ -304,7 +306,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       }
     })();
 
-    return this[EXTENSION_MANAGER_INIT];
+    return this[EXTENSION_INIT];
   }
 
   /**
@@ -427,16 +429,14 @@ class ClientExtensionManager extends BaseExtensionManager {
       const ext = extensionModule.default || extensionModule;
 
       // Inject view routes if the extension provides a views() hook
-      if (ext && typeof ext.views === 'function') {
-        try {
-          // eslint-disable-next-line no-underscore-dangle
-          this._injectRoutes(id, ext.views());
-        } catch (err) {
-          console.error(
-            `[ClientExtensionManager] Failed to inject view routes for ${id}:`,
-            err.message,
-          );
-        }
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        this._bootstrapViewRoutes(id, ext, manifest);
+      } catch (err) {
+        console.error(
+          `[ClientExtensionManager] Failed to inject view routes for ${id}:`,
+          err.message,
+        );
       }
 
       if (__DEV__) {

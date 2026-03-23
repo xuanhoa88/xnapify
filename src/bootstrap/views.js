@@ -132,6 +132,7 @@ export default async function initializeRouter(options = {}) {
       const ns =
         route.workspace ||
         (route.module && route.module.workspace) ||
+        route.moduleName ||
         route.path;
       const manager = ctx.extension || extension;
 
@@ -150,6 +151,7 @@ export default async function initializeRouter(options = {}) {
       const ns =
         route.workspace ||
         (route.module && route.module.workspace) ||
+        route.moduleName ||
         route.path;
       const manager = ctx.extension || extension;
 

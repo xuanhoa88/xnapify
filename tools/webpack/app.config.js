@@ -118,6 +118,7 @@ function createStatsWriterPlugin() {
           };
 
           const outPath = path.join(config.BUILD_DIR, 'stats.json');
+          fs.mkdirSync(path.dirname(outPath), { recursive: true });
           fs.writeFileSync(outPath, JSON.stringify(output, null, 2));
         } catch (err) {
           // Surface the error without silently swallowing it — a missing or

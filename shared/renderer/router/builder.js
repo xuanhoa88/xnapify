@@ -111,6 +111,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
 
     routeMap.set(pathname, {
       module, // Preserve module for register/unregister lifecycle
+      moduleName, // Preserve for extension namespace resolution
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedLayouts),
       // Lifecycle hooks: init (config + route), mount/unmount (both)
