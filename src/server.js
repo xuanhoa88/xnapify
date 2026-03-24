@@ -59,8 +59,6 @@ const SERVER_CONFIG = Object.freeze({
   nodeEnv: process.env.NODE_ENV || 'development',
   port: validatePort(process.env.RSK_PORT, 1337),
   host: process.env.RSK_HOST || '127.0.0.1',
-  wsPath: formatUrlPath(process.env.RSK_WS_PATH || 'ws'),
-  apiPrefix: formatUrlPath(process.env.RSK_API_PREFIX || 'api'),
 
   enableCompression: process.env.RSK_COMPRESSION !== 'false',
   compressionLevel: parseInt(
@@ -128,10 +126,6 @@ async function sanitizeHost(host) {
 
   // '127.0.0.1' returned as-is
   return host;
-}
-
-function formatUrlPath(urlPath) {
-  return ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
 }
 
 function promiseWithDeadline(promise, timeoutMs, operationName) {
@@ -252,6 +246,9 @@ const appState = {
     ttl: SERVER_CONFIG.localeCacheTTL,
   }),
   ssrResourcesPromise: null,
+  ssrRetryCount: 0,
+  extensionSyncPromise: null,
+  youchMod: null,
   wsServer: null,
   nodeRED: new NodeRedManager(),
   onExtensionRefreshed: null,
@@ -261,7 +258,18 @@ function invalidateCaches() {
   appState.localeCache.clear();
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;
+  appState.extensionSyncPromise = null;
   if (__DEV__) console.log('🗑️  Caches cleared');
+}
+
+function ensureExtensionSync() {
+  if (!appState.extensionSyncPromise) {
+    appState.extensionSyncPromise = extensionManager.sync().catch(err => {
+      console.warn('⚠️  Extension sync failed:', err.message);
+      appState.extensionSyncPromise = null;
+    });
+  }
+  return appState.extensionSyncPromise;
 }
 
 function computeSsrKey(req, baseUrl, locale, authHeader) {
@@ -352,6 +360,9 @@ async function createReduxStore({ fetch, history, locale }, options = {}) {
 }
 
 async function loadSsrResources$() {
+  const formatUrlPath = urlPath =>
+    ('/' + urlPath).replace(/\/+/g, '/').replace(/\/$/, '');
+
   const normaliseEntry = entry => {
     if (typeof entry === 'string') return formatUrlPath(entry);
     if (entry && typeof entry === 'object') {
@@ -456,6 +467,9 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
 function makeSsrMiddleware(baseUrl) {
   return async (req, res, next) => {
     if (res.headersSent) return;
+
+    // API requests should never be SSR-rendered — pass to error handler
+    if (req.path.startsWith('/api/')) return next();
 
     const startTime = Date.now();
 
@@ -681,9 +695,12 @@ function makeErrorMiddleware() {
       ...(__DEV__ && err.stack ? { stack: err.stack } : {}),
     });
 
-    if (appState.youch && appState.youch.default) {
+    if (__DEV__ && !req.path.startsWith('/api')) {
       try {
-        const { default: Youch } = appState.youch;
+        if (!appState.youchMod) {
+          appState.youchMod = await import('youch');
+        }
+        const { default: Youch } = appState.youchMod;
         const youch = new Youch(err, {
           method: req.method,
           url: req.url,
@@ -757,9 +774,12 @@ async function listen(server, baseUrl, port, host) {
     });
   }
 
-  // Extensions: now that the server is reachable via HTTP, load all
-  // active extensions (their API modules self-fetch /api/extensions).
-  await Promise.all([appState.nodeRED.start(), extensionManager.sync()]);
+  // Start Node-RED and sync extensions now that the server is reachable.
+  // Uses ensureExtensionSync() so the lazy middleware in bootstrapApp
+  // sees the same resolved promise (avoids duplicate sync).
+  // During HMR, listen() is not re-called — the lazy middleware
+  // handles re-sync because invalidateCaches() resets the flag.
+  await Promise.all([appState.nodeRED.start(), ensureExtensionSync()]);
 
   const separator = '='.repeat(60);
   const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
@@ -775,8 +795,8 @@ async function listen(server, baseUrl, port, host) {
     }`,
   );
   console.info(`Base URL      : ${baseUrl}`);
-  console.info(`API URL       : ${baseUrl}${SERVER_CONFIG.apiPrefix}`);
-  console.info(`WebSocket URL : ${wsUrl}${SERVER_CONFIG.wsPath}`);
+  console.info(`API URL       : ${baseUrl}/api`);
+  console.info(`WebSocket URL : ${wsUrl}/ws`);
   const nodeRedRoot = appState.nodeRED.settings
     ? appState.nodeRED.settings.httpAdminRoot
     : '/~/red/admin';
@@ -796,11 +816,6 @@ export function createServer({ express: expressMod, http: httpMod }) {
 }
 
 export async function bootstrapApp(app, server, options = {}) {
-  // Youch is only available in dev mode
-  if (__DEV__) {
-    appState.youch = await import('youch').catch(() => null);
-  }
-
   const {
     static: staticMiddleware,
     port = SERVER_CONFIG.port,
@@ -827,6 +842,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // Core DI container — the only provider stored on Express settings
   const container = new Container();
 
+  // Register core services
   container.instance('cwd', SERVER_CONFIG.cwd);
   container.instance('env', SERVER_CONFIG.nodeEnv);
   container.instance('jwt', configureJwt());
@@ -836,7 +852,7 @@ export async function bootstrapApp(app, server, options = {}) {
   // WebSocket
   appState.wsServer = createWebSocketServer(
     {
-      path: SERVER_CONFIG.wsPath,
+      path: '/ws',
       enableLogging: !__DEV__,
       onAuthentication: token =>
         validateWsToken(container.resolve('jwt'), token),
@@ -934,7 +950,7 @@ export async function bootstrapApp(app, server, options = {}) {
 
   // Request timeout
   app.use((req, res, next) => {
-    const timeout = req.path.startsWith(SERVER_CONFIG.apiPrefix)
+    const timeout = req.path.startsWith('/api')
       ? SERVER_TIMEOUTS.API_REQUEST
       : SERVER_TIMEOUTS.SSR_REQUEST;
 
@@ -965,11 +981,10 @@ export async function bootstrapApp(app, server, options = {}) {
   // API routes
   const api = await import('./bootstrap/api');
   const apiRouter = await api.default(app, extensionManager);
-  app.use(SERVER_CONFIG.apiPrefix, apiRouter);
+  app.use('/api', apiRouter);
 
   // Initialize extensions AFTER API routes are mounted so connectApiRouter
-  // can store the router ref. sync() is called separately in
-  // listen() after the HTTP server is bound.
+  // can store the router ref.
   try {
     await extensionManager.init(
       createFetch(nodeFetch, {
@@ -986,13 +1001,20 @@ export async function bootstrapApp(app, server, options = {}) {
     }
   }
 
+  // Lazy extension sync: after HMR, listen() is not re-called, so the
+  // first request triggers ensureExtensionSync() as a fallback.
+  app.use(async (_req, _res, next) => {
+    await ensureExtensionSync();
+    next();
+  });
+
   // Node-RED
   await appState.nodeRED.init(app, server, {
     ...SERVER_CONFIG,
     port,
     host: resolvedHost,
     functionGlobalContext: {
-      container: () => app.get('container'),
+      container: () => container,
       fetch: () =>
         createFetch(nodeFetch, {
           defaults: {
@@ -1003,7 +1025,7 @@ export async function bootstrapApp(app, server, options = {}) {
   });
 
   // Node-RED API proxy
-  await appState.nodeRED.setupApiProxy(app, SERVER_CONFIG.apiPrefix);
+  await appState.nodeRED.setupApiProxy(app, '/api');
 
   // SSR catch-all
   app.get('*', makeSsrMiddleware(baseUrl));
@@ -1126,7 +1148,7 @@ if (module.hot) {
 
       const extensionIds = Array.isArray(msg.extensions) ? msg.extensions : [];
 
-      console.log(`🔌 Refreshing all extensions'}...`);
+      console.log('🔌 Refreshing all extensions...');
 
       isRefreshingExtensions = true;
 
@@ -1142,7 +1164,7 @@ if (module.hot) {
         const duration = Date.now() - start;
         console.log(`✅ Extensions refreshed in ${duration}ms`);
       } catch (err) {
-        console.error(`❌ Failed to refresh extensions'}:`, err.message);
+        console.error('❌ Failed to refresh extensions:', err.message);
       } finally {
         isRefreshingExtensions = false;
       }

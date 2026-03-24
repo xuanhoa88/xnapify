@@ -486,14 +486,14 @@ export class BaseExtensionManager {
           manifest.rsk && Array.isArray(manifest.rsk.subscribe)
             ? manifest.rsk.subscribe
             : [];
-        for (const ns of subs) {
-          try {
-            // eslint-disable-next-line no-await-in-loop
-            await this.ensureNamespaceActive(ns);
-          } catch (nsError) {
+        const results = await Promise.allSettled(
+          subs.map(ns => this.ensureNamespaceActive(ns)),
+        );
+        for (let i = 0; i < results.length; i++) {
+          if (results[i].status === 'rejected') {
             console.warn(
-              `[ExtensionManager] Namespace "${ns}" activation failed for ${id}:`,
-              nsError.message,
+              `[ExtensionManager] Namespace "${subs[i]}" activation failed for ${id}:`,
+              results[i].reason.message,
             );
           }
         }
@@ -853,93 +853,109 @@ export class BaseExtensionManager {
         );
       }
 
-      for (const def of extensions) {
-        if (this[ACTIVE_EXTENSIONS].has(def.id)) {
-          if (__DEV__) {
-            console.log(
-              `[ExtensionManager] Extension "${def.id}" is already active. Skipping component registration.`,
-            );
-          }
-          continue;
-        }
-
-        if (__DEV__) {
-          console.log(
-            `[ExtensionManager] Loading extension from namespace: ${def.id}`,
-          );
-        }
-
-        // Wrap init/destroy for the standard register method
-        const extInstance = {
-          ...def,
-          init: async reg => {
+      const results = await Promise.allSettled(
+        Array.from(extensions)
+          .filter(def => {
+            if (this[ACTIVE_EXTENSIONS].has(def.id)) {
+              if (__DEV__) {
+                console.log(
+                  `[ExtensionManager] Extension "${def.id}" is already active. Skipping component registration.`,
+                );
+              }
+              return false;
+            }
+            return true;
+          })
+          .map(async def => {
             if (__DEV__) {
               console.log(
-                `[ExtensionManager] Initializing extension: ${def.id}`,
+                `[ExtensionManager] Loading extension from namespace: ${def.id}`,
               );
             }
 
-            // Auto-register translations before init if extension exports translations()
-            if (typeof def.translations === 'function') {
-              try {
-                const translations = getTranslations(def.translations());
-                if (Object.keys(translations).length > 0) {
-                  addNamespace(`extension:${def.id}`, translations);
+            // Wrap init/destroy for the standard register method
+            const extInstance = {
+              ...def,
+              init: async reg => {
+                if (__DEV__) {
+                  console.log(
+                    `[ExtensionManager] Initializing extension: ${def.id}`,
+                  );
                 }
-              } catch (error) {
-                console.error(
-                  `[ExtensionManager] Failed to register translations for ${def.id}:`,
-                  error,
-                );
-              }
-            }
 
-            if (typeof def.init === 'function') {
-              try {
-                // eslint-disable-next-line no-underscore-dangle
-                await def.init(reg, this._hookContext());
-              } catch (error) {
-                console.error(
-                  `[ExtensionManager] Failed to initialize extension ${def.id}:`,
-                  error,
-                );
-                await this.emit('extension:init-error', {
-                  id: def.id,
-                  error,
-                  phase: 'init',
-                });
-              }
-            }
-          },
-          destroy: async reg => {
-            if (__DEV__) {
-              console.log(`[ExtensionManager] Destroying extension: ${def.id}`);
-            }
-            if (typeof def.destroy === 'function') {
-              try {
-                // eslint-disable-next-line no-underscore-dangle
-                await def.destroy(reg, this._hookContext());
-              } catch (error) {
-                console.error(
-                  `[ExtensionManager] Failed to destroy extension ${def.id}:`,
-                  error,
-                );
-                await this.emit('extension:destroy-error', {
-                  id: def.id,
-                  error,
-                  phase: 'destroy',
-                });
-              }
-            }
-          },
-        };
+                // Auto-register translations before init if extension exports translations()
+                if (typeof def.translations === 'function') {
+                  try {
+                    const translations = getTranslations(def.translations());
+                    if (Object.keys(translations).length > 0) {
+                      addNamespace(`extension:${def.id}`, translations);
+                    }
+                  } catch (error) {
+                    console.error(
+                      `[ExtensionManager] Failed to register translations for ${def.id}:`,
+                      error,
+                    );
+                  }
+                }
 
-        await registry.register(def.id, extInstance);
-        this[ACTIVE_EXTENSIONS].set(def.id, extInstance);
+                if (typeof def.init === 'function') {
+                  try {
+                    // eslint-disable-next-line no-underscore-dangle
+                    await def.init(reg, this._hookContext());
+                  } catch (error) {
+                    console.error(
+                      `[ExtensionManager] Failed to initialize extension ${def.id}:`,
+                      error,
+                    );
+                    await this.emit('extension:init-error', {
+                      id: def.id,
+                      error,
+                      phase: 'init',
+                    });
+                  }
+                }
+              },
+              destroy: async reg => {
+                if (__DEV__) {
+                  console.log(
+                    `[ExtensionManager] Destroying extension: ${def.id}`,
+                  );
+                }
+                if (typeof def.destroy === 'function') {
+                  try {
+                    // eslint-disable-next-line no-underscore-dangle
+                    await def.destroy(reg, this._hookContext());
+                  } catch (error) {
+                    console.error(
+                      `[ExtensionManager] Failed to destroy extension ${def.id}:`,
+                      error,
+                    );
+                    await this.emit('extension:destroy-error', {
+                      id: def.id,
+                      error,
+                      phase: 'destroy',
+                    });
+                  }
+                }
+              },
+            };
 
-        // Transition metadata state to ACTIVE
-        const meta = this[EXTENSION_METADATA].get(def.id);
-        if (meta) meta.state = ExtensionState.ACTIVE;
+            await registry.register(def.id, extInstance);
+            this[ACTIVE_EXTENSIONS].set(def.id, extInstance);
+
+            // Transition metadata state to ACTIVE
+            const meta = this[EXTENSION_METADATA].get(def.id);
+            if (meta) meta.state = ExtensionState.ACTIVE;
+          }),
+      );
+
+      for (const r of results) {
+        if (r.status === 'rejected') {
+          console.error(
+            `[ExtensionManager] Extension registration failed in "${ns}":`,
+            r.reason,
+          );
+        }
       }
 
       if (__DEV__) {
@@ -975,10 +991,21 @@ export class BaseExtensionManager {
       const extensions = registry.getDefinitions(ns);
       if (!extensions) return;
 
-      for (const def of extensions) {
-        // eslint-disable-next-line no-underscore-dangle
-        await registry.unregister(def.id, this._hookContext());
-        this[ACTIVE_EXTENSIONS].delete(def.id);
+      const results = await Promise.allSettled(
+        Array.from(extensions).map(async def => {
+          // eslint-disable-next-line no-underscore-dangle
+          await registry.unregister(def.id, this._hookContext());
+          this[ACTIVE_EXTENSIONS].delete(def.id);
+        }),
+      );
+
+      for (const r of results) {
+        if (r.status === 'rejected') {
+          console.error(
+            `[ExtensionManager] Extension unregistration failed in "${ns}":`,
+            r.reason,
+          );
+        }
       }
 
       if (__DEV__) {
