@@ -7,4 +7,4 @@
 
 export { default as ExtensionSlot } from './ExtensionSlot';
 export * from './useExtension';
-export { default } from './manager';
+export { default } from './ExtensionManager';

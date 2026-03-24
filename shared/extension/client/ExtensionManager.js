@@ -114,7 +114,7 @@ class ClientExtensionManager extends BaseExtensionManager {
   _resolveRouter() {
     const ctx = this[EXTENSION_CONTEXT];
     try {
-      return ctx.container().resolve('viewRouter');
+      return ctx.container.resolve('viewRouter');
     } catch {
       return null;
     }
@@ -431,7 +431,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Inject view routes if the extension provides a views() hook
       try {
         // eslint-disable-next-line no-underscore-dangle
-        this._bootstrapViewRoutes(id, ext, manifest);
+        this._injectViewRoutes(id, ext, manifest);
       } catch (err) {
         console.error(
           `[ClientExtensionManager] Failed to inject view routes for ${id}:`,

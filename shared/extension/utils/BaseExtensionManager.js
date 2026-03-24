@@ -23,7 +23,6 @@ export const EXTENSION_METADATA = Symbol('__rsk.extensionMetadata__');
 export const EVENT_HANDLERS = Symbol('__rsk.extensionEventHandlers__');
 export const LOADED_VERSIONS = Symbol('__rsk.loadedExtensionVersions__');
 export const EXTENSION_INIT = Symbol('__rsk.extensionInit__');
-const RESOLVED_CONTEXT_CACHE = Symbol('__rsk.resolvedContextCache__');
 
 /**
  * Extension states
@@ -127,7 +126,6 @@ export class BaseExtensionManager {
 
     // Update context for the current request/navigation
     this[EXTENSION_CONTEXT] = context;
-    this[RESOLVED_CONTEXT_CACHE] = null;
 
     // Singleton pattern: Skip re-initialization if already initialized
     // This prevents redundant extension loading on subsequent calls (e.g., per-request on server)
@@ -231,7 +229,7 @@ export class BaseExtensionManager {
    * @returns {boolean} True if routes were injected
    * @protected
    */
-  _bootstrapViewRoutes(id, ext, manifest, ...injectArgs) {
+  _injectViewRoutes(id, ext, manifest, ...injectArgs) {
     if (!ext || typeof ext.views !== 'function') return false;
 
     const viewsResult = ext.views();

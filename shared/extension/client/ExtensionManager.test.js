@@ -17,7 +17,7 @@ import {
   EXTENSION_INIT,
 } from '../utils/BaseExtensionManager';
 
-import clientManager from './manager';
+import clientManager from './ExtensionManager';
 
 describe('ClientExtensionManager', () => {
   let mockContext;
@@ -247,7 +247,7 @@ describe('ClientExtensionManager', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       clientManager[EXTENSION_CONTEXT] = {
-        container: () => ({ resolve: () => mockRouter }),
+        container: { resolve: () => mockRouter },
       };
 
       // eslint-disable-next-line no-underscore-dangle
@@ -260,7 +260,7 @@ describe('ClientExtensionManager', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       clientManager[EXTENSION_CONTEXT] = {
-        container: () => ({ resolve: () => mockRouter }),
+        container: { resolve: () => mockRouter },
       };
 
       // Inject routes first
@@ -288,7 +288,7 @@ describe('ClientExtensionManager', () => {
       };
 
       clientManager[EXTENSION_CONTEXT] = {
-        container: () => ({ resolve: () => mockRouter }),
+        container: { resolve: () => mockRouter },
       };
 
       // Mock the container loading process

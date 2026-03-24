@@ -14,7 +14,7 @@ import {
 } from '../utils/BaseExtensionManager';
 import { registry } from '../utils/Registry';
 
-import serverManager from './manager';
+import serverManager from './ExtensionManager';
 
 // Mock Registry
 jest.mock('../utils/Registry', () => ({

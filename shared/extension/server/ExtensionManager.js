@@ -120,7 +120,7 @@ class ServerExtensionManager extends BaseExtensionManager {
   _resolveFromContainer(key) {
     const ctx = this[EXTENSION_CONTEXT];
     try {
-      return ctx.container().resolve(key);
+      return ctx.container.resolve(key);
     } catch {
       return null;
     }
@@ -558,13 +558,16 @@ class ServerExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Load the View (browser) module and inject view routes.
+   * Load the extension module from the SSR bundle and inject view routes.
+   * On the server, `server.js` is the full extension definition (init, destroy,
+   * views, slots, hooks) built from the browser entry point.
+   *
    * @param {string} id - Extension ID
    * @param {Object} manifest - Extension manifest
-   * @returns {Object|null} View module exports or null
+   * @returns {Object|null} Extension module exports or null
    * @private
    */
-  _bootstrapViewModule(id, manifest) {
+  _loadViewModule(id, manifest) {
     if (!manifest || !manifest.browser) return null;
 
     // eslint-disable-next-line no-underscore-dangle
@@ -584,7 +587,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Inject view routes if the extension provides a views() hook
     try {
       // eslint-disable-next-line no-underscore-dangle
-      this._bootstrapViewRoutes(id, extensionModule, manifest, 'views');
+      this._injectViewRoutes(id, extensionModule, manifest, 'views');
     } catch (err) {
       console.error(
         `[ServerExtensionManager] Failed to inject view routes for ${id}:`,
@@ -606,7 +609,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @param {Object} manifest - Extension manifest
    * @private
    */
-  async _bootstrapApiModule(id, manifest) {
+  async _loadApiModule(id, manifest) {
     if (!manifest || !manifest.main) return;
 
     // eslint-disable-next-line no-underscore-dangle
@@ -695,13 +698,13 @@ class ServerExtensionManager extends BaseExtensionManager {
     const startTime = Date.now();
 
     try {
-      // 1. Load view module (if browser entry exists)
+      // 1. Load extension module (if browser entry exists)
       // eslint-disable-next-line no-underscore-dangle
-      const extensionModule = this._bootstrapViewModule(id, manifest);
+      const viewModule = this._loadViewModule(id, manifest);
 
-      // 2. Boot API module (init + routes)
+      // 2. Load API module (init + routes)
       // eslint-disable-next-line no-underscore-dangle
-      await this._bootstrapApiModule(id, manifest);
+      await this._loadApiModule(id, manifest);
 
       // Track version
       this[LOADED_VERSIONS].set(id, currentVersion);
@@ -720,7 +723,7 @@ class ServerExtensionManager extends BaseExtensionManager {
       }
 
       // Return view module, or synthetic object for API-only extensions
-      if (extensionModule) return extensionModule;
+      if (viewModule) return viewModule;
       if (entryPoint === 'api.js') {
         return { name: id, version: currentVersion, register: () => [] };
       }
