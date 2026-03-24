@@ -12,8 +12,6 @@ import reducer, { SLICE_NAME } from '../redux';
 
 import Posts from './Posts';
 
-export const namespace = 'posts';
-
 export const middleware = requirePermission('posts:read');
 
 /**

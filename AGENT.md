@@ -177,7 +177,7 @@ The application uses an auto-discovery system for both API modules and page comp
 - **Store Configuration:** `shared/renderer/redux/configureStore.js`
 - **Middleware:** Redux Logger (dev only), custom middleware for async actions
 - **Helpers:** Store receives `fetch`, `history`, `i18n` as extra arguments
-- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `views/index.js` `providers()` hook
+- **Dynamic Injection:** Use `store.injectReducer(SLICE_NAME, reducer)` in module `_route.js` `init({ store })` hook
 
 ### 5. Authentication & Authorization
 
@@ -564,7 +564,7 @@ export default PostsList;
 | `middleware`      | Permission checks, redirects | Before rendering     |
 | `getInitialProps` | Data fetching, page metadata | Before rendering     |
 
-> **Note:** Redux reducer injection (`store.injectReducer`) is handled in `views/index.js` `providers()` hook, not in `_route.js`.
+> **Note:** Redux reducer injection (`store.injectReducer`) should be handled in `_route.js` `init({ store })` hook to ensure lazy loading, rather than in `views/index.js` `providers()` hook.
 
 ### 5. API Module Structure
 

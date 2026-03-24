@@ -12,9 +12,18 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
+import reducer, { SLICE_NAME } from '../redux';
+
 import Permissions from './Permissions';
 
 export const middleware = requirePermission('permissions:read');
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
 
 /**
  * Register menu item for this route

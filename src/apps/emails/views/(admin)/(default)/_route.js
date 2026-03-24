@@ -7,12 +7,22 @@
 
 import { addBreadcrumb } from '@shared/renderer/redux';
 
+import reducer, { SLICE_NAME } from '../redux';
+
 /**
  * Admin index route - redirects to dashboard
  */
 export function middleware() {
   return { redirect: '/admin/emails/templates' };
 }
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
+
 /**
  * Mount function - reset breadcrumbs for admin routes
  * Runs on every admin route navigation to reset breadcrumbs

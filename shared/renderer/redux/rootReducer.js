@@ -11,7 +11,7 @@ import ui from './features/ui';
 import user from './features/user';
 
 // Note: admin reducers are dynamically injected by page modules
-// via store.injectReducer() in their views/index.js providers() hook
+// via store.injectReducer() in their _route.js init() hook
 
 // Export as object for dynamic injection in configureStore
 export default {

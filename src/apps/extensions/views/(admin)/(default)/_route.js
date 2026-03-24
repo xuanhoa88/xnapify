@@ -13,9 +13,16 @@ import {
 } from '@shared/renderer/redux';
 
 import Extensions from './Extensions';
+import reducer, { SLICE_NAME } from './redux';
 
-// Protect route with 'extensions:read' permission
 export const middleware = requirePermission('extensions:read');
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
 
 /**
  * Register menu item for this route

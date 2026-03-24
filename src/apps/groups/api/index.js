@@ -8,7 +8,7 @@
 import { SEED_GROUPS } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('groups');
+const OWNER_KEY = Symbol('groups:api');
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(

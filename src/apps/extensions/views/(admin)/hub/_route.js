@@ -9,6 +9,7 @@ import { requirePermission } from '@shared/renderer/components/Rbac';
 import { addBreadcrumb } from '@shared/renderer/redux';
 
 import Hub from './Hub';
+import hubReducer, { SLICE_NAME as HUB_SLICE_NAME } from './redux';
 
 // Load translations
 const translationsContext = require.context(
@@ -17,8 +18,14 @@ const translationsContext = require.context(
   /\.json$/i,
 );
 
-// Protect route with 'extensions:read' permission
 export const middleware = requirePermission('extensions:read');
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(HUB_SLICE_NAME, hubReducer);
+}
 
 /**
  * Translations hook — returns the webpack require.context for this module's translations.

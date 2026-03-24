@@ -5,9 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
+
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('emails:views');
 
 // Auto-load view routes via require.context
 const viewsContext = require.context(
@@ -37,11 +39,12 @@ function log(phase) {
  * Providers hook — called during view bootstrap to share
  * client-side services/state with other view modules.
  */
-export function providers({ container, store }) {
-  // Inject Redux reducer
-  store.injectReducer(SLICE_NAME, reducer);
-
-  container.bind('emails:admin:state', () => ({ selectors, thunks }), true);
+export function providers({ container }) {
+  container.bind(
+    'emails:admin:state',
+    () => ({ selectors, thunks }),
+    OWNER_KEY,
+  );
 }
 
 /**

@@ -8,7 +8,7 @@
 import { SEED_PERMISSIONS } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('files');
+const OWNER_KEY = Symbol('files:api');
 
 // Auto-load migrations
 const migrationsContext = require.context(

@@ -12,6 +12,8 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
+import reducer, { SLICE_NAME } from '../redux';
+
 import Files from './Files';
 
 // Load translations
@@ -21,12 +23,14 @@ const translationsContext = require.context(
   /\.json$/i,
 );
 
-/**
- * Middleware hook — returns the middleware for this module.
- *
- * @returns {function} Middleware function
- */
 export const middleware = requirePermission('files:read');
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
 
 /**
  * Translations hook — returns the webpack require.context for this module's translations.

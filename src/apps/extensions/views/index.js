@@ -5,9 +5,6 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, { SLICE_NAME } from './(admin)/(default)/redux';
-import hubReducer, { SLICE_NAME as HUB_SLICE_NAME } from './(admin)/hub/redux';
-
 // Auto-load view routes via require.context
 // Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
 const viewsContext = require.context(
@@ -29,18 +26,6 @@ const TAG = 'Extensions';
  */
 function log(phase) {
   console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-// =============================================================================
-// PUBLIC LIFECYCLE HOOKS
-// =============================================================================
-
-/**
- * Providers hook — inject Redux reducers at bootstrap time.
- */
-export function providers({ store }) {
-  store.injectReducer(SLICE_NAME, reducer);
-  store.injectReducer(HUB_SLICE_NAME, hubReducer);
 }
 
 /**

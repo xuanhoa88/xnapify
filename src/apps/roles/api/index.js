@@ -8,7 +8,7 @@
 import { SEED_ROLES } from './constants';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('roles');
+const OWNER_KEY = Symbol('roles:api');
 
 // Auto-load migrations via require.context
 const migrationsContext = require.context(

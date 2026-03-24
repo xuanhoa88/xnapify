@@ -5,9 +5,11 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import reducer, { SLICE_NAME } from './(admin)/redux';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
+
+/** @type {Symbol} Ownership key for this module's persistent bindings */
+const OWNER_KEY = Symbol('permissions:views');
 
 // Auto-load view routes via require.context
 // Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
@@ -42,15 +44,12 @@ function log(phase) {
  *
  * @param {Object} context - Shared context (e.g., container, extension)
  */
-export function providers({ container, store }) {
-  // Inject Redux reducer
-  store.injectReducer(SLICE_NAME, reducer);
-
+export function providers({ container }) {
   // Bind admin state
   container.bind(
     'permissions:admin:state',
     () => ({ selectors, thunks }),
-    true,
+    OWNER_KEY,
   );
 }
 

@@ -13,7 +13,7 @@ import { registerActivityHooks } from './hooks';
 import getActivityWorkerPool from './workers';
 
 /** @type {Symbol} Ownership key for this module's persistent bindings */
-const OWNER_KEY = Symbol('activities');
+const OWNER_KEY = Symbol('activities:api');
 
 // Auto-load contexts
 const migrationsContext = require.context(

@@ -16,9 +16,18 @@ import {
   unregisterMenu,
 } from '@shared/renderer/redux';
 
+import reducer, { SLICE_NAME } from '../redux';
+
 import ActivityList from './ActivityList';
 
 export const middleware = requirePermission('activities:read');
+
+/**
+ * Route init — inject Redux reducer into the store.
+ */
+export function init({ store }) {
+  store.injectReducer(SLICE_NAME, reducer);
+}
 
 /**
  * Register menu item

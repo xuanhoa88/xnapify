@@ -134,7 +134,7 @@ function Tab({ children, id, icon, disabled, className }) {
       aria-controls={`panel-${id}`}
       id={`tab-${id}`}
       tabIndex={isActive ? 0 : -1}
-      className={clsx(s.tab, {
+      className={clsx(s.tab, className, {
         [s.tabActive]: isActive,
         [s.tabDisabled]: disabled,
       })}
