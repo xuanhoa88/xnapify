@@ -247,10 +247,9 @@ const appState = {
   }),
   ssrResourcesPromise: null,
   ssrRetryCount: 0,
-  extensionSyncPromise: null,
-  youchMod: null,
+  youch: null,
   wsServer: null,
-  nodeRED: new NodeRedManager(),
+  nodeRed: new NodeRedManager(),
   onExtensionRefreshed: null,
 };
 
@@ -258,18 +257,7 @@ function invalidateCaches() {
   appState.localeCache.clear();
   appState.ssrCache.clear();
   appState.ssrResourcesPromise = null;
-  appState.extensionSyncPromise = null;
   if (__DEV__) console.log('🗑️  Caches cleared');
-}
-
-function ensureExtensionSync() {
-  if (!appState.extensionSyncPromise) {
-    appState.extensionSyncPromise = extensionManager.sync().catch(err => {
-      console.warn('⚠️  Extension sync failed:', err.message);
-      appState.extensionSyncPromise = null;
-    });
-  }
-  return appState.extensionSyncPromise;
 }
 
 function computeSsrKey(req, baseUrl, locale, authHeader) {
@@ -697,10 +685,10 @@ function makeErrorMiddleware() {
 
     if (__DEV__ && !req.path.startsWith('/api')) {
       try {
-        if (!appState.youchMod) {
-          appState.youchMod = await import('youch');
+        if (!appState.youch) {
+          appState.youch = await import('youch');
         }
-        const { default: Youch } = appState.youchMod;
+        const { default: Youch } = appState.youch;
         const youch = new Youch(err, {
           method: req.method,
           url: req.url,
@@ -775,12 +763,14 @@ async function listen(server, baseUrl, port, host) {
   }
 
   // Start Node-RED and sync extensions now that the server is reachable.
-  // Uses ensureExtensionSync() so the lazy middleware in bootstrapApp
-  // sees the same resolved promise (avoids duplicate sync).
-  // During HMR, listen() is not re-called — the lazy middleware
-  // handles re-sync because invalidateCaches() resets the flag.
-  await Promise.all([appState.nodeRED.start(), ensureExtensionSync()]);
+  await Promise.all([
+    appState.nodeRed.start(),
+    extensionManager.sync().catch(err => {
+      console.warn('⚠️  Extension sync failed:', err.message);
+    }),
+  ]);
 
+  // Print server information
   const separator = '='.repeat(60);
   const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
 
@@ -797,8 +787,8 @@ async function listen(server, baseUrl, port, host) {
   console.info(`Base URL      : ${baseUrl}`);
   console.info(`API URL       : ${baseUrl}/api`);
   console.info(`WebSocket URL : ${wsUrl}/ws`);
-  const nodeRedRoot = appState.nodeRED.settings
-    ? appState.nodeRED.settings.httpAdminRoot
+  const nodeRedRoot = appState.nodeRed.settings
+    ? appState.nodeRed.settings.httpAdminRoot
     : '/~/red/admin';
   console.info(`Node-RED URL  : ${baseUrl}${nodeRedRoot}`);
   console.info(separator);
@@ -860,7 +850,7 @@ export async function bootstrapApp(app, server, options = {}) {
     server,
   );
   container.instance('ws', appState.wsServer);
-  container.instance('nodeRED', appState.nodeRED);
+  container.instance('nodeRED', appState.nodeRed);
 
   // Register container on Express settings (accessible via app.get / req.app.get)
   app.set('container', container);
@@ -1001,15 +991,8 @@ export async function bootstrapApp(app, server, options = {}) {
     }
   }
 
-  // Lazy extension sync: after HMR, listen() is not re-called, so the
-  // first request triggers ensureExtensionSync() as a fallback.
-  app.use(async (_req, _res, next) => {
-    await ensureExtensionSync();
-    next();
-  });
-
   // Node-RED
-  await appState.nodeRED.init(app, server, {
+  await appState.nodeRed.init(app, server, {
     ...SERVER_CONFIG,
     port,
     host: resolvedHost,
@@ -1025,7 +1008,7 @@ export async function bootstrapApp(app, server, options = {}) {
   });
 
   // Node-RED API proxy
-  await appState.nodeRED.setupApiProxy(app, '/api');
+  await appState.nodeRed.setupApiProxy(app, '/api');
 
   // SSR catch-all
   app.get('*', makeSsrMiddleware(baseUrl));
@@ -1056,9 +1039,9 @@ export async function disposeApp() {
   const errors = [];
 
   try {
-    if (appState.nodeRED) {
+    if (appState.nodeRed) {
       console.info('   Shutting down Node-RED...');
-      await appState.nodeRED.shutdown();
+      await appState.nodeRed.shutdown();
       console.info('   ✔ Node-RED shutdown complete');
     }
   } catch (err) {

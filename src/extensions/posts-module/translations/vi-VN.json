@@ -34,6 +34,22 @@
     "message": "Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.",
     "confirm": "Xóa"
   },
+  "form": {
+    "createTitle": "Tạo bài viết",
+    "editTitle": "Sửa bài viết",
+    "title": "Tiêu đề",
+    "titlePlaceholder": "Nhập tiêu đề bài viết",
+    "slug": "Đường dẫn",
+    "slugPlaceholder": "duong-dan-than-thien",
+    "slugHint": "Tự động tạo từ tiêu đề. Sửa để tùy chỉnh.",
+    "status": "Trạng thái",
+    "excerpt": "Tóm tắt",
+    "excerptPlaceholder": "Tóm tắt ngắn cho SEO...",
+    "content": "Nội dung",
+    "contentPlaceholder": "Viết nội dung bài viết...",
+    "save": "Lưu",
+    "saving": "Đang lưu..."
+  },
   "validations": {
     "titleRequired": "Tiêu đề là bắt buộc",
     "titleMax": "Tiêu đề quá dài",

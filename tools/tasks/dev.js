@@ -256,6 +256,10 @@ async function prepareDevServer(
     existingServer.removeAllListeners('request');
     existingServer.on('request', newApp);
 
+    // Re-run listen() to sync extensions and restart Node-RED.
+    // listen() guards server.listening so it won't re-bind the port.
+    await startServer();
+
     notifyBrowserSyncReady();
   }
 

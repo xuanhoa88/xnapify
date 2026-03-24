@@ -28,6 +28,7 @@ import {
   isPostDeleteLoading,
 } from '../redux';
 
+import PostForm from './PostForm';
 import SeoPreview from './SeoPreview';
 
 import s from './Posts.css';
@@ -54,6 +55,8 @@ function Posts() {
   const [currentPage, setCurrentPage] = useState(1);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [seoPost, setSeoPost] = useState(null);
+  const [formPost, setFormPost] = useState(null);
+  const isFormOpen = formPost !== null;
 
   useEffect(() => {
     dispatch(
@@ -149,6 +152,7 @@ function Posts() {
       >
         <Button
           variant='primary'
+          onClick={() => setFormPost({})}
           {...(!canCreate && {
             disabled: true,
             title: t(
@@ -266,6 +270,7 @@ function Posts() {
                   variant='ghost'
                   size='small'
                   iconOnly
+                  onClick={() => setFormPost(post)}
                   {...(!canUpdate && {
                     disabled: true,
                     title: t(
@@ -326,6 +331,7 @@ function Posts() {
             >
               <Button
                 variant='primary'
+                onClick={() => setFormPost({})}
                 {...(!canCreate && {
                   disabled: true,
                   title: t(
@@ -371,6 +377,13 @@ function Posts() {
         post={seoPost}
         isOpen={!!seoPost}
         onClose={() => setSeoPost(null)}
+      />
+
+      <PostForm
+        post={formPost}
+        isOpen={isFormOpen}
+        onClose={() => setFormPost(null)}
+        onSaved={refreshPosts}
       />
     </div>
   );

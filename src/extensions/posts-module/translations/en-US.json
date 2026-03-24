@@ -34,6 +34,22 @@
     "message": "Are you sure you want to delete this post? This action cannot be undone.",
     "confirm": "Delete"
   },
+  "form": {
+    "createTitle": "Create Post",
+    "editTitle": "Edit Post",
+    "title": "Title",
+    "titlePlaceholder": "Enter post title",
+    "slug": "Slug",
+    "slugPlaceholder": "url-friendly-slug",
+    "slugHint": "Auto-generated from title. Edit to customize.",
+    "status": "Status",
+    "excerpt": "Excerpt",
+    "excerptPlaceholder": "Brief summary for SEO...",
+    "content": "Content",
+    "contentPlaceholder": "Write your post content...",
+    "save": "Save",
+    "saving": "Saving..."
+  },
   "validations": {
     "titleRequired": "Title is required",
     "titleMax": "Title is too long",

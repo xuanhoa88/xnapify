@@ -153,8 +153,19 @@ export async function getUserRBACData(req) {
   const models = container.resolve('models');
   const cache = container.resolve('cache');
 
-  // Use consolidated fetcher
-  const rbacData = await fetchUserRBACData(userId, { models, cache });
+  let rbacData;
+  try {
+    // Use consolidated fetcher
+    rbacData = await fetchUserRBACData(userId, { models, cache });
+  } catch (error) {
+    // Never throw from a hook listener — unhandled rejections crash the server.
+    // Return empty RBAC data so the permission middleware denies with 403.
+    console.warn(
+      `[RBAC] Failed to fetch RBAC data for user ${userId}:`,
+      error.message,
+    );
+    rbacData = { roles: [], groups: [], permissions: [] };
+  }
 
   // Attach to request
   req.user = {
