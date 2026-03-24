@@ -243,10 +243,16 @@ export class Router {
         : true;
 
     validateAdapter(adapter);
+
+    // Collect and store layouts for reuse in add()
+    // eslint-disable-next-line no-underscore-dangle
+    this._layouts = collect(adapter, 'layouts');
+
     this.routes = buildRoutes(
       collect(adapter, 'routes'),
       collect(adapter, 'configs'),
-      collect(adapter, 'layouts'),
+      // eslint-disable-next-line no-underscore-dangle
+      this._layouts,
     );
 
     validateConfig(this.routes);
@@ -339,10 +345,19 @@ export class Router {
     validateAdapter(adapter);
 
     // 1. Build new routes using the same pipeline as the constructor
+    // Merge core layouts with any extension-provided layouts so that
+    // extension routes under /admin/* get the admin layout wrapper.
+    // eslint-disable-next-line no-underscore-dangle
+    const extLayouts = collect(adapter, 'layouts');
+    const mergedLayouts = new Map([
+      // eslint-disable-next-line no-underscore-dangle
+      ...(this._layouts || []),
+      ...extLayouts,
+    ]);
     const newRoutes = buildRoutes(
       collect(adapter, 'routes'),
       collect(adapter, 'configs'),
-      collect(adapter, 'layouts'),
+      mergedLayouts,
     );
 
     if (newRoutes.length === 0) return newRoutes;
