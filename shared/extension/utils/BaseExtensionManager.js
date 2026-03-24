@@ -15,14 +15,16 @@ import { addNamespace } from '@shared/i18n/utils';
 
 import { registry } from './Registry';
 
-// Symbols for internal state
-export const INITIALIZED = Symbol('__rsk.initializedExtensions__');
-export const ACTIVE_EXTENSIONS = Symbol('__rsk.activeExtensions__');
-export const EXTENSION_CONTEXT = Symbol('__rsk.extensionContext__');
-export const EXTENSION_METADATA = Symbol('__rsk.extensionMetadata__');
-export const EVENT_HANDLERS = Symbol('__rsk.extensionEventHandlers__');
-export const LOADED_VERSIONS = Symbol('__rsk.loadedExtensionVersions__');
-export const EXTENSION_INIT = Symbol('__rsk.extensionInit__');
+// Symbols — exported (used by subclass managers and tests)
+export const INITIALIZED = Symbol('__rsk.ext.initialized__');
+export const ACTIVE_EXTENSIONS = Symbol('__rsk.ext.active__');
+export const EXTENSION_METADATA = Symbol('__rsk.ext.metadata__');
+export const LOADED_VERSIONS = Symbol('__rsk.ext.loadedVersions__');
+
+// Symbols — private (internal to base manager)
+const FETCH = Symbol('__rsk.ext.fetch__');
+const PROVIDERS_CONTEXT = Symbol('__rsk.ext.providersContext__');
+const EVENT_HANDLERS = Symbol('__rsk.ext.eventHandlers__');
 
 /**
  * Extension states
@@ -52,12 +54,12 @@ export const ExtensionState = Object.freeze({
 export class BaseExtensionManager {
   constructor() {
     this[INITIALIZED] = false;
-    this[EXTENSION_CONTEXT] = null;
+    this[FETCH] = null;
+    this[PROVIDERS_CONTEXT] = null;
     this[ACTIVE_EXTENSIONS] = new Map(); // id -> extension instance
     this[EXTENSION_METADATA] = new Map(); // id -> metadata
     this[EVENT_HANDLERS] = new Map(); // eventType -> Set of handlers
     this[LOADED_VERSIONS] = new Map(); // extensionId -> version
-    this[EXTENSION_INIT] = null; // initialization promise
   }
 
   /**
@@ -79,11 +81,12 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Ensure the extension manager is ready (abstract method)
-   * Subclasses should override to implement environment-specific initialization.
-   * @returns {Promise<void>}
+   * Subclass hook called once during init (before syncExtensions).
+   * Override to perform environment-specific setup.
+   * @param {Object} container - Application container
    */
-  async _ensureReady() {
+  // eslint-disable-next-line class-methods-use-this
+  _onInit(_container) {
     // Override in subclasses
   }
 
@@ -101,45 +104,22 @@ export class BaseExtensionManager {
   /**
    * Initialize the extension manager
    *
-   * @param {Object} context - Application context
-   * @param {Function} context.fetch - Fetch function for API calls (required)
-   * @param {Object} [context.store] - Redux store instance
-   * @param {Object} [context.i18n] - i18n instance
-   * @param {Object} [context.history] - History instance (client only)
-   * @param {string} [context.locale] - Current locale
-   * @param {string} [context.pathname] - Current pathname (client only)
-   * @param {Object} [context.query] - Query parameters (client only)
-   * @param {string} [context.cwd] - Current working directory (server only)
-   * @param {AbortSignal} [context.signal] - Abort signal for request cancellation (server only)
-   *
-   * @note Server context: Initialized once at startup with server-level context
-   * @note Client context: Initialized before app startup, updated on navigation
+   * @param {Function} fetch$ - Fetch function for API calls (required)
+   * @param {Object} container - Application container
    */
-  async init(context) {
-    if (!context || typeof context.fetch !== 'function') {
-      const error = new Error(
-        'ExtensionManager requires a valid context with fetch method',
-      );
-      error.name = 'ExtensionManagerError';
-      throw error;
-    }
-
-    // Update context for the current request/navigation
-    this[EXTENSION_CONTEXT] = context;
-
+  async init(fetch$, container) {
     // Singleton pattern: Skip re-initialization if already initialized
-    // This prevents redundant extension loading on subsequent calls (e.g., per-request on server)
-    // We check the explicit INITIALIZED flag instead of active extension count
-    // to handle cases where no extensions are installed (count = 0)
-    if (this[INITIALIZED]) {
-      return;
-    }
-
+    if (this[INITIALIZED]) return;
     this[INITIALIZED] = true;
 
-    // Subclasses can implement this
-    this.onReady();
+    // Store fetch for API calls
+    this[FETCH] = fetch$;
 
+    // Subclass hook for environment-specific setup (receives full context)
+    // eslint-disable-next-line no-underscore-dangle
+    await this._onInit(container);
+
+    // Load all active extensions
     await this.syncExtensions();
   }
 
@@ -148,8 +128,7 @@ export class BaseExtensionManager {
    */
   async syncExtensions() {
     try {
-      const { data: response } =
-        await this[EXTENSION_CONTEXT].fetch('/api/extensions');
+      const { data: response } = await this[FETCH]('/api/extensions');
       const extensions =
         response && Array.isArray(response.extensions)
           ? response.extensions
@@ -189,6 +168,47 @@ export class BaseExtensionManager {
       console.error('[ExtensionManager] Failed to fetch extensions:', error);
       await this.emit('extensions:init-failed', { error });
     }
+  }
+
+  /**
+   * Run providers hooks on all loaded extensions.
+   * Called per-request on the server (with ssrContainer) and once on the client.
+   *
+   * @param {Object} context - Per-request context
+   * @param {Object} context.container - DI container for service binding
+   * @param {Object} [context.store] - Redux store instance
+   */
+  async runProviders(context) {
+    // Store for lifecycle hooks (onLoad, init, destroy, etc.)
+    this[PROVIDERS_CONTEXT] = context;
+
+    const extensions = Array.from(this[ACTIVE_EXTENSIONS].entries());
+    if (extensions.length === 0) return;
+
+    const results = await Promise.allSettled(
+      extensions.map(async ([, ext]) => {
+        if (typeof ext.providers !== 'function') return;
+        await ext.providers(context);
+      }),
+    );
+
+    const failures = results.filter(r => r.status === 'rejected');
+    if (failures.length > 0) {
+      console.warn(
+        `[ExtensionManager] ${failures.length} provider(s) failed:`,
+        failures.map(r => (r.reason && r.reason.message) || r.reason),
+      );
+    }
+  }
+
+  /**
+   * Resolve context for lifecycle hooks.
+   * Returns the context stored by runProviders(), or empty object if not yet called.
+   *
+   * @returns {Object}
+   */
+  _hookContext() {
+    return this[PROVIDERS_CONTEXT] || {};
   }
 
   /**
@@ -346,9 +366,8 @@ export class BaseExtensionManager {
       manifest,
     });
 
-    await this.emit('extension:loading', { id });
-
     try {
+      await this.emit('extension:loading', { id });
       // Load extension dependencies first (ensures dependency graph is satisfied)
       // Dependencies are loaded recursively before the extension itself
       if (
@@ -371,9 +390,7 @@ export class BaseExtensionManager {
         // Clean up the internal flag
         delete manifest.fromDisk;
       } else {
-        const response = await this[EXTENSION_CONTEXT].fetch(
-          `/api/extensions/${id}`,
-        );
+        const response = await this[FETCH](`/api/extensions/${id}`);
         if (!response || !response.success) {
           const error = new Error(
             (response && response.message) ||
@@ -427,8 +444,9 @@ export class BaseExtensionManager {
       if (__DEV__) {
         console.log(`[ExtensionManager] Defining extension in registry: ${id}`);
       }
+
       // eslint-disable-next-line no-underscore-dangle
-      await registry.defineExtension(ext, this[EXTENSION_CONTEXT], manifest);
+      await registry.defineExtension(ext, this._hookContext(), manifest);
 
       // Determine extension kind: 'module' (has views() hook) or 'plugin'
       const extensionType =
@@ -448,8 +466,15 @@ export class BaseExtensionManager {
             ? manifest.rsk.subscribe
             : [];
         for (const ns of subs) {
-          // eslint-disable-next-line no-await-in-loop
-          await this.ensureNamespaceActive(ns);
+          try {
+            // eslint-disable-next-line no-await-in-loop
+            await this.ensureNamespaceActive(ns);
+          } catch (nsError) {
+            console.warn(
+              `[ExtensionManager] Namespace "${ns}" activation failed for ${id}:`,
+              nsError.message,
+            );
+          }
         }
       }
 
@@ -462,8 +487,20 @@ export class BaseExtensionManager {
 
       // Call extension lifecycle hook
       if (typeof ext.onLoad === 'function') {
-        // eslint-disable-next-line no-underscore-dangle
-        await ext.onLoad(this[EXTENSION_CONTEXT]);
+        try {
+          // eslint-disable-next-line no-underscore-dangle
+          await ext.onLoad(this._hookContext());
+        } catch (hookError) {
+          console.warn(
+            `[ExtensionManager] onLoad hook failed for ${id}:`,
+            hookError.message,
+          );
+          await this.emit('extension:hook-error', {
+            id,
+            hook: 'onLoad',
+            error: hookError,
+          });
+        }
       }
 
       if (__DEV__) {
@@ -475,7 +512,7 @@ export class BaseExtensionManager {
     } catch (error) {
       console.error(
         `[ExtensionManager] Failed to load extension "${id}":`,
-        error,
+        error.message,
       );
 
       // Update metadata
@@ -485,8 +522,11 @@ export class BaseExtensionManager {
         metadata.error = error;
       }
 
-      await this.emit('extension:failed', { id, error });
-      console.error(error);
+      try {
+        await this.emit('extension:failed', { id, error });
+      } catch {
+        // Prevent event handler errors from masking the original failure
+      }
     }
   }
 
@@ -521,12 +561,12 @@ export class BaseExtensionManager {
       // Call extension lifecycle hook
       if (ext && typeof ext.onUnload === 'function') {
         // eslint-disable-next-line no-underscore-dangle
-        await ext.onUnload(this[EXTENSION_CONTEXT]);
+        await ext.onUnload(this._hookContext());
       }
 
       // Unregister from registry
       // eslint-disable-next-line no-underscore-dangle
-      await registry.unregister(id, this[EXTENSION_CONTEXT]);
+      await registry.unregister(id, this._hookContext());
 
       // Remove from active extensions
       this[ACTIVE_EXTENSIONS].delete(id);
@@ -823,11 +863,7 @@ export class BaseExtensionManager {
               try {
                 const translations = getTranslations(def.translations());
                 if (Object.keys(translations).length > 0) {
-                  addNamespace(
-                    `extension:${def.id}`,
-                    translations,
-                    this[EXTENSION_CONTEXT].i18n,
-                  );
+                  addNamespace(`extension:${def.id}`, translations);
                 }
               } catch (error) {
                 console.error(
@@ -840,7 +876,7 @@ export class BaseExtensionManager {
             if (typeof def.init === 'function') {
               try {
                 // eslint-disable-next-line no-underscore-dangle
-                await def.init(reg, this[EXTENSION_CONTEXT]);
+                await def.init(reg, this._hookContext());
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to initialize extension ${def.id}:`,
@@ -865,7 +901,7 @@ export class BaseExtensionManager {
             if (typeof def.destroy === 'function') {
               try {
                 // eslint-disable-next-line no-underscore-dangle
-                await def.destroy(reg, this[EXTENSION_CONTEXT]);
+                await def.destroy(reg, this._hookContext());
               } catch (error) {
                 console.error(
                   `[ExtensionManager] Failed to destroy extension ${def.id}:`,
@@ -890,9 +926,7 @@ export class BaseExtensionManager {
 
         // Transition metadata state to ACTIVE
         const meta = this[EXTENSION_METADATA].get(def.id);
-        if (meta) {
-          meta.state = ExtensionState.ACTIVE;
-        }
+        if (meta) meta.state = ExtensionState.ACTIVE;
       }
 
       if (__DEV__) {
@@ -929,7 +963,8 @@ export class BaseExtensionManager {
       if (!extensions) return;
 
       for (const def of extensions) {
-        await registry.unregister(def.id, this[EXTENSION_CONTEXT]);
+        // eslint-disable-next-line no-underscore-dangle
+        await registry.unregister(def.id, this._hookContext());
         this[ACTIVE_EXTENSIONS].delete(def.id);
       }
 
@@ -998,13 +1033,6 @@ export class BaseExtensionManager {
   getExtensionState(id) {
     const metadata = this[EXTENSION_METADATA].get(id);
     return (metadata && metadata.state) || null;
-  }
-
-  /**
-   * Subscribe to events (abstract method)
-   */
-  onReady() {
-    // Override in subclasses
   }
 
   /**
@@ -1087,89 +1115,32 @@ export class BaseExtensionManager {
       this[EVENT_HANDLERS].delete(eventType);
     }
   }
+
   /**
    * Refresh extensions (unload, reset state, re-fetch)
    * Unlike destroy(), this preserves context and event handlers,
    * allowing the manager to immediately re-initialize.
    *
-   * @param {Array<string>} [extensionIds] - Specific extension IDs to refresh.
-   *   If provided, only those extensions are reloaded (unload → load).
-   *   If omitted or empty, all extensions are refreshed.
+   * Subclasses may override to add targeted refresh (by specific IDs).
    */
-  async refresh(...extensionIds) {
-    // Guard: if context was destroyed (e.g. by HMR dispose), skip refresh.
-    // The manager will be re-initialized via init() when the new bundle loads.
-    if (!this[EXTENSION_CONTEXT]) {
-      if (__DEV__) {
-        console.log(
-          '[ExtensionManager] Skipping refresh (no context, manager was destroyed)',
-        );
-      }
-      return;
-    }
-
-    // Resolve incoming names to actual extension IDs.
-    // The build tool sends manifest names but the
-    // extension manager tracks extensions by their API IDs (UUIDs).  We match
-    // incoming names against manifest.name stored in extension metadata.
-    let resolvedIds = [];
-
-    if (extensionIds.length > 0) {
-      const nameSet = new Set(extensionIds);
-
-      for (const [id, metadata] of this[EXTENSION_METADATA].entries()) {
-        const manifestName = metadata.manifest && metadata.manifest.name;
-        if (nameSet.has(id) || (manifestName && nameSet.has(manifestName))) {
-          resolvedIds.push(id);
-        }
-      }
-
-      resolvedIds = [...new Set(resolvedIds)];
-    }
-
-    const specific = resolvedIds.length > 0;
-
+  async refresh() {
     if (__DEV__) {
-      console.log(
-        `[ExtensionManager] Refreshing${specific ? `: ${resolvedIds.join(', ')}` : ' all'}...`,
-      );
+      console.log('[ExtensionManager] Refreshing all...');
     }
 
-    await this.emit('extensions:refreshing', { extensionIds: resolvedIds });
+    await this.emit('extensions:refreshing', { extensionIds: null });
 
-    if (specific) {
-      // Targeted refresh: properly tear down and reload each extension
-      for (const id of resolvedIds) {
-        // Unload if active (registered in a namespace)
-        if (this[ACTIVE_EXTENSIONS].has(id)) {
-          await this.unloadExtension(id);
-        }
+    // Full refresh: unload all, reset state, re-fetch
+    const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
+    await Promise.all(allIds.map(id => this.unloadExtension(id)));
 
-        // Clean up metadata and version tracking
-        this[EXTENSION_METADATA].delete(id);
-        this[LOADED_VERSIONS].delete(id);
-      }
+    this[ACTIVE_EXTENSIONS].clear();
+    this[EXTENSION_METADATA].clear();
+    this[LOADED_VERSIONS].clear();
 
-      // Re-load the extensions (syncExtensions would re-load everything;
-      // here we load only the targeted ones)
-      await Promise.all(resolvedIds.map(id => this.loadExtension(id)));
-    } else {
-      // Full refresh: unload all, reset state, re-fetch
-      const allIds = Array.from(this[ACTIVE_EXTENSIONS].keys());
-      await Promise.all(allIds.map(id => this.unloadExtension(id)));
+    await this.syncExtensions();
 
-      this[ACTIVE_EXTENSIONS].clear();
-      this[EXTENSION_METADATA].clear();
-      this[LOADED_VERSIONS].clear();
-      this[INITIALIZED] = false;
-      this[EXTENSION_INIT] = null;
-
-      await this.syncExtensions();
-    }
-
-    await this.emit('extensions:refreshed', {
-      extensionIds: specific ? resolvedIds : null,
-    });
+    await this.emit('extensions:refreshed', { extensionIds: null });
 
     if (__DEV__) {
       console.log('[ExtensionManager] Refreshed');
@@ -1195,9 +1166,9 @@ export class BaseExtensionManager {
     this[EXTENSION_METADATA].clear();
 
     this[LOADED_VERSIONS].clear();
-    this[EXTENSION_CONTEXT] = null;
+    this[FETCH] = null;
+    this[PROVIDERS_CONTEXT] = null;
     this[INITIALIZED] = false;
-    this[EXTENSION_INIT] = null;
 
     await this.emit('manager:destroyed');
 

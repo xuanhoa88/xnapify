@@ -317,11 +317,7 @@ const localeMiddleware = expressRequestLanguage({
 
 async function initializeViews({ container, store }) {
   const m = await import('./bootstrap/views');
-  const views = await m.default({
-    extension: extensionManager,
-    container,
-    store,
-  });
+  const views = await m.default({ container, store });
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
@@ -470,6 +466,7 @@ function makeSsrMiddleware(baseUrl) {
 
     // Container for dependency injection
     const ssrContainer = new Container();
+    ssrContainer.instance('extension', extensionManager);
 
     const authHeader = validateCookieHeader(req.headers.cookie || '');
     const rawLocale = req.language || DEFAULT_LOCALE;
@@ -552,6 +549,9 @@ function makeSsrMiddleware(baseUrl) {
         throw err;
       }
       context.store = store;
+
+      // Run extension providers per-request (binds services into ssrContainer)
+      await extensionManager.runProviders(context);
 
       const views = await promiseWithDeadline(
         initializeViews({ container: ssrContainer, store }),
@@ -962,30 +962,28 @@ export async function bootstrapApp(app, server, options = {}) {
     next();
   });
 
-  // API routes
-  const api = await import('./bootstrap/api');
-  const apiRouter = await api.default(app);
-  app.use(SERVER_CONFIG.apiPrefix, apiRouter);
-
-  // Initialize extensions at bootstrap time (after API router is created)
-  // so they use the app container which has apiRouter registered.
+  // Initialize extensions at bootstrap time (after API router is created).
+  // Pass apiRouter directly — extensions inject their routes into it.
   try {
-    await extensionManager.init({
-      i18n,
-      fetch: createFetch(nodeFetch, {
+    await extensionManager.init(
+      createFetch(nodeFetch, {
         defaults: {
           baseUrl,
           headers: { 'User-Agent': 'RSK-Server' },
         },
       }),
       container,
-      cwd: SERVER_CONFIG.cwd,
-    });
+    );
   } catch (err) {
     if (__DEV__) {
       console.warn('⚠️  Extension initialization failed:', err.message);
     }
   }
+
+  // API routes
+  const api = await import('./bootstrap/api');
+  const apiRouter = await api.default(app);
+  app.use(SERVER_CONFIG.apiPrefix, apiRouter);
 
   // Node-RED
   await appState.nodeRED.init(app, server, {

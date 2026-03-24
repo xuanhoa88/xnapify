@@ -349,6 +349,12 @@ export default {
     return translationsContext;
   },
 
+  // Lifecycle: providers (called once per bootstrap with { container, store })
+  // Use for Redux reducer injection or other DI-dependent setup
+  providers(_registry, { store }) {
+    // store.injectReducer('mySlice', myReducer);
+  },
+
   // Lifecycle: init (called when extension is initialized)
   init(registry, _context) {
     // 1. Register Slot Component
@@ -687,7 +693,7 @@ export default {
     return translationsContext;
   },
 
-  init(registry, context) {
+  init(registry, _context) {
     registry.registerSlot('posts.detail.comments', CommentForm, {
       order: 10,
     });

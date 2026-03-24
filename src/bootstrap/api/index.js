@@ -161,23 +161,22 @@ function buildApiRouter(app, apiRoutes) {
     }),
   );
 
+  // Mount module API routes
   for (const [name, adapter] of apiRoutes) {
     try {
-      const dynamicRouter = new DynamicRouter(adapter);
-      router.use(...apiMiddlewares, dynamicRouter.resolve);
+      router.use(...apiMiddlewares, new DynamicRouter(adapter).resolve);
     } catch (error) {
       log(`[${name}] Failed to load routes: ${error.message}`, 'error');
     }
   }
 
-  // Dedicated DynamicRouter for extension route injection.
-  // Extensions call container.resolve('apiRouter').add(adapter) to inject routes.
-  const extensionApiRouter = new DynamicRouter({
-    files: () => [],
-    load: () => ({}),
-  });
-  router.use(...apiMiddlewares, extensionApiRouter.resolve);
-  container.instance('apiRouter', extensionApiRouter);
+  // Connect extension API router (flushes buffered routes + stores ref for runtime installs)
+  const extensionManager = container.resolve('extension');
+  if (extensionManager) {
+    const extRouter = new DynamicRouter({ files: () => [], load: () => ({}) });
+    router.use(...apiMiddlewares, extRouter.resolve);
+    extensionManager.connectApiRouter(extRouter);
+  }
 
   log(`Dynamic router built (${apiRoutes.size} module(s))`);
 
@@ -198,9 +197,7 @@ async function setupApiRoutes(app) {
   );
 
   // Build the dynamic router from collected route adapters
-  const router = buildApiRouter(app, apiRoutes);
-
-  return router;
+  return buildApiRouter(app, apiRoutes);
 }
 
 // =============================================================================

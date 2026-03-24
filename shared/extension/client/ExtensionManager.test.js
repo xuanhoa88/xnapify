@@ -11,11 +11,7 @@
 
 /* eslint-env jest */
 
-import {
-  INITIALIZED,
-  EXTENSION_CONTEXT,
-  EXTENSION_INIT,
-} from '../utils/BaseExtensionManager';
+import { INITIALIZED } from '../utils/BaseExtensionManager';
 
 import clientManager from './ExtensionManager';
 
@@ -24,7 +20,6 @@ describe('ClientExtensionManager', () => {
 
   beforeEach(async () => {
     clientManager[INITIALIZED] = false;
-    clientManager[EXTENSION_INIT] = null;
 
     mockContext = {
       fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),
@@ -36,7 +31,7 @@ describe('ClientExtensionManager', () => {
     // eslint-disable-next-line no-underscore-dangle
     window.__webpack_share_scopes__ = { default: {} };
 
-    await clientManager.init(mockContext);
+    await clientManager.init(mockContext.fetch);
 
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -147,11 +142,29 @@ describe('ClientExtensionManager', () => {
   });
 
   describe('onWebSocketEvent', () => {
+    let loadSpy;
+    let unloadSpy;
+    let reloadSpy;
+
     beforeEach(() => {
-      clientManager.needsReload = false;
+      loadSpy = jest
+        .spyOn(clientManager, 'loadExtension')
+        .mockResolvedValue(undefined);
+      unloadSpy = jest
+        .spyOn(clientManager, 'unloadExtension')
+        .mockResolvedValue(undefined);
+      reloadSpy = jest
+        .spyOn(clientManager, 'reloadExtension')
+        .mockResolvedValue(undefined);
     });
 
-    it('injects resources and sets needsReload on EXTENSION_INSTALLED', async () => {
+    afterEach(() => {
+      loadSpy.mockRestore();
+      unloadSpy.mockRestore();
+      reloadSpy.mockRestore();
+    });
+
+    it('injects resources and reloads on EXTENSION_INSTALLED', async () => {
       await clientManager.onWebSocketEvent({
         type: 'EXTENSION_INSTALLED',
         extensionId: 'new-p',
@@ -161,61 +174,69 @@ describe('ClientExtensionManager', () => {
       expect(
         document.querySelector('link[data-extension-id="new-p"]'),
       ).toBeTruthy();
-      expect(clientManager.needsReload).toBe(true);
+      expect(reloadSpy).toHaveBeenCalledWith('new-p');
     });
 
-    it('removes resources and sets needsReload on EXTENSION_UNINSTALLED', async () => {
+    it('unloads and removes resources on EXTENSION_UNINSTALLED', async () => {
       // Pre-inject
       await clientManager.emit('extension:loaded', {
         id: 'old-p',
         manifest: { hasClientCss: true },
       });
-      clientManager.needsReload = false;
+
+      // Mark as loaded so unload path is taken
+      jest.spyOn(clientManager, 'isExtensionLoaded').mockReturnValue(true);
 
       await clientManager.onWebSocketEvent({
         type: 'EXTENSION_UNINSTALLED',
         extensionId: 'old-p',
       });
 
+      expect(unloadSpy).toHaveBeenCalledWith('old-p');
       expect(
         document.querySelector('link[data-extension-id="old-p"]'),
       ).toBeNull();
-      expect(clientManager.needsReload).toBe(true);
     });
 
-    it('sets needsReload on EXTENSION_UPDATED', async () => {
+    it('reloads extension on EXTENSION_UPDATED', async () => {
       await clientManager.onWebSocketEvent({
         type: 'EXTENSION_UPDATED',
         extensionId: 'existing-p',
         data: { manifest: { hasClientScript: true } },
       });
 
-      expect(clientManager.needsReload).toBe(true);
+      expect(reloadSpy).toHaveBeenCalledWith('existing-p');
     });
 
-    it('sets needsReload on EXTENSION_ACTIVATED', async () => {
+    it('loads extension on EXTENSION_ACTIVATED', async () => {
+      const manifest = { hasClientCss: true };
       await clientManager.onWebSocketEvent({
         type: 'EXTENSION_ACTIVATED',
         extensionId: 'activated-p',
+        data: { manifest },
       });
 
-      expect(clientManager.needsReload).toBe(true);
+      expect(loadSpy).toHaveBeenCalledWith('activated-p', manifest);
     });
 
-    it('sets needsReload on EXTENSION_DEACTIVATED', async () => {
+    it('unloads extension on EXTENSION_DEACTIVATED', async () => {
+      jest.spyOn(clientManager, 'isExtensionLoaded').mockReturnValue(true);
+
       await clientManager.onWebSocketEvent({
         type: 'EXTENSION_DEACTIVATED',
         extensionId: 'deactivated-p',
       });
 
-      expect(clientManager.needsReload).toBe(true);
+      expect(unloadSpy).toHaveBeenCalledWith('deactivated-p');
     });
 
     it('ignores invalid events', async () => {
       await clientManager.onWebSocketEvent(null);
       await clientManager.onWebSocketEvent({});
 
-      expect(clientManager.needsReload).toBe(false);
+      expect(loadSpy).not.toHaveBeenCalled();
+      expect(unloadSpy).not.toHaveBeenCalled();
+      expect(reloadSpy).not.toHaveBeenCalled();
     });
   });
 
@@ -229,26 +250,67 @@ describe('ClientExtensionManager', () => {
       };
     });
 
-    it('flushPendingRoutes injects buffered view adapters', () => {
+    it('connectViewRouter injects buffered view adapters', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      // Simulate buffered injection (no router available)
-      clientManager[EXTENSION_CONTEXT] = { container: null };
+      // Simulate buffered injection (no router available yet)
       // eslint-disable-next-line no-underscore-dangle
       clientManager._injectRoutes('test-ext', mockAdapter);
 
       // Flush with router
-      clientManager.flushPendingRoutes(mockRouter);
+      clientManager.connectViewRouter(mockRouter);
 
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('connectViewRouter re-injects stored adapters on subsequent flush', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // First flush stores the adapter
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+      clientManager.connectViewRouter(mockRouter);
+      expect(mockRouter.add).toHaveBeenCalledTimes(1);
+
+      // Second flush (e.g. SSR creates new router per request)
+      const newRouter = { add: jest.fn(() => []), remove: jest.fn() };
+      clientManager.connectViewRouter(newRouter);
+
+      expect(newRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('connectViewRouter stores router reference for later _injectRoutes', () => {
+      // Flush first to store router
+      clientManager.connectViewRouter(mockRouter);
+
+      // Subsequent _injectRoutes should use stored reference
+      const mockAdapter = { files: () => [], load: () => ({}) };
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+
+      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('connectViewRouter with null viewRouter buffers without crash', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // Buffer an adapter
+      // eslint-disable-next-line no-underscore-dangle
+      clientManager._injectRoutes('test-ext', mockAdapter);
+
+      // Flush with null — should not crash, should still store pending
+      expect(() => clientManager.connectViewRouter(null)).not.toThrow();
+
+      // Now flush with real router — stored adapters should inject
+      clientManager.connectViewRouter(mockRouter);
       expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
     });
 
     it('_injectRoutes injects directly when router is available', () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      clientManager[EXTENSION_CONTEXT] = {
-        container: { resolve: () => mockRouter },
-      };
+      // Store router reference via flush (simulates bootstrapViews)
+      clientManager.connectViewRouter(mockRouter);
 
       // eslint-disable-next-line no-underscore-dangle
       clientManager._injectRoutes('test-ext', mockAdapter);
@@ -259,9 +321,8 @@ describe('ClientExtensionManager', () => {
     it('extension:unloaded removes route adapters', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
-      clientManager[EXTENSION_CONTEXT] = {
-        container: { resolve: () => mockRouter },
-      };
+      // Store router reference via flush
+      clientManager.connectViewRouter(mockRouter);
 
       // Inject routes first
       // eslint-disable-next-line no-underscore-dangle
@@ -287,9 +348,8 @@ describe('ClientExtensionManager', () => {
         views: () => mockAdapter,
       };
 
-      clientManager[EXTENSION_CONTEXT] = {
-        container: { resolve: () => mockRouter },
-      };
+      // Store router reference via flush
+      clientManager.connectViewRouter(mockRouter);
 
       // Mock the container loading process
       jest.spyOn(clientManager, '_loadScript').mockResolvedValue();

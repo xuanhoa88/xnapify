@@ -310,6 +310,33 @@ export const upgradeExtension = async (req, res) => {
   }
 };
 
+/**
+ * Refresh Extensions (Admin)
+ * Re-syncs the server-side extension manager — unloads all extensions,
+ * re-fetches from the API, and re-loads them. Broadcasts to all clients
+ * so they can hot-reload in place.
+ *
+ * @route   POST /api/admin/extensions/refresh
+ * @access  Admin
+ */
+export const refreshExtensions = async (req, res) => {
+  const container = req.app.get('container');
+  const http = container.resolve('http');
+  try {
+    const extensionManager = container.resolve('extension');
+    await extensionManager.refresh();
+
+    const ws = container.resolve('ws');
+    ws.sendToPublicChannel('extension:updated', {
+      type: 'EXTENSIONS_REFRESHED',
+    });
+
+    return http.sendSuccess(res, { message: 'Extensions refreshed' });
+  } catch (error) {
+    return http.sendServerError(res, 'Failed to refresh extensions', error);
+  }
+};
+
 // ========================================================================
 // IPC GATEWAY
 // ========================================================================

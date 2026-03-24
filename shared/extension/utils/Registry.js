@@ -9,13 +9,13 @@ import { composeMiddleware } from '@shared/utils/middleware';
 
 import Hook from './Hook';
 
-// Private property symbols
-const EXTENSIONS = Symbol('__rsk.extensionsList__');
-const SLOTS = Symbol('__rsk.extensionSlots__');
-const DEFINITIONS = Symbol('__rsk.extensionDefinitions__');
-const LISTENERS = Symbol('__rsk.extensionListeners__');
-const HOOKS = Symbol('__rsk.extensionHooks__');
-const REGISTRATIONS = Symbol('__rsk.extensionRegistrations__');
+// Symbols — private (internal to registry)
+const EXTENSIONS = Symbol('__rsk.ext.list__');
+const SLOTS = Symbol('__rsk.ext.slots__');
+const DEFINITIONS = Symbol('__rsk.ext.definitions__');
+const LISTENERS = Symbol('__rsk.ext.listeners__');
+const HOOKS = Symbol('__rsk.ext.hooks__');
+const REGISTRATIONS = Symbol('__rsk.ext.registrations__');
 
 /**
  * ExtensionRegistry - Manages extension registrations, UI slots, hooks, and schema extensions

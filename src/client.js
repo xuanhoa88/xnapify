@@ -43,6 +43,7 @@ const REACT_DOM_UNAVAILABLE = false;
 
 // Create dependency injection container
 const container = new Container();
+container.instance('extension', extensionManager);
 
 // eslint-disable-next-line no-underscore-dangle
 const preloadedState = window.__PRELOADED_STATE__ || {};
@@ -61,34 +62,6 @@ try {
   parsedBasename = '';
 }
 const history = createBrowserHistory({ basename: parsedBasename });
-
-// Monkey-patch history to support silent reload on navigation
-const originalPush = history.push;
-const originalReplace = history.replace;
-
-// Helper to get full URL from path/location
-const getNavUrl = (path, state) => {
-  if (typeof path === 'string') {
-    return history.createHref({ pathname: path, state });
-  }
-  return history.createHref({ ...path, state: state || path.state });
-};
-
-history.push = (path, state) => {
-  if (extensionManager.needsReload) {
-    window.location.href = getNavUrl(path, state);
-    return;
-  }
-  originalPush.call(history, path, state);
-};
-
-history.replace = (path, state) => {
-  if (extensionManager.needsReload) {
-    window.location.replace(getNavUrl(path, state));
-    return;
-  }
-  originalReplace.call(history, path, state);
-};
 
 // Abort controller for request cancellation
 let fetchAbortController = new AbortController();
@@ -269,11 +242,7 @@ async function initializeViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({
-          container,
-          store,
-          extension: extensionManager,
-        });
+        const views = m.default({ container, store });
         log('✅ Views initialized');
         return views;
       })
@@ -722,12 +691,18 @@ async function attemptStartup() {
   hasStarted = true;
   log('✅ Starting app...');
 
-  // Initialize extensions (Client Side)
+  // Phase 1: Load extensions (fetch manifests, run onLoad hooks)
   try {
-    await extensionManager.init({ ...context, container });
+    await extensionManager.init(fetch, container);
   } catch (error) {
-    log(`⚠️ Extension initialization failed: ${error.message}`, 'error');
-    // Continue app startup even if extensions fail
+    log(`⚠️ Extension init failed: ${error.message}`, 'error');
+  }
+
+  // Phase 2: Bind extension services into the DI container
+  try {
+    await extensionManager.runProviders(context);
+  } catch (error) {
+    log(`⚠️ Extension providers failed: ${error.message}`, 'error');
   }
 
   // Initialize app
@@ -792,9 +767,6 @@ if (module.hot) {
           const data = JSON.parse(event.data);
           if (data && data.type === 'extensions-refreshed') {
             log('🔌 Extension(s) rebuilt, reload required');
-
-            // Ensure next navigation triggers a full page reload
-            extensionManager.needsReload = true;
 
             // Show only one confirm at a time and debounce
             if (window[RELOAD_PENDING]) return;

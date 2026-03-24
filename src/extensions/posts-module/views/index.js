@@ -1,11 +1,9 @@
 /**
  * Posts Module — View entry point
  *
- * Module-type extension that provides view routes via the views() hook
- * and injects its Redux reducer into the store.
+ * Module-type extension that provides view routes via the views() hook.
+ * Redux reducer injection is handled per-route in _route.js init().
  */
-
-import reducer, { SLICE_NAME } from './(admin)/redux';
 
 const viewsContext = require.context(
   '.',
@@ -20,14 +18,6 @@ const translationsContext = require.context(
 );
 
 export default {
-  init(_registry, { store }) {
-    store.injectReducer(SLICE_NAME, reducer);
-  },
-
-  destroy(_registry) {
-    // no-op
-  },
-
   /**
    * Declarative translations — auto-registered by extension manager.
    */

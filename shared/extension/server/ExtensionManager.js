@@ -14,20 +14,28 @@ import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
-  EXTENSION_CONTEXT,
   LOADED_VERSIONS,
-  EXTENSION_INIT,
   EXTENSION_METADATA,
 } from '../utils/BaseExtensionManager';
 
-// Symbols for internal state
-const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.extensionApiEntryPoints__');
-const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.extensionCssEntryPoints__');
-const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol(
-  '__rsk.extensionScriptEntryPoints__',
-);
-const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.extensionRouteAdapters__');
-const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.pendingRouteInjections__');
+// Symbols — private (internal to server manager)
+const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.ext.apiEntryPoints__');
+const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.ext.cssEntryPoints__');
+const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__rsk.ext.scriptEntryPoints__');
+const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
+const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.ext.pendingRoutes__');
+const ROUTERS = Symbol('__rsk.ext.routers__');
+const SERVER_CWD = Symbol('__rsk.ext.serverCwd__');
+
+/** Non-throwing async file existence check */
+async function fileExists(filePath) {
+  try {
+    await fs.promises.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 class ServerExtensionManager extends BaseExtensionManager {
   constructor() {
@@ -37,6 +45,8 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
     this[EXTENSION_ROUTE_ADAPTERS] = new Map();
     this[PENDING_ROUTE_INJECTIONS] = [];
+    this[ROUTERS] = { api: null, view: null };
+    this[SERVER_CWD] = null;
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:loaded', ({ id }) => this._onExtensionLoaded(id));
@@ -82,7 +92,8 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
       if (apiEntry && typeof apiEntry.destroy === 'function') {
-        await apiEntry.destroy(this.registry, this[EXTENSION_CONTEXT]);
+        // eslint-disable-next-line no-underscore-dangle
+        await apiEntry.destroy(this.registry, this._hookContext());
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Destroyed API for: ${id}`);
         }
@@ -111,25 +122,16 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_CSS_ENTRY_POINTS].clear();
     this[EXTENSION_SCRIPT_ENTRY_POINTS].clear();
     this[EXTENSION_ROUTE_ADAPTERS].clear();
+    this[ROUTERS] = { api: null, view: null };
   }
 
   // ---------------------------------------------------------------------------
-  // Container & route helpers
+  // Route helpers
   // ---------------------------------------------------------------------------
-
-  _resolveFromContainer(key) {
-    const ctx = this[EXTENSION_CONTEXT];
-    try {
-      return ctx.container.resolve(key);
-    } catch {
-      return null;
-    }
-  }
 
   _injectRoutes(id, hookResult, type) {
-    const routerKey = type === 'api' ? 'apiRouter' : 'viewRouter';
-    // eslint-disable-next-line no-underscore-dangle
-    const router = this._resolveFromContainer(routerKey);
+    const routerKey = type === 'api' ? 'api' : 'view';
+    const router = this[ROUTERS][routerKey];
     const adapter = normalizeRouteAdapter(hookResult, type);
 
     if (!router) {
@@ -148,8 +150,7 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
       this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
     }
-    const adapterKey = type === 'api' ? 'api' : 'view';
-    this[EXTENSION_ROUTE_ADAPTERS].get(id)[adapterKey] = adapter;
+    this[EXTENSION_ROUTE_ADAPTERS].get(id)[routerKey] = adapter;
 
     if (__DEV__) {
       console.log(
@@ -159,79 +160,86 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Inject extension route adapters into the current router.
+   * Connect a router instance and flush pending/stored route adapters.
    *
-   * Handles two cases:
-   * 1. Pending injections buffered during init (router wasn't ready yet)
-   * 2. Already-stored adapters that need re-injection when a new router
-   *    is created (SSR creates a new router per request, but init runs once)
+   * Shared logic for both view and API routers:
+   * 1. Drains pending injections matching `routerKey` from buffer → store
+   * 2. Re-injects all stored adapters for `routerKey` into the router
    *
-   * Called by views bootstrap after the router is created and registered.
-   *
-   * @param {Object} [viewRouter] - The current view router instance.
-   *   When provided, bypasses container resolution (avoids stale context on
-   *   subsequent SSR requests where init() returns early without updating
-   *   the container reference).
+   * @param {string} routerKey - 'view' or 'api'
+   * @param {Object} router - Router instance with add(adapter) method
    */
-  flushPendingRoutes(viewRouter) {
-    // 1. Process pending injections first (buffer → store)
-    const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
-    for (const { id, adapter, type } of pending) {
-      if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
-        this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+  _connectRouter(routerKey, router) {
+    this[ROUTERS][routerKey] = router;
+
+    // 1. Drain pending injections for this router key (buffer → store)
+    const remaining = [];
+    for (const entry of this[PENDING_ROUTE_INJECTIONS]) {
+      const entryKey = entry.type === 'api' ? 'api' : 'view';
+      if (entryKey === routerKey) {
+        if (!this[EXTENSION_ROUTE_ADAPTERS].has(entry.id)) {
+          this[EXTENSION_ROUTE_ADAPTERS].set(entry.id, {});
+        }
+        this[EXTENSION_ROUTE_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
+      } else {
+        remaining.push(entry);
       }
-      const adapterKey = type === 'api' ? 'api' : 'view';
-      this[EXTENSION_ROUTE_ADAPTERS].get(id)[adapterKey] = adapter;
     }
+    this[PENDING_ROUTE_INJECTIONS].length = 0;
+    this[PENDING_ROUTE_INJECTIONS].push(...remaining);
 
-    // 2. Resolve routers
-    // eslint-disable-next-line no-underscore-dangle
-    const vRouter = viewRouter || this._resolveFromContainer('viewRouter');
-    // eslint-disable-next-line no-underscore-dangle
-    const aRouter = this._resolveFromContainer('apiRouter');
-
-    // 3. Inject all stored adapters into their respective routers
+    // 2. Inject all stored adapters for this router key
     for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
-      if (adapters.view && vRouter) {
-        const added = vRouter.add(adapters.view);
+      if (adapters[routerKey] && router) {
+        const added = router.add(adapters[routerKey]);
         if (__DEV__) {
           console.log(
-            `[ServerExtensionManager] Injected ${added.length} view route(s) for ${id}`,
-          );
-        }
-      }
-
-      if (adapters.api && aRouter) {
-        const added = aRouter.add(adapters.api);
-        if (__DEV__) {
-          console.log(
-            `[ServerExtensionManager] Injected ${added.length} API route(s) for ${id}`,
+            `[ServerExtensionManager] Injected ${added.length} ${routerKey} route(s) for ${id}`,
           );
         }
       }
     }
+  }
 
-    if (!vRouter && __DEV__) {
-      console.warn('[ServerExtensionManager] viewRouter unavailable for flush');
-    }
+  /**
+   * Connect the view router instance.
+   * Called per-request by views bootstrap (SSR creates a new router each time).
+   *
+   * @param {Object} viewRouter - View router with add/remove methods
+   */
+  connectViewRouter(viewRouter) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._connectRouter('view', viewRouter);
+  }
+
+  /**
+   * Connect the API router instance.
+   * Called once at boot after the API DynamicRouter is created.
+   *
+   * @param {Object} apiRouter - API router with add/remove methods
+   */
+  connectApiRouter(apiRouter) {
+    // eslint-disable-next-line no-underscore-dangle
+    this._connectRouter('api', apiRouter);
   }
 
   _removeRouteAdapters(id) {
     const adapters = this[EXTENSION_ROUTE_ADAPTERS].get(id);
     if (!adapters) return;
 
-    if (adapters.api) {
-      // eslint-disable-next-line no-underscore-dangle
-      const apiRouter = this._resolveFromContainer('apiRouter');
-      if (apiRouter) apiRouter.remove(adapters.api);
-    }
-    if (adapters.view) {
-      // eslint-disable-next-line no-underscore-dangle
-      const viewRouter = this._resolveFromContainer('viewRouter');
-      if (viewRouter) viewRouter.remove(adapters.view);
+    if (adapters.api && this[ROUTERS].api) {
+      this[ROUTERS].api.remove(adapters.api);
     }
 
-    console.log(`[ServerExtensionManager] Removed route adapters for: ${id}`);
+    if (adapters.view && this[ROUTERS].view) {
+      this[ROUTERS].view.remove(adapters.view);
+    }
+
+    this[EXTENSION_ROUTE_ADAPTERS].delete(id);
+
+    if (__DEV__) {
+      console.log(`[ServerExtensionManager] Removed route adapters for: ${id}`);
+    }
   }
 
   /**
@@ -308,10 +316,8 @@ class ServerExtensionManager extends BaseExtensionManager {
     const baseExtensionDir = extensionKey.split(path.sep)[0] || extensionKey;
 
     try {
-      if (this[EXTENSION_CONTEXT] && this[EXTENSION_CONTEXT].cwd) {
-        const devBaseDir = this.getDevExtensionPath(
-          this[EXTENSION_CONTEXT].cwd,
-        );
+      if (this[SERVER_CWD]) {
+        const devBaseDir = this.getDevExtensionPath(this[SERVER_CWD]);
         if (
           devBaseDir &&
           fs.existsSync(path.join(devBaseDir, baseExtensionDir))
@@ -390,44 +396,28 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Validate server environment and context
-   * @throws {Error} If context is invalid
+   * Environment-specific setup called once by init().
+   * Resolves `cwd` for bundle path resolution.
+   * @param {Object} container - DI container
    */
-  _validateServerContext() {
-    if (
-      typeof this[EXTENSION_CONTEXT].cwd !== 'string' ||
-      this[EXTENSION_CONTEXT].cwd.trim().length === 0
-    ) {
+  async _onInit(container) {
+    // Store cwd for bundle path resolution
+    try {
+      const cwd = container.resolve('cwd');
+      await fileExists(cwd);
+      this[SERVER_CWD] = cwd;
+    } catch {
       if (__DEV__) {
         console.warn(
-          '[ServerExtensionManager] Running without explicit cwd, using process.cwd()',
+          '[ServerExtensionManager] cwd not accessible, using process.cwd()',
         );
       }
-      this[EXTENSION_CONTEXT].cwd = process.cwd();
-    }
-  }
-
-  /**
-   * Ensure server extension manager is ready
-   * For SSR: Ensures context is valid before loading extensions
-   * @returns {Promise<void>}
-   */
-  async _ensureReady() {
-    if (this[EXTENSION_INIT]) {
-      return this[EXTENSION_INIT];
+      this[SERVER_CWD] = process.cwd();
     }
 
-    this[EXTENSION_INIT] = (async () => {
-      // Validate server context
-      // eslint-disable-next-line no-underscore-dangle
-      this._validateServerContext();
-
-      if (__DEV__) {
-        console.log('[ServerExtensionManager] Server extension manager ready');
-      }
-    })();
-
-    return this[EXTENSION_INIT];
+    if (__DEV__) {
+      console.log('[ServerExtensionManager] Server extension manager ready');
+    }
   }
 
   /**
@@ -478,8 +468,6 @@ class ServerExtensionManager extends BaseExtensionManager {
       manifest.name,
       manifest.main,
     );
-    // eslint-disable-next-line no-underscore-dangle
-    await this._ensureReady();
 
     const apiModule = this.requireModule(apiBundlePath);
     const extensionApi = apiModule.default || apiModule;
@@ -490,7 +478,8 @@ class ServerExtensionManager extends BaseExtensionManager {
           `[ServerExtensionManager] Running ${hookName} for ${id} (v${manifest.version || '0.0.0'})`,
         );
       }
-      await extensionApi[hookName](this.registry, this[EXTENSION_CONTEXT]);
+      // eslint-disable-next-line no-underscore-dangle
+      await extensionApi[hookName](this.registry, this._hookContext());
       console.log(`[ServerExtensionManager] ${hookName} completed for ${id}`);
     } else if (__DEV__) {
       console.log(
@@ -628,7 +617,7 @@ class ServerExtensionManager extends BaseExtensionManager {
           console.log(`[ServerExtensionManager] Booting API for ${id}`);
         }
         // eslint-disable-next-line no-underscore-dangle
-        await extensionApi.init(this.registry, this[EXTENSION_CONTEXT]);
+        await extensionApi.init(this.registry, this._hookContext());
         this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
       } else {
         console.warn(
@@ -693,8 +682,6 @@ class ServerExtensionManager extends BaseExtensionManager {
       throw error;
     }
 
-    // eslint-disable-next-line no-underscore-dangle
-    await this._ensureReady();
     const startTime = Date.now();
 
     try {
@@ -763,16 +750,67 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @returns {Promise<void>}
    */
   async refresh(...extensionIds) {
-    if (!this[EXTENSION_CONTEXT]) {
-      if (__DEV__) {
-        console.log('[ServerExtensionManager] Skipping refresh (no context)');
-      }
-      return;
-    }
-
-    // Full refresh: delegate to base class (re-fetches everything)
+    // Full refresh: re-sync from API, then discover dev disk extensions
     if (extensionIds.length === 0) {
-      return super.refresh();
+      await super.refresh();
+
+      // After API sync, scan dev extensions dir for disk-only extensions
+      // not yet registered in the DB (true plug & play for dev)
+      const devDir = this.getDevExtensionPath(this[SERVER_CWD]);
+      if (devDir && fs.existsSync(devDir)) {
+        try {
+          const entries = fs.readdirSync(devDir, { withFileTypes: true });
+          const loadedNames = new Set(
+            Array.from(this[EXTENSION_METADATA].values())
+              .map(m => m.manifest && m.manifest.name)
+              .filter(Boolean),
+          );
+
+          const devExtensions = (
+            await Promise.all(
+              entries
+                .filter(entry => entry.isDirectory())
+                .map(async entry => {
+                  const extDir = path.join(devDir, entry.name);
+                  const manifest = this.readManifest(extDir);
+                  if (!manifest || !manifest.name) return null;
+                  if (loadedNames.has(manifest.name)) return null;
+
+                  if (await fileExists(path.join(extDir, 'extension.css'))) {
+                    manifest.hasClientCss = true;
+                  }
+                  if (await fileExists(path.join(extDir, 'remote.js'))) {
+                    manifest.hasClientScript = true;
+                  }
+
+                  return { ...manifest, fromDisk: true };
+                }),
+            )
+          ).filter(Boolean);
+
+          if (devExtensions.length > 0) {
+            if (__DEV__) {
+              console.log(
+                `[ServerExtensionManager] Discovered dev extensions: ${devExtensions.map(m => m.name).join(', ')}`,
+              );
+            }
+            await Promise.allSettled(
+              devExtensions.map(manifest =>
+                this.loadExtension(manifest.name, manifest),
+              ),
+            );
+          }
+        } catch (err) {
+          if (__DEV__) {
+            console.warn(
+              '[ServerExtensionManager] Dev extension scan failed:',
+              err.message,
+            );
+          }
+        }
+      }
+
+      return;
     }
 
     // Build lookup map once: name/id → { id, metadata }  (O(M))
@@ -786,32 +824,32 @@ class ServerExtensionManager extends BaseExtensionManager {
     }
 
     // Resolve each name in O(1)
-    const resolvedEntries = extensionIds
-      .map(name => metadataByKey.get(name))
-      .filter(Boolean)
-      .map(({ id, metadata }) => {
-        const extensionKey =
-          (metadata.manifest && metadata.manifest.name) || id;
-        const { dir } = this.resolveExtensionDir(extensionKey);
+    const resolvedEntries = (
+      await Promise.all(
+        extensionIds
+          .map(name => metadataByKey.get(name))
+          .filter(Boolean)
+          .map(async ({ id, metadata }) => {
+            const extensionKey =
+              (metadata.manifest && metadata.manifest.name) || id;
+            const { dir } = this.resolveExtensionDir(extensionKey);
 
-        let freshManifest = dir ? this.readManifest(dir) : null;
-        if (!freshManifest) {
-          freshManifest = metadata.manifest;
-        } else {
-          try {
-            if (fs.existsSync(path.join(dir, 'extension.css'))) {
-              freshManifest.hasClientCss = true;
+            let freshManifest = dir ? this.readManifest(dir) : null;
+            if (!freshManifest) {
+              freshManifest = metadata.manifest;
+            } else {
+              if (await fileExists(path.join(dir, 'extension.css'))) {
+                freshManifest.hasClientCss = true;
+              }
+              if (await fileExists(path.join(dir, 'remote.js'))) {
+                freshManifest.hasClientScript = true;
+              }
             }
-            if (fs.existsSync(path.join(dir, 'remote.js'))) {
-              freshManifest.hasClientScript = true;
-            }
-          } catch {
-            // Non-critical: asset detection failure
-          }
-        }
 
-        return { id, manifest: { ...freshManifest, fromDisk: true } };
-      });
+            return { id, manifest: { ...freshManifest, fromDisk: true } };
+          }),
+      )
+    ).filter(Boolean);
 
     if (resolvedEntries.length === 0) {
       if (__DEV__) {
@@ -856,13 +894,6 @@ class ServerExtensionManager extends BaseExtensionManager {
     if (__DEV__) {
       console.log('[ServerExtensionManager] Refreshed ✅');
     }
-  }
-
-  /**
-   * Subscribe to events (No-op on server)
-   */
-  onReady() {
-    // No WebSocket subscriptions on server
   }
 
   /**

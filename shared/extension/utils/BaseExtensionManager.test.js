@@ -42,6 +42,16 @@ describe('BaseExtensionManager', () => {
   let manager;
   let mockContext;
 
+  /**
+   * Helper: initialize the manager without triggering syncExtensions.
+   * Sets FETCH internally via init() while skipping sync side-effects.
+   */
+  async function initManager() {
+    const syncSpy = jest.spyOn(manager, 'syncExtensions').mockResolvedValue();
+    await manager.init(mockContext.fetch);
+    syncSpy.mockRestore();
+  }
+
   beforeEach(() => {
     manager = new BaseExtensionManager();
     mockContext = {
@@ -58,21 +68,15 @@ describe('BaseExtensionManager', () => {
   });
 
   describe('init', () => {
-    it('throws error if context has no fetch', async () => {
-      await expect(manager.init({})).rejects.toThrow(
-        'ExtensionManager requires a valid context with fetch method',
-      );
-    });
-
     it('initializes once and calls syncExtensions', async () => {
       const syncSpy = jest.spyOn(manager, 'syncExtensions').mockResolvedValue();
 
-      await manager.init(mockContext);
+      await manager.init(mockContext.fetch);
       expect(manager[INITIALIZED]).toBe(true);
       expect(syncSpy).toHaveBeenCalledTimes(1);
 
       // Second call should skip
-      await manager.init(mockContext);
+      await manager.init(mockContext.fetch);
       expect(syncSpy).toHaveBeenCalledTimes(1);
     });
   });
@@ -92,7 +96,7 @@ describe('BaseExtensionManager', () => {
         .spyOn(manager, 'loadExtension')
         .mockResolvedValue();
 
-      await manager.init(mockContext);
+      await manager.init(mockContext.fetch);
 
       expect(mockContext.fetch).toHaveBeenCalledWith('/api/extensions');
       expect(loadExtensionSpy).toHaveBeenCalledWith(
@@ -112,8 +116,7 @@ describe('BaseExtensionManager', () => {
     });
 
     it('successfully loads an extension', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext); // Set context
+      await initManager();
 
       mockContext.fetch.mockResolvedValue({
         success: true,
@@ -139,18 +142,17 @@ describe('BaseExtensionManager', () => {
       expect(result).toBe(mockExtensionInstance);
       expect(registry.defineExtension).toHaveBeenCalledWith(
         mockExtensionInstance,
-        mockContext,
+        {},
         { id: 'test-extension', main: 'index.js' },
       );
-      expect(mockExtensionInstance.onLoad).toHaveBeenCalledWith(mockContext);
+      expect(mockExtensionInstance.onLoad).toHaveBeenCalledWith({});
 
       const meta = manager[EXTENSION_METADATA].get('test-extension');
       expect(meta.state).toBe(ExtensionState.LOADED);
     });
 
     it('handles load failure', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext);
+      await initManager();
 
       mockContext.fetch.mockResolvedValue({
         success: false,
@@ -167,8 +169,7 @@ describe('BaseExtensionManager', () => {
 
   describe('loadDependencies', () => {
     it('skips loading if all dependencies are already active', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext);
+      await initManager();
 
       manager[ACTIVE_EXTENSIONS].set('dep-1', {});
       const loadExtensionSpy = jest.spyOn(manager, 'loadExtension');
@@ -179,8 +180,7 @@ describe('BaseExtensionManager', () => {
     });
 
     it('loads missing dependencies in parallel', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext);
+      await initManager();
 
       manager[ACTIVE_EXTENSIONS].set('existing-dep', {});
       const loadExtensionSpy = jest
@@ -209,8 +209,7 @@ describe('BaseExtensionManager', () => {
 
   describe('unloadExtension', () => {
     it('unregisters extension from registry', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext);
+      await initManager();
 
       const mockExtension = { onUnload: jest.fn() };
       manager[ACTIVE_EXTENSIONS].set('p1', mockExtension);
@@ -218,8 +217,8 @@ describe('BaseExtensionManager', () => {
 
       await manager.unloadExtension('p1');
 
-      expect(mockExtension.onUnload).toHaveBeenCalledWith(mockContext);
-      expect(registry.unregister).toHaveBeenCalledWith('p1', mockContext);
+      expect(mockExtension.onUnload).toHaveBeenCalledWith({});
+      expect(registry.unregister).toHaveBeenCalledWith('p1', {});
       expect(manager[ACTIVE_EXTENSIONS].has('p1')).toBe(false);
       expect(manager[EXTENSION_METADATA].get('p1').state).toBe(
         ExtensionState.UNLOADED,
@@ -229,8 +228,7 @@ describe('BaseExtensionManager', () => {
 
   describe('activateNamespace', () => {
     it('activates extensions for a namespace', async () => {
-      manager[INITIALIZED] = true;
-      manager.init(mockContext);
+      await initManager();
 
       const mockDef = { id: 'p1', init: jest.fn() };
       registry.getDefinitions.mockReturnValue(new Set([mockDef]));
@@ -246,7 +244,7 @@ describe('BaseExtensionManager', () => {
       // Verify init wrapper
       const registeredInstance = registry.register.mock.calls[0][1];
       await registeredInstance.init(registry);
-      expect(mockDef.init).toHaveBeenCalledWith(registry, mockContext);
+      expect(mockDef.init).toHaveBeenCalledWith(registry, {});
     });
   });
 });

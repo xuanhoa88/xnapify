@@ -36,11 +36,17 @@ describe('ServerExtensionManager', () => {
 
     mockContext = {
       fetch: jest.fn().mockResolvedValue({ data: { extensions: [] } }),
-      cwd: '/test/cwd',
+    };
+
+    const mockContainer = {
+      resolve: jest.fn(key => {
+        if (key === 'cwd') return '/test/cwd';
+        return undefined;
+      }),
     };
 
     // Initialize properly
-    await serverManager.init(mockContext);
+    await serverManager.init(mockContext.fetch, mockContainer);
 
     jest.clearAllMocks();
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -94,7 +100,7 @@ describe('ServerExtensionManager', () => {
         {},
       );
 
-      expect(mockApi.init).toHaveBeenCalledWith(registry, mockContext);
+      expect(mockApi.init).toHaveBeenCalledWith(registry, {});
       expect(result).toBeDefined();
       expect(result.name).toBe('test');
     });
@@ -142,7 +148,7 @@ describe('ServerExtensionManager', () => {
       expect(serverManager.requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
-      expect(mockApi.install).toHaveBeenCalledWith(registry, mockContext);
+      expect(mockApi.install).toHaveBeenCalledWith(registry, {});
       expect(result).toBe(true);
     });
 
@@ -194,8 +200,80 @@ describe('ServerExtensionManager', () => {
       expect(serverManager.requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
-      expect(mockApi.uninstall).toHaveBeenCalledWith(registry, mockContext);
+      expect(mockApi.uninstall).toHaveBeenCalledWith(registry, {});
       expect(result).toBe(true);
+    });
+  });
+
+  describe('connectViewRouter', () => {
+    let mockViewRouter;
+    let mockApiRouter;
+
+    beforeEach(() => {
+      mockViewRouter = { add: jest.fn(() => []), remove: jest.fn() };
+      mockApiRouter = { add: jest.fn(() => []), remove: jest.fn() };
+    });
+
+    it('injects buffered view routes into the router', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // Buffer a view route (no router yet)
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._injectRoutes('test-ext', mockAdapter, 'views');
+
+      // Connect view router — should flush buffered adapter
+      serverManager.connectViewRouter(mockViewRouter);
+
+      expect(mockViewRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('re-injects stored adapters on subsequent connect (SSR per-request)', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // Buffer and connect
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._injectRoutes('test-ext', mockAdapter, 'views');
+      serverManager.connectViewRouter(mockViewRouter);
+      expect(mockViewRouter.add).toHaveBeenCalledTimes(1);
+
+      // New router (next SSR request)
+      const newRouter = { add: jest.fn(() => []), remove: jest.fn() };
+      serverManager.connectViewRouter(newRouter);
+
+      expect(newRouter.add).toHaveBeenCalledWith(mockAdapter);
+    });
+
+    it('buffers both view and api routes then injects view routes on connect', () => {
+      const viewAdapter = { files: () => [], load: () => ({}) };
+      const apiAdapter = { files: () => [], load: () => ({}) };
+
+      // Buffer both types (no routers available yet)
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._injectRoutes('test-ext', viewAdapter, 'views');
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._injectRoutes('test-ext', apiAdapter, 'api');
+
+      // connectViewRouter — should inject view routes, api stays stored
+      serverManager.connectViewRouter(mockViewRouter);
+
+      expect(mockViewRouter.add).toHaveBeenCalledWith(viewAdapter);
+      // API adapter was stored but no apiRouter to inject into
+      expect(mockApiRouter.add).not.toHaveBeenCalled();
+    });
+
+    it('handles null viewRouter without crash', () => {
+      const mockAdapter = { files: () => [], load: () => ({}) };
+
+      // Buffer a route
+      // eslint-disable-next-line no-underscore-dangle
+      serverManager._injectRoutes('test-ext', mockAdapter, 'views');
+
+      // Should not crash
+      expect(() => serverManager.connectViewRouter(null)).not.toThrow();
+
+      // Now connect real router — stored adapter should inject
+      serverManager.connectViewRouter(mockViewRouter);
+      expect(mockViewRouter.add).toHaveBeenCalledWith(mockAdapter);
     });
   });
 });

@@ -5,30 +5,26 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-
-
 import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
 
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
-  EXTENSION_CONTEXT,
   EXTENSION_METADATA,
-  EXTENSION_INIT,
 } from '../utils/BaseExtensionManager';
 
-// Private symbols
-const NEEDS_RELOAD = Symbol('__rsk.needsReloadExtensions__');
-const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.extensionRouteAdapters__');
-const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.pendingRouteInjections__');
+// Symbols — private (internal to client manager)
+const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
+const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.ext.pendingRoutes__');
+const VIEW_ROUTER = Symbol('__rsk.ext.viewRouter__');
 
 class ClientExtensionManager extends BaseExtensionManager {
   constructor() {
     super();
 
-    this[NEEDS_RELOAD] = false;
     this[EXTENSION_ROUTE_ADAPTERS] = new Map();
     this[PENDING_ROUTE_INJECTIONS] = [];
+    this[VIEW_ROUTER] = null;
 
     // Inject CSS and script tags when a extension is loaded at runtime
     this.on('extension:loaded', ({ id, manifest }) => {
@@ -92,33 +88,9 @@ class ClientExtensionManager extends BaseExtensionManager {
     });
   }
 
-  /** Whether a full page reload is required on next navigation */
-  get needsReload() {
-    return this[NEEDS_RELOAD];
-  }
-
-  /** @private */
-  set needsReload(value) {
-    this[NEEDS_RELOAD] = value;
-  }
-
   // ---------------------------------------------------------------------------
   // Route injection (mirrors ServerExtensionManager)
   // ---------------------------------------------------------------------------
-
-  /**
-   * Resolve the view router from the DI container.
-   * @returns {Object|null} Router instance or null
-   * @private
-   */
-  _resolveRouter() {
-    const ctx = this[EXTENSION_CONTEXT];
-    try {
-      return ctx.container.resolve('viewRouter');
-    } catch {
-      return null;
-    }
-  }
 
   /**
    * Normalize and inject (or buffer) view routes for an extension.
@@ -128,10 +100,8 @@ class ClientExtensionManager extends BaseExtensionManager {
    */
   _injectRoutes(id, hookResult) {
     const adapter = normalizeRouteAdapter(hookResult, 'views');
-    // eslint-disable-next-line no-underscore-dangle
-    const router = this._resolveRouter();
 
-    if (!router) {
+    if (!this[VIEW_ROUTER]) {
       // Router not available yet — buffer for later injection
       this[PENDING_ROUTE_INJECTIONS].push({ id, adapter });
       if (__DEV__) {
@@ -142,7 +112,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       return;
     }
 
-    router.add(adapter);
+    this[VIEW_ROUTER].add(adapter);
 
     if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
       this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
@@ -161,9 +131,12 @@ class ClientExtensionManager extends BaseExtensionManager {
    * 1. Pending injections buffered before the router was ready
    * 2. Re-injection of already-stored adapters (e.g. on HMR/SSR)
    *
-   * @param {Object} [viewRouter] - The current view router instance
+   * @param {Object} viewRouter - The current view router instance
    */
-  flushPendingRoutes(viewRouter) {
+  connectViewRouter(viewRouter) {
+    // Store the view router reference for future use
+    this[VIEW_ROUTER] = viewRouter;
+
     // 1. Process pending injections (buffer → store)
     const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
     for (const { id, adapter } of pending) {
@@ -173,10 +146,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       this[EXTENSION_ROUTE_ADAPTERS].get(id).view = adapter;
     }
 
-    // 2. Resolve the router (prefer explicit param over container lookup)
-    // eslint-disable-next-line no-underscore-dangle
-    const router = viewRouter || this._resolveRouter();
-    if (!router) {
+    if (!viewRouter) {
       if (__DEV__) {
         console.warn(
           '[ClientExtensionManager] viewRouter unavailable for flush',
@@ -185,11 +155,11 @@ class ClientExtensionManager extends BaseExtensionManager {
       return;
     }
 
-    // 3. Inject all stored view adapters into the current router
+    // 2. Inject all stored view adapters into the current router
     for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
       if (!adapters.view) continue;
 
-      router.add(adapters.view);
+      viewRouter.add(adapters.view);
       if (__DEV__) {
         console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
       }
@@ -205,10 +175,8 @@ class ClientExtensionManager extends BaseExtensionManager {
     const adapters = this[EXTENSION_ROUTE_ADAPTERS].get(id);
     if (!adapters || !adapters.view) return;
 
-    // eslint-disable-next-line no-underscore-dangle
-    const router = this._resolveRouter();
-    if (router) {
-      router.remove(adapters.view);
+    if (this[VIEW_ROUTER]) {
+      this[VIEW_ROUTER].remove(adapters.view);
     }
 
     this[EXTENSION_ROUTE_ADAPTERS].delete(id);
@@ -267,17 +235,11 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Ensure Module Federation shared scope is initialized.
-   * The shared scope is available as soon as Webpack's client bundle
-   * executes, so no additional waiting is required.
-   * @returns {Promise<void>}
+   * Environment-specific setup called once by init().
+   * Verifies Module Federation shared scope and sets up dev debug.
    */
-  async _ensureReady() {
-    if (this[EXTENSION_INIT]) {
-      return this[EXTENSION_INIT];
-    }
-
-    this[EXTENSION_INIT] = (async () => {
+  _onInit() {
+    try {
       // Verify shared scope is available
       // eslint-disable-next-line no-undef
       if (
@@ -304,9 +266,9 @@ class ClientExtensionManager extends BaseExtensionManager {
           manager: this,
         };
       }
-    })();
-
-    return this[EXTENSION_INIT];
+    } catch (error) {
+      console.error('[ClientExtensionManager] Failed to initialize:', error);
+    }
   }
 
   /**
@@ -392,10 +354,6 @@ class ClientExtensionManager extends BaseExtensionManager {
     const containerName = options && options.containerName;
 
     try {
-      // Ensure shared scope is ready before loading any extension
-      // eslint-disable-next-line no-underscore-dangle
-      await this._ensureReady();
-
       // If the MF container is not yet on window (SSR script hasn't
       // executed or was not injected), load the script dynamically.
       if (!window[containerName]) {
@@ -468,13 +426,6 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Subscribe to WebSocket events (Client only)
-   */
-  onReady() {
-    console.log('[ClientExtensionManager] Ready to receive WebSocket events');
-  }
-
-  /**
    * Handle external event (e.g., from WebSocket)
    * @param {Object} event - Event object
    */
@@ -490,24 +441,40 @@ class ClientExtensionManager extends BaseExtensionManager {
     switch (type) {
       case 'EXTENSION_INSTALLED':
       case 'EXTENSION_UPDATED': {
-        // Instantly inject CSS/script so user sees the effect
+        // Inject CSS/script tags, then hot-reload the extension
         await this.emit('extension:loaded', { id: extensionId, manifest });
-        this.needsReload = true;
+        await this.reloadExtension(extensionId);
         break;
       }
 
       case 'EXTENSION_UNINSTALLED': {
-        // Remove CSS/script tags from the DOM
+        // Tear down and remove CSS/script tags
+        if (this.isExtensionLoaded(extensionId)) {
+          await this.unloadExtension(extensionId);
+        }
         await this.emit('extension:unloaded', { id: extensionId });
-        this.needsReload = true;
         break;
       }
 
-      case 'EXTENSION_ACTIVATED':
-      case 'EXTENSION_DEACTIVATED':
-        // Reload needed so new routes/menus are picked up
-        this.needsReload = true;
+      case 'EXTENSION_ACTIVATED': {
+        // Hot-load the newly activated extension
+        await this.loadExtension(extensionId, manifest);
         break;
+      }
+
+      case 'EXTENSION_DEACTIVATED': {
+        // Tear down the deactivated extension
+        if (this.isExtensionLoaded(extensionId)) {
+          await this.unloadExtension(extensionId);
+        }
+        break;
+      }
+
+      case 'EXTENSIONS_REFRESHED': {
+        // Admin triggered full refresh — re-sync all extensions
+        await this.refresh();
+        break;
+      }
 
       default:
         console.warn(`[ClientExtensionManager] Unknown event type: ${type}`);
