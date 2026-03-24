@@ -17,7 +17,6 @@ import expressRequestLanguage from 'express-request-language';
 import { createMemoryHistory } from 'history';
 import isLocalhostIp from 'is-localhost-ip';
 import set from 'lodash/set';
-import toString from 'lodash/toString';
 import { LRUCache } from 'lru-cache';
 import nodeFetch from 'node-fetch';
 import ReactDOM from 'react-dom/server';
@@ -370,7 +369,7 @@ async function loadSsrResources$() {
       if (entry == null) return false;
       const url =
         typeof entry === 'string' ? entry : entry.href || entry.src || '';
-      const key = toString(url);
+      const key = String(url);
       if (!key || seen.has(key)) return false;
       seen.add(key);
       return true;
@@ -391,17 +390,6 @@ async function loadSsrResources$() {
     if (__DEV__) console.error('❌ Failed to load stats.json:', err);
   }
 
-  for (const [key, target] of [
-    ['scriptUrls', rawScripts],
-    ['cssUrls', rawStyles],
-  ]) {
-    try {
-      target.push(...(extensionManager[key] || []));
-    } catch (err) {
-      if (__DEV__) console.error(`❌ Failed to load extension ${key}:`, err);
-    }
-  }
-
   const [{ default: App }, { default: Html }] = await Promise.all([
     import('@shared/renderer/App'),
     import('@shared/renderer/Html'),
@@ -417,8 +405,12 @@ async function loadSsrResources$() {
 
 function getSsrResources() {
   if (!appState.ssrResourcesPromise) {
+    appState.ssrRetryCount = (appState.ssrRetryCount || 0) + 1;
     appState.ssrResourcesPromise = loadSsrResources$().catch(err => {
-      appState.ssrResourcesPromise = null;
+      // Allow retry up to 3 times; after that, cache the rejection
+      if (appState.ssrRetryCount < 3) {
+        appState.ssrResourcesPromise = null;
+      }
       throw err;
     });
   }
@@ -428,6 +420,15 @@ function getSsrResources() {
 // ---------------------------------------------------------------------------
 // SSR Rendering
 // ---------------------------------------------------------------------------
+
+function safeExtUrls(key) {
+  try {
+    return extensionManager[key] || [];
+  } catch (err) {
+    if (__DEV__) console.error(`❌ Failed to read extension ${key}:`, err);
+    return [];
+  }
+}
 
 async function renderToHtml({ context, component, metadata = {}, nonce }) {
   const { scriptLinks, styleLinks, App, Html } = await getSsrResources();
@@ -439,8 +440,8 @@ async function renderToHtml({ context, component, metadata = {}, nonce }) {
   const htmlData = {
     ...metadata,
     children,
-    styleLinks,
-    scriptLinks,
+    styleLinks: [...styleLinks, ...safeExtUrls('cssUrls')],
+    scriptLinks: [...scriptLinks, ...safeExtUrls('scriptUrls')],
     appState: {
       redux: context.store.getState(),
       appUrl: process.env.RSK_APP_URL,
@@ -479,7 +480,7 @@ function makeSsrMiddleware(baseUrl) {
     const authCookie = (req.cookies && req.cookies['id_token']) || '';
 
     const handleClientDisconnect = () => {
-      if (!res.headersSent) {
+      if (!res.writableEnded) {
         if (__DEV__) console.info('❌ Client disconnected:', req.path);
         abortController.abort();
       }
@@ -608,6 +609,7 @@ function makeSsrMiddleware(baseUrl) {
         });
       }
 
+      if (res.headersSent) return;
       res.status(status).send(html);
 
       if (__DEV__ && renderTime > 1000) {
@@ -624,7 +626,7 @@ function makeSsrMiddleware(baseUrl) {
         err.status = 504;
       }
 
-      next(err);
+      if (!res.headersSent) next(err);
     } finally {
       req.removeListener('close', handleClientDisconnect);
 

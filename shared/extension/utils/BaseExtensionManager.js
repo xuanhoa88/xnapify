@@ -930,10 +930,6 @@ export class BaseExtensionManager {
                   phase: 'destroy',
                 });
               }
-            } else if (__DEV__) {
-              console.warn(
-                `[ExtensionManager] Extension ${def.id} has no 'destroy' method`,
-              );
             }
           },
         };
