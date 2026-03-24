@@ -57,12 +57,6 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
           console.debug(`[manageExtensions] Added extension: ${mapKey}`);
           const encryptedId = encryptExtensionId(mapKey);
           const rsk = merge({}, manifest.rsk);
-
-          // Auto-detect kind: extensions with API/view entry points are modules
-          const type =
-            rsk.kind ||
-            (manifest.main || manifest.browser ? 'module' : 'plugin');
-
           // Derive capabilities from manifest fields
           const subscribe = rsk.subscribe || [];
           const capabilities = {
@@ -79,7 +73,6 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
             ...manifest,
             name: rsk.name || mapKey,
             id: encryptedId,
-            type,
             capabilities,
             icon,
             isInstalled: false, // Default, will be overwritten by DB check

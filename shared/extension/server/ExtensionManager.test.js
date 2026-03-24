@@ -58,15 +58,17 @@ describe('ServerExtensionManager', () => {
     jest.restoreAllMocks();
   });
 
-  describe('resolveEntryPoint', () => {
+  describe('_resolveEntryPoint', () => {
     it('resolves server.js for browser extensions', () => {
-      expect(serverManager.resolveEntryPoint({ browser: 'index.js' })).toBe(
+      // eslint-disable-next-line no-underscore-dangle
+      expect(serverManager._resolveEntryPoint({ browser: 'index.js' })).toBe(
         'server.js',
       );
     });
 
     it('resolves api.js for main-only extensions', () => {
-      expect(serverManager.resolveEntryPoint({ main: 'api.js' })).toBe(
+      // eslint-disable-next-line no-underscore-dangle
+      expect(serverManager._resolveEntryPoint({ main: 'api.js' })).toBe(
         'api.js',
       );
     });
@@ -100,9 +102,13 @@ describe('ServerExtensionManager', () => {
         {},
       );
 
-      expect(mockApi.init).toHaveBeenCalledWith(registry, {});
+      expect(mockApi.init).toHaveBeenCalledWith(
+        registry,
+        expect.objectContaining({ container: expect.any(Object) }),
+      );
       expect(result).toBeDefined();
-      expect(result.name).toBe('test');
+      // Merged result contains the apiModule properties
+      expect(result.init).toBe(mockApi.init);
     });
 
     it('loads View module from server.js', async () => {
@@ -126,7 +132,8 @@ describe('ServerExtensionManager', () => {
         {},
       );
 
-      expect(result).toBe(mockView.default);
+      // Result is a merged spread, not the original reference
+      expect(result).toStrictEqual(mockView.default);
     });
   });
 
@@ -148,7 +155,10 @@ describe('ServerExtensionManager', () => {
       expect(serverManager.requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
-      expect(mockApi.install).toHaveBeenCalledWith(registry, {});
+      expect(mockApi.install).toHaveBeenCalledWith(
+        registry,
+        expect.objectContaining({ container: expect.any(Object) }),
+      );
       expect(result).toBe(true);
     });
 
@@ -200,7 +210,10 @@ describe('ServerExtensionManager', () => {
       expect(serverManager.requireModule).toHaveBeenCalledWith(
         '/abs/path/api.js',
       );
-      expect(mockApi.uninstall).toHaveBeenCalledWith(registry, {});
+      expect(mockApi.uninstall).toHaveBeenCalledWith(
+        registry,
+        expect.objectContaining({ container: expect.any(Object) }),
+      );
       expect(result).toBe(true);
     });
   });

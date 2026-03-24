@@ -139,15 +139,14 @@ function createApiMiddlewareStack(app) {
  * Build the dynamic API router from per-module route adapters.
  *
  * @param {object} app - Express application
- * @param {Map<string, object>} apiRoutes - Map of module name → route adapter
+ * @param {object} extension] - Extension manager instance
  * @returns {Router} Assembled Express router
  */
-function buildApiRouter(app, apiRoutes) {
-  const container = app.get('container');
-
+async function buildApiRouter(app, extension) {
   // Create API middleware stack
   const apiMiddlewares = createApiMiddlewareStack(app);
 
+  // Create router
   const router = express.Router();
 
   // Body parsing scoped to API routes only
@@ -161,6 +160,12 @@ function buildApiRouter(app, apiRoutes) {
     }),
   );
 
+  // Discover and run module lifecycles (container-only DI)
+  const { apiRoutes } = await discoverModules(
+    apisContext,
+    app.get('container'),
+  );
+
   // Mount module API routes
   for (const [name, adapter] of apiRoutes) {
     try {
@@ -171,33 +176,15 @@ function buildApiRouter(app, apiRoutes) {
   }
 
   // Connect extension API router (flushes buffered routes + stores ref for runtime installs)
-  const extensionManager = container.resolve('extension');
-  if (extensionManager) {
+  if (extension) {
     const extRouter = new DynamicRouter({ files: () => [], load: () => ({}) });
     router.use(...apiMiddlewares, extRouter.resolve);
-    extensionManager.connectApiRouter(extRouter);
+    extension.connectApiRouter(extRouter);
   }
 
   log(`Dynamic router built (${apiRoutes.size} module(s))`);
 
   return router;
-}
-
-/**
- * Discover modules and assemble the API middleware stack.
- *
- * @param {object} app - Express application
- * @returns {Promise<Router>} Assembled Express router
- */
-async function setupApiRoutes(app) {
-  // Discover and run module lifecycles (container-only DI)
-  const { apiRoutes } = await discoverModules(
-    apisContext,
-    app.get('container'),
-  );
-
-  // Build the dynamic router from collected route adapters
-  return buildApiRouter(app, apiRoutes);
 }
 
 // =============================================================================
@@ -215,10 +202,11 @@ async function setupApiRoutes(app) {
  *   5. Apply global middleware
  *
  * @param {object} app - Express application
+ * @param {object} [extension] - Extension manager instance
  * @returns {Promise<Router>} The assembled API router
  * @throws {Error} If initialization fails
  */
-export default async function bootstrap(app) {
+export default async function bootstrap(app, extension) {
   try {
     const container = app.get('container');
 
@@ -236,7 +224,7 @@ export default async function bootstrap(app) {
     setupGlobalMiddleware(app);
 
     // Discover modules and setup API routes
-    const apiRouter = await setupApiRoutes(app);
+    const apiRouter = await buildApiRouter(app, extension);
 
     log('Bootstrap completed');
 

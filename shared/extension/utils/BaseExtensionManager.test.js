@@ -43,13 +43,11 @@ describe('BaseExtensionManager', () => {
   let mockContext;
 
   /**
-   * Helper: initialize the manager without triggering syncExtensions.
+   * Helper: initialize the manager without triggering sync.
    * Sets FETCH internally via init() while skipping sync side-effects.
    */
   async function initManager() {
-    const syncSpy = jest.spyOn(manager, 'syncExtensions').mockResolvedValue();
     await manager.init(mockContext.fetch);
-    syncSpy.mockRestore();
   }
 
   beforeEach(() => {
@@ -67,21 +65,51 @@ describe('BaseExtensionManager', () => {
     jest.restoreAllMocks();
   });
 
-  describe('init', () => {
-    it('initializes once and calls syncExtensions', async () => {
-      const syncSpy = jest.spyOn(manager, 'syncExtensions').mockResolvedValue();
+  describe('validateExtensionStructure', () => {
+    it('throws for non-object values', () => {
+      expect(() => manager.validateExtensionStructure(null)).toThrow(
+        'Extension must be an object',
+      );
+      expect(() => manager.validateExtensionStructure('string')).toThrow(
+        'Extension must be an object',
+      );
+    });
 
-      await manager.init(mockContext.fetch);
-      expect(manager[INITIALIZED]).toBe(true);
-      expect(syncSpy).toHaveBeenCalledTimes(1);
+    it('throws for empty objects with no recognized keys', () => {
+      expect(() => manager.validateExtensionStructure({})).toThrow(
+        'at least one recognized property',
+      );
+      expect(() => manager.validateExtensionStructure({ foo: 'bar' })).toThrow(
+        'at least one recognized property',
+      );
+    });
 
-      // Second call should skip
-      await manager.init(mockContext.fetch);
-      expect(syncSpy).toHaveBeenCalledTimes(1);
+    it.each([
+      ['name', { name: 'ext' }],
+      ['init', { init: jest.fn() }],
+      ['views', { views: jest.fn() }],
+      ['routes', { routes: jest.fn() }],
+      ['translations', { translations: jest.fn() }],
+      ['install', { install: jest.fn() }],
+      ['destroy', { destroy: jest.fn() }],
+    ])('accepts extension with %s property', (_key, ext) => {
+      expect(() => manager.validateExtensionStructure(ext)).not.toThrow();
     });
   });
 
-  describe('syncExtensions', () => {
+  describe('init', () => {
+    it('initializes once (setup only, no sync)', async () => {
+      await manager.init(mockContext.fetch);
+      expect(manager[INITIALIZED]).toBe(true);
+
+      // Second call should skip
+      const onInitSpy = jest.spyOn(manager, '_onInit');
+      await manager.init(mockContext.fetch);
+      expect(onInitSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sync', () => {
     it('fetches extensions and calls loadExtension for each', async () => {
       mockContext.fetch.mockResolvedValue({
         data: {
@@ -97,6 +125,7 @@ describe('BaseExtensionManager', () => {
         .mockResolvedValue();
 
       await manager.init(mockContext.fetch);
+      await manager.sync();
 
       expect(mockContext.fetch).toHaveBeenCalledWith('/api/extensions');
       expect(loadExtensionSpy).toHaveBeenCalledWith(
@@ -127,7 +156,7 @@ describe('BaseExtensionManager', () => {
       });
 
       // Mock resolved entry point
-      jest.spyOn(manager, 'resolveEntryPoint').mockReturnValue('index.js');
+      jest.spyOn(manager, '_resolveEntryPoint').mockReturnValue('index.js');
 
       const mockExtensionInstance = {
         name: 'Test Extension',

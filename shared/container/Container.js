@@ -20,6 +20,7 @@ const BINDING_TYPE = Object.freeze({
 
 // Private symbol for internal state (matches HookFactory convention)
 const BINDINGS = Symbol('__rsk.containerBindings__');
+const PARENT = Symbol('__rsk.containerParent__');
 
 /**
  * A lightweight, isomorphic Dependency Injection container.
@@ -84,6 +85,20 @@ class Container {
      * @type {Map<string, {type: string, persistent: *, factory?: Function, value?: *}>}
      */
     this[BINDINGS] = new Map();
+    this[PARENT] = null;
+  }
+
+  /**
+   * Create a child container that inherits bindings from this container.
+   * The child resolves its own bindings first; if not found, it delegates
+   * to the parent. Bindings added to the child do NOT affect the parent.
+   *
+   * @returns {Container} A new child container
+   */
+  createChild() {
+    const child = new Container();
+    child[PARENT] = this;
+    return child;
   }
 
   // ===========================================================================
@@ -195,6 +210,11 @@ class Container {
     const binding = this[BINDINGS].get(name);
 
     if (!binding) {
+      // Delegate to parent container if available
+      if (this[PARENT]) {
+        return this[PARENT].resolve(name);
+      }
+
       const error = new Error(
         `No binding registered for "${name}". Available: [${this.getBindingNames().join(', ')}]`,
       );
@@ -247,16 +267,25 @@ class Container {
    * @returns {boolean} `true` if the binding is registered
    */
   has(name) {
-    return this[BINDINGS].has(name);
+    return (
+      this[BINDINGS].has(name) ||
+      (this[PARENT] ? this[PARENT].has(name) : false)
+    );
   }
 
   /**
-   * Get all registered binding names.
+   * Get all registered binding names (including parent bindings).
    *
    * @returns {string[]} Array of binding keys
    */
   getBindingNames() {
-    return Array.from(this[BINDINGS].keys());
+    const names = new Set(this[BINDINGS].keys());
+    if (this[PARENT]) {
+      for (const name of this[PARENT].getBindingNames()) {
+        names.add(name);
+      }
+    }
+    return Array.from(names);
   }
 
   // ===========================================================================

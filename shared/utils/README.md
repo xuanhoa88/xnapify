@@ -55,23 +55,5 @@ adapter.files().forEach(filePath => {
 });
 ```
 
-### `routeAdapter.js` (`createRouteAdapter`, `normalizeRouteAdapter`)
-
-Creates prefixed route adapters for extension modules. Builds on `contextAdapter.js` by mapping `require.context` keys to prefixed paths that the router's collector expects.
-
-- Validates `moduleName` (non-empty string) and `type` (`'api'` or `'views'`).
-- `normalizeRouteAdapter` accepts either a `[name, context]` tuple or a pre-built adapter object.
-
-**Example:**
-```javascript
-// In an extension's API entry point:
-export default {
-  routes() {
-    // Returns a tuple — the framework builds the adapter automatically
-    return ['posts', require.context('./routes', true, /\.[cm]?[jt]s$/i)];
-  },
-};
-```
-
 ## See Also
 - [SPEC.md](./SPEC.md) — Technical specification

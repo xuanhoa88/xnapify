@@ -79,7 +79,6 @@ function ExtensionCard({
   );
 
   const capabilities = merge({}, extension.capabilities);
-  const isModule = (extension.type || 'plugin') === 'module';
   const authorText =
     extension.author || (extension.options && extension.options.author);
   const isLocal =
@@ -108,10 +107,7 @@ function ExtensionCard({
               className={s.iconImage}
             />
           ) : (
-            <Icon
-              name={extension.icon || (isModule ? 'dashboard' : 'extension')}
-              size={28}
-            />
+            <Icon name={extension.icon || 'extension'} size={28} />
           )}
         </div>
         <div className={s.headerText}>
@@ -128,13 +124,6 @@ function ExtensionCard({
                 <span className={s.version}>v{extension.version}</span>
               </div>
               <div className={s.subtitleRow}>
-                <span
-                  className={clsx(s.typeBadge, { [s.typeModule]: isModule })}
-                >
-                  {isModule
-                    ? t('admin:extensions.typeModule', 'Module')
-                    : t('admin:extensions.typePlugin', 'Plugin')}
-                </span>
                 {extension.source && (
                   <span
                     className={clsx(s.typeBadge, s.sourceBadge, {
@@ -259,7 +248,7 @@ ExtensionCard.propTypes = {
     version: PropTypes.string,
     is_active: PropTypes.bool,
     job_status: PropTypes.string,
-    type: PropTypes.oneOf(['plugin', 'module']),
+
     source: PropTypes.string,
     icon: PropTypes.string,
     author: PropTypes.string,

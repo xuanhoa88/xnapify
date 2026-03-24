@@ -46,16 +46,6 @@ import s from './Extensions.css';
 const FILTER_TABS = [
   { key: 'all', labelKey: 'admin:extensions.filterAll', fallback: 'All' },
   {
-    key: 'plugins',
-    labelKey: 'admin:extensions.filterPlugins',
-    fallback: 'Plugins',
-  },
-  {
-    key: 'modules',
-    labelKey: 'admin:extensions.filterModules',
-    fallback: 'Modules',
-  },
-  {
     key: 'active',
     labelKey: 'admin:extensions.filterActive',
     fallback: 'Active',
@@ -333,20 +323,11 @@ function Extensions() {
   // Count per tab for badges
   const tabCounts = useMemo(() => {
     let activeCount = 0;
-    let pluginCount = 0;
-    let moduleCount = 0;
     for (let i = 0; i < extensions.length; i++) {
       if (extensions[i].is_active) activeCount++;
-      if ((extensions[i].type || 'plugin') === 'module') {
-        moduleCount++;
-      } else {
-        pluginCount++;
-      }
     }
     return {
       all: extensions.length,
-      plugins: pluginCount,
-      modules: moduleCount,
       active: activeCount,
       inactive: extensions.length - activeCount,
     };
@@ -357,11 +338,7 @@ function Extensions() {
     let result = extensions;
 
     // Apply tab filter
-    if (activeFilter === 'plugins') {
-      result = result.filter(p => (p.type || 'plugin') === 'plugin');
-    } else if (activeFilter === 'modules') {
-      result = result.filter(p => (p.type || 'plugin') === 'module');
-    } else if (activeFilter === 'active') {
+    if (activeFilter === 'active') {
       result = result.filter(p => p.is_active);
     } else if (activeFilter === 'inactive') {
       result = result.filter(p => !p.is_active);

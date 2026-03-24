@@ -247,10 +247,13 @@ export class Router {
       // Run mount hook (once per route, parent → child)
       await runMount(route, ctx);
 
-      // Execute the action (composed middlewares + handler)
+      // Execute the action (composed middlewares + handler).
+      // The composed next callback must forward errors to Express's
+      // next(err) instead of throwing, because async/promise-based
+      // middleware may call next(err) after the outer await resolves,
+      // turning `throw err` into an unhandled rejection.
       const actionResult = await route.action(req, res, err => {
-        if (err) throw err;
-        // If action calls next() without error, route didn't handle the request
+        if (err) return next(err);
         return next();
       });
 

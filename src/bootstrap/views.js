@@ -10,7 +10,7 @@ import { getAppName, getAppDescription } from '@shared/renderer/redux';
 import Router from '@shared/renderer/router';
 
 // Discover view lifecycle modules from apps directory
-const viewsLifecycleContext = require.context(
+const viewsContext = require.context(
   '../apps',
   true,
   /^\.\/[^/]+\/views\/index\.[cm]?[jt]s$/i,
@@ -88,17 +88,15 @@ class AppRouter extends Router {
 /**
  * Creates the router by discovering per-module view contexts.
  *
- * @param {Object} options - Router initialization options
- * @param {Object} options.container - DI container instance (client or server)
- * @param {Object} options.store - Redux store instance
+ * @param {Object} context - Router initialization options
+ * @param {Object} context.container - DI container instance (client or server)
+ * @param {Object} context.store - Redux store instance
+ * @param {Object} extension - Extension manager instance
  * @returns {Promise<Router>} Configured router instance
  */
-export default async function initializeRouter(options = {}) {
+export default async function initializeRouter(context, extension) {
   // Discover modules and run lifecycle phases (translations → providers → views)
-  const { mergedAdapter } = await discoverModules(
-    viewsLifecycleContext,
-    options,
-  );
+  const { mergedAdapter } = await discoverModules(viewsContext, context);
 
   if (!mergedAdapter) {
     const err = new Error('No view modules found — cannot initialize router');
@@ -117,36 +115,39 @@ export default async function initializeRouter(options = {}) {
       const { _instance, ...context } = ctx;
       return _instance.resolve({ ...context, error, pathname: '/error' });
     },
-    async onRouteInit(route, ctx) {
-      const ns = (route.module && route.module.namespace) || route.path;
-      const extensionManager = ctx.container.resolve('extension');
-      if (ns && extensionManager) {
-        if (__DEV__) {
-          console.log(`[Router] Loading extension namespace: ${ns}`);
+    async onRouteInit(route) {
+      try {
+        const ns = (route.module && route.module.namespace) || route.path;
+        if (ns) {
+          if (__DEV__) {
+            console.log(`[Router] Loading extension namespace: ${ns}`);
+          }
+          await extension.ensureNamespaceActive(ns);
         }
-        await extensionManager.ensureNamespaceActive(ns);
+      } catch (err) {
+        log('Failed to load extension namespace: ' + err, 'error');
       }
     },
-    async onRouteDestroy(route, ctx) {
-      const ns = (route.module && route.module.namespace) || route.path;
-      const extensionManager = ctx.container.resolve('extension');
-      if (ns && extensionManager) {
-        if (__DEV__) {
-          console.log(`[Router] Unloading extension namespace: ${ns}`);
+    async onRouteDestroy(route) {
+      try {
+        const ns = (route.module && route.module.namespace) || route.path;
+        if (ns) {
+          if (__DEV__) {
+            console.log(`[Router] Unloading extension namespace: ${ns}`);
+          }
+          await extension.deactivateNamespace(ns);
         }
-        await extensionManager.deactivateNamespace(ns);
+      } catch (err) {
+        log('Failed to unload extension namespace: ' + err, 'error');
       }
     },
   });
 
-  // Connect the extension extensionManager's view router so buffered routes are injected
+  // Connect the extension extension's view router so buffered routes are injected
   // (extensions load before the router is created; also re-injects on
   // subsequent SSR requests where a new router is created)
   try {
-    const extensionManager = options.container.resolve('extension');
-    if (typeof extensionManager.connectViewRouter === 'function') {
-      extensionManager.connectViewRouter(router);
-    }
+    await extension.connectViewRouter(router);
   } catch (err) {
     log('Failed to connect extension manager: ' + err, 'error');
   }

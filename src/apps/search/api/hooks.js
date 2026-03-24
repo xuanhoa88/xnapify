@@ -6,21 +6,21 @@
  */
 
 /**
- * Register extension search hooks.
+ * Register search indexer hooks.
  *
- * Allows extensions to auto-register their own search indexers via
- * the `search.indexers.register` hook.
+ * Emits the `search:indexers` → `register` event so extensions and modules
+ * can register their own search indexers via the app hook system.
  *
  * @param {Object} container - DI container instance
  */
 export function registerSearchHooks(container) {
-  const { registry } = container.resolve('extension');
+  const hook = container.resolve('hook');
 
-  registry
-    .executeHookParallel('search.indexers.register', container)
+  hook('search:indexers')
+    .emit('register', container)
     .catch(err => {
       console.error(
-        '[Search] Failed to execute search.indexers.register hook',
+        '[Search] Failed to emit search:indexers.register hook',
         err,
       );
     });

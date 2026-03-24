@@ -164,18 +164,27 @@ class ExtensionRegistry {
       return this;
     }
 
-    // Auto-detect kind: extensions with API/view entry points are modules
-    const extensionType =
-      manifest.rsk.kind ||
-      (manifest.main || manifest.browser ? 'module' : 'plugin');
+    // A module provides routes (API or views); a plugin extends via hooks only
+    const hasRoutes =
+      typeof definition.routes === 'function' ||
+      typeof definition.views === 'function';
+    const extensionType = hasRoutes ? 'module' : 'plugin';
 
-    if (namespaces.length === 0 && extensionType !== 'module') {
+    // Modules with views auto-subscribe to '*' (wildcard) if no explicit
+    // subscribe is declared. This ensures their route init hooks (e.g.
+    // registerMenu) run on every route navigation, keeping menus consistent
+    // between SSR and client hydration.
+    const hasViews = typeof definition.views === 'function';
+    const effectiveNamespaces =
+      namespaces.length === 0 && hasViews ? ['*'] : namespaces;
+
+    if (effectiveNamespaces.length === 0 && extensionType !== 'module') {
       console.warn(
         `[ExtensionRegistry] Extension "${extensionId}" has no subscribed namespaces`,
       );
     }
 
-    for (const ns of namespaces) {
+    for (const ns of effectiveNamespaces) {
       if (!this[DEFINITIONS].has(ns)) {
         this[DEFINITIONS].set(ns, new Set());
       }
@@ -242,7 +251,16 @@ class ExtensionRegistry {
    * @returns {Set|null} Set of extension definitions or null
    */
   getDefinitions(ns) {
-    return this[DEFINITIONS].get(ns) || null;
+    const exact = this[DEFINITIONS].get(ns);
+    const wildcard = ns !== '*' ? this[DEFINITIONS].get('*') : null;
+
+    if (!exact && !wildcard) return null;
+
+    // Merge exact and wildcard definitions into a single Set
+    const merged = new Set();
+    if (exact) exact.forEach(d => merged.add(d));
+    if (wildcard) wildcard.forEach(d => merged.add(d));
+    return merged.size > 0 ? merged : null;
   }
 
   /**

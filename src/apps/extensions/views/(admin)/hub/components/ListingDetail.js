@@ -61,11 +61,6 @@ export default function ListingDetail({ listing = null, onClose }) {
       value: ((listing && listing.install_count) || 0).toLocaleString(),
     },
     {
-      icon: 'extension',
-      label: t('admin:hub.type', 'Type'),
-      value: listing && listing.type,
-    },
-    {
       icon: 'folder',
       label: t('admin:hub.category', 'Category'),
       value: listing && listing.category,

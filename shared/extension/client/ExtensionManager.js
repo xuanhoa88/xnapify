@@ -5,25 +5,24 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
-
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
   EXTENSION_METADATA,
+  BUFFERED_ROUTES,
+  STORED_ADAPTERS,
 } from '../utils/BaseExtensionManager';
+import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
 // Symbols — private (internal to client manager)
-const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
-const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.ext.pendingRoutes__');
 const VIEW_ROUTER = Symbol('__rsk.ext.viewRouter__');
 
 class ClientExtensionManager extends BaseExtensionManager {
   constructor() {
     super();
 
-    this[EXTENSION_ROUTE_ADAPTERS] = new Map();
-    this[PENDING_ROUTE_INJECTIONS] = [];
+    this[STORED_ADAPTERS] = new Map();
+    this[BUFFERED_ROUTES] = [];
     this[VIEW_ROUTER] = null;
 
     // Inject CSS and script tags when a extension is loaded at runtime
@@ -103,7 +102,7 @@ class ClientExtensionManager extends BaseExtensionManager {
 
     if (!this[VIEW_ROUTER]) {
       // Router not available yet — buffer for later injection
-      this[PENDING_ROUTE_INJECTIONS].push({ id, adapter });
+      this[BUFFERED_ROUTES].push({ id, adapter });
       if (__DEV__) {
         console.log(
           `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
@@ -114,10 +113,10 @@ class ClientExtensionManager extends BaseExtensionManager {
 
     this[VIEW_ROUTER].add(adapter);
 
-    if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
-      this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+    if (!this[STORED_ADAPTERS].has(id)) {
+      this[STORED_ADAPTERS].set(id, {});
     }
-    this[EXTENSION_ROUTE_ADAPTERS].get(id).view = adapter;
+    this[STORED_ADAPTERS].get(id).view = adapter;
 
     if (__DEV__) {
       console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
@@ -138,12 +137,12 @@ class ClientExtensionManager extends BaseExtensionManager {
     this[VIEW_ROUTER] = viewRouter;
 
     // 1. Process pending injections (buffer → store)
-    const pending = this[PENDING_ROUTE_INJECTIONS].splice(0);
+    const pending = this[BUFFERED_ROUTES].splice(0);
     for (const { id, adapter } of pending) {
-      if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
-        this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+      if (!this[STORED_ADAPTERS].has(id)) {
+        this[STORED_ADAPTERS].set(id, {});
       }
-      this[EXTENSION_ROUTE_ADAPTERS].get(id).view = adapter;
+      this[STORED_ADAPTERS].get(id).view = adapter;
     }
 
     if (!viewRouter) {
@@ -156,7 +155,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     }
 
     // 2. Inject all stored view adapters into the current router
-    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
+    for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
       if (!adapters.view) continue;
 
       viewRouter.add(adapters.view);
@@ -172,14 +171,14 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @private
    */
   _removeRouteAdapters(id) {
-    const adapters = this[EXTENSION_ROUTE_ADAPTERS].get(id);
+    const adapters = this[STORED_ADAPTERS].get(id);
     if (!adapters || !adapters.view) return;
 
     if (this[VIEW_ROUTER]) {
       this[VIEW_ROUTER].remove(adapters.view);
     }
 
-    this[EXTENSION_ROUTE_ADAPTERS].delete(id);
+    this[STORED_ADAPTERS].delete(id);
 
     if (__DEV__) {
       console.log(`[ClientExtensionManager] Removed route adapters for: ${id}`);
@@ -328,7 +327,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null to skip
    */
-  resolveEntryPoint(manifest) {
+  _resolveEntryPoint(manifest) {
     // If the build produced a remote.js, load it as the Webpack MF container
     return manifest && manifest.hasClientScript ? 'remote.js' : null;
   }
@@ -341,16 +340,6 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {Object} options - Additional options (containerName)
    */
   async _bootstrapExtension(id, entryPoint, manifest, options) {
-    // Skip if no entry point resolved (e.g. server-only extension)
-    if (!entryPoint) {
-      if (__DEV__) {
-        console.log(
-          `[ClientExtensionManager] Skipping extension ${id} (no client entry point)`,
-        );
-      }
-      return null;
-    }
-
     const containerName = options && options.containerName;
 
     try {

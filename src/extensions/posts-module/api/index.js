@@ -54,14 +54,21 @@ export default {
     const db = context.container.resolve('db');
     const models = context.container.resolve('models');
 
-    if (db && models) {
-      for (const key of modelsContext.keys()) {
-        const mod = modelsContext(key);
-        const factory = mod.default || mod;
-        if (typeof factory === 'function') {
-          const model = factory(db);
-          if (model && model.name) {
-            models[model.name] = model;
+    if (db) {
+      // Run migrations (idempotent — skips already-applied)
+      await db.connection.runMigrations([
+        { context: migrationsContext, prefix: __EXTENSION_NAME__ },
+      ]);
+
+      if (models) {
+        for (const key of modelsContext.keys()) {
+          const mod = modelsContext(key);
+          const factory = mod.default || mod;
+          if (typeof factory === 'function') {
+            const model = factory(db);
+            if (model && model.name) {
+              models[model.name] = model;
+            }
           }
         }
       }

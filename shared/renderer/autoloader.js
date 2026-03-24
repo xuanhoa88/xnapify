@@ -200,13 +200,10 @@ export function mergeAdapters(adapters) {
  * Discover and boot all view modules in lifecycle order.
  *
  * @param {object} modulesContext - Webpack require.context or compatible
- * @param {object} options       - { container }
+ * @param {object} context - DI context
  * @returns {Promise<{ viewAdapters: Map, mergedAdapter: object|null, errors: object[] }>}
  */
-export async function discoverModules(
-  modulesContext,
-  { container, store } = {},
-) {
+export async function discoverModules(modulesContext, context) {
   const startTime = Date.now();
   const adapter = createWebpackContextAdapter(modulesContext);
 
@@ -239,7 +236,7 @@ export async function discoverModules(
   errors.push(
     ...(await runPhase('providers', lifecycles, async (name, hook) => {
       try {
-        await hook({ container, store });
+        await hook(context);
         log(`[${name}] Providers`);
       } catch (error) {
         // PersistentBindingError = idempotent re-registration on same container

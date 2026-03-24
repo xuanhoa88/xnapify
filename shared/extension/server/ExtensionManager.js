@@ -9,23 +9,23 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 
-import { normalizeRouteAdapter } from '@shared/utils/routeAdapter';
-
 import {
   BaseExtensionManager,
   ACTIVE_EXTENSIONS,
   LOADED_VERSIONS,
   EXTENSION_METADATA,
+  BUFFERED_ROUTES,
+  STORED_ADAPTERS,
 } from '../utils/BaseExtensionManager';
+import { normalizeRouteAdapter } from '../utils/routeAdapter';
 
 // Symbols — private (internal to server manager)
 const EXTENSION_API_ENTRY_POINTS = Symbol('__rsk.ext.apiEntryPoints__');
 const EXTENSION_CSS_ENTRY_POINTS = Symbol('__rsk.ext.cssEntryPoints__');
 const EXTENSION_SCRIPT_ENTRY_POINTS = Symbol('__rsk.ext.scriptEntryPoints__');
-const EXTENSION_ROUTE_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
-const PENDING_ROUTE_INJECTIONS = Symbol('__rsk.ext.pendingRoutes__');
-const ROUTERS = Symbol('__rsk.ext.routers__');
+const CONNECTED_ROUTERS = Symbol('__rsk.ext.connectedRouters__');
 const SERVER_CWD = Symbol('__rsk.ext.serverCwd__');
+const SERVER_CONTAINER = Symbol('__rsk.ext.serverContainer__');
 
 /** Non-throwing async file existence check */
 async function fileExists(filePath) {
@@ -43,10 +43,11 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_API_ENTRY_POINTS] = new Map();
     this[EXTENSION_CSS_ENTRY_POINTS] = new Map();
     this[EXTENSION_SCRIPT_ENTRY_POINTS] = new Map();
-    this[EXTENSION_ROUTE_ADAPTERS] = new Map();
-    this[PENDING_ROUTE_INJECTIONS] = [];
-    this[ROUTERS] = { api: null, view: null };
+    this[STORED_ADAPTERS] = new Map();
+    this[BUFFERED_ROUTES] = [];
+    this[CONNECTED_ROUTERS] = { api: null, view: null };
     this[SERVER_CWD] = null;
+    this[SERVER_CONTAINER] = null;
 
     // eslint-disable-next-line no-underscore-dangle
     this.on('extension:loaded', ({ id }) => this._onExtensionLoaded(id));
@@ -92,8 +93,9 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
       if (apiEntry && typeof apiEntry.destroy === 'function') {
-        // eslint-disable-next-line no-underscore-dangle
-        await apiEntry.destroy(this.registry, this._hookContext());
+        await apiEntry.destroy(this.registry, {
+          container: this[SERVER_CONTAINER],
+        });
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Destroyed API for: ${id}`);
         }
@@ -114,15 +116,18 @@ class ServerExtensionManager extends BaseExtensionManager {
     this[EXTENSION_API_ENTRY_POINTS].delete(id);
     this[EXTENSION_CSS_ENTRY_POINTS].delete(id);
     this[EXTENSION_SCRIPT_ENTRY_POINTS].delete(id);
-    this[EXTENSION_ROUTE_ADAPTERS].delete(id);
+    this[STORED_ADAPTERS].delete(id);
   }
 
   _onManagerDestroyed() {
     this[EXTENSION_API_ENTRY_POINTS].clear();
     this[EXTENSION_CSS_ENTRY_POINTS].clear();
     this[EXTENSION_SCRIPT_ENTRY_POINTS].clear();
-    this[EXTENSION_ROUTE_ADAPTERS].clear();
-    this[ROUTERS] = { api: null, view: null };
+    this[STORED_ADAPTERS].clear();
+    this[CONNECTED_ROUTERS] = { api: null, view: null };
+    this[BUFFERED_ROUTES].length = 0;
+    this[SERVER_CWD] = null;
+    this[SERVER_CONTAINER] = null;
   }
 
   // ---------------------------------------------------------------------------
@@ -131,12 +136,12 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   _injectRoutes(id, hookResult, type) {
     const routerKey = type === 'api' ? 'api' : 'view';
-    const router = this[ROUTERS][routerKey];
+    const router = this[CONNECTED_ROUTERS][routerKey];
     const adapter = normalizeRouteAdapter(hookResult, type);
 
     if (!router) {
       // Router not available yet — buffer for later injection
-      this[PENDING_ROUTE_INJECTIONS].push({ id, adapter, type });
+      this[BUFFERED_ROUTES].push({ id, adapter, type });
       if (__DEV__) {
         console.log(
           `[ServerExtensionManager] Buffered ${type} route(s) for ${id} (router not ready)`,
@@ -147,10 +152,10 @@ class ServerExtensionManager extends BaseExtensionManager {
 
     const added = router.add(adapter);
 
-    if (!this[EXTENSION_ROUTE_ADAPTERS].has(id)) {
-      this[EXTENSION_ROUTE_ADAPTERS].set(id, {});
+    if (!this[STORED_ADAPTERS].has(id)) {
+      this[STORED_ADAPTERS].set(id, {});
     }
-    this[EXTENSION_ROUTE_ADAPTERS].get(id)[routerKey] = adapter;
+    this[STORED_ADAPTERS].get(id)[routerKey] = adapter;
 
     if (__DEV__) {
       console.log(
@@ -170,26 +175,26 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @param {Object} router - Router instance with add(adapter) method
    */
   _connectRouter(routerKey, router) {
-    this[ROUTERS][routerKey] = router;
+    this[CONNECTED_ROUTERS][routerKey] = router;
 
     // 1. Drain pending injections for this router key (buffer → store)
     const remaining = [];
-    for (const entry of this[PENDING_ROUTE_INJECTIONS]) {
+    for (const entry of this[BUFFERED_ROUTES]) {
       const entryKey = entry.type === 'api' ? 'api' : 'view';
       if (entryKey === routerKey) {
-        if (!this[EXTENSION_ROUTE_ADAPTERS].has(entry.id)) {
-          this[EXTENSION_ROUTE_ADAPTERS].set(entry.id, {});
+        if (!this[STORED_ADAPTERS].has(entry.id)) {
+          this[STORED_ADAPTERS].set(entry.id, {});
         }
-        this[EXTENSION_ROUTE_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
+        this[STORED_ADAPTERS].get(entry.id)[routerKey] = entry.adapter;
       } else {
         remaining.push(entry);
       }
     }
-    this[PENDING_ROUTE_INJECTIONS].length = 0;
-    this[PENDING_ROUTE_INJECTIONS].push(...remaining);
+    this[BUFFERED_ROUTES].length = 0;
+    this[BUFFERED_ROUTES].push(...remaining);
 
     // 2. Inject all stored adapters for this router key
-    for (const [id, adapters] of this[EXTENSION_ROUTE_ADAPTERS].entries()) {
+    for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
       if (adapters[routerKey] && router) {
         const added = router.add(adapters[routerKey]);
         if (__DEV__) {
@@ -224,18 +229,18 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   _removeRouteAdapters(id) {
-    const adapters = this[EXTENSION_ROUTE_ADAPTERS].get(id);
+    const adapters = this[STORED_ADAPTERS].get(id);
     if (!adapters) return;
 
-    if (adapters.api && this[ROUTERS].api) {
-      this[ROUTERS].api.remove(adapters.api);
+    if (adapters.api && this[CONNECTED_ROUTERS].api) {
+      this[CONNECTED_ROUTERS].api.remove(adapters.api);
     }
 
-    if (adapters.view && this[ROUTERS].view) {
-      this[ROUTERS].view.remove(adapters.view);
+    if (adapters.view && this[CONNECTED_ROUTERS].view) {
+      this[CONNECTED_ROUTERS].view.remove(adapters.view);
     }
 
-    this[EXTENSION_ROUTE_ADAPTERS].delete(id);
+    this[STORED_ADAPTERS].delete(id);
 
     if (__DEV__) {
       console.log(`[ServerExtensionManager] Removed route adapters for: ${id}`);
@@ -397,10 +402,14 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   /**
    * Environment-specific setup called once by init().
-   * Resolves `cwd` for bundle path resolution.
+   * Resolves `cwd` for bundle path resolution and stores the DI container
+   * for use by lifecycle hooks (init, destroy, install, uninstall).
    * @param {Object} container - DI container
    */
   async _onInit(container) {
+    // Store container for extension lifecycle hooks
+    this[SERVER_CONTAINER] = container;
+
     // Store cwd for bundle path resolution
     try {
       const cwd = container.resolve('cwd');
@@ -435,7 +444,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * @param {Object} manifest - Extension manifest
    * @returns {string|null} Entry point filename or null
    */
-  resolveEntryPoint(manifest) {
+  _resolveEntryPoint(manifest) {
     // If browser exists, we have a View (server.js) generated from it
     if (manifest && manifest.browser) return 'server.js';
     if (manifest && manifest.main) return 'api.js';
@@ -478,8 +487,9 @@ class ServerExtensionManager extends BaseExtensionManager {
           `[ServerExtensionManager] Running ${hookName} for ${id} (v${manifest.version || '0.0.0'})`,
         );
       }
-      // eslint-disable-next-line no-underscore-dangle
-      await extensionApi[hookName](this.registry, this._hookContext());
+      await extensionApi[hookName](this.registry, {
+        container: this[SERVER_CONTAINER],
+      });
       console.log(`[ServerExtensionManager] ${hookName} completed for ${id}`);
     } else if (__DEV__) {
       console.log(
@@ -547,9 +557,10 @@ class ServerExtensionManager extends BaseExtensionManager {
   // ---------------------------------------------------------------------------
 
   /**
-   * Load the extension module from the SSR bundle and inject view routes.
-   * On the server, `server.js` is the full extension definition (init, destroy,
-   * views, slots, hooks) built from the browser entry point.
+   * Load the SSR view bundle and inject view routes.
+   * `server.js` is the SSR-compiled version of the browser entry, typically
+   * exporting `{ views, translations }`. The full lifecycle hooks (init,
+   * routes, install) come from the API module, not here.
    *
    * @param {string} id - Extension ID
    * @param {Object} manifest - Extension manifest
@@ -594,6 +605,11 @@ class ServerExtensionManager extends BaseExtensionManager {
 
   /**
    * Load the API module, call init(), and inject API routes.
+   *
+   * Init and route injection are independent — if init() fails (e.g. because
+   * runProviders hasn't been called yet), routes are still injected so the
+   * API endpoints are reachable.
+   *
    * @param {string} id - Extension ID
    * @param {Object} manifest - Extension manifest
    * @private
@@ -607,48 +623,64 @@ class ServerExtensionManager extends BaseExtensionManager {
       manifest.main,
     );
 
+    let extensionApi;
+
     try {
       const apiModule = this.requireModule(apiBundlePath);
-      const extensionApi = apiModule.default || apiModule;
+      extensionApi = apiModule.default || apiModule;
+    } catch (err) {
+      console.error(
+        `[ServerExtensionManager] Failed to load API module for ${id}:`,
+        err.message,
+      );
+      this.emit('extension:error', { id, error: err, phase: 'api-load' });
+      return;
+    }
 
-      // Call init() lifecycle hook
-      if (extensionApi && typeof extensionApi.init === 'function') {
+    // Store entry point so destroy() can run later regardless of init() outcome
+    this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
+
+    // Call init() lifecycle hook (non-fatal — routes are injected regardless)
+    if (extensionApi && typeof extensionApi.init === 'function') {
+      try {
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Booting API for ${id}`);
         }
-        // eslint-disable-next-line no-underscore-dangle
-        await extensionApi.init(this.registry, this._hookContext());
-        this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
-      } else {
-        console.warn(
-          `[ServerExtensionManager] Extension ${id} has no init() in API module`,
+        await extensionApi.init(this.registry, {
+          container: this[SERVER_CONTAINER],
+        });
+      } catch (initErr) {
+        console.error(
+          `[ServerExtensionManager] init() failed for ${id}:`,
+          initErr.message,
         );
+        this.emit('extension:error', {
+          id,
+          error: initErr,
+          phase: 'api-init',
+        });
       }
-
-      // Inject API routes if the extension provides a routes() hook
-      if (extensionApi && typeof extensionApi.routes === 'function') {
-        try {
-          // eslint-disable-next-line no-underscore-dangle
-          this._injectRoutes(id, extensionApi.routes(), 'api');
-        } catch (routeErr) {
-          console.error(
-            `[ServerExtensionManager] Failed to inject API routes for ${id}:`,
-            routeErr.message,
-          );
-          this.emit('extension:error', {
-            id,
-            error: routeErr,
-            phase: 'api-routes',
-          });
-        }
-      }
-    } catch (err) {
-      console.error(
-        `[ServerExtensionManager] Failed to boot API for ${id}:`,
-        err.message,
-      );
-      this.emit('extension:error', { id, error: err, phase: 'api-boot' });
     }
+
+    // Inject API routes if the extension provides a routes() hook
+    if (extensionApi && typeof extensionApi.routes === 'function') {
+      try {
+        // eslint-disable-next-line no-underscore-dangle
+        this._injectRoutes(id, extensionApi.routes(), 'api');
+      } catch (routeErr) {
+        console.error(
+          `[ServerExtensionManager] Failed to inject API routes for ${id}:`,
+          routeErr.message,
+        );
+        this.emit('extension:error', {
+          id,
+          error: routeErr,
+          phase: 'api-routes',
+        });
+      }
+    }
+
+    return extensionApi;
   }
 
   /**
@@ -656,20 +688,11 @@ class ServerExtensionManager extends BaseExtensionManager {
    * Orchestrates view module loading, API booting, and route injection.
    *
    * @param {string} id - Extension ID
-   * @param {string|null} entryPoint - Resolved entry point filename
+   * @param {string|null} _entryPoint - Resolved entry point filename
    * @param {Object} manifest - Extension manifest
    * @returns {Promise<Object|null>} Extension module or null
    */
-  async _bootstrapExtension(id, entryPoint, manifest, _options) {
-    if (!entryPoint) {
-      if (__DEV__) {
-        console.log(
-          `[ServerExtensionManager] Skipping ${id} (no server entry point)`,
-        );
-      }
-      return null;
-    }
-
+  async _bootstrapExtension(id, _entryPoint, manifest) {
     const extensionDir = manifest && manifest.name;
     const currentVersion = (manifest && manifest.version) || '0.0.0';
 
@@ -685,13 +708,13 @@ class ServerExtensionManager extends BaseExtensionManager {
     const startTime = Date.now();
 
     try {
-      // 1. Load extension module (if browser entry exists)
+      // 1. Load SSR view module (server.js — generated from browser entry)
       // eslint-disable-next-line no-underscore-dangle
       const viewModule = this._loadViewModule(id, manifest);
 
       // 2. Load API module (init + routes)
       // eslint-disable-next-line no-underscore-dangle
-      await this._loadApiModule(id, manifest);
+      const apiModule = await this._loadApiModule(id, manifest);
 
       // Track version
       this[LOADED_VERSIONS].set(id, currentVersion);
@@ -709,10 +732,11 @@ class ServerExtensionManager extends BaseExtensionManager {
         }
       }
 
-      // Return view module, or synthetic object for API-only extensions
-      if (viewModule) return viewModule;
-      if (entryPoint === 'api.js') {
-        return { name: id, version: currentVersion, register: () => [] };
+      // Merge view + API modules into a single extension object so
+      // loadExtension → defineExtension gets the complete picture
+      // (e.g. views from SSR bundle, init/routes from API bundle).
+      if (viewModule || apiModule) {
+        return { ...apiModule, ...viewModule };
       }
       return null;
     } catch (err) {
@@ -744,7 +768,7 @@ class ServerExtensionManager extends BaseExtensionManager {
    * during dev-mode HMR.
    *
    * For full refreshes (no specific IDs), delegates to the base class which
-   * does a complete syncExtensions().
+   * does a complete sync().
    *
    * @param  {...string} extensionIds - Extension names/IDs to refresh (empty = all)
    * @returns {Promise<void>}

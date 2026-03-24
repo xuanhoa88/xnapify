@@ -315,9 +315,9 @@ const localeMiddleware = expressRequestLanguage({
 // View & Store Initialization
 // ---------------------------------------------------------------------------
 
-async function initializeViews({ container, store }) {
+async function initializeViews(context) {
   const m = await import('./bootstrap/views');
-  const views = await m.default({ container, store });
+  const views = await m.default(context, extensionManager);
   if (__DEV__) console.log('✅ Views initialized');
   return views;
 }
@@ -464,10 +464,6 @@ function makeSsrMiddleware(baseUrl) {
     // Abort controller for cancelling the request
     const abortController = new AbortController();
 
-    // Container for dependency injection
-    const ssrContainer = new Container();
-    ssrContainer.instance('extension', extensionManager);
-
     const authHeader = validateCookieHeader(req.headers.cookie || '');
     const rawLocale = req.language || DEFAULT_LOCALE;
 
@@ -526,7 +522,7 @@ function makeSsrMiddleware(baseUrl) {
         i18n,
         locale,
         history,
-        container: ssrContainer,
+        container: new Container(),
         pathname: history.location.pathname,
         query: Object.fromEntries(new URLSearchParams(history.location.search)),
         signal: abortController.signal,
@@ -550,11 +546,11 @@ function makeSsrMiddleware(baseUrl) {
       }
       context.store = store;
 
-      // Run extension providers per-request (binds services into ssrContainer)
+      // Run extension providers per-request (binds services into the context container)
       await extensionManager.runProviders(context);
 
       const views = await promiseWithDeadline(
-        initializeViews({ container: ssrContainer, store }),
+        initializeViews(context),
         SERVER_TIMEOUTS.VIEWS_LOAD,
         'Views loading',
       );
@@ -759,7 +755,9 @@ async function listen(server, baseUrl, port, host) {
     });
   }
 
-  appState.nodeRED.start();
+  // Extensions: now that the server is reachable via HTTP, load all
+  // active extensions (their API modules self-fetch /api/extensions).
+  await Promise.all([appState.nodeRED.start(), extensionManager.sync()]);
 
   const separator = '='.repeat(60);
   const wsUrl = baseUrl.replace(/^http(s?)/i, 'ws$1');
@@ -962,8 +960,14 @@ export async function bootstrapApp(app, server, options = {}) {
     next();
   });
 
-  // Initialize extensions at bootstrap time (after API router is created).
-  // Pass apiRouter directly — extensions inject their routes into it.
+  // API routes
+  const api = await import('./bootstrap/api');
+  const apiRouter = await api.default(app, extensionManager);
+  app.use(SERVER_CONFIG.apiPrefix, apiRouter);
+
+  // Initialize extensions AFTER API routes are mounted so connectApiRouter
+  // can store the router ref. sync() is called separately in
+  // listen() after the HTTP server is bound.
   try {
     await extensionManager.init(
       createFetch(nodeFetch, {
@@ -979,11 +983,6 @@ export async function bootstrapApp(app, server, options = {}) {
       console.warn('⚠️  Extension initialization failed:', err.message);
     }
   }
-
-  // API routes
-  const api = await import('./bootstrap/api');
-  const apiRouter = await api.default(app);
-  app.use(SERVER_CONFIG.apiPrefix, apiRouter);
 
   // Node-RED
   await appState.nodeRED.init(app, server, {
@@ -1075,9 +1074,7 @@ export async function destroyServer(server) {
 
   // Destroy extension manager only on full shutdown (not during HMR dispose)
   try {
-    if (typeof extensionManager.destroy === 'function') {
-      await extensionManager.destroy();
-    }
+    await extensionManager.destroy();
   } catch (err) {
     console.error('   ⚠️  Extension manager shutdown error:', err.message);
   }
@@ -1136,10 +1133,10 @@ if (module.hot) {
       try {
         // ServerExtensionManager.refresh() reads fresh manifests from disk
         // for targeted reloads, bypassing the HTTP self-fetch cycle.
-        if (typeof extensionManager.refresh === 'function') {
-          await extensionManager.refresh(...extensionIds);
-        }
+        await extensionManager.refresh(...extensionIds);
+
         invalidateCaches();
+
         const duration = Date.now() - start;
         console.log(`✅ Extensions refreshed in ${duration}ms`);
       } catch (err) {

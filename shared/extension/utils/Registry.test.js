@@ -150,6 +150,93 @@ describe('ExtensionRegistry', () => {
       expect(destroy).toHaveBeenCalledTimes(1);
       expect(init).toHaveBeenCalledWith(registry, { contextVal: 42 });
     });
+
+    test('module-type without subscribe auto-subscribes to wildcard', () => {
+      const definition = { views: jest.fn() };
+      const manifest = {
+        name: 'posts-module',
+        browser: 'views/index.js',
+        main: 'api/index.js',
+        rsk: {},
+      };
+
+      registry.defineExtension(definition, {}, manifest);
+
+      // Should be stored under '*' namespace
+      expect(registry.getDefinitions('*').size).toBe(1);
+      expect(registry.findDefinition('posts-module')).toBeDefined();
+    });
+
+    test('getDefinitions includes wildcard definitions for any namespace', () => {
+      // Define a wildcard module
+      registry.defineExtension(
+        { views: jest.fn() },
+        {},
+        { name: 'global-mod', browser: 'index.js', rsk: {} },
+      );
+
+      // Define a namespace-specific extension
+      registry.defineExtension(
+        { init: jest.fn() },
+        {},
+        { name: 'core-ext', rsk: { subscribe: ['core'] } },
+      );
+
+      // Querying 'core' should return both core-ext AND global-mod
+      const coreDefs = registry.getDefinitions('core');
+      expect(coreDefs.size).toBe(2);
+
+      const ids = [...coreDefs].map(d => d.id);
+      expect(ids).toContain('core-ext');
+      expect(ids).toContain('global-mod');
+
+      // Querying unknown namespace should still return wildcard
+      const otherDefs = registry.getDefinitions('unknown-ns');
+      expect(otherDefs.size).toBe(1);
+      expect([...otherDefs][0].id).toBe('global-mod');
+    });
+
+    test('explicit subscribe is preserved for module-type', () => {
+      const definition = { views: jest.fn() };
+      const manifest = {
+        name: 'scoped-mod',
+        browser: 'index.js',
+        rsk: { subscribe: ['admin'] },
+      };
+
+      registry.defineExtension(definition, {}, manifest);
+
+      // Should be stored under 'admin', NOT under '*'
+      expect(registry.getDefinitions('admin').size).toBe(1);
+      expect(registry.getDefinitions('*')).toBeNull();
+    });
+
+    test('API-only with routes() is module but not wildcard-subscribed', () => {
+      const definition = { init: jest.fn(), routes: jest.fn() };
+      const manifest = {
+        name: 'api-module',
+        main: 'api/index.js',
+        rsk: {},
+      };
+
+      registry.defineExtension(definition, {}, manifest);
+
+      // Module with routes but no views → no wildcard, no namespace stored
+      expect(registry.getDefinitions('*')).toBeNull();
+    });
+
+    test('extension without routes or views is plugin', () => {
+      const definition = { init: jest.fn() };
+      const manifest = {
+        name: 'hook-plugin',
+        rsk: { subscribe: ['core'] },
+      };
+
+      registry.defineExtension(definition, {}, manifest);
+
+      expect(registry.getDefinitions('core').size).toBe(1);
+      expect(registry.getDefinitions('*')).toBeNull();
+    });
   });
 
   describe('Slots', () => {

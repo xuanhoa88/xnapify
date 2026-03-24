@@ -41,10 +41,6 @@ const REACT_DOM_UNAVAILABLE = false;
 // INITIALIZATION
 // =============================================================================
 
-// Create dependency injection container
-const container = new Container();
-container.instance('extension', extensionManager);
-
 // eslint-disable-next-line no-underscore-dangle
 const preloadedState = window.__PRELOADED_STATE__ || {};
 
@@ -80,11 +76,11 @@ const store = configureStore(preloadedReduxState, { fetch, history, i18n });
 
 // Create context for React components
 const context = {
-  container,
   store,
   fetch,
   i18n,
   history,
+  container: new Container(),
   locale:
     (preloadedReduxState &&
       preloadedReduxState.intl &&
@@ -242,7 +238,7 @@ async function initializeViews() {
   if (!cachedViews) {
     cachedViews = import('./bootstrap/views')
       .then(m => {
-        const views = m.default({ container, store });
+        const views = m.default(context, extensionManager);
         log('✅ Views initialized');
         return views;
       })
@@ -691,11 +687,18 @@ async function attemptStartup() {
   hasStarted = true;
   log('✅ Starting app...');
 
-  // Phase 1: Load extensions (fetch manifests, run onLoad hooks)
+  // Phase 1: Initialize extension manager (setup only, no sync)
   try {
-    await extensionManager.init(fetch, container);
+    await extensionManager.init(fetch, context.container);
   } catch (error) {
     log(`⚠️ Extension init failed: ${error.message}`, 'error');
+  }
+
+  // Phase 1b: Load active extensions (API is already reachable on the client)
+  try {
+    await extensionManager.sync();
+  } catch (error) {
+    log(`⚠️ Extension sync failed: ${error.message}`, 'error');
   }
 
   // Phase 2: Bind extension services into the DI container

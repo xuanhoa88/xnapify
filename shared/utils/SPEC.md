@@ -24,21 +24,3 @@ A wrapper function designed to decouple domain logic (like the `node-red` settin
 - `adapter.resolve(path)` strictly maps to `ctx.resolve(path)`.
 
 This decoupling allows testing environments (like Jest) that mock `require.context` to operate cleanly under a standardized interface without needing to replicate internal Webpack hidden properties.
-
-## `routeAdapter.js` (`createRouteAdapter`, `normalizeRouteAdapter`)
-
-A higher-level adapter that builds on `contextAdapter.js` to provide prefixed route adapters for extension modules. Used by `ServerExtensionManager._injectRoutes()` to dynamically inject extension routes into the API and view routers.
-
-### Path Mapping
-- **API routes**: `./` → `./${moduleName}/api/routes/`
-- **View routes**: `./` → `./${moduleName}/views/`
-
-### Input Validation
-- `moduleName` must be a non-empty string (throws `TypeError`).
-- `type` must be `'api'` or `'views'` (throws `TypeError`).
-- `normalizeRouteAdapter` validates that non-tuple inputs have the required `{ files(), load() }` shape.
-
-### `normalizeRouteAdapter` Overloading
-Accepts two input forms:
-1. **Tuple** `[moduleName, requireContext]` → delegates to `createRouteAdapter`
-2. **Adapter object** `{ files(), load() }` → passes through after shape validation

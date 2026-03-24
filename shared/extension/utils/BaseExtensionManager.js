@@ -20,6 +20,8 @@ export const INITIALIZED = Symbol('__rsk.ext.initialized__');
 export const ACTIVE_EXTENSIONS = Symbol('__rsk.ext.active__');
 export const EXTENSION_METADATA = Symbol('__rsk.ext.metadata__');
 export const LOADED_VERSIONS = Symbol('__rsk.ext.loadedVersions__');
+export const BUFFERED_ROUTES = Symbol('__rsk.ext.pendingRoutes__');
+export const STORED_ADAPTERS = Symbol('__rsk.ext.routeAdapters__');
 
 // Symbols — private (internal to base manager)
 const FETCH = Symbol('__rsk.ext.fetch__');
@@ -81,7 +83,7 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Subclass hook called once during init (before syncExtensions).
+   * Subclass hook called once during init (before sync).
    * Override to perform environment-specific setup.
    * @param {Object} container - Application container
    */
@@ -102,7 +104,10 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Initialize the extension manager
+   * Initialize the extension manager.
+   * Stores the fetch function and calls the subclass _onInit hook.
+   * Does NOT load extensions — call sync() separately
+   * after the API is reachable.
    *
    * @param {Function} fetch$ - Fetch function for API calls (required)
    * @param {Object} container - Application container
@@ -118,15 +123,12 @@ export class BaseExtensionManager {
     // Subclass hook for environment-specific setup (receives full context)
     // eslint-disable-next-line no-underscore-dangle
     await this._onInit(container);
-
-    // Load all active extensions
-    await this.syncExtensions();
   }
 
   /**
    * Fetch and load all active extensions from API
    */
-  async syncExtensions() {
+  async sync() {
     try {
       const { data: response } = await this[FETCH]('/api/extensions');
       const extensions =
@@ -212,12 +214,15 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Resolve the extension entry point based on manifest
+   * Resolve the extension entry point based on manifest.
+   * Override in subclasses.
+   *
    * @param {Object} _manifest - Extension manifest
-   * @returns {string} Entry point filename
+   * @returns {string|null} Entry point filename
+   * @private
    */
-  resolveEntryPoint(_manifest) {
-    // Override in subclasses
+  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+  _resolveEntryPoint(_manifest) {
     return null;
   }
 
@@ -319,13 +324,26 @@ export class BaseExtensionManager {
       throw error;
     }
 
-    // Extensions must have at least an init function or a name property
-    const hasInit = typeof ext.init === 'function';
-    const hasName = 'name' in ext;
+    // Accept any object that has at least one recognized extension property
+    const recognizedKeys = [
+      'name',
+      'init',
+      'install',
+      'destroy',
+      'uninstall',
+      'onLoad',
+      'register',
+      'views',
+      'routes',
+      'translations',
+    ];
+    const hasRecognized = recognizedKeys.some(
+      key => key in ext && ext[key] != null,
+    );
 
-    if (!hasInit && !hasName) {
+    if (!hasRecognized) {
       const error = new Error(
-        'Extension must have either an "init" function or a "name" property',
+        `Extension must have at least one recognized property (${recognizedKeys.join(', ')})`,
       );
       error.name = 'ExtensionManagerError';
       throw error;
@@ -406,7 +424,8 @@ export class BaseExtensionManager {
       }
 
       // Resolve entry point (main vs browser)
-      const entryPoint = this.resolveEntryPoint(manifest);
+      // eslint-disable-next-line no-underscore-dangle
+      const entryPoint = this._resolveEntryPoint(manifest);
 
       if (!entryPoint) {
         if (__DEV__) {
@@ -414,6 +433,7 @@ export class BaseExtensionManager {
             `[ExtensionManager] Skipping execution for ${id} (no entry point for environment)`,
           );
         }
+
         // Update metadata to show it's loaded safely but has no active instance
         const metadata = this[EXTENSION_METADATA].get(id);
         metadata.state = ExtensionState.LOADED;
@@ -448,10 +468,11 @@ export class BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       await registry.defineExtension(ext, this._hookContext(), manifest);
 
-      // Determine extension kind: 'module' (has views() hook) or 'plugin'
+      // A module provides routes (API or views); a plugin extends via hooks only
       const extensionType =
-        (manifest.rsk && manifest.rsk.kind) ||
-        (typeof ext.views === 'function' ? 'module' : 'plugin');
+        typeof ext.routes === 'function' || typeof ext.views === 'function'
+          ? 'module'
+          : 'plugin';
 
       // Module-kind extensions auto-subscribe to a namespace derived from
       // their views() hook. Activate eagerly so init() runs immediately
@@ -888,10 +909,6 @@ export class BaseExtensionManager {
                   phase: 'init',
                 });
               }
-            } else if (__DEV__) {
-              console.warn(
-                `[ExtensionManager] Extension ${def.id} has no 'init' method`,
-              );
             }
           },
           destroy: async reg => {
@@ -1138,7 +1155,7 @@ export class BaseExtensionManager {
     this[EXTENSION_METADATA].clear();
     this[LOADED_VERSIONS].clear();
 
-    await this.syncExtensions();
+    await this.sync();
 
     await this.emit('extensions:refreshed', { extensionIds: null });
 

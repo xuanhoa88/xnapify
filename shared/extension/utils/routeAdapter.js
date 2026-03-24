@@ -5,7 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-import { createWebpackContextAdapter } from './contextAdapter';
+import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
 const VALID_TYPES = new Set(['api', 'views']);
 
@@ -25,7 +25,7 @@ const VALID_TYPES = new Set(['api', 'views']);
  * @param {'api'|'views'} type - Route type
  * @returns {{ files: Function, load: Function, resolve?: Function }}
  */
-export function createRouteAdapter(moduleName, context, type) {
+function createRouteAdapter(moduleName, context, type) {
   if (!moduleName || typeof moduleName !== 'string') {
     throw new TypeError(
       `createRouteAdapter: moduleName must be a non-empty string, got ${typeof moduleName}`,
