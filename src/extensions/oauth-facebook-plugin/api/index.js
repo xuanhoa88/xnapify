@@ -10,7 +10,7 @@ import { Strategy as FacebookStrategy } from 'passport-facebook';
 const TAG = '[OAuth Facebook]';
 
 export default {
-  async init(registry, context) {
+  async boot(registry, context) {
     const clientID = process.env.RSK_FACEBOOK_APP_ID;
     const clientSecret = process.env.RSK_FACEBOOK_APP_SECRET;
 
@@ -41,7 +41,7 @@ export default {
     console.info(`${TAG} ✅ Initialized`);
   },
 
-  async destroy(registry, context) {
+  async shutdown(registry, context) {
     const oauth = context.container.resolve('oauth');
     if (oauth && oauth.hasProvider('facebook')) {
       oauth.unregisterProvider('facebook');

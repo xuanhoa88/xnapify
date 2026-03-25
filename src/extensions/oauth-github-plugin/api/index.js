@@ -10,7 +10,7 @@ import { Strategy as GitHubStrategy } from 'passport-github2';
 const TAG = '[OAuth GitHub]';
 
 export default {
-  async init(registry, context) {
+  async boot(registry, context) {
     const clientID = process.env.RSK_GITHUB_CLIENT_ID;
     const clientSecret = process.env.RSK_GITHUB_CLIENT_SECRET;
 
@@ -41,7 +41,7 @@ export default {
     console.info(`${TAG} ✅ Initialized`);
   },
 
-  async destroy(registry, context) {
+  async shutdown(registry, context) {
     const oauth = context.container.resolve('oauth');
     if (oauth && oauth.hasProvider('github')) {
       oauth.unregisterProvider('github');

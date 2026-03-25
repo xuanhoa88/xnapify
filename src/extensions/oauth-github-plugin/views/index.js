@@ -8,11 +8,11 @@
 import GitHubButton from './GitHubButton';
 
 export default {
-  init(registry) {
+  boot(registry) {
     registry.registerSlot('auth.oauth.buttons', GitHubButton, { order: 30 });
   },
 
-  destroy(registry) {
+  shutdown(registry) {
     registry.unregisterSlot('auth.oauth.buttons', GitHubButton);
   },
 };

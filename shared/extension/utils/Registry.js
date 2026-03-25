@@ -21,7 +21,7 @@ const REGISTRATIONS = Symbol('__rsk.ext.registrations__');
  * ExtensionRegistry - Manages extension registrations, UI slots, hooks, and schema extensions
  *
  * All registration methods are idempotent - safe to call multiple times.
- * Extension init/destroy and hooks support async/await.
+ * Extension boot/shutdown and hooks support async/await.
  */
 class ExtensionRegistry {
   constructor() {
@@ -38,9 +38,9 @@ class ExtensionRegistry {
   // =========================================================================
 
   /**
-   * Register an extension (idempotent, supports async init)
+   * Register an extension (idempotent, supports async boot)
    * @param {string} extensionId - Extension identifier
-   * @param {Object} ext - { name, init, destroy }
+   * @param {Object} ext - { name, boot, shutdown }
    * @param {Object} context - Optional extension context (i18n, store, etc.)
    * @returns {Promise<this>}
    */
@@ -48,27 +48,27 @@ class ExtensionRegistry {
     if (this[EXTENSIONS].has(extensionId)) return this;
 
     this[EXTENSIONS].set(extensionId, { ...ext, id: extensionId });
-    if (typeof ext.init === 'function') {
-      await ext.init(this, context);
+    if (typeof ext.boot === 'function') {
+      await ext.boot(this, context);
     }
     return this;
   }
 
   /**
-   * Unregister an extension by ID (supports async destroy)
+   * Unregister an extension by ID (supports async shutdown)
    * Automatically cleans up all registrations made by this extension
    * @param {string} extensionId - Extension identifier
    * @param {Object} context - Optional extension context
    * @returns {Promise<this>}
    */
   async unregister(extensionId, context) {
-    // Clean up all registrations before calling destroy
+    // Clean up all registrations before calling shutdown
     // eslint-disable-next-line no-underscore-dangle
     this._clearExtensionRegistrations(extensionId);
 
     const ext = this[EXTENSIONS].get(extensionId);
-    if (ext && typeof ext.destroy === 'function') {
-      await ext.destroy(this, context);
+    if (ext && typeof ext.shutdown === 'function') {
+      await ext.shutdown(this, context);
     }
     this[EXTENSIONS].delete(extensionId);
     return this;
@@ -143,7 +143,7 @@ class ExtensionRegistry {
   /**
    * Register an extension definition using manifest metadata
    * Namespaces and identity come from the manifest's rsk.subscribe, rsk.name, and description fields.
-   * @param {Object} definition - Extension definition object (init, destroy, translations)
+   * @param {Object} definition - Extension definition object (boot, shutdown, translations)
    * @param {Object} context - Extension context
    * @param {Object} manifest - Extension manifest from package.json
    */

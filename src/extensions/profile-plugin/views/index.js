@@ -83,13 +83,13 @@ export default {
   // Store composed handlers for cleanup
   [HANDLERS]: {},
 
-  // Declarative translations — auto-registered by extension manager before init
+  // Declarative translations — auto-registered by extension manager before boot
   translations() {
     return translationsContext;
   },
 
-  // Lifecycle: init (called when extension is initialized)
-  init(registry, _context) {
+  // Lifecycle: boot (called when extension is booted)
+  boot(registry, _context) {
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', ExtensionField, {
       order: 10,
@@ -124,8 +124,8 @@ export default {
     console.log('[Test Extension] Initialized');
   },
 
-  // Lifecycle: destroy (called when extension is disabled)
-  destroy(registry) {
+  // Lifecycle: shutdown (called when extension is disabled)
+  shutdown(registry) {
     registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',

@@ -29,58 +29,27 @@ const translationsContext = require.context(
 
 export default {
   /**
-   * Lifecycle: install
-   * Runs database migrations and seeds permissions.
+   * Declarative hooks — auto-processed by ServerExtensionManager.
    */
-  async install(_registry, context) {
-    const db = context.container.resolve('db');
-    if (db) {
-      await db.connection.runMigrations([
-        { context: migrationsContext, prefix: __EXTENSION_NAME__ },
-      ]);
-
-      await db.connection.runSeeds(
-        [{ context: seedsContext, prefix: __EXTENSION_NAME__ }],
-        { container: context.container },
-      );
-    }
-  },
+  models: () => modelsContext,
+  migrations: () => migrationsContext,
+  seeds: () => seedsContext,
+  translations: () => translationsContext,
 
   /**
-   * Lifecycle: init
-   * Registers models with the global models map.
+   * Lifecycle: install (one-time setup — currently a no-op)
    */
-  async init(_registry, context) {
-    const db = context.container.resolve('db');
-    const models = context.container.resolve('models');
+  async install(_registry, _context) {},
 
-    if (db) {
-      // Run migrations (idempotent — skips already-applied)
-      await db.connection.runMigrations([
-        { context: migrationsContext, prefix: __EXTENSION_NAME__ },
-      ]);
-
-      if (models) {
-        for (const key of modelsContext.keys()) {
-          const mod = modelsContext(key);
-          const factory = mod.default || mod;
-          if (typeof factory === 'function') {
-            const model = factory(db);
-            if (model && model.name) {
-              models[model.name] = model;
-            }
-          }
-        }
-      }
-    }
-  },
+  /**
+   * Lifecycle: init (called on every load)
+   */
+  async boot(_registry, _context) {},
 
   /**
    * Lifecycle: destroy
    */
-  async destroy(_registry, _context) {
-    // no-op
-  },
+  async shutdown(_registry, _context) {},
 
   /**
    * Lifecycle: uninstall
@@ -98,13 +67,6 @@ export default {
         { context: migrationsContext, prefix: __EXTENSION_NAME__ },
       ]);
     }
-  },
-
-  /**
-   * Declarative translations — auto-registered by extension manager.
-   */
-  translations() {
-    return translationsContext;
   },
 
   /**

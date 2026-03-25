@@ -89,28 +89,41 @@ class ServerExtensionManager extends BaseExtensionManager {
   }
 
   async _onExtensionUnloaded(id) {
-    // Destroy API instance
+    // Shutdown API instance
     try {
       const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
-      if (apiEntry && typeof apiEntry.destroy === 'function') {
-        await apiEntry.destroy(this.registry, {
+      if (apiEntry && typeof apiEntry.shutdown === 'function') {
+        await apiEntry.shutdown(this.registry, {
           container: this[SERVER_CONTAINER],
         });
         if (__DEV__) {
-          console.log(`[ServerExtensionManager] Destroyed API for: ${id}`);
+          console.log(`[ServerExtensionManager] Shut down API for: ${id}`);
         }
       }
     } catch (err) {
       console.error(
-        `[ServerExtensionManager] Failed to destroy API for ${id}:`,
+        `[ServerExtensionManager] Failed to shutdown API for ${id}:`,
         err,
       );
-      this.emit('extension:error', { id, error: err, phase: 'api-destroy' });
+      this.emit('extension:error', { id, error: err, phase: 'api-shutdown' });
     }
 
     // Remove injected route adapters from routers
     // eslint-disable-next-line no-underscore-dangle
     this._removeRouteAdapters(id);
+
+    // Unregister extension models from the global ModelRegistry
+    try {
+      const models =
+        this[SERVER_CONTAINER] &&
+        this[SERVER_CONTAINER].has('models') &&
+        this[SERVER_CONTAINER].resolve('models');
+      if (models && typeof models.unregister === 'function') {
+        models.unregister(id);
+      }
+    } catch (_) {
+      // non-fatal
+    }
 
     // Clean up maps
     this[EXTENSION_API_ENTRY_POINTS].delete(id);
@@ -640,26 +653,63 @@ class ServerExtensionManager extends BaseExtensionManager {
     // Store entry point so destroy() can run later regardless of init() outcome
     this[EXTENSION_API_ENTRY_POINTS].set(id, extensionApi);
 
-    // Call init() lifecycle hook (non-fatal — routes are injected regardless)
-    if (extensionApi && typeof extensionApi.init === 'function') {
-      try {
-        if (__DEV__) {
-          console.log(`[ServerExtensionManager] Booting API for ${id}`);
-        }
-        await extensionApi.init(this.registry, {
-          container: this[SERVER_CONTAINER],
-        });
-      } catch (initErr) {
-        console.error(
-          `[ServerExtensionManager] init() failed for ${id}:`,
-          initErr.message,
-        );
-        this.emit('extension:error', {
-          id,
-          error: initErr,
-          phase: 'api-init',
-        });
+    // ── Extension init: migrations → models → seeds → init() ──
+    // (non-fatal — routes are injected regardless)
+    try {
+      const container = this[SERVER_CONTAINER];
+      const db = container && container.resolve('db');
+
+      if (__DEV__) {
+        console.log(`[ServerExtensionManager] Booting API for ${id}`);
       }
+
+      // 1. Migrations (idempotent — skips already-applied)
+      if (db && typeof extensionApi.migrations === 'function') {
+        const migrationCtx = extensionApi.migrations();
+        if (migrationCtx) {
+          await db.connection.runMigrations([
+            { context: migrationCtx, prefix: manifest.name },
+          ]);
+        }
+      }
+
+      // 2. Models — register into global ModelRegistry
+      if (db && typeof extensionApi.models === 'function') {
+        const modelCtx = extensionApi.models();
+        if (modelCtx) {
+          const models = container.resolve('models');
+          if (models && typeof models.discover === 'function') {
+            await models.discover(modelCtx, id);
+            models.associate();
+          }
+        }
+      }
+
+      // 3. Seeds (idempotent — skips already-applied)
+      if (db && typeof extensionApi.seeds === 'function') {
+        const seedCtx = extensionApi.seeds();
+        if (seedCtx) {
+          await db.connection.runSeeds(
+            [{ context: seedCtx, prefix: manifest.name }],
+            { container },
+          );
+        }
+      }
+
+      // 4. Extension boot() hook
+      if (typeof extensionApi.boot === 'function') {
+        await extensionApi.boot(this.registry, { container });
+      }
+    } catch (initErr) {
+      console.error(
+        `[ServerExtensionManager] boot failed for ${id}:`,
+        initErr.message,
+      );
+      this.emit('extension:error', {
+        id,
+        error: initErr,
+        phase: 'api-boot',
+      });
     }
 
     // Inject API routes if the extension provides a routes() hook

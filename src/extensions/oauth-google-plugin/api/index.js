@@ -10,7 +10,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 const TAG = '[OAuth Google]';
 
 export default {
-  async init(registry, context) {
+  async boot(registry, context) {
     const clientID = process.env.RSK_GOOGLE_CLIENT_ID;
     const clientSecret = process.env.RSK_GOOGLE_CLIENT_SECRET;
 
@@ -40,7 +40,7 @@ export default {
     console.info(`${TAG} ✅ Initialized`);
   },
 
-  async destroy(registry, context) {
+  async shutdown(registry, context) {
     const oauth = context.container.resolve('oauth');
     if (oauth && oauth.hasProvider('google')) {
       oauth.unregisterProvider('google');

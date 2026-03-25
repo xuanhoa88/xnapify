@@ -77,8 +77,8 @@ export default {
     }
   },
 
-  // Lifecycle: init (called when extension is initialized on server)
-  async init(registry, context) {
+  // Lifecycle: boot (called when extension is booted on server)
+  async boot(registry, context) {
     console.log(
       '[Test Extension] Backend logic initialized for ' + __EXTENSION_NAME__,
     );
@@ -228,8 +228,8 @@ export default {
     );
   },
 
-  // Lifecycle: destroy (called when extension is disabled)
-  async destroy(registry, context) {
+  // Lifecycle: shutdown (called when extension is disabled)
+  async shutdown(registry, context) {
     console.log(
       '[Test Extension] Backend logic destroyed for ' + __EXTENSION_NAME__,
     );

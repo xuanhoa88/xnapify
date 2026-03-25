@@ -181,7 +181,7 @@ export class BaseExtensionManager {
    * @param {Object} [context.store] - Redux store instance
    */
   async runProviders(context) {
-    // Store for lifecycle hooks (onLoad, init, destroy, etc.)
+    // Store for lifecycle hooks (onLoad, boot, shutdown, etc.)
     this[PROVIDERS_CONTEXT] = context;
 
     const extensions = Array.from(this[ACTIVE_EXTENSIONS].entries());
@@ -327,9 +327,9 @@ export class BaseExtensionManager {
     // Accept any object that has at least one recognized extension property
     const recognizedKeys = [
       'name',
-      'init',
+      'boot',
       'install',
-      'destroy',
+      'shutdown',
       'uninstall',
       'onLoad',
       'register',
@@ -475,7 +475,7 @@ export class BaseExtensionManager {
           : 'plugin';
 
       // Module-kind extensions auto-subscribe to a namespace derived from
-      // their views() hook. Activate eagerly so init() runs immediately
+      // their views() hook. Activate eagerly so boot() runs immediately
       // (injecting Redux reducers and registering sidebar menus) rather than
       // waiting for route-based activateNamespace which creates a
       // chicken-and-egg problem (menu invisible → can't navigate → can't activate).
@@ -873,17 +873,17 @@ export class BaseExtensionManager {
               );
             }
 
-            // Wrap init/destroy for the standard register method
+            // Wrap boot/shutdown for the standard register method
             const extInstance = {
               ...def,
-              init: async reg => {
+              boot: async reg => {
                 if (__DEV__) {
                   console.log(
-                    `[ExtensionManager] Initializing extension: ${def.id}`,
+                    `[ExtensionManager] Booting extension: ${def.id}`,
                   );
                 }
 
-                // Auto-register translations before init if extension exports translations()
+                // Auto-register translations before boot if extension exports translations()
                 if (typeof def.translations === 'function') {
                   try {
                     const translations = getTranslations(def.translations());
@@ -898,42 +898,42 @@ export class BaseExtensionManager {
                   }
                 }
 
-                if (typeof def.init === 'function') {
+                if (typeof def.boot === 'function') {
                   try {
                     // eslint-disable-next-line no-underscore-dangle
-                    await def.init(reg, this._hookContext());
+                    await def.boot(reg, this._hookContext());
                   } catch (error) {
                     console.error(
-                      `[ExtensionManager] Failed to initialize extension ${def.id}:`,
+                      `[ExtensionManager] Failed to boot extension ${def.id}:`,
                       error,
                     );
-                    await this.emit('extension:init-error', {
+                    await this.emit('extension:boot-error', {
                       id: def.id,
                       error,
-                      phase: 'init',
+                      phase: 'boot',
                     });
                   }
                 }
               },
-              destroy: async reg => {
+              shutdown: async reg => {
                 if (__DEV__) {
                   console.log(
-                    `[ExtensionManager] Destroying extension: ${def.id}`,
+                    `[ExtensionManager] Shutting down extension: ${def.id}`,
                   );
                 }
-                if (typeof def.destroy === 'function') {
+                if (typeof def.shutdown === 'function') {
                   try {
                     // eslint-disable-next-line no-underscore-dangle
-                    await def.destroy(reg, this._hookContext());
+                    await def.shutdown(reg, this._hookContext());
                   } catch (error) {
                     console.error(
-                      `[ExtensionManager] Failed to destroy extension ${def.id}:`,
+                      `[ExtensionManager] Failed to shutdown extension ${def.id}:`,
                       error,
                     );
-                    await this.emit('extension:destroy-error', {
+                    await this.emit('extension:shutdown-error', {
                       id: def.id,
                       error,
-                      phase: 'destroy',
+                      phase: 'shutdown',
                     });
                   }
                 }

@@ -8,11 +8,11 @@
 import FacebookButton from './FacebookButton';
 
 export default {
-  init(registry) {
+  boot(registry) {
     registry.registerSlot('auth.oauth.buttons', FacebookButton, { order: 20 });
   },
 
-  destroy(registry) {
+  shutdown(registry) {
     registry.unregisterSlot('auth.oauth.buttons', FacebookButton);
   },
 };

@@ -24,6 +24,8 @@ import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
 import { createWebpackContextAdapter } from '@shared/utils/contextAdapter';
 
+import ModelRegistry from './ModelRegistry';
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================
@@ -108,20 +110,6 @@ function getModuleName(filePath, pattern = LIFECYCLE_PATH_PATTERN) {
   return (match && match[1]) || 'unknown';
 }
 
-function loadModuleFactory(adapter, filePath) {
-  const mod = adapter.load(filePath);
-  const factory = mod.default || mod;
-  if (typeof factory !== 'function') {
-    const err = new Error(
-      `Module must export a factory function, got ${typeof factory}`,
-    );
-    err.name = 'InvalidModuleError';
-    err.code = 'INVALID_MODULE';
-    throw err;
-  }
-  return factory;
-}
-
 function createLoadError(moduleName, filePath, error) {
   return {
     moduleName,
@@ -168,62 +156,6 @@ export function validateCoreModules(modulePaths, options = {}) {
   }
 
   return { valid: true, missing: [] };
-}
-
-// =============================================================================
-// MODEL LOADING
-// =============================================================================
-
-async function loadModelsFromContext(modelContext, moduleName, db, container) {
-  const adapter = createWebpackContextAdapter(modelContext);
-  const models = {};
-  const errors = [];
-
-  for (const filePath of adapter.files()) {
-    const fileName = filePath.split('/').pop();
-    if (
-      /^index\.[cm]?[jt]s$/i.test(fileName) ||
-      /\.(test|spec)\.[cm]?[jt]s$/i.test(fileName)
-    )
-      continue;
-
-    try {
-      const factory = loadModuleFactory(adapter, filePath);
-      const model = await factory(db, container);
-
-      if (!model) {
-        log(
-          `[${moduleName}] "${filePath}" did not return a valid object`,
-          'warn',
-        );
-        continue;
-      }
-      if (!model.name) {
-        log(
-          `[${moduleName}] "${filePath}" returned an object without a name property`,
-          'warn',
-        );
-        continue;
-      }
-      if (
-        typeof model.findAll !== 'function' ||
-        typeof model.create !== 'function'
-      ) {
-        log(
-          `[${moduleName}] "${model.name}" doesn't appear to be a Sequelize model`,
-          'warn',
-        );
-        continue;
-      }
-
-      models[model.name] = model;
-    } catch (error) {
-      errors.push(createLoadError(moduleName, filePath, error));
-      log(`[${moduleName}] ${error.message}`, 'error');
-    }
-  }
-
-  return { models, errors };
 }
 
 // =============================================================================
@@ -347,56 +279,28 @@ export async function discoverModules(modulesContext, container) {
   );
 
   // ─── Phase 2: models ──────────────────────────────────────────────────────
-  const db = container.resolve('db');
-  const apiModels = {};
+  const registry = new ModelRegistry(
+    container.has('db') ? container.resolve('db') : null,
+  );
 
-  if (!db) {
-    log('No database connection found, skipping models', 'warn');
-  } else {
-    errors.push(
-      ...(await runPhase('models', lifecycles, async (name, hook) => {
-        const modelContext = hook();
-        if (!modelContext) return;
+  errors.push(
+    ...(await runPhase('models', lifecycles, async (name, hook) => {
+      const modelContext = hook();
+      if (!modelContext) return;
 
-        const { models, errors: modelErrors } = await loadModelsFromContext(
-          modelContext,
-          name,
-          db,
-          container,
-        );
-        errors.push(...modelErrors);
+      const { errors: modelErrors } = await registry.discover(
+        modelContext,
+        name,
+      );
+      errors.push(...modelErrors);
+    })),
+  );
 
-        for (const [modelName, model] of Object.entries(models)) {
-          if (modelName in apiModels) {
-            log(
-              `Duplicate model "${modelName}" from module "${name}". Skipped.`,
-              'error',
-            );
-            continue;
-          }
-          apiModels[modelName] = model;
-        }
-      })),
-    );
+  // Initialise associations and seal core models
+  errors.push(...registry.associate());
+  registry.seal();
 
-    // Initialise Sequelize associations after all models are collected
-    for (const [modelName, model] of Object.entries(apiModels)) {
-      if (typeof model.associate !== 'function') continue;
-      try {
-        model.associate(apiModels);
-      } catch (error) {
-        errors.push(
-          createLoadError(modelName, `${modelName}.associate()`, error),
-        );
-        log(
-          `[${modelName}] Failed to initialize associations: ${error.message}`,
-          'error',
-        );
-      }
-    }
-  }
-
-  container.instance('models', apiModels);
+  container.instance('models', registry);
 
   // ─── Phase 3: providers ───────────────────────────────────────────────────
   errors.push(
@@ -454,7 +358,7 @@ export async function discoverModules(modulesContext, container) {
 
   // ─── Summary ──────────────────────────────────────────────────────────────
   log(
-    `${Object.keys(apiModels).length} model(s), ${lifecycles.size} lifecycle(s), ` +
+    `${registry.size} model(s), ${lifecycles.size} lifecycle(s), ` +
       `${apiRoutes.size} route context(s) loaded in ${Date.now() - startTime}ms`,
   );
 
@@ -462,5 +366,5 @@ export async function discoverModules(modulesContext, container) {
     log(`${errors.length} error(s) during module loading`, 'warn');
   }
 
-  return { apiModels, apiRoutes, errors };
+  return { apiModels: registry, apiRoutes, errors };
 }

@@ -1,5 +1,5 @@
 export default {
-  async init(registry, _context) {
+  async boot(registry, _context) {
     registry.registerHook('search:indexers', async hook => {
       hook.on('register', container => {
         const appHook = container.resolve('hook');

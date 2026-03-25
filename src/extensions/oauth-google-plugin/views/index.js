@@ -8,11 +8,11 @@
 import GoogleButton from './GoogleButton';
 
 export default {
-  init(registry) {
+  boot(registry) {
     registry.registerSlot('auth.oauth.buttons', GoogleButton, { order: 10 });
   },
 
-  destroy(registry) {
+  shutdown(registry) {
     registry.unregisterSlot('auth.oauth.buttons', GoogleButton);
   },
 };
