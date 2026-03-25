@@ -124,11 +124,13 @@ describe('shared/api/autoloader', () => {
         if (key === 'db') return mockDb;
         return null;
       }),
+      has: jest.fn(key => key === 'db'),
       instance: jest.fn(),
     };
 
     beforeEach(() => {
       mockContainer.resolve.mockClear();
+      mockContainer.has.mockClear();
       mockContainer.instance.mockClear();
     });
 

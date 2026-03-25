@@ -24,8 +24,8 @@ describe('ExtensionRegistry', () => {
 
   describe('Extension Management', () => {
     test('registers an extension and initializes it', async () => {
-      const init = jest.fn().mockResolvedValue();
-      const ext = { name: 'Test Extension', init };
+      const boot = jest.fn().mockResolvedValue();
+      const ext = { name: 'Test Extension', boot };
 
       await registry.register('extension-1', ext, { someContext: true });
 
@@ -35,18 +35,18 @@ describe('ExtensionRegistry', () => {
         name: 'Test Extension',
       });
       expect(registry.list()).toContain('extension-1');
-      expect(init).toHaveBeenCalledWith(registry, { someContext: true });
+      expect(boot).toHaveBeenCalledWith({ someContext: true, registry });
     });
 
-    test('unregisters an extension and calls destroy', async () => {
-      const destroy = jest.fn().mockResolvedValue();
-      const ext = { name: 'Test Extension', destroy };
+    test('unregisters an extension and calls shutdown', async () => {
+      const shutdown = jest.fn().mockResolvedValue();
+      const ext = { name: 'Test Extension', shutdown };
 
       await registry.register('extension-1', ext);
       await registry.unregister('extension-1', { someContext: true });
 
       expect(registry.has('extension-1')).toBe(false);
-      expect(destroy).toHaveBeenCalledWith(registry, { someContext: true });
+      expect(shutdown).toHaveBeenCalledWith({ someContext: true, registry });
     });
 
     test('unregister clears extension slots and hooks', async () => {
@@ -129,13 +129,13 @@ describe('ExtensionRegistry', () => {
     });
 
     test('updates an extension by ID', async () => {
-      const init = jest.fn().mockResolvedValue();
-      const destroy = jest.fn().mockResolvedValue();
+      const boot = jest.fn().mockResolvedValue();
+      const shutdown = jest.fn().mockResolvedValue();
 
       // Initial mock extension already registered
-      await registry.register('extension-updatable', { destroy });
+      await registry.register('extension-updatable', { shutdown });
 
-      const definition = { init };
+      const definition = { boot };
       const manifest = {
         name: 'extension-updatable',
         rsk: { subscribe: ['core'], name: 'extension-updatable' },
@@ -147,12 +147,12 @@ describe('ExtensionRegistry', () => {
 
       // The registry unregisters the current instance and registers the new one built from definition
       expect(result).toBe(registry);
-      expect(destroy).toHaveBeenCalledTimes(1);
-      expect(init).toHaveBeenCalledWith(registry, { contextVal: 42 });
+      expect(shutdown).toHaveBeenCalledTimes(1);
+      expect(boot).toHaveBeenCalledWith({ contextVal: 42, registry });
     });
 
     test('module-type without subscribe auto-subscribes to wildcard', () => {
-      const definition = { views: jest.fn() };
+      const definition = { routes: jest.fn() };
       const manifest = {
         name: 'posts-module',
         browser: 'views/index.js',
@@ -170,7 +170,7 @@ describe('ExtensionRegistry', () => {
     test('getDefinitions includes wildcard definitions for any namespace', () => {
       // Define a wildcard module
       registry.defineExtension(
-        { views: jest.fn() },
+        { routes: jest.fn() },
         {},
         { name: 'global-mod', browser: 'index.js', rsk: {} },
       );
@@ -197,7 +197,7 @@ describe('ExtensionRegistry', () => {
     });
 
     test('explicit subscribe is preserved for module-type', () => {
-      const definition = { views: jest.fn() };
+      const definition = { routes: jest.fn() };
       const manifest = {
         name: 'scoped-mod',
         browser: 'index.js',
@@ -211,7 +211,7 @@ describe('ExtensionRegistry', () => {
       expect(registry.getDefinitions('*')).toBeNull();
     });
 
-    test('API-only with routes() is module but not wildcard-subscribed', () => {
+    test('API-only with routes() auto-subscribes to wildcard', () => {
       const definition = { init: jest.fn(), routes: jest.fn() };
       const manifest = {
         name: 'api-module',
@@ -221,11 +221,11 @@ describe('ExtensionRegistry', () => {
 
       registry.defineExtension(definition, {}, manifest);
 
-      // Module with routes but no views → no wildcard, no namespace stored
-      expect(registry.getDefinitions('*')).toBeNull();
+      // Now all modules with routes() auto-subscribe to wildcard
+      expect(registry.getDefinitions('*').size).toBe(1);
     });
 
-    test('extension without routes or views is plugin', () => {
+    test('extension without routes is plugin', () => {
       const definition = { init: jest.fn() };
       const manifest = {
         name: 'hook-plugin',

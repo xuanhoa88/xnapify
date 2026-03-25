@@ -345,7 +345,7 @@ describe('ClientExtensionManager', () => {
 
       // Mock the module returned from the container
       const mockModule = {
-        views: () => mockAdapter,
+        routes: () => mockAdapter,
       };
 
       // Store router reference via flush

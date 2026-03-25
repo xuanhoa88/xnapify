@@ -82,9 +82,7 @@ describe('BaseExtensionManager', () => {
     });
 
     it.each([
-      ['name', { name: 'ext' }],
       ['boot', { boot: jest.fn() }],
-      ['views', { views: jest.fn() }],
       ['routes', { routes: jest.fn() }],
       ['translations', { translations: jest.fn() }],
       ['install', { install: jest.fn() }],
@@ -156,7 +154,7 @@ describe('BaseExtensionManager', () => {
       jest.spyOn(manager, '_resolveEntryPoint').mockReturnValue('index.js');
 
       const mockExtensionInstance = {
-        name: 'Test Extension',
+        routes: jest.fn(),
       };
       jest
         .spyOn(manager, '_bootstrapExtension')

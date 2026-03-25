@@ -86,7 +86,7 @@ describe('ServerExtensionManager', () => {
       const manifest = { name: 'test_extension', id: 'test', main: 'api.js' };
 
       const mockApi = {
-        init: jest.fn().mockResolvedValue(true),
+        boot: jest.fn().mockResolvedValue(true),
       };
 
       jest.spyOn(serverManager, 'requireModule').mockReturnValue(mockApi);
@@ -102,13 +102,13 @@ describe('ServerExtensionManager', () => {
         {},
       );
 
-      expect(mockApi.init).toHaveBeenCalledWith(
+      expect(mockApi.boot).toHaveBeenCalledWith(
         registry,
         expect.objectContaining({ container: expect.any(Object) }),
       );
       expect(result).toBeDefined();
       // Merged result contains the apiModule properties
-      expect(result.init).toBe(mockApi.init);
+      expect(result.boot).toBe(mockApi.boot);
     });
 
     it('loads View module from server.js', async () => {
