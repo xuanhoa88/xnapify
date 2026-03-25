@@ -15,11 +15,11 @@ import Posts from './Posts';
 export const middleware = requirePermission('posts:read');
 
 /**
- * Route init — inject Redux reducer into the store.
+ * Route boot — inject Redux reducer into the store.
  * Runs per-route during resolution where store is always available
  * (client: persistent store, server: per-request SSR store).
  */
-export function init({ store }) {
+export function boot({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
