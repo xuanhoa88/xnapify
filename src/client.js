@@ -616,17 +616,16 @@ async function initializeApp() {
         log(`⚠️ WebSocket error: ${error}`, 'error');
       });
 
-      // Add a pending flag to prevent concurrent processing
-      let pendingExtensionUpdate = null;
+      // Sequential queue — process events in order, never drop any
+      let extensionEventQueue = Promise.resolve();
       wsClient.on('extension:updated', event => {
-        if (pendingExtensionUpdate) return; // Skip if already processing
-        pendingExtensionUpdate = (async () => {
+        extensionEventQueue = extensionEventQueue.then(async () => {
           try {
-            await extensionManager.onWebSocketEvent(event);
-          } finally {
-            pendingExtensionUpdate = null;
+            await extensionManager.processLifecycleEvent(event);
+          } catch (err) {
+            log(`⚠️ Extension event failed: ${err.message}`, 'error');
           }
-        })();
+        });
       });
 
       wsClient.connect();

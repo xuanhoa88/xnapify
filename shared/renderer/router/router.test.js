@@ -289,7 +289,7 @@ describe('Router.add() — Dynamic Extension Injection', () => {
       },
     });
 
-    const added = router.add(extensionAdapter);
+    const added = await router.add(extensionAdapter);
     expect(added.length).toBeGreaterThan(0);
 
     const result = await router.resolve({ pathname: '/extension-page' });
@@ -297,10 +297,10 @@ describe('Router.add() — Dynamic Extension Injection', () => {
     expect(result.component).toBeDefined();
   });
 
-  it('should return empty array when adapter has no matching files', () => {
+  it('should return empty array when adapter has no matching files', async () => {
     const router = new Router(mockModuleLoader);
     const emptyAdapter = createAdapter({});
-    const added = router.add(emptyAdapter);
+    const added = await router.add(emptyAdapter);
     expect(added).toEqual([]);
   });
 });
@@ -321,7 +321,7 @@ describe('Router.remove() — Extension Route Removal', () => {
       },
     });
 
-    router.add(extensionAdapter);
+    await router.add(extensionAdapter);
 
     // Verify it was added
     const result = await router.resolve({ pathname: '/removable' });
@@ -329,7 +329,7 @@ describe('Router.remove() — Extension Route Removal', () => {
     expect(result.component).toBeDefined();
 
     // Remove it
-    const removed = router.remove(extensionAdapter);
+    const removed = await router.remove(extensionAdapter);
     expect(removed).toBe(true);
 
     // Verify it's gone (resolves to null since no route matches)
@@ -337,9 +337,9 @@ describe('Router.remove() — Extension Route Removal', () => {
     expect(result2).toBeNull();
   });
 
-  it('should return false for null adapter', () => {
+  it('should return false for null adapter', async () => {
     const router = new Router(mockModuleLoader);
-    expect(router.remove(null)).toBe(false);
+    expect(await router.remove(null)).toBe(false);
   });
 });
 

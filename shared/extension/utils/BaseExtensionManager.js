@@ -1014,15 +1014,6 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Handle external event (abstract method)
-   * Subclasses should implement for environment-specific event handling.
-   * @param {Object} _event - Event object
-   */
-  async onWebSocketEvent(_event) {
-    // Override in subclasses
-  }
-
-  /**
    * Event emitter - emit an event
    * @param {string} eventType - Event type
    * @param {Object} data - Event data

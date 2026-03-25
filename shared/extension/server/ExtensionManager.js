@@ -959,20 +959,6 @@ class ServerExtensionManager extends BaseExtensionManager {
       console.log('[ServerExtensionManager] Refreshed ✅');
     }
   }
-
-  /**
-   * Handle external event (No-op on server - server doesn't receive WebSocket events)
-   * @param {Object} _event - Event object (unused)
-   */
-  async onWebSocketEvent(_event) {
-    // Server-side event handling is not supported
-    // Extensions are loaded at initialization and reloaded on server restart
-    if (__DEV__) {
-      console.warn(
-        '[ServerExtensionManager] onWebSocketEvent called on server - this is a no-op',
-      );
-    }
-  }
 }
 
 // Export singleton instance

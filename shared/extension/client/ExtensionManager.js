@@ -77,10 +77,6 @@ class ClientExtensionManager extends BaseExtensionManager {
         .querySelectorAll(`script[data-extension-id="${id}"]`)
         .forEach(el => el.remove());
 
-      // Remove injected view routes
-      // eslint-disable-next-line no-underscore-dangle
-      this._removeRouteAdapters(id);
-
       if (__DEV__) {
         console.log(`[ExtensionManager] Removed resources for: ${id}`);
       }
@@ -126,7 +122,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {string} id - Extension ID
    * @param {*} hookResult - Return value of the extension's views() hook
    */
-  _injectRoutes(id, hookResult) {
+  async _injectRoutes(id, hookResult) {
     const adapter = normalizeRouteAdapter(hookResult, 'views');
 
     if (!this[VIEW_ROUTER]) {
@@ -140,7 +136,11 @@ class ClientExtensionManager extends BaseExtensionManager {
       return;
     }
 
-    this[VIEW_ROUTER].add(adapter);
+    // Pass _lastResolveContext so register() lifecycle fires immediately
+    // Pass id as sourceId for robust removal (survives HMR reference changes)
+    // eslint-disable-next-line no-underscore-dangle
+    const ctx = this[VIEW_ROUTER]._lastResolveContext;
+    await this[VIEW_ROUTER].add(adapter, ctx, id);
 
     if (!this[STORED_ADAPTERS].has(id)) {
       this[STORED_ADAPTERS].set(id, {});
@@ -187,7 +187,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     for (const [id, adapters] of this[STORED_ADAPTERS].entries()) {
       if (!adapters.view) continue;
 
-      viewRouter.add(adapters.view);
+      viewRouter.add(adapters.view, undefined, id);
       if (__DEV__) {
         console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
       }
@@ -199,14 +199,15 @@ class ClientExtensionManager extends BaseExtensionManager {
    * @param {string} id - Extension ID
    * @private
    */
-  _removeRouteAdapters(id) {
-    const adapters = this[STORED_ADAPTERS].get(id);
-    if (!adapters || !adapters.view) return;
-
+  async _removeRouteAdapters(id) {
     if (this[VIEW_ROUTER]) {
-      this[VIEW_ROUTER].remove(adapters.view);
+      // Use string-based sourceId removal (survives HMR/reference changes)
+      // eslint-disable-next-line no-underscore-dangle
+      const ctx = this[VIEW_ROUTER]._lastResolveContext;
+      await this[VIEW_ROUTER].removeBySourceId(id, ctx);
     }
 
+    // Clean up adapter reference if still stored
     this[STORED_ADAPTERS].delete(id);
 
     if (__DEV__) {
@@ -407,7 +408,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Inject view routes if the extension provides a views() hook
       try {
         // eslint-disable-next-line no-underscore-dangle
-        this._injectViewRoutes(id, ext, manifest);
+        await this._injectViewRoutes(id, ext, manifest);
       } catch (err) {
         console.error(
           `[ClientExtensionManager] Failed to inject view routes for ${id}:`,
@@ -444,10 +445,49 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   /**
-   * Handle external event (e.g., from WebSocket)
-   * @param {Object} event - Event object
+   * Resolve the loaded ID for an extension.
+   *
+   * WebSocket events send the database UUID, but ACTIVE_EXTENSIONS is keyed
+   * by package name (set during activateNamespace via registry.register).
+   * This helper tries the UUID first, then resolves the package name via
+   * extension metadata.
+   *
+   * @param {string} id - Database UUID from WebSocket event
+   * @returns {string|null} The key in ACTIVE_EXTENSIONS, or null
+   * @private
    */
-  async onWebSocketEvent(event) {
+  _resolveLoadedId(id) {
+    if (this.isExtensionLoaded(id)) return id;
+    const meta = this[EXTENSION_METADATA].get(id);
+    const pkgName =
+      meta && meta.manifest && meta.manifest.name ? meta.manifest.name : null;
+    if (pkgName && this.isExtensionLoaded(pkgName)) return pkgName;
+    return null;
+  }
+
+  /**
+   * Full teardown of an extension: remove routes, unload, and clean up.
+   * Handles the UUID vs package-name ID mismatch transparently.
+   *
+   * @param {string} id - Database UUID from WebSocket event
+   * @private
+   */
+  async _teardownExtension(id) {
+    // eslint-disable-next-line no-underscore-dangle
+    await this._removeRouteAdapters(id);
+
+    // eslint-disable-next-line no-underscore-dangle
+    const loadedId = this._resolveLoadedId(id);
+    if (loadedId) {
+      await this.unloadExtension(loadedId);
+    }
+  }
+
+  /**
+   * Process an extension lifecycle event (install, activate, deactivate, etc.)
+   * @param {Object} event - Event with { type, extensionId, data }
+   */
+  async processLifecycleEvent(event) {
     if (!event || !event.type) {
       console.warn('[ClientExtensionManager] Invalid event received:', event);
       return;
@@ -459,37 +499,30 @@ class ClientExtensionManager extends BaseExtensionManager {
     switch (type) {
       case 'EXTENSION_INSTALLED':
       case 'EXTENSION_UPDATED': {
-        // Inject CSS/script tags, then hot-reload the extension
         await this.emit('extension:loaded', { id: extensionId, manifest });
         await this.reloadExtension(extensionId);
         break;
       }
 
       case 'EXTENSION_UNINSTALLED': {
-        // Tear down and remove CSS/script tags
-        if (this.isExtensionLoaded(extensionId)) {
-          await this.unloadExtension(extensionId);
-        }
+        // eslint-disable-next-line no-underscore-dangle
+        await this._teardownExtension(extensionId);
         await this.emit('extension:unloaded', { id: extensionId });
         break;
       }
 
       case 'EXTENSION_ACTIVATED': {
-        // Hot-load the newly activated extension
         await this.loadExtension(extensionId, manifest);
         break;
       }
 
       case 'EXTENSION_DEACTIVATED': {
-        // Tear down the deactivated extension
-        if (this.isExtensionLoaded(extensionId)) {
-          await this.unloadExtension(extensionId);
-        }
+        // eslint-disable-next-line no-underscore-dangle
+        await this._teardownExtension(extensionId);
         break;
       }
 
       case 'EXTENSIONS_REFRESHED': {
-        // Admin triggered full refresh — re-sync all extensions
         await this.refresh();
         break;
       }

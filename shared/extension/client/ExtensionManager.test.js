@@ -141,7 +141,7 @@ describe('ClientExtensionManager', () => {
     });
   });
 
-  describe('onWebSocketEvent', () => {
+  describe('processLifecycleEvent', () => {
     let loadSpy;
     let unloadSpy;
     let reloadSpy;
@@ -165,7 +165,7 @@ describe('ClientExtensionManager', () => {
     });
 
     it('injects resources and reloads on EXTENSION_INSTALLED', async () => {
-      await clientManager.onWebSocketEvent({
+      await clientManager.processLifecycleEvent({
         type: 'EXTENSION_INSTALLED',
         extensionId: 'new-p',
         data: { manifest: { hasClientCss: true } },
@@ -187,7 +187,7 @@ describe('ClientExtensionManager', () => {
       // Mark as loaded so unload path is taken
       jest.spyOn(clientManager, 'isExtensionLoaded').mockReturnValue(true);
 
-      await clientManager.onWebSocketEvent({
+      await clientManager.processLifecycleEvent({
         type: 'EXTENSION_UNINSTALLED',
         extensionId: 'old-p',
       });
@@ -199,7 +199,7 @@ describe('ClientExtensionManager', () => {
     });
 
     it('reloads extension on EXTENSION_UPDATED', async () => {
-      await clientManager.onWebSocketEvent({
+      await clientManager.processLifecycleEvent({
         type: 'EXTENSION_UPDATED',
         extensionId: 'existing-p',
         data: { manifest: { hasClientScript: true } },
@@ -210,7 +210,7 @@ describe('ClientExtensionManager', () => {
 
     it('loads extension on EXTENSION_ACTIVATED', async () => {
       const manifest = { hasClientCss: true };
-      await clientManager.onWebSocketEvent({
+      await clientManager.processLifecycleEvent({
         type: 'EXTENSION_ACTIVATED',
         extensionId: 'activated-p',
         data: { manifest },
@@ -222,7 +222,7 @@ describe('ClientExtensionManager', () => {
     it('unloads extension on EXTENSION_DEACTIVATED', async () => {
       jest.spyOn(clientManager, 'isExtensionLoaded').mockReturnValue(true);
 
-      await clientManager.onWebSocketEvent({
+      await clientManager.processLifecycleEvent({
         type: 'EXTENSION_DEACTIVATED',
         extensionId: 'deactivated-p',
       });
@@ -231,8 +231,8 @@ describe('ClientExtensionManager', () => {
     });
 
     it('ignores invalid events', async () => {
-      await clientManager.onWebSocketEvent(null);
-      await clientManager.onWebSocketEvent({});
+      await clientManager.processLifecycleEvent(null);
+      await clientManager.processLifecycleEvent({});
 
       expect(loadSpy).not.toHaveBeenCalled();
       expect(unloadSpy).not.toHaveBeenCalled();
@@ -247,6 +247,7 @@ describe('ClientExtensionManager', () => {
       mockRouter = {
         add: jest.fn().mockReturnValue([]),
         remove: jest.fn().mockReturnValue(true),
+        removeBySourceId: jest.fn().mockReturnValue(true),
       };
     });
 
@@ -260,65 +261,89 @@ describe('ClientExtensionManager', () => {
       // Flush with router
       clientManager.connectViewRouter(mockRouter);
 
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
 
-    it('connectViewRouter re-injects stored adapters on subsequent flush', () => {
+    it('connectViewRouter re-injects stored adapters on subsequent flush', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       // First flush stores the adapter
       // eslint-disable-next-line no-underscore-dangle
-      clientManager._injectRoutes('test-ext', mockAdapter);
+      await clientManager._injectRoutes('test-ext', mockAdapter);
       clientManager.connectViewRouter(mockRouter);
       expect(mockRouter.add).toHaveBeenCalledTimes(1);
 
       // Second flush (e.g. SSR creates new router per request)
-      const newRouter = { add: jest.fn(() => []), remove: jest.fn() };
+      const newRouter = {
+        add: jest.fn(() => []),
+        remove: jest.fn(),
+        removeBySourceId: jest.fn(),
+      };
       clientManager.connectViewRouter(newRouter);
 
-      expect(newRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(newRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
 
-    it('connectViewRouter stores router reference for later _injectRoutes', () => {
+    it('connectViewRouter stores router reference for later _injectRoutes', async () => {
       // Flush first to store router
       clientManager.connectViewRouter(mockRouter);
 
       // Subsequent _injectRoutes should use stored reference
       const mockAdapter = { files: () => [], load: () => ({}) };
       // eslint-disable-next-line no-underscore-dangle
-      clientManager._injectRoutes('test-ext', mockAdapter);
+      await clientManager._injectRoutes('test-ext', mockAdapter);
 
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
 
-    it('connectViewRouter with null viewRouter buffers without crash', () => {
+    it('connectViewRouter with null viewRouter buffers without crash', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       // Buffer an adapter
       // eslint-disable-next-line no-underscore-dangle
-      clientManager._injectRoutes('test-ext', mockAdapter);
+      await clientManager._injectRoutes('test-ext', mockAdapter);
 
       // Flush with null — should not crash, should still store pending
       expect(() => clientManager.connectViewRouter(null)).not.toThrow();
 
       // Now flush with real router — stored adapters should inject
       clientManager.connectViewRouter(mockRouter);
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
 
-    it('_injectRoutes injects directly when router is available', () => {
+    it('_injectRoutes injects directly when router is available', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       // Store router reference via flush (simulates bootstrapViews)
       clientManager.connectViewRouter(mockRouter);
 
       // eslint-disable-next-line no-underscore-dangle
-      clientManager._injectRoutes('test-ext', mockAdapter);
+      await clientManager._injectRoutes('test-ext', mockAdapter);
 
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
 
-    it('extension:unloaded removes route adapters', async () => {
+    it('_teardownExtension removes route adapters and unloads', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 
       // Store router reference via flush
@@ -326,13 +351,21 @@ describe('ClientExtensionManager', () => {
 
       // Inject routes first
       // eslint-disable-next-line no-underscore-dangle
-      clientManager._injectRoutes('test-ext', mockAdapter);
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      await clientManager._injectRoutes('test-ext', mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
 
-      // Trigger unload
-      await clientManager.emit('extension:unloaded', { id: 'test-ext' });
+      // Trigger teardown (called by DEACTIVATED/UNINSTALLED handlers)
+      // eslint-disable-next-line no-underscore-dangle
+      await clientManager._teardownExtension('test-ext');
 
-      expect(mockRouter.remove).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.removeBySourceId).toHaveBeenCalledWith(
+        'test-ext',
+        undefined,
+      );
     });
 
     it('end-to-end: _bootstrapExtension injects view routes automatically', async () => {
@@ -371,7 +404,11 @@ describe('ClientExtensionManager', () => {
       );
 
       // Verify that the views function was called and the adapter injected
-      expect(mockRouter.add).toHaveBeenCalledWith(mockAdapter);
+      expect(mockRouter.add).toHaveBeenCalledWith(
+        mockAdapter,
+        undefined,
+        'test-ext',
+      );
     });
   });
 });

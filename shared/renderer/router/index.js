@@ -24,17 +24,21 @@ import { createError, decodeUrl, isDescendant, log } from './utils';
 
 // Tag routes with their source adapter for dynamic add/remove tracking
 const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
+// String-based source ID for robust removal (survives HMR/reference changes)
+const ROUTE_SOURCE_ID = Symbol('__rsk.routeSourceId__');
 
 /**
  * Recursively tag routes with a source identifier
  * @param {Object} route - Route to tag
  * @param {*} source - Source identifier (adapter reference or null)
+ * @param {string} [sourceId] - Optional string ID for robust matching
  */
-function tagRoutes(route, source) {
+function tagRoutes(route, source, sourceId) {
   if (!route || typeof route !== 'object') return;
   route[ROUTE_SOURCE_KEY] = source;
+  if (sourceId) route[ROUTE_SOURCE_ID] = sourceId;
   if (Array.isArray(route.children)) {
-    route.children.forEach(child => tagRoutes(child, source));
+    route.children.forEach(child => tagRoutes(child, source, sourceId));
   }
 }
 
@@ -339,9 +343,11 @@ export class Router {
    * children are merged into the existing route instead of creating a duplicate.
    *
    * @param {Object} adapter - Adapter with files() and load() methods
+   * @param {Object} [ctx] - Optional context for immediate register lifecycle
+   * @param {string} [sourceId] - Optional string ID for robust removal
    * @returns {Object[]} The newly built route trees
    */
-  add(adapter) {
+  async add(adapter, ctx, sourceId) {
     validateAdapter(adapter);
 
     // 1. Build new routes using the same pipeline as the constructor
@@ -362,8 +368,8 @@ export class Router {
 
     if (newRoutes.length === 0) return newRoutes;
 
-    // 2. Tag all new routes with the adapter source
-    newRoutes.forEach(route => tagRoutes(route, adapter));
+    // 2. Tag all new routes with the adapter source (+ optional string ID)
+    newRoutes.forEach(route => tagRoutes(route, adapter, sourceId));
 
     // 3. Merge into existing tree deeply, tracking actually inserted routes
     const insertedRoutes = [];
@@ -427,7 +433,15 @@ export class Router {
       this._pendingRoutes.push(...insertedRoutes);
     }
 
-    // 5. Clear matcher cache so new URLs resolve correctly
+    // 5. If ctx is provided, immediately register pending routes
+    // so lifecycle hooks (e.g. registerMenu) fire without waiting for resolve()
+    // eslint-disable-next-line no-underscore-dangle
+    if (ctx && this._pendingRoutes.length > 0) {
+      // eslint-disable-next-line no-underscore-dangle
+      const pending = this._pendingRoutes.splice(0);
+      await traverseRoutes(pending, 'register', ctx, false);
+    }
+
     return newRoutes;
   }
 
@@ -437,26 +451,37 @@ export class Router {
    * @param {Object} adapter - The same adapter reference passed to add()
    * @returns {boolean} True if any routes were removed
    */
-  remove(adapter) {
+  async remove(adapter, ctx) {
     if (!adapter) return false;
 
+    // 1. Collect tagged routes BEFORE removal (needed for unregister lifecycle)
+    const tagged = [];
+    if (ctx) {
+      const collectTagged = routes => {
+        for (const r of routes) {
+          if (r[ROUTE_SOURCE_KEY] === adapter) tagged.push(r);
+          if (r.children) collectTagged(r.children);
+        }
+      };
+      collectTagged(this.routes);
+    }
+
+    // 2. Run unregister lifecycle on routes about to be removed
+    if (tagged.length > 0) {
+      await traverseRoutes(tagged, 'unregister', ctx, true);
+    }
+
+    // 3. Filter out the tagged routes from the tree
     let removed = false;
 
-    /**
-     * Recursively filter out routes tagged with the given adapter
-     * @param {Object[]} routes - Route array to filter
-     * @returns {Object[]} Filtered routes
-     */
     const filterRoutes = routes => {
       const result = [];
       for (const route of routes) {
         if (route[ROUTE_SOURCE_KEY] === adapter) {
-          // This entire route (and its children) came from this adapter
           removed = true;
           continue;
         }
 
-        // Keep the route, but filter its children
         if (Array.isArray(route.children) && route.children.length > 0) {
           const originalLength = route.children.length;
           route.children = filterRoutes(route.children);
@@ -470,14 +495,64 @@ export class Router {
       return result;
     };
 
-    // Filter the top-level routes
     this.routes = filterRoutes(this.routes);
 
     if (removed) {
-      // Re-link parents after structural changes
       this.routes.forEach(route => linkParents(route));
     }
 
+    return removed;
+  }
+
+  /**
+   * Remove routes by source ID string (robust across HMR/reference changes)
+   * @param {string} sourceId - The string ID used during add()
+   * @param {Object} [ctx] - Optional context for immediate unregister lifecycle
+   * @returns {Promise<boolean>} True if any routes were removed
+   */
+  async removeBySourceId(sourceId, ctx) {
+    if (!sourceId) return false;
+
+    // 1. Collect routes tagged with this sourceId
+    const tagged = [];
+    const collectTagged = routes => {
+      for (const r of routes) {
+        if (r[ROUTE_SOURCE_ID] === sourceId) tagged.push(r);
+        if (r.children) collectTagged(r.children);
+      }
+    };
+    collectTagged(this.routes);
+
+    // 2. Run unregister lifecycle
+    if (tagged.length > 0 && ctx) {
+      await traverseRoutes(tagged, 'unregister', ctx, true);
+    }
+
+    // 3. Filter out tagged routes
+    let removed = false;
+    const filterRoutes = routes => {
+      const result = [];
+      for (const route of routes) {
+        if (route[ROUTE_SOURCE_ID] === sourceId) {
+          removed = true;
+          continue;
+        }
+        if (Array.isArray(route.children) && route.children.length > 0) {
+          const originalLength = route.children.length;
+          route.children = filterRoutes(route.children);
+          if (route.children.length !== originalLength) {
+            removed = true;
+          }
+        }
+        result.push(route);
+      }
+      return result;
+    };
+
+    this.routes = filterRoutes(this.routes);
+    if (removed) {
+      this.routes.forEach(route => linkParents(route));
+    }
     return removed;
   }
 
@@ -572,6 +647,9 @@ export class Router {
    * Internal resolve implementation
    */
   async _resolveInternal(context, navigationEntry) {
+    // Store context for deferred lifecycle calls (e.g. add/remove with ctx)
+    // eslint-disable-next-line no-underscore-dangle
+    this._lastResolveContext = context;
     const ctx = {
       ...this.options.context,
       ...context,
