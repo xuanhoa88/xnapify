@@ -5,18 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Auto-load view routes via require.context
+// Auto-load contexts
 const viewsContext = require.context(
   '.',
   true,
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
-/**
- * Views hook — returns the webpack require.context for this module's views.
- *
- * @returns {object} Webpack require.context for views
- */
-export function views() {
-  return viewsContext;
-}
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
+
+export default {
+  routes: () => viewsContext,
+};

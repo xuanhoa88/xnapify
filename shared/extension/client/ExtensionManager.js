@@ -88,6 +88,36 @@ class ClientExtensionManager extends BaseExtensionManager {
   }
 
   // ---------------------------------------------------------------------------
+  // Post-load: eager namespace activation
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Eagerly activate namespaces for module-type extensions so boot() runs
+   * immediately — injecting Redux reducers and registering sidebar menus.
+   * Server skips this (inherits no-op); SSR activates per-request via onRouteInit.
+   */
+  async _postLoad(id, ext, manifest) {
+    const hasRoutes = typeof ext.routes === 'function';
+    if (!hasRoutes) return;
+
+    const subs =
+      manifest.rsk && Array.isArray(manifest.rsk.subscribe)
+        ? manifest.rsk.subscribe
+        : [];
+    const results = await Promise.allSettled(
+      subs.map(ns => this.ensureNamespaceActive(ns)),
+    );
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].status === 'rejected') {
+        console.warn(
+          `[ClientExtensionManager] Namespace "${subs[i]}" activation failed for ${id}:`,
+          results[i].reason.message,
+        );
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Route injection (mirrors ServerExtensionManager)
   // ---------------------------------------------------------------------------
 
@@ -95,7 +125,6 @@ class ClientExtensionManager extends BaseExtensionManager {
    * Normalize and inject (or buffer) view routes for an extension.
    * @param {string} id - Extension ID
    * @param {*} hookResult - Return value of the extension's views() hook
-   * @private
    */
   _injectRoutes(id, hookResult) {
     const adapter = normalizeRouteAdapter(hookResult, 'views');

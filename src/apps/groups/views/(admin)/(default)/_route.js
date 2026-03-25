@@ -19,9 +19,9 @@ import Groups from './Groups';
 export const middleware = requirePermission('groups:read');
 
 /**
- * Route init — inject Redux reducer into the store.
+ * Route boot — inject Redux reducer into the store.
  */
-export function init({ store }) {
+export function boot({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 

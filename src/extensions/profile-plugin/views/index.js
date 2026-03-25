@@ -89,7 +89,7 @@ export default {
   },
 
   // Lifecycle: boot (called when extension is booted)
-  boot(registry, _context) {
+  boot({ registry }) {
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', ExtensionField, {
       order: 10,
@@ -125,7 +125,7 @@ export default {
   },
 
   // Lifecycle: shutdown (called when extension is disabled)
-  shutdown(registry) {
+  shutdown({ registry }) {
     registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',

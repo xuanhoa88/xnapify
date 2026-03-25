@@ -9,9 +9,9 @@ import Dashboard from './Dashboard';
 import reducer, { SLICE_NAME } from './redux';
 
 /**
- * Route init — inject Redux reducer into the store.
+ * Route boot — inject Redux reducer into the store.
  */
-export function init({ store }) {
+export function boot({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 

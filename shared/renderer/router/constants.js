@@ -11,8 +11,8 @@ export const ROUTE_PATH_ROOT = '';
 export const ROUTE_SEPARATOR = '/';
 /** @type {string} Default module/config placeholder name */
 export const ROUTE_PATH_DEFAULT = '(default)';
-/** @type {symbol} Tracks whether a route's init() has been called */
-export const ROUTE_INIT_KEY = Symbol('__rsk.routeInitKey__');
+/** @type {symbol} Tracks whether a route's boot() has been called */
+export const ROUTE_BOOT_KEY = Symbol('__rsk.routeBootKey__');
 /** @type {symbol} Tracks mounted config modules to prevent double-mounting */
 export const ROUTE_MOUNT_KEY = Symbol('__rsk.routeMountKey__');
 /** @type {symbol} Tracks unmounted config modules to prevent double-unmounting */

@@ -10,7 +10,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 const TAG = '[OAuth Google]';
 
 export default {
-  async boot(registry, context) {
+  async boot({ container }) {
     const clientID = process.env.RSK_GOOGLE_CLIENT_ID;
     const clientSecret = process.env.RSK_GOOGLE_CLIENT_SECRET;
 
@@ -22,7 +22,7 @@ export default {
     }
 
     const appUrl = process.env.RSK_APP_URL || 'http://localhost:1337';
-    const oauth = context.container.resolve('oauth');
+    const oauth = container.resolve('oauth');
 
     oauth.registerProvider('google', {
       strategy: new GoogleStrategy(
@@ -40,8 +40,8 @@ export default {
     console.info(`${TAG} ✅ Initialized`);
   },
 
-  async shutdown(registry, context) {
-    const oauth = context.container.resolve('oauth');
+  async shutdown({ container }) {
+    const oauth = container.resolve('oauth');
     if (oauth && oauth.hasProvider('google')) {
       oauth.unregisterProvider('google');
     }

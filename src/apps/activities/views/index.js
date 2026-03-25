@@ -15,28 +15,25 @@ import * as thunks from './(admin)/redux/thunks';
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('activities:views');
 
-// Auto-load view routes via require.context
+// Auto-load contexts
 const viewsContext = require.context(
   '.',
   true,
   /(?:\/_route|\/_layout|\(routes\)\/\([^)]+\)|\(layouts\)\/\([^)]+\)\/_layout)\.[cm]?[jt]sx?$/i,
 );
 
-/**
- * Providers hook — share client-side services/state with other view modules.
- */
-export function providers({ container }) {
-  // Bind activities state
-  container.bind(
-    'activities:admin:state',
-    () => ({ selectors, thunks }),
-    OWNER_KEY,
-  );
-}
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
 
-/**
- * Views hook — returns the webpack require.context for this module's views.
- */
-export function views() {
-  return viewsContext;
-}
+export default {
+  providers({ container }) {
+    container.bind(
+      'activities:admin:state',
+      () => ({ selectors, thunks }),
+      OWNER_KEY,
+    );
+  },
+
+  routes: () => viewsContext,
+};

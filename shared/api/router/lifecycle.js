@@ -12,7 +12,7 @@ import { addNamespace } from '@shared/i18n/utils';
 import { composeMiddleware } from '@shared/utils/middleware';
 
 import {
-  ROUTE_INIT_KEY,
+  ROUTE_BOOT_KEY,
   ROUTE_MOUNT_KEY,
   ROUTE_TRANSLATIONS_KEY,
 } from './constants';
@@ -20,36 +20,36 @@ import { resolveRateLimiter } from './rateLimit';
 import { log, normalizeError } from './utils';
 
 /**
- * Creates init function for config and route initialization
+ * Creates boot function for config and route initialization
  */
-export function createInit(configs, init) {
-  const initableConfigs = configs.filter(
-    c => typeof c.module.init === 'function',
+export function createBoot(configs, boot) {
+  const bootableConfigs = configs.filter(
+    c => typeof c.module.boot === 'function',
   );
 
-  if (initableConfigs.length === 0 && typeof init !== 'function') {
+  if (bootableConfigs.length === 0 && typeof boot !== 'function') {
     return undefined;
   }
 
   return async function (ctx) {
     await Promise.all(
-      initableConfigs.map(async config => {
+      bootableConfigs.map(async config => {
         try {
-          if (!config.module[ROUTE_INIT_KEY]) {
-            await config.module.init(ctx);
-            config.module[ROUTE_INIT_KEY] = true;
+          if (!config.module[ROUTE_BOOT_KEY]) {
+            await config.module.boot(ctx);
+            config.module[ROUTE_BOOT_KEY] = true;
           }
         } catch (error) {
-          log(`Config init error: ${error.message}`, 'error');
+          log(`Config boot error: ${error.message}`, 'error');
         }
       }),
     );
 
-    if (typeof init === 'function') {
+    if (typeof boot === 'function') {
       try {
-        await init(ctx);
+        await boot(ctx);
       } catch (error) {
-        log(`Route init error: ${error.message}`, 'error');
+        log(`Route boot error: ${error.message}`, 'error');
       }
     }
   };
@@ -327,7 +327,7 @@ export function createAction(pageInfo, configs = [], middlewares = []) {
   };
 }
 
-export async function runInit(route, ctx) {
+export async function runBoot(route, ctx) {
   if (!route) return;
 
   const hierarchy = [];
@@ -354,12 +354,12 @@ export async function runInit(route, ctx) {
   }
 
   for (const r of hierarchy) {
-    if (typeof r.init === 'function' && !r[ROUTE_INIT_KEY]) {
+    if (typeof r.boot === 'function' && !r[ROUTE_BOOT_KEY]) {
       try {
-        await r.init(ctx);
-        r[ROUTE_INIT_KEY] = true;
+        await r.boot(ctx);
+        r[ROUTE_BOOT_KEY] = true;
       } catch (error) {
-        log(`Init error for "${r.path}": ${error.message}`, 'error');
+        log(`Boot error for "${r.path}": ${error.message}`, 'error');
       }
     }
   }

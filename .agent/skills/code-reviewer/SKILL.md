@@ -21,16 +21,16 @@ For all code:
 ### 1. Modules (`src/apps/[module_name]`)
 Modules form the core business logic of the application. They are loaded dynamically.
 - **Directory Structure:** Ensure the module correctly separates backend logic into `api/` and frontend logic into `views/`.
-- **Backend Hooks (`api/index.js`):** MUST strictly export the following lifecycle functions:
+- **Backend Hooks (`api/index.js`):** MUST use `export default { ... }` with lifecycle methods:
   - `models()` (returns Webpack context)
-  - `providers(container)` (binds DI injection)
-  - `migrations(container)`
-  - `seeds(container)`
-  - `init(container)`
+  - `providers({ container })` (binds DI injection)
+  - `migrations({ container })`
+  - `seeds({ container })`
+  - `boot({ container })`
   - `routes()` (returns `[name, context]` tuple or Webpack context)
-- **Frontend Hooks (`views/index.js`):** MUST export:
+- **Frontend Hooks (`views/index.js`):** MUST use `export default { ... }` with:
   - `providers({ container })`
-  - `views()` (returns `[name, context]` tuple or Webpack context)
+  - `routes()` (returns `[name, context]` tuple or Webpack context)
 - **Frontend Routing:** Any `_route.js` file MUST export exactly: `register`, `mount`, `getInitialProps`, and the default component.
 - **Dependency Isolation:** Block **any static imports** between independent domains in `src/apps/`. Cross-domain logic MUST use dependency injection (`app.get('container')`) or the event hook system.
 - **Webpack Constants:** Enforce that `require.context(...)` calls do not use dynamic string interpolation (Webpack needs static paths).
@@ -38,15 +38,15 @@ Modules form the core business logic of the application. They are loaded dynamic
 ### 2. Extensions (`src/extensions/[extension-name]`)
 Extensions are entirely encapsulated and attach to the core application via slots and hooks.
 - **Isolation Verification:** Flag and block ANY direct code modifications or static imports of files inside `src/apps/`. Extensions are strictly isolated.
-- **Backend Extensibility (`api/index.js`):** MUST export:
-  - `install(registry, context)`
-  - `init(registry, context)`
-  - `uninstall(registry, context)`
-  - `destroy(registry, context)`
-- **Frontend Extensibility (`views/index.js`):** MUST export:
-  - `init(registry)`
-  - `destroy(registry)`
-- **Memory Leak Prevention [CRITICAL]:** You MUST verify that every event listener, hook, or UI slot registered in `init()` has a corresponding `.off()` or `unregister()` call inside `destroy()`. Failure to do so prevents hot-reloading and leaks memory.
+- **Backend Extensibility (`api/index.js`):** MUST use `export default { ... }` with:
+  - `install({ container })`
+  - `boot({ container, registry })`
+  - `uninstall({ container })`
+  - `shutdown({ container, registry })`
+- **Frontend Extensibility (`views/index.js`):** MUST use `export default { ... }` with:
+  - `boot({ registry })`
+  - `shutdown({ registry })`
+- **Memory Leak Prevention [CRITICAL]:** You MUST verify that every event listener, hook, or UI slot registered in `boot()` has a corresponding `.off()` or `unregister()` call inside `shutdown()`. Failure to do so prevents hot-reloading and leaks memory.
 - **Defensive Database Queries:** Ensure any database tasks executed in `install` or `uninstall` are correctly wrapped in `try/catch` and gracefully handle errors.
 - **IPC Pipelines:** Verify that frontend-to-backend communication relies securely on standard IPC pipeline configurations instead of direct API hacks.
 

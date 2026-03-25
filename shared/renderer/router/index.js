@@ -15,7 +15,7 @@ import {
 } from './constants';
 import {
   loadRouteTranslations,
-  runInit,
+  runBoot,
   runMount,
   runUnmount,
 } from './lifecycle';
@@ -698,8 +698,8 @@ export class Router {
       // Run translations hook (once per route, parent → child)
       await loadRouteTranslations(state.current.route, state.current);
 
-      // Run init hook (config + route-level, parent → child, once per route)
-      await runInit(state.current.route, state.current);
+      // Run boot hook (config + route-level, parent → child, once per route)
+      await runBoot(state.current.route, state.current);
 
       // Check cancellation before unmount
       if (navigationEntry.cancelled) {

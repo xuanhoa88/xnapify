@@ -7,7 +7,7 @@
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import {
-  createInit,
+  createBoot,
   createMount,
   createUnmount,
   buildTranslationsLoader,
@@ -113,14 +113,14 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
       module, // Preserve module for register/unregister lifecycle
       path: pathname,
       action: createAction(pageInfo, matchedConfigs, matchedLayouts),
-      // Lifecycle hooks: init (config + route), mount/unmount (both)
+      // Lifecycle hooks: boot (config + route), mount/unmount (both)
       translations: buildTranslationsLoader(
         matchedConfigs,
         module.translations,
         pathname,
         moduleName,
       ),
-      init: createInit(matchedConfigs, module.init),
+      boot: createBoot(matchedConfigs, module.boot),
       mount: createMount(matchedConfigs, module.mount),
       unmount: createUnmount(matchedConfigs, module.unmount),
     });

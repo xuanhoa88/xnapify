@@ -5,28 +5,28 @@
  * Routes are dynamically injected into the API router at extension load time.
  */
 
+// Auto-load contexts
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
 const seedsContext = require.context(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-
 const translationsContext = require.context(
   '../translations',
   false,
   /\.json$/i,
 );
 
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
 export default {
   /**
    * Declarative hooks — auto-processed by ServerExtensionManager.
@@ -39,28 +39,28 @@ export default {
   /**
    * Lifecycle: install (one-time setup — currently a no-op)
    */
-  async install(_registry, _context) {},
+  async install() {},
 
   /**
    * Lifecycle: init (called on every load)
    */
-  async boot(_registry, _context) {},
+  async boot() {},
 
   /**
    * Lifecycle: destroy
    */
-  async shutdown(_registry, _context) {},
+  async shutdown() {},
 
   /**
    * Lifecycle: uninstall
    * Reverts seeds and database migrations.
    */
-  async uninstall(_registry, context) {
-    const db = context.container.resolve('db');
+  async uninstall({ container }) {
+    const db = container.resolve('db');
     if (db) {
       await db.connection.revertSeeds(
         [{ context: seedsContext, prefix: __EXTENSION_NAME__ }],
-        { container: context.container },
+        { container },
       );
 
       await db.connection.revertMigrations([

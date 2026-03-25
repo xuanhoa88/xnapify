@@ -34,7 +34,7 @@ const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/views\/index\.[cm]?[jt]s$/i;
  *   providers    — bind DI services (views may consume them)
  *   views        — collect route contexts last, once bindings are ready
  */
-const LIFECYCLE_PHASES = ['translations', 'providers', 'views'];
+const LIFECYCLE_PHASES = ['translations', 'providers', 'routes'];
 
 // =============================================================================
 // LOGGING
@@ -86,7 +86,8 @@ function loadLifecycles(adapter, paths) {
     const moduleName = getModuleName(filePath);
 
     try {
-      const hooks = adapter.load(filePath);
+      const raw = adapter.load(filePath);
+      const hooks = (raw && raw.default) || raw;
 
       if (!hooks || typeof hooks !== 'object') {
         const err = new Error(
@@ -249,7 +250,7 @@ export async function discoverModules(modulesContext, context) {
   // ─── Phase 3: views ─────────────────────────────────────────────────────
   const viewAdapters = new Map();
   errors.push(
-    ...(await runPhase('views', lifecycles, (name, hook) => {
+    ...(await runPhase('routes', lifecycles, (name, hook) => {
       const viewContext = hook();
       if (viewContext) {
         const rawAdapter = createWebpackContextAdapter(viewContext);

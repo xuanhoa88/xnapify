@@ -17,6 +17,10 @@ const translationsContext = require.context(
   /\.json$/i,
 );
 
+// =============================================================================
+// LIFECYCLE HOOKS
+// =============================================================================
+
 export default {
   /**
    * Declarative translations — auto-registered by extension manager.
@@ -29,7 +33,7 @@ export default {
    * Module-type hook: provides view routes for dynamic injection.
    * Returns [moduleName, context] — the framework auto-builds the adapter.
    */
-  views() {
+  routes() {
     return ['posts', viewsContext];
   },
 };

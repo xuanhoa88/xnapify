@@ -335,7 +335,7 @@ Register in the module's `init()` lifecycle hook:
 // @apps/posts/api/index.js
 import { registerPostWorkers } from './services/post.workers';
 
-export async function init(container) {
+export async function boot(container) {
   registerPostWorkers(container);
 }
 ```

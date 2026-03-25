@@ -165,11 +165,11 @@ describe('shared/api/autoloader', () => {
         if (key === './users/api/index.js') {
           return {
             translations: () => mockTranslationsContext,
-            init: jest.fn(),
+            boot: jest.fn(),
             routes: jest.fn(),
           };
         }
-        return { init: jest.fn() };
+        return { boot: jest.fn() };
       });
 
       await discoverModules(mockContext, mockContainer);
@@ -180,7 +180,7 @@ describe('shared/api/autoloader', () => {
       });
     });
 
-    it('should load models via hooks.models() and call init', async () => {
+    it('should load models via hooks.models() and call boot', async () => {
       const { discoverModules } = require('./autoloader');
 
       // Mock context — only lifecycle files now (no model paths)
@@ -235,13 +235,13 @@ describe('shared/api/autoloader', () => {
       mockContext.mockImplementation(key => {
         if (key === './users/api/index.js') {
           return {
-            init: usersInit,
+            boot: usersInit,
             models: () => mockModelContext,
             routes: jest.fn(),
           };
         }
         if (key === './extensions/api/index.js') {
-          return { init: jest.fn() };
+          return { boot: jest.fn() };
         }
         if (
           [
@@ -258,7 +258,7 @@ describe('shared/api/autoloader', () => {
             .map(p => `./${p}/api/index.js`)
             .includes(key)
         ) {
-          return { init: jest.fn() };
+          return { boot: jest.fn() };
         }
       });
 
@@ -272,7 +272,7 @@ describe('shared/api/autoloader', () => {
       expect(userModel.associate).toHaveBeenCalledWith(apiModels);
       expect(postModel.associate).toHaveBeenCalledWith(apiModels);
 
-      // Verify init was called
+      // Verify boot was called
       expect(usersInit).toHaveBeenCalled();
     });
 
@@ -315,11 +315,11 @@ describe('shared/api/autoloader', () => {
       mockContext.mockImplementation(key => {
         if (key === './users/api/index.js') {
           return {
-            init: jest.fn(),
+            boot: jest.fn(),
             models: () => mockModelContext,
           };
         }
-        if (key === './extensions/api/index.js') return { init: jest.fn() };
+        if (key === './extensions/api/index.js') return { boot: jest.fn() };
         if (
           [
             'roles',
@@ -335,7 +335,7 @@ describe('shared/api/autoloader', () => {
             .map(p => `./${p}/api/index.js`)
             .includes(key)
         ) {
-          return { init: jest.fn() };
+          return { boot: jest.fn() };
         }
         return { default: jest.fn() };
       });

@@ -8,7 +8,7 @@
 import { buildRoutes, validateConfig, linkParents } from './builder';
 import { collect } from './collector';
 import { ROUTE_MOUNT_KEY } from './constants';
-import { loadRouteTranslations, runInit, runMount } from './lifecycle';
+import { loadRouteTranslations, runBoot, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
 
 /** @type {symbol} Tag for tracking which adapter a route came from */
@@ -241,8 +241,8 @@ export class Router {
       // Run translations hook (once per route, parent → child)
       await loadRouteTranslations(route, ctx);
 
-      // Run init hook (once per route, parent → child)
-      await runInit(route, ctx);
+      // Run boot hook (once per route, parent → child)
+      await runBoot(route, ctx);
 
       // Run mount hook (once per route, parent → child)
       await runMount(route, ctx);

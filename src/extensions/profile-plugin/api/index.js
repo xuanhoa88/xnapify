@@ -45,9 +45,9 @@ export default {
   },
 
   // Lifecycle: install (called once when the user clicks 'Install Extension')
-  async install(registry, context) {
+  async install({ container }) {
     console.log('[Test Extension] Installing...', __EXTENSION_NAME__);
-    const db = context.container.resolve('db');
+    const db = container.resolve('db');
     if (db) {
       try {
         console.log(
@@ -78,13 +78,13 @@ export default {
   },
 
   // Lifecycle: boot (called when extension is booted on server)
-  async boot(registry, context) {
+  async boot({ container, registry }) {
     console.log(
       '[Test Extension] Backend logic initialized for ' + __EXTENSION_NAME__,
     );
 
     // Get hook engine
-    const hook = context.container.resolve('hook');
+    const hook = container.resolve('hook');
 
     // Handler to extend profile schema
     this[HANDLERS].updateValidation = function (context) {
@@ -199,7 +199,7 @@ export default {
         }
 
         try {
-          const models = context.container.resolve('models');
+          const models = container.resolve('models');
           const { UserProfile } = models;
           const existing = await UserProfile.findOne({
             where: {
@@ -229,13 +229,13 @@ export default {
   },
 
   // Lifecycle: shutdown (called when extension is disabled)
-  async shutdown(registry, context) {
+  async shutdown({ container }) {
     console.log(
       '[Test Extension] Backend logic destroyed for ' + __EXTENSION_NAME__,
     );
 
     // Unsubscribe from hooks
-    const hook = context.container.resolve('hook');
+    const hook = container.resolve('hook');
     if (this[HANDLERS].updateValidation) {
       hook('profile').off('validation:update', this[HANDLERS].updateValidation);
     }
@@ -251,9 +251,9 @@ export default {
   },
 
   // Lifecycle: uninstall (called once when the user deletes the extension)
-  async uninstall(registry, context) {
+  async uninstall({ container }) {
     console.log('[Test Extension] Uninstalling...', __EXTENSION_NAME__);
-    const db = context.container.resolve('db');
+    const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([

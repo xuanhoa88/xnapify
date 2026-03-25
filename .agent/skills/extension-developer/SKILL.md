@@ -24,25 +24,25 @@ Extensions follow a well-defined lifecycle with hooks that receive progressively
 
 After `runProviders()` is called (during SSR or client bootstrap), lifecycle hooks receive the full DI context:
 
-- **`providers(registry, context)`**: Called once per request (SSR) or once at boot (client). Use to inject Redux reducers or other per-request setup. Context includes `{ container, store }`.
-- **`boot(registry, context)`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs. Context includes `{ container, store }`.
-- **`shutdown(registry, context)`**: Re-runs when disabled. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`. Context includes `{ container, store }`.
+- **`providers({ container })`**: Called once per request (SSR) or once at boot (client). Use to inject Redux reducers or other per-request setup. 
+- **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers, subscribe to hooks. Data layer (migrations, models, seeds) is already processed before this runs. 
+- **`shutdown({ container, registry })`**: Re-runs when disabled. MUST unsubscribe from all hooks. Extension models are auto-unregistered from the `ModelRegistry`. 
 
 ### One-time Hooks (backend only)
 
-- **`install(registry, context)`**: Runs ONCE when installed. Run migrations/seeds.
-- **`uninstall(registry, context)`**: Runs ONCE when deleted. Revert migrations/seeds.
+- **`install({ container })`**: Runs ONCE when installed. Run migrations/seeds.
+- **`uninstall({ container })`**: Runs ONCE when deleted. Revert migrations/seeds.
 
 ## Extension Kinds
 
-### Plugin-kind (no `views()` hook)
+### Plugin-kind (no `routes()` hook)
 - Extends existing modules (e.g., profile enhancements)
 - Must declare `rsk.subscribe` in `package.json` with route paths
 - Injects UI via slots and hooks
 
-### Module-kind (with `views()` hook)
+### Module-kind (with `routes()` hook)
 - Provides its own view routes
-- Namespace auto-derived from `views()` return tuple `[moduleName, context]`
+- Namespace auto-derived from `routes()` return tuple `[moduleName, context]`
 - Can inject Redux reducers via `providers()` hook
 
 ## Procedure: Developing an Extension
@@ -60,15 +60,15 @@ After `runProviders()` is called (during SSR or client bootstrap), lifecycle hoo
    - **`translations()`**: Returns a `require.context` for i18n JSON files.
 
    **Lifecycle Hooks:**
-   - **`install(registry, context)`**: Runs ONCE when installed. Currently a no-op since migrations/seeds are now declarative.
-   - **`boot(registry, context)`**: Re-runs on every server boot. Register IPC handlers and subscribe to Backend Hooks. Models, migrations, and seeds are already processed before this runs.
-   - **`uninstall(registry, context)`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
-   - **`shutdown(registry, context)`**: Re-runs when disabled. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`.
+   - **`install({ container })`**: Runs ONCE when installed. Currently a no-op since migrations/seeds are now declarative.
+   - **`boot({ container, registry })`**: Re-runs on every server boot. Register IPC handlers and subscribe to Backend Hooks. Models, migrations, and seeds are already processed before this runs.
+   - **`uninstall({ container })`**: Runs ONCE when deleted. Undo migrations/seeds via `db.connection.revertSeeds()`/`revertMigrations()`.
+   - **`shutdown({ container, registry })`**: Re-runs when disabled. MUST unsubscribe from all hooks (`.off()`). Extension models are auto-unregistered from the `ModelRegistry`.
 
 3. **Frontend Entry (`views/index.js`):**
 
    - Export an object containing `translations`, `providers`, `boot`, and `shutdown`.
-   - **`providers(registry, context)`**: Use `context.store.injectReducer(name, reducer)` to inject Redux state. Called once per bootstrap (before routes render).
+   - **`providers({ container })`**: Use `store.injectReducer(name, reducer)` to inject Redux state. Called once per bootstrap (before routes render).
    - **`boot(registry)`**: Use `registry.registerSlot('extension.point', Component)` to inject UI. Use `registry.registerHook` to inject validation schema extenders or data middleware.
    - **`shutdown(registry)`**: MUST exactly inverse `boot` with `unregisterSlot` and `unregisterHook`.
 

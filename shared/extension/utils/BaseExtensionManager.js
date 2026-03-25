@@ -93,15 +93,15 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Whether module-kind extensions should eagerly activate during loadExtension.
-   * Client returns true (persistent store available), server returns false
-   * (no persistent store at boot; SSR activates per-request via onRouteInit).
-   * @returns {boolean}
+   * Post-load hook called after an extension is successfully loaded.
+   * Subclasses override to perform environment-specific work.
+   * Client uses this to eagerly activate module-type namespaces.
+   * @param {string} _id - Extension ID
+   * @param {Object} _ext - Loaded extension module
+   * @param {Object} _manifest - Extension manifest
    */
-  // eslint-disable-next-line class-methods-use-this
-  _shouldEagerActivate() {
-    return true;
-  }
+  // eslint-disable-next-line class-methods-use-this, no-unused-vars
+  async _postLoad(_id, _ext, _manifest) {}
 
   /**
    * Initialize the extension manager.
@@ -181,7 +181,7 @@ export class BaseExtensionManager {
    * @param {Object} [context.store] - Redux store instance
    */
   async runProviders(context) {
-    // Store for lifecycle hooks (onLoad, boot, shutdown, etc.)
+    // Store for lifecycle hooks (boot, shutdown, etc.)
     this[PROVIDERS_CONTEXT] = context;
 
     const extensions = Array.from(this[ACTIVE_EXTENSIONS].entries());
@@ -190,7 +190,7 @@ export class BaseExtensionManager {
     const results = await Promise.allSettled(
       extensions.map(async ([, ext]) => {
         if (typeof ext.providers !== 'function') return;
-        await ext.providers(context);
+        await ext.providers({ ...context });
       }),
     );
 
@@ -255,17 +255,17 @@ export class BaseExtensionManager {
    * @protected
    */
   _injectViewRoutes(id, ext, manifest, ...injectArgs) {
-    if (!ext || typeof ext.views !== 'function') return false;
+    if (!ext || typeof ext.routes !== 'function') return false;
 
-    const viewsResult = ext.views();
+    const routesResult = ext.routes();
 
     // Auto-subscribe module namespace from [moduleName, context] tuple
     if (
-      Array.isArray(viewsResult) &&
-      viewsResult.length === 2 &&
-      typeof viewsResult[0] === 'string'
+      Array.isArray(routesResult) &&
+      routesResult.length === 2 &&
+      typeof routesResult[0] === 'string'
     ) {
-      const moduleName = viewsResult[0];
+      const moduleName = routesResult[0];
       const rsk = manifest.rsk || {};
       const subs = rsk.subscribe || [];
       if (!subs.includes(moduleName)) {
@@ -275,7 +275,7 @@ export class BaseExtensionManager {
     }
 
     // eslint-disable-next-line no-underscore-dangle
-    this._injectRoutes(id, viewsResult, ...injectArgs);
+    this._injectRoutes(id, routesResult, ...injectArgs);
 
     return true;
   }
@@ -283,7 +283,8 @@ export class BaseExtensionManager {
   /**
    * Load extension dependencies
    * @param {string} extensionId - Extension requesting dependencies
-   * @param {Array<Object<string, string>>} dependencies - Array of dependency IDs
+   * @param {Object<string, string>} dependencies - Map of dependency IDs to version ranges
+   * @param {Set} [_loadingChain] - Internal: circular dependency tracking
    */
   async loadDependencies(extensionId, dependencies, _loadingChain) {
     const chain = _loadingChain || new Set();
@@ -325,17 +326,18 @@ export class BaseExtensionManager {
     }
 
     // Accept any object that has at least one recognized extension property
+    // Recognized extension properties grouped by purpose:
+    //   Lifecycle:   install → providers → boot → shutdown → uninstall
+    //   Declarative: routes, translations, models
     const recognizedKeys = [
-      'name',
-      'boot',
       'install',
+      'providers',
+      'boot',
       'shutdown',
       'uninstall',
-      'onLoad',
-      'register',
-      'views',
       'routes',
       'translations',
+      'models',
     ];
     const hasRecognized = recognizedKeys.some(
       key => key in ext && ext[key] != null,
@@ -380,19 +382,20 @@ export class BaseExtensionManager {
       version: (manifest && manifest.version) || '0.0.0',
       error: null,
       loadedAt: null,
-      require: (manifest && manifest.rsk && manifest.rsk.require) || [],
+      require: (manifest && manifest.rsk && manifest.rsk.require) || {},
       manifest,
     });
 
     try {
       await this.emit('extension:loading', { id });
+
       // Load extension dependencies first (ensures dependency graph is satisfied)
       // Dependencies are loaded recursively before the extension itself
       if (
         manifest &&
         manifest.rsk &&
         manifest.rsk.require &&
-        manifest.rsk.require.length > 0
+        Object.keys(manifest.rsk.require).length > 0
       ) {
         await this.loadDependencies(id, manifest.rsk.require, _loadingChain);
       }
@@ -468,61 +471,20 @@ export class BaseExtensionManager {
       // eslint-disable-next-line no-underscore-dangle
       await registry.defineExtension(ext, this._hookContext(), manifest);
 
-      // A module provides routes (API or views); a plugin extends via hooks only
-      const extensionType =
-        typeof ext.routes === 'function' || typeof ext.views === 'function'
-          ? 'module'
-          : 'plugin';
+      // Extensions with routes() are module-type (eagerly activated);
+      // extensions without routes are plugin-type (lazily activated).
+      const hasRoutes = typeof ext.routes === 'function';
 
-      // Module-kind extensions auto-subscribe to a namespace derived from
-      // their views() hook. Activate eagerly so boot() runs immediately
-      // (injecting Redux reducers and registering sidebar menus) rather than
-      // waiting for route-based activateNamespace which creates a
-      // chicken-and-egg problem (menu invisible → can't navigate → can't activate).
-      // Plugin-kind extensions activate lazily on route navigation via onRouteInit.
+      // Post-load hook (client uses this for eager namespace activation)
       // eslint-disable-next-line no-underscore-dangle
-      if (extensionType === 'module' && this._shouldEagerActivate()) {
-        const subs =
-          manifest.rsk && Array.isArray(manifest.rsk.subscribe)
-            ? manifest.rsk.subscribe
-            : [];
-        const results = await Promise.allSettled(
-          subs.map(ns => this.ensureNamespaceActive(ns)),
-        );
-        for (let i = 0; i < results.length; i++) {
-          if (results[i].status === 'rejected') {
-            console.warn(
-              `[ExtensionManager] Namespace "${subs[i]}" activation failed for ${id}:`,
-              results[i].reason.message,
-            );
-          }
-        }
-      }
+      await this._postLoad(id, ext, manifest);
 
       // Update metadata
       const metadata = this[EXTENSION_METADATA].get(id);
       metadata.state = ExtensionState.LOADED;
-      metadata.kind = extensionType;
+      metadata.hasRoutes = hasRoutes;
       metadata.loadedAt = Date.now();
       metadata.manifest = { ...manifest };
-
-      // Call extension lifecycle hook
-      if (typeof ext.onLoad === 'function') {
-        try {
-          // eslint-disable-next-line no-underscore-dangle
-          await ext.onLoad(this._hookContext());
-        } catch (hookError) {
-          console.warn(
-            `[ExtensionManager] onLoad hook failed for ${id}:`,
-            hookError.message,
-          );
-          await this.emit('extension:hook-error', {
-            id,
-            hook: 'onLoad',
-            error: hookError,
-          });
-        }
-      }
 
       if (__DEV__) {
         console.log(`[ExtensionManager] Successfully loaded extension: ${id}`);
@@ -543,11 +505,7 @@ export class BaseExtensionManager {
         metadata.error = error;
       }
 
-      try {
-        await this.emit('extension:failed', { id, error });
-      } catch {
-        // Prevent event handler errors from masking the original failure
-      }
+      await this.emit('extension:failed', { id, error });
     }
   }
 
@@ -800,31 +758,13 @@ export class BaseExtensionManager {
   }
 
   /**
-   * Get the kind of an extension ('module' or 'plugin')
+   * Check if an extension has routes (module-type)
    * @param {string} id - Extension ID
-   * @returns {string|null} 'module', 'plugin', or null if not found
+   * @returns {boolean}
    */
-  getExtensionKind(id) {
+  hasExtensionRoutes(id) {
     const meta = this[EXTENSION_METADATA].get(id);
-    return meta ? meta.kind : null;
-  }
-
-  /**
-   * Check if an extension is module-kind (has views, eagerly activated)
-   * @param {string} id - Extension ID
-   * @returns {boolean}
-   */
-  isModuleExtension(id) {
-    return this.getExtensionKind(id) === 'module';
-  }
-
-  /**
-   * Check if an extension is plugin-kind (no views, lazily activated on route)
-   * @param {string} id - Extension ID
-   * @returns {boolean}
-   */
-  isPluginExtension(id) {
-    return this.getExtensionKind(id) === 'plugin';
+    return meta ? !!meta.hasRoutes : false;
   }
 
   /**
@@ -876,7 +816,7 @@ export class BaseExtensionManager {
             // Wrap boot/shutdown for the standard register method
             const extInstance = {
               ...def,
-              boot: async reg => {
+              boot: async context => {
                 if (__DEV__) {
                   console.log(
                     `[ExtensionManager] Booting extension: ${def.id}`,
@@ -900,8 +840,7 @@ export class BaseExtensionManager {
 
                 if (typeof def.boot === 'function') {
                   try {
-                    // eslint-disable-next-line no-underscore-dangle
-                    await def.boot(reg, this._hookContext());
+                    await def.boot(context);
                   } catch (error) {
                     console.error(
                       `[ExtensionManager] Failed to boot extension ${def.id}:`,
@@ -915,7 +854,7 @@ export class BaseExtensionManager {
                   }
                 }
               },
-              shutdown: async reg => {
+              shutdown: async context => {
                 if (__DEV__) {
                   console.log(
                     `[ExtensionManager] Shutting down extension: ${def.id}`,
@@ -923,8 +862,7 @@ export class BaseExtensionManager {
                 }
                 if (typeof def.shutdown === 'function') {
                   try {
-                    // eslint-disable-next-line no-underscore-dangle
-                    await def.shutdown(reg, this._hookContext());
+                    await def.shutdown(context);
                   } catch (error) {
                     console.error(
                       `[ExtensionManager] Failed to shutdown extension ${def.id}:`,

@@ -645,19 +645,19 @@ describe('Matcher & Path Parsing', () => {
 });
 
 // =============================================================================
-// Configs & Init Hook
+// Configs & Boot Hook
 // =============================================================================
 
-describe('Configs and runInit', () => {
-  it('should execute config init and route init sequentially', async () => {
+describe('Configs and runBoot', () => {
+  it('should execute config boot and route boot sequentially', async () => {
     const log = [];
     const adapter = createAdapter({
       './(default)/views/(routes)/(default).js': {
-        init: () => log.push('config_init'),
+        boot: () => log.push('config_boot'),
       },
       './(default)/views/page/_route.js': {
         default: () => 'Page',
-        init: () => log.push('route_init'),
+        boot: () => log.push('route_boot'),
       },
     });
 
@@ -665,15 +665,15 @@ describe('Configs and runInit', () => {
     const result = await router.resolve({ pathname: '/page' });
 
     expect(result).toBeDefined();
-    expect(log).toEqual(['config_init', 'route_init']); // Sequential execution
+    expect(log).toEqual(['config_boot', 'route_boot']); // Sequential execution
   });
 
   it('should ignore errors thrown gracefully during route hooks', async () => {
     const adapter = createAdapter({
       './(default)/views/error-hook/_route.js': {
         default: () => 'Page',
-        init: () => {
-          throw new Error('Init crash');
+        boot: () => {
+          throw new Error('Boot crash');
         },
       },
     });

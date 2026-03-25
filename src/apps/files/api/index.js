@@ -10,81 +10,44 @@ import { SEED_PERMISSIONS } from './constants';
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('files:api');
 
-// Auto-load migrations
+// Auto-load contexts
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load seeds
 const seedsContext = require.context(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load models
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-
-// Auto-load routes
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
-// PUBLIC LIFECYCLE HOOKS
+// LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Providers hook — called by the autoloader to share services with other modules.
- *
- * @param {Object} container - DI container instance
- */
-export async function providers(container) {
-  // Bind seed permissions to container as singleton
-  container.bind('files:seed_constants', () => SEED_PERMISSIONS, OWNER_KEY);
-}
+export default {
+  async providers({ container }) {
+    container.bind('files:seed_constants', () => SEED_PERMISSIONS, OWNER_KEY);
+  },
 
-/**
- * Migrations hook — run database migrations.
- *
- * @param {Object} container - DI container instance
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
+  async migrations({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runMigrations(
+      [{ context: migrationsContext, prefix: 'files' }],
+      { container },
+    );
+  },
 
-  await db.connection.runMigrations(
-    [{ context: migrationsContext, prefix: 'files' }],
-    { container },
-  );
-}
+  async seeds({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runSeeds([{ context: seedsContext, prefix: 'files' }], {
+      container,
+    });
+  },
 
-/**
- * Seeds hook — run database seeds.
- *
- * @param {Object} container - DI container instance
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'files' }], {
-    container,
-  });
-}
-
-/**
- * Models hook — returns the webpack require.context for this module's models.
- *
- * @returns {object} Webpack require.context for models
- */
-export function models() {
-  return modelsContext;
-}
-
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * @returns {object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
+  models: () => modelsContext,
+  routes: () => routesContext,
+};

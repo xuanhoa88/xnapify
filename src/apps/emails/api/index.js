@@ -5,82 +5,47 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Auto-load migrations via require.context
+import { registerEmailHooks } from './hooks';
+
+// Auto-load contexts
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load seeds via require.context
 const seedsContext = require.context(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load models via require.context
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-
-// Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
-// PUBLIC LIFECYCLE HOOKS
+// LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Migrations hook — run database migrations.
- *
- * @param {Object} container - DI container instance
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
+export default {
+  async migrations({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runMigrations(
+      [{ context: migrationsContext, prefix: 'emails' }],
+      { container },
+    );
+  },
 
-  await db.connection.runMigrations(
-    [{ context: migrationsContext, prefix: 'emails' }],
-    { container },
-  );
-}
+  async seeds({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runSeeds(
+      [{ context: seedsContext, prefix: 'emails' }],
+      { container },
+    );
+  },
 
-/**
- * Seeds hook — run database seeds.
- *
- * @param {Object} container - DI container instance
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
+  async boot({ container }) {
+    registerEmailHooks(container);
+  },
 
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'emails' }], {
-    container,
-  });
-}
-
-/**
- * Models hook — returns the webpack require.context for this module's models.
- *
- * @returns {object} Webpack require.context for models
- */
-export function models() {
-  return modelsContext;
-}
-
-import { registerEmailHooks } from './hooks';
-
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * @returns {object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
-
-/**
- * Init hook — called after components are registered.
- *
- * @param {Object} container - DI container instance
- */
-export async function init(container) {
-  registerEmailHooks(container);
-}
+  models: () => modelsContext,
+  routes: () => routesContext,
+};

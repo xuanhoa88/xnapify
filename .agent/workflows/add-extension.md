@@ -63,7 +63,7 @@ mkdir -p src/extensions/{extension-name}
 
 - **Plugin-kind extensions** (no `views()` hook): You **must** list route paths manually (e.g., `["/login", "/profile"]`).
 - **Module-kind extensions** (with `views()` hook): The namespace is **auto-derived** from the `views()` return tuple `[moduleName, context]`. You can omit `rsk.subscribe` — it will be populated automatically (e.g., `"posts"`).
-- Extensions are **eagerly activated** during loading — their `init()` runs immediately after registration, so Redux reducers and sidebar menus are available before the user navigates to the route.
+- Extensions are **eagerly activated** during loading — their `boot()` runs immediately after registration, so Redux reducers and sidebar menus are available before the user navigates to the route.
 
 **Route namespace override:** A `_route.js` file can export `namespace` to override which namespace the route belongs to:
 
@@ -129,17 +129,17 @@ export default {
   // Store handlers for cleanup
   [HANDLERS]: {},
 
-  // Declarative translations — auto-registered by extension manager before init
+  // Declarative translations — auto-registered by extension manager before boot
   translations() {
     return translationsContext;
   },
 
-  // Lifecycle: Initialize on server startup
-  async init(registry, context) {
+  // Lifecycle: Boot on server startup
+  async boot({ container, registry }) {
     console.log('[Extension] Initialized for ' + __EXTENSION_NAME__);
 
     // Run database migrations
-    const db = context.container.resolve('db');
+    const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
@@ -161,7 +161,7 @@ export default {
     }
 
     // Get hook engine
-    const hook = context.container.resolve('hook');
+    const hook = container.resolve('hook');
 
     // Handler for schema validation
     this[HANDLERS].updateValidation = function (context) {
@@ -217,9 +217,9 @@ export default {
     );
   },
 
-  // Lifecycle: Cleanup on extension disable
-  async destroy(registry, context) {
-    const hook = context.container.resolve('hook');
+  // Lifecycle: Shutdown on extension disable
+  async shutdown({ container, registry }) {
+    const hook = container.resolve('hook');
 
     // Unregister hook
     if (this[HANDLERS].updateValidation) {
@@ -227,7 +227,7 @@ export default {
     }
 
     // Undo seeds and migrations
-    const db = context.container.resolve('db');
+    const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.undoSeeds([
@@ -344,7 +344,7 @@ export default {
   // Store composed handlers for cleanup
   [HANDLERS]: {},
 
-  // Declarative translations — auto-registered by extension manager before init
+  // Declarative translations — auto-registered by extension manager before boot
   translations() {
     return translationsContext;
   },
@@ -355,8 +355,8 @@ export default {
     // store.injectReducer('mySlice', myReducer);
   },
 
-  // Lifecycle: init (called when extension is initialized)
-  init(registry, _context) {
+  // Lifecycle: boot (called when extension is booted)
+  boot({ registry }) {
     // 1. Register Slot Component
     registry.registerSlot('profile.personal_info.fields', ExtensionField, {
       order: 10,
@@ -392,8 +392,8 @@ export default {
     console.log('[Extension] Initialized');
   },
 
-  // Lifecycle: destroy (called when extension is disabled)
-  destroy(registry) {
+  // Lifecycle: shutdown (called when extension is disabled)
+  shutdown(registry) {
     registry.unregisterSlot('profile.personal_info.fields', ExtensionField);
     registry.unregisterHook(
       'profile.personal_info.validator',
@@ -693,7 +693,7 @@ export default {
     return translationsContext;
   },
 
-  init(registry, _context) {
+  boot({ registry }) {
     registry.registerSlot('posts.detail.comments', CommentForm, {
       order: 10,
     });
@@ -703,7 +703,7 @@ export default {
     console.log('[Comments Extension] Initialized');
   },
 
-  destroy(registry) {
+  shutdown(registry) {
     registry.unregisterSlot('posts.detail.comments', CommentForm);
     registry.unregisterHook('posts.comments.validator', extendCommentValidator);
     this[HANDLERS] = {};
@@ -738,8 +738,8 @@ export default {
     return translationsContext;
   },
 
-  async init(registry, context) {
-    const db = context.container.resolve('db');
+  async boot({ container, registry }) {
+    const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.runMigrations([
@@ -751,7 +751,7 @@ export default {
       }
     }
 
-    const hook = context.container.resolve('hook');
+    const hook = container.resolve('hook');
 
     // Example handler for comment creation hook
     this[HANDLERS].onCommentCreated = function (comment) {
@@ -763,14 +763,14 @@ export default {
     console.log('[Comments Extension] Backend initialized');
   },
 
-  async destroy(registry, context) {
-    const hook = context.container.resolve('hook');
+  async shutdown({ container, registry }) {
+    const hook = container.resolve('hook');
 
     if (this[HANDLERS].onCommentCreated) {
       hook('posts').off('comment:created', this[HANDLERS].onCommentCreated);
     }
 
-    const db = context.container.resolve('db');
+    const db = container.resolve('db');
     if (db) {
       try {
         await db.connection.revertMigrations([
@@ -808,7 +808,7 @@ registry.registerHook('posts.validator', extendValidator);
 registry.unregisterHook('posts.validator', extendValidator);
 
 // Listen to extension events
-const hook = context.container.resolve('hook');
+const hook = container.resolve('hook');
 hook('posts').on('created', post => {
   console.log('Post created:', post);
 });

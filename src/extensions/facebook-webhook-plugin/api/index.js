@@ -45,8 +45,7 @@ export default {
    * @param {Object} registry - Extension registry
    * @param {Object} context - App context
    */
-  async boot(registry, context) {
-    const { container } = context;
+  async boot({ container }) {
     const webhook = container.resolve('webhook');
 
     const secret = process.env.FACEBOOK_WEBHOOK_SECRET;
@@ -128,8 +127,8 @@ export default {
    * @param {Object} registry - Extension registry
    * @param {Object} context - App context
    */
-  async shutdown(registry, context) {
-    const webhook = context.container.resolve('webhook');
+  async shutdown({ container }) {
+    const webhook = container.resolve('webhook');
     webhook.removeHandler('facebook');
 
     // Clear handlers

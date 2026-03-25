@@ -6,15 +6,15 @@ Add a webhook handler that integrates with the webhook engine (`@shared/api`).
 
 ## How Webhooks Work
 
-The webhook engine dispatches incoming HTTP payloads to registered handlers. Handlers are registered via the hook system during module `init()`. Signature verification is handled automatically.
+The webhook engine dispatches incoming HTTP payloads to registered handlers. Handlers are registered via the hook system during module `boot()`. Signature verification is handled automatically.
 
 ## Step-by-Step
 
 ### 1. Register Webhook Handler in Module Init
 
 ```javascript
-// src/apps/{module-name}/api/index.js — inside init()
-export async function init(container) {
+// src/apps/{module-name}/api/index.js — inside boot()
+export async function boot(container) {
   
   const webhook = container.resolve('webhook');
 

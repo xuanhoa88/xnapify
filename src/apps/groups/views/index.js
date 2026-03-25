@@ -11,8 +11,7 @@ import * as thunks from './(admin)/redux/thunks';
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('groups:views');
 
-// Auto-load view routes via require.context
-// Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
+// Auto-load contexts
 const viewsContext = require.context(
   '.',
   true,
@@ -20,48 +19,17 @@ const viewsContext = require.context(
 );
 
 // =============================================================================
-// LOGGING
+// LIFECYCLE HOOKS
 // =============================================================================
 
-const TAG = 'Groups';
+export default {
+  providers({ container }) {
+    container.bind(
+      'groups:admin:state',
+      () => ({ selectors, thunks }),
+      OWNER_KEY,
+    );
+  },
 
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-// =============================================================================
-// PUBLIC LIFECYCLE HOOK
-// =============================================================================
-
-/**
- * Providers hook — called during view bootstrap to share
- * client-side services/state with other view modules.
- *
- * @param {Object} context - Shared context (e.g., container, extension)
- */
-export function providers({ container }) {
-  // Bind admin state
-  container.bind(
-    'groups:admin:state',
-    () => ({ selectors, thunks }),
-    OWNER_KEY,
-  );
-}
-
-/**
- * Views hook — returns the webpack require.context for this module's views.
- *
- * Called independently by the renderer router so each module
- * can be built and resolved as a standalone webpack entry.
- *
- * @returns {object} Webpack require.context for views
- */
-export function views() {
-  log('Views declared');
-  return viewsContext;
-}
+  routes: () => viewsContext,
+};

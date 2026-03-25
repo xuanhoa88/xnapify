@@ -14,27 +14,19 @@ import { getUserRBACData } from './utils/rbac/fetcher';
 /** @type {Symbol} Ownership key for this module's persistent bindings */
 const OWNER_KEY = Symbol('users:api');
 
-// Auto-load migrations via require.context
+// Auto-load contexts
 const migrationsContext = require.context(
   './database/migrations',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load seeds via require.context
 const seedsContext = require.context(
   './database/seeds',
   false,
   /\.[cm]?[jt]s$/i,
 );
-
-// Auto-load models via require.context
 const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
-
-// Auto-load routes via require.context
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-
-// Auto-load workers via require.context
 const workersContext = require.context(
   './workers',
   false,
@@ -61,122 +53,78 @@ async function registerAuthHooks(container) {
 }
 
 // =============================================================================
-// PUBLIC LIFECYCLE HOOKS
+// LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Providers hook — called by the autoloader to share services with other modules.
- *
- * @param {Object} container - DI container instance
- */
-export async function providers(container) {
-  // Bind seed constants to container as singleton
-  container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
+export default {
+  async providers({ container }) {
+    container.bind('users:seed_constants', () => SEED_USERS, OWNER_KEY);
 
-  // Bind controllers to container as singleton
-  container.bind(
-    'users:controllers',
-    () => ({
-      profile: profileController,
-      auth: authController,
-    }),
-    OWNER_KEY,
-  );
+    container.bind(
+      'users:controllers',
+      () => ({
+        profile: profileController,
+        auth: authController,
+      }),
+      OWNER_KEY,
+    );
 
-  // Create search worker pool for user indexing
-  const worker = container.resolve('worker');
-  if (worker) {
-    const { default: attachSearchMethods } = require('./workers');
-    const pool = worker.createWorkerPool('UsersSearch', workersContext, {
-      maxWorkers: 1,
-    });
-    const searchWorkerPool = attachSearchMethods(pool);
-    container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
-  }
-}
-
-/**
- * Migrations hook — run database migrations.
- *
- * @param {Object} container - DI container instance
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
-
-  await db.connection.runMigrations(
-    [{ context: migrationsContext, prefix: 'users' }],
-    { container },
-  );
-}
-
-/**
- * Seeds hook — run database seeds.
- *
- * @param {Object} container - DI container instance
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
-
-  await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }], {
-    container,
-  });
-}
-
-/**
- * Init hook — called by the autoloader to initialise this module.
- * @param {Object} container - DI container instance
- */
-export async function init(container) {
-  await registerAuthHooks(container);
-
-  // Bulk-index users for search (fire-and-forget)
-  const search = container.resolve('search');
-  const searchWorkerPool = container.has('users:search:worker')
-    ? container.make('users:search:worker')
-    : null;
-
-  if (searchWorkerPool && search) {
-    searchWorkerPool.setSearch(search);
-    searchWorkerPool.registerSearchHooks(container);
-
-    const usersCount = await search.withNamespace('users').count();
-    if (usersCount === 0) {
-      searchWorkerPool
-        .indexAllUsers(search, container.resolve('models'))
-        .then(r => {
-          const count = r && r.result ? r.result.usersCount : 0;
-          console.info(`[Users] Indexed ${count} user(s) for search`);
-        })
-        .catch(e =>
-          console.error('[Users] Search indexing failed:', e.message),
-        );
-    } else {
-      // prettier-ignore
-      console.info(`[Users] Using cached search index (${usersCount} user(s))`);
+    const worker = container.resolve('worker');
+    if (worker) {
+      const { default: attachSearchMethods } = require('./workers');
+      const pool = worker.createWorkerPool('UsersSearch', workersContext, {
+        maxWorkers: 1,
+      });
+      const searchWorkerPool = attachSearchMethods(pool);
+      container.bind('users:search:worker', () => searchWorkerPool, OWNER_KEY);
     }
-  }
-}
+  },
 
-/**
- * Models hook — returns the webpack require.context for this module's models.
- *
- * Called independently by the autoloader so each module
- * can be built and resolved as a standalone webpack entry.
- *
- * @returns {object} Webpack require.context for models
- */
-export function models() {
-  return modelsContext;
-}
+  async migrations({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runMigrations(
+      [{ context: migrationsContext, prefix: 'users' }],
+      { container },
+    );
+  },
 
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * Called independently by the dynamic router so each module
- * can be built and resolved as a standalone webpack entry.
- *
- * @returns {object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
+  async seeds({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runSeeds([{ context: seedsContext, prefix: 'users' }], {
+      container,
+    });
+  },
+
+  async boot({ container }) {
+    await registerAuthHooks(container);
+
+    const search = container.resolve('search');
+    const searchWorkerPool = container.has('users:search:worker')
+      ? container.make('users:search:worker')
+      : null;
+
+    if (searchWorkerPool && search) {
+      searchWorkerPool.setSearch(search);
+      searchWorkerPool.registerSearchHooks(container);
+
+      const usersCount = await search.withNamespace('users').count();
+      if (usersCount === 0) {
+        searchWorkerPool
+          .indexAllUsers(search, container.resolve('models'))
+          .then(r => {
+            const count = r && r.result ? r.result.usersCount : 0;
+            console.info(`[Users] Indexed ${count} user(s) for search`);
+          })
+          .catch(e =>
+            console.error('[Users] Search indexing failed:', e.message),
+          );
+      } else {
+        // prettier-ignore
+        console.info(`[Users] Using cached search index (${usersCount} user(s))`);
+      }
+    }
+  },
+
+  models: () => modelsContext,
+  routes: () => routesContext,
+};

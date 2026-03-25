@@ -5,27 +5,17 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+// Auto-load routes via require.context
+const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
+
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Init hook — called by the autoloader to initialise this module.
- *
- * @param {Object} _app - Express app instance
- */
-export async function init(_app) {
-  console.info('[Auth] ✅ Initialized');
-}
+export default {
+  boot() {
+    console.info('[Auth] ✅ Initialized');
+  },
 
-// Auto-load routes via require.context
-const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
-
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * @returns {object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
+  routes: () => routesContext,
+};

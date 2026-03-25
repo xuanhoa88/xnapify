@@ -16,18 +16,13 @@
  * 1. **routes()** — Exposes admin and inbound webhook routes
  */
 
-// Auto-load routes via require.context
+// Auto-load contexts
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
 // LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * @returns {Object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
+export default {
+  routes: () => routesContext,
+};

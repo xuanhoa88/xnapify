@@ -5,8 +5,7 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
-// Auto-load view routes via require.context
-// Matches: _route.js, _layout.js, (routes)/(*).js, (layouts)/(*) /_layout.js
+// Auto-load contexts
 const viewsContext = require.context(
   '.',
   true,
@@ -14,29 +13,9 @@ const viewsContext = require.context(
 );
 
 // =============================================================================
-// LOGGING
+// LIFECYCLE HOOKS
 // =============================================================================
 
-const TAG = 'Extensions';
-
-/**
- * Log a lifecycle phase message.
- *
- * @param {string} phase - Lifecycle phase name
- */
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
-
-/**
- * Views hook — returns the webpack require.context for this module's views.
- *
- * Called independently by the renderer router so each module
- * can be built and resolved as a standalone webpack entry.
- *
- * @returns {object} Webpack require.context for views
- */
-export function views() {
-  log('Views declared');
-  return viewsContext;
-}
+export default {
+  routes: () => viewsContext,
+};

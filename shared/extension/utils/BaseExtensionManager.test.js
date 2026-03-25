@@ -7,9 +7,6 @@
 
 /* eslint-env jest */
 
-// eslint-disable-next-line no-underscore-dangle
-global.__DEV__ = false;
-
 import {
   BaseExtensionManager,
   ExtensionState,
@@ -86,12 +83,12 @@ describe('BaseExtensionManager', () => {
 
     it.each([
       ['name', { name: 'ext' }],
-      ['init', { init: jest.fn() }],
+      ['boot', { boot: jest.fn() }],
       ['views', { views: jest.fn() }],
       ['routes', { routes: jest.fn() }],
       ['translations', { translations: jest.fn() }],
       ['install', { install: jest.fn() }],
-      ['destroy', { destroy: jest.fn() }],
+      ['shutdown', { shutdown: jest.fn() }],
     ])('accepts extension with %s property', (_key, ext) => {
       expect(() => manager.validateExtensionStructure(ext)).not.toThrow();
     });
@@ -160,7 +157,6 @@ describe('BaseExtensionManager', () => {
 
       const mockExtensionInstance = {
         name: 'Test Extension',
-        onLoad: jest.fn(),
       };
       jest
         .spyOn(manager, '_bootstrapExtension')
@@ -174,7 +170,6 @@ describe('BaseExtensionManager', () => {
         {},
         { id: 'test-extension', main: 'index.js' },
       );
-      expect(mockExtensionInstance.onLoad).toHaveBeenCalledWith({});
 
       const meta = manager[EXTENSION_METADATA].get('test-extension');
       expect(meta.state).toBe(ExtensionState.LOADED);
@@ -259,7 +254,7 @@ describe('BaseExtensionManager', () => {
     it('activates extensions for a namespace', async () => {
       await initManager();
 
-      const mockDef = { id: 'p1', init: jest.fn() };
+      const mockDef = { id: 'p1', boot: jest.fn() };
       registry.getDefinitions.mockReturnValue(new Set([mockDef]));
 
       await manager.activateNamespace('ui');
@@ -270,10 +265,11 @@ describe('BaseExtensionManager', () => {
       );
       expect(manager[ACTIVE_EXTENSIONS].has('p1')).toBe(true);
 
-      // Verify init wrapper
+      // Verify boot wrapper — pass a context object as Registry now does
       const registeredInstance = registry.register.mock.calls[0][1];
-      await registeredInstance.init(registry);
-      expect(mockDef.init).toHaveBeenCalledWith(registry, {});
+      const mockContext = { registry, container: {} };
+      await registeredInstance.boot(mockContext);
+      expect(mockDef.boot).toHaveBeenCalledWith(mockContext);
     });
   });
 });

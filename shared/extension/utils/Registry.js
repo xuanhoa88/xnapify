@@ -49,7 +49,7 @@ class ExtensionRegistry {
 
     this[EXTENSIONS].set(extensionId, { ...ext, id: extensionId });
     if (typeof ext.boot === 'function') {
-      await ext.boot(this, context);
+      await ext.boot({ ...context, registry: this });
     }
     return this;
   }
@@ -68,7 +68,7 @@ class ExtensionRegistry {
 
     const ext = this[EXTENSIONS].get(extensionId);
     if (ext && typeof ext.shutdown === 'function') {
-      await ext.shutdown(this, context);
+      await ext.shutdown({ ...context, registry: this });
     }
     this[EXTENSIONS].delete(extensionId);
     return this;
@@ -164,21 +164,17 @@ class ExtensionRegistry {
       return this;
     }
 
-    // A module provides routes (API or views); a plugin extends via hooks only
-    const hasRoutes =
-      typeof definition.routes === 'function' ||
-      typeof definition.views === 'function';
-    const extensionType = hasRoutes ? 'module' : 'plugin';
+    // Extensions with routes() are module-type (eagerly activated)
+    const hasRoutes = typeof definition.routes === 'function';
 
-    // Modules with views auto-subscribe to '*' (wildcard) if no explicit
+    // Module-type extensions auto-subscribe to '*' (wildcard) if no explicit
     // subscribe is declared. This ensures their route init hooks (e.g.
     // registerMenu) run on every route navigation, keeping menus consistent
     // between SSR and client hydration.
-    const hasViews = typeof definition.views === 'function';
     const effectiveNamespaces =
-      namespaces.length === 0 && hasViews ? ['*'] : namespaces;
+      namespaces.length === 0 && hasRoutes ? ['*'] : namespaces;
 
-    if (effectiveNamespaces.length === 0 && extensionType !== 'module') {
+    if (effectiveNamespaces.length === 0 && !hasRoutes) {
       console.warn(
         `[ExtensionRegistry] Extension "${extensionId}" has no subscribed namespaces`,
       );

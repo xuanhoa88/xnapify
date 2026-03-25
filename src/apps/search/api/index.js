@@ -14,24 +14,11 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Init hook — called by the autoloader to initialise this module.
- *
- * Sets up hooks for incremental index updates. Bulk indexing and worker
- * pools are owned by each domain module (users, groups).
- *
- * @param {Object} container - DI container instance
- */
-export async function init(container) {
-  registerSearchHooks(container);
-  console.info('[Search] ✅ Initialized');
-}
+export default {
+  async boot({ container }) {
+    registerSearchHooks(container);
+    console.info('[Search] ✅ Initialized');
+  },
 
-/**
- * Routes hook — returns the webpack require.context for this module's routes.
- *
- * @returns {object} Webpack require.context for routes
- */
-export function routes() {
-  return routesContext;
-}
+  routes: () => routesContext,
+};

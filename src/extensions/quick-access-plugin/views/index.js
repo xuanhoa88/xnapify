@@ -8,11 +8,11 @@
 import QuickAccess from './QuickAccess';
 
 export default {
-  boot(registry) {
+  boot({ registry }) {
     registry.registerSlot('auth.login.quickAccess', QuickAccess, { order: 10 });
   },
 
-  shutdown(registry) {
+  shutdown({ registry }) {
     registry.unregisterSlot('auth.login.quickAccess', QuickAccess);
   },
 };

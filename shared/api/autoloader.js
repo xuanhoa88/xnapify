@@ -14,7 +14,7 @@
  *   - providers()     — share services/constants across modules (DI bindings)
  *   - migrations() — run database migrations (all tables created first)
  *   - seeds()      — run database seeds (after all tables exist)
- *   - init()       — initialisation logic (auth hooks, etc.)
+ *   - boot()        — initialisation logic (auth hooks, etc.)
  *   - routes()     — returns a webpack require.context for routes
  *
  * Core modules (like 'users') are loaded first to ensure proper dependency order.
@@ -36,10 +36,10 @@ const LIFECYCLE_PATH_PATTERN = /^\.\/([^/]+)\/api\/index\.[cm]?[jt]s$/i;
 /**
  * Ordered lifecycle phases. The sequence is intentional:
  *   models     — register data structures first (migrations depend on them)
- *   shared     — bind DI services (init/seeds may consume them)
+ *   shared     — bind DI services (boot/seeds may consume them)
  *   migrations — create all tables before any data is inserted
  *   seeds      — populate data after schema is guaranteed to exist
- *   init       — run auth hooks / schedulers after DB is fully ready
+ *   boot       — run auth hooks / schedulers after DB is fully ready
  *   routes     — mount routes last, once the app is fully initialised
  */
 const LIFECYCLE_PHASES = [
@@ -48,7 +48,7 @@ const LIFECYCLE_PHASES = [
   'providers',
   'migrations',
   'seeds',
-  'init',
+  'boot',
   'routes',
 ];
 
@@ -177,7 +177,8 @@ async function loadLifecycles(adapter, paths) {
     const moduleName = getModuleName(filePath);
 
     try {
-      const hooks = adapter.load(filePath);
+      const raw = adapter.load(filePath);
+      const hooks = (raw && raw.default) || raw;
 
       if (!hooks || typeof hooks !== 'object') {
         const err = new Error(
@@ -214,7 +215,7 @@ async function loadLifecycles(adapter, paths) {
  * Execute a single lifecycle phase across all modules.
  * Collects errors without interrupting other modules.
  *
- * @param {string}                  phase      - Phase name (e.g. 'init')
+ * @param {string}                  phase      - Phase name (e.g. 'boot')
  * @param {Map<string, object>}     lifecycles - Module name → hooks
  * @param {Function}                handler    - async (name, hook, hooks) => void
  * @returns {Promise<object[]>}     errors
@@ -304,22 +305,26 @@ export async function discoverModules(modulesContext, container) {
 
   // ─── Phase 3: providers ───────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('providers', lifecycles, (_, hook) => hook(container))),
+    ...(await runPhase('providers', lifecycles, (_, hook) =>
+      hook({ container }),
+    )),
   );
 
   // ─── Phase 4: migrations ──────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('migrations', lifecycles, (_, hook) => hook(container))),
+    ...(await runPhase('migrations', lifecycles, (_, hook) =>
+      hook({ container }),
+    )),
   );
 
   // ─── Phase 5: seeds ───────────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('seeds', lifecycles, (_, hook) => hook(container))),
+    ...(await runPhase('seeds', lifecycles, (_, hook) => hook({ container }))),
   );
 
-  // ─── Phase 6: init ────────────────────────────────────────────────────────
+  // ─── Phase 6: boot ────────────────────────────────────────────────────────
   errors.push(
-    ...(await runPhase('init', lifecycles, (_, hook) => hook(container))),
+    ...(await runPhase('boot', lifecycles, (_, hook) => hook({ container }))),
   );
 
   // ─── Phase 7: routes ──────────────────────────────────────────────────────

@@ -8,13 +8,13 @@
 import MicrosoftButton from './MicrosoftButton';
 
 export default {
-  boot(registry) {
+  boot({ registry }) {
     registry.registerSlot('auth.oauth.buttons', MicrosoftButton, {
       order: 40,
     });
   },
 
-  shutdown(registry) {
+  shutdown({ registry }) {
     registry.unregisterSlot('auth.oauth.buttons', MicrosoftButton);
   },
 };

@@ -5,7 +5,7 @@ jest.mock('../workers', () => {
       .fn()
       .mockResolvedValue({ valid: true, actual: 'abc123hash' }),
   };
-  return { __esModule: true, default: pool };
+  return { default: pool };
 });
 
 jest.mock('./extension.helpers', () => ({
@@ -28,7 +28,6 @@ jest.mock('fs', () => {
   };
 
   return {
-    __esModule: true,
     default: mockFs,
     ...mockFs,
   };

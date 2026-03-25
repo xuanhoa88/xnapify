@@ -126,144 +126,74 @@ const modelsContext = require.context('./models', false, /\.[cm]?[jt]s$/i);
 const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 
 // =============================================================================
-// LOGGING
+// LIFECYCLE HOOKS
 // =============================================================================
 
-const TAG = 'Module';
+export default {
+  /**
+   * Providers hook — share services with other modules via container.
+   * Called during API bootstrap before initialization.
+   */
+  async providers({ container }) {
+    container.bind(
+      '{module-name}:controllers',
+      () => ({
+        // export as destructured imports: import * as controller from './controllers'
+      }),
+      true, // isSingleton
+    );
 
-function log(message, level = 'info') {
-  const prefix = `[${TAG}]`;
-  switch (level) {
-    case 'error':
-      console.error(`${prefix} ❌ ${message}`);
-      break;
-    case 'warn':
-      console.warn(`${prefix} ⚠️ ${message}`);
-      break;
-    default:
-      console.info(`${prefix} ✅ ${message}`);
-  }
-}
+    container.bind('{module-name}:constants', () => ({}), true);
+  },
 
-// =============================================================================
-// PUBLIC LIFECYCLE HOOKS
-// =============================================================================
+  /**
+   * Translations hook — return webpack require.context for module-specific i18n files.
+   */
+  translations() {
+    // Example:
+    // return require.context('./translations', false, /\.json$/i);
+    return null;
+  },
 
-/**
- * Providers hook — share services with other modules via container.
- * Called during API bootstrap before initialization.
- *
- * @param {Object} app - Express app instance
- */
-export async function providers(container) {
-  
-
-  // Example: Bind controllers to container
-  container.bind(
-    '{module-name}:controllers',
-    () => ({
-      // export as destructured imports: import * as controller from './controllers'
-    }),
-    true, // isSingleton
-  );
-
-  // Example: Bind constants
-  container.bind('{module-name}:constants', () => ({}), true);
-
-  log('Providers registered');
-}
-
-/**
- * Translations hook — return webpack require.context for module-specific i18n files.
- * If provided, the bootstrapper will load these translations into the global
- * i18next namespace under the module name (e.g. "{module-name}").
- *
- * @returns {Object|null} Webpack require.context or null if none
- */
-export function translations() {
-  // Example implementation:
-  // return require.context('./translations', false, /\.json$/i);
-  return null;
-}
-
-/**
- * Migrations hook — run database migrations.
- * Called after core migrations, before seeds.
- *
- * @param {Object} app - Express app instance
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
-
-  try {
+  /**
+   * Migrations hook — run database migrations.
+   * Called after core migrations, before seeds.
+   */
+  async migrations({ container }) {
+    const db = container.resolve('db');
     await db.connection.runMigrations(
       [{ context: migrationsContext, prefix: '{module-name}' }],
-      { app },
+      { container },
     );
-    log('Migrations executed');
-  } catch (error) {
-    log(`Migration failed: ${error.message}`, 'error');
-    throw error;
-  }
-}
+  },
 
-/**
- * Seeds hook — run database seeds.
- * Called after migrations.
- *
- * @param {Object} app - Express app instance
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
-
-  try {
+  /**
+   * Seeds hook — run database seeds.
+   * Called after migrations.
+   */
+  async seeds({ container }) {
+    const db = container.resolve('db');
     await db.connection.runSeeds(
       [{ context: seedsContext, prefix: '{module-name}' }],
-      { app },
+      { container },
     );
-    log('Seeds executed');
-  } catch (error) {
-    log(`Seed failed: ${error.message}`, 'warn');
-    // Don't throw on seed failures
-  }
-}
+  },
 
-/**
- * Init hook — initialize module after all models are loaded.
- * Register auth strategies, webhooks, scheduled tasks, etc.
- *
- * @param {Object} app - Express app instance
- */
-export async function init(container) {
-  const hook = container.resolve('hook');
+  /**
+   * Boot hook — initialize module after all models are loaded.
+   * Register auth strategies, webhooks, scheduled tasks, etc.
+   */
+  async boot({ container }) {
+    const hook = container.resolve('hook');
 
-  // Example: Register webhooks
-  hook('{module-name}').on('created', async entity => {
-    console.log('Entity created:', entity);
-  });
+    hook('{module-name}').on('created', async entity => {
+      console.log('Entity created:', entity);
+    });
+  },
 
-  log('Initialized');
-}
-
-/**
- * Models hook — return webpack require.context for models.
- * Called during model discovery phase.
- *
- * @returns {Object} Webpack require.context object
- */
-export function models() {
-  return modelsContext;
-}
-
-/**
- * Routes hook — return [moduleName, context] tuple for dynamic routing.
- * The framework auto-builds the prefix adapter from the tuple.
- *
- * @returns {Array} [moduleName, webpackContext]
- */
-export function routes() {
-  return ['{module-name}', routesContext];
-}
+  models: () => modelsContext,
+  routes: () => routesContext,
+};
 ```
 
 ### 3. Create API Routes (File-Based)
@@ -546,7 +476,7 @@ import RoleTag from './(admin)/components/RoleTag';
 import * as selectors from './(admin)/redux/selector';
 import * as thunks from './(admin)/redux/thunks';
 
-// Auto-load view routes via require.context
+// Auto-load contexts
 const viewsContext = require.context(
   '.',
   true,
@@ -554,67 +484,37 @@ const viewsContext = require.context(
 );
 
 // =============================================================================
-// LOGGING
+// LIFECYCLE HOOKS
 // =============================================================================
 
-const TAG = 'Module';
+export default {
+  /**
+   * Providers hook — share client-side services with other modules.
+   * Called during view bootstrap before route initialization.
+   */
+  providers({ container, store }) {
+    store.injectReducer(SLICE_NAME, reducer);
 
-function log(phase) {
-  console.info(`[${TAG}] ✅ ${phase}`);
-}
+    container.bind(
+      '{module-name}:admin:state',
+      () => ({ selectors, thunks }),
+      true,
+    );
 
-// =============================================================================
-// PUBLIC LIFECYCLE HOOKS
-// =============================================================================
+    container.bind('{module-name}:admin:components', () => ({ RoleTag }), true);
+  },
 
-/**
- * Providers hook — share client-side services with other modules.
- * Called during view bootstrap before route initialization.
- *
- * @param {Object} context - Shared context (container, store, extension, etc.)
- */
-export function providers({ container, store }) {
-  // Inject Redux reducer at bootstrap time
-  store.injectReducer(SLICE_NAME, reducer);
+  /**
+   * Translations hook — return webpack require.context for module-specific i18n files.
+   */
+  translations() {
+    // Example:
+    // return require.context('./translations', false, /\.json$/i);
+    return null;
+  },
 
-  // Bind Redux state/actions
-  container.bind(
-    '{module-name}:admin:state',
-    () => ({ selectors, thunks }),
-    true,
-  );
-
-  // Bind UI components
-  container.bind('{module-name}:admin:components', () => ({ RoleTag }), true);
-
-  log('Providers registered');
-}
-
-/**
- * Translations hook — return webpack require.context for module-specific i18n files.
- * If provided, the bootstrapper will load these translations into the global
- * i18next namespace under the module name (e.g. "{module-name}").
- *
- * @returns {Object|null} Webpack require.context or null if none
- */
-export function translations() {
-  // Example implementation:
-  // return require.context('./translations', false, /\.json$/i);
-  return null;
-}
-
-/**
- * Views hook — return [moduleName, context] tuple for view discovery.
- * The framework auto-builds the prefix adapter from the tuple.
- * The moduleName is also used as the default namespace for extension activation
- * (i.e. module-kind extensions auto-derive their rsk.subscribe from this value).
- *
- * @returns {Array} [moduleName, webpackContext]
- */
-export function views() {
-  log('Views declared');
-  return ['{module-name}', viewsContext];
-}
+  views: () => viewsContext,
+};
 ```
 
 ### 8. Create View Routes
@@ -870,12 +770,12 @@ Modules are auto-discovered during application bootstrap:
 **Backend:** `src/bootstrap/api/index.js`
 
 - Scans `src/apps/*/api/index.js` for lifecycle hooks
-- Hooks called in order: `providers` → `migrations` → `seeds` → `init`
+- Hooks called in order: `providers` → `migrations` → `seeds` → `boot`
 
 **Frontend:** `src/bootstrap/views.js`
 
 - Scans `src/apps/*/views/index.js` for lifecycle hooks
-- Calls `views()` to get webpack context for route discovery
+- Calls `routes()` to get webpack context for route discovery
 
 **Naming Convention:**
 
@@ -887,22 +787,22 @@ Modules are auto-discovered during application bootstrap:
 
 ### Backend (API)
 
-| Hook              | Purpose                                | Called When              | Async |
-| ----------------- | -------------------------------------- | ------------------------ | ----- |
-| `providers(container)`  | Bind services to container             | Module loaded            | Yes   |
-| `migrations(container)` | Run database migrations                | After core migrations    | Yes   |
-| `seeds(container)`      | Run database seeds                     | After module migrations  | Yes   |
-| `init(container)`       | Initialize module                      | All models loaded        | Yes   |
-| `models()`        | Return models webpack context          | Model discovery phase    | No    |
-| `routes()`        | Return `[name, context]` tuple         | Router setup phase       | No    |
-| `translations()`  | Provide webpack context for i18n files | Module loaded (optional) | No    |
+| Hook                    | Purpose                                | Called When              | Async |
+| ----------------------- | -------------------------------------- | ------------------------ | ----- |
+| `providers({ container })`  | Bind services to container             | Module loaded            | Yes   |
+| `migrations({ container })` | Run database migrations                | After core migrations    | Yes   |
+| `seeds({ container })`      | Run database seeds                     | After module migrations  | Yes   |
+| `boot({ container })`       | Initialize module                      | All models loaded        | Yes   |
+| `models()`              | Return models webpack context          | Model discovery phase    | No    |
+| `routes()`              | Return `[name, context]` tuple         | Router setup phase       | No    |
+| `translations()`        | Provide webpack context for i18n files | Module loaded (optional) | No    |
 
 ### Frontend (Views)
 
-| Hook                 | Purpose                      | Called When          | Async |
-| -------------------- | ---------------------------- | -------------------- | ----- |
-| `providers(context)` | Bind client services         | Module loaded        | No    |
-| `views()`            | Return `[name, context]` tuple | View discovery phase | No    |
+| Hook                 | Purpose                        | Called When          | Async |
+| -------------------- | ------------------------------ | -------------------- | ----- |
+| `providers(context)` | Bind client services           | Module loaded        | No    |
+| `routes()`            | Return `[name, context]` tuple | View discovery phase | No    |
 
 ## API File-Based Routing
 
@@ -983,6 +883,7 @@ See `src/apps/users/` for a complete working example with:
 - Migrations and seeds
 - Admin views and Redux state
 - RBAC permission integration
+
 ### 11. AI Specification (Optional)
 
 Each module can optionally include a `SPEC.md` file in its root directory to document specific features for AI assistance. To avoid duplication, start from the global template:

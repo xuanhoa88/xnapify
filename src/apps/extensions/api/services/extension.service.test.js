@@ -33,7 +33,6 @@ jest.mock('fs', () => {
   };
 
   return {
-    __esModule: true,
     default: mockFs,
     ...mockFs,
   };
@@ -41,7 +40,6 @@ jest.mock('fs', () => {
 
 // Mock fs/promises (the named imports used by readdir/readFile in the service)
 jest.mock('fs/promises', () => ({
-  __esModule: true,
   readdir: jest.fn(),
   readFile: jest.fn(),
 }));

@@ -33,59 +33,33 @@ const routesContext = require.context('./routes', true, /\.[cm]?[jt]s$/i);
 // LIFECYCLE HOOKS
 // =============================================================================
 
-/**
- * Providers hook — share services with other modules.
- * @param {Object} container - DI container instance
- */
-export async function providers(container) {
-  const workerPool = getActivityWorkerPool(container);
+export default {
+  async providers({ container }) {
+    const workerPool = getActivityWorkerPool(container);
+    container.bind('activities:worker', () => workerPool, OWNER_KEY);
+  },
 
-  // Expose worker pool so other modules (if any) can call it directly
-  container.bind('activities:worker', () => workerPool, OWNER_KEY);
-}
+  async migrations({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runMigrations(
+      [{ context: migrationsContext, prefix: 'activities' }],
+      { container },
+    );
+  },
 
-/**
- * Models hook — returns the webpack require.context for models.
- */
-export function models() {
-  return modelsContext;
-}
+  async seeds({ container }) {
+    const db = container.resolve('db');
+    await db.connection.runSeeds(
+      [{ context: seedsContext, prefix: 'activities' }],
+      { container },
+    );
+  },
 
-/**
- * Migrations hook — run database migrations.
- */
-export async function migrations(container) {
-  const db = container.resolve('db');
-  await db.connection.runMigrations(
-    [{ context: migrationsContext, prefix: 'activities' }],
-    { container },
-  );
-}
+  async boot({ container }) {
+    registerActivityHooks(container);
+    console.info('[Activity] ✅ Initialized');
+  },
 
-/**
- * Seeds hook — run database seeds.
- */
-export async function seeds(container) {
-  const db = container.resolve('db');
-  await db.connection.runSeeds(
-    [{ context: seedsContext, prefix: 'activities' }],
-    { container },
-  );
-}
-
-/**
- * Init hook — called by the autoloader to initialise this module.
- */
-export async function init(container) {
-  // Register hooks to observe system changes
-  registerActivityHooks(container);
-
-  console.info('[Activity] ✅ Initialized');
-}
-
-/**
- * Routes hook — returns the webpack require.context for routes.
- */
-export function routes() {
-  return routesContext;
-}
+  models: () => modelsContext,
+  routes: () => routesContext,
+};
