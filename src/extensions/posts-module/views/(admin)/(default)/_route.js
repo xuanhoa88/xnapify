@@ -19,14 +19,14 @@ export const middleware = requirePermission('posts:read');
  * Runs per-route during resolution where store is always available
  * (client: persistent store, server: per-request SSR store).
  */
-export function boot({ store }) {
+export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
 /**
  * Register menu item for this route
  */
-export function register({ store, i18n }) {
+export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
@@ -50,7 +50,7 @@ export function register({ store, i18n }) {
 /**
  * Unregister menu item for this route
  */
-export function unregister({ store }) {
+export function teardown({ store }) {
   store.dispatch(
     unregisterMenu({
       ns: 'admin',

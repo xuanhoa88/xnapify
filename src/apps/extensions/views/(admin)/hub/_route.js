@@ -23,7 +23,7 @@ export const middleware = requirePermission('extensions:read');
 /**
  * Route boot — inject Redux reducer into the store.
  */
-export function boot({ store }) {
+export function init({ store }) {
   store.injectReducer(HUB_SLICE_NAME, hubReducer);
 }
 

@@ -557,9 +557,9 @@ export async function middleware(context, next) {
 }
 
 /**
- * Register — called once when route is discovered
+ * Setup — called once when route is discovered
  */
-export function register({ store, i18n, extension }) {
+export function setup({ store, i18n, extension }) {
   extension.registerMenu({
     ns: 'admin',
     item: {

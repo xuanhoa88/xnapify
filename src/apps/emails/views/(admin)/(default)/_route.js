@@ -19,7 +19,7 @@ export function middleware() {
 /**
  * Route boot — inject Redux reducer into the store.
  */
-export function boot({ store }) {
+export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 

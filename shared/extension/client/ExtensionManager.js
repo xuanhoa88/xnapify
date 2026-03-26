@@ -204,7 +204,7 @@ class ClientExtensionManager extends BaseExtensionManager {
       // Use string-based sourceId removal (survives HMR/reference changes)
       // eslint-disable-next-line no-underscore-dangle
       const ctx = this[VIEW_ROUTER]._lastResolveContext;
-      await this[VIEW_ROUTER].removeBySourceId(id, ctx);
+      await this[VIEW_ROUTER].remove(id, ctx);
     }
 
     // Clean up adapter reference if still stored

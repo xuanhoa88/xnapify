@@ -12,7 +12,7 @@ import { addNamespace } from '@shared/i18n/utils';
 import { composeMiddleware } from '@shared/utils/middleware';
 
 import {
-  ROUTE_BOOT_KEY,
+  ROUTE_INIT_KEY,
   ROUTE_MOUNT_KEY,
   ROUTE_UNMOUNT_KEY,
   ROUTE_TRANSLATIONS_KEY,
@@ -20,41 +20,39 @@ import {
 import { log } from './utils';
 
 /**
- * Creates boot function for config and route initialization
- * Config boot runs once per config (globally)
- * Route boot runs once per route, sequential parent → child
+ * Creates init function for config and route initialization
+ * Config init runs once per config (globally)
+ * Route init runs once per route, sequential parent → child
  */
-export function createBoot(configs, boot) {
-  // Get configs that have boot functions
-  const bootableConfigs = configs.filter(
-    c => typeof c.module.boot === 'function',
-  );
+export function createInit(configs, init) {
+  // Get configs that have init functions
+  const initConfigs = configs.filter(c => typeof c.module.init === 'function');
 
-  if (bootableConfigs.length === 0 && typeof boot !== 'function') {
+  if (initConfigs.length === 0 && typeof init !== 'function') {
     return undefined;
   }
 
   return async function (ctx) {
-    // 1. Boot configs first (once per config, tracked by module)
+    // 1. Init configs first (once per config, tracked by module)
     await Promise.all(
-      bootableConfigs.map(async config => {
+      initConfigs.map(async config => {
         try {
-          if (!config.module[ROUTE_BOOT_KEY]) {
-            await config.module.boot(ctx);
-            config.module[ROUTE_BOOT_KEY] = true;
+          if (!config.module[ROUTE_INIT_KEY]) {
+            await config.module.init(ctx);
+            config.module[ROUTE_INIT_KEY] = true;
           }
         } catch (error) {
-          log(`Config boot error: ${error.message}`, 'error');
+          log(`Config init error: ${error.message}`, 'error');
         }
       }),
     );
 
-    // 2. Boot route (original behavior)
-    if (typeof boot === 'function') {
+    // 2. Init route (original behavior)
+    if (typeof init === 'function') {
       try {
-        await boot(ctx);
+        await init(ctx);
       } catch (error) {
-        log(`Route boot error: ${error.message}`, 'error');
+        log(`Route init error: ${error.message}`, 'error');
       }
     }
   };
@@ -286,7 +284,7 @@ export function createMiddlewareRunner(configs, routeMiddleware) {
 /**
  * Creates the action function for a route
  * Handles: middleware (replaces guards), data loading (getInitialProps), and component rendering
- * NOTE: boot/mount are handled separately via runBoot/runMount in resolve()
+ * NOTE: init/mount are handled separately via runInit/runMount in resolve()
  */
 export function createAction(pageInfo, configs = [], layouts = []) {
   const { module } = pageInfo;
@@ -338,9 +336,9 @@ export function createAction(pageInfo, configs = [], layouts = []) {
 }
 
 /**
- * Runs boot hooks sequentially from parent to child route
+ * Runs init hooks sequentially from parent to child route
  */
-export async function runBoot(route, ctx) {
+export async function runInit(route, ctx) {
   if (!route) return;
 
   // Get route hierarchy from root to current (parent → child)
@@ -367,14 +365,14 @@ export async function runBoot(route, ctx) {
     }
   }
 
-  // Boot each route in sequence (parent → child)
+  // Init each route in sequence (parent → child)
   for (const r of hierarchy) {
-    if (typeof r.boot === 'function' && !r[ROUTE_BOOT_KEY]) {
+    if (typeof r.init === 'function' && !r[ROUTE_INIT_KEY]) {
       try {
-        await r.boot(ctx);
-        r[ROUTE_BOOT_KEY] = true;
+        await r.init(ctx);
+        r[ROUTE_INIT_KEY] = true;
       } catch (error) {
-        log(`Boot error for "${r.path}": ${error.message}`, 'error');
+        log(`Init error for "${r.path}": ${error.message}`, 'error');
       }
     }
   }

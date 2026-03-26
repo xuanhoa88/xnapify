@@ -19,7 +19,7 @@ import Roles from './Roles';
 /**
  * Route boot — inject Redux reducer into the store.
  */
-export function boot({ store }) {
+export function init({ store }) {
   store.injectReducer(SLICE_NAME, reducer);
 }
 
@@ -28,7 +28,7 @@ export const middleware = requirePermission('roles:read');
 /**
  * Register menu item for this route
  */
-export function register({ store, i18n }) {
+export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
@@ -52,7 +52,7 @@ export function register({ store, i18n }) {
 /**
  * Unregister menu item for this route
  */
-export function unregister({ store }) {
+export function teardown({ store }) {
   store.dispatch(
     unregisterMenu({
       ns: 'admin',

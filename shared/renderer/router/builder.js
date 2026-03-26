@@ -7,7 +7,7 @@
 
 import { ROUTE_SEPARATOR, ROUTE_PATH_DEFAULT } from './constants';
 import {
-  createBoot,
+  createInit,
   createMount,
   createUnmount,
   buildTranslationsLoader,
@@ -120,7 +120,7 @@ export function buildRoutes(pages, configs = new Map(), layouts = new Map()) {
         pathname,
         moduleName,
       ),
-      boot: createBoot(matchedConfigs, module.boot),
+      init: createInit(matchedConfigs, module.init),
       mount: createMount(matchedConfigs, module.mount),
       unmount: createUnmount(matchedConfigs, module.unmount),
     });

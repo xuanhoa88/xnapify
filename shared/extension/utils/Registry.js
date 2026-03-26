@@ -5,6 +5,8 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import assign from 'lodash/assign';
+
 import { composeMiddleware } from '@shared/utils/middleware';
 
 import Hook from './Hook';
@@ -148,14 +150,16 @@ class ExtensionRegistry {
    * @param {Object} manifest - Extension manifest from package.json
    */
   defineExtension(definition, context, manifest) {
-    if (!manifest || !manifest.rsk) {
+    if (!manifest) {
       console.warn(
-        '[ExtensionRegistry] Invalid extension definition: missing manifest or rsk key',
+        '[ExtensionRegistry] Invalid extension definition: missing manifest',
       );
       return this;
     }
 
-    const namespaces = manifest.rsk.subscribe || [];
+    // Auto-populate rsk defaults from standard package.json fields
+    const rsk = assign({}, manifest.rsk);
+    const namespaces = Array.isArray(rsk.subscribe) ? rsk.subscribe : [];
     const extensionId = manifest.name;
     const meta = { description: manifest.description };
 

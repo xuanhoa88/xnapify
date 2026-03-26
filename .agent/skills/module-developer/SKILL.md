@@ -51,7 +51,8 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
 3. **Defining Pages:** 
    Views are discovered via hierarchical `_route.js` files.
    A standard `_route.js` should export:
-   - `export function register({ store, i18n })`: registers the menu item.
+   - `export function setup({ store, i18n })`: registers the menu item.
+   - `export function init({ store })`: injects Redux reducer (once per route, idempotent).
    - `export function mount({ store, i18n, path })`: dispatches breadcrumbs.
    - `export async function getInitialProps({ fetch, i18n })`: SSR data fetching.
    - `export default PageComponent`: the React component.

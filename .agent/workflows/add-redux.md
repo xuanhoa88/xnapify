@@ -565,9 +565,9 @@ import PostsList from './PostsList';
 export const middleware = requirePermission('posts:read');
 
 /**
- * Register - called once when route is discovered (for menus, etc.)
+ * Setup - called once when route is discovered (for menus, etc.)
  */
-export function register({ store, i18n }) {
+export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
@@ -583,9 +583,9 @@ export function register({ store, i18n }) {
 }
 
 /**
- * Unregister - called when route is unloaded
+ * Teardown - called when route is unloaded
  */
-export function unregister({ store }) {
+export function teardown({ store }) {
   store.dispatch(
     unregisterMenu({
       ns: 'admin',
@@ -741,8 +741,9 @@ export default PostsList;
 
 | Hook              | Purpose                                | Called When          |
 | ----------------- | -------------------------------------- | -------------------- |
-| `register`        | Register menus, global state           | Route discovered     |
-| `unregister`      | Cleanup menus, global state            | Route unloaded       |
+| `setup`           | Register menus, global state           | Route discovered     |
+| `teardown`        | Cleanup menus, global state            | Route unloaded       |
+| `init`            | Inject reducers (idempotent)           | First navigation     |
 | `mount`           | Dispatch breadcrumbs, track navigation | Route mounted        |
 | `middleware`      | Permission checks, redirects           | Before rendering     |
 | `getInitialProps` | Data fetching, page metadata           | Before rendering     |
@@ -754,7 +755,7 @@ export default PostsList;
 1. **Module-level Redux** - Redux features live in `views/{view-path}/redux/` not shared
 2. **SLICE_NAME constant** - Use namespaced slice name like `@admin/posts` for dynamic injection
 3. **providers() for reducer injection** - Use `store.injectReducer(SLICE_NAME, reducer)` in `views/index.js` `providers()` hook
-4. **register() for menus** - Register admin menu items when route is discovered
+4. **setup() for menus** - Register admin menu items when route is discovered
 5. **Per-operation loading/error** - Track each operation independently (list, fetch, create, update, delete)
 6. **Initialized tracking** - Track if data has been fetched to avoid duplicate requests
 7. **Access fetch via `extra`** - Use `{ extra: { fetch }, rejectWithValue }` in thunks

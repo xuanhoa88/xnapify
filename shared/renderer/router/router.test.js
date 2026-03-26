@@ -347,70 +347,70 @@ describe('Router.remove() — Extension Route Removal', () => {
 // Register / Unregister Lifecycle
 // =============================================================================
 
-describe('register() / unregister()', () => {
-  it('should call register on route modules during registration', async () => {
-    const registerFn = jest.fn();
+describe('setup() / teardown()', () => {
+  it('should call setup on route modules during registration', async () => {
+    const setupFn = jest.fn();
     const adapter = createAdapter({
       './(default)/views/(default)/_route.js': {
         default: () => 'Page',
-        register: registerFn,
+        setup: setupFn,
       },
     });
 
-    const router = new Router(adapter, { autoRegister: false });
+    const router = new Router(adapter);
     const context = { pathname: '/' };
 
-    await router.register(context);
-    expect(registerFn).toHaveBeenCalledTimes(1);
+    await router.setup(context);
+    expect(setupFn).toHaveBeenCalledTimes(1);
   });
 
-  it('should not register twice for the same context', async () => {
-    const registerFn = jest.fn();
+  it('should not setup twice for the same context', async () => {
+    const setupFn = jest.fn();
     const adapter = createAdapter({
       './(default)/views/(default)/_route.js': {
         default: () => 'Page',
-        register: registerFn,
+        setup: setupFn,
       },
     });
 
-    const router = new Router(adapter, { autoRegister: false });
+    const router = new Router(adapter);
     const context = { pathname: '/' };
 
-    await router.register(context);
-    await router.register(context);
-    expect(registerFn).toHaveBeenCalledTimes(1); // Idempotent
+    await router.setup(context);
+    await router.setup(context);
+    expect(setupFn).toHaveBeenCalledTimes(1); // Idempotent
   });
 
-  it('should call unregister on route modules during unregistration', async () => {
-    const unregisterFn = jest.fn();
+  it('should call teardown on route modules during teardown', async () => {
+    const teardownFn = jest.fn();
     const adapter = createAdapter({
       './(default)/views/(default)/_route.js': {
         default: () => 'Page',
-        unregister: unregisterFn,
+        teardown: teardownFn,
       },
     });
 
-    const router = new Router(adapter, { autoRegister: false });
+    const router = new Router(adapter);
     const context = { pathname: '/' };
 
-    await router.register(context);
-    await router.unregister(context);
-    expect(unregisterFn).toHaveBeenCalledTimes(1);
+    await router.setup(context);
+    await router.teardown(context);
+    expect(teardownFn).toHaveBeenCalledTimes(1);
   });
 
-  it('should auto-register on first resolve when autoRegister is true', async () => {
-    const registerFn = jest.fn();
+  it('should auto-setup on first resolve', async () => {
+    const setupFn = jest.fn();
     const adapter = createAdapter({
       './(default)/views/(default)/_route.js': {
         default: () => 'Page',
-        register: registerFn,
+        setup: setupFn,
       },
     });
 
-    const router = new Router(adapter); // autoRegister defaults to true
+    const router = new Router(adapter);
 
     await router.resolve({ pathname: '/' });
-    expect(registerFn).toHaveBeenCalled();
+    expect(setupFn).toHaveBeenCalled();
   });
 });
 
@@ -648,16 +648,16 @@ describe('Matcher & Path Parsing', () => {
 // Configs & Boot Hook
 // =============================================================================
 
-describe('Configs and runBoot', () => {
-  it('should execute config boot and route boot sequentially', async () => {
+describe('Configs and runInit', () => {
+  it('should execute config boot and route init sequentially', async () => {
     const log = [];
     const adapter = createAdapter({
       './(default)/views/(routes)/(default).js': {
-        boot: () => log.push('config_boot'),
+        init: () => log.push('config_init'),
       },
       './(default)/views/page/_route.js': {
         default: () => 'Page',
-        boot: () => log.push('route_boot'),
+        init: () => log.push('route_init'),
       },
     });
 
@@ -665,15 +665,15 @@ describe('Configs and runBoot', () => {
     const result = await router.resolve({ pathname: '/page' });
 
     expect(result).toBeDefined();
-    expect(log).toEqual(['config_boot', 'route_boot']); // Sequential execution
+    expect(log).toEqual(['config_init', 'route_init']); // Sequential execution
   });
 
   it('should ignore errors thrown gracefully during route hooks', async () => {
     const adapter = createAdapter({
       './(default)/views/error-hook/_route.js': {
         default: () => 'Page',
-        boot: () => {
-          throw new Error('Boot crash');
+        init: () => {
+          throw new Error('Init crash');
         },
       },
     });

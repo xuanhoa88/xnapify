@@ -247,7 +247,6 @@ describe('ClientExtensionManager', () => {
       mockRouter = {
         add: jest.fn().mockReturnValue([]),
         remove: jest.fn().mockReturnValue(true),
-        removeBySourceId: jest.fn().mockReturnValue(true),
       };
     });
 
@@ -281,7 +280,6 @@ describe('ClientExtensionManager', () => {
       const newRouter = {
         add: jest.fn(() => []),
         remove: jest.fn(),
-        removeBySourceId: jest.fn(),
       };
       clientManager.connectViewRouter(newRouter);
 
@@ -362,10 +360,7 @@ describe('ClientExtensionManager', () => {
       // eslint-disable-next-line no-underscore-dangle
       await clientManager._teardownExtension('test-ext');
 
-      expect(mockRouter.removeBySourceId).toHaveBeenCalledWith(
-        'test-ext',
-        undefined,
-      );
+      expect(mockRouter.remove).toHaveBeenCalledWith('test-ext', undefined);
     });
 
     it('end-to-end: _bootstrapExtension injects view routes automatically', async () => {

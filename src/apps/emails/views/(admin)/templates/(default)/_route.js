@@ -19,7 +19,7 @@ export const middleware = requirePermission('emails:templates:read');
 /**
  * Register menu item for this route
  */
-export function register({ store, i18n }) {
+export function setup({ store, i18n }) {
   store.dispatch(
     registerMenu({
       ns: 'admin',
@@ -43,7 +43,7 @@ export function register({ store, i18n }) {
 /**
  * Unregister menu item for this route
  */
-export function unregister({ store }) {
+export function teardown({ store }) {
   store.dispatch(
     unregisterMenu({
       ns: 'admin',

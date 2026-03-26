@@ -5,54 +5,16 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import { BaseRouter, validateAdapter } from '@shared/utils/BaseRouter';
+
 import { buildRoutes, validateConfig, linkParents } from './builder';
 import { collect } from './collector';
 import { ROUTE_MOUNT_KEY } from './constants';
-import { loadRouteTranslations, runBoot, runMount } from './lifecycle';
+import { loadRouteTranslations, runInit, runMount } from './lifecycle';
 import { createMatchCache, clearMatchCache, findRoute } from './matcher';
-
-/** @type {symbol} Tag for tracking which adapter a route came from */
-const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
 
 /** @type {symbol} Per-instance radix tree cache */
 const ROUTE_CACHE_KEY = Symbol('__rsk.routeCache__');
-
-/**
- * Recursively tags all routes with their source adapter.
- * @param {Object} route - Route node to tag
- * @param {Object} source - The adapter that produced this route
- */
-function tagRoutes(route, source) {
-  if (!route || typeof route !== 'object') return;
-  route[ROUTE_SOURCE_KEY] = source;
-  if (Array.isArray(route.children)) {
-    route.children.forEach(child => tagRoutes(child, source));
-  }
-}
-
-/**
- * Validates that an adapter has the required files() and load() methods.
- * @param {Object} adapter
- * @throws {TypeError}
- */
-function validateAdapter(adapter) {
-  if (!adapter) {
-    throw new TypeError('adapter must have files() and load() methods');
-  }
-  if (
-    typeof adapter.files !== 'function' ||
-    typeof adapter.load !== 'function'
-  ) {
-    throw new TypeError('adapter must have files() and load() methods');
-  }
-  return true;
-}
-
-/**
- * @typedef {Object} RouterOptions
- * @property {Function} [onRouteInit] - Hook called before route initialization
- * @property {Function} [onRouteMount] - Hook called on route mount
- */
 
 /**
  * File-based dynamic API router for Express.
@@ -63,28 +25,29 @@ function validateAdapter(adapter) {
  * const router = new Router(adapter);
  * app.use('/api', router.resolve);
  */
-export class Router {
+export class Router extends BaseRouter {
   /**
    * @param {Object} adapter - Module loader with files() and load() methods
    * @param {RouterOptions} [options={}]
    */
   constructor(adapter, options) {
-    /** @type {RouterOptions} */
-    this.options = options || {};
-    /** @type {import('./matcher').MatchCache} */
-    this[ROUTE_CACHE_KEY] = createMatchCache();
-
     validateAdapter(adapter);
 
-    this.routes = buildRoutes(
+    const routes = buildRoutes(
       collect(adapter, 'routes'),
       collect(adapter, 'configs'),
       collect(adapter, 'middlewares'),
     );
 
-    validateConfig(this.routes);
-    this.routes.forEach(route => linkParents(route));
-    this.routes.forEach(route => tagRoutes(route, adapter));
+    // Initialize BaseRouter with pre-built routes and builder hooks
+    super(routes, { validateConfig, linkParents });
+
+    /** @type {RouterOptions} */
+    this.options = options || {};
+
+    /** @type {import('./matcher').MatchCache} */
+    this[ROUTE_CACHE_KEY] = createMatchCache();
+
     clearMatchCache(this[ROUTE_CACHE_KEY]);
 
     // Bind resolve so it can be passed directly to app.use()
@@ -94,9 +57,10 @@ export class Router {
   /**
    * Dynamically adds routes from a new adapter (e.g. an extension).
    * @param {Object} adapter - Module loader for the new routes
+   * @param {string} [sourceId] - Optional string ID for robust removal
    * @returns {Object[]} The newly added route nodes
    */
-  add(adapter) {
+  add(adapter, sourceId) {
     validateAdapter(adapter);
 
     const newRoutes = buildRoutes(
@@ -107,100 +71,25 @@ export class Router {
 
     if (newRoutes.length === 0) return newRoutes;
 
-    newRoutes.forEach(route => tagRoutes(route, adapter));
-
-    const insertDeep = (routesList, routeToInsert) => {
-      let bestParent = null;
-
-      const findParent = list => {
-        for (const r of list) {
-          if (routeToInsert.path === r.path) {
-            return r;
-          }
-          const isPrefix =
-            r.path === '/' || routeToInsert.path.startsWith(r.path + '/');
-          if (isPrefix) {
-            bestParent = r;
-            if (r.children) {
-              const deeper = findParent(r.children);
-              if (deeper) return deeper;
-            }
-          }
-        }
-        return bestParent;
-      };
-
-      const existing = findParent(this.routes);
-
-      if (existing) {
-        if (existing.path === routeToInsert.path) {
-          if (
-            Array.isArray(routeToInsert.children) &&
-            routeToInsert.children.length > 0
-          ) {
-            existing.children = existing.children || [];
-            for (const child of routeToInsert.children) {
-              insertDeep(existing.children, child);
-            }
-          }
-        } else {
-          existing.children = existing.children || [];
-          existing.children.push(routeToInsert);
-        }
-      } else {
-        routesList.push(routeToInsert);
-      }
-    };
-
-    for (const newRoute of newRoutes) {
-      insertDeep(this.routes, newRoute);
-    }
-
-    validateConfig(this.routes);
-    this.routes.forEach(route => linkParents(route));
+    // Delegate tree insertion to BaseRouter
+    // eslint-disable-next-line no-underscore-dangle
+    this._addRoutes(newRoutes, adapter, sourceId);
 
     clearMatchCache(this[ROUTE_CACHE_KEY]);
     return newRoutes;
   }
 
   /**
-   * Removes all routes originating from the given adapter.
-   * @param {Object} adapter - The adapter whose routes should be removed
+   * Remove routes by adapter reference (object) or source ID (string).
+   * @param {Object|string} adapterOrSourceId - Adapter or source ID
    * @returns {boolean} True if any routes were removed
    */
-  remove(adapter) {
-    if (!adapter) return false;
-
-    let removed = false;
-
-    const filterRoutes = routes => {
-      const result = [];
-      for (const route of routes) {
-        if (route[ROUTE_SOURCE_KEY] === adapter) {
-          removed = true;
-          continue;
-        }
-
-        if (Array.isArray(route.children) && route.children.length > 0) {
-          const originalLength = route.children.length;
-          route.children = filterRoutes(route.children);
-          if (route.children.length !== originalLength) {
-            removed = true;
-          }
-        }
-
-        result.push(route);
-      }
-      return result;
-    };
-
-    this.routes = filterRoutes(this.routes);
-
+  remove(adapterOrSourceId) {
+    // eslint-disable-next-line no-underscore-dangle
+    const removed = this._remove(adapterOrSourceId);
     if (removed) {
-      this.routes.forEach(route => linkParents(route));
       clearMatchCache(this[ROUTE_CACHE_KEY]);
     }
-
     return removed;
   }
 
@@ -241,17 +130,13 @@ export class Router {
       // Run translations hook (once per route, parent → child)
       await loadRouteTranslations(route, ctx);
 
-      // Run boot hook (once per route, parent → child)
-      await runBoot(route, ctx);
+      // Run init hook (once per route, parent → child)
+      await runInit(route, ctx);
 
       // Run mount hook (once per route, parent → child)
       await runMount(route, ctx);
 
       // Execute the action (composed middlewares + handler).
-      // The composed next callback must forward errors to Express's
-      // next(err) instead of throwing, because async/promise-based
-      // middleware may call next(err) after the outer await resolves,
-      // turning `throw err` into an unhandled rejection.
       const actionResult = await route.action(req, res, err => {
         if (err) return next(err);
         return next();

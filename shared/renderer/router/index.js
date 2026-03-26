@@ -5,6 +5,12 @@
  * LICENSE.txt file in the root directory of this source tree.
  */
 
+import {
+  BaseRouter,
+  tagRoutes,
+  validateAdapter,
+} from '@shared/utils/BaseRouter';
+
 import { buildRoutes, validateConfig, linkParents } from './builder';
 import { collect } from './collector';
 import {
@@ -15,51 +21,12 @@ import {
 } from './constants';
 import {
   loadRouteTranslations,
-  runBoot,
+  runInit,
   runMount,
   runUnmount,
 } from './lifecycle';
 import { createMatcher } from './matcher';
 import { createError, decodeUrl, isDescendant, log } from './utils';
-
-// Tag routes with their source adapter for dynamic add/remove tracking
-const ROUTE_SOURCE_KEY = Symbol('__rsk.routeSource__');
-// String-based source ID for robust removal (survives HMR/reference changes)
-const ROUTE_SOURCE_ID = Symbol('__rsk.routeSourceId__');
-
-/**
- * Recursively tag routes with a source identifier
- * @param {Object} route - Route to tag
- * @param {*} source - Source identifier (adapter reference or null)
- * @param {string} [sourceId] - Optional string ID for robust matching
- */
-function tagRoutes(route, source, sourceId) {
-  if (!route || typeof route !== 'object') return;
-  route[ROUTE_SOURCE_KEY] = source;
-  if (sourceId) route[ROUTE_SOURCE_ID] = sourceId;
-  if (Array.isArray(route.children)) {
-    route.children.forEach(child => tagRoutes(child, source, sourceId));
-  }
-}
-
-/**
- * Validate that an adapter has the required interface
- * @param {Object} adapter - Adapter to validate
- * @returns {boolean} True if adapter is valid
- * @throws {TypeError} If adapter is missing required methods
- */
-function validateAdapter(adapter) {
-  if (!adapter) {
-    throw new TypeError('adapter must have files() and load() methods');
-  }
-  if (
-    typeof adapter.files !== 'function' ||
-    typeof adapter.load !== 'function'
-  ) {
-    throw new TypeError('adapter must have files() and load() methods');
-  }
-  return true;
-}
 
 // ============================================================================
 // Helpers
@@ -210,10 +177,27 @@ class NavigationEntry {
 /**
  * Router class for file-based routing
  */
-export class Router {
+export class Router extends BaseRouter {
   constructor(adapter, options) {
+    validateAdapter(adapter);
+
+    // Collect and store layouts for reuse in add()
+    const layouts = collect(adapter, 'layouts');
+
+    const routes = buildRoutes(
+      collect(adapter, 'routes'),
+      collect(adapter, 'configs'),
+      layouts,
+    );
+
+    // Initialize BaseRouter with pre-built routes and builder hooks
+    super(routes, { validateConfig, linkParents });
+
     this.options = options || {};
     this.baseUrl = this.options.baseUrl || '';
+
+    // Tag initial routes with their source adapter
+    this.routes.forEach(route => tagRoutes(route, adapter || null));
 
     // Track previous route for unmount lifecycle (CSR only)
     this[ROUTE_PREV_KEY] = null;
@@ -233,35 +217,9 @@ export class Router {
     // eslint-disable-next-line no-underscore-dangle
     this._pendingRoutes = [];
 
-    // Max recursion depth for next() calls
+    // Store layouts for extension route injection
     // eslint-disable-next-line no-underscore-dangle
-    this._maxDepth = this.options.maxDepth || 50;
-
-    // Auto-registration behavior (default: true)
-    // When true, routes are automatically registered on first resolve()
-    // When false, you must manually call router.register() before resolving
-    // eslint-disable-next-line no-underscore-dangle
-    this._autoRegister =
-      this.options.autoRegister !== undefined
-        ? this.options.autoRegister
-        : true;
-
-    validateAdapter(adapter);
-
-    // Collect and store layouts for reuse in add()
-    // eslint-disable-next-line no-underscore-dangle
-    this._layouts = collect(adapter, 'layouts');
-
-    this.routes = buildRoutes(
-      collect(adapter, 'routes'),
-      collect(adapter, 'configs'),
-      // eslint-disable-next-line no-underscore-dangle
-      this._layouts,
-    );
-
-    validateConfig(this.routes);
-    this.routes.forEach(route => linkParents(route));
-    this.routes.forEach(route => tagRoutes(route, adapter || null));
+    this._layouts = layouts;
   }
 
   /**
@@ -269,7 +227,7 @@ export class Router {
    * @param {Object} context - App context
    * @param {boolean} force - Force re-registration even if already registered
    */
-  async register(context, force = false) {
+  async setup(context, force = false) {
     const scope = context && typeof context === 'object' ? context : this;
 
     if (!force && registeredContexts.has(scope)) {
@@ -287,12 +245,12 @@ export class Router {
     this._registrationPromise = (async () => {
       try {
         // Call custom register hook if provided
-        if (typeof this.options.register === 'function') {
-          await this.options.register(context, this);
+        if (typeof this.options.setup === 'function') {
+          await this.options.setup(context, this);
         }
 
         registeredContexts.set(scope, true);
-        await traverseRoutes(this.routes, 'register', context, false);
+        await traverseRoutes(this.routes, 'setup', context, false);
       } catch (err) {
         // Remove from registered contexts on failure
         registeredContexts.delete(scope);
@@ -313,7 +271,7 @@ export class Router {
    * @param {Object} context - App context
    * @param {boolean} force - Force unregistration even if not registered
    */
-  async unregister(context, force = false) {
+  async teardown(context, force = false) {
     const scope = context && typeof context === 'object' ? context : this;
 
     if (!force && !registeredContexts.has(scope)) {
@@ -322,11 +280,11 @@ export class Router {
 
     try {
       registeredContexts.delete(scope);
-      await traverseRoutes(this.routes, 'unregister', context, true);
+      await traverseRoutes(this.routes, 'teardown', context, true);
 
       // Call custom unregister hook if provided
-      if (typeof this.options.unregister === 'function') {
-        await this.options.unregister(context, this);
+      if (typeof this.options.teardown === 'function') {
+        await this.options.teardown(context, this);
       }
     } catch (err) {
       log(`Error during unregistration: ${err.message}`, 'error');
@@ -336,11 +294,9 @@ export class Router {
 
   /**
    * Dynamically add routes from a module adapter.
-   * Uses the same collect/buildRoutes pipeline as the constructor to
-   * auto-detect routes, configs, and layouts from the adapter.
    *
-   * If the new tree shares a root path with an existing route (e.g. '/'),
-   * children are merged into the existing route instead of creating a duplicate.
+   * Collects routes, configs, and layouts from the adapter, builds them,
+   * then delegates to BaseRouter._addRoutes() for tree insertion.
    *
    * @param {Object} adapter - Adapter with files() and load() methods
    * @param {Object} [ctx] - Optional context for immediate register lifecycle
@@ -350,9 +306,7 @@ export class Router {
   async add(adapter, ctx, sourceId) {
     validateAdapter(adapter);
 
-    // 1. Build new routes using the same pipeline as the constructor
-    // Merge core layouts with any extension-provided layouts so that
-    // extension routes under /admin/* get the admin layout wrapper.
+    // Build new routes — merge core layouts with extension-provided layouts
     // eslint-disable-next-line no-underscore-dangle
     const extLayouts = collect(adapter, 'layouts');
     const mergedLayouts = new Map([
@@ -368,192 +322,53 @@ export class Router {
 
     if (newRoutes.length === 0) return newRoutes;
 
-    // 2. Tag all new routes with the adapter source (+ optional string ID)
-    newRoutes.forEach(route => tagRoutes(route, adapter, sourceId));
+    // Delegate tree insertion to BaseRouter
+    // eslint-disable-next-line no-underscore-dangle
+    const insertedRoutes = this._addRoutes(newRoutes, adapter, sourceId);
 
-    // 3. Merge into existing tree deeply, tracking actually inserted routes
-    const insertedRoutes = [];
-
-    const insertDeep = (routesList, routeToInsert) => {
-      let bestParent = null;
-
-      const findParent = list => {
-        for (const r of list) {
-          if (routeToInsert.path === r.path) {
-            return r; // Exact match is the best
-          }
-          const isPrefix =
-            r.path === '/' || routeToInsert.path.startsWith(r.path + '/');
-          if (isPrefix) {
-            bestParent = r;
-            if (r.children) {
-              const deeper = findParent(r.children);
-              if (deeper) return deeper;
-            }
-          }
-        }
-        return bestParent;
-      };
-
-      const existing = findParent(this.routes);
-
-      if (existing) {
-        if (existing.path === routeToInsert.path) {
-          if (
-            Array.isArray(routeToInsert.children) &&
-            routeToInsert.children.length > 0
-          ) {
-            existing.children = existing.children || [];
-            for (const child of routeToInsert.children) {
-              insertDeep(existing.children, child);
-            }
-          }
-        } else {
-          existing.children = existing.children || [];
-          existing.children.push(routeToInsert);
-          insertedRoutes.push(routeToInsert);
-        }
-      } else {
-        routesList.push(routeToInsert);
-        insertedRoutes.push(routeToInsert);
-      }
-    };
-
-    for (const newRoute of newRoutes) {
-      insertDeep(this.routes, newRoute);
-    }
-
-    validateConfig(this.routes);
-    this.routes.forEach(route => linkParents(route));
-
-    // 4. Track genuinely inserted routes for deferred register() lifecycle calls
+    // Track genuinely inserted routes for deferred register() lifecycle
     // eslint-disable-next-line no-underscore-dangle
     if (insertedRoutes.length > 0) {
       // eslint-disable-next-line no-underscore-dangle
       this._pendingRoutes.push(...insertedRoutes);
     }
 
-    // 5. If ctx is provided, immediately register pending routes
-    // so lifecycle hooks (e.g. registerMenu) fire without waiting for resolve()
+    // If ctx is provided, immediately register pending routes
     // eslint-disable-next-line no-underscore-dangle
     if (ctx && this._pendingRoutes.length > 0) {
       // eslint-disable-next-line no-underscore-dangle
       const pending = this._pendingRoutes.splice(0);
-      await traverseRoutes(pending, 'register', ctx, false);
+      await traverseRoutes(pending, 'setup', ctx, false);
     }
 
     return newRoutes;
   }
 
   /**
-   * Dynamically remove all routes previously added by a specific adapter.
+   * Remove routes by adapter reference (object) or source ID (string).
+   * Runs unregister lifecycle before delegating removal to BaseRouter.
    *
-   * @param {Object} adapter - The same adapter reference passed to add()
-   * @returns {boolean} True if any routes were removed
-   */
-  async remove(adapter, ctx) {
-    if (!adapter) return false;
-
-    // 1. Collect tagged routes BEFORE removal (needed for unregister lifecycle)
-    const tagged = [];
-    if (ctx) {
-      const collectTagged = routes => {
-        for (const r of routes) {
-          if (r[ROUTE_SOURCE_KEY] === adapter) tagged.push(r);
-          if (r.children) collectTagged(r.children);
-        }
-      };
-      collectTagged(this.routes);
-    }
-
-    // 2. Run unregister lifecycle on routes about to be removed
-    if (tagged.length > 0) {
-      await traverseRoutes(tagged, 'unregister', ctx, true);
-    }
-
-    // 3. Filter out the tagged routes from the tree
-    let removed = false;
-
-    const filterRoutes = routes => {
-      const result = [];
-      for (const route of routes) {
-        if (route[ROUTE_SOURCE_KEY] === adapter) {
-          removed = true;
-          continue;
-        }
-
-        if (Array.isArray(route.children) && route.children.length > 0) {
-          const originalLength = route.children.length;
-          route.children = filterRoutes(route.children);
-          if (route.children.length !== originalLength) {
-            removed = true;
-          }
-        }
-
-        result.push(route);
-      }
-      return result;
-    };
-
-    this.routes = filterRoutes(this.routes);
-
-    if (removed) {
-      this.routes.forEach(route => linkParents(route));
-    }
-
-    return removed;
-  }
-
-  /**
-   * Remove routes by source ID string (robust across HMR/reference changes)
-   * @param {string} sourceId - The string ID used during add()
-   * @param {Object} [ctx] - Optional context for immediate unregister lifecycle
+   * @param {Object|string} adapterOrSourceId - Adapter reference or source ID
+   * @param {Object} [ctx] - Optional context for unregister lifecycle
    * @returns {Promise<boolean>} True if any routes were removed
    */
-  async removeBySourceId(sourceId, ctx) {
-    if (!sourceId) return false;
+  async remove(adapterOrSourceId, ctx) {
+    if (!adapterOrSourceId) return false;
 
-    // 1. Collect routes tagged with this sourceId
-    const tagged = [];
-    const collectTagged = routes => {
-      for (const r of routes) {
-        if (r[ROUTE_SOURCE_ID] === sourceId) tagged.push(r);
-        if (r.children) collectTagged(r.children);
+    // Run unregister lifecycle on affected routes before removal
+    if (ctx) {
+      const tagged =
+        typeof adapterOrSourceId === 'string'
+          ? this.collectBySourceId(adapterOrSourceId)
+          : this.collectByAdapter(adapterOrSourceId);
+      if (tagged.length > 0) {
+        await traverseRoutes(tagged, 'teardown', ctx, true);
       }
-    };
-    collectTagged(this.routes);
-
-    // 2. Run unregister lifecycle
-    if (tagged.length > 0 && ctx) {
-      await traverseRoutes(tagged, 'unregister', ctx, true);
     }
 
-    // 3. Filter out tagged routes
-    let removed = false;
-    const filterRoutes = routes => {
-      const result = [];
-      for (const route of routes) {
-        if (route[ROUTE_SOURCE_ID] === sourceId) {
-          removed = true;
-          continue;
-        }
-        if (Array.isArray(route.children) && route.children.length > 0) {
-          const originalLength = route.children.length;
-          route.children = filterRoutes(route.children);
-          if (route.children.length !== originalLength) {
-            removed = true;
-          }
-        }
-        result.push(route);
-      }
-      return result;
-    };
-
-    this.routes = filterRoutes(this.routes);
-    if (removed) {
-      this.routes.forEach(route => linkParents(route));
-    }
-    return removed;
+    // Delegate tree removal to BaseRouter
+    // eslint-disable-next-line no-underscore-dangle
+    return this._remove(adapterOrSourceId);
   }
 
   /**
@@ -670,18 +485,15 @@ export class Router {
         ? this.options.routeResolver
         : defaultResolver;
 
-    // Auto-invoke registration if enabled (idempotent, errors caught in traverseRoutes)
-    // eslint-disable-next-line no-underscore-dangle
-    if (this._autoRegister) {
-      await this.register(ctx);
-    }
+    // Auto-invoke setup (idempotent — no-ops if already registered)
+    await this.setup(ctx);
 
     // Register routes added via add() after initial registration
     // eslint-disable-next-line no-underscore-dangle
     if (this._pendingRoutes.length > 0) {
       // eslint-disable-next-line no-underscore-dangle
       const pending = this._pendingRoutes.splice(0);
-      await traverseRoutes(pending, 'register', ctx, false);
+      await traverseRoutes(pending, 'setup', ctx, false);
     }
 
     // Check if navigation was cancelled
@@ -704,7 +516,6 @@ export class Router {
       matches: matcher.next(),
       cachedMatch: null,
       current: null,
-      depth: 0,
       mountedRoute: null, // Track what we've mounted for rollback
       previousRouteSnapshot: {
         route: this[ROUTE_PREV_KEY],
@@ -712,115 +523,117 @@ export class Router {
       },
     };
 
+    // eslint-disable-next-line no-param-reassign
     const next = async (resume = false, parent = null, prevResult = null) => {
-      // Check recursion depth
-      state.depth += 1;
-      // eslint-disable-next-line no-underscore-dangle
-      if (state.depth > this._maxDepth) {
-        throw createError(
-          // eslint-disable-next-line no-underscore-dangle
-          `Maximum recursion depth (${this._maxDepth}) exceeded`,
-          500,
-          { pathname: ctx.pathname, depth: state.depth },
-        );
-      }
+      // Iterative loop replaces recursive next() calls.
+      // O(1) memory regardless of match count.
+      let __iterations = 0; // eslint-disable-line no-underscore-dangle
+      // eslint-disable-next-line no-constant-condition
+      while (true) {
+        // Dev-only: catch infinite loops with a clear error
+        // eslint-disable-next-line no-underscore-dangle, no-plusplus
+        if (__DEV__ && ++__iterations > 100) {
+          throw createError(`Possible infinite loop: ${ctx.pathname}`, 500, {
+            pathname: ctx.pathname,
+          });
+        }
 
-      // Check if navigation was cancelled
-      if (navigationEntry.cancelled) {
-        return null;
-      }
-
-      if (
-        resume &&
-        state.matches &&
-        state.matches.value &&
-        !state.matches.done
-      ) {
-        parent = state.matches.value.route;
-      }
-
-      const skip =
-        prevResult === null &&
-        state.matches &&
-        !state.matches.done &&
-        state.matches.value
-          ? state.matches.value.route
-          : null;
-
-      state.matches = state.cachedMatch || matcher.next(skip);
-      state.cachedMatch = null;
-
-      if (!resume) {
-        if (
-          state.matches.done ||
-          (parent && !isDescendant(parent, state.matches.value.route))
-        ) {
-          state.cachedMatch = state.matches;
+        // Check if navigation was cancelled
+        if (navigationEntry.cancelled) {
           return null;
         }
-      }
 
-      if (state.matches.done) {
-        throw createError(`No route found: ${ctx.pathname}`, 404, {
-          pathname: ctx.pathname,
-        });
-      }
-
-      state.current = { ...ctx, ...state.matches.value };
-
-      // Check cancellation before init
-      if (navigationEntry.cancelled) {
-        return null;
-      }
-
-      // Run translations hook (once per route, parent → child)
-      await loadRouteTranslations(state.current.route, state.current);
-
-      // Run boot hook (config + route-level, parent → child, once per route)
-      await runBoot(state.current.route, state.current);
-
-      // Check cancellation before unmount
-      if (navigationEntry.cancelled) {
-        return null;
-      }
-
-      // Run unmount hook on previous route ONLY on first match
-      // This ensures we unmount once per navigation, not on every next() call
-      if (!state.mountedRoute && state.previousRouteSnapshot.route) {
-        const prevRoute = state.previousRouteSnapshot.route;
-        const prevCtx = state.previousRouteSnapshot.ctx || ctx;
-
-        if (prevRoute !== state.current.route) {
-          await runUnmount(prevRoute, prevCtx);
+        if (
+          resume &&
+          state.matches &&
+          state.matches.value &&
+          !state.matches.done
+        ) {
+          parent = state.matches.value.route;
         }
+
+        const skip =
+          prevResult === null &&
+          state.matches &&
+          !state.matches.done &&
+          state.matches.value
+            ? state.matches.value.route
+            : null;
+
+        state.matches = state.cachedMatch || matcher.next(skip);
+        state.cachedMatch = null;
+
+        if (!resume) {
+          if (
+            state.matches.done ||
+            (parent && !isDescendant(parent, state.matches.value.route))
+          ) {
+            state.cachedMatch = state.matches;
+            return null;
+          }
+        }
+
+        if (state.matches.done) {
+          throw createError(`No route found: ${ctx.pathname}`, 404, {
+            pathname: ctx.pathname,
+          });
+        }
+
+        state.current = { ...ctx, ...state.matches.value };
+
+        // Check cancellation before init
+        if (navigationEntry.cancelled) {
+          return null;
+        }
+
+        // Run translations hook (once per route, parent → child)
+        await loadRouteTranslations(state.current.route, state.current);
+
+        // Run init hook (config + route-level, parent → child, once per route)
+        await runInit(state.current.route, state.current);
+
+        // Check cancellation before unmount
+        if (navigationEntry.cancelled) {
+          return null;
+        }
+
+        // Run unmount hook on previous route ONLY on first match
+        if (!state.mountedRoute && state.previousRouteSnapshot.route) {
+          const prevRoute = state.previousRouteSnapshot.route;
+          const prevCtx = state.previousRouteSnapshot.ctx || ctx;
+
+          if (prevRoute !== state.current.route) {
+            await runUnmount(prevRoute, prevCtx);
+          }
+        }
+
+        // Check cancellation before mount
+        if (navigationEntry.cancelled) {
+          return null;
+        }
+
+        // Run mount hook (per-request, every navigation)
+        await runMount(state.current.route, state.current);
+
+        // Track that we've mounted this route (for potential rollback)
+        if (!state.mountedRoute) {
+          state.mountedRoute = state.current.route;
+        }
+
+        // Check cancellation before resolver
+        if (navigationEntry.cancelled) {
+          return null;
+        }
+
+        const result = await resolver(state.current, {
+          autoResolve: state.current.route.autoResolve !== false,
+        });
+
+        if (result != null) return result;
+
+        // No result — continue loop to try next match (replaces recursion)
+        prevResult = result;
       }
-
-      // Check cancellation before mount
-      if (navigationEntry.cancelled) {
-        return null;
-      }
-
-      // Run mount hook (per-request, every navigation)
-      await runMount(state.current.route, state.current);
-
-      // Track that we've mounted this route (for potential rollback)
-      if (!state.mountedRoute) {
-        state.mountedRoute = state.current.route;
-      }
-
-      // Check cancellation before resolver
-      if (navigationEntry.cancelled) {
-        return null;
-      }
-
-      const result = await resolver(state.current, {
-        autoResolve: state.current.route.autoResolve !== false,
-      });
-
-      if (result != null) return result;
-
-      state.depth -= 1; // Decrease depth before recursion
-      return next(resume, parent, result);
     };
 
     ctx.next = next;
