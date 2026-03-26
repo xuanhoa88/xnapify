@@ -196,6 +196,11 @@ class ModelRegistry {
     const db = this[DB_ENGINE];
     if (!db || !context) return { registered: [], errors: [] };
 
+    // Idempotent: skip if this source was already discovered
+    if (this[SOURCE_MAP].has(source)) {
+      return { registered: [], errors: [] };
+    }
+
     const registered = [];
     const errors = [];
     const adapter = createWebpackContextAdapter(context);
@@ -260,23 +265,17 @@ class ModelRegistry {
       const model = result.value;
       if (!model) continue;
 
-      if (this[MODELS].has(model.name)) {
-        log(
-          `Duplicate model "${model.name}" from "${source}". Skipped.`,
-          'error',
-        );
-        continue;
-      }
+      // Silently skip models already registered by another source
+      if (this[MODELS].has(model.name)) continue;
 
       this.register(model.name, model);
       registered.push(model.name);
     }
 
-    // Track which models came from this source
-    if (registered.length > 0) {
-      const existing = this[SOURCE_MAP].get(source) || [];
-      this[SOURCE_MAP].set(source, [...existing, ...registered]);
-    }
+    // Track source regardless of whether models were registered —
+    // an empty source still counts as "discovered" for idempotency
+    const existing = this[SOURCE_MAP].get(source) || [];
+    this[SOURCE_MAP].set(source, [...existing, ...registered]);
 
     return { registered, errors };
   }
