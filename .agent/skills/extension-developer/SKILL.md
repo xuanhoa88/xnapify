@@ -17,7 +17,6 @@ Extensions follow a well-defined lifecycle with hooks that receive progressively
 
 ### Boot-time Hooks (no DI context)
 
-- **`onLoad(context)`**: Called immediately after extension code is loaded. Context is `{}` (empty) at boot-time.
 - **`translations()`**: Declarative — returns a `require.context` for i18n JSON files. Auto-registered before other hooks.
 
 ### Post-bootstrap Hooks (full DI context: `{ container, store }`)
@@ -37,8 +36,10 @@ After `runProviders()` is called (during SSR or client bootstrap), lifecycle hoo
 
 ### Plugin-kind (no `routes()` hook)
 - Extends existing modules (e.g., profile enhancements)
-- Must declare `rsk.subscribe` in `package.json` with route paths
+- Should declare `rsk.subscribe` in `package.json` with route paths (e.g., `["/profile"]`)
 - Injects UI via slots and hooks
+
+> **Note:** The `rsk` config in `package.json` is optional. If omitted, `defineExtension()` auto-defaults to `{}`. Module-kind extensions auto-subscribe to the `'*'` wildcard namespace. Plugin-kind extensions should still declare `rsk.subscribe` to target specific routes.
 
 ### Module-kind (with `routes()` hook)
 - Provides its own view routes

@@ -75,8 +75,9 @@ function PersonalInfoCard() {
   }, [dispatch]);
 
   // Derive default values from user (memoized to prevent unnecessary re-renders)
+  // Extension defaults come first so user data takes precedence
   const defaultValues = useMemo(
-    () => merge({}, user, extensionDefaultValues),
+    () => merge({}, extensionDefaultValues, user),
     [user, extensionDefaultValues],
   );
 

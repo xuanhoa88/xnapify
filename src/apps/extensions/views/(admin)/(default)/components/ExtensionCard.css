@@ -127,32 +127,6 @@
   line-height: 1.5;
 }
 
-.capabilitiesRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.capPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 11px;
-  color: #5f6368;
-  background: #f1f3f4;
-  padding: 2px 6px;
-  border-radius: 4px;
-}
-
-.capabilityActive {
-  background: #e8f0fe;
-  color: #1967d2;
-}
-
-.capabilityLabel {
-  margin-left: 2px;
-}
 
 /* Footer & Actions */
 .footer {

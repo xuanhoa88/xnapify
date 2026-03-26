@@ -93,8 +93,9 @@ class ServerExtensionManager extends BaseExtensionManager {
     try {
       const apiEntry = this[EXTENSION_API_ENTRY_POINTS].get(id);
       if (apiEntry && typeof apiEntry.shutdown === 'function') {
-        await apiEntry.shutdown(this.registry, {
+        await apiEntry.shutdown({
           container: this[SERVER_CONTAINER],
+          registry: this.registry,
         });
         if (__DEV__) {
           console.log(`[ServerExtensionManager] Shut down API for: ${id}`);
@@ -688,7 +689,7 @@ class ServerExtensionManager extends BaseExtensionManager {
 
       // 4. Extension boot() hook
       if (typeof extensionApi.boot === 'function') {
-        await extensionApi.boot(this.registry, { container });
+        await extensionApi.boot({ container, registry: this.registry });
       }
     } catch (initErr) {
       console.error(

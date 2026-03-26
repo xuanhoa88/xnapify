@@ -57,14 +57,6 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
           console.debug(`[manageExtensions] Added extension: ${mapKey}`);
           const encryptedId = encryptExtensionId(mapKey);
           const rsk = merge({}, manifest.rsk);
-          // Derive capabilities from manifest fields
-          const subscribe = rsk.subscribe || [];
-          const capabilities = {
-            api: Boolean(manifest.main),
-            views: Boolean(manifest.browser),
-            hooks: Array.isArray(subscribe) && subscribe.length > 0,
-            translations: Boolean(rsk.translations),
-          };
 
           // Icon from manifest (built-in name or relative path)
           const icon = rsk.icon || null;
@@ -73,7 +65,6 @@ async function scanDirectory(dirPath, source, fsExtensionsMap) {
             ...manifest,
             name: rsk.name || mapKey,
             id: encryptedId,
-            capabilities,
             icon,
             isInstalled: false, // Default, will be overwritten by DB check
             source, // 'remote' or 'local'

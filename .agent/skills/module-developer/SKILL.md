@@ -24,7 +24,7 @@ Modules interact with the core framework by exporting specific lifecycle hooks f
    - `providers(container)`: binds singletons/factories to the dependency injection `container`.
    - `migrations(container)`: executes `db.connection.runMigrations()`.
    - `seeds(container)`: executes `db.connection.runSeeds()`.
-   - `init(container)`: registers hooks, schedules, queue-based workers, or Piscina worker pools.
+   - `boot({ container })`: registers hooks, schedules, queue-based workers, or Piscina worker pools. Runs after all models are loaded.
    - `routes()`: returns `[moduleName, routesContext]` tuple for dynamic routing.
 
    *Note: Ensure you include `translations()` hook if this module provides backend i18n JSON.*

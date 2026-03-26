@@ -8,7 +8,6 @@
 import { useState, useCallback, useEffect } from 'react';
 
 import clsx from 'clsx';
-import merge from 'lodash/merge';
 import PropTypes from 'prop-types';
 import { useTranslation } from 'react-i18next';
 
@@ -19,16 +18,6 @@ import Icon from '@shared/renderer/components/Icon';
 import ExtensionActionsDropdown from './ExtensionActionsDropdown';
 
 import s from './ExtensionCard.css';
-
-/**
- * Capability icon definitions
- */
-const CAPABILITY_DEFS = [
-  { key: 'api', icon: 'database', label: 'API' },
-  { key: 'views', icon: 'dashboard', label: 'Views' },
-  { key: 'hooks', icon: 'share', label: 'Hooks' },
-  { key: 'translations', icon: 'globe', label: 'i18n' },
-];
 
 function ExtensionCard({
   extension,
@@ -78,7 +67,6 @@ function ExtensionCard({
     [canUpdate, isLoading, extension, onActivate, onDeactivate],
   );
 
-  const capabilities = merge({}, extension.capabilities);
   const authorText =
     extension.author || (extension.options && extension.options.author);
   const isLocal =
@@ -162,24 +150,6 @@ function ExtensionCard({
                   'No description available',
                 )}
             </p>
-
-            <div className={s.capabilitiesRow}>
-              {CAPABILITY_DEFS.map(cap => {
-                const active = Boolean(capabilities[cap.key]);
-                return (
-                  <span
-                    key={cap.key}
-                    className={clsx(s.capPill, {
-                      [s.capabilityActive]: active,
-                    })}
-                    title={cap.label}
-                  >
-                    <Icon name={cap.icon} size={14} />
-                    <span className={s.capabilityLabel}>{cap.label}</span>
-                  </span>
-                );
-              })}
-            </div>
           </>
         )}
       </div>
@@ -252,12 +222,7 @@ ExtensionCard.propTypes = {
     source: PropTypes.string,
     icon: PropTypes.string,
     author: PropTypes.string,
-    capabilities: PropTypes.shape({
-      api: PropTypes.bool,
-      views: PropTypes.bool,
-      hooks: PropTypes.bool,
-      translations: PropTypes.bool,
-    }),
+
     options: PropTypes.shape({
       author: PropTypes.string,
       repository: PropTypes.string,

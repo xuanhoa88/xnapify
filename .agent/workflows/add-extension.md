@@ -927,7 +927,7 @@ registry.registerHook(
 - Schema must nest nested objects properly (e.g., `profile: zod.object({...})`)
 - Hook name must match the feature (e.g., `profile.personal_info.validator`)
 - Ensure the schema merger handles optional wrapping correctly with `.unwrap()` check
-- Check that the validator hook is registered in `init()` before the component renders
+- Check that the validator hook is registered in `boot()` before the component renders
 
 ### Translations Missing
 

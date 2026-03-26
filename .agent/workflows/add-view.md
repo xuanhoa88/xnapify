@@ -63,6 +63,17 @@ export default MyView;
 import MyView from './MyView';
 
 /**
+ * Route-level lifecycle hooks (all optional):
+ * - setup({ store, i18n })    — called once when route is discovered (register menus)
+ * - init({ store })           — called once when route is first visited (inject reducers)
+ * - mount({ store, i18n })    — called each time route is navigated to (breadcrumbs)
+ * - unmount({ store })        — called each time route is navigated away
+ * - teardown({ store })       — called once when route is cleaned up (unregister menus)
+ * - middleware(context, next) — guard function, runs before rendering
+ * - getInitialProps(context)  — data fetching for SSR and client
+ */
+
+/**
  * Data Loading & Metadata (Server & Client)
  */
 export async function getInitialProps({ fetch, store, i18n, locale }) {

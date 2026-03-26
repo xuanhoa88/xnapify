@@ -11,24 +11,20 @@ You are performing **visual or functional browser tests** on the running `rapid-
 
 ---
 
-## Port Discovery (MANDATORY)
+## Port Discovery (MANDATORY — Do This First)
 
-The app port is **NOT hardcoded to 3000**. You MUST resolve it:
+> [!CAUTION]
+> The port is **NOT** 3000. It is configured via `RSK_PORT` in `.env` and can be **overridden** by environment-specific files (`.env.development`, `.env.local`, etc.).
 
-| Priority | Source | Example |
-|----------|--------|---------|
-| 1 | `RSK_PORT` env var | Read from `.env` file |
-| 2 | Running terminal metadata | Check user's running dev server URL |
+**Resolution order:**
+
+| Priority | Source | How |
+|----------|--------|-----|
+| 1 | User metadata | Check "Browser State" URLs or "Running terminal commands" for `localhost:XXXX` — this is always the **actual** running port |
+| 2 | `.env` files | `grep RSK_PORT .env .env.* 2>/dev/null` — use the **last** match (env-specific files override base) |
 | 3 | Default fallback | `1337` |
 
-**Quick resolution:**
-```
-1. Check user metadata for "Running terminal commands" or "Browser State" — extract port from URL
-2. If unavailable, read RSK_PORT from .env: grep RSK_PORT .env
-3. Fallback: 1337
-```
-
-> 🔴 **NEVER assume port 3000.** Always resolve port first.
+> 🔴 **NEVER guess or assume port 3000.** Always resolve from user context or `.env` files first.
 
 ---
 

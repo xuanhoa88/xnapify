@@ -10,6 +10,8 @@
  * Handles dynamic loading, unloading, and synchronization of extensions.
  * Shared logic for both server and client.
  */
+import assign from 'lodash/assign';
+
 import { getTranslations } from '@shared/i18n/loader';
 import { addNamespace } from '@shared/i18n/utils';
 
@@ -266,8 +268,8 @@ export class BaseExtensionManager {
       typeof routesResult[0] === 'string'
     ) {
       const moduleName = routesResult[0];
-      const rsk = manifest.rsk || {};
-      const subs = rsk.subscribe || [];
+      const rsk = assign({}, manifest.rsk);
+      const subs = Array.isArray(rsk.subscribe) ? rsk.subscribe : [];
       if (!subs.includes(moduleName)) {
         // eslint-disable-next-line no-param-reassign
         manifest.rsk = { ...rsk, subscribe: [...subs, moduleName] };
