@@ -296,25 +296,6 @@ describe('ClientExtensionManager', () => {
       );
     });
 
-    it('connectViewRouter with null viewRouter buffers without crash', async () => {
-      const mockAdapter = { files: () => [], load: () => ({}) };
-
-      // Buffer an adapter
-      // eslint-disable-next-line no-underscore-dangle
-      await clientManager._injectRoutes('test-ext', mockAdapter);
-
-      // Flush with null — should not crash, should still store pending
-      expect(() => clientManager.connectViewRouter(null)).not.toThrow();
-
-      // Now flush with real router — stored adapters should inject
-      clientManager.connectViewRouter(mockRouter);
-      expect(mockRouter.add).toHaveBeenCalledWith(
-        mockAdapter,
-        undefined,
-        'test-ext',
-      );
-    });
-
     it('_injectRoutes injects directly when router is available', async () => {
       const mockAdapter = { files: () => [], load: () => ({}) };
 

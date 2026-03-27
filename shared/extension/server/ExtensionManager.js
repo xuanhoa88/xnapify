@@ -582,16 +582,16 @@ class ServerExtensionManager extends BaseExtensionManager {
    * Inject (or buffer) routes for an extension.
    * @param {string} id - Extension ID
    * @param {*} hookResult - Return value of the extension's routes() hook
-   * @param {string} type - Type of routes (view or api)
+   * @param {'api'|'views'} type - External route type (for normalizeRouteAdapter)
    */
   _injectRoutes(id, hookResult, type) {
-    const routerKey = type === 'api' ? 'api' : 'view';
+    const routerKey = type === 'api' ? 'api' : 'views';
     const router = this[CONNECTED_ROUTERS][routerKey];
     const adapter = normalizeRouteAdapter(hookResult, type);
 
     if (!router) {
-      // Router not available yet — buffer for later injection
-      this[BUFFERED_ROUTES].push({ id, adapter, type });
+      // Router not available yet — buffer with internal routerKey
+      this[BUFFERED_ROUTES].push({ id, adapter, type: routerKey });
       if (__DEV__) {
         console.log(
           `[ServerExtensionManager] Buffered ${type} route(s) for ${id} (router not ready)`,

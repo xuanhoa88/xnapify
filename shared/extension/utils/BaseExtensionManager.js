@@ -447,7 +447,7 @@ export class BaseExtensionManager {
       // Inject view routes (module-type only; plugins have no routes)
       if (hasRoutes) {
         // eslint-disable-next-line no-underscore-dangle
-        this._injectRoutes(id, ext.routes(), 'view');
+        this._injectRoutes(id, ext.routes(), 'views');
       }
 
       // Update metadata
@@ -1074,7 +1074,7 @@ export class BaseExtensionManager {
    * 2. Drains pending injections matching `routerKey` from buffer → store
    * 3. Re-injects all stored adapters for `routerKey` into the router
    *
-   * @param {string} routerKey - 'view' or 'api'
+   * @param {string} routerKey - 'views' or 'api'
    * @param {Object} router - Router instance with add(adapter) method
    * @param {Function} [injectFn] - Optional custom injection: (router, adapter, id) => void
    */
@@ -1084,7 +1084,7 @@ export class BaseExtensionManager {
     // 1. Drain pending injections for this router key (buffer → store)
     const remaining = [];
     for (const entry of this[BUFFERED_ROUTES]) {
-      const entryKey = entry.type === 'api' ? 'api' : 'view';
+      const entryKey = entry.type;
       if (entryKey === routerKey) {
         if (!this[STORED_ADAPTERS].has(entry.id)) {
           this[STORED_ADAPTERS].set(entry.id, {});
@@ -1131,7 +1131,7 @@ export class BaseExtensionManager {
     const adapters = this[STORED_ADAPTERS].get(id);
     if (adapters) {
       const remove = removeFn || ((router, adapter) => router.remove(adapter));
-      for (const routerKey of ['view', 'api']) {
+      for (const routerKey of ['views', 'api']) {
         try {
           const router = this[CONNECTED_ROUTERS][routerKey];
           if (router && adapters[routerKey]) {
@@ -1165,7 +1165,7 @@ export class BaseExtensionManager {
    */
   connectViewRouter(viewRouter) {
     // eslint-disable-next-line no-underscore-dangle
-    this._connectRouter('view', viewRouter);
+    this._connectRouter('views', viewRouter);
   }
 
   // ---------------------------------------------------------------------------

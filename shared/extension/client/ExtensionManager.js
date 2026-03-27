@@ -309,15 +309,15 @@ class ClientExtensionManager extends BaseExtensionManager {
    * Normalize and inject (or buffer) view routes for an extension.
    * @param {string} id - Extension ID
    * @param {*} hookResult - Return value of the extension's views() hook
-   * @param {string} [type='view'] - Route type (always 'view' on client)
+   * @param {'api'|'views'} [type='views'] - External route type (for normalizeRouteAdapter)
    */
-  async _injectRoutes(id, hookResult, type = 'view') {
+  async _injectRoutes(id, hookResult, type = 'views') {
     const adapter = normalizeRouteAdapter(hookResult, type);
-    const viewRouter = this[CONNECTED_ROUTERS]['view'];
+    const viewRouter = this[CONNECTED_ROUTERS]['views'];
 
     if (!viewRouter) {
-      // Router not available yet — buffer for later injection
-      this[BUFFERED_ROUTES].push({ id, adapter, type });
+      // Router not available yet — buffer with internal routerKey
+      this[BUFFERED_ROUTES].push({ id, adapter, type: 'views' });
       if (__DEV__) {
         console.log(
           `[ClientExtensionManager] Buffered view route(s) for ${id} (router not ready)`,
@@ -335,7 +335,7 @@ class ClientExtensionManager extends BaseExtensionManager {
     if (!this[STORED_ADAPTERS].has(id)) {
       this[STORED_ADAPTERS].set(id, {});
     }
-    this[STORED_ADAPTERS].get(id).view = adapter;
+    this[STORED_ADAPTERS].get(id).views = adapter;
 
     if (__DEV__) {
       console.log(`[ClientExtensionManager] Injected view route(s) for ${id}`);
@@ -352,7 +352,7 @@ class ClientExtensionManager extends BaseExtensionManager {
    */
   connectViewRouter(viewRouter) {
     // eslint-disable-next-line no-underscore-dangle
-    this._connectRouter('view', viewRouter, (router, adapter, id) => {
+    this._connectRouter('views', viewRouter, (router, adapter, id) => {
       router.add(adapter, undefined, id);
       if (__DEV__) {
         console.log(`[ClientExtensionManager] Flushed view route(s) for ${id}`);
